@@ -17,7 +17,7 @@ public class ILoadInstruction extends Instruction {
      * @param varIndex The index of the local variable to load.
      */
     public ILoadInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, 1);
+        super(opcode, offset, 2);
         this.varIndex = varIndex;
     }
 
