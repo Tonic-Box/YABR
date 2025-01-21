@@ -4,6 +4,7 @@ import com.tonic.analysis.instruction.*;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.ReturnType;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -397,6 +398,15 @@ public class Bytecode {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertIInc(offset, varIndex, increment);
         System.out.println("Appended IINC at offset " + offset + " for variable " + varIndex + " with increment " + increment);
+    }
+
+    /**
+     * Appends a RETURN instruction to the end of the bytecode.
+     *
+     * @param returnOpcode The opcode of the RETURN instruction (e.g., 0xAC for IRETURN).
+     */
+    public void addReturn(ReturnType returnType) {
+        addReturn(returnType.getOpcode());
     }
 
     /**

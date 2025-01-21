@@ -1,11 +1,15 @@
 package com.tonic;
 
 import com.tonic.analysis.Bytecode;
+import com.tonic.analysis.instruction.ReturnInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.utill.AccessBuilder;
 import com.tonic.utill.Logger;
+import com.tonic.utill.ReturnType;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -28,15 +32,16 @@ public class Main {
             classFile.createNewMethod(0x0001, "testInt", int.class);
             classFile.createNewMethod(0x0001, "testObjWithParams", Object.class, int.class, String.class);
 
-            classFile.createNewField(0x0001, "testIntField", "I", new ArrayList<>());
-            MethodEntry method = classFile.createNewMethod(false, 0x0001, "demoGetter", int.class);
+            int access = new AccessBuilder().setPublic().build();
+            classFile.createNewField(access, "testIntField", "I", new ArrayList<>());
+            MethodEntry method = classFile.createNewMethod(false, access, "demoGetter", int.class);
             Bytecode bytecode = new Bytecode(method);
 
             ConstPool constPool = bytecode.getConstPool();
             int fieldRefIndex = constPool.findOrAddField("com/tonic/TestCase", "testIntField", "I");
             bytecode.addALoad(0);
             bytecode.addGetField(fieldRefIndex);
-            bytecode.addReturn(0xAC); // IRETURN opcode
+            bytecode.addReturn(ReturnType.IRETURN); // IRETURN opcode
             bytecode.finalizeBytecode();
 
             classFile.rebuild();

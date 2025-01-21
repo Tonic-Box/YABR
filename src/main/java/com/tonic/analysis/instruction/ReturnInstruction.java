@@ -1,5 +1,7 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.utill.ReturnType;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -8,43 +10,6 @@ import java.io.IOException;
  */
 public class ReturnInstruction extends Instruction {
     private final ReturnType type;
-
-    /**
-     * Enum representing the types of return operations.
-     */
-    public enum ReturnType {
-        IRETURN(0xAC, "ireturn"),
-        LRETURN(0xAD, "lreturn"),
-        FRETURN(0xAE, "freturn"),
-        DRETURN(0xAF, "dreturn"),
-        ARETURN(0xB0, "areturn"),
-        RETURN_(0xB1, "return");
-
-        private final int opcode;
-        private final String mnemonic;
-
-        ReturnType(int opcode, String mnemonic) {
-            this.opcode = opcode;
-            this.mnemonic = mnemonic;
-        }
-
-        public int getOpcode() {
-            return opcode;
-        }
-
-        public String getMnemonic() {
-            return mnemonic;
-        }
-
-        public static ReturnType fromOpcode(int opcode) {
-            for (ReturnType type : ReturnType.values()) {
-                if (type.opcode == opcode) {
-                    return type;
-                }
-            }
-            return null;
-        }
-    }
 
     /**
      * Constructs a ReturnInstruction.

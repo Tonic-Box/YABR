@@ -4,6 +4,7 @@ import com.tonic.analysis.Bytecode;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.Access;
 import com.tonic.utill.Logger;
 import lombok.Getter;
 import lombok.Setter;
@@ -507,6 +508,8 @@ public class ClassFile extends AbstractParser {
     /**
      * Creates and adds a new method to the class file using the Bytecode utility.
      *
+     * @apiNote assumed non-static method at the moment
+     *
      * @param addDefaultBody Whether to add a default body to the method.
      * @param accessFlags    The access flags for the method (e.g., 0x0001 for public).
      * @param methodName     The name of the method, e.g., "myMethod".
@@ -559,6 +562,10 @@ public class ClassFile extends AbstractParser {
         if(!addDefaultBody)
             return newMethod;
         Bytecode bytecode = new Bytecode(newMethod);
+        if(!Access.isStatic(accessFlags))
+        {
+            bytecode.addALoad(0);
+        }
 
         // Example: Append instructions based on return type
         if (returnType.equals(void.class)) {
