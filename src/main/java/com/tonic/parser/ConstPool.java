@@ -15,7 +15,7 @@ import java.util.List;
  */
 @Getter
 public class ConstPool {
-    private final ClassFile classFile;
+    private ClassFile classFile;
     private final List<Item<?>> items;
 
     /**
@@ -97,6 +97,23 @@ public class ConstPool {
                 Logger.info("Long/Double entry at " + i + ", skipping next index");
                 i++; // Increment index to skip the next entry.
             }
+        }
+    }
+
+    public ConstPool() {
+        this.classFile = null;
+        this.items = new ArrayList<>();
+        this.items.add(null); // Index 0 is unused.
+    }
+
+    public void setClassFile(ClassFile classFile) {
+        this.classFile = classFile;
+        // Assign classFile to existing items that require it
+        for (Item<?> item : items) {
+            if (item instanceof MethodRefItem) {
+                ((MethodRefItem) item).setClassFile(classFile);
+            }
+            // Similarly, set classFile for other item types if needed
         }
     }
 
@@ -188,6 +205,7 @@ public class ConstPool {
         }
         MethodRefItem newMethodRef = new MethodRefItem();
         newMethodRef.setValue(new MethodRef(classIndex, nameAndTypeIndex));
+        newMethodRef.setClassFile(classFile);
         addItem(newMethodRef);
         return newMethodRef;
     }
@@ -232,7 +250,8 @@ public class ConstPool {
             }
         }
         NameAndTypeRefItem newNameAndType = new NameAndTypeRefItem();
-        newNameAndType.readFromValue(new NameAndType(nameIndex, descIndex));
+        newNameAndType.setConstPool(this);
+        newNameAndType.setValue(new NameAndType(nameIndex, descIndex));
         addItem(newNameAndType);
         return newNameAndType;
     }
@@ -374,4 +393,5 @@ public class ConstPool {
 
         return addItem(newFieldRef);
     }
+
 }

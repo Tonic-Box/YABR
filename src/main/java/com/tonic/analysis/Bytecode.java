@@ -4,6 +4,7 @@ import com.tonic.analysis.instruction.*;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.Logger;
 import com.tonic.utill.ReturnType;
 import lombok.Getter;
 
@@ -41,7 +42,7 @@ public class Bytecode {
     public void defineLabel(String labelName) {
         int currentOffset = codeWriter.getBytecodeSize();
         labels.put(labelName, currentOffset);
-        System.out.println("Defined label '" + labelName + "' at offset " + currentOffset);
+        Logger.info("Defined label '" + labelName + "' at offset " + currentOffset);
     }
 
     /**
@@ -52,7 +53,7 @@ public class Bytecode {
     public void addInvokeVirtual(int methodRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertInvokeVirtual(offset, methodRefIndex);
-        System.out.println("Appended INVOKEVIRTUAL at offset " + offset);
+        Logger.info("Appended INVOKEVIRTUAL at offset " + offset);
     }
 
     /**
@@ -63,7 +64,7 @@ public class Bytecode {
     public void addInvokeSpecial(int methodRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertInvokeSpecial(offset, methodRefIndex);
-        System.out.println("Appended INVOKESPECIAL at offset " + offset);
+        Logger.info("Appended INVOKESPECIAL at offset " + offset);
     }
 
     /**
@@ -74,7 +75,7 @@ public class Bytecode {
     public void addInvokeStatic(int methodRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertInvokeStatic(offset, methodRefIndex);
-        System.out.println("Appended INVOKESTATIC at offset " + offset);
+        Logger.info("Appended INVOKESTATIC at offset " + offset);
     }
 
     /**
@@ -86,7 +87,7 @@ public class Bytecode {
     public void addInvokeInterface(int interfaceMethodRefIndex, int count) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertInvokeInterface(offset, interfaceMethodRefIndex, count);
-        System.out.println("Appended INVOKEINTERFACE at offset " + offset);
+        Logger.info("Appended INVOKEINTERFACE at offset " + offset);
     }
 
     /**
@@ -98,7 +99,7 @@ public class Bytecode {
     public void addInvokeDynamic(int bootstrapMethodIndex, int nameAndTypeIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertInvokeDynamic(offset, bootstrapMethodIndex, nameAndTypeIndex);
-        System.out.println("Appended INVOKEDYNAMIC at offset " + offset);
+        Logger.info("Appended INVOKEDYNAMIC at offset " + offset);
     }
 
     /**
@@ -109,7 +110,7 @@ public class Bytecode {
     public void addPutStatic(int fieldRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertPutStatic(offset, fieldRefIndex);
-        System.out.println("Appended PUTSTATIC at offset " + offset);
+        Logger.info("Appended PUTSTATIC at offset " + offset);
     }
 
 
@@ -121,7 +122,7 @@ public class Bytecode {
     public void addGetStatic(int fieldRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertGetStatic(offset, fieldRefIndex);
-        System.out.println("Appended GETSTATIC at offset " + offset);
+        Logger.info("Appended GETSTATIC at offset " + offset);
     }
 
     /**
@@ -132,7 +133,7 @@ public class Bytecode {
     public void addPutField(int fieldRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertPutField(offset, fieldRefIndex);
-        System.out.println("Appended PUTFIELD at offset " + offset);
+        Logger.info("Appended PUTFIELD at offset " + offset);
     }
 
     /**
@@ -143,7 +144,7 @@ public class Bytecode {
     public void addGetField(int fieldRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertGetField(offset, fieldRefIndex);
-        System.out.println("Appended GETFIELD at offset " + offset);
+        Logger.info("Appended GETFIELD at offset " + offset);
     }
 
     /**
@@ -154,7 +155,7 @@ public class Bytecode {
     public void addNew(int classRefIndex) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertNew(offset, classRefIndex);
-        System.out.println("Appended NEW at offset " + offset);
+        Logger.info("Appended NEW at offset " + offset);
     }
 
     /**
@@ -165,7 +166,7 @@ public class Bytecode {
     public void addALoad(int index) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertALoad(offset, index);
-        System.out.println("Appended ALOAD at offset " + offset);
+        Logger.info("Appended ALOAD at offset " + offset);
     }
 
     /**
@@ -176,7 +177,7 @@ public class Bytecode {
     public void addAStore(int index) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertAStore(offset, index);
-        System.out.println("Appended ASTORE at offset " + offset);
+        Logger.info("Appended ASTORE at offset " + offset);
     }
 
     /**
@@ -187,7 +188,7 @@ public class Bytecode {
     public void addILoad(int index) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertILoad(offset, index);
-        System.out.println("Appended ILOAD at offset " + offset);
+        Logger.info("Appended ILOAD at offset " + offset);
     }
 
     /**
@@ -198,7 +199,7 @@ public class Bytecode {
     public void addIStore(int index) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertIStore(offset, index);
-        System.out.println("Appended ISTORE at offset " + offset);
+        Logger.info("Appended ISTORE at offset " + offset);
     }
 
     /**
@@ -230,7 +231,7 @@ public class Bytecode {
             instr = new LdcInstruction(constPool, opcode, codeWriter.getBytecodeSize(), ldcIndex);
         }
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended ICONST/IINC instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended ICONST/IINC instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
     /**
@@ -252,7 +253,7 @@ public class Bytecode {
             instr = new Ldc2WInstruction(constPool, opcode, codeWriter.getBytecodeSize(), ldc2WIndex);
         }
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended LCONST instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended LCONST instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
     /**
@@ -276,7 +277,7 @@ public class Bytecode {
             instr = new LdcInstruction(constPool, opcode, codeWriter.getBytecodeSize(), ldcIndex);
         }
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended FCONST instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended FCONST instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
     /**
@@ -298,7 +299,7 @@ public class Bytecode {
             instr = new Ldc2WInstruction(constPool, opcode, codeWriter.getBytecodeSize(), ldc2WIndex);
         }
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended DCONST instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended DCONST instruction with value " + value + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
     /**
@@ -308,7 +309,7 @@ public class Bytecode {
         int opcode = 0x01; // ACONST_NULL
         Instruction instr = new AConstNullInstruction(opcode, codeWriter.getBytecodeSize());
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended ACONST_NULL instruction at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended ACONST_NULL instruction at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
     /**
@@ -320,7 +321,7 @@ public class Bytecode {
         int opcode = 0x16; // LLOAD
         Instruction instr = new LLoadInstruction(opcode, codeWriter.getBytecodeSize(), index);
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended LLOAD instruction for index " + index + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended LLOAD instruction for index " + index + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
     /**
@@ -332,7 +333,7 @@ public class Bytecode {
         int opcode = 0x17; // FLOAD
         Instruction instr = new FLoadInstruction(opcode, codeWriter.getBytecodeSize(), index);
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended FLOAD instruction for index " + index + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended FLOAD instruction for index " + index + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
     /**
@@ -344,7 +345,7 @@ public class Bytecode {
         int opcode = 0x18; // DLOAD
         Instruction instr = new DLoadInstruction(opcode, codeWriter.getBytecodeSize(), index);
         codeWriter.appendInstruction(instr);
-        System.out.println("Appended DLOAD instruction for index " + index + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
+        Logger.info("Appended DLOAD instruction for index " + index + " at offset " + (codeWriter.getBytecodeSize() - instr.getLength()));
     }
 
 
@@ -365,7 +366,7 @@ public class Bytecode {
         // Append the GOTO instruction
         GotoInstruction gotoInstr = new GotoInstruction(0xA7, gotoOffset, relativeOffset);
         codeWriter.appendInstruction(gotoInstr);
-        System.out.println("Appended GOTO to label '" + labelName + "' at offset " + targetOffset);
+        Logger.info("Appended GOTO to label '" + labelName + "' at offset " + targetOffset);
     }
 
     /**
@@ -385,7 +386,7 @@ public class Bytecode {
         // Append the GOTO_W instruction
         GotoInstruction gotoWInstr = new GotoInstruction(0xC8, gotoWOffset, relativeOffset);
         codeWriter.appendInstruction(gotoWInstr);
-        System.out.println("Appended GOTO_W to label '" + labelName + "' at offset " + targetOffset);
+        Logger.info("Appended GOTO_W to label '" + labelName + "' at offset " + targetOffset);
     }
 
     /**
@@ -397,13 +398,13 @@ public class Bytecode {
     public void addIInc(int varIndex, int increment) {
         int offset = codeWriter.getBytecodeSize();
         codeWriter.insertIInc(offset, varIndex, increment);
-        System.out.println("Appended IINC at offset " + offset + " for variable " + varIndex + " with increment " + increment);
+        Logger.info("Appended IINC at offset " + offset + " for variable " + varIndex + " with increment " + increment);
     }
 
     /**
      * Appends a RETURN instruction to the end of the bytecode.
      *
-     * @param returnOpcode The opcode of the RETURN instruction (e.g., 0xAC for IRETURN).
+     * @param returnType The opcode of the RETURN instruction (e.g., 0xAC for IRETURN).
      */
     public void addReturn(ReturnType returnType) {
         addReturn(returnType.getOpcode());
@@ -418,7 +419,7 @@ public class Bytecode {
         int offset = codeWriter.getBytecodeSize();
         ReturnInstruction returnInstr = new ReturnInstruction(returnOpcode, offset);
         codeWriter.appendInstruction(returnInstr);
-        System.out.println("Appended RETURN (opcode 0x" + Integer.toHexString(returnOpcode) + ") at offset " + offset);
+        Logger.info("Appended RETURN (opcode 0x" + Integer.toHexString(returnOpcode) + ") at offset " + offset);
     }
 
     /**
@@ -428,6 +429,6 @@ public class Bytecode {
      */
     public void finalizeBytecode() throws IOException {
         codeWriter.write();
-        System.out.println("Finalized bytecode modifications.");
+        Logger.info("Finalized bytecode modifications.");
     }
 }

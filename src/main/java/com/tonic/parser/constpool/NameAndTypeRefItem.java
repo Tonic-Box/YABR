@@ -3,6 +3,7 @@ package com.tonic.parser.constpool;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.structure.NameAndType;
+import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,7 +13,9 @@ import java.io.IOException;
  * The value is a NameAndType object containing name and descriptor indices.
  */
 public class NameAndTypeRefItem extends Item<NameAndType> {
+    @Setter
     private ConstPool constPool;
+    @Setter
     private NameAndType value;
 
     @Override
@@ -38,11 +41,6 @@ public class NameAndTypeRefItem extends Item<NameAndType> {
     @Override
     public NameAndType getValue() {
         return value;
-    }
-
-    public void readFromValue(NameAndType nameAndType)
-    {
-        this.value = nameAndType;
     }
 
     /**

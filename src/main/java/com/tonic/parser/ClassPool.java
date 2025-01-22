@@ -1,5 +1,6 @@
 package com.tonic.parser;
 
+import com.tonic.utill.Logger;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -13,9 +14,22 @@ import java.util.jar.JarFile;
  */
 public class ClassPool {
     @Getter
-    private static final ClassPool Default = new ClassPool();
+    private static final ClassPool Default;
+
+    static
+    {
+        try {
+            Default = new ClassPool();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private final List<ClassFile> classMap = new ArrayList<>();
+
+    public ClassPool() throws IOException {
+        loadClass("java/lang/Object.class");
+    }
 
     /**
      * Adds a ClassFile to the pool, indexed by its internal class name.
@@ -46,7 +60,7 @@ public class ClassPool {
      * @return The loaded ClassFile object
      * @throws IOException If parsing fails
      */
-    public ClassFile loadClass(byte[] classData) throws IOException {
+    public ClassFile loadClass(byte[] classData) {
         ClassFile cf = new ClassFile(classData);
         classMap.add(cf);
         return cf;
@@ -63,6 +77,15 @@ public class ClassPool {
         // Read all bytes, then delegate to loadClass(byte[])
         byte[] data = is.readAllBytes();
         return loadClass(data);
+    }
+
+    public ClassFile loadClass(String clazz) throws IOException {
+        try (InputStream is = ClassLoader.getSystemResourceAsStream(clazz)) {
+            if (is == null) {
+                throw new IOException("Failed to load class: " + clazz);
+            }
+            return loadClass(is);
+        }
     }
 
     /**
@@ -82,5 +105,43 @@ public class ClassPool {
                 }
             }
         }
+    }
+
+    /**
+     * Creates a new empty class with the specified name and access flags.
+     * The superclass is set to java/lang/Object by default.
+     * The class is set to target Java 11 (major version 55, minor version 0).
+     *
+     * @param className   The internal name of the class, e.g., "com/tonic/NewClass".
+     * @param accessFlags The access flags for the class, e.g., Modifiers.PUBLIC | Modifiers.FINAL.
+     * @return The newly created ClassFile object.
+     */
+    public ClassFile createNewClass(String className, int accessFlags) throws IOException {
+        // Validate the class name
+        if (className == null || className.isEmpty()) {
+            throw new IllegalArgumentException("Class name cannot be null or empty.");
+        }
+        if (className.contains(".")) {
+            throw new IllegalArgumentException("Class name must use '/' as package separators, e.g., 'com/tonic/NewClass'.");
+        }
+
+        // Check if the class already exists
+        if (get(className) != null) {
+            throw new IllegalArgumentException("Class " + className + " already exists in the pool.");
+        }
+
+        // Create a new ClassFile instance
+        ClassFile newClass = new ClassFile(className, accessFlags);
+
+        // Rebuild the class file to generate the byte array
+        newClass.rebuild();
+
+        // Add the new ClassFile to the pool
+        put(newClass);
+
+        // Log the creation
+        Logger.info("Created new class: " + className + " with access flags: 0x" + Integer.toHexString(accessFlags));
+
+        return newClass;
     }
 }

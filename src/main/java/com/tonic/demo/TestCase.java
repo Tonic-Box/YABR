@@ -1,4 +1,4 @@
-package com.tonic;
+package com.tonic.demo;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -26,7 +26,7 @@ public class TestCase implements MouseListener
     /**
      * Entry point demonstrating various Java 11 features and instructions.
      */
-    public static void main(String[] args) {
+    public static void _main(String[] args) {
         // Java 11 local variable type inference with 'var'
         var localVar = MY_CONST + 1;
         System.out.println("localVar = " + localVar);

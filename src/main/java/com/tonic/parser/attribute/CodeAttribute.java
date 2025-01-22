@@ -26,7 +26,7 @@ public class CodeAttribute extends Attribute {
     private byte[] code;
     private List<ExceptionTableEntry> exceptionTable = new ArrayList<>();
     @Setter
-    private List<Attribute> attributes;
+    private List<Attribute> attributes = new ArrayList<>();
 
     public CodeAttribute(String name, MemberEntry parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);

@@ -4,8 +4,9 @@ import com.tonic.analysis.Bytecode;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.*;
-import com.tonic.utill.Access;
 import com.tonic.utill.Logger;
+import com.tonic.utill.Modifiers;
+import com.tonic.utill.ReturnType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -64,6 +65,107 @@ public class ClassFile extends AbstractParser {
     public ClassFile(final InputStream inputStream) throws IOException {
         super(inputStream.readAllBytes());
     }
+
+    public ClassFile(String className, int accessFlags) {
+        super(new byte[0], false); // Initialize with an empty byte array; actual data will be constructed
+
+        // Initialize constant pool
+        this.constPool = new ConstPool();
+        this.constPool.setClassFile(this);
+
+        // Add necessary constant pool entries
+        Utf8Item thisClassNameUtf8 = constPool.findOrAddUtf8(className);
+        Utf8Item superClassNameUtf8 = constPool.findOrAddUtf8("java/lang/Object");
+
+        ClassRefItem thisClassRef = constPool.findOrAddClassRef(constPool.getIndexOf(thisClassNameUtf8));
+        ClassRefItem superClassRef = constPool.findOrAddClassRef(constPool.getIndexOf(superClassNameUtf8));
+
+        // Set access flags
+        this.access = accessFlags;
+
+        // Set this_class and super_class indices
+        thisClass = constPool.getIndexOf(thisClassRef);
+        superClass = constPool.getIndexOf(superClassRef);
+
+        // Initialize interfaces, fields, methods, and attributes
+        this.interfaces = new ArrayList<>();
+        this.fields = new ArrayList<>();
+        this.methods = new ArrayList<>();
+        this.classAttributes = new ArrayList<>();
+
+        // Set minor and major versions for Java 11
+        this.minorVersion = 0;
+        this.majorVersion = 55;
+
+        // Add a default constructor
+        createDefaultConstructor();
+    }
+
+    /**
+     * Creates and adds a default no-argument constructor to the class.
+     */
+    private void createDefaultConstructor() {
+        // Define access flags for the constructor (public)
+        int constructorAccessFlags = Modifiers.PUBLIC;
+
+        // Constructor name is "<init>"
+        String constructorName = "<init>";
+
+        // Constructor descriptor is "()V" (no arguments, void return)
+        String constructorDescriptor = "()V";
+
+        // Add or find Utf8 entries
+        Utf8Item nameUtf8 = constPool.findOrAddUtf8(constructorName);
+        int nameIndex = constPool.getIndexOf(nameUtf8);
+
+        Utf8Item descUtf8 = constPool.findOrAddUtf8(constructorDescriptor);
+        int descIndex = constPool.getIndexOf(descUtf8);
+
+        // Add or find NameAndTypeRefItem
+        NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(nameIndex, descIndex);
+        int nameAndTypeIndex = constPool.getIndexOf(nameAndType);
+
+        // Add or find MethodRefItem for superclass constructor
+        MethodRefItem superConstructorRef = constPool.findOrAddMethodRef(superClass, nameAndTypeIndex);
+
+        // Create a new MethodEntry for the constructor
+        MethodEntry constructor = new MethodEntry(this, constructorAccessFlags, nameIndex, descIndex, new ArrayList<>());
+        constructor.setName(constructorName);
+        constructor.setDesc(constructorDescriptor);
+        constructor.setOwnerName(getClassName());
+        constructor.setKey(constructorName + constructorDescriptor);
+
+        // Create CodeAttribute for the constructor
+        CodeAttribute codeAttr = new CodeAttribute("Code", constructor, constPool.getIndexOf(constPool.findOrAddUtf8("Code")), 0);
+        codeAttr.setMaxStack(10); // Set an appropriate max stack size
+        codeAttr.setMaxLocals(1); // +1 for 'this' if not static
+        constructor.getAttributes().add(codeAttr);
+
+        // **Initialize the code to an empty byte array to prevent NullPointerException**
+        codeAttr.setCode(new byte[0]);
+
+        // Initialize Bytecode for the constructor
+        Bytecode bytecode = new Bytecode(constructor);
+
+        // Bytecode instructions for:
+        // aload_0
+        // invokespecial <init> of superclass
+        // return
+        bytecode.addALoad(0); // Load 'this'
+        bytecode.addInvokeSpecial(constPool.getIndexOf(superConstructorRef)); // Call super.<init>()
+        bytecode.addReturn(ReturnType.RETURN_); // RETURN
+
+        // Finalize bytecode (which sets the code in codeAttr)
+        try {
+            bytecode.finalizeBytecode();
+        } catch (IOException e) {
+            Logger.error("Failed to finalize bytecode for default constructor: " + e.getMessage());
+        }
+
+        // Add the constructor to the methods list
+        methods.add(constructor);
+    }
+
 
     @Override
     protected void process() {
@@ -269,8 +371,8 @@ public class ClassFile extends AbstractParser {
 
         // 4. Create the new FieldRefItem (optional, depending on usage)
         // If fields reference FieldRefItem, uncomment the following lines:
-        //FieldRefItem fieldRef = (FieldRefItem) constPool.findOrAddFieldRef(thisClass, nameAndTypeIndex);
-        // int fieldRefIndex = constPool.getIndexOf(fieldRef);
+        //FieldRefItem fieldRef = constPool.findOrAddFieldRef(thisClass, nameAndTypeIndex);
+        //int fieldRefIndex = constPool.getIndexOf(fieldRef);
 
         // 5. Create the new FieldEntry
         FieldEntry newField = new FieldEntry();
@@ -536,7 +638,8 @@ public class ClassFile extends AbstractParser {
         // 5. Create CodeAttribute with the correct nameIndex
         CodeAttribute codeAttr = new CodeAttribute("Code", null, codeNameIndex, 0); // Parent will be set later
         codeAttr.setMaxStack(10); // Set an appropriate max stack size
-        codeAttr.setMaxLocals(parameterTypes.length + 1); // +1 for 'this' if not static
+        int maxLocals = Modifiers.isStatic(accessFlags) ? parameterTypes.length : parameterTypes.length + 1;
+        codeAttr.setMaxLocals(maxLocals); // +1 for 'this' if not static
         codeAttr.setCode(new byte[0]); // Initialize with empty bytecode
         codeAttr.setAttributes(new ArrayList<>()); // Add any additional attributes if necessary
 
@@ -561,9 +664,11 @@ public class ClassFile extends AbstractParser {
         // 10. Build the method body
         if(!addDefaultBody)
             return newMethod;
+
         Bytecode bytecode = new Bytecode(newMethod);
-        if(!Access.isStatic(accessFlags))
+        if(!Modifiers.isStatic(accessFlags))
         {
+            System.out.println("Adding 'this' to the stack");
             bytecode.addALoad(0);
         }
 

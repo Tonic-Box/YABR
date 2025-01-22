@@ -15,6 +15,7 @@ import static com.tonic.parser.constpool.structure.InvokeParameterUtil.*;
  * The value is a MethodRef object containing class and name-and-type indices.
  */
 public class MethodRefItem extends Item<MethodRef> {
+    @Setter
     private ClassFile classFile = null;
     @Setter
     private MethodRef value;
@@ -77,7 +78,7 @@ public class MethodRefItem extends Item<MethodRef> {
      */
     public int getParameterCount() {
         if (classFile == null) {
-            throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
+            throw new IllegalStateException("classFile not set. Ensure read(ClassFile) has been called.");
         }
 
         // Retrieve the NameAndType entry from the constant pool

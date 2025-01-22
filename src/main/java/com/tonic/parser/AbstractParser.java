@@ -17,22 +17,36 @@ public abstract class AbstractParser {
     private int index;
 
     /**
-     * Constructs an AbstractParser with the provided byte array.
+     * Constructs an AbstractParser for parsing an existing class file.
      *
-     * @param bytes The byte array to parse.
-     * @throws IllegalArgumentException If the byte array is null.
+     * @param bytes The byte array representing the class file.
+     * @throws IllegalArgumentException   If the byte array is null.
      * @throws IncorrectFormatException If the byte array fails verification.
      */
     protected AbstractParser(byte[] bytes) {
+        this(bytes, true);
+    }
+
+    /**
+     * Constructs an AbstractParser with the provided byte array and indicates whether to parse it.
+     *
+     * @param bytes The byte array to parse or build.
+     * @param parse Whether to parse the byte array.
+     * @throws IllegalArgumentException   If the byte array is null.
+     * @throws IncorrectFormatException If the byte array fails verification when parsing.
+     */
+    protected AbstractParser(byte[] bytes, boolean parse) {
         if (bytes == null) {
             throw new IllegalArgumentException("Byte array cannot be null.");
         }
         this.bytes = bytes.clone();
         this.index = 0;
-        if (!verify()) {
+        if (parse && !verify()) {
             throw new IncorrectFormatException();
         }
-        process();
+        if (parse) {
+            process();
+        }
     }
 
     /**
