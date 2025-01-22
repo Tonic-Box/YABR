@@ -30,4 +30,28 @@ public enum ReturnType {
         }
         return null;
     }
+
+    public static ReturnType fromDescriptor(String desc) {
+        if (desc == null || desc.isEmpty()) {
+            throw new IllegalArgumentException("Descriptor cannot be null or empty");
+        }
+
+        switch (desc) {
+            case "I": // int
+                return IRETURN;
+            case "J": // long
+                return LRETURN;
+            case "F": // float
+                return FRETURN;
+            case "D": // double
+                return DRETURN;
+            case "L": // reference (e.g., objects)
+            case "[": // array
+                return ARETURN;
+            case "V": // void
+                return RETURN;
+            default:
+                throw new IllegalArgumentException("Unknown descriptor: " + desc);
+        }
+    }
 }

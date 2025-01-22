@@ -97,7 +97,7 @@ public class TestClassCreation {
         {
             bytecode.addGetStatic(fieldRefIndex);
         }
-        bytecode.addReturn(ReturnType.IRETURN);
+        bytecode.addReturn(ReturnType.fromDescriptor(entry.getDesc()));
         bytecode.finalizeBytecode();
     }
 }
