@@ -381,7 +381,7 @@ public class ClassFile extends AbstractParser {
         newField.setNameIndex(nameIndex);
         newField.setDescIndex(descIndex);
         newField.setAttributes(new ArrayList<>(attributes));
-        newField.setOwnerName(getClassName());
+        newField.setOwnerName(getClassName().replace('.', '/'));
         newField.setName(fieldName);
         newField.setDesc(fieldDescriptor);
         newField.setKey(fieldName + fieldDescriptor);

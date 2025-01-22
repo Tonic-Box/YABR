@@ -48,7 +48,7 @@ public class FieldEntry extends MemberEntry {
         }
 
         // Resolve and set ownerName, name, desc, key
-        this.ownerName = classFile.getClassName();
+        this.ownerName = classFile.getClassName().replace('.', '/');
         this.name = resolveUtf8(nameIndex);
         this.desc = resolveUtf8(descIndex);
         this.key = computeKey();

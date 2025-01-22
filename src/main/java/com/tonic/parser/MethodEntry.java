@@ -50,7 +50,7 @@ public class MethodEntry extends MemberEntry {
         this.desc = resolveUtf8(descIndex);
 
         // Set ownerName as the class's own name
-        this.ownerName = classFile.getClassName();
+        this.ownerName = classFile.getClassName().replace('.', '/');;
 
         // Compute a unique key (e.g., name + descriptor)
         this.key = computeKey();
@@ -75,6 +75,11 @@ public class MethodEntry extends MemberEntry {
         this.desc = resolveUtf8(descIndex);
         this.ownerName = classFile.getClassName();
         this.key = computeKey();
+
+        if(ownerName != null)
+        {
+            this.ownerName = ownerName.replace('.', '/');
+        }
     }
 
     @Override
