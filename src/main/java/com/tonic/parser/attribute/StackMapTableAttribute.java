@@ -25,6 +25,10 @@ public class StackMapTableAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public StackMapTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         int startIndex = classFile.getIndex(); // Record starting index

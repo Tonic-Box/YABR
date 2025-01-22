@@ -22,6 +22,10 @@ public class NestHostAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public NestHostAttribute(String name, ClassFile hostClass, int nameIndex, int length) {
+        super(name, hostClass, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         if (length != 2) {
@@ -50,10 +54,10 @@ public class NestHostAttribute extends Attribute {
     }
 
     private String resolveHostClassName() {
-        Item<?> classRefItem = parent.getClassFile().getConstPool().getItem(hostClassIndex);
+        Item<?> classRefItem = getClassFile().getConstPool().getItem(hostClassIndex);
         if (classRefItem instanceof ClassRefItem) {
             int nameIndex = ((ClassRefItem) classRefItem).getValue();
-            Item<?> utf8Item = parent.getClassFile().getConstPool().getItem(nameIndex);
+            Item<?> utf8Item = getClassFile().getConstPool().getItem(nameIndex);
             if (utf8Item instanceof Utf8Item) {
                 return ((Utf8Item) utf8Item).getValue().replace('/', '.');
             }

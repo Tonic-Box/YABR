@@ -22,6 +22,10 @@ public class SignatureAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public SignatureAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         if (length != 2) {
@@ -50,7 +54,7 @@ public class SignatureAttribute extends Attribute {
     }
 
     private String resolveSignature(int signatureIndex) {
-        Item<?> utf8Item = parent.getClassFile().getConstPool().getItem(signatureIndex);
+        Item<?> utf8Item = getClassFile().getConstPool().getItem(signatureIndex);
         if (utf8Item instanceof Utf8Item) {
             return ((Utf8Item) utf8Item).getValue();
         }

@@ -26,6 +26,8 @@ public abstract class Item<T> {
     public static final byte ITEM_METHOD_HANDLE =  0xF;
     public static final byte ITEM_METHOD_TYPE   = 0x10;
     public static final byte ITEM_INVOKEDYNAMIC = 0x12;
+    public static final byte ITEM_PACKAGE = 0x13; // CONSTANT_Package
+    public static final byte ITEM_MODULE  = 0x14; // CONSTANT_Module
 
     /**
      * Reads the constant pool item from the class file.

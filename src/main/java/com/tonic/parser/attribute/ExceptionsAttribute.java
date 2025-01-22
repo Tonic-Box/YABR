@@ -5,6 +5,7 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,10 +16,15 @@ import java.util.List;
  * Represents the Exceptions attribute.
  * Lists the exceptions that a method can throw.
  */
+@Getter
 public class ExceptionsAttribute extends Attribute {
     private List<Integer> exceptionIndexTable;
 
     public ExceptionsAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
+    public ExceptionsAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
     }
 
@@ -51,17 +57,13 @@ public class ExceptionsAttribute extends Attribute {
         this.length = 2 + (exceptionIndexTable.size() * 2);
     }
 
-    public List<Integer> getExceptionIndexTable() {
-        return exceptionIndexTable;
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("ExceptionsAttribute{");
         sb.append("exceptions=[");
         for (int i = 0; i < exceptionIndexTable.size(); i++) {
             int index = exceptionIndexTable.get(i);
-            ClassRefItem classRef = (ClassRefItem) parent.getClassFile().getConstPool().getItem(index);
+            ClassRefItem classRef = (ClassRefItem) getClassFile().getConstPool().getItem(index);
             sb.append(classRef.getValue()).append(":").append(getClassName(classRef.getValue())).append(", ");
         }
         if (!exceptionIndexTable.isEmpty()) {
@@ -78,10 +80,10 @@ public class ExceptionsAttribute extends Attribute {
      * @return The class name as a String.
      */
     private String getClassName(int classIndex) {
-        Item<?> classRefItem = parent.getClassFile().getConstPool().getItem(classIndex);
+        Item<?> classRefItem = getClassFile().getConstPool().getItem(classIndex);
         if (classRefItem instanceof ClassRefItem) {
             int nameIndex = ((ClassRefItem) classRefItem).getValue();
-            Item<?> utf8Item = parent.getClassFile().getConstPool().getItem(nameIndex);
+            Item<?> utf8Item = getClassFile().getConstPool().getItem(nameIndex);
             if (utf8Item instanceof Utf8Item) {
                 return ((Utf8Item) utf8Item).getValue().replace('/', '.');
             }

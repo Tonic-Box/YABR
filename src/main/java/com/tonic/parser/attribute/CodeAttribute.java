@@ -32,6 +32,10 @@ public class CodeAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public CodeAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         int startIndex = classFile.getIndex(); // Record starting index
@@ -67,7 +71,7 @@ public class CodeAttribute extends Attribute {
         int attributesCount = classFile.readUnsignedShort();
         this.attributes = new ArrayList<>(attributesCount);
         for (int i = 0; i < attributesCount; i++) {
-            Attribute attribute = Attribute.get(classFile, parent.getClassFile().getConstPool(), parent);
+            Attribute attribute = Attribute.get(classFile, getClassFile().getConstPool(), parent);
             this.attributes.add(attribute);
         }
 
@@ -151,7 +155,7 @@ public class CodeAttribute extends Attribute {
      * @return A String representing the disassembled bytecode.
      */
     public String prettyPrintCode() {
-        return CodePrinter.prettyPrintCode(this.code, parent.getClassFile().getConstPool());
+        return CodePrinter.prettyPrintCode(this.code, getClassFile().getConstPool());
     }
 
     @Override

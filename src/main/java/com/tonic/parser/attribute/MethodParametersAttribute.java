@@ -22,6 +22,10 @@ public class MethodParametersAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public MethodParametersAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         if (length < 1) {
@@ -35,7 +39,7 @@ public class MethodParametersAttribute extends Attribute {
         for (int i = 0; i < parametersCount; i++) {
             int nameIndex = classFile.readUnsignedShort();
             int accessFlags = classFile.readUnsignedShort();
-            parameters.add(new MethodParameter(parent.getClassFile().getConstPool(), nameIndex, accessFlags));
+            parameters.add(new MethodParameter(getClassFile().getConstPool(), nameIndex, accessFlags));
         }
     }
 

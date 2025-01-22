@@ -5,6 +5,7 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.table.LocalVariableTypeTableEntry;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,10 +16,15 @@ import java.util.List;
  * Represents the LocalVariableTypeTable attribute.
  * Provides information about local variables' generic types within a method.
  */
+@Getter
 public class LocalVariableTypeTableAttribute extends Attribute {
     private List<LocalVariableTypeTableEntry> localVariableTypeTable;
 
     public LocalVariableTypeTableAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
+    public LocalVariableTypeTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
     }
 
@@ -57,10 +63,6 @@ public class LocalVariableTypeTableAttribute extends Attribute {
     @Override
     public void updateLength() {
         this.length = 2 + (localVariableTypeTable.size() * 10);
-    }
-
-    public List<LocalVariableTypeTableEntry> getLocalVariableTypeTable() {
-        return localVariableTypeTable;
     }
 
     @Override

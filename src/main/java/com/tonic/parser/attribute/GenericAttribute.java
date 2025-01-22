@@ -20,6 +20,11 @@ public class GenericAttribute extends Attribute {
         this.info = new byte[length];
     }
 
+    public GenericAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+        this.info = new byte[length];
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         if (length > 0) {

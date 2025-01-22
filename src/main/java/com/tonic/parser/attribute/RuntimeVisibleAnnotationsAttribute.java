@@ -25,6 +25,11 @@ public class RuntimeVisibleAnnotationsAttribute extends Attribute {
         this.visible = visible;
     }
 
+    public RuntimeVisibleAnnotationsAttribute(String name, ClassFile parent, boolean visible, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+        this.visible = visible;
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         int startIndex = classFile.getIndex(); // Record starting index
@@ -35,7 +40,7 @@ public class RuntimeVisibleAnnotationsAttribute extends Attribute {
         int numAnnotations = classFile.readUnsignedShort();
         this.annotations = new ArrayList<>(numAnnotations);
         for (int i = 0; i < numAnnotations; i++) {
-            Annotation annotation = Annotation.readAnnotation(classFile, parent.getClassFile().getConstPool());
+            Annotation annotation = Annotation.readAnnotation(classFile, getClassFile().getConstPool());
             annotations.add(annotation);
         }
 

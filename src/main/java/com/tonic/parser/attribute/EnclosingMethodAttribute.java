@@ -21,6 +21,10 @@ public class EnclosingMethodAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public EnclosingMethodAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         if (length != 4) {
@@ -52,10 +56,10 @@ public class EnclosingMethodAttribute extends Attribute {
     }
 
     private String resolveClassName(int classInfoIndex) {
-        Item<?> classRefItem = parent.getClassFile().getConstPool().getItem(classInfoIndex);
+        Item<?> classRefItem = getClassFile().getConstPool().getItem(classInfoIndex);
         if (classRefItem instanceof ClassRefItem) {
             int nameIndex = ((ClassRefItem) classRefItem).getValue();
-            Item<?> utf8Item = parent.getClassFile().getConstPool().getItem(nameIndex);
+            Item<?> utf8Item = getClassFile().getConstPool().getItem(nameIndex);
             if (utf8Item instanceof Utf8Item) {
                 return ((Utf8Item) utf8Item).getValue().replace('/', '.');
             }
@@ -64,13 +68,13 @@ public class EnclosingMethodAttribute extends Attribute {
     }
 
     private String resolveMethodName(int methodIndex) {
-        Item<?> methodRefItem = parent.getClassFile().getConstPool().getItem(methodIndex);
+        Item<?> methodRefItem = getClassFile().getConstPool().getItem(methodIndex);
         if (methodRefItem instanceof MethodRefItem) {
             MethodRefItem methodRef = (MethodRefItem) methodRefItem;
-            Item<?> nameAndTypeItem = parent.getClassFile().getConstPool().getItem(methodRef.getValue().getNameAndTypeIndex());
+            Item<?> nameAndTypeItem = getClassFile().getConstPool().getItem(methodRef.getValue().getNameAndTypeIndex());
             if (nameAndTypeItem instanceof NameAndTypeRefItem) {
                 NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) nameAndTypeItem;
-                Item<?> nameItem = parent.getClassFile().getConstPool().getItem(nameAndType.getValue().getNameIndex());
+                Item<?> nameItem = getClassFile().getConstPool().getItem(nameAndType.getValue().getNameIndex());
                 if (nameItem instanceof Utf8Item) {
                     return ((Utf8Item) nameItem).getValue();
                 }

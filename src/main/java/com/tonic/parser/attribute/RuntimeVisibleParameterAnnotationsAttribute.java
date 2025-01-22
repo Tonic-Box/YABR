@@ -25,6 +25,11 @@ public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute {
         this.visible = visible;
     }
 
+    public RuntimeVisibleParameterAnnotationsAttribute(String name, ClassFile parent, boolean visible, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+        this.visible = visible;
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         int startIndex = classFile.getIndex(); // Record starting index

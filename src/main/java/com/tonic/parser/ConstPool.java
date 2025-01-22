@@ -79,6 +79,12 @@ public class ConstPool {
                 case Item.ITEM_INVOKEDYNAMIC:
                     item = new InvokeDynamicItem();
                     break;
+                case Item.ITEM_PACKAGE: // CONSTANT_Package
+                    item = new PackageItem();
+                    break;
+                case Item.ITEM_MODULE: // CONSTANT_Module
+                    item = new ModuleItem();
+                    break;
                 default:
                     throw new IllegalArgumentException("Unknown constant pool tag: " + tag + " at index " + i);
             }

@@ -21,12 +21,16 @@ public class AnnotationDefaultAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public AnnotationDefaultAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         int startIndex = classFile.getIndex(); // Record starting index
 
         // Read the ElementValue
-        this.defaultValue = ElementValue.readElementValue(classFile, parent.getClassFile().getConstPool());
+        this.defaultValue = ElementValue.readElementValue(classFile, getClassFile().getConstPool());
 
         // Calculate bytes read
         int bytesRead = classFile.getIndex() - startIndex;

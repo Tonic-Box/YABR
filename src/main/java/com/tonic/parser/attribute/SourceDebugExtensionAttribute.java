@@ -19,6 +19,10 @@ public class SourceDebugExtensionAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public SourceDebugExtensionAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         if (length < 0) {

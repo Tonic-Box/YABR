@@ -32,6 +32,10 @@ public class ModuleAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    public ModuleAttribute(String name, ClassFile parent, int nameIndex, int length) {
+        super(name, parent, nameIndex, length);
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         int startIndex = classFile.getIndex(); // Record starting index
@@ -45,7 +49,7 @@ public class ModuleAttribute extends Attribute {
             int requiresIndex = classFile.readUnsignedShort();
             int requiresFlags = classFile.readUnsignedShort();
             int requiresVersionIndex = classFile.readUnsignedShort();
-            requires.add(new Requires(parent.getClassFile().getConstPool(), requiresIndex, requiresFlags, requiresVersionIndex));
+            requires.add(new Requires(getClassFile().getConstPool(), requiresIndex, requiresFlags, requiresVersionIndex));
         }
 
         int exportsCount = classFile.readUnsignedShort();
@@ -58,7 +62,7 @@ public class ModuleAttribute extends Attribute {
             for (int j = 0; j < exportsToCount; j++) {
                 exportsTo.add(classFile.readUnsignedShort());
             }
-            exports.add(new Exports(parent.getClassFile().getConstPool(), exportsIndex, exportsFlags, exportsTo));
+            exports.add(new Exports(getClassFile().getConstPool(), exportsIndex, exportsFlags, exportsTo));
         }
 
         int opensCount = classFile.readUnsignedShort();
@@ -71,14 +75,14 @@ public class ModuleAttribute extends Attribute {
             for (int j = 0; j < opensToCount; j++) {
                 opensTo.add(classFile.readUnsignedShort());
             }
-            opens.add(new Opens(parent.getClassFile().getConstPool(), opensIndex, opensFlags, opensTo));
+            opens.add(new Opens(getClassFile().getConstPool(), opensIndex, opensFlags, opensTo));
         }
 
         int usesCount = classFile.readUnsignedShort();
         this.uses = new ArrayList<>(usesCount);
         for (int i = 0; i < usesCount; i++) {
             int usesIndex = classFile.readUnsignedShort();
-            uses.add(new Uses(parent.getClassFile().getConstPool(), usesIndex));
+            uses.add(new Uses(getClassFile().getConstPool(), usesIndex));
         }
 
         int providesCount = classFile.readUnsignedShort();
@@ -90,7 +94,7 @@ public class ModuleAttribute extends Attribute {
             for (int j = 0; j < providesWithCount; j++) {
                 providesWith.add(classFile.readUnsignedShort());
             }
-            provides.add(new Provides(parent.getClassFile().getConstPool(), providesIndex, providesWith));
+            provides.add(new Provides(getClassFile().getConstPool(), providesIndex, providesWith));
         }
 
         int bytesRead = classFile.getIndex() - startIndex;
@@ -219,7 +223,7 @@ public class ModuleAttribute extends Attribute {
     }
 
     private String resolveModuleName() {
-        Item<?> utf8Item = parent.getClassFile().getConstPool().getItem(moduleNameIndex);
+        Item<?> utf8Item = getClassFile().getConstPool().getItem(moduleNameIndex);
         if (utf8Item instanceof Utf8Item) {
             return ((Utf8Item) utf8Item).getValue().replace('/', '.');
         }
@@ -230,7 +234,7 @@ public class ModuleAttribute extends Attribute {
         if (moduleVersionIndex == 0) {
             return "None";
         }
-        Item<?> utf8Item = parent.getClassFile().getConstPool().getItem(moduleVersionIndex);
+        Item<?> utf8Item = getClassFile().getConstPool().getItem(moduleVersionIndex);
         if (utf8Item instanceof Utf8Item) {
             return ((Utf8Item) utf8Item).getValue();
         }

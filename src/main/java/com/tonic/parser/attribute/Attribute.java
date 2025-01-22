@@ -16,6 +16,7 @@ import java.io.IOException;
 public abstract class Attribute {
     protected String name;
     protected MemberEntry parent;
+    protected ClassFile hostClass;
     protected int nameIndex, length;
 
     public Attribute(String name, MemberEntry parent, int nameIndex, int length) {
@@ -23,6 +24,17 @@ public abstract class Attribute {
         this.parent = parent;
         this.nameIndex = nameIndex;
         this.length = length;
+    }
+
+    public Attribute(String name, ClassFile hostClass, int nameIndex, int length) {
+        this.name = name;
+        this.hostClass = hostClass;
+        this.nameIndex = nameIndex;
+        this.length = length;
+    }
+
+    protected ClassFile getClassFile() {
+        return parent != null ? parent.getClassFile() : hostClass;
     }
 
     /**
@@ -69,12 +81,128 @@ public abstract class Attribute {
         int length = (int) lengthLong;
         Logger.info("Attribute Length: " + length);
 
-        // Instantiate the appropriate Attribute subclass
+        Attribute attribute;
+        if(parent == null)
+        {
+            attribute = getClassAttribute(name, nameIndex, length, classFile);
+        }
+        else
+        {
+            attribute = getMethodAttribute(name, nameIndex, length, classFile, parent);
+        }
+
+        // Read the attribute-specific data
+        try {
+            Logger.info("Starting to read attribute data for: " + name);
+            attribute.read(classFile, length);
+            Logger.info("Completed reading attribute: " + name);
+        } catch (Exception e) {
+            Logger.error("ERROR: Failed to read attribute '" + name + "'. Exception: " + e.getMessage());
+            throw e; // Re-throw the exception after logging
+        }
+
+        // Calculate the byte index after reading the attribute
+        int postReadIndex = classFile.getIndex();
+        Logger.info("Finished attribute '" + name + "'. Byte index moved from " + preReadIndex + " to " + postReadIndex);
+        Logger.info("---------------------------------------------------");
+
+        return attribute;
+    }
+
+    private static Attribute getClassAttribute(String name, int nameIndex, int length, ClassFile classFile)
+    {
+        Attribute attribute;
+        switch (name) {
+            case "ConstantValue":
+                attribute = new ConstantValueAttribute(name, classFile, nameIndex, length);
+                break;
+            case "StackMapTable":
+                attribute = new StackMapTableAttribute(name, classFile, nameIndex, length);
+                break;
+            case "Code":
+                attribute = new CodeAttribute(name, classFile, nameIndex, length);
+                break;
+
+            case "Exceptions":
+                attribute = new ExceptionsAttribute(name, classFile, nameIndex, length);
+                break;
+            case "InnerClasses":
+                attribute = new InnerClassesAttribute(name, classFile, nameIndex, length);
+                break;
+            case "EnclosingMethod":
+                attribute = new EnclosingMethodAttribute(name, classFile, nameIndex, length);
+                break;
+            case "Synthetic":
+                attribute = new SyntheticAttribute(name, classFile, nameIndex, length);
+                break;
+            case "Signature":
+                attribute = new SignatureAttribute(name, classFile, nameIndex, length);
+                break;
+            case "SourceFile":
+                attribute = new SourceFileAttribute(classFile, name, null, nameIndex, length);
+                break;
+            case "SourceDebugExtension":
+                attribute = new SourceDebugExtensionAttribute(name, classFile, nameIndex, length);
+                break;
+            case "LineNumberTable":
+                attribute = new LineNumberTableAttribute(name, classFile, nameIndex, length);
+                break;
+            case "LocalVariableTable":
+                attribute = new LocalVariableTableAttribute(name, classFile, nameIndex, length);
+                break;
+            case "LocalVariableTypeTable":
+                attribute = new LocalVariableTypeTableAttribute(name, classFile, nameIndex, length);
+                break;
+            case "Deprecated":
+                attribute = new DeprecatedAttribute(name, classFile, nameIndex, length);
+                break;
+            case "RuntimeVisibleAnnotations":
+                attribute = new RuntimeVisibleAnnotationsAttribute(name, classFile, true, nameIndex, length);
+                break;
+            case "RuntimeInvisibleAnnotations":
+                attribute = new RuntimeVisibleAnnotationsAttribute(name, classFile, false, nameIndex, length);
+                break;
+            case "RuntimeVisibleParameterAnnotations":
+                attribute = new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, true, nameIndex, length);
+                break;
+            case "RuntimeInvisibleParameterAnnotations":
+                attribute = new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, false, nameIndex, length);
+                break;
+            case "AnnotationDefault":
+                attribute = new AnnotationDefaultAttribute(name, classFile, nameIndex, length);
+                break;
+            case "MethodParameters":
+                attribute = new MethodParametersAttribute(name, classFile, nameIndex, length);
+                break;
+            case "BootstrapMethods":
+                attribute = new BootstrapMethodsAttribute(name, classFile, nameIndex, length);
+                break;
+            case "Module":
+                attribute = new ModuleAttribute(name, classFile, nameIndex, length);
+                break;
+            case "NestHost":
+                attribute = new NestHostAttribute(name, classFile, nameIndex, length);
+                break;
+            case "NestMembers":
+                attribute = new NestMembersAttribute(name, classFile, nameIndex, length);
+                break;
+            // Add more cases for different attribute types as needed
+            default:
+                Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
+                attribute = new GenericAttribute(name, classFile, nameIndex, length);
+                break;
+        }
+        return attribute;
+    }
+
+    private static Attribute getMethodAttribute(String name, int nameIndex, int length,ClassFile classFile, MemberEntry parent)
+    {
         Attribute attribute;
         switch (name) {
             case "ConstantValue":
                 attribute = new ConstantValueAttribute(name, parent, nameIndex, length);
-                break;case "StackMapTable":
+                break;
+            case "StackMapTable":
                 attribute = new StackMapTableAttribute(name, parent, nameIndex, length);
                 break;
             case "Code":
@@ -150,22 +278,6 @@ public abstract class Attribute {
                 attribute = new GenericAttribute(name, parent, nameIndex, length);
                 break;
         }
-
-        // Read the attribute-specific data
-        try {
-            Logger.info("Starting to read attribute data for: " + name);
-            attribute.read(classFile, length);
-            Logger.info("Completed reading attribute: " + name);
-        } catch (Exception e) {
-            Logger.error("ERROR: Failed to read attribute '" + name + "'. Exception: " + e.getMessage());
-            throw e; // Re-throw the exception after logging
-        }
-
-        // Calculate the byte index after reading the attribute
-        int postReadIndex = classFile.getIndex();
-        Logger.info("Finished attribute '" + name + "'. Byte index moved from " + preReadIndex + " to " + postReadIndex);
-        Logger.info("---------------------------------------------------");
-
         return attribute;
     }
 

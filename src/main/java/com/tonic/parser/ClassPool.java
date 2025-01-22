@@ -5,6 +5,8 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.*;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -28,7 +30,60 @@ public class ClassPool {
     private final List<ClassFile> classMap = new ArrayList<>();
 
     public ClassPool() throws IOException {
-        loadClass("java/lang/Object.class");
+        loadAllJavaBuiltInClasses();
+    }
+
+    /**
+     * Loads all Java built-in classes into the pool.
+     *
+     * @throws IOException If loading fails
+     */
+    private void loadAllJavaBuiltInClasses() throws IOException {
+        if (isUsingJRT()) {
+            loadFromJRT();
+        } else {
+            loadFromRTJar();
+        }
+    }
+
+    /**
+     * Checks if the current environment is using the JRT filesystem (Java 9+).
+     */
+    private boolean isUsingJRT() {
+        return System.getProperty("java.version").startsWith("9") || System.getProperty("java.version").startsWith("1");
+    }
+
+    /**
+     * Loads all classes from the JRT filesystem (Java 9+).
+     */
+    private void loadFromJRT() throws IOException {
+        // Mount the `jrt:/` file system
+        try (FileSystem jrtFS = FileSystems.newFileSystem(URI.create("jrt:/"), Collections.emptyMap())) {
+            Path javaBasePath = jrtFS.getPath("modules", "java.base");
+            Files.walk(javaBasePath)
+                    .filter(path -> path.toString().endsWith(".class"))
+                    .forEach(path -> {
+                        try (InputStream is = Files.newInputStream(path)) {
+                            loadClass(is);
+                        } catch (IOException e) {
+                            System.err.println("Failed to load class from JRT: " + path);
+                        }
+                    });
+        }
+    }
+
+    /**
+     * Loads all classes from the rt.jar file (Java 8 and earlier).
+     */
+    private void loadFromRTJar() throws IOException {
+        String javaHome = System.getProperty("java.home");
+        Path rtJarPath = Paths.get(javaHome, "lib", "rt.jar");
+        if (!Files.exists(rtJarPath)) {
+            throw new IOException("rt.jar not found at: " + rtJarPath);
+        }
+        try (JarFile rtJar = new JarFile(rtJarPath.toFile())) {
+            loadJar(rtJar);
+        }
     }
 
     /**

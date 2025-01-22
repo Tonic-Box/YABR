@@ -636,7 +636,7 @@ public class ClassFile extends AbstractParser {
         int codeNameIndex = constPool.getIndexOf(codeUtf8);
 
         // 5. Create CodeAttribute with the correct nameIndex
-        CodeAttribute codeAttr = new CodeAttribute("Code", null, codeNameIndex, 0); // Parent will be set later
+        CodeAttribute codeAttr = new CodeAttribute("Code", (MethodEntry)null, codeNameIndex, 0); // Parent will be set later
         codeAttr.setMaxStack(10); // Set an appropriate max stack size
         int maxLocals = Modifiers.isStatic(accessFlags) ? parameterTypes.length : parameterTypes.length + 1;
         codeAttr.setMaxLocals(maxLocals); // +1 for 'this' if not static
