@@ -1,5 +1,6 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -12,6 +13,11 @@ public class UnknownInstruction extends Instruction {
     public UnknownInstruction(int opcode, int offset, int length) {
         super(opcode, offset, length);
         this.operands = new byte[length - 1];
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.tonic.parser;
 
+import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
@@ -113,5 +114,10 @@ public class FieldEntry extends MemberEntry {
         for (Attribute attr : attributes) {
             attr.write(dos);
         }
+    }
+
+    public void accept(AbstractClassVisitor visitor)
+    {
+        visitor.visitField(this);
     }
 }

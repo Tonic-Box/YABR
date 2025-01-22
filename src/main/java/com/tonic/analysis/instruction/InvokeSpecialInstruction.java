@@ -1,7 +1,10 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.MethodRefItem;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,6 +13,7 @@ import java.io.IOException;
  * Represents the INVOKESPECIAL instruction (0xB7).
  */
 public class InvokeSpecialInstruction extends Instruction {
+    @Getter
     private final int methodIndex;
     private final ConstPool constPool;
 
@@ -28,6 +32,11 @@ public class InvokeSpecialInstruction extends Instruction {
         }
         this.methodIndex = methodIndex;
         this.constPool = constPool;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -63,15 +72,6 @@ public class InvokeSpecialInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the method index used by this instruction.
-     *
-     * @return The constant pool index for the method reference.
-     */
-    public int getMethodIndex() {
-        return methodIndex;
     }
 
     /**

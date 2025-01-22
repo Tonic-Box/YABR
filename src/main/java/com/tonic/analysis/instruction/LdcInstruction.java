@@ -1,7 +1,10 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,6 +13,7 @@ import java.io.IOException;
  * Represents the LDC instruction (0x12).
  */
 public class LdcInstruction extends Instruction {
+    @Getter
     private final int cpIndex;
     private final ConstPool constPool;
 
@@ -25,6 +29,11 @@ public class LdcInstruction extends Instruction {
         super(opcode, offset, 2);
         this.constPool = constPool;
         this.cpIndex = cpIndex;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -62,15 +71,6 @@ public class LdcInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the constant pool index used by this instruction.
-     *
-     * @return The constant pool index.
-     */
-    public int getCpIndex() {
-        return cpIndex;
     }
 
     /**

@@ -1,5 +1,8 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -70,6 +73,11 @@ public class ConditionalBranchInstruction extends Instruction {
             throw new IllegalArgumentException("Invalid Conditional Branch opcode: " + opcode);
         }
         this.branchOffset = branchOffset;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

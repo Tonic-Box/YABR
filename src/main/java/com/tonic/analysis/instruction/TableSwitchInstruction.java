@@ -1,5 +1,9 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Map;
@@ -7,6 +11,7 @@ import java.util.Map;
 /**
  * Represents the TABLESWITCH instruction (0xAA).
  */
+@Getter
 public class TableSwitchInstruction extends Instruction {
     private final int padding;
     private final int defaultOffset;
@@ -35,6 +40,11 @@ public class TableSwitchInstruction extends Instruction {
         this.low = low;
         this.high = high;
         this.jumpOffsets = jumpOffsets;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -75,42 +85,6 @@ public class TableSwitchInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the default branch offset.
-     *
-     * @return The default branch target offset.
-     */
-    public int getDefaultOffset() {
-        return defaultOffset;
-    }
-
-    /**
-     * Returns the low key value.
-     *
-     * @return The low key value.
-     */
-    public int getLow() {
-        return low;
-    }
-
-    /**
-     * Returns the high key value.
-     *
-     * @return The high key value.
-     */
-    public int getHigh() {
-        return high;
-    }
-
-    /**
-     * Returns the map of jump offsets.
-     *
-     * @return The map of keys to branch target offsets.
-     */
-    public Map<Integer, Integer> getJumpOffsets() {
-        return jumpOffsets;
     }
 
     /**

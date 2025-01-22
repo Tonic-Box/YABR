@@ -1,24 +1,32 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the IASTORE instruction (0x53).
+ * Represents the FASTORE instruction (0x5C).
  */
-public class IASToreInstruction extends Instruction {
+public class FAStoreInstruction extends Instruction {
 
     /**
-     * Constructs an IASToreInstruction.
+     * Constructs a FASToreInstruction.
      *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
-    public IASToreInstruction(int opcode, int offset) {
+    public FAStoreInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
-        if (opcode != 0x53) {
-            throw new IllegalArgumentException("Invalid opcode for IASToreInstruction: " + opcode);
+        if (opcode != 0x5C) {
+            throw new IllegalArgumentException("Invalid opcode for FASToreInstruction: " + opcode);
         }
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     @Override
@@ -28,7 +36,7 @@ public class IASToreInstruction extends Instruction {
 
     @Override
     public int getStackChange() {
-        // IASTORE consumes two values from the stack (value and array reference)
+        // FASTORE consumes two values from the stack (value and array reference)
         return -2;
     }
 
@@ -40,6 +48,6 @@ public class IASToreInstruction extends Instruction {
 
     @Override
     public String toString() {
-        return "iastore";
+        return "fastore";
     }
 }

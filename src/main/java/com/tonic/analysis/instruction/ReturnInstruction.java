@@ -1,5 +1,7 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.utill.ReturnType;
 
 import java.io.DataOutputStream;
@@ -23,6 +25,11 @@ public class ReturnInstruction extends Instruction {
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid Return opcode: " + opcode);
         }
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

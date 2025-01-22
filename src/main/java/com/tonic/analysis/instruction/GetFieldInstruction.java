@@ -1,7 +1,10 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.FieldRefItem;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,12 +14,14 @@ import java.io.IOException;
  */
 public class GetFieldInstruction extends Instruction {
     private final FieldType type;
+    @Getter
     private final int fieldIndex;
     private final ConstPool constPool;
 
     /**
      * Enum representing the types of get field operations.
      */
+    @Getter
     public enum FieldType {
         GETFIELD(0xB4, "getfield"),
         GETSTATIC(0xB2, "getstatic");
@@ -27,14 +32,6 @@ public class GetFieldInstruction extends Instruction {
         FieldType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
-        }
-
-        public int getOpcode() {
-            return opcode;
-        }
-
-        public String getMnemonic() {
-            return mnemonic;
         }
 
         public static FieldType fromOpcode(int opcode) {
@@ -65,6 +62,11 @@ public class GetFieldInstruction extends Instruction {
         this.constPool = constPool;
     }
 
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
+    }
+
     /**
      * Writes the get field opcode and its operand to the DataOutputStream.
      *
@@ -86,13 +88,11 @@ public class GetFieldInstruction extends Instruction {
     public int getStackChange() {
         // Pushes the field type onto the stack
         FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
-        switch (field.getDescriptor()) {
-            case "J": // long
-            case "D": // double
-                return 2;
-            default:
-                return 1;
-        }
+        return switch (field.getDescriptor()) { // long
+            case "J", "D" -> // double
+                    2;
+            default -> 1;
+        };
     }
 
     /**
@@ -103,15 +103,6 @@ public class GetFieldInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the field index used by this instruction.
-     *
-     * @return The constant pool index for the field reference.
-     */
-    public int getFieldIndex() {
-        return fieldIndex;
     }
 
     /**

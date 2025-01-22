@@ -1,5 +1,8 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -63,6 +66,11 @@ public class ConversionInstruction extends Instruction {
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid Conversion opcode: " + opcode);
         }
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

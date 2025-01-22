@@ -1,11 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the ICONST_* instructions (0x02 to 0x08).
  */
+@Getter
 public class IConstInstruction extends Instruction {
     private final int value;
 
@@ -19,6 +24,11 @@ public class IConstInstruction extends Instruction {
     public IConstInstruction(int opcode, int offset, int value) {
         super(opcode, offset, 1);
         this.value = value;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -50,15 +60,6 @@ public class IConstInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the constant value pushed onto the stack.
-     *
-     * @return The integer constant.
-     */
-    public int getValue() {
-        return value;
     }
 
     /**

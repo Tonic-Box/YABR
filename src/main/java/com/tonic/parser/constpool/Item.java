@@ -1,5 +1,6 @@
 package com.tonic.parser.constpool;
 
+import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.ClassFile;
 
 import java.io.DataOutputStream;
@@ -54,4 +55,9 @@ public abstract class Item<T> {
      * @return The value of type T.
      */
     public abstract T getValue();
+
+    public void accept(AbstractClassVisitor visitor)
+    {
+        visitor.visitConstPoolItem(this);
+    }
 }

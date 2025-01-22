@@ -1,11 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the SIPUSH instruction (0x11).
  */
+@Getter
 public class SipushInstruction extends Instruction {
     private final short value;
 
@@ -19,6 +24,11 @@ public class SipushInstruction extends Instruction {
     public SipushInstruction(int opcode, int offset, int value) {
         super(opcode, offset, 3);
         this.value = (short) value;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -51,15 +61,6 @@ public class SipushInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the short value pushed onto the stack.
-     *
-     * @return The short constant.
-     */
-    public short getValue() {
-        return value;
     }
 
     /**

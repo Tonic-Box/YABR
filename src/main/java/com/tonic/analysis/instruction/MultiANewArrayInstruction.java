@@ -1,7 +1,10 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,7 +13,9 @@ import java.io.IOException;
  * Represents the MULTIANEWARRAY instruction (0xC5).
  */
 public class MultiANewArrayInstruction extends Instruction {
+    @Getter
     private final int classIndex;
+    @Getter
     private final int dimensions;
     private final ConstPool constPool;
 
@@ -31,6 +36,11 @@ public class MultiANewArrayInstruction extends Instruction {
         this.classIndex = classIndex;
         this.dimensions = dimensions;
         this.constPool = constPool;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -64,24 +74,6 @@ public class MultiANewArrayInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the class index used by this instruction.
-     *
-     * @return The constant pool index for the class reference.
-     */
-    public int getClassIndex() {
-        return classIndex;
-    }
-
-    /**
-     * Returns the number of dimensions for the new array.
-     *
-     * @return The number of dimensions.
-     */
-    public int getDimensions() {
-        return dimensions;
     }
 
     /**

@@ -1,11 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the JSR instruction (0xA8).
  */
+@Getter
 public class JsrInstruction extends Instruction {
     private final int branchOffset;
 
@@ -22,6 +27,11 @@ public class JsrInstruction extends Instruction {
             throw new IllegalArgumentException("Invalid opcode for JsrInstruction: " + opcode);
         }
         this.branchOffset = branchOffset;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -54,15 +64,6 @@ public class JsrInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the branch offset.
-     *
-     * @return The branch target offset.
-     */
-    public int getBranchOffset() {
-        return branchOffset;
     }
 
     /**

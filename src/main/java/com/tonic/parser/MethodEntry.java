@@ -1,5 +1,6 @@
 package com.tonic.parser;
 
+import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.Utf8Item;
@@ -151,5 +152,10 @@ public class MethodEntry extends MemberEntry {
         for (Attribute attr : attributes) {
             attr.write(dos);
         }
+    }
+
+    public void accept(AbstractClassVisitor visitor)
+    {
+        visitor.visitMethod(this);
     }
 }

@@ -1,5 +1,8 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -19,6 +22,11 @@ public class FLoadInstruction extends Instruction {
     public FLoadInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, 2);
         this.varIndex = varIndex;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

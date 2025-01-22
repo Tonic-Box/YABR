@@ -1,11 +1,15 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the FSTORE instructions (0x38, 0x43-0x46).
  */
+@Getter
 public class FStoreInstruction extends Instruction {
     private final int varIndex;
 
@@ -19,6 +23,11 @@ public class FStoreInstruction extends Instruction {
     public FStoreInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form FSTORE_0-3 have no operands, regular FSTORE has one operand byte
         this.varIndex = varIndex;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -63,15 +72,6 @@ public class FStoreInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the local variable index being stored.
-     *
-     * @return The local variable index.
-     */
-    public int getVarIndex() {
-        return varIndex;
     }
 
     /**

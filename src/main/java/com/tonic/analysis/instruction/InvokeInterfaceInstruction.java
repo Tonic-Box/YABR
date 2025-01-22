@@ -1,7 +1,10 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.InterfaceRefItem;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,7 +13,9 @@ import java.io.IOException;
  * Represents the INVOKEINTERFACE instruction (0xB9).
  */
 public class InvokeInterfaceInstruction extends Instruction {
+    @Getter
     private final int methodIndex;
+    @Getter
     private final int count;
     private final ConstPool constPool;
 
@@ -31,6 +36,11 @@ public class InvokeInterfaceInstruction extends Instruction {
         this.methodIndex = methodIndex;
         this.count = count;
         this.constPool = constPool;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -68,24 +78,6 @@ public class InvokeInterfaceInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the method index used by this instruction.
-     *
-     * @return The constant pool index for the interface method reference.
-     */
-    public int getMethodIndex() {
-        return methodIndex;
-    }
-
-    /**
-     * Returns the count of arguments for the method.
-     *
-     * @return The argument count.
-     */
-    public int getCount() {
-        return count;
     }
 
     /**

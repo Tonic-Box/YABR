@@ -1,11 +1,15 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the NEWARRAY instruction (0xBC).
  */
+@Getter
 public class NewArrayInstruction extends Instruction {
     private final ArrayType arrayType;
     private final int count;
@@ -13,6 +17,7 @@ public class NewArrayInstruction extends Instruction {
     /**
      * Enum representing the types of array creation.
      */
+    @Getter
     public enum ArrayType {
         T_BOOLEAN(4, "newarray [boolean]"),
         T_CHAR(5, "newarray [char]"),
@@ -29,14 +34,6 @@ public class NewArrayInstruction extends Instruction {
         ArrayType(int code, String description) {
             this.code = code;
             this.description = description;
-        }
-
-        public int getCode() {
-            return code;
-        }
-
-        public String getDescription() {
-            return description;
         }
 
         public static ArrayType fromCode(int code) {
@@ -69,6 +66,11 @@ public class NewArrayInstruction extends Instruction {
         this.count = count;
     }
 
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
+    }
+
     /**
      * Writes the NEWARRAY opcode and its operand to the DataOutputStream.
      *
@@ -99,24 +101,6 @@ public class NewArrayInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the array type.
-     *
-     * @return The ArrayType enum value.
-     */
-    public ArrayType getArrayType() {
-        return arrayType;
-    }
-
-    /**
-     * Returns the count of array elements.
-     *
-     * @return The number of elements in the array.
-     */
-    public int getCount() {
-        return count;
     }
 
     /**

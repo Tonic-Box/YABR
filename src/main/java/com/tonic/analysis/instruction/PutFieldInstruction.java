@@ -1,5 +1,7 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.FieldRefItem;
 
@@ -63,6 +65,11 @@ public class PutFieldInstruction extends Instruction {
         }
         this.fieldIndex = fieldIndex;
         this.constPool = constPool;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

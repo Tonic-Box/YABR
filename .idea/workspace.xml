@@ -4,7 +4,109 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="implimented a simple visitor pattern api">
+      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractBytecodeVisitor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractClassVisitor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/Visitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AConstNullInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AConstNullInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ANewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ANewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AStoreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/AStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ATHROWInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ATHROWInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ArithmeticInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ArithmeticInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ArithmeticShiftInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ArithmeticShiftInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ArrayLengthInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ArrayLengthInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/BALOADInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/BALOADInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/BASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/BAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/BipushInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/BipushInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CheckCastInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CheckCastInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CompareInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/CompareInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ConditionalBranchInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ConditionalBranchInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ConversionInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ConversionInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DConstInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DConstInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DLoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DLoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DNegInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DNegInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DStoreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DupInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/DupInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FConstInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FConstInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FLoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FLoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FNegInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FNegInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FStoreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/FStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/GetFieldInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/GetFieldInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/GotoInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/GotoInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/I2LInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/I2LInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IAndInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IAndInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IConstInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IConstInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IIncInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IIncInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ILoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ILoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/INegInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/INegInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IOrInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IOrInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IStoreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IXorInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/IXorInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InstanceOfInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InstanceOfInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeDynamicInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeDynamicInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeInterfaceInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeInterfaceInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeSpecialInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeSpecialInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/JsrInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/JsrInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LConstInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LConstInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LLoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LLoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LNegInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LNegInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LStoreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LXorInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LXorInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LandInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LandInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LookupSwitchInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LookupSwitchInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LorInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LorInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/MonitorEnterInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/MonitorEnterInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/MonitorExitInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/MonitorExitInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/MultiANewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/MultiANewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NarrowingConversionInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NarrowingConversionInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NewInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NewInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NopInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NopInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Pop2Instruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Pop2Instruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/PopInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/PopInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/PutFieldInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/PutFieldInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/RetInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/RetInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ReturnInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/ReturnInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SALoadInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SALoadInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SASToreInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SAStoreInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SipushInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SipushInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SwapInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/SwapInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/TableSwitchInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/TableSwitchInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/UnknownInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/UnknownInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/WideIIncInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/WideIIncInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/WideInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/WideInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestModifyClass.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestModifyClass.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/FieldEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/FieldEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MemberEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MemberEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MethodEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MethodEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/Attribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/Attribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/Item.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/Item.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -15,8 +117,26 @@
       <ProjectState />
     </projectState>
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Merge.Settings">
+    <option name="BRANCH" value="origin/main" />
+  </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
   </component>
   <component name="ProjectColorInfo"><![CDATA[{
   "associatedIndex": 7
@@ -30,9 +150,59 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true"
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "main"
   }
 }]]></component>
+  <component name="RunManager" selected="Application.TestClassCreation">
+    <configuration name="TestClassCreation" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.TestClassCreation" />
+      <module name="YABR.main" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tonic.demo.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestModifyClass" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.TestModifyClass" />
+      <module name="YABR.main" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tonic.demo.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="YABR-fixed" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="YABR-fixed" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.TestModifyClass" />
+        <item itemvalue="Application.TestClassCreation" />
+        <item itemvalue="Application.Main" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -42,6 +212,124 @@
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
     </task>
+    <task id="LOCAL-00001" summary="Inicial push">
+      <option name="closed" value="true" />
+      <created>1737455663813</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1737455663813</updated>
+    </task>
+    <task id="LOCAL-00002" summary="incorrect length fix for ILoadInstruction">
+      <option name="closed" value="true" />
+      <created>1737456841058</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1737456841058</updated>
+    </task>
+    <task id="LOCAL-00003" summary="AccessBuilder">
+      <option name="closed" value="true" />
+      <created>1737457908965</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1737457908965</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Moved demos to demo package. Implimented Byttecode class and other QoL builder classes.">
+      <option name="closed" value="true" />
+      <created>1737523964757</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1737523964757</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Moved demos to demo package. Implimented Byttecode class and other QoL builder classes.">
+      <option name="closed" value="true" />
+      <created>1737524002371</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1737524002371</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Cleanup">
+      <option name="closed" value="true" />
+      <created>1737524763285</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1737524763285</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Fixed a bug with class attributes, and also added 2 missing attribute types (0x13 and 0x14)">
+      <option name="closed" value="true" />
+      <created>1737527171392</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1737527171392</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Cleanup">
+      <option name="closed" value="true" />
+      <created>1737529372078</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1737529372078</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Cleanup">
+      <option name="closed" value="true" />
+      <created>1737529761726</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1737529761726</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Cleanup of demo classes. Implimented ClassFile::setFieldInitialValue, ClassFile::generateSetter, and ClassFile::generateGetter">
+      <option name="closed" value="true" />
+      <created>1737544212959</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1737544212959</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Inicial push" />
+    <MESSAGE value="incorrect length fix for ILoadInstruction" />
+    <MESSAGE value="AccessBuilder" />
+    <MESSAGE value="Moved demos to demo package. Implimented Byttecode class and other QoL builder classes." />
+    <MESSAGE value="Fixed a bug with class attributes, and also added 2 missing attribute types (0x13 and 0x14)" />
+    <MESSAGE value="Cleanup" />
+    <MESSAGE value="Cleanup of demo classes. Implimented ClassFile::setFieldInitialValue, ClassFile::generateSetter, and ClassFile::generateGetter" />
+    <MESSAGE value="implimented a simple visitor pattern api" />
+    <option name="LAST_COMMIT_MESSAGE" value="implimented a simple visitor pattern api" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-method">
+          <url>file://$PROJECT_DIR$/src/main/java/com/tonic/utill/AccessBuilder.java</url>
+          <line>38</line>
+          <properties class="com.tonic.utill.AccessBuilder" method="setPublic">
+            <option name="EMULATED" value="true" />
+            <option name="WATCH_EXIT" value="false" />
+          </properties>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

@@ -1,5 +1,6 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
 
@@ -30,6 +31,11 @@ public class ANewArrayInstruction extends Instruction {
         this.classIndex = classIndex;
         this.constPool = constPool;
         this.count = count;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -16,6 +17,11 @@ public class BALOADInstruction extends Instruction {
      */
     public BALOADInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

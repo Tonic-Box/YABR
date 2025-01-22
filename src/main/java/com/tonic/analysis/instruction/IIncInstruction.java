@@ -1,6 +1,9 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.utill.Opcode;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -8,6 +11,7 @@ import java.io.IOException;
 /**
  * Represents the IINC instruction (0x84).
  */
+@Getter
 public class IIncInstruction extends Instruction {
     private final int varIndex;
     private final int constValue;
@@ -24,6 +28,11 @@ public class IIncInstruction extends Instruction {
         super(opcode, offset, 3); // opcode + modifiedOpcode + varIndex (2 bytes) + constValue (2 bytes)
         this.varIndex = varIndex;
         this.constValue = constValue;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -58,24 +67,6 @@ public class IIncInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the local variable index being incremented.
-     *
-     * @return The local variable index.
-     */
-    public int getVarIndex() {
-        return varIndex;
-    }
-
-    /**
-     * Returns the constant value to add to the local variable.
-     *
-     * @return The constant value.
-     */
-    public int getConstValue() {
-        return constValue;
     }
 
     /**

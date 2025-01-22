@@ -1,11 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the ASTORE instruction and its variants (ASTORE, ASTORE_0-3) (0x4B-0x4E).
  */
+@Getter
 public class AStoreInstruction extends Instruction {
     private final int varIndex;
 
@@ -19,6 +24,11 @@ public class AStoreInstruction extends Instruction {
     public AStoreInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form ASTORE_0-3 have no operands, regular ASTORE has one operand byte
         this.varIndex = varIndex;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -49,10 +59,6 @@ public class AStoreInstruction extends Instruction {
     public int getLocalChange() {
         // No change in the number of local variables
         return 0;
-    }
-
-    public int getVarIndex() {
-        return varIndex;
     }
 
     @Override

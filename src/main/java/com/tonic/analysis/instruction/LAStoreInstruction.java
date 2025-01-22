@@ -1,24 +1,32 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the DASTORE instruction (0x5B).
+ * Represents the LASTORE instruction (0x5D).
  */
-public class DASToreInstruction extends Instruction {
+public class LAStoreInstruction extends Instruction {
 
     /**
-     * Constructs a DASToreInstruction.
+     * Constructs a LASToreInstruction.
      *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
-    public DASToreInstruction(int opcode, int offset) {
+    public LAStoreInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
-        if (opcode != 0x5B) {
-            throw new IllegalArgumentException("Invalid opcode for DASToreInstruction: " + opcode);
+        if (opcode != 0x5D) {
+            throw new IllegalArgumentException("Invalid opcode for LASToreInstruction: " + opcode);
         }
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     @Override
@@ -28,7 +36,7 @@ public class DASToreInstruction extends Instruction {
 
     @Override
     public int getStackChange() {
-        // DASTORE consumes three values from the stack (value high, value low, and array reference)
+        // LASTORE consumes three values from the stack (value high, value low, and array reference)
         return -3;
     }
 
@@ -40,6 +48,6 @@ public class DASToreInstruction extends Instruction {
 
     @Override
     public String toString() {
-        return "dastore";
+        return "lastore";
     }
 }

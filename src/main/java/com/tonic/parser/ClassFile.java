@@ -1,6 +1,7 @@
 package com.tonic.parser;
 
 import com.tonic.analysis.Bytecode;
+import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.*;
@@ -994,5 +995,24 @@ public class ClassFile extends AbstractParser {
         }
 
         return TypeUtil.validateDescriptorFormat(descriptor);
+    }
+
+    public void accept(AbstractClassVisitor visitor) {
+        for(Item<?> item : constPool.getItems()) {
+            if(item != null) {
+                item.accept(visitor);
+            }
+        }
+
+        for(Attribute attr : classAttributes) {
+            visitor.visitClassAttribute(attr);
+        }
+
+        for (FieldEntry field : fields) {
+            field.accept(visitor);
+        }
+        for (MethodEntry method : methods) {
+            method.accept(visitor);
+        }
     }
 }

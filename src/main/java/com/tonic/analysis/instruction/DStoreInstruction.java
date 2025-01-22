@@ -1,11 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the DSTORE instructions (0x39, 0x47-0x4A).
  */
+@Getter
 public class DStoreInstruction extends Instruction {
     private final int varIndex;
 
@@ -19,6 +24,11 @@ public class DStoreInstruction extends Instruction {
     public DStoreInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, (opcode == 0x39) ? 2 : 1); // DSTORE has 1 operand byte, DSTORE_0-3 have no operands
         this.varIndex = varIndex;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -53,15 +63,6 @@ public class DStoreInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the local variable index being stored.
-     *
-     * @return The local variable index.
-     */
-    public int getVarIndex() {
-        return varIndex;
     }
 
     /**

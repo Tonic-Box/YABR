@@ -1,5 +1,8 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -19,6 +22,8 @@ public abstract class Instruction {
         this.offset = offset;
         this.length = length;
     }
+
+    public abstract void accept(AbstractBytecodeVisitor visitor);
 
     /**
      * Writes the instruction to the DataOutputStream.

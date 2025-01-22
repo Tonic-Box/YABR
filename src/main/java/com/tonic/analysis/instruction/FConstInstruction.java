@@ -1,5 +1,8 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -19,6 +22,11 @@ public class FConstInstruction extends Instruction {
     public FConstInstruction(int opcode, int offset, float value) {
         super(opcode, offset, 1);
         this.value = value;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

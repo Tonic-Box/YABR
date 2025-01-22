@@ -1,5 +1,8 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -19,6 +22,11 @@ public class BipushInstruction extends Instruction {
     public BipushInstruction(int opcode, int offset, int value) {
         super(opcode, offset, 2);
         this.value = (byte) value;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

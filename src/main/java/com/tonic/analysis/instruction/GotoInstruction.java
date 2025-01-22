@@ -1,5 +1,9 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -7,6 +11,7 @@ import java.io.IOException;
  * Represents the GOTO instructions (GOTO, GOTO_W).
  */
 public class GotoInstruction extends Instruction {
+    @Getter
     private final GotoType type;
     private final int branchOffsetInt;
     private final short branchOffsetShort;
@@ -14,6 +19,7 @@ public class GotoInstruction extends Instruction {
     /**
      * Enum representing the types of GOTO operations.
      */
+    @Getter
     public enum GotoType {
         GOTO(0xA7, "goto"),
         GOTO_W(0xC8, "goto_w");
@@ -24,14 +30,6 @@ public class GotoInstruction extends Instruction {
         GotoType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
-        }
-
-        public int getOpcode() {
-            return opcode;
-        }
-
-        public String getMnemonic() {
-            return mnemonic;
         }
 
         public static GotoType fromOpcode(int opcode) {
@@ -59,6 +57,11 @@ public class GotoInstruction extends Instruction {
         }
         this.branchOffsetInt = branchOffset;
         this.branchOffsetShort = -1;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -112,15 +115,6 @@ public class GotoInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the type of GOTO operation.
-     *
-     * @return The GotoType enum value.
-     */
-    public GotoType getType() {
-        return type;
     }
 
     /**

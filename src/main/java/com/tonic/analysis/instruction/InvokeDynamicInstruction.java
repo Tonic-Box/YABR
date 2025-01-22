@@ -1,7 +1,10 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.InvokeDynamicItem;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,7 +13,9 @@ import java.io.IOException;
  * Represents the INVOKEDYNAMIC instruction (0xBA).
  */
 public class InvokeDynamicInstruction extends Instruction {
+    @Getter
     private final int bootstrapMethodAttrIndex;
+    @Getter
     private final int nameAndTypeIndex;
     private final ConstPool constPool;
 
@@ -31,6 +36,11 @@ public class InvokeDynamicInstruction extends Instruction {
         this.bootstrapMethodAttrIndex = bootstrapMethodAttrIndex;
         this.nameAndTypeIndex = nameAndTypeIndex;
         this.constPool = constPool;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -67,24 +77,6 @@ public class InvokeDynamicInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the bootstrap method attribute index used by this instruction.
-     *
-     * @return The bootstrap method attribute index.
-     */
-    public int getBootstrapMethodAttrIndex() {
-        return bootstrapMethodAttrIndex;
-    }
-
-    /**
-     * Returns the name and type index used by this instruction.
-     *
-     * @return The name and type index.
-     */
-    public int getNameAndTypeIndex() {
-        return nameAndTypeIndex;
     }
 
     /**

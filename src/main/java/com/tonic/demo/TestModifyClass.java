@@ -31,7 +31,6 @@ public class TestModifyClass
             classFile.createNewField(access, "testIntField", "I", new ArrayList<>());
             MethodEntry method = classFile.createNewMethod(access, "demoGetter", int.class);
             Bytecode bytecode = new Bytecode(method);
-
             ConstPool constPool = bytecode.getConstPool();
             int fieldRefIndex = constPool.findOrAddField("com/tonic/TestCase", "testIntField", "I");
             bytecode.addGetStatic(fieldRefIndex);
@@ -39,7 +38,7 @@ public class TestModifyClass
             bytecode.finalizeBytecode();
 
             classFile.rebuild();
-            System.out.println(classPool.get("com.tonic.TestCaseModified"));
+            System.out.println(classFile);
         }
     }
 }

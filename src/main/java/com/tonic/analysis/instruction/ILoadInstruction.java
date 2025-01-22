@@ -1,11 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the ILOAD instruction (0x15).
  */
+@Getter
 public class ILoadInstruction extends Instruction {
     private final int varIndex;
 
@@ -19,6 +24,11 @@ public class ILoadInstruction extends Instruction {
     public ILoadInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, 2);
         this.varIndex = varIndex;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -51,15 +61,6 @@ public class ILoadInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the local variable index being loaded.
-     *
-     * @return The local variable index.
-     */
-    public int getVarIndex() {
-        return varIndex;
     }
 
     /**

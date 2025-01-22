@@ -1,5 +1,9 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -12,6 +16,7 @@ public class NarrowingConversionInstruction extends Instruction {
     /**
      * Enum representing the types of narrowing conversion operations.
      */
+    @Getter
     public enum NarrowingType {
         I2B(0x91, "i2b"),
         I2C(0x92, "i2c"),
@@ -23,14 +28,6 @@ public class NarrowingConversionInstruction extends Instruction {
         NarrowingType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
-        }
-
-        public int getOpcode() {
-            return opcode;
-        }
-
-        public String getMnemonic() {
-            return mnemonic;
         }
 
         public static NarrowingType fromOpcode(int opcode) {
@@ -55,6 +52,11 @@ public class NarrowingConversionInstruction extends Instruction {
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid Narrowing Conversion opcode: " + opcode);
         }
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**

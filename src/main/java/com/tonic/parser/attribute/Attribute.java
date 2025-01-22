@@ -111,174 +111,80 @@ public abstract class Attribute {
 
     private static Attribute getClassAttribute(String name, int nameIndex, int length, ClassFile classFile)
     {
-        Attribute attribute;
-        switch (name) {
-            case "ConstantValue":
-                attribute = new ConstantValueAttribute(name, classFile, nameIndex, length);
-                break;
-            case "StackMapTable":
-                attribute = new StackMapTableAttribute(name, classFile, nameIndex, length);
-                break;
-            case "Code":
-                attribute = new CodeAttribute(name, classFile, nameIndex, length);
-                break;
-
-            case "Exceptions":
-                attribute = new ExceptionsAttribute(name, classFile, nameIndex, length);
-                break;
-            case "InnerClasses":
-                attribute = new InnerClassesAttribute(name, classFile, nameIndex, length);
-                break;
-            case "EnclosingMethod":
-                attribute = new EnclosingMethodAttribute(name, classFile, nameIndex, length);
-                break;
-            case "Synthetic":
-                attribute = new SyntheticAttribute(name, classFile, nameIndex, length);
-                break;
-            case "Signature":
-                attribute = new SignatureAttribute(name, classFile, nameIndex, length);
-                break;
-            case "SourceFile":
-                attribute = new SourceFileAttribute(classFile, name, null, nameIndex, length);
-                break;
-            case "SourceDebugExtension":
-                attribute = new SourceDebugExtensionAttribute(name, classFile, nameIndex, length);
-                break;
-            case "LineNumberTable":
-                attribute = new LineNumberTableAttribute(name, classFile, nameIndex, length);
-                break;
-            case "LocalVariableTable":
-                attribute = new LocalVariableTableAttribute(name, classFile, nameIndex, length);
-                break;
-            case "LocalVariableTypeTable":
-                attribute = new LocalVariableTypeTableAttribute(name, classFile, nameIndex, length);
-                break;
-            case "Deprecated":
-                attribute = new DeprecatedAttribute(name, classFile, nameIndex, length);
-                break;
-            case "RuntimeVisibleAnnotations":
-                attribute = new RuntimeVisibleAnnotationsAttribute(name, classFile, true, nameIndex, length);
-                break;
-            case "RuntimeInvisibleAnnotations":
-                attribute = new RuntimeVisibleAnnotationsAttribute(name, classFile, false, nameIndex, length);
-                break;
-            case "RuntimeVisibleParameterAnnotations":
-                attribute = new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, true, nameIndex, length);
-                break;
-            case "RuntimeInvisibleParameterAnnotations":
-                attribute = new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, false, nameIndex, length);
-                break;
-            case "AnnotationDefault":
-                attribute = new AnnotationDefaultAttribute(name, classFile, nameIndex, length);
-                break;
-            case "MethodParameters":
-                attribute = new MethodParametersAttribute(name, classFile, nameIndex, length);
-                break;
-            case "BootstrapMethods":
-                attribute = new BootstrapMethodsAttribute(name, classFile, nameIndex, length);
-                break;
-            case "Module":
-                attribute = new ModuleAttribute(name, classFile, nameIndex, length);
-                break;
-            case "NestHost":
-                attribute = new NestHostAttribute(name, classFile, nameIndex, length);
-                break;
-            case "NestMembers":
-                attribute = new NestMembersAttribute(name, classFile, nameIndex, length);
-                break;
+        return switch (name) {
+            case "ConstantValue" -> new ConstantValueAttribute(name, classFile, nameIndex, length);
+            case "StackMapTable" -> new StackMapTableAttribute(name, classFile, nameIndex, length);
+            case "Code" -> new CodeAttribute(name, classFile, nameIndex, length);
+            case "Exceptions" -> new ExceptionsAttribute(name, classFile, nameIndex, length);
+            case "InnerClasses" -> new InnerClassesAttribute(name, classFile, nameIndex, length);
+            case "EnclosingMethod" -> new EnclosingMethodAttribute(name, classFile, nameIndex, length);
+            case "Synthetic" -> new SyntheticAttribute(name, classFile, nameIndex, length);
+            case "Signature" -> new SignatureAttribute(name, classFile, nameIndex, length);
+            case "SourceFile" -> new SourceFileAttribute(classFile, name, null, nameIndex, length);
+            case "SourceDebugExtension" -> new SourceDebugExtensionAttribute(name, classFile, nameIndex, length);
+            case "LineNumberTable" -> new LineNumberTableAttribute(name, classFile, nameIndex, length);
+            case "LocalVariableTable" -> new LocalVariableTableAttribute(name, classFile, nameIndex, length);
+            case "LocalVariableTypeTable" -> new LocalVariableTypeTableAttribute(name, classFile, nameIndex, length);
+            case "Deprecated" -> new DeprecatedAttribute(name, classFile, nameIndex, length);
+            case "RuntimeVisibleAnnotations" ->
+                    new RuntimeVisibleAnnotationsAttribute(name, classFile, true, nameIndex, length);
+            case "RuntimeInvisibleAnnotations" ->
+                    new RuntimeVisibleAnnotationsAttribute(name, classFile, false, nameIndex, length);
+            case "RuntimeVisibleParameterAnnotations" ->
+                    new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, true, nameIndex, length);
+            case "RuntimeInvisibleParameterAnnotations" ->
+                    new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, false, nameIndex, length);
+            case "AnnotationDefault" -> new AnnotationDefaultAttribute(name, classFile, nameIndex, length);
+            case "MethodParameters" -> new MethodParametersAttribute(name, classFile, nameIndex, length);
+            case "BootstrapMethods" -> new BootstrapMethodsAttribute(name, classFile, nameIndex, length);
+            case "Module" -> new ModuleAttribute(name, classFile, nameIndex, length);
+            case "NestHost" -> new NestHostAttribute(name, classFile, nameIndex, length);
+            case "NestMembers" -> new NestMembersAttribute(name, classFile, nameIndex, length);
             // Add more cases for different attribute types as needed
-            default:
+            default -> {
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
-                attribute = new GenericAttribute(name, classFile, nameIndex, length);
-                break;
-        }
-        return attribute;
+                yield new GenericAttribute(name, classFile, nameIndex, length);
+            }
+        };
     }
 
     private static Attribute getMethodAttribute(String name, int nameIndex, int length,ClassFile classFile, MemberEntry parent)
     {
-        Attribute attribute;
-        switch (name) {
-            case "ConstantValue":
-                attribute = new ConstantValueAttribute(name, parent, nameIndex, length);
-                break;
-            case "StackMapTable":
-                attribute = new StackMapTableAttribute(name, parent, nameIndex, length);
-                break;
-            case "Code":
-                attribute = new CodeAttribute(name, parent, nameIndex, length);
-                break;
-
-            case "Exceptions":
-                attribute = new ExceptionsAttribute(name, parent, nameIndex, length);
-                break;
-            case "InnerClasses":
-                attribute = new InnerClassesAttribute(name, parent, nameIndex, length);
-                break;
-            case "EnclosingMethod":
-                attribute = new EnclosingMethodAttribute(name, parent, nameIndex, length);
-                break;
-            case "Synthetic":
-                attribute = new SyntheticAttribute(name, parent, nameIndex, length);
-                break;
-            case "Signature":
-                attribute = new SignatureAttribute(name, parent, nameIndex, length);
-                break;
-            case "SourceFile":
-                attribute = new SourceFileAttribute(classFile, name, parent, nameIndex, length);
-                break;
-            case "SourceDebugExtension":
-                attribute = new SourceDebugExtensionAttribute(name, parent, nameIndex, length);
-                break;
-            case "LineNumberTable":
-                attribute = new LineNumberTableAttribute(name, parent, nameIndex, length);
-                break;
-            case "LocalVariableTable":
-                attribute = new LocalVariableTableAttribute(name, parent, nameIndex, length);
-                break;
-            case "LocalVariableTypeTable":
-                attribute = new LocalVariableTypeTableAttribute(name, parent, nameIndex, length);
-                break;
-            case "Deprecated":
-                attribute = new DeprecatedAttribute(name, parent, nameIndex, length);
-                break;
-            case "RuntimeVisibleAnnotations":
-                attribute = new RuntimeVisibleAnnotationsAttribute(name, parent, true, nameIndex, length);
-                break;
-            case "RuntimeInvisibleAnnotations":
-                attribute = new RuntimeVisibleAnnotationsAttribute(name, parent, false, nameIndex, length);
-                break;
-            case "RuntimeVisibleParameterAnnotations":
-                attribute = new RuntimeVisibleParameterAnnotationsAttribute(name, parent, true, nameIndex, length);
-                break;
-            case "RuntimeInvisibleParameterAnnotations":
-                attribute = new RuntimeVisibleParameterAnnotationsAttribute(name, parent, false, nameIndex, length);
-                break;
-            case "AnnotationDefault":
-                attribute = new AnnotationDefaultAttribute(name, parent, nameIndex, length);
-                break;
-            case "MethodParameters":
-                attribute = new MethodParametersAttribute(name, parent, nameIndex, length);
-                break;
-            case "BootstrapMethods":
-                attribute = new BootstrapMethodsAttribute(name, parent, nameIndex, length);
-                break;
-            case "Module":
-                attribute = new ModuleAttribute(name, parent, nameIndex, length);
-                break;
-            case "NestHost":
-                attribute = new NestHostAttribute(name, parent, nameIndex, length);
-                break;
-            case "NestMembers":
-                attribute = new NestMembersAttribute(name, parent, nameIndex, length);
-                break;
+        return switch (name) {
+            case "ConstantValue" -> new ConstantValueAttribute(name, parent, nameIndex, length);
+            case "StackMapTable" -> new StackMapTableAttribute(name, parent, nameIndex, length);
+            case "Code" -> new CodeAttribute(name, parent, nameIndex, length);
+            case "Exceptions" -> new ExceptionsAttribute(name, parent, nameIndex, length);
+            case "InnerClasses" -> new InnerClassesAttribute(name, parent, nameIndex, length);
+            case "EnclosingMethod" -> new EnclosingMethodAttribute(name, parent, nameIndex, length);
+            case "Synthetic" -> new SyntheticAttribute(name, parent, nameIndex, length);
+            case "Signature" -> new SignatureAttribute(name, parent, nameIndex, length);
+            case "SourceFile" -> new SourceFileAttribute(classFile, name, parent, nameIndex, length);
+            case "SourceDebugExtension" -> new SourceDebugExtensionAttribute(name, parent, nameIndex, length);
+            case "LineNumberTable" -> new LineNumberTableAttribute(name, parent, nameIndex, length);
+            case "LocalVariableTable" -> new LocalVariableTableAttribute(name, parent, nameIndex, length);
+            case "LocalVariableTypeTable" -> new LocalVariableTypeTableAttribute(name, parent, nameIndex, length);
+            case "Deprecated" -> new DeprecatedAttribute(name, parent, nameIndex, length);
+            case "RuntimeVisibleAnnotations" ->
+                    new RuntimeVisibleAnnotationsAttribute(name, parent, true, nameIndex, length);
+            case "RuntimeInvisibleAnnotations" ->
+                    new RuntimeVisibleAnnotationsAttribute(name, parent, false, nameIndex, length);
+            case "RuntimeVisibleParameterAnnotations" ->
+                    new RuntimeVisibleParameterAnnotationsAttribute(name, parent, true, nameIndex, length);
+            case "RuntimeInvisibleParameterAnnotations" ->
+                    new RuntimeVisibleParameterAnnotationsAttribute(name, parent, false, nameIndex, length);
+            case "AnnotationDefault" -> new AnnotationDefaultAttribute(name, parent, nameIndex, length);
+            case "MethodParameters" -> new MethodParametersAttribute(name, parent, nameIndex, length);
+            case "BootstrapMethods" -> new BootstrapMethodsAttribute(name, parent, nameIndex, length);
+            case "Module" -> new ModuleAttribute(name, parent, nameIndex, length);
+            case "NestHost" -> new NestHostAttribute(name, parent, nameIndex, length);
+            case "NestMembers" -> new NestMembersAttribute(name, parent, nameIndex, length);
             // Add more cases for different attribute types as needed
-            default:
+            default -> {
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
-                attribute = new GenericAttribute(name, parent, nameIndex, length);
-                break;
-        }
-        return attribute;
+                yield new GenericAttribute(name, parent, nameIndex, length);
+            }
+        };
     }
 
     /**

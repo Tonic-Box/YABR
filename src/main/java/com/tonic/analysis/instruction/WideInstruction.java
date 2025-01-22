@@ -1,13 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
 import com.tonic.utill.Opcode;
-
+import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the WIDE instruction (0xC4).
  */
+@Getter
 public class WideInstruction extends Instruction {
     private final Opcode modifiedOpcode;
     private final int varIndex;
@@ -44,6 +47,11 @@ public class WideInstruction extends Instruction {
         this.constValue = constValue;
     }
 
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
+    }
+
     /**
      * Writes the WIDE opcode and its operands to the DataOutputStream.
      *
@@ -68,20 +76,12 @@ public class WideInstruction extends Instruction {
     @Override
     public int getStackChange() {
         // Shift operations or variable instructions may have specific stack changes
-        switch (modifiedOpcode) {
-            case ILOAD:
-            case FLOAD:
-            case ALOAD:
-                return 1; // Pushes one value
-            case ISTORE:
-            case FSTORE:
-            case ASTORE:
-                return -1; // Pops one value
-            case IINC:
-                return 0; // No stack change
-            default:
-                return 0;
-        }
+        return switch (modifiedOpcode) {
+            case ILOAD, FLOAD, ALOAD -> 1; // Pushes one value
+            case ISTORE, FSTORE, ASTORE -> -1; // Pops one value
+            case IINC -> 0; // No stack change
+            default -> 0;
+        };
     }
 
     /**
@@ -92,33 +92,6 @@ public class WideInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the modified opcode.
-     *
-     * @return The modified Opcode.
-     */
-    public Opcode getModifiedOpcode() {
-        return modifiedOpcode;
-    }
-
-    /**
-     * Returns the local variable index.
-     *
-     * @return The local variable index.
-     */
-    public int getVarIndex() {
-        return varIndex;
-    }
-
-    /**
-     * Returns the constant value for IINC.
-     *
-     * @return The constant value.
-     */
-    public int getConstValue() {
-        return constValue;
     }
 
     /**

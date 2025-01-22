@@ -1,17 +1,29 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the DUP instruction and its variants (0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E).
  */
+@Getter
 public class DupInstruction extends Instruction {
+    /**
+     * -- GETTER --
+     *  Returns the type of DUP instruction.
+     *
+     * @return The DupType enum value.
+     */
     private final DupType type;
 
     /**
      * Enum representing the types of DUP instructions.
      */
+    @Getter
     public enum DupType {
         DUP(0x59, "dup"),
         DUP_X1(0x5A, "dup_x1"),
@@ -26,14 +38,6 @@ public class DupInstruction extends Instruction {
         DupType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
-        }
-
-        public int getOpcode() {
-            return opcode;
-        }
-
-        public String getMnemonic() {
-            return mnemonic;
         }
 
         public static DupType fromOpcode(int opcode) {
@@ -58,6 +62,11 @@ public class DupInstruction extends Instruction {
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid DUP opcode: " + opcode);
         }
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -90,15 +99,6 @@ public class DupInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the type of DUP instruction.
-     *
-     * @return The DupType enum value.
-     */
-    public DupType getType() {
-        return type;
     }
 
     /**

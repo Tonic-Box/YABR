@@ -1,11 +1,16 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the ISTORE instructions (0x36, 0x3B-0x3E).
  */
+@Getter
 public class IStoreInstruction extends Instruction {
     private final int varIndex;
 
@@ -19,6 +24,11 @@ public class IStoreInstruction extends Instruction {
     public IStoreInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form ISTORE_0-3 have no operands, regular ISTORE has one operand byte
         this.varIndex = varIndex;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -63,15 +73,6 @@ public class IStoreInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the local variable index being stored.
-     *
-     * @return The local variable index.
-     */
-    public int getVarIndex() {
-        return varIndex;
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.tonic.analysis;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
@@ -404,28 +405,28 @@ public class CodeWriter {
 
                 // Array Store Instructions
                 case 0x4F: // IASTORE
-                    return new IASToreInstruction(opcode, offset);
+                    return new IAStoreInstruction(opcode, offset);
 
                 case 0x50: // LASTORE
-                    return new LASToreInstruction(opcode, offset);
+                    return new LAStoreInstruction(opcode, offset);
 
                 case 0x51: // FASTORE
-                    return new FASToreInstruction(opcode, offset);
+                    return new FAStoreInstruction(opcode, offset);
 
                 case 0x52: // DASTORE
-                    return new DASToreInstruction(opcode, offset);
+                    return new DAStoreInstruction(opcode, offset);
 
                 case 0x53: // AASTORE
-                    return new AASToreInstruction(opcode, offset);
+                    return new AAStoreInstruction(opcode, offset);
 
                 case 0x54: // BASTORE
-                    return new BASToreInstruction(opcode, offset);
+                    return new BAStoreInstruction(opcode, offset);
 
                 case 0x55: // CASTORE
-                    return new CASToreInstruction(opcode, offset);
+                    return new CAStoreInstruction(opcode, offset);
 
                 case 0x56: // SASTORE
-                    return new SASToreInstruction(opcode, offset);
+                    return new SAStoreInstruction(opcode, offset);
 
                 // POP and its variants
                 case 0x57: // POP
@@ -693,6 +694,19 @@ public class CodeWriter {
                 case 0xB0: // ARETURN
                 case 0xB1: // RETURN
                     return new ReturnInstruction(opcode, offset);
+
+                case 0xC1: // INSTANCEOF
+                    if (offset + 2 >= bytecode.length) {
+                        return new UnknownInstruction(opcode, offset, bytecode.length - offset);
+                    }
+                    int instanceOfClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
+                    return new InstanceOfInstruction(constPool, opcode, offset, instanceOfClassIndex);
+
+                case 0xC3: // MONITOREXIT
+                    return new MonitorExitInstruction(opcode, offset);
+
+                case 0xC2: // MONITORENTER
+                    return new MonitorEnterInstruction(opcode, offset);
 
                 // UNKNOWN or UNIMPLEMENTED OPCODES
                 default:
@@ -1361,5 +1375,17 @@ public class CodeWriter {
         instructions.put(appendOffset, newInstr);
         rebuildBytecode();
         parseBytecode();
+    }
+
+    /**
+     * Accepts a BytecodeVisitor to traverse and operate on the instructions.
+     *
+     * @param visitor The BytecodeVisitor implementation.
+     */
+    public void accept(AbstractBytecodeVisitor visitor) {
+        for (Map.Entry<Integer, Instruction> entry : instructions.entrySet()) {
+            Instruction instr = entry.getValue();
+            instr.accept(visitor);
+        }
     }
 }

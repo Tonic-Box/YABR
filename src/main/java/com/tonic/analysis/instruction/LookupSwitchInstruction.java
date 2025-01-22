@@ -1,5 +1,9 @@
 package com.tonic.analysis.instruction;
 
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Map;
@@ -9,8 +13,11 @@ import java.util.Map;
  */
 public class LookupSwitchInstruction extends Instruction {
     private final int padding;
+    @Getter
     private final int defaultOffset;
+    @Getter
     private final int npairs;
+    @Getter
     private final Map<Integer, Integer> matchOffsets;
 
     /**
@@ -32,6 +39,11 @@ public class LookupSwitchInstruction extends Instruction {
         this.defaultOffset = defaultOffset;
         this.npairs = npairs;
         this.matchOffsets = matchOffsets;
+    }
+
+    @Override
+    public void accept(AbstractBytecodeVisitor visitor) {
+        visitor.visit(this);
     }
 
     /**
@@ -72,33 +84,6 @@ public class LookupSwitchInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the default branch offset.
-     *
-     * @return The default branch target offset.
-     */
-    public int getDefaultOffset() {
-        return defaultOffset;
-    }
-
-    /**
-     * Returns the number of key-offset pairs.
-     *
-     * @return The number of pairs.
-     */
-    public int getNpairs() {
-        return npairs;
-    }
-
-    /**
-     * Returns the map of key-offset pairs.
-     *
-     * @return The map of keys to branch target offsets.
-     */
-    public Map<Integer, Integer> getMatchOffsets() {
-        return matchOffsets;
     }
 
     /**
