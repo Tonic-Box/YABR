@@ -34,37 +34,55 @@ ClassPool.getDefault().loadClass("java/lang/Object.class");
 ```
 
 
-### Field/method creation:
+### Field creation:
 ```java
 ClassFile classFile = ...;
 
-int staticAccess = new AccessBuilder()
-        .setPublic()
-        .setStatic()
-        .build();
+int staticAccessPrivate = new AccessBuilder()
+    .setPrivate()
+    .setStatic()
+    .build();
 
-// Create a Static field
-classFile.createNewField(staticAccess, "testStaticIntField", "I", new ArrayList<>());
+FieldEntry staticField = classFile.createNewField(
+    staticAccessPrivate, 
+    "testStaticIntField", 
+    "I", 
+    new ArrayList<>()
+);
 
-// Create a Static method for our getter
-MethodEntry getter = classFile.createNewMethod(false, staticAccess, "demoStaticGetter", int.class);
-Bytecode getterBytecode = new Bytecode(getter);
-ConstPool constPool = getterBytecode.getConstPool();
-int fieldRefIndex = constPool.findOrAddField("com/tonic/ANewClass", "testStaticIntField", "I");
-getterBytecode.addGetStatic(fieldRefIndex);
-getterBytecode.addReturn(ReturnType.IRETURN);
-getterBytecode.finalizeBytecode();
+classFile.setFieldInitialValue(staticField, 12);
+```
 
-// Create a Static method for our setter
-MethodEntry setterMethod = classFile.createNewMethod(false, staticAccess, "demoStaticSetter", void.class, int.class);
-Bytecode setterBytecode = new Bytecode(setterMethod);
-ConstPool constPool2 = getterBytecode.getConstPool();
-int fieldRefIndex2 = constPool2.findOrAddField("com/tonic/ANewClass", "testStaticIntField", "I");
-setterBytecode.addILoad(0);
-setterBytecode.addPutStatic(fieldRefIndex2);
-setterBytecode.addReturn(ReturnType.RETURN);
 
+### Method creation and Bytecode Api:
+```java
+// Initialize class pool and access modifiers
+ClassPool classPool = ...;
+int access = new AccessBuilder()
+    .setPublic()
+    .setStatic()
+    .build();
+
+// Create a new field in the class
+classFile.createNewField(
+    access, 
+    "testIntField", 
+    "I", 
+    new ArrayList<>()
+);
+
+// Create a new method
+MethodEntry method = classFile.createNewMethod(access, "demoGetter", int.class);
+Bytecode bytecode = new Bytecode(method);
+ConstPool constPool = bytecode.getConstPool();
+
+// Add field reference and generate bytecode instructions
+int fieldRefIndex = constPool.findOrAddField("com/tonic/TestCase", "testIntField", "I");
+bytecode.addGetStatic(fieldRefIndex);
+bytecode.addReturn(ReturnType.IRETURN); // Add IRETURN opcode
+bytecode.finalizeBytecode();
+
+// Rebuild the class and print it
 classFile.rebuild();
-
 System.out.println(classFile);
 ```
