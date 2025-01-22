@@ -400,4 +400,23 @@ public class ConstPool {
         return addItem(newFieldRef);
     }
 
+    public Item<?> findOrAddString(String value)
+    {
+        Utf8Item utf8 = findOrAddUtf8(value);
+        for (int i = 1; i < items.size(); i++)
+        {
+            Item<?> item = items.get(i);
+            if (item instanceof StringRefItem stringRef)
+            {
+                if (stringRef.getValue() == getIndexOf(utf8))
+                {
+                    return stringRef;
+                }
+            }
+        }
+        StringRefItem newStringRef = new StringRefItem();
+        newStringRef.setValue(getIndexOf(utf8));
+        items.add(newStringRef);
+        return newStringRef;
+    }
 }

@@ -1,6 +1,7 @@
 package com.tonic.parser.constpool;
 
 import com.tonic.parser.ClassFile;
+import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,7 +11,7 @@ import java.io.IOException;
  * The value is an index pointing to a Utf8Item representing the string.
  */
 public class StringRefItem extends Item<Integer> {
-
+    @Setter
     private Integer value;
 
     @Override

@@ -10,6 +10,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.stream.Stream;
 
 /**
  * A simple class pool that can store and retrieve ClassFile objects by their internal names.
@@ -60,15 +61,16 @@ public class ClassPool {
         // Mount the `jrt:/` file system
         try (FileSystem jrtFS = FileSystems.newFileSystem(URI.create("jrt:/"), Collections.emptyMap())) {
             Path javaBasePath = jrtFS.getPath("modules", "java.base");
-            Files.walk(javaBasePath)
-                    .filter(path -> path.toString().endsWith(".class"))
-                    .forEach(path -> {
-                        try (InputStream is = Files.newInputStream(path)) {
-                            loadClass(is);
-                        } catch (IOException e) {
-                            System.err.println("Failed to load class from JRT: " + path);
-                        }
-                    });
+            try (Stream<Path> paths = Files.walk(javaBasePath)) {
+                paths.filter(path -> path.toString().endsWith(".class"))
+                        .forEach(path -> {
+                            try (InputStream is = Files.newInputStream(path)) {
+                                loadClass(is);
+                            } catch (IOException e) {
+                                System.err.println("Failed to load class from JRT: " + path);
+                            }
+                        });
+            }
         }
     }
 
@@ -113,7 +115,6 @@ public class ClassPool {
      *
      * @param classData A byte[] containing an entire .class file
      * @return The loaded ClassFile object
-     * @throws IOException If parsing fails
      */
     public ClassFile loadClass(byte[] classData) {
         ClassFile cf = new ClassFile(classData);
@@ -134,8 +135,31 @@ public class ClassPool {
         return loadClass(data);
     }
 
-    public ClassFile loadClass(String clazz) throws IOException {
+    /**
+     * Loads a .class from the system class loader into the pool.
+     *
+     * @param clazz The internal name of the class, e.g. "java/lang/Object"
+     * @return The loaded ClassFile object
+     * @throws IOException If reading or parsing fails
+     */
+    public ClassFile loadSystemClass(String clazz) throws IOException {
         try (InputStream is = ClassLoader.getSystemResourceAsStream(clazz)) {
+            if (is == null) {
+                throw new IOException("Failed to load class: " + clazz);
+            }
+            return loadClass(is);
+        }
+    }
+
+    /**
+     * Loads a .class from the platform class loader into the pool.
+     *
+     * @param clazz The internal name of the class, e.g. "java/lang/Object"
+     * @return The loaded ClassFile object
+     * @throws IOException If reading or parsing fails
+     */
+    public ClassFile loadPlatformClass(String clazz) throws IOException {
+        try (InputStream is = ClassLoader.getPlatformClassLoader().getResourceAsStream(clazz)) {
             if (is == null) {
                 throw new IOException("Failed to load class: " + clazz);
             }

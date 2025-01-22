@@ -215,7 +215,7 @@ public class CodePrinter {
                 case LSTORE:
                 case FSTORE:
                 case DSTORE:
-                case ASTORE:
+                case ASTORE, RET:
                     if (pc >= code.length) {
                         sb.append(" <invalid>");
                         break;
@@ -239,7 +239,7 @@ public class CodePrinter {
                 //----------------------------------------------------------------------
                 // (D) Two-byte immediate (SIPUSH).
                 //----------------------------------------------------------------------
-                case SIPUSH:
+                case SIPUSH, IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE, IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL, IFNONNULL:
                     if (pc + 1 >= code.length) {
                         sb.append(" <invalid>");
                         break;
@@ -276,42 +276,6 @@ public class CodePrinter {
                     sb.append("#").append(cpIndex)
                             .append(" (").append(resolveConstantPoolReference(cpIndex, constPool)).append(")");
                     pc += 2;
-                    break;
-
-                // (J) Additional conditional branch instructions with 2-byte offset
-                case IFEQ:
-                case IFNE:
-                case IFLT:
-                case IFGE:
-                case IFGT:
-                case IFLE:
-                case IF_ICMPEQ:
-                case IF_ICMPNE:
-                case IF_ICMPLT:
-                case IF_ICMPGE:
-                case IF_ICMPGT:
-                case IF_ICMPLE:
-                case IF_ACMPEQ:
-                case IF_ACMPNE:
-                case GOTO:        // 0xA7
-                case JSR:         // 0xA8
-                    if (pc + 1 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int branchOffset2 = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                    sb.append(branchOffset2);
-                    pc += 2;
-                    break;
-
-                // RET has a single local variable index operand
-                case RET:
-                    if (pc >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int retIndex = Byte.toUnsignedInt(code[pc++]);
-                    sb.append(retIndex);
                     break;
 
                 //----------------------------------------------------------------------
@@ -431,20 +395,6 @@ public class CodePrinter {
                     break;
 
                 //----------------------------------------------------------------------
-                // (J) Conditional branch instructions with 2-byte offset
-                //----------------------------------------------------------------------
-                case IFNULL:
-                case IFNONNULL:
-                    if (pc + 1 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int branchOffset = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                    sb.append(branchOffset);
-                    pc += 2;
-                    break;
-
-                //----------------------------------------------------------------------
                 // (K) GOTO_W, JSR_W => 4-byte offsets
                 //----------------------------------------------------------------------
                 case GOTO_W:
@@ -549,23 +499,19 @@ public class CodePrinter {
      */
     private static String resolveConstantPoolReference(int index, ConstPool constPool) {
         Logger.info("DEBUG: resolveConstantPoolReference(" + index + ")");
-        if (constPool.getItem(index) instanceof MethodRefItem) {
-            MethodRefItem methodRef = (MethodRefItem) constPool.getItem(index);
+        if (constPool.getItem(index) instanceof MethodRefItem methodRef) {
             String className = methodRef.getClassName().replace('/', '.');
             String methodName = methodRef.getName();
             String methodDesc = methodRef.getDescriptor();
             return className + "." + methodName + methodDesc;
-        } else if (constPool.getItem(index) instanceof FieldRefItem) {
-            FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(index);
+        } else if (constPool.getItem(index) instanceof FieldRefItem fieldRef) {
             String className = fieldRef.getClassName().replace('/', '.');
             String fieldName = fieldRef.getName();
             String fieldDesc = fieldRef.getDescriptor();
             return className + "." + fieldName + " " + fieldDesc;
-        } else if (constPool.getItem(index) instanceof StringRefItem) {
-            StringRefItem stringItem = (StringRefItem) constPool.getItem(index);
+        } else if (constPool.getItem(index) instanceof StringRefItem stringItem) {
             return "\"" + stringItem.getValue() + "\"";
-        } else if (constPool.getItem(index) instanceof ClassRefItem) {
-            ClassRefItem classRef = (ClassRefItem) constPool.getItem(index);
+        } else if (constPool.getItem(index) instanceof ClassRefItem classRef) {
             return classRef.getClassName().replace('/', '.');
         } else {
             return "UnknownReference";
@@ -576,25 +522,16 @@ public class CodePrinter {
      * Provides a description for the atype in NEWARRAY instruction.
      */
     private static String atypeDescription(int atype) {
-        switch (atype) {
-            case 4:
-                return "boolean";
-            case 5:
-                return "char";
-            case 6:
-                return "float";
-            case 7:
-                return "double";
-            case 8:
-                return "byte";
-            case 9:
-                return "short";
-            case 10:
-                return "int";
-            case 11:
-                return "long";
-            default:
-                return "unknown_atype_" + atype;
-        }
+        return switch (atype) {
+            case 4 -> "boolean";
+            case 5 -> "char";
+            case 6 -> "float";
+            case 7 -> "double";
+            case 8 -> "byte";
+            case 9 -> "short";
+            case 10 -> "int";
+            case 11 -> "long";
+            default -> "unknown_atype_" + atype;
+        };
     }
 }

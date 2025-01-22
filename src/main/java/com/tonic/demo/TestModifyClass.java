@@ -29,7 +29,7 @@ public class TestModifyClass
             int access = new AccessBuilder().setPublic().setStatic().build();
 
             classFile.createNewField(access, "testIntField", "I", new ArrayList<>());
-            MethodEntry method = classFile.createNewMethod(false, access, "demoGetter", int.class);
+            MethodEntry method = classFile.createNewMethod(access, "demoGetter", int.class);
             Bytecode bytecode = new Bytecode(method);
 
             ConstPool constPool = bytecode.getConstPool();

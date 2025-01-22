@@ -27,13 +27,15 @@ public class TestClassCreation {
 
         //Create a Static field with setter/getter
         FieldEntry staticField = classFile.createNewField(staticAccessPrivate, "testStaticIntField", "I", new ArrayList<>());
-        generateIntGetter(classFile, staticField, true);
-        generateIntSetter(classFile, staticField, true);
+        classFile.setFieldInitialValue(staticField, 12);
+        classFile.generateGetter(staticField, true);
+        classFile.generateSetter(staticField, true);
 
         //Create a field with setter/getter
         FieldEntry field = classFile.createNewField(accessPrivate, "testIntField", "I", new ArrayList<>());
-        generateIntGetter(classFile, field, false);
-        generateIntSetter(classFile, field, false);
+        classFile.setFieldInitialValue(field, 54);
+        classFile.generateGetter(field, false);
+        classFile.generateSetter(field, false);
 
         //compile our changes in memory
         classFile.rebuild();
@@ -43,61 +45,5 @@ public class TestClassCreation {
 
         //Save the class file to disk
         ClassFileUtil.saveClassFile(classFile.write(), "C:\\test\\new", "ANewClass");
-    }
-
-    /**
-     * Generate a setter for an int field
-     * @param classFile The class file to add the setter to
-     * @param entry The field entry to generate the setter for
-     * @param isStatic Whether the field is static or not
-     * @throws IOException io exception
-     */
-    public static void generateIntSetter(ClassFile classFile, FieldEntry entry, boolean isStatic) throws IOException {
-        String name = "set" + entry.getName().substring(0, 1).toUpperCase() + entry.getName().substring(1);
-        int access = isStatic ? new AccessBuilder().setPublic().setStatic().build() : new AccessBuilder().setPublic().build();
-        MethodEntry method = classFile.createNewMethod(false, access, name, void.class, int.class);
-        Bytecode bytecode = new Bytecode(method);
-        int fieldRefIndex = bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc());
-        if(!isStatic)
-        {
-            bytecode.addALoad(0);
-            bytecode.addILoad(1);
-            bytecode.addPutField(fieldRefIndex);
-        }
-        else
-        {
-            bytecode.addILoad(0);
-            bytecode.addPutStatic(fieldRefIndex);
-        }
-        bytecode.addReturn(ReturnType.RETURN);
-        bytecode.finalizeBytecode();
-    }
-
-    /**
-     * Generate a getter for an int field
-     * @param classFile The class file to add the getter to
-     * @param entry The field entry to generate the getter for
-     * @param isStatic Whether the field is static or not
-     * @throws IOException io exception
-     */
-    private static void generateIntGetter(ClassFile classFile, FieldEntry entry, boolean isStatic) throws IOException {
-        String name = "get" + entry.getName().substring(0, 1).toUpperCase() + entry.getName().substring(1);
-        int access = isStatic ? new AccessBuilder().setPublic().setStatic().build() : new AccessBuilder().setPublic().build();
-        MethodEntry method = classFile.createNewMethod(false, access, name, int.class);
-        Bytecode bytecode = new Bytecode(method);
-        int fieldRefIndex = bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc());
-        System.out.println("fieldRefIndex: " + fieldRefIndex);
-        System.out.println(entry);
-        if(!isStatic)
-        {
-            bytecode.addALoad(0);
-            bytecode.addGetField(fieldRefIndex);
-        }
-        else
-        {
-            bytecode.addGetStatic(fieldRefIndex);
-        }
-        bytecode.addReturn(ReturnType.fromDescriptor(entry.getDesc()));
-        bytecode.finalizeBytecode();
     }
 }

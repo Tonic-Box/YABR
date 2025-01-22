@@ -4,6 +4,7 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.analysis.instruction.*;
+import com.tonic.utill.ReturnType;
 import lombok.Getter;
 
 import java.io.ByteArrayOutputStream;
@@ -70,6 +71,11 @@ public class CodeWriter {
      */
     public Iterable<Instruction> getInstructions() {
         return instructions.values();
+    }
+
+    public int getInstructionCount()
+    {
+        return instructions.size();
     }
 
     public void insertInstruction(int offset, Instruction newInstr) {
@@ -190,6 +196,16 @@ public class CodeWriter {
         return bytecode.length;
     }
 
+    public boolean endsWithReturn()
+    {
+        if (bytecode.length < 1)
+        {
+            return false;
+        }
+        int lastOpcode = Byte.toUnsignedInt(bytecode[bytecode.length - 1]);
+        return ReturnType.isReturnOpcode(lastOpcode);
+    }
+
     /**
      * A factory for creating Instruction instances based on opcode.
      */
@@ -279,7 +295,7 @@ public class CodeWriter {
                 case 0x17: // FLOAD
                 case 0x18: // DLOAD
                 case 0x19: // ALOAD
-                    return createLoadInstruction(opcode, offset, bytecode, constPool, getLoadInstructionName(opcode), 1);
+                    return createLoadInstruction(opcode, offset, bytecode, getLoadInstructionName(opcode));
 
                 // Load Instructions with Indexed Opcodes (ILOAD_0 to ILOAD_3, etc.)
                 case 0x1A: // ILOAD_0
@@ -348,7 +364,7 @@ public class CodeWriter {
                 case 0x38: // FSTORE
                 case 0x39: // DSTORE
                 case 0x3A: // ASTORE
-                    return createStoreInstruction(opcode, offset, bytecode, constPool, getStoreInstructionName(opcode), 1);
+                    return createStoreInstruction(opcode, offset, bytecode, getStoreInstructionName(opcode));
 
                 // Store Instructions with Indexed Opcodes (ISTORE_0 to ISTORE_3, etc.)
                 case 0x3B: // ISTORE_0
@@ -659,15 +675,15 @@ public class CodeWriter {
 
                 // LOOKUPSWITCH (0xAB)
                 case 0xAB: // LOOKUPSWITCH
-                    return parseLookupSwitchInstruction(opcode, offset, bytecode, constPool);
+                    return parseLookupSwitchInstruction(opcode, offset, bytecode);
 
                 // TABLESWITCH (0xAA)
                 case 0xAA: // TABLESWITCH
-                    return parseTableSwitchInstruction(opcode, offset, bytecode, constPool);
+                    return parseTableSwitchInstruction(opcode, offset, bytecode);
 
                 // WIDE (0xC4)
                 case 0xC4: // WIDE
-                    return parseWideInstruction(opcode, offset, bytecode, constPool);
+                    return parseWideInstruction(opcode, offset, bytecode);
 
                 // RETURN instructions (0xAC - 0xB1)
                 case 0xAC: // IRETURN
@@ -691,20 +707,14 @@ public class CodeWriter {
          * @return The name of the load instruction.
          */
         private static String getLoadInstructionName(int opcode) {
-            switch (opcode) {
-                case 0x15:
-                    return "ILOAD";
-                case 0x16:
-                    return "LLOAD";
-                case 0x17:
-                    return "FLOAD";
-                case 0x18:
-                    return "DLOAD";
-                case 0x19:
-                    return "ALOAD";
-                default:
-                    return "UNKNOWN_LOAD";
-            }
+            return switch (opcode) {
+                case 0x15 -> "ILOAD";
+                case 0x16 -> "LLOAD";
+                case 0x17 -> "FLOAD";
+                case 0x18 -> "DLOAD";
+                case 0x19 -> "ALOAD";
+                default -> "UNKNOWN_LOAD";
+            };
         }
 
         /**
@@ -714,20 +724,14 @@ public class CodeWriter {
          * @return The name of the store instruction.
          */
         private static String getStoreInstructionName(int opcode) {
-            switch (opcode) {
-                case 0x36:
-                    return "ISTORE";
-                case 0x37:
-                    return "LSTORE";
-                case 0x38:
-                    return "FSTORE";
-                case 0x39:
-                    return "DSTORE";
-                case 0x3A:
-                    return "ASTORE";
-                default:
-                    return "UNKNOWN_STORE";
-            }
+            return switch (opcode) {
+                case 0x36 -> "ISTORE";
+                case 0x37 -> "LSTORE";
+                case 0x38 -> "FSTORE";
+                case 0x39 -> "DSTORE";
+                case 0x3A -> "ASTORE";
+                default -> "UNKNOWN_STORE";
+            };
         }
 
         /**
@@ -736,30 +740,23 @@ public class CodeWriter {
          * @param opcode           The opcode of the load instruction.
          * @param offset           The bytecode offset.
          * @param bytecode         The entire bytecode array.
-         * @param constPool        The constant pool.
          * @param instructionName  The name of the instruction (e.g., "ILOAD").
-         * @param operandBytes     Number of operand bytes (usually 1 for variable index).
          * @return A LoadInstruction instance or UnknownInstruction if malformed.
          */
-        private static Instruction createLoadInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool, String instructionName, int operandBytes) {
+        private static Instruction createLoadInstruction(int opcode, int offset, byte[] bytecode, String instructionName) {
+            int operandBytes = 1;
             if (offset + operandBytes >= bytecode.length) {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
             }
             int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-            switch (instructionName) {
-                case "ILOAD":
-                    return new ILoadInstruction(opcode, offset, varIndex);
-                case "LLOAD":
-                    return new LLoadInstruction(opcode, offset, varIndex);
-                case "FLOAD":
-                    return new FLoadInstruction(opcode, offset, varIndex);
-                case "DLOAD":
-                    return new DLoadInstruction(opcode, offset, varIndex);
-                case "ALOAD":
-                    return new ALoadInstruction(opcode, offset, varIndex);
-                default:
-                    return new UnknownInstruction(opcode, offset, operandBytes + 1);
-            }
+            return switch (instructionName) {
+                case "ILOAD" -> new ILoadInstruction(opcode, offset, varIndex);
+                case "LLOAD" -> new LLoadInstruction(opcode, offset, varIndex);
+                case "FLOAD" -> new FLoadInstruction(opcode, offset, varIndex);
+                case "DLOAD" -> new DLoadInstruction(opcode, offset, varIndex);
+                case "ALOAD" -> new ALoadInstruction(opcode, offset, varIndex);
+                default -> new UnknownInstruction(opcode, offset, operandBytes + 1);
+            };
         }
 
         /**
@@ -768,30 +765,23 @@ public class CodeWriter {
          * @param opcode           The opcode of the store instruction.
          * @param offset           The bytecode offset.
          * @param bytecode         The entire bytecode array.
-         * @param constPool        The constant pool.
          * @param instructionName  The name of the instruction (e.g., "ISTORE").
-         * @param operandBytes     Number of operand bytes (usually 1 for variable index).
          * @return A StoreInstruction instance or UnknownInstruction if malformed.
          */
-        private static Instruction createStoreInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool, String instructionName, int operandBytes) {
+        private static Instruction createStoreInstruction(int opcode, int offset, byte[] bytecode, String instructionName) {
+            int operandBytes = 1;
             if (offset + operandBytes >= bytecode.length) {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
             }
             int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-            switch (instructionName) {
-                case "ISTORE":
-                    return new IStoreInstruction(opcode, offset, varIndex);
-                case "LSTORE":
-                    return new LStoreInstruction(opcode, offset, varIndex);
-                case "FSTORE":
-                    return new FStoreInstruction(opcode, offset, varIndex);
-                case "DSTORE":
-                    return new DStoreInstruction(opcode, offset, varIndex);
-                case "ASTORE":
-                    return new AStoreInstruction(opcode, offset, varIndex);
-                default:
-                    return new UnknownInstruction(opcode, offset, operandBytes + 1);
-            }
+            return switch (instructionName) {
+                case "ISTORE" -> new IStoreInstruction(opcode, offset, varIndex);
+                case "LSTORE" -> new LStoreInstruction(opcode, offset, varIndex);
+                case "FSTORE" -> new FStoreInstruction(opcode, offset, varIndex);
+                case "DSTORE" -> new DStoreInstruction(opcode, offset, varIndex);
+                case "ASTORE" -> new AStoreInstruction(opcode, offset, varIndex);
+                default -> new UnknownInstruction(opcode, offset, operandBytes + 1);
+            };
         }
 
         /**
@@ -866,16 +856,12 @@ public class CodeWriter {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
             }
             int methodRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
-            switch (opcode) {
-                case 0xB6: // INVOKEVIRTUAL
-                    return new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
-                case 0xB7: // INVOKESPECIAL
-                    return new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
-                case 0xB8: // INVOKESTATIC
-                    return new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
-                default:
-                    return new UnknownInstruction(opcode, offset, 3);
-            }
+            return switch (opcode) {
+                case 0xB6 -> new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
+                case 0xB7 -> new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
+                case 0xB8 -> new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
+                default -> new UnknownInstruction(opcode, offset, 3);
+            };
         }
 
         /**
@@ -884,10 +870,9 @@ public class CodeWriter {
          * @param opcode    The opcode of the instruction (0xAB).
          * @param offset    The bytecode offset of the instruction.
          * @param bytecode  The entire bytecode array.
-         * @param constPool The constant pool associated with the class.
          * @return A LookupSwitchInstruction instance or UnknownInstruction if malformed.
          */
-        private static Instruction parseLookupSwitchInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool) {
+        private static Instruction parseLookupSwitchInstruction(int opcode, int offset, byte[] bytecode) {
             // LOOKUPSWITCH alignment: after opcode, padding to reach a 4-byte boundary
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int defaultOffsetPos = offset + 1 + padding;
@@ -941,10 +926,9 @@ public class CodeWriter {
          * @param opcode    The opcode of the instruction (0xAA).
          * @param offset    The bytecode offset of the instruction.
          * @param bytecode  The entire bytecode array.
-         * @param constPool The constant pool associated with the class.
          * @return A TableSwitchInstruction instance or UnknownInstruction if malformed.
          */
-        private static Instruction parseTableSwitchInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool) {
+        private static Instruction parseTableSwitchInstruction(int opcode, int offset, byte[] bytecode) {
             // TABLESWITCH alignment: after opcode, padding to reach a 4-byte boundary
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int defaultOffsetPos = offset + 1 + padding;
@@ -997,10 +981,9 @@ public class CodeWriter {
          * @param opcode    The opcode of the instruction (0xC4).
          * @param offset    The bytecode offset of the instruction.
          * @param bytecode  The entire bytecode array.
-         * @param constPool The constant pool associated with the class.
          * @return A WideInstruction instance or UnknownInstruction if malformed.
          */
-        private static Instruction parseWideInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool) {
+        private static Instruction parseWideInstruction(int opcode, int offset, byte[] bytecode) {
             // Ensure there is at least one more byte for the modified opcode
             if (offset + 1 >= bytecode.length) {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
@@ -1019,20 +1002,14 @@ public class CodeWriter {
                         return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                     }
                     int varIndexLoad = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
-                    switch (modifiedOpcodeCode) {
-                        case 0x15:
-                            return new ILoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x16:
-                            return new LLoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x17:
-                            return new FLoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x18:
-                            return new DLoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x19:
-                            return new ALoadInstruction(opcode, offset, varIndexLoad);
-                        default:
-                            return new UnknownInstruction(opcode, offset, 4);
-                    }
+                    return switch (modifiedOpcodeCode) {
+                        case 0x15 -> new ILoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x16 -> new LLoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x17 -> new FLoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x18 -> new DLoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x19 -> new ALoadInstruction(opcode, offset, varIndexLoad);
+                        default -> new UnknownInstruction(opcode, offset, 4);
+                    };
 
                 case 0x36: // ISTORE
                 case 0x37: // LSTORE
@@ -1043,20 +1020,14 @@ public class CodeWriter {
                         return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                     }
                     int varIndexStore = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
-                    switch (modifiedOpcodeCode) {
-                        case 0x36:
-                            return new IStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x37:
-                            return new LStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x38:
-                            return new FStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x39:
-                            return new DStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x3A:
-                            return new AStoreInstruction(opcode, offset, varIndexStore);
-                        default:
-                            return new UnknownInstruction(opcode, offset, 4);
-                    }
+                    return switch (modifiedOpcodeCode) {
+                        case 0x36 -> new IStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x37 -> new LStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x38 -> new FStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x39 -> new DStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x3A -> new AStoreInstruction(opcode, offset, varIndexStore);
+                        default -> new UnknownInstruction(opcode, offset, 4);
+                    };
 
                 case 0x84: // IINC
                     if (offset + 5 >= bytecode.length) {
@@ -1078,10 +1049,11 @@ public class CodeWriter {
      * @param offset          The bytecode offset to insert the instruction at.
      * @param methodRefIndex  The index into the constant pool for the method reference.
      */
-    public void insertInvokeVirtual(int offset, int methodRefIndex) {
+    public InvokeVirtualInstruction insertInvokeVirtual(int offset, int methodRefIndex) {
         int opcode = 0xB6; // INVOKEVIRTUAL
         InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1090,10 +1062,11 @@ public class CodeWriter {
      * @param offset          The bytecode offset to insert the instruction at.
      * @param methodRefIndex  The index into the constant pool for the method reference.
      */
-    public void insertInvokeSpecial(int offset, int methodRefIndex) {
+    public InvokeSpecialInstruction insertInvokeSpecial(int offset, int methodRefIndex) {
         int opcode = 0xB7; // INVOKESPECIAL
         InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1102,10 +1075,11 @@ public class CodeWriter {
      * @param offset          The bytecode offset to insert the instruction at.
      * @param methodRefIndex  The index into the constant pool for the method reference.
      */
-    public void insertInvokeStatic(int offset, int methodRefIndex) {
+    public InvokeStaticInstruction insertInvokeStatic(int offset, int methodRefIndex) {
         int opcode = 0xB8; // INVOKESTATIC
         InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1115,10 +1089,11 @@ public class CodeWriter {
      * @param interfaceMethodRefIndex The index into the constant pool for the interface method reference.
      * @param count                   The count of arguments for the interface method.
      */
-    public void insertInvokeInterface(int offset, int interfaceMethodRefIndex, int count) {
+    public InvokeInterfaceInstruction insertInvokeInterface(int offset, int interfaceMethodRefIndex, int count) {
         int opcode = 0xB9; // INVOKEINTERFACE
         InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, opcode, offset, interfaceMethodRefIndex, count);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1128,10 +1103,11 @@ public class CodeWriter {
      * @param bootstrapMethodIndex    The bootstrap method index in the constant pool.
      * @param nameAndTypeIndex        The name and type index in the constant pool.
      */
-    public void insertInvokeDynamic(int offset, int bootstrapMethodIndex, int nameAndTypeIndex) {
+    public InvokeDynamicInstruction insertInvokeDynamic(int offset, int bootstrapMethodIndex, int nameAndTypeIndex) {
         int opcode = 0xBA; // INVOKEDYNAMIC
         InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, opcode, offset, bootstrapMethodIndex, nameAndTypeIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1140,10 +1116,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to load from.
      */
-    public void insertALoad(int offset, int index) {
+    public ALoadInstruction insertALoad(int offset, int index) {
         int opcode = 0x19; // ALOAD
         ALoadInstruction instr = new ALoadInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1152,10 +1129,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to store into.
      */
-    public void insertAStore(int offset, int index) {
+    public AStoreInstruction insertAStore(int offset, int index) {
         int opcode = 0x3A; // ASTORE
         AStoreInstruction instr = new AStoreInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1164,10 +1142,11 @@ public class CodeWriter {
      * @param offset        The bytecode offset to insert the instruction at.
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void insertGetStatic(int offset, int fieldRefIndex) {
+    public GetFieldInstruction insertGetStatic(int offset, int fieldRefIndex) {
         int opcode = 0xB2; // GETSTATIC
         GetFieldInstruction instr = new GetFieldInstruction(constPool, opcode, offset, fieldRefIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1176,10 +1155,11 @@ public class CodeWriter {
      * @param offset        The bytecode offset to insert the instruction at.
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void insertGetField(int offset, int fieldRefIndex) {
+    public GetFieldInstruction insertGetField(int offset, int fieldRefIndex) {
         int opcode = 0xB4; // GETFIELD
         GetFieldInstruction instr = new GetFieldInstruction(constPool, opcode, offset, fieldRefIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1188,10 +1168,11 @@ public class CodeWriter {
      * @param offset        The bytecode offset to insert the instruction at.
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void insertPutStatic(int offset, int fieldRefIndex) {
+    public PutFieldInstruction insertPutStatic(int offset, int fieldRefIndex) {
         int opcode = 0xB3; // PUTSTATIC
         PutFieldInstruction instr = new PutFieldInstruction(constPool, opcode, offset, fieldRefIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1200,10 +1181,11 @@ public class CodeWriter {
      * @param offset        The bytecode offset to insert the instruction at.
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void insertPutField(int offset, int fieldRefIndex) {
+    public PutFieldInstruction insertPutField(int offset, int fieldRefIndex) {
         int opcode = 0xB5; // PUTFIELD
         PutFieldInstruction instr = new PutFieldInstruction(constPool, opcode, offset, fieldRefIndex);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1212,10 +1194,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to load from.
      */
-    public void insertILoad(int offset, int index) {
+    public ILoadInstruction insertILoad(int offset, int index) {
         int opcode = 0x15; // ILOAD
         ILoadInstruction instr = new ILoadInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1224,10 +1207,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to store into.
      */
-    public void insertIStore(int offset, int index) {
+    public IStoreInstruction insertIStore(int offset, int index) {
         int opcode = 0x36; // ISTORE
         IStoreInstruction instr = new IStoreInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1236,10 +1220,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to load from.
      */
-    public void insertLLoad(int offset, int index) {
+    public LLoadInstruction insertLLoad(int offset, int index) {
         int opcode = 0x16; // LLOAD
         LLoadInstruction instr = new LLoadInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1248,10 +1233,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to store into.
      */
-    public void insertLStore(int offset, int index) {
+    public LStoreInstruction insertLStore(int offset, int index) {
         int opcode = 0x37; // LSTORE
         LStoreInstruction instr = new LStoreInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1260,10 +1246,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to load from.
      */
-    public void insertFLoad(int offset, int index) {
+    public FLoadInstruction insertFLoad(int offset, int index) {
         int opcode = 0x17; // FLOAD
         FLoadInstruction instr = new FLoadInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1272,10 +1259,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to store into.
      */
-    public void insertFStore(int offset, int index) {
+    public FStoreInstruction insertFStore(int offset, int index) {
         int opcode = 0x38; // FSTORE
         FStoreInstruction instr = new FStoreInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1284,10 +1272,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to load from.
      */
-    public void insertDLoad(int offset, int index) {
+    public DLoadInstruction insertDLoad(int offset, int index) {
         int opcode = 0x18; // DLOAD
         DLoadInstruction instr = new DLoadInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1296,10 +1285,11 @@ public class CodeWriter {
      * @param offset The bytecode offset to insert the instruction at.
      * @param index  The local variable index to store into.
      */
-    public void insertDStore(int offset, int index) {
+    public DStoreInstruction insertDStore(int offset, int index) {
         int opcode = 0x39; // DSTORE
         DStoreInstruction instr = new DStoreInstruction(opcode, offset, index);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1309,10 +1299,11 @@ public class CodeWriter {
      * @param varIndex The local variable index to increment.
      * @param increment The constant by which to increment the variable.
      */
-    public void insertIInc(int offset, int varIndex, int increment) {
+    public IIncInstruction insertIInc(int offset, int varIndex, int increment) {
         int opcode = 0x84; // IINC
         IIncInstruction instr = new IIncInstruction(opcode, offset, varIndex, increment);
         insertInstruction(offset, instr);
+        return instr;
     }
 
     /**
@@ -1321,10 +1312,11 @@ public class CodeWriter {
      * @param offset       The bytecode offset to insert the GOTO instruction at.
      * @param branchOffset The signed short branch offset relative to the GOTO instruction.
      */
-    public void insertGoto(int offset, short branchOffset) {
+    public GotoInstruction insertGoto(int offset, short branchOffset) {
         int opcode = 0xA7; // GOTO opcode
         GotoInstruction gotoInstr = new GotoInstruction(opcode, offset, branchOffset);
         insertInstruction(offset, gotoInstr);
+        return gotoInstr;
     }
 
     /**
@@ -1334,7 +1326,7 @@ public class CodeWriter {
      * @param branchOffset The signed 32-bit branch offset relative to the GOTO_W instruction.
      * @throws IllegalArgumentException If the specified offset is invalid.
      */
-    public void insertGotoW(int offset, int branchOffset) {
+    public GotoInstruction insertGotoW(int offset, int branchOffset) {
         // Opcode for GOTO_W
         final int GOTO_W_OPCODE = 0xC8;
 
@@ -1343,6 +1335,7 @@ public class CodeWriter {
 
         // Insert the GOTO_W instruction at the specified offset
         insertInstruction(offset, gotoWInstr);
+        return gotoWInstr;
     }
 
     /**
@@ -1351,10 +1344,11 @@ public class CodeWriter {
      * @param offset        The bytecode offset to insert the instruction at.
      * @param classRefIndex The index into the constant pool for the class reference.
      */
-    public void insertNew(int offset, int classRefIndex) {
+    public NewInstruction insertNew(int offset, int classRefIndex) {
         int opcode = 0xBB; // NEW opcode
         NewInstruction newInstr = new NewInstruction(constPool, opcode, offset, classRefIndex);
         insertInstruction(offset, newInstr);
+        return newInstr;
     }
 
     /**

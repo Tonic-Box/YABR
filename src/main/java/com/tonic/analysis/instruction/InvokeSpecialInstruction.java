@@ -84,6 +84,16 @@ public class InvokeSpecialInstruction extends Instruction {
         return method.toString();
     }
 
+    public String getMethodName() {
+        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
+        return method.getName();
+    }
+
+    public String getOwnerName() {
+        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
+        return method.getClassName();
+    }
+
     /**
      * Returns a string representation of the instruction.
      *
