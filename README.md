@@ -4,16 +4,16 @@ Demos can be found here: https://github.com/Tonic-Box/YABR/tree/main/src/main/ja
 
 Inspired by: https://github.com/d-o-g/classpooly
 
-__**Example Code:**__
+## Example Code:
 
-New Class Creation:
+### New Class Creation:
 ```java
 ClassPool classPool = ClassPool.getDefault();
 ClassFile classFile = classPool.createNewClass("com/tonic/ANewClass", classAccess);
 ```
 
 
-Load a class from disk:
+### Load a class from disk:
 ```java
 ClassPool classPool = ClassPool.getDefault();
 
@@ -28,13 +28,13 @@ try (InputStream is = TestClassCreation.class.getResourceAsStream("TestCase.clas
 }
 ```
 
-Load a builtin java class:
+### Load a builtin java class:
 ```java
 ClassPool.getDefault().loadClass("java/lang/Object.class");
 ```
 
 
-Field/method creation:
+### Field/method creation:
 ```java
 ClassFile classFile = ...;
 
