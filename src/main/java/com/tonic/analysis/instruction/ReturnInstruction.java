@@ -51,7 +51,7 @@ public class ReturnInstruction extends Instruction {
             case LRETURN:
             case DRETURN:
                 return -2; // Pops one long or double
-            case RETURN_:
+            case RETURN:
                 return 0; // Pops nothing
             default:
                 return 0;

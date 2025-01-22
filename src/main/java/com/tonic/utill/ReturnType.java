@@ -12,7 +12,7 @@ public enum ReturnType {
     FRETURN(0xAE, "freturn"),
     DRETURN(0xAF, "dreturn"),
     ARETURN(0xB0, "areturn"),
-    RETURN_(0xB1, "return");
+    RETURN(0xB1, "return");
 
     private final int opcode;
     private final String mnemonic;

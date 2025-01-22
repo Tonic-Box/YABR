@@ -153,7 +153,7 @@ public class ClassFile extends AbstractParser {
         // return
         bytecode.addALoad(0); // Load 'this'
         bytecode.addInvokeSpecial(constPool.getIndexOf(superConstructorRef)); // Call super.<init>()
-        bytecode.addReturn(ReturnType.RETURN_); // RETURN
+        bytecode.addReturn(ReturnType.RETURN); // RETURN
 
         // Finalize bytecode (which sets the code in codeAttr)
         try {
