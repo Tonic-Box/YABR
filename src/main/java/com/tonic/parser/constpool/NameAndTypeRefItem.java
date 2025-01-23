@@ -3,6 +3,7 @@ package com.tonic.parser.constpool;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.structure.NameAndType;
+import lombok.Getter;
 import lombok.Setter;
 
 import java.io.DataOutputStream;
@@ -14,6 +15,7 @@ import java.io.IOException;
  */
 public class NameAndTypeRefItem extends Item<NameAndType> {
     @Setter
+    @Getter
     private ConstPool constPool;
     @Setter
     private NameAndType value;
@@ -61,6 +63,20 @@ public class NameAndTypeRefItem extends Item<NameAndType> {
         }
 
         return descriptor;
+    }
+
+    public String getName() {
+        if (constPool == null) {
+            throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
+        }
+
+        // Retrieve the descriptor string from the constant pool using descriptorIndex
+        String name = ((Utf8Item)constPool.getItem(value.getNameIndex())).getValue();
+        if (name == null) {
+            throw new IllegalStateException("Invalid name index: " + value.getNameIndex());
+        }
+
+        return name;
     }
 
     public void setNameIndex(int nameIndex) {

@@ -4,6 +4,7 @@ import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.Logger;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -29,6 +30,7 @@ public class LdcWInstruction extends Instruction {
         super(opcode, offset, 3);
         this.constPool = constPool;
         this.cpIndex = cpIndex;
+        Logger.info("Initialized LdcWInstruction at offset " + offset + " with cpIndex=" + cpIndex + " and length=" + length);
     }
 
     @Override
@@ -46,6 +48,8 @@ public class LdcWInstruction extends Instruction {
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
         dos.writeShort(cpIndex);
+        Logger.info("Writing LDC_W: Opcode=0x" + Integer.toHexString(opcode) +
+                ", cpIndex=" + cpIndex + " (" + String.format("0x%04X", cpIndex) + ")");
     }
 
     /**

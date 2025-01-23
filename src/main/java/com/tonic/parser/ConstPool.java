@@ -26,7 +26,7 @@ public class ConstPool {
     public ConstPool(final ClassFile classFile) {
         this.classFile = classFile;
         final int constantPoolCount = classFile.readUnsignedShort();
-        this.items = new ArrayList<>(constantPoolCount);
+        this.items = new ArrayList<>();
 
         // Index 0 is unused; add a null to align indices.
         items.add(null);
@@ -34,60 +34,27 @@ public class ConstPool {
         // Iterate through constant pool entries.
         for (int i = 1; i < constantPoolCount; i++) {
             byte tag = (byte) classFile.readUnsignedByte();
-            Item<?> item;
-
-            switch (tag) {
-                case Item.ITEM_UTF_8:
-                    item = new Utf8Item();
-                    break;
-                case Item.ITEM_INTEGER:
-                    item = new IntegerItem();
-                    break;
-                case Item.ITEM_FLOAT:
-                    item = new FloatItem();
-                    break;
-                case Item.ITEM_LONG:
-                    item = new LongItem();
-                    break;
-                case Item.ITEM_DOUBLE:
-                    item = new DoubleItem();
-                    break;
-                case Item.ITEM_CLASS_REF:
-                    item = new ClassRefItem();
-                    break;
-                case Item.ITEM_STRING_REF:
-                    item = new StringRefItem();
-                    break;
-                case Item.ITEM_FIELD_REF:
-                    item = new FieldRefItem();
-                    break;
-                case Item.ITEM_METHOD_REF:
-                    item = new MethodRefItem();
-                    break;
-                case Item.ITEM_INTERFACE_REF:
-                    item = new InterfaceRefItem();
-                    break;
-                case Item.ITEM_NAME_TYPE_REF:
-                    item = new NameAndTypeRefItem();
-                    break;
-                case Item.ITEM_METHOD_HANDLE:
-                    item = new MethodHandleItem();
-                    break;
-                case Item.ITEM_METHOD_TYPE:
-                    item = new MethodTypeItem();
-                    break;
-                case Item.ITEM_INVOKEDYNAMIC:
-                    item = new InvokeDynamicItem();
-                    break;
-                case Item.ITEM_PACKAGE: // CONSTANT_Package
-                    item = new PackageItem();
-                    break;
-                case Item.ITEM_MODULE: // CONSTANT_Module
-                    item = new ModuleItem();
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unknown constant pool tag: " + tag + " at index " + i);
-            }
+            Item<?> item = switch (tag) {
+                case Item.ITEM_UTF_8 -> new Utf8Item();
+                case Item.ITEM_INTEGER -> new IntegerItem();
+                case Item.ITEM_FLOAT -> new FloatItem();
+                case Item.ITEM_LONG -> new LongItem();
+                case Item.ITEM_DOUBLE -> new DoubleItem();
+                case Item.ITEM_CLASS_REF -> new ClassRefItem();
+                case Item.ITEM_STRING_REF -> new StringRefItem();
+                case Item.ITEM_FIELD_REF -> new FieldRefItem();
+                case Item.ITEM_METHOD_REF -> new MethodRefItem();
+                case Item.ITEM_INTERFACE_REF -> new InterfaceRefItem();
+                case Item.ITEM_NAME_TYPE_REF -> new NameAndTypeRefItem();
+                case Item.ITEM_METHOD_HANDLE -> new MethodHandleItem();
+                case Item.ITEM_METHOD_TYPE -> new MethodTypeItem();
+                case Item.ITEM_INVOKEDYNAMIC -> new InvokeDynamicItem();
+                case Item.ITEM_PACKAGE -> // CONSTANT_Package
+                        new PackageItem();
+                case Item.ITEM_MODULE -> // CONSTANT_Module
+                        new ModuleItem();
+                default -> throw new IllegalArgumentException("Unknown constant pool tag: " + tag + " at index " + i);
+            };
 
             // Read the item's data from the class file.
             item.read(classFile);
@@ -158,6 +125,19 @@ public class ConstPool {
     }
 
     public int addItem(Item<?> newItem) {
+        if (newItem instanceof NameAndTypeRefItem) {
+            ((NameAndTypeRefItem) newItem).setConstPool(this);
+        }
+        if (newItem instanceof ClassRefItem) {
+            ((ClassRefItem) newItem).setClassFile(classFile);
+        }
+        if (newItem instanceof MethodRefItem) {
+            ((MethodRefItem) newItem).setClassFile(classFile);
+        }
+        if (newItem instanceof FieldRefItem) {
+            ((FieldRefItem) newItem).setClassFile(classFile);
+        }
+
         // The next available index is just the current size of 'items'.
         int index = items.size();
         items.add(newItem);
@@ -179,8 +159,7 @@ public class ConstPool {
     public ClassRefItem findOrAddClassRef(int nameIndex) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof ClassRefItem) {
-                ClassRefItem classRef = (ClassRefItem) item;
+            if (item instanceof ClassRefItem classRef) {
                 if (classRef.getNameIndex() == nameIndex) {
                     return classRef;
                 }
@@ -202,8 +181,7 @@ public class ConstPool {
     public MethodRefItem findOrAddMethodRef(int classIndex, int nameAndTypeIndex) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof MethodRefItem) {
-                MethodRefItem methodRef = (MethodRefItem) item;
+            if (item instanceof MethodRefItem methodRef) {
                 if (methodRef.getValue().getClassIndex() == classIndex && methodRef.getValue().getNameAndTypeIndex() == nameAndTypeIndex) {
                     return methodRef;
                 }
@@ -225,8 +203,7 @@ public class ConstPool {
     public Utf8Item findOrAddUtf8(String value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof Utf8Item) {
-                Utf8Item utf8 = (Utf8Item) item;
+            if (item instanceof Utf8Item utf8) {
                 if (utf8.getValue().equals(value)) {
                     return utf8;
                 }
@@ -248,18 +225,24 @@ public class ConstPool {
     public NameAndTypeRefItem findOrAddNameAndType(int nameIndex, int descIndex) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof NameAndTypeRefItem) {
-                NameAndTypeRefItem nt = (NameAndTypeRefItem) item;
+            if (item instanceof NameAndTypeRefItem nt) {
                 if (nt.getValue().getNameIndex() == nameIndex && nt.getValue().getDescriptorIndex() == descIndex) {
+                    nt.setConstPool(this);
                     return nt;
                 }
             }
         }
-        NameAndTypeRefItem newNameAndType = new NameAndTypeRefItem();
+        NameAndTypeRefItem newNameAndType =  new NameAndTypeRefItem();
         newNameAndType.setConstPool(this);
         newNameAndType.setValue(new NameAndType(nameIndex, descIndex));
         addItem(newNameAndType);
         return newNameAndType;
+    }
+
+    public NameAndTypeRefItem findOrAddNameAndType(String name, String descriptor) {
+        Utf8Item nameUtf8 = findOrAddUtf8(name);
+        Utf8Item descUtf8 = findOrAddUtf8(descriptor);
+        return findOrAddNameAndType(getIndexOf(nameUtf8), getIndexOf(descUtf8));
     }
 
     public int getIndexOf(Item<?> item) {
@@ -280,8 +263,7 @@ public class ConstPool {
     public DoubleItem findOrAddDouble(double value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof DoubleItem) {
-                DoubleItem doubleItem = (DoubleItem) item;
+            if (item instanceof DoubleItem doubleItem) {
                 if (Double.compare(doubleItem.getValue(), value) == 0) {
                     return doubleItem;
                 }
@@ -302,8 +284,7 @@ public class ConstPool {
     public FloatItem findOrAddFloat(float value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof FloatItem) {
-                FloatItem floatItem = (FloatItem) item;
+            if (item instanceof FloatItem floatItem) {
                 if (Float.compare(floatItem.getValue(), value) == 0) {
                     return floatItem;
                 }
@@ -324,8 +305,7 @@ public class ConstPool {
     public LongItem findOrAddLong(long value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof LongItem) {
-                LongItem longItem = (LongItem) item;
+            if (item instanceof LongItem longItem) {
                 if (longItem.getValue() == value) {
                     return longItem;
                 }
@@ -346,8 +326,7 @@ public class ConstPool {
     public IntegerItem findOrAddInteger(int value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof IntegerItem) {
-                IntegerItem intItem = (IntegerItem) item;
+            if (item instanceof IntegerItem intItem) {
                 if (intItem.getValue() == value) {
                     return intItem;
                 }
@@ -368,7 +347,7 @@ public class ConstPool {
      * @param fieldType The descriptor of the field (e.g., "I" for int).
      * @return The index of the FieldRefItem in the constant pool.
      */
-    public int findOrAddField(String className, String fieldName, String fieldType) {
+    public FieldRefItem findOrAddField(String className, String fieldName, String fieldType) {
         // Find or add Utf8 entries for className, fieldName, and fieldType
         Utf8Item classNameUtf8 = findOrAddUtf8(className);
         Utf8Item fieldNameUtf8 = findOrAddUtf8(fieldName);
@@ -383,11 +362,10 @@ public class ConstPool {
         // Search for an existing FieldRefItem with the same classRef and nameAndType
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof FieldRefItem) {
-                FieldRefItem fieldRef = (FieldRefItem) item;
+            if (item instanceof FieldRefItem fieldRef) {
                 if (fieldRef.getValue().getClassIndex() == getIndexOf(classRef) &&
                         fieldRef.getValue().getNameAndTypeIndex() == getIndexOf(nameAndType)) {
-                    return i;
+                    return fieldRef;
                 }
             }
         }
@@ -397,10 +375,11 @@ public class ConstPool {
         newFieldRef.setClassFile(classFile);
         newFieldRef.setValue(new FieldRef(getIndexOf(classRef), getIndexOf(nameAndType)));
 
-        return addItem(newFieldRef);
+        addItem(newFieldRef);
+        return newFieldRef;
     }
 
-    public Item<?> findOrAddString(String value)
+    public StringRefItem findOrAddString(String value)
     {
         Utf8Item utf8 = findOrAddUtf8(value);
         for (int i = 1; i < items.size(); i++)
@@ -416,7 +395,28 @@ public class ConstPool {
         }
         StringRefItem newStringRef = new StringRefItem();
         newStringRef.setValue(getIndexOf(utf8));
-        items.add(newStringRef);
+        addItem(newStringRef);
         return newStringRef;
+    }
+
+    public ClassRefItem findOrAddClass(String className)
+    {
+        Utf8Item utf8 = findOrAddUtf8(className);
+        for (int i = 1; i < items.size(); i++)
+        {
+            Item<?> item = items.get(i);
+            if (item instanceof ClassRefItem classRef)
+            {
+                if (classRef.getNameIndex() == getIndexOf(utf8))
+                {
+                    return classRef;
+                }
+            }
+        }
+        ClassRefItem newClassRef = new ClassRefItem();
+        newClassRef.setNameIndex(getIndexOf(utf8));
+        newClassRef.setClassFile(classFile);
+        addItem(newClassRef);
+        return newClassRef;
     }
 }

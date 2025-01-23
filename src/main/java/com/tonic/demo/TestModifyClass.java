@@ -32,7 +32,7 @@ public class TestModifyClass
             MethodEntry method = classFile.createNewMethod(access, "demoGetter", int.class);
             Bytecode bytecode = new Bytecode(method);
             ConstPool constPool = bytecode.getConstPool();
-            int fieldRefIndex = constPool.findOrAddField("com/tonic/TestCase", "testIntField", "I");
+            int fieldRefIndex = constPool.getIndexOf(constPool.findOrAddField("com/tonic/TestCase", "testIntField", "I"));
             bytecode.addGetStatic(fieldRefIndex);
             bytecode.addReturn(ReturnType.IRETURN); // IRETURN opcode
             bytecode.finalizeBytecode();

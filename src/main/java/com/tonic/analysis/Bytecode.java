@@ -23,6 +23,7 @@ public class Bytecode {
     private final CodeWriter codeWriter;
     private final ConstPool constPool;
     private boolean insertBefore = false;
+    @Setter
     private int insertBeforeOffset = 0;
     private final boolean isStatic;
 
@@ -38,6 +39,12 @@ public class Bytecode {
         this.codeWriter = new CodeWriter(methodEntry);
         this.constPool = codeWriter.getConstPool();
         this.isStatic = Modifiers.isStatic(methodEntry.getAccess());
+    }
+
+    public Bytecode(CodeWriter codeWriter) {
+        this.codeWriter = codeWriter;
+        this.constPool = codeWriter.getConstPool();
+        this.isStatic = Modifiers.isStatic(codeWriter.getMethodEntry().getAccess());
     }
 
     public void setInsertBefore(boolean insertBefore)
@@ -243,7 +250,7 @@ public class Bytecode {
             // BIPUSH (0x10)
             int opcode = 0x10;
             byte operand = (byte) value;
-            System.out.println("BIPUSH: " + value + " -> " + operand);
+            Logger.info("BIPUSH: " + value + " -> " + operand);
             instr = new BipushInstruction(opcode, processOffset(), operand);
         } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
             // SIPUSH (0x11)
@@ -492,6 +499,44 @@ public class Bytecode {
         }
     }
 
+    /**
+     * Inserts an INVOKESTATIC instruction into the bytecode.
+     *
+     * @param className         The fully qualified class name (e.g., "java/lang/System").
+     * @param methodName        The name of the static method to invoke (e.g., "currentTimeMillis").
+     * @param methodDescriptor  The method descriptor (e.g., "()J").
+     */
+    public void addInvokeStatic(String className, String methodName, String methodDescriptor) {
+        // Step 1: Add or find Utf8 entries for className, methodName, and methodDescriptor
+        Utf8Item classNameUtf8 = constPool.findOrAddUtf8(className);
+        Utf8Item methodNameUtf8 = constPool.findOrAddUtf8(methodName);
+        Utf8Item methodDescUtf8 = constPool.findOrAddUtf8(methodDescriptor);
+
+        // Step 2: Add or find ClassRef entry for className
+        ClassRefItem classRef = constPool.findOrAddClass(classNameUtf8.getValue());
+
+        // Step 3: Add or find NameAndType entry for methodName and methodDescriptor
+        NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(methodNameUtf8.getIndex(constPool), methodDescUtf8.getIndex(constPool));
+
+        // Step 4: Add or find MethodRef entry for classRef and nameAndType
+        MethodRefItem methodRef = constPool.findOrAddMethodRef(classRef.getIndex(constPool), nameAndType.getIndex(constPool));
+
+        // Step 5: Get the index of the MethodRef entry
+        int methodRefIndex = constPool.getIndexOf(methodRef);
+
+        // Step 6: Determine the insertion offset
+        // For example, inserting at the end of the bytecode
+        int insertOffset = codeWriter.getBytecodeSize();
+
+        // Step 7: Insert the INVOKESTATIC instruction
+        Instruction instruction = codeWriter.insertInvokeStatic(insertOffset, methodRefIndex);
+        insertBeforeOffset += instruction.getLength();
+
+        // Optional: Update maxStack and maxLocals if necessary
+        // This depends on your implementation of CodeWriter and whether it handles stack analysis automatically
+    }
+
+
     private int processOffset()
     {
         return insertBefore ? insertBeforeOffset : codeWriter.getBytecodeSize();
@@ -509,13 +554,15 @@ public class Bytecode {
 
         for (Instruction instruction : codeWriter.getInstructions()) {
             // Check for aload_0 (opcode 0x2a)
-            if (instruction instanceof ALoadInstruction aLoadInstruction && aLoadInstruction.getVarIndex() == 0) { // aload_0
+            if (instruction instanceof ALoadInstruction && ((ALoadInstruction) instruction).getVarIndex() == 0) {
+                ALoadInstruction aLoadInstruction = (ALoadInstruction) instruction; // aload_0
                 offset += instruction.getLength(); // Increment offset by instruction length
                 continue; // Skip to the next instruction
             }
 
             // Check for invokespecial <init> (opcode 0xb7)
-            if (instruction instanceof InvokeSpecialInstruction invokeSpecialInstruction) { // invokespecial
+            if (instruction instanceof InvokeSpecialInstruction) {
+                InvokeSpecialInstruction invokeSpecialInstruction = (InvokeSpecialInstruction) instruction; // invokespecial
                 // Validate that it is calling super.<init>
                 String methodName = invokeSpecialInstruction.getMethodName(); // Assume instruction provides method details
 
@@ -534,5 +581,104 @@ public class Bytecode {
     public boolean endsWithReturn()
     {
         return codeWriter.endsWithReturn();
+    }
+
+    /**
+     * Inserts an LDC or LDC_W instruction to load a String constant onto the operand stack.
+     *
+     * @param value The String constant to load.
+     */
+    public void addLdc(String value) {
+        int offset = processOffset();
+        // Step 1: Add or find Utf8 entry for the string
+        Utf8Item stringUtf8 = constPool.findOrAddUtf8(value);
+
+        // Step 2: Add or find StringRef entry
+        StringRefItem stringRef = constPool.findOrAddString(stringUtf8.getValue());
+
+        // Step 3: Get the index of the StringRef entry
+        int stringRefIndex = constPool.getIndexOf(stringRef);
+
+        // Step 4: Decide whether to use LDC or LDC_W based on the index
+        Instruction instruction;
+        if (stringRefIndex <= 0xFF) {
+            // Use LDC (opcode 0x12)
+            instruction = codeWriter.insertLDC(processOffset(), stringRefIndex);
+        } else {
+            // Use LDC_W (opcode 0x13)
+            instruction = codeWriter.insertLDCW(processOffset(), stringRefIndex);
+        }
+        insertBeforeOffset += instruction.getLength();
+        // Optional: Update maxStack if your CodeWriter does not handle it automatically
+        // codeWriter.updateMaxStackForLdc();
+    }
+
+    /**
+     * Inserts an INVOKEVIRTUAL instruction into the bytecode.
+     *
+     * @param className        The fully qualified class name (e.g., "java/io/PrintStream").
+     * @param methodName       The name of the method to invoke (e.g., "println").
+     * @param methodDescriptor The method descriptor (e.g., "(Ljava/lang/String;)V").
+     */
+    public void addInvokeVirtual(String className, String methodName, String methodDescriptor) {
+        // Step 1: Add or find Utf8 entries for className, methodName, and methodDescriptor
+        Utf8Item classNameUtf8 = constPool.findOrAddUtf8(className);
+        Utf8Item methodNameUtf8 = constPool.findOrAddUtf8(methodName);
+        Utf8Item methodDescUtf8 = constPool.findOrAddUtf8(methodDescriptor);
+
+        // Step 2: Add or find ClassRef entry for className
+        ClassRefItem classRef = constPool.findOrAddClass(classNameUtf8.getValue());
+
+        // Step 3: Add or find NameAndType entry for methodName and methodDescriptor
+        NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(methodNameUtf8.getIndex(constPool), methodDescUtf8.getIndex(constPool));
+
+        // Step 4: Add or find MethodRef entry for classRef and nameAndType
+        MethodRefItem methodRef = constPool.findOrAddMethodRef(classRef.getIndex(constPool), nameAndType.getIndex(constPool));
+
+        // Step 5: Get the index of the MethodRef entry
+        int methodRefIndex = constPool.getIndexOf(methodRef);
+
+        // Step 6: Determine the insertion offset
+        int insertOffset = processOffset();
+
+        // Step 7: Insert the INVOKEVIRTUAL instruction
+        Instruction instruction = codeWriter.insertInvokeVirtual(insertOffset, methodRefIndex);
+        insertBeforeOffset += instruction.getLength();
+    }
+
+    /**
+     * Inserts a GETSTATIC instruction into the bytecode.
+     *
+     * @param className       The fully qualified class name (e.g., "java/lang/System").
+     * @param fieldName       The name of the static field (e.g., "out").
+     * @param fieldDescriptor The field descriptor (e.g., "Ljava/io/PrintStream;").
+     */
+    public void addGetStatic(String className, String fieldName, String fieldDescriptor) {
+        // Step 1: Add or find Utf8 entries for className, fieldName, and fieldDescriptor
+        Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(fieldName);
+        Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(fieldDescriptor);
+
+        // Step 2: Add or find ClassRef entry for className
+        ClassRefItem classRef = constPool.findOrAddClass(className);
+        System.out.println("classRef: " + classRef.getClassName());
+
+        // Step 3: Add or find NameAndType entry for fieldName and fieldDescriptor
+        NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
+
+        // Step 4: Add or find FieldRef entry for classRef and nameAndType
+        FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
+
+        // Step 5: Get the index of the FieldRef entry
+        int fieldRefIndex = constPool.getIndexOf(fieldRef);
+
+        // Step 6: Determine the insertion offset
+        int insertOffset = processOffset();
+
+        // Step 7: Insert the GETSTATIC instruction
+        Instruction instruction = codeWriter.insertGetStatic(insertOffset, fieldRefIndex);
+        insertBeforeOffset += instruction.getLength();
+
+        // Optional: Update maxStack and maxLocals if necessary
+        // This depends on your implementation of CodeWriter and whether it handles stack analysis automatically
     }
 }

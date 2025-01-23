@@ -215,7 +215,8 @@ public class CodePrinter {
                 case LSTORE:
                 case FSTORE:
                 case DSTORE:
-                case ASTORE, RET:
+                case ASTORE:
+                case RET:
                     if (pc >= code.length) {
                         sb.append(" <invalid>");
                         break;

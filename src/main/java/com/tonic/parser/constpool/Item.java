@@ -2,6 +2,7 @@ package com.tonic.parser.constpool;
 
 import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -59,5 +60,10 @@ public abstract class Item<T> {
     public void accept(AbstractClassVisitor visitor)
     {
         visitor.visitConstPoolItem(this);
+    }
+
+    public int getIndex(ConstPool constPool)
+    {
+        return constPool.getIndexOf(this);
     }
 }

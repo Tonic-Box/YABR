@@ -491,7 +491,7 @@ public class ClassFile extends AbstractParser {
         }
 
         // Get the field reference index and set the value
-        int fieldRefIndex = constPool.findOrAddField(field.getOwnerName(), field.getName(), field.getDesc());
+        int fieldRefIndex = constPool.getIndexOf(constPool.findOrAddField(field.getOwnerName(), field.getName(), field.getDesc()));
         if (isStatic) {
             bytecode.addPutStatic(fieldRefIndex); // Set static field
         } else {
@@ -537,7 +537,7 @@ public class ClassFile extends AbstractParser {
 
         // Create and populate bytecode
         Bytecode bytecode = new Bytecode(method);
-        int fieldRefIndex = bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc());
+        int fieldRefIndex = constPool.getIndexOf(bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc()));
 
         if (!isStatic) {
             bytecode.addALoad(0); // Load 'this'
@@ -586,7 +586,7 @@ public class ClassFile extends AbstractParser {
 
         // Create and populate bytecode
         Bytecode bytecode = new Bytecode(method);
-        int fieldRefIndex = bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc());
+        int fieldRefIndex = constPool.getIndexOf(bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc()));
 
         if (!isStatic) {
             bytecode.addALoad(0); // Load 'this'
@@ -871,7 +871,7 @@ public class ClassFile extends AbstractParser {
         Bytecode bytecode = new Bytecode(newMethod);
         if(!Modifiers.isStatic(accessFlags))
         {
-            System.out.println("Adding 'this' to the stack");
+            Logger.info("Adding 'this' to the stack");
             bytecode.addALoad(0);
         }
 

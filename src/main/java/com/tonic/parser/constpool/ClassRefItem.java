@@ -2,6 +2,7 @@ package com.tonic.parser.constpool;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
+import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.io.IOException;
  * The value is an index pointing to a Utf8Item representing the class name.
  */
 public class ClassRefItem extends Item<Integer> {
+    @Setter
     private ClassFile classFile;
     private Integer value;
 
@@ -41,7 +43,7 @@ public class ClassRefItem extends Item<Integer> {
         ConstPool constPool = classFile.getConstPool();
         Utf8Item utf8 = (Utf8Item) constPool.getItem(this.value);
         if (utf8 != null) {
-            return utf8.getValue().replace('/', '.');
+            return utf8.getValue().replace('.', '/');
         } else {
             return "UnknownClass";
         }

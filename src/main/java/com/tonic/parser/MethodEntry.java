@@ -1,6 +1,7 @@
 package com.tonic.parser;
 
 import com.tonic.analysis.visitor.AbstractClassVisitor;
+import com.tonic.analysis.visitor.AbstractMethodVisitor;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.Utf8Item;
@@ -157,5 +158,29 @@ public class MethodEntry extends MemberEntry {
     public void accept(AbstractClassVisitor visitor)
     {
         visitor.visitMethod(this);
+    }
+
+    public void accept(AbstractMethodVisitor visitor) throws IOException {
+        visitor.visit(this);
+    }
+
+    public boolean isVoidReturn() {
+        return desc.endsWith(")V");
+    }
+
+    public boolean isPrimitiveReturn() {
+        return desc.endsWith(")Z") || desc.endsWith(")B") || desc.endsWith(")C") || desc.endsWith(")S") || desc.endsWith(")I") || desc.endsWith(")J") || desc.endsWith(")F") || desc.endsWith(")D");
+    }
+
+    public boolean isReferenceReturn() {
+        return desc.endsWith(")L");
+    }
+
+    public boolean isPrimitiveArrayReturn() {
+        return desc.endsWith(")[Z") || desc.endsWith(")[B") || desc.endsWith(")[C") || desc.endsWith(")[S") || desc.endsWith(")[I") || desc.endsWith(")[J") || desc.endsWith(")[F") || desc.endsWith(")[D");
+    }
+
+    public boolean isReferenceArrayReturn() {
+        return desc.endsWith(")[L");
     }
 }

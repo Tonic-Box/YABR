@@ -5,6 +5,7 @@ import com.tonic.analysis.cfg.ControlFlowMap;
 import com.tonic.analysis.cfg.Statement;
 import com.tonic.analysis.instruction.*;
 import com.tonic.analysis.instruction.Instruction;
+import com.tonic.utill.Logger;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -92,7 +93,7 @@ public class CFGAnalyzer {
             while (offset < end) {
                 Instruction instr = instructionsMap.get(offset);
                 if (instr == null) {
-                    System.out.println("Warning: No instruction found at offset " + offset);
+                    Logger.error("Warning: No instruction found at offset " + offset);
                     break; // No instruction found at this offset
                 }
                 blockInstructions.add(instr);
@@ -110,9 +111,9 @@ public class CFGAnalyzer {
             basicBlocks.add(block);
 
             // Log basic block creation for debugging
-            System.out.println("Created Block " + block.getId() + " [Start: " + block.getStartOffset() + ", End: " + block.getEndOffset() + "]");
+            Logger.info("Created Block " + block.getId() + " [Start: " + block.getStartOffset() + ", End: " + block.getEndOffset() + "]");
             for (Instruction instr : block.getInstructions()) {
-                System.out.println("  Instruction: " + instr);
+                Logger.info("  Instruction: " + instr);
             }
         }
     }
@@ -142,10 +143,10 @@ public class CFGAnalyzer {
                 if (targetBlock != null) {
                     successors.add(targetBlock);
                     // Log the successor
-                    System.out.println("Block " + block.getId() + " (GOTO) -> Block " + targetBlock.getId());
+                    Logger.info("Block " + block.getId() + " (GOTO) -> Block " + targetBlock.getId());
                 } else {
                     // Log invalid target
-                    System.out.println("Block " + block.getId() + " (GOTO) has invalid target offset: " + target);
+                    Logger.info("Block " + block.getId() + " (GOTO) has invalid target offset: " + target);
                 }
                 // Unconditional branch should not have fall-through
             } else if (lastInstr instanceof ConditionalBranchInstruction) {
@@ -154,10 +155,10 @@ public class CFGAnalyzer {
                 if (targetBlock != null) {
                     successors.add(targetBlock);
                     // Log the branch target
-                    System.out.println("Block " + block.getId() + " (Conditional Branch) -> Block " + targetBlock.getId());
+                    Logger.info("Block " + block.getId() + " (Conditional Branch) -> Block " + targetBlock.getId());
                 } else {
                     // Log invalid target
-                    System.out.println("Block " + block.getId() + " (Conditional Branch) has invalid target offset: " + target);
+                    Logger.info("Block " + block.getId() + " (Conditional Branch) has invalid target offset: " + target);
                 }
                 // Fall-through successor
                 int fallThrough = lastInstr.getOffset() + lastInstr.getLength();
@@ -165,14 +166,14 @@ public class CFGAnalyzer {
                 if (fallThroughBlock != null) {
                     successors.add(fallThroughBlock);
                     // Log the fall-through
-                    System.out.println("Block " + block.getId() + " (Conditional Branch) -> Block " + fallThroughBlock.getId() + " (Fall-through)");
+                    Logger.info("Block " + block.getId() + " (Conditional Branch) -> Block " + fallThroughBlock.getId() + " (Fall-through)");
                 } else {
                     // Log invalid fall-through
-                    System.out.println("Block " + block.getId() + " (Conditional Branch) has invalid fall-through offset: " + fallThrough);
+                    Logger.info("Block " + block.getId() + " (Conditional Branch) has invalid fall-through offset: " + fallThrough);
                 }
             } else if (lastInstr instanceof ReturnInstruction || lastInstr instanceof ATHROWInstruction) {
                 // No successors
-                System.out.println("Block " + block.getId() + " (Return/Throw) has no successors.");
+                Logger.info("Block " + block.getId() + " (Return/Throw) has no successors.");
             } else {
                 // Fall-through successor for non-branch instructions
                 int fallThrough = lastInstr.getOffset() + lastInstr.getLength();
@@ -180,10 +181,10 @@ public class CFGAnalyzer {
                 if (fallThroughBlock != null) {
                     successors.add(fallThroughBlock);
                     // Log the successor
-                    System.out.println("Block " + block.getId() + " -> Block " + fallThroughBlock.getId());
+                    Logger.info("Block " + block.getId() + " -> Block " + fallThroughBlock.getId());
                 } else {
                     // Log invalid fall-through
-                    System.out.println("Block " + block.getId() + " has invalid fall-through offset: " + fallThrough);
+                    Logger.info("Block " + block.getId() + " has invalid fall-through offset: " + fallThrough);
                 }
             }
 
@@ -213,21 +214,21 @@ public class CFGAnalyzer {
             // Cast branchOffset to short to correctly interpret negative values
             short signedOffset = (short) cbi.getBranchOffset();
             int targetOffset = instr.getOffset() + instr.getLength() + signedOffset;
-            System.out.println("Calculating target for " + instr + ": " + targetOffset);
+            Logger.info("Calculating target for " + instr + ": " + targetOffset);
             return targetOffset;
         } else if (instr instanceof GotoInstruction) {
             GotoInstruction gi = (GotoInstruction) instr;
             // Cast branchOffset to short to correctly interpret negative values
             short signedOffset = (short) gi.getBranchOffset();
             int targetOffset = instr.getOffset() + gi.getLength() + signedOffset;
-            System.out.println("Calculating target for " + instr + ": " + targetOffset);
+            Logger.info("Calculating target for " + instr + ": " + targetOffset);
             return targetOffset;
         } else if (instr instanceof JsrInstruction) {
             JsrInstruction ji = (JsrInstruction) instr;
             // Cast branchOffset to short to correctly interpret negative values
             short signedOffset = (short) ji.getBranchOffset();
             int targetOffset = instr.getOffset() + ji.getLength() + signedOffset;
-            System.out.println("Calculating target for " + instr + ": " + targetOffset);
+            Logger.info("Calculating target for " + instr + ": " + targetOffset);
             return targetOffset;
         }
         return -1;
@@ -246,7 +247,7 @@ public class CFGAnalyzer {
             }
         }
         // Log a warning if no block contains the offset
-        System.out.println("Warning: No block contains offset " + offset);
+        Logger.info("Warning: No block contains offset " + offset);
         return null;
     }
 

@@ -1,5 +1,6 @@
 package com.tonic.parser.attribute;
 
+import com.tonic.analysis.visitor.AbstractMethodVisitor;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.MethodEntry;
@@ -167,5 +168,9 @@ public class CodeAttribute extends Attribute {
                 ", exceptionTableSize=" + exceptionTable.size() +
                 ", attributesCount=" + attributes.size() +
                 '}';
+    }
+
+    public void accept(AbstractMethodVisitor abstractMethodVisitor)
+    {
     }
 }

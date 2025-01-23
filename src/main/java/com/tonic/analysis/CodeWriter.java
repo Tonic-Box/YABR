@@ -5,6 +5,7 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.analysis.instruction.*;
+import com.tonic.utill.Logger;
 import com.tonic.utill.ReturnType;
 import lombok.Getter;
 
@@ -84,6 +85,9 @@ public class CodeWriter {
             throw new IllegalArgumentException("Invalid bytecode offset: " + offset);
         }
 
+        Logger.info("Inserting instruction at offset: " + offset);
+        Logger.info("Instruction to insert: " + newInstr);
+
         List<Map.Entry<Integer, Instruction>> entries = new ArrayList<>(instructions.entrySet());
         Map<Integer, Instruction> updatedInstructions = new TreeMap<>();
         boolean inserted = false;
@@ -97,9 +101,12 @@ public class CodeWriter {
                 updatedInstructions.put(offset, newInstr);
                 updatedInstructions.put(offset + newInstr.getLength(), instr);
                 inserted = true;
+                Logger.info("Inserted new instruction at " + offset + ", shifted existing instruction to " + (offset + newInstr.getLength()));
             } else if (currentOffset > offset) {
+                int newShiftedOffset = currentOffset + newInstr.getLength();
                 // Shift instructions after insertion point
-                updatedInstructions.put(currentOffset + newInstr.getLength(), instr);
+                updatedInstructions.put(newShiftedOffset, instr);
+                Logger.info("Shifted instruction from " + currentOffset + " to " + newShiftedOffset);
             } else {
                 // Keep instructions before insertion point
                 updatedInstructions.put(currentOffset, instr);
@@ -109,11 +116,13 @@ public class CodeWriter {
         if (!inserted && offset == bytecode.length) {
             // Append at the end
             updatedInstructions.put(offset, newInstr);
+            Logger.info("Appended instruction at end offset: " + offset);
         }
 
         // Handle inserting into empty bytecode
         if (entries.isEmpty() && offset == 0) {
             updatedInstructions.put(0, newInstr);
+            Logger.info("Inserted instruction into empty bytecode at offset 0");
         }
 
         instructions.clear();
@@ -134,14 +143,16 @@ public class CodeWriter {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (DataOutputStream dos = new DataOutputStream(baos)) {
             for (Instruction instr : instructions.values()) {
+                Logger.info("Writing instruction at offset " + instr.getOffset() + ": " + instr);
                 instr.write(dos);
             }
             dos.flush();
             bytecode = baos.toByteArray();
             codeAttribute.setCode(bytecode);
+            Logger.info("Rebuilt bytecode: " + Arrays.toString(bytecode));
         } catch (IOException e) {
             // Replace Logger with appropriate logging mechanism
-            System.err.println("Failed to rebuild bytecode: " + e.getMessage());
+            Logger.error("Failed to rebuild bytecode: " + e.getMessage());
         }
     }
 
@@ -212,6 +223,7 @@ public class CodeWriter {
      */
     public static class InstructionFactory {
         public static Instruction createInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool) {
+            Logger.info("Parsing opcode: 0x" + Integer.toHexString(opcode) + " at offset: " + offset);
             switch (opcode) {
                 // Simple Instructions
                 case 0x00: // NOP
@@ -280,6 +292,7 @@ public class CodeWriter {
                         return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                     }
                     int ldcWIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
+                    Logger.info("LDC_W: cpIndex = " + ldcWIndex);
                     return new LdcWInstruction(constPool, opcode, offset, ldcWIndex);
 
                 // LDC2_W (0x14)
@@ -721,14 +734,20 @@ public class CodeWriter {
          * @return The name of the load instruction.
          */
         private static String getLoadInstructionName(int opcode) {
-            return switch (opcode) {
-                case 0x15 -> "ILOAD";
-                case 0x16 -> "LLOAD";
-                case 0x17 -> "FLOAD";
-                case 0x18 -> "DLOAD";
-                case 0x19 -> "ALOAD";
-                default -> "UNKNOWN_LOAD";
-            };
+            switch (opcode) {
+                case 0x15:
+                    return "ILOAD";
+                case 0x16:
+                    return "LLOAD";
+                case 0x17:
+                    return "FLOAD";
+                case 0x18:
+                    return "DLOAD";
+                case 0x19:
+                    return "ALOAD";
+                default:
+                    return "UNKNOWN_LOAD";
+            }
         }
 
         /**
@@ -738,14 +757,20 @@ public class CodeWriter {
          * @return The name of the store instruction.
          */
         private static String getStoreInstructionName(int opcode) {
-            return switch (opcode) {
-                case 0x36 -> "ISTORE";
-                case 0x37 -> "LSTORE";
-                case 0x38 -> "FSTORE";
-                case 0x39 -> "DSTORE";
-                case 0x3A -> "ASTORE";
-                default -> "UNKNOWN_STORE";
-            };
+            switch (opcode) {
+                case 0x36:
+                    return "ISTORE";
+                case 0x37:
+                    return "LSTORE";
+                case 0x38:
+                    return "FSTORE";
+                case 0x39:
+                    return "DSTORE";
+                case 0x3A:
+                    return "ASTORE";
+                default:
+                    return "UNKNOWN_STORE";
+            }
         }
 
         /**
@@ -763,14 +788,20 @@ public class CodeWriter {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
             }
             int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-            return switch (instructionName) {
-                case "ILOAD" -> new ILoadInstruction(opcode, offset, varIndex);
-                case "LLOAD" -> new LLoadInstruction(opcode, offset, varIndex);
-                case "FLOAD" -> new FLoadInstruction(opcode, offset, varIndex);
-                case "DLOAD" -> new DLoadInstruction(opcode, offset, varIndex);
-                case "ALOAD" -> new ALoadInstruction(opcode, offset, varIndex);
-                default -> new UnknownInstruction(opcode, offset, operandBytes + 1);
-            };
+            switch (instructionName) {
+                case "ILOAD":
+                    return new ILoadInstruction(opcode, offset, varIndex);
+                case "LLOAD":
+                    return new LLoadInstruction(opcode, offset, varIndex);
+                case "FLOAD":
+                    return new FLoadInstruction(opcode, offset, varIndex);
+                case "DLOAD":
+                    return new DLoadInstruction(opcode, offset, varIndex);
+                case "ALOAD":
+                    return new ALoadInstruction(opcode, offset, varIndex);
+                default:
+                    return new UnknownInstruction(opcode, offset, operandBytes + 1);
+            }
         }
 
         /**
@@ -788,14 +819,20 @@ public class CodeWriter {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
             }
             int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-            return switch (instructionName) {
-                case "ISTORE" -> new IStoreInstruction(opcode, offset, varIndex);
-                case "LSTORE" -> new LStoreInstruction(opcode, offset, varIndex);
-                case "FSTORE" -> new FStoreInstruction(opcode, offset, varIndex);
-                case "DSTORE" -> new DStoreInstruction(opcode, offset, varIndex);
-                case "ASTORE" -> new AStoreInstruction(opcode, offset, varIndex);
-                default -> new UnknownInstruction(opcode, offset, operandBytes + 1);
-            };
+            switch (instructionName) {
+                case "ISTORE":
+                    return new IStoreInstruction(opcode, offset, varIndex);
+                case "LSTORE":
+                    return new LStoreInstruction(opcode, offset, varIndex);
+                case "FSTORE":
+                    return new FStoreInstruction(opcode, offset, varIndex);
+                case "DSTORE":
+                    return new DStoreInstruction(opcode, offset, varIndex);
+                case "ASTORE":
+                    return new AStoreInstruction(opcode, offset, varIndex);
+                default:
+                    return new UnknownInstruction(opcode, offset, operandBytes + 1);
+            }
         }
 
         /**
@@ -870,12 +907,16 @@ public class CodeWriter {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
             }
             int methodRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
-            return switch (opcode) {
-                case 0xB6 -> new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
-                case 0xB7 -> new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
-                case 0xB8 -> new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
-                default -> new UnknownInstruction(opcode, offset, 3);
-            };
+            switch (opcode) {
+                case 0xB6:
+                    return new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
+                case 0xB7:
+                    return new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
+                case 0xB8:
+                    return new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
+                default:
+                    return new UnknownInstruction(opcode, offset, 3);
+            }
         }
 
         /**
@@ -1016,14 +1057,20 @@ public class CodeWriter {
                         return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                     }
                     int varIndexLoad = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
-                    return switch (modifiedOpcodeCode) {
-                        case 0x15 -> new ILoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x16 -> new LLoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x17 -> new FLoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x18 -> new DLoadInstruction(opcode, offset, varIndexLoad);
-                        case 0x19 -> new ALoadInstruction(opcode, offset, varIndexLoad);
-                        default -> new UnknownInstruction(opcode, offset, 4);
-                    };
+                    switch (modifiedOpcodeCode) {
+                        case 0x15:
+                            return new ILoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x16:
+                            return new LLoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x17:
+                            return new FLoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x18:
+                            return new DLoadInstruction(opcode, offset, varIndexLoad);
+                        case 0x19:
+                            return new ALoadInstruction(opcode, offset, varIndexLoad);
+                        default:
+                            return new UnknownInstruction(opcode, offset, 4);
+                    }
 
                 case 0x36: // ISTORE
                 case 0x37: // LSTORE
@@ -1034,14 +1081,20 @@ public class CodeWriter {
                         return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                     }
                     int varIndexStore = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
-                    return switch (modifiedOpcodeCode) {
-                        case 0x36 -> new IStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x37 -> new LStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x38 -> new FStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x39 -> new DStoreInstruction(opcode, offset, varIndexStore);
-                        case 0x3A -> new AStoreInstruction(opcode, offset, varIndexStore);
-                        default -> new UnknownInstruction(opcode, offset, 4);
-                    };
+                    switch (modifiedOpcodeCode) {
+                        case 0x36:
+                            return new IStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x37:
+                            return new LStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x38:
+                            return new FStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x39:
+                            return new DStoreInstruction(opcode, offset, varIndexStore);
+                        case 0x3A:
+                            return new AStoreInstruction(opcode, offset, varIndexStore);
+                        default:
+                            return new UnknownInstruction(opcode, offset, 4);
+                    }
 
                 case 0x84: // IINC
                     if (offset + 5 >= bytecode.length) {
@@ -1363,6 +1416,33 @@ public class CodeWriter {
         NewInstruction newInstr = new NewInstruction(constPool, opcode, offset, classRefIndex);
         insertInstruction(offset, newInstr);
         return newInstr;
+    }
+
+    /**
+     * Inserts an LDC instruction at the specified bytecode offset.
+     *
+     * @param offset             The bytecode offset to insert the instruction at.
+     * @param constantPoolIndex  The index into the constant pool for the constant.
+     */
+    public LdcInstruction insertLDC(int offset, int constantPoolIndex) {
+        int opcode = 0x12; // LDC opcode
+        LdcInstruction ldcInstr = new LdcInstruction(constPool, opcode, offset, constantPoolIndex);
+        insertInstruction(offset, ldcInstr);
+        return ldcInstr;
+    }
+
+    /**
+     * Inserts an LDC_W instruction at the specified bytecode offset.
+     *
+     * @param offset            The bytecode offset to insert the instruction at.
+     * @param constantPoolIndex The 2-byte index into the constant pool for the constant.
+     */
+    public LdcWInstruction insertLDCW(int offset, int constantPoolIndex) {
+        int opcode = 0x13; // LDC_W opcode
+        Logger.info("Inserting LDC_W at offset " + offset + " with index " + constantPoolIndex);
+        LdcWInstruction ldcWInstr = new LdcWInstruction(constPool, opcode, offset, constantPoolIndex);
+        insertInstruction(offset, ldcWInstr);
+        return ldcWInstr;
     }
 
     /**

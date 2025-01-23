@@ -87,6 +87,11 @@ public class MethodRefItem extends Item<MethodRef> {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
+        if(nameAndType.getConstPool() == null)
+        {
+            nameAndType.setConstPool(classFile.getConstPool());
+        }
+
         String descriptor = nameAndType.getDescriptor(); // e.g., "(Ljava/lang/String;)V"
         return parseDescriptorParameters(descriptor);
     }

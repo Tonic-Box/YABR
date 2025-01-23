@@ -8,12 +8,12 @@ import java.io.IOException;
 
 public class AbstractBytecodeVisitor implements Visitor<MethodEntry>
 {
-    protected MethodEntry method;
     protected CodeWriter codeWriter;
+    protected MethodEntry method;
     @Override
     public void process(MethodEntry method) throws IOException {
-        this.method = method;
         codeWriter = new CodeWriter(method);
+        this.method = method;
         codeWriter.accept(this);
         codeWriter.write();
     }

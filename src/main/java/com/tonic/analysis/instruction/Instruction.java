@@ -1,8 +1,7 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
+import com.tonic.utill.Logger;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -21,6 +20,11 @@ public abstract class Instruction {
         this.opcode = opcode;
         this.offset = offset;
         this.length = length;
+    }
+
+    public int getLength() {
+        Logger.info("Instruction " + this + " has length: " + length);
+        return length;
     }
 
     public abstract void accept(AbstractBytecodeVisitor visitor);

@@ -3,6 +3,8 @@ package com.tonic.parser.constpool;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.structure.InterfaceRef;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
