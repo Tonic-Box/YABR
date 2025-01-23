@@ -86,3 +86,40 @@ bytecode.finalizeBytecode();
 classFile.rebuild();
 System.out.println(classFile);
 ```
+
+### Visitor Example
+```java
+/**
+ * This visitor will add a System.out.println call to each exit point of the method with a void return and the beginning of each method with a return type
+ * method with a void return and the beginning of each method with a return type.
+ */
+public final class TestBytecodeVisitor extends AbstractBytecodeVisitor {
+
+    /**
+     * We add a System.out.println call to each exit point of the method just before the return
+     * instruction with a void return and the beginning of each method with a return type.
+     * @param instruction the return instruction
+     */
+    @Override
+    public void visit(ReturnInstruction instruction) {
+        super.visit(instruction);
+
+        Bytecode bytecode = new Bytecode(codeWriter);
+        bytecode.setInsertBefore(true);
+
+        if (method.isVoidReturn()) {
+            bytecode.setInsertBeforeOffset(instruction.getOffset());
+        }
+
+        bytecode.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
+        bytecode.addLdc("Hello, World!");
+        bytecode.addInvokeVirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
+
+        try {
+            bytecode.finalizeBytecode();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+```
