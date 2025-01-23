@@ -1,6 +1,12 @@
 package com.tonic.analysis;
 
+import com.tonic.analysis.ir.blocks.Block;
+import com.tonic.analysis.ir.blocks.Expression;
+import com.tonic.analysis.ir.blocks.Statement;
+import com.tonic.analysis.ir.types.OpcodeTypeMapper;
+import com.tonic.analysis.ir.types.StatementType;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.visitor.AbstractBlockVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
@@ -27,7 +33,10 @@ public class CodeWriter {
     private final ConstPool constPool;
 
     // Mapping from bytecode offset to Instruction
-    private final Map<Integer, Instruction> instructions = new TreeMap<>();
+    protected final Map<Integer, Instruction> instructions = new TreeMap<>();
+
+    // List of blocks (Expressions and Statements)
+    protected final List<Block> blocks = new ArrayList<>();
 
     // Current max stack and locals, updated as we modify bytecode
     private int maxStack;
@@ -47,12 +56,13 @@ public class CodeWriter {
         this.bytecode = this.codeAttribute.getCode();
         this.constPool = methodEntry.getClassFile().getConstPool();
         parseBytecode();
+        parseBlocks();
     }
 
     /**
      * Parses the bytecode into individual instructions.
      */
-    private void parseBytecode() {
+    protected void parseBytecode() {
         instructions.clear();
         int offset = 0;
         while (offset < bytecode.length) {
@@ -80,6 +90,12 @@ public class CodeWriter {
         return instructions.size();
     }
 
+    /**
+     * Inserts an instruction into the bytecode and updates blocks accordingly.
+     *
+     * @param offset   The bytecode offset to insert the instruction at.
+     * @param newInstr The new Instruction to insert.
+     */
     public void insertInstruction(int offset, Instruction newInstr) {
         if (!instructions.containsKey(offset) && offset != bytecode.length) {
             throw new IllegalArgumentException("Invalid bytecode offset: " + offset);
@@ -88,6 +104,7 @@ public class CodeWriter {
         Logger.info("Inserting instruction at offset: " + offset);
         Logger.info("Instruction to insert: " + newInstr);
 
+        // Insert into the instructions map
         List<Map.Entry<Integer, Instruction>> entries = new ArrayList<>(instructions.entrySet());
         Map<Integer, Instruction> updatedInstructions = new TreeMap<>();
         boolean inserted = false;
@@ -131,15 +148,16 @@ public class CodeWriter {
         // Rebuild the bytecode
         rebuildBytecode();
 
-        // Re-parse bytecode to update instruction mappings
+        // Re-parse bytecode and blocks to update mappings
         parseBytecode();
+        parseBlocks();
     }
 
 
     /**
      * Rebuilds the bytecode array from the current instructions.
      */
-    private void rebuildBytecode() {
+    protected void rebuildBytecode() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (DataOutputStream dos = new DataOutputStream(baos)) {
             for (Instruction instr : instructions.values()) {
@@ -1466,6 +1484,85 @@ public class CodeWriter {
         for (Map.Entry<Integer, Instruction> entry : instructions.entrySet()) {
             Instruction instr = entry.getValue();
             instr.accept(visitor);
+        }
+    }
+
+    /**
+     * Determines if the instruction is a branching instruction.
+     *
+     * @param instr The instruction to check.
+     * @return True if it's a branching instruction, false otherwise.
+     */
+    protected boolean isBranchingInstruction(Instruction instr) {
+        // Define branching opcodes based on JVM specification
+        Set<Integer> branchingOpcodes = new HashSet<>(Arrays.asList(
+                0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, // IFxxxx
+                0x9F, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, // IF_ICMPxxxx, IF_ACMPxxxx
+                0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, // GOTO, JSR, RET, etc.
+                0xC8, 0xC9 // GOTO_W, JSR_W
+        ));
+        return branchingOpcodes.contains(instr.getOpcode());
+    }
+
+    /**
+     * Parses the instructions into Blocks (Expressions and Statements) and assigns their types.
+     */
+    protected void parseBlocks() {
+        blocks.clear();
+        Block currentBlock = null;
+        String currentBlockType = null; // "Expression", "Statement", or "Other"
+
+        for (Instruction instr : instructions.values()) {
+            int opcode = instr.getOpcode();
+            String instrBlockType = OpcodeTypeMapper.getBlockType(opcode);
+
+            // Determine if a new block should be started
+            boolean shouldStartNewBlock = false;
+
+            if (currentBlock == null) {
+                shouldStartNewBlock = true;
+            } else if (!instrBlockType.equals(currentBlockType)) {
+                shouldStartNewBlock = true;
+            }
+
+            if (shouldStartNewBlock) {
+                // Start a new block based on instrBlockType
+                switch (instrBlockType) {
+                    case "Expression":
+                        currentBlock = new Expression();
+                        // Assign ExpressionType
+                        ((Expression) currentBlock).setType(OpcodeTypeMapper.getExpressionType(opcode));
+                        break;
+                    case "Statement":
+                        currentBlock = new Statement();
+                        // Assign StatementType
+                        ((Statement) currentBlock).setType(OpcodeTypeMapper.getStatementType(opcode));
+                        break;
+                    default:
+                        currentBlock = new Statement(); // Treat "Other" as StatementType.OTHER
+                        ((Statement) currentBlock).setType(StatementType.OTHER);
+                        break;
+                }
+                blocks.add(currentBlock);
+                currentBlockType = instrBlockType;
+            }
+
+            // Add instruction to the current block
+            currentBlock.addInstruction(instr);
+        }
+
+        Logger.info("Parsed into " + blocks.size() + " blocks.");
+    }
+
+    public void accept(AbstractBlockVisitor visitor) {
+        for (Block block : blocks) {
+            if(block instanceof Expression) {
+                visitor.visit((Expression) block);
+            } else if(block instanceof Statement) {
+                visitor.visit((Statement) block);
+            } else {
+                visitor.visit(block);
+            }
         }
     }
 }

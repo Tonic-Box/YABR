@@ -8,7 +8,7 @@ import com.tonic.parser.constpool.Item;
 
 import java.io.IOException;
 
-public class AbstractClassVisitor implements Visitor<ClassFile>
+public abstract class AbstractClassVisitor implements Visitor<ClassFile>
 {
     protected ClassFile classFile;
     @Override

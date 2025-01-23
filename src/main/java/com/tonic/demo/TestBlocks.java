@@ -1,16 +1,22 @@
 package com.tonic.demo;
 
-import com.tonic.analysis.Bytecode;
-import com.tonic.analysis.instruction.ReturnInstruction;
-import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import com.tonic.analysis.instruction.Instruction;
+import com.tonic.analysis.ir.blocks.Block;
+import com.tonic.analysis.ir.blocks.Expression;
+import com.tonic.analysis.ir.blocks.Statement;
+import com.tonic.analysis.visitor.AbstractBlockVisitor;
 import com.tonic.analysis.visitor.AbstractClassVisitor;
-import com.tonic.parser.*;
+import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
+import com.tonic.parser.FieldEntry;
+import com.tonic.parser.MethodEntry;
 import com.tonic.utill.AccessBuilder;
 import com.tonic.utill.Logger;
+
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class TestVisitor
+public class TestBlocks
 {
     private static final int classAccess = new AccessBuilder()
             .setPublic()
@@ -45,14 +51,6 @@ public class TestVisitor
         classFile.rebuild();
 
         classFile.accept(new TestClassVisitor());
-
-        //compile our changes in memory
-        classFile.rebuild();
-
-        System.out.println(classFile);
-
-        //save the class file to disc
-        //ClassFileUtil.saveClassFile(classFile.write(), "C:\\test\\new", "ANewClass");
     }
 
     /**
@@ -60,15 +58,14 @@ public class TestVisitor
      */
     public static final class TestClassVisitor extends AbstractClassVisitor
     {
-        private final TestBytecodeVisitor bytecodeVisitor = new TestBytecodeVisitor();
+        private final PrintBlockVisitor printBlockVisitor = new PrintBlockVisitor();
         @Override
         public void visitMethod(MethodEntry methodEntry) {
             super.visitMethod(methodEntry);
-            if(methodEntry.getName().contains("lambda$") || methodEntry.getName().startsWith("<"))
-                return;
-
             try {
-                bytecodeVisitor.process(methodEntry);
+                System.out.println("Method: " + methodEntry.getName());
+                printBlockVisitor.process(methodEntry);
+                System.out.println();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -80,29 +77,32 @@ public class TestVisitor
         }
     }
 
-    /**
-     * This visitor will add a System.out.println call to each exit point of the method
-     */
-    public static final class TestBytecodeVisitor extends AbstractBytecodeVisitor
+    public static class PrintBlockVisitor extends AbstractBlockVisitor
     {
-        /**
-         * we add a sout call to each exit point of the method just before the return instruction
-         * @param instruction the return instruction
-         */
         @Override
-        public void visit(ReturnInstruction instruction) {
-            super.visit(instruction);
-            Bytecode bytecode = new Bytecode(codeWriter);
-            bytecode.setInsertBefore(true);
-            if(method.isVoidReturn())
-                bytecode.setInsertBeforeOffset(instruction.getOffset());
-            bytecode.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-            bytecode.addLdc("Hello, World!");
-            bytecode.addInvokeVirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
-            try {
-                bytecode.finalizeBytecode();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+        public void visit(Expression expression) {
+            System.out.println("\tExpression Block: " + expression);
+            for(Instruction instruction : expression.getInstructions())
+            {
+                System.out.println("\t\tInstruction: " + instruction);
+            }
+        }
+
+        @Override
+        public void visit(Statement statement) {
+            System.out.println("\tStatement Block: " + statement);
+            for(Instruction instruction : statement.getInstructions())
+            {
+                System.out.println("\t\tInstruction: " + instruction);
+            }
+        }
+
+        @Override
+        public void visit(Block other) {
+            System.out.println("\tOther Block: " + other);
+            for(Instruction instruction : other.getInstructions())
+            {
+                System.out.println("\t\tInstruction: " + instruction);
             }
         }
     }

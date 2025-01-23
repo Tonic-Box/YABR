@@ -92,4 +92,16 @@ public class InvokeVirtualInstruction extends Instruction {
     public String toString() {
         return String.format("INVOKEVIRTUAL #%d // %s", methodIndex, resolveMethod());
     }
+
+    public String getMethodName()
+    {
+        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
+        return method.getName();
+    }
+
+    public String getMethodDescriptor()
+    {
+        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
+        return method.getDescriptor();
+    }
 }

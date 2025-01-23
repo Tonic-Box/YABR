@@ -5,7 +5,7 @@ import com.tonic.parser.attribute.CodeAttribute;
 
 import java.io.IOException;
 
-public class AbstractMethodVisitor implements Visitor<MethodEntry> {
+public abstract class AbstractMethodVisitor implements Visitor<MethodEntry> {
     @Override
     public void process(MethodEntry methodEntry) throws IOException {
         methodEntry.accept(this);

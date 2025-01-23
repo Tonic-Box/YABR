@@ -4,25 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="implemented a simple visitor pattern api">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Visitors implemented and VisitorTest demo class written">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/Bytecode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/Bytecode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CFGAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CFGAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractBytecodeVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractBytecodeVisitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestModifyClass.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestModifyClass.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MethodEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MethodEntry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/ClassRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/ClassRefItem.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/InterfaceRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/InterfaceRefItem.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/Item.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/Item.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/MethodRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/MethodRefItem.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/NameAndTypeRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/NameAndTypeRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractClassVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractClassVisitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractMethodVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractMethodVisitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestVisitor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,6 +26,7 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="Enum" />
         <option value="Class" />
       </list>
     </option>
@@ -75,7 +65,20 @@
     "project.structure.side.proportion": "0.0"
   }
 }]]></component>
-  <component name="RunManager" selected="Application.TestVisitor">
+  <component name="RunManager" selected="Application.TestBlocks">
+    <configuration name="TestBlocks" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.TestBlocks" />
+      <module name="YABR.main" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tonic.demo.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="TestClassCreation" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.TestClassCreation" />
       <module name="YABR.main" />
@@ -130,6 +133,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.TestBlocks" />
         <item itemvalue="Application.TestVisitor" />
         <item itemvalue="Application.TestModifyClass" />
         <item itemvalue="Application.TestClassCreation" />
@@ -234,7 +238,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737561326720</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="Visitors implemented and VisitorTest demo class written">
+      <option name="closed" value="true" />
+      <created>1737595682163</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1737595682163</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -258,7 +270,8 @@
     <MESSAGE value="Cleanup of demo classes. Implimented ClassFile::setFieldInitialValue, ClassFile::generateSetter, and ClassFile::generateGetter" />
     <MESSAGE value="implimented a simple visitor pattern api" />
     <MESSAGE value="implemented a simple visitor pattern api" />
-    <option name="LAST_COMMIT_MESSAGE" value="implemented a simple visitor pattern api" />
+    <MESSAGE value="Visitors implemented and VisitorTest demo class written" />
+    <option name="LAST_COMMIT_MESSAGE" value="Visitors implemented and VisitorTest demo class written" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

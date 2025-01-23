@@ -6,7 +6,7 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.IOException;
 
-public class AbstractBytecodeVisitor implements Visitor<MethodEntry>
+public abstract class AbstractBytecodeVisitor implements Visitor<MethodEntry>
 {
     protected CodeWriter codeWriter;
     protected MethodEntry method;
