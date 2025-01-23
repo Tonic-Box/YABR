@@ -13,7 +13,7 @@ ClassFile classFile = classPool.createNewClass("com/tonic/ANewClass", classAcces
 ```
 
 
-### Load a class from disk:
+### Load a class from disc:
 ```java
 ClassPool classPool = ClassPool.getDefault();
 
