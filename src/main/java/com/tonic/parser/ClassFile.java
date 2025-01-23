@@ -26,6 +26,7 @@ public class ClassFile extends AbstractParser {
     private int access;
     private int thisClass;
     private int superClass;
+    @Setter
     private ConstPool constPool;
     private List<Attribute> classAttributes;
     private List<FieldEntry> fields;
@@ -211,7 +212,7 @@ public class ClassFile extends AbstractParser {
         Logger.info("Version: " + majorVersion + "." + minorVersion);
 
         // Parse constant pool
-        constPool = new ConstPool(this);
+        new ConstPool(this);
         Logger.info(constPool.toString());
 
         // Read access flags

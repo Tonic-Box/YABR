@@ -3,6 +3,7 @@ package com.tonic.parser.constpool;
 import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
+import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,6 +14,9 @@ import java.io.IOException;
  * @param <T> The type of the value held by the constant pool item.
  */
 public abstract class Item<T> {
+    @Setter
+    private ClassFile classFile;
+
     // Constant Pool Tags
     public static final byte ITEM_UTF_8         =  0x1;
     public static final byte ITEM_INTEGER       =  0x3;

@@ -67,4 +67,9 @@ public class FieldRefItem extends Item<FieldRef> {
         Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getDescriptorIndex());
         return utf8.getValue();
     }
+
+    @Override
+    public String toString() {
+        return "FieldRefItem{<" + getDescriptor() + "> " + getClassName() + "." + getName() + "}";
+    }
 }

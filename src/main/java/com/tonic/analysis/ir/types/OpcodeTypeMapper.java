@@ -28,10 +28,11 @@ public class OpcodeTypeMapper {
     public static final Set<Integer> DUPLICATE_OPCODES = new HashSet<>();
     public static final Set<Integer> SWAP_OPCODES = new HashSet<>();
     public static final Set<Integer> NOP_OPCODES = new HashSet<>();
+    public static final Set<Integer> BLOCK_TERMINATOR_OPCODES = new HashSet<>();
+    public static final Set<Integer> CONSTANT_PUSH_OPCODES = new HashSet<>();
 
-    // Initialize the opcode sets
     static {
-        // Conditional Branches
+        // Initialize CONDITIONAL_BRANCH_OPCODES
         CONDITIONAL_BRANCH_OPCODES.add(0x99); // IFEQ
         CONDITIONAL_BRANCH_OPCODES.add(0x9A); // IFNE
         CONDITIONAL_BRANCH_OPCODES.add(0x9B); // IFLT
@@ -47,15 +48,15 @@ public class OpcodeTypeMapper {
         CONDITIONAL_BRANCH_OPCODES.add(0xA5); // IF_ACMPEQ
         CONDITIONAL_BRANCH_OPCODES.add(0xA6); // IF_ACMPNE
 
-        // Unconditional Branches
+        // Initialize UNCONDITIONAL_BRANCH_OPCODES
         UNCONDITIONAL_BRANCH_OPCODES.add(0xA7); // GOTO
         UNCONDITIONAL_BRANCH_OPCODES.add(0xC8); // GOTO_W
 
-        // Switch Instructions
+        // Initialize SWITCH_OPCODES
         SWITCH_OPCODES.add(0xAA); // TABLESWITCH
         SWITCH_OPCODES.add(0xAB); // LOOKUPSWITCH
 
-        // Return Instructions
+        // Initialize RETURN_OPCODES
         RETURN_OPCODES.add(0xAC); // IRETURN
         RETURN_OPCODES.add(0xAD); // LRETURN
         RETURN_OPCODES.add(0xAE); // FRETURN
@@ -63,22 +64,22 @@ public class OpcodeTypeMapper {
         RETURN_OPCODES.add(0xB0); // ARETURN
         RETURN_OPCODES.add(0xB1); // RETURN
 
-        // Invokedynamic
+        // Initialize INVOKEDYNAMIC_OPCODES
         INVOKEDYNAMIC_OPCODES.add(0xBA); // INVOKEDYNAMIC
 
-        // Method Calls
+        // Initialize METHOD_CALL_OPCODES
         METHOD_CALL_OPCODES.add(0xB6); // INVOKEVIRTUAL
         METHOD_CALL_OPCODES.add(0xB7); // INVOKESPECIAL
         METHOD_CALL_OPCODES.add(0xB8); // INVOKESTATIC
         METHOD_CALL_OPCODES.add(0xB9); // INVOKEINTERFACE
 
-        // Field Access
+        // Initialize FIELD_ACCESS_OPCODES
         FIELD_ACCESS_OPCODES.add(0xB2); // GETSTATIC
         FIELD_ACCESS_OPCODES.add(0xB3); // PUTSTATIC
         FIELD_ACCESS_OPCODES.add(0xB4); // GETFIELD
         FIELD_ACCESS_OPCODES.add(0xB5); // PUTFIELD
 
-        // Variable Load
+        // Initialize VARIABLE_LOAD_OPCODES
         VARIABLE_LOAD_OPCODES.add(0x15); // ILOAD
         VARIABLE_LOAD_OPCODES.add(0x16); // LLOAD
         VARIABLE_LOAD_OPCODES.add(0x17); // FLOAD
@@ -105,7 +106,7 @@ public class OpcodeTypeMapper {
         VARIABLE_LOAD_OPCODES.add(0x2C); // ALOAD_2
         VARIABLE_LOAD_OPCODES.add(0x2D); // ALOAD_3
 
-        // Variable Store
+        // Initialize VARIABLE_STORE_OPCODES
         VARIABLE_STORE_OPCODES.add(0x36); // ISTORE
         VARIABLE_STORE_OPCODES.add(0x37); // LSTORE
         VARIABLE_STORE_OPCODES.add(0x38); // FSTORE
@@ -132,7 +133,7 @@ public class OpcodeTypeMapper {
         VARIABLE_STORE_OPCODES.add(0x4D); // ASTORE_2
         VARIABLE_STORE_OPCODES.add(0x4E); // ASTORE_3
 
-        // Arithmetic Operations
+        // Initialize ARITHMETIC_OPCODES
         ARITHMETIC_OPCODES.add(0x60); // IADD
         ARITHMETIC_OPCODES.add(0x61); // LADD
         ARITHMETIC_OPCODES.add(0x62); // FADD
@@ -170,15 +171,10 @@ public class OpcodeTypeMapper {
         ARITHMETIC_OPCODES.add(0x82); // IXOR
         ARITHMETIC_OPCODES.add(0x83); // LXOR
 
-        // Logical Operations
-        LOGICAL_OPCODES.add(0x7E); // IAND
-        LOGICAL_OPCODES.add(0x7F); // LAND
-        LOGICAL_OPCODES.add(0x80); // IOR
-        LOGICAL_OPCODES.add(0x81); // LOR
-        LOGICAL_OPCODES.add(0x82); // IXOR
-        LOGICAL_OPCODES.add(0x83); // LXOR
+        // Initialize LOGICAL_OPCODES (reusing ARITHMETIC_OPCODES as they overlap)
+        LOGICAL_OPCODES.addAll(ARITHMETIC_OPCODES);
 
-        // Array Operations
+        // Initialize ARRAY_OPERATION_OPCODES
         ARRAY_OPERATION_OPCODES.add(0x2E); // IALOAD
         ARRAY_OPERATION_OPCODES.add(0x2F); // LALOAD
         ARRAY_OPERATION_OPCODES.add(0x30); // FALOAD
@@ -196,7 +192,7 @@ public class OpcodeTypeMapper {
         ARRAY_OPERATION_OPCODES.add(0x55); // CASTORE
         ARRAY_OPERATION_OPCODES.add(0x56); // SASTORE
 
-        // Type Conversion
+        // Initialize TYPE_CONVERSION_OPCODES
         TYPE_CONVERSION_OPCODES.add(0x85); // I2L
         TYPE_CONVERSION_OPCODES.add(0x86); // I2F
         TYPE_CONVERSION_OPCODES.add(0x87); // I2D
@@ -213,24 +209,24 @@ public class OpcodeTypeMapper {
         TYPE_CONVERSION_OPCODES.add(0x92); // I2C
         TYPE_CONVERSION_OPCODES.add(0x93); // I2S
 
-        // Object Creation
+        // Initialize OBJECT_CREATION_OPCODES
         OBJECT_CREATION_OPCODES.add(0xBB); // NEW
         OBJECT_CREATION_OPCODES.add(0xBC); // NEWARRAY
         OBJECT_CREATION_OPCODES.add(0xBD); // ANEWARRAY
         OBJECT_CREATION_OPCODES.add(0xC5); // MULTIANEWARRAY
 
-        // Array Length
+        // Initialize ARRAY_LENGTH_OPCODES
         ARRAY_LENGTH_OPCODES.add(0xBE); // ARRAYLENGTH
 
-        // Monitor Operations
+        // Initialize MONITOR_OPERATION_OPCODES
         MONITOR_OPERATION_OPCODES.add(0xC2); // MONITORENTER
         MONITOR_OPERATION_OPCODES.add(0xC3); // MONITOREXIT
 
-        // Pop Operations
+        // Initialize POP_OPCODES
         POP_OPCODES.add(0x57); // POP
         POP_OPCODES.add(0x58); // POP2
 
-        // Duplicate Operations
+        // Initialize DUPLICATE_OPCODES
         DUPLICATE_OPCODES.add(0x59); // DUP
         DUPLICATE_OPCODES.add(0x5A); // DUP_X1
         DUPLICATE_OPCODES.add(0x5B); // DUP_X2
@@ -238,11 +234,56 @@ public class OpcodeTypeMapper {
         DUPLICATE_OPCODES.add(0x5D); // DUP2_X1
         DUPLICATE_OPCODES.add(0x5E); // DUP2_X2
 
-        // Swap Operations
+        // Initialize SWAP_OPCODES
         SWAP_OPCODES.add(0x5F); // SWAP
 
-        // NOP
+        // Initialize NOP_OPCODES
         NOP_OPCODES.add(0x00); // NOP
+
+        // Initialize BLOCK_TERMINATOR_OPCODES
+        BLOCK_TERMINATOR_OPCODES.addAll(RETURN_OPCODES);
+        BLOCK_TERMINATOR_OPCODES.addAll(CONDITIONAL_BRANCH_OPCODES);
+        BLOCK_TERMINATOR_OPCODES.addAll(UNCONDITIONAL_BRANCH_OPCODES);
+        BLOCK_TERMINATOR_OPCODES.addAll(SWITCH_OPCODES);
+        BLOCK_TERMINATOR_OPCODES.add(0xBA); // INVOKEDYNAMIC
+        BLOCK_TERMINATOR_OPCODES.addAll(METHOD_CALL_OPCODES);
+        BLOCK_TERMINATOR_OPCODES.add(0xBF); // ATHROW
+
+        // Initialize CONSTANT_PUSH_OPCODES
+        CONSTANT_PUSH_OPCODES.add(0x10); // BIPUSH
+        CONSTANT_PUSH_OPCODES.add(0x11); // SIPUSH
+        CONSTANT_PUSH_OPCODES.add(0x12); // LDC
+        CONSTANT_PUSH_OPCODES.add(0x13); // LDC_W
+        CONSTANT_PUSH_OPCODES.add(0x14); // LDC2_W
+    }
+
+    /**
+     * Determines if the opcode corresponds to an ExpressionType.
+     *
+     * @param opcode The opcode of the instruction.
+     * @return True if it's an Expression opcode, else false.
+     */
+    public static boolean isExpressionOpcode(int opcode) {
+        return CONDITIONAL_BRANCH_OPCODES.contains(opcode) ||
+                UNCONDITIONAL_BRANCH_OPCODES.contains(opcode) ||
+                SWITCH_OPCODES.contains(opcode) ||
+                RETURN_OPCODES.contains(opcode) ||
+                INVOKEDYNAMIC_OPCODES.contains(opcode) ||
+                METHOD_CALL_OPCODES.contains(opcode) ||
+                FIELD_ACCESS_OPCODES.contains(opcode) ||
+                VARIABLE_LOAD_OPCODES.contains(opcode) ||
+                VARIABLE_STORE_OPCODES.contains(opcode) ||
+                ARITHMETIC_OPCODES.contains(opcode) ||
+                LOGICAL_OPCODES.contains(opcode) ||
+                ARRAY_OPERATION_OPCODES.contains(opcode) ||
+                TYPE_CONVERSION_OPCODES.contains(opcode) ||
+                OBJECT_CREATION_OPCODES.contains(opcode) ||
+                ARRAY_LENGTH_OPCODES.contains(opcode) ||
+                MONITOR_OPERATION_OPCODES.contains(opcode) ||
+                POP_OPCODES.contains(opcode) ||
+                DUPLICATE_OPCODES.contains(opcode) ||
+                SWAP_OPCODES.contains(opcode) ||
+                NOP_OPCODES.contains(opcode);
     }
 
     /**
@@ -266,102 +307,36 @@ public class OpcodeTypeMapper {
             return ExpressionType.METHOD_CALL;
         } else if (FIELD_ACCESS_OPCODES.contains(opcode)) {
             return ExpressionType.FIELD_ACCESS;
+        } else if (VARIABLE_LOAD_OPCODES.contains(opcode)) {
+            return ExpressionType.VARIABLE_LOAD;
+        } else if (VARIABLE_STORE_OPCODES.contains(opcode)) {
+            return ExpressionType.VARIABLE_STORE;
+        } else if (ARITHMETIC_OPCODES.contains(opcode)) {
+            return ExpressionType.ARITHMETIC_OPERATION;
+        } else if (LOGICAL_OPCODES.contains(opcode)) {
+            return ExpressionType.LOGICAL_OPERATION;
+        } else if (ARRAY_OPERATION_OPCODES.contains(opcode)) {
+            return ExpressionType.ARRAY_OPERATION;
+        } else if (TYPE_CONVERSION_OPCODES.contains(opcode)) {
+            return ExpressionType.TYPE_CONVERSION;
+        } else if (OBJECT_CREATION_OPCODES.contains(opcode)) {
+            return ExpressionType.OBJECT_CREATION;
+        } else if (ARRAY_LENGTH_OPCODES.contains(opcode)) {
+            return ExpressionType.ARRAY_LENGTH;
+        } else if (MONITOR_OPERATION_OPCODES.contains(opcode)) {
+            return ExpressionType.MONITOR_OPERATION;
+        } else if (POP_OPCODES.contains(opcode)) {
+            return ExpressionType.POP;
+        } else if (DUPLICATE_OPCODES.contains(opcode)) {
+            return ExpressionType.DUPLICATE;
+        } else if (SWAP_OPCODES.contains(opcode)) {
+            return ExpressionType.SWAP;
+        } else if (NOP_OPCODES.contains(opcode)) {
+            return ExpressionType.NOP;
+        } else if(CONSTANT_PUSH_OPCODES.contains(opcode)) {
+            return ExpressionType.CONSTANT_PUSH;
         } else {
             return ExpressionType.OTHER;
         }
-    }
-
-    /**
-     * Determines the StatementType based on the opcode.
-     *
-     * @param opcode The opcode of the instruction.
-     * @return The corresponding StatementType.
-     */
-    public static StatementType getStatementType(int opcode) {
-        if (VARIABLE_LOAD_OPCODES.contains(opcode)) {
-            return StatementType.VARIABLE_LOAD;
-        } else if (VARIABLE_STORE_OPCODES.contains(opcode)) {
-            return StatementType.VARIABLE_STORE;
-        } else if (ARITHMETIC_OPCODES.contains(opcode)) {
-            return StatementType.ARITHMETIC_OPERATION;
-        } else if (LOGICAL_OPCODES.contains(opcode)) {
-            return StatementType.LOGICAL_OPERATION;
-        } else if (ARRAY_OPERATION_OPCODES.contains(opcode)) {
-            return StatementType.ARRAY_OPERATION;
-        } else if (TYPE_CONVERSION_OPCODES.contains(opcode)) {
-            return StatementType.TYPE_CONVERSION;
-        } else if (OBJECT_CREATION_OPCODES.contains(opcode)) {
-            return StatementType.OBJECT_CREATION;
-        } else if (ARRAY_LENGTH_OPCODES.contains(opcode)) {
-            return StatementType.ARRAY_LENGTH;
-        } else if (MONITOR_OPERATION_OPCODES.contains(opcode)) {
-            return StatementType.MONITOR_OPERATION;
-        } else if (POP_OPCODES.contains(opcode)) {
-            return StatementType.POP;
-        } else if (DUPLICATE_OPCODES.contains(opcode)) {
-            return StatementType.DUPLICATE;
-        } else if (SWAP_OPCODES.contains(opcode)) {
-            return StatementType.SWAP;
-        } else if (NOP_OPCODES.contains(opcode)) {
-            return StatementType.NOP;
-        } else {
-            return StatementType.OTHER;
-        }
-    }
-
-    /**
-     * Determines the BlockType based on the opcode.
-     *
-     * @param opcode The opcode of the instruction.
-     * @return "Expression", "Statement", or "Other".
-     */
-    public static String getBlockType(int opcode) {
-        if (isExpressionOpcode(opcode)) {
-            return "Expression";
-        } else if (isStatementOpcode(opcode)) {
-            return "Statement";
-        } else {
-            return "Other";
-        }
-    }
-
-    /**
-     * Determines if the opcode corresponds to an ExpressionType.
-     *
-     * @param opcode The opcode of the instruction.
-     * @return True if it's an Expression opcode, else false.
-     */
-    public static boolean isExpressionOpcode(int opcode) {
-        return CONDITIONAL_BRANCH_OPCODES.contains(opcode) ||
-                UNCONDITIONAL_BRANCH_OPCODES.contains(opcode) ||
-                SWITCH_OPCODES.contains(opcode) ||
-                RETURN_OPCODES.contains(opcode) ||
-                INVOKEDYNAMIC_OPCODES.contains(opcode) ||
-                METHOD_CALL_OPCODES.contains(opcode) ||
-                FIELD_ACCESS_OPCODES.contains(opcode);
-    }
-
-    /**
-     * Determines if the opcode corresponds to a StatementType.
-     *
-     * @param opcode The opcode of the instruction.
-     * @return True if it's a Statement opcode, else false.
-     */
-    public static boolean isStatementOpcode(int opcode) {
-        return VARIABLE_LOAD_OPCODES.contains(opcode) ||
-                VARIABLE_STORE_OPCODES.contains(opcode) ||
-                ARITHMETIC_OPCODES.contains(opcode) ||
-                LOGICAL_OPCODES.contains(opcode) ||
-                ARRAY_OPERATION_OPCODES.contains(opcode) ||
-                TYPE_CONVERSION_OPCODES.contains(opcode) ||
-                OBJECT_CREATION_OPCODES.contains(opcode) ||
-                ARRAY_LENGTH_OPCODES.contains(opcode) ||
-                MONITOR_OPERATION_OPCODES.contains(opcode) ||
-                POP_OPCODES.contains(opcode) ||
-                DUPLICATE_OPCODES.contains(opcode) ||
-                SWAP_OPCODES.contains(opcode) ||
-                NOP_OPCODES.contains(opcode) ||
-                METHOD_CALL_OPCODES.contains(opcode) ||
-                FIELD_ACCESS_OPCODES.contains(opcode);
     }
 }

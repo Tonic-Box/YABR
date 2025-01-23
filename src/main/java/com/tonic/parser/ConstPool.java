@@ -25,6 +25,7 @@ public class ConstPool {
      */
     public ConstPool(final ClassFile classFile) {
         this.classFile = classFile;
+        this.classFile.setConstPool(this);
         final int constantPoolCount = classFile.readUnsignedShort();
         this.items = new ArrayList<>();
 
@@ -58,10 +59,11 @@ public class ConstPool {
 
             // Read the item's data from the class file.
             item.read(classFile);
+            item.setClassFile(classFile);
             items.add(item);
 
             // Log the parsed item
-            Logger.info("Parsed constant pool entry " + i + ": " + item);
+            Logger.info("Parsed constant pool entry " + i + ": " + item.getClass().getName());
 
             // Handle Long and Double which occupy two entries.
             if (tag == Item.ITEM_LONG || tag == Item.ITEM_DOUBLE) {
@@ -125,17 +127,13 @@ public class ConstPool {
     }
 
     public int addItem(Item<?> newItem) {
-        if (newItem instanceof NameAndTypeRefItem) {
-            ((NameAndTypeRefItem) newItem).setConstPool(this);
+        if(classFile != null)
+        {
+            newItem.setClassFile(classFile);
         }
-        if (newItem instanceof ClassRefItem) {
-            ((ClassRefItem) newItem).setClassFile(classFile);
-        }
-        if (newItem instanceof MethodRefItem) {
-            ((MethodRefItem) newItem).setClassFile(classFile);
-        }
-        if (newItem instanceof FieldRefItem) {
-            ((FieldRefItem) newItem).setClassFile(classFile);
+        else
+        {
+            throw new IllegalStateException("Cannot add item to constant pool without a ClassFile reference.");
         }
 
         // The next available index is just the current size of 'items'.

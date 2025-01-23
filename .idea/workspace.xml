@@ -4,14 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Visitors implemented and VisitorTest demo class written">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Super basic implementation of Expression/Statement block parsing/abstractions. Added a Demo to show them off @ TestBlocks.java&#10;&#10;Very basic so far and a bit lack luster, will take more work.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractBytecodeVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractBytecodeVisitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractClassVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractClassVisitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractMethodVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractMethodVisitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestVisitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ir/blocks/Statement.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ir/types/ExpressionType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ir/types/ExpressionType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ir/types/OpcodeTypeMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ir/types/OpcodeTypeMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ir/types/StatementType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractBlockVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/visitor/AbstractBlockVisitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestBlocks.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestBlocks.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/FieldRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/FieldRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/Item.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/Item.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/MethodRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/MethodRefItem.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -246,7 +252,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737595682163</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Super basic implementation of Expression/Statement block parsing/abstractions. Added a Demo to show them off @ TestBlocks.java&#10;&#10;Very basic so far and a bit lack luster, will take more work.">
+      <option name="closed" value="true" />
+      <created>1737610840862</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1737610840862</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -271,7 +285,8 @@
     <MESSAGE value="implimented a simple visitor pattern api" />
     <MESSAGE value="implemented a simple visitor pattern api" />
     <MESSAGE value="Visitors implemented and VisitorTest demo class written" />
-    <option name="LAST_COMMIT_MESSAGE" value="Visitors implemented and VisitorTest demo class written" />
+    <MESSAGE value="Super basic implementation of Expression/Statement block parsing/abstractions. Added a Demo to show them off @ TestBlocks.java&#10;&#10;Very basic so far and a bit lack luster, will take more work." />
+    <option name="LAST_COMMIT_MESSAGE" value="Super basic implementation of Expression/Statement block parsing/abstractions. Added a Demo to show them off @ TestBlocks.java&#10;&#10;Very basic so far and a bit lack luster, will take more work." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

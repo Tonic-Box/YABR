@@ -3,7 +3,6 @@ package com.tonic.demo;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.ir.blocks.Block;
 import com.tonic.analysis.ir.blocks.Expression;
-import com.tonic.analysis.ir.blocks.Statement;
 import com.tonic.analysis.visitor.AbstractBlockVisitor;
 import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.ClassFile;
@@ -83,15 +82,6 @@ public class TestBlocks
         public void visit(Expression expression) {
             System.out.println("\tExpression Block: " + expression);
             for(Instruction instruction : expression.getInstructions())
-            {
-                System.out.println("\t\tInstruction: " + instruction);
-            }
-        }
-
-        @Override
-        public void visit(Statement statement) {
-            System.out.println("\tStatement Block: " + statement);
-            for(Instruction instruction : statement.getInstructions())
             {
                 System.out.println("\t\tInstruction: " + instruction);
             }

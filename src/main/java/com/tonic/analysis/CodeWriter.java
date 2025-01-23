@@ -2,9 +2,7 @@ package com.tonic.analysis;
 
 import com.tonic.analysis.ir.blocks.Block;
 import com.tonic.analysis.ir.blocks.Expression;
-import com.tonic.analysis.ir.blocks.Statement;
 import com.tonic.analysis.ir.types.OpcodeTypeMapper;
-import com.tonic.analysis.ir.types.StatementType;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.analysis.visitor.AbstractBlockVisitor;
 import com.tonic.parser.ConstPool;
@@ -1475,6 +1473,25 @@ public class CodeWriter {
         parseBytecode();
     }
 
+
+    /**
+     * Parses the instructions into Blocks (Expressions and Statements) and assigns their types.
+     */
+    protected void parseBlocks() {
+        blocks.clear();
+        Expression currentBlock;
+
+        for (Instruction instr : instructions.values()) {
+            int opcode = instr.getOpcode();
+            currentBlock = new Expression();
+            currentBlock.setType(OpcodeTypeMapper.getExpressionType(opcode));
+            currentBlock.addInstruction(instr);
+            blocks.add(currentBlock);
+        }
+
+        Logger.info("Parsed into " + blocks.size() + " blocks.");
+    }
+
     /**
      * Accepts a BytecodeVisitor to traverse and operate on the instructions.
      *
@@ -1487,79 +1504,11 @@ public class CodeWriter {
         }
     }
 
-    /**
-     * Determines if the instruction is a branching instruction.
-     *
-     * @param instr The instruction to check.
-     * @return True if it's a branching instruction, false otherwise.
-     */
-    protected boolean isBranchingInstruction(Instruction instr) {
-        // Define branching opcodes based on JVM specification
-        Set<Integer> branchingOpcodes = new HashSet<>(Arrays.asList(
-                0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, // IFxxxx
-                0x9F, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, // IF_ICMPxxxx, IF_ACMPxxxx
-                0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, // GOTO, JSR, RET, etc.
-                0xC8, 0xC9 // GOTO_W, JSR_W
-        ));
-        return branchingOpcodes.contains(instr.getOpcode());
-    }
-
-    /**
-     * Parses the instructions into Blocks (Expressions and Statements) and assigns their types.
-     */
-    protected void parseBlocks() {
-        blocks.clear();
-        Block currentBlock = null;
-        String currentBlockType = null; // "Expression", "Statement", or "Other"
-
-        for (Instruction instr : instructions.values()) {
-            int opcode = instr.getOpcode();
-            String instrBlockType = OpcodeTypeMapper.getBlockType(opcode);
-
-            // Determine if a new block should be started
-            boolean shouldStartNewBlock = false;
-
-            if (currentBlock == null) {
-                shouldStartNewBlock = true;
-            } else if (!instrBlockType.equals(currentBlockType)) {
-                shouldStartNewBlock = true;
-            }
-
-            if (shouldStartNewBlock) {
-                // Start a new block based on instrBlockType
-                switch (instrBlockType) {
-                    case "Expression":
-                        currentBlock = new Expression();
-                        // Assign ExpressionType
-                        ((Expression) currentBlock).setType(OpcodeTypeMapper.getExpressionType(opcode));
-                        break;
-                    case "Statement":
-                        currentBlock = new Statement();
-                        // Assign StatementType
-                        ((Statement) currentBlock).setType(OpcodeTypeMapper.getStatementType(opcode));
-                        break;
-                    default:
-                        currentBlock = new Statement(); // Treat "Other" as StatementType.OTHER
-                        ((Statement) currentBlock).setType(StatementType.OTHER);
-                        break;
-                }
-                blocks.add(currentBlock);
-                currentBlockType = instrBlockType;
-            }
-
-            // Add instruction to the current block
-            currentBlock.addInstruction(instr);
-        }
-
-        Logger.info("Parsed into " + blocks.size() + " blocks.");
-    }
 
     public void accept(AbstractBlockVisitor visitor) {
         for (Block block : blocks) {
             if(block instanceof Expression) {
                 visitor.visit((Expression) block);
-            } else if(block instanceof Statement) {
-                visitor.visit((Statement) block);
             } else {
                 visitor.visit(block);
             }

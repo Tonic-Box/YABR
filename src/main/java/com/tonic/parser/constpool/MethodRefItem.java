@@ -126,4 +126,9 @@ public class MethodRefItem extends Item<MethodRef> {
     {
         value.setNameAndTypeIndex(nameAndTypeIndex);
     }
+
+    @Override
+    public String toString() {
+        return "MethodRefItem{" + getClassName() + "." + getName() + getDescriptor() + "}";
+    }
 }
