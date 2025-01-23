@@ -87,7 +87,7 @@ classFile.rebuild();
 System.out.println(classFile);
 ```
 
-### Visitor Example
+### Visitor Example:
 ```java
 /**
  * This visitor will add a System.out.println call to each exit point of the method with a void return and the beginning of each method with a return type
