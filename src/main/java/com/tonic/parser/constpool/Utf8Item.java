@@ -6,7 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a UTF-8 string in the constant pool.
+ * Represents a CONSTANT_Utf8 entry in the constant pool.
  */
 public class Utf8Item extends Item<String> {
 
@@ -19,10 +19,8 @@ public class Utf8Item extends Item<String> {
 
     @Override
     public void write(DataOutputStream dos) throws IOException {
-        // first write the length of the UTF-8 bytes
         byte[] utf8Bytes = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         dos.writeShort(utf8Bytes.length);
-        // then write the bytes themselves
         dos.write(utf8Bytes);
     }
 
@@ -36,6 +34,11 @@ public class Utf8Item extends Item<String> {
         return value;
     }
 
+    /**
+     * Sets the string value.
+     *
+     * @param value The string value to set.
+     */
     public void setValue(String value)
     {
         this.value = value;

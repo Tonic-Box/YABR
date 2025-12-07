@@ -8,7 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the DSTORE instructions (0x39, 0x47-0x4A).
+ * Represents the JVM DSTORE instruction.
  */
 @Getter
 public class DStoreInstruction extends Instruction {
@@ -22,7 +22,7 @@ public class DStoreInstruction extends Instruction {
      * @param varIndex The index of the local variable to store. For DSTORE_0-3, this is 0-3 respectively.
      */
     public DStoreInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, (opcode == 0x39) ? 2 : 1); // DSTORE has 1 operand byte, DSTORE_0-3 have no operands
+        super(opcode, offset, (opcode == 0x39) ? 2 : 1);
         this.varIndex = varIndex;
     }
 
@@ -40,7 +40,7 @@ public class DStoreInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        if (opcode == 0x39) { // DSTORE with operand
+        if (opcode == 0x39) {
             dos.writeByte(varIndex);
         }
     }
@@ -52,7 +52,7 @@ public class DStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -2; // Pops a double from the stack (occupies two stack slots)
+        return -2;
     }
 
     /**
@@ -72,9 +72,9 @@ public class DStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x39) { // DSTORE with operand
+        if (opcode == 0x39) {
             return String.format("DSTORE %d", varIndex);
-        } else { // DSTORE_0-3
+        } else {
             int index = opcode - 0x47;
             return String.format("DSTORE_%d", index);
         }

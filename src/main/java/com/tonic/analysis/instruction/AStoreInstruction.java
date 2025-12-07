@@ -22,7 +22,7 @@ public class AStoreInstruction extends Instruction {
      * @param varIndex The index of the local variable to store. For ASTORE_0-3, this is 0-3 respectively.
      */
     public AStoreInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form ASTORE_0-3 have no operands, regular ASTORE has one operand byte
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
     }
 
@@ -41,6 +41,12 @@ public class AStoreInstruction extends Instruction {
         return opcode >= 0x4B && opcode <= 0x4E;
     }
 
+    /**
+     * Writes the ASTORE opcode and its operand (if any) to the DataOutputStream.
+     *
+     * @param dos The DataOutputStream to write to.
+     * @throws IOException If an I/O error occurs.
+     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
@@ -49,18 +55,31 @@ public class AStoreInstruction extends Instruction {
         }
     }
 
+    /**
+     * Returns the change in stack size caused by this instruction.
+     *
+     * @return The stack size change (pops a reference).
+     */
     @Override
     public int getStackChange() {
-        // ASTORE consumes one reference from the stack
         return -1;
     }
 
+    /**
+     * Returns the change in local variables caused by this instruction.
+     *
+     * @return The local variables size change (none).
+     */
     @Override
     public int getLocalChange() {
-        // No change in the number of local variables
         return 0;
     }
 
+    /**
+     * Returns a string representation of the instruction.
+     *
+     * @return The mnemonic and variable index of the instruction.
+     */
     @Override
     public String toString() {
         String mnemonic;

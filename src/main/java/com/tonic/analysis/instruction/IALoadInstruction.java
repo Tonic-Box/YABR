@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the IALOAD instruction (0x2E).
+ * Represents the JVM IALOAD instruction.
  */
 public class IALoadInstruction extends Instruction {
 
@@ -44,7 +44,7 @@ public class IALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops two (array reference and index), pushes one (int)
+        return -1;
     }
 
     /**

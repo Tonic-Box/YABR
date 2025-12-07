@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the FNEG instruction (0x76).
+ * Represents the JVM FNEG instruction.
  */
 public class FNegInstruction extends Instruction {
 
@@ -44,7 +44,7 @@ public class FNegInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops one and pushes one (float)
+        return 0;
     }
 
     /**

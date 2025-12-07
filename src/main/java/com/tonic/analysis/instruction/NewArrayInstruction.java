@@ -55,7 +55,7 @@ public class NewArrayInstruction extends Instruction {
      * @param count     The number of elements in the array.
      */
     public NewArrayInstruction(int opcode, int offset, int typeCode, int count) {
-        super(opcode, offset, 2); // opcode + one byte type code
+        super(opcode, offset, 2);
         if (opcode != 0xBC) {
             throw new IllegalArgumentException("Invalid opcode for NewArrayInstruction: " + opcode);
         }
@@ -90,7 +90,7 @@ public class NewArrayInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes a new array reference onto the stack
+        return 1;
     }
 
     /**

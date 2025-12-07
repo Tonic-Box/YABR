@@ -19,7 +19,7 @@ public class ATHROWInstruction extends Instruction {
      * @param offset The bytecode offset of the instruction.
      */
     public ATHROWInstruction(int opcode, int offset) {
-        super(opcode, offset, 1); // opcode only
+        super(opcode, offset, 1);
         if (opcode != 0xBF) {
             throw new IllegalArgumentException("Invalid opcode for ATHROWInstruction: " + opcode);
         }
@@ -48,7 +48,7 @@ public class ATHROWInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops one throwable reference from the stack
+        return -1;
     }
 
     /**

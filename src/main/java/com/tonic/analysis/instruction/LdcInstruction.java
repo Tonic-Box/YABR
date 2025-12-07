@@ -55,7 +55,6 @@ public class LdcInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Depending on the constant type, stack change can vary
         Item<?> item = constPool.getItem(cpIndex);
         if (item instanceof DoubleItem || item instanceof LongItem) {
             return 2;

@@ -30,7 +30,7 @@ public class BootstrapMethodsAttribute extends Attribute {
 
     @Override
     public void read(ClassFile classFile, int length) {
-        int startIndex = classFile.getIndex(); // Record starting index
+        int startIndex = classFile.getIndex();
 
         if (length < 2) {
             throw new IllegalArgumentException("BootstrapMethods attribute length must be at least 2, found: " + length);
@@ -58,8 +58,6 @@ public class BootstrapMethodsAttribute extends Attribute {
 
         if (bytesRead != length) {
             Logger.error("Warning: BootstrapMethodsAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
-            // Optionally, throw an exception or handle as needed
-            // throw new IllegalStateException("BootstrapMethodsAttribute read mismatch.");
         }
     }
 
@@ -77,10 +75,10 @@ public class BootstrapMethodsAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        int size = 2; // num_bootstrap_methods (u2)
+        int size = 2;
         for (BootstrapMethod bm : bootstrapMethods) {
-            size += 4; // bootstrap_method_ref (u2) + num_bootstrap_arguments (u2)
-            size += 2 * bm.getBootstrapArguments().size(); // each argument is u2
+            size += 4;
+            size += 2 * bm.getBootstrapArguments().size();
         }
         this.length = size;
     }

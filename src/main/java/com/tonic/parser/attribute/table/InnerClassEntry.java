@@ -8,12 +8,22 @@ import lombok.Getter;
 
 /**
  * Represents an entry in the InnerClasses attribute.
+ * Describes the relationship between an inner class and its enclosing class.
  */
 public class InnerClassEntry {
     private final ConstPool constPool;
     @Getter
     private final int innerClassInfoIndex, outerClassInfoIndex, innerNameIndex, innerClassAccessFlags;
 
+    /**
+     * Constructs an inner class entry.
+     *
+     * @param constPool the constant pool for resolving references
+     * @param innerClassInfoIndex constant pool index of the inner class
+     * @param outerClassInfoIndex constant pool index of the outer class, or 0 if none
+     * @param innerNameIndex constant pool index of the simple name, or 0 if anonymous
+     * @param innerClassAccessFlags access flags for the inner class
+     */
     public InnerClassEntry(ConstPool constPool, int innerClassInfoIndex, int outerClassInfoIndex, int innerNameIndex, int innerClassAccessFlags) {
         this.constPool = constPool;
         this.innerClassInfoIndex = innerClassInfoIndex;

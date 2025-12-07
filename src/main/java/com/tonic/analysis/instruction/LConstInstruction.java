@@ -49,7 +49,7 @@ public class LConstInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 2; // Long occupies two stack slots
+        return 2;
     }
 
     /**

@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the FLOAD instruction (0x17).
+ * Represents the JVM FLOAD instruction.
  */
 public class FLoadInstruction extends Instruction {
     private final int varIndex;
@@ -17,11 +17,21 @@ public class FLoadInstruction extends Instruction {
      *
      * @param opcode   The opcode of the instruction.
      * @param offset   The bytecode offset of the instruction.
-     * @param varIndex The index of the local variable to load.
+     * @param varIndex The index of the local variable to load. For FLOAD_0-3, this is 0-3 respectively.
      */
     public FLoadInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, 2);
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
+    }
+
+    /**
+     * Determines if the opcode is a short-form FLOAD instruction.
+     *
+     * @param opcode The opcode to check.
+     * @return True if the opcode is FLOAD_0-3, false otherwise.
+     */
+    private static boolean isShortForm(int opcode) {
+        return opcode >= 0x22 && opcode <= 0x25;
     }
 
     @Override
@@ -30,7 +40,7 @@ public class FLoadInstruction extends Instruction {
     }
 
     /**
-     * Writes the FLOAD opcode and its operand to the DataOutputStream.
+     * Writes the FLOAD opcode and its operand (if any) to the DataOutputStream.
      *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
@@ -38,7 +48,9 @@ public class FLoadInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        dos.writeByte(varIndex);
+        if (!isShortForm(opcode)) {
+            dos.writeByte(varIndex);
+        }
     }
 
     /**
@@ -48,7 +60,7 @@ public class FLoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes a float onto the stack
+        return 1;
     }
 
     /**

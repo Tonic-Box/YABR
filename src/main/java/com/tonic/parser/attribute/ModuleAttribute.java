@@ -38,7 +38,7 @@ public class ModuleAttribute extends Attribute {
 
     @Override
     public void read(ClassFile classFile, int length) {
-        int startIndex = classFile.getIndex(); // Record starting index
+        int startIndex = classFile.getIndex();
         this.moduleNameIndex = classFile.readUnsignedShort();
         this.moduleFlags = classFile.readUnsignedShort();
         this.moduleVersionIndex = classFile.readUnsignedShort();
@@ -101,32 +101,23 @@ public class ModuleAttribute extends Attribute {
 
         if (bytesRead != length) {
             Logger.error("Warning: ModuleAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
-            // Optionally, throw an exception or handle as needed
-            // throw new IllegalStateException("ModuleAttribute read mismatch.");
         }
     }
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // module_name_index (u2)
         dos.writeShort(moduleNameIndex);
-        // module_flags (u2)
         dos.writeShort(moduleFlags);
-        // module_version_index (u2)
         dos.writeShort(moduleVersionIndex);
 
-        // requires_count (u2)
         dos.writeShort(requires.size());
-        // each requires => requires_index(u2), requires_flags(u2), requires_version_index(u2)
         for (Requires req : requires) {
             dos.writeShort(req.getRequiresIndex());
             dos.writeShort(req.getRequiresFlags());
             dos.writeShort(req.getRequiresVersionIndex());
         }
 
-        // exports_count (u2)
         dos.writeShort(exports.size());
-        // each exports => exports_index(u2), exports_flags(u2), exports_to_count(u2), then exports_to[]
         for (Exports exp : exports) {
             dos.writeShort(exp.getExportsIndex());
             dos.writeShort(exp.getExportsFlags());
@@ -137,9 +128,7 @@ public class ModuleAttribute extends Attribute {
             }
         }
 
-        // opens_count (u2)
         dos.writeShort(opens.size());
-        // each opens => opens_index(u2), opens_flags(u2), opens_to_count(u2), then opens_to[]
         for (Opens op : opens) {
             dos.writeShort(op.getOpensIndex());
             dos.writeShort(op.getOpensFlags());
@@ -150,16 +139,12 @@ public class ModuleAttribute extends Attribute {
             }
         }
 
-        // uses_count (u2)
         dos.writeShort(uses.size());
-        // each uses => uses_index(u2)
         for (Uses use : uses) {
             dos.writeShort(use.getUsesIndex());
         }
 
-        // provides_count (u2)
         dos.writeShort(provides.size());
-        // each provides => provides_index(u2), provides_with_count(u2), then provides_with[]
         for (Provides prov : provides) {
             dos.writeShort(prov.getProvidesWithIndex());
             List<Integer> providesWith = prov.getProvidesWithArguments();
@@ -172,35 +157,29 @@ public class ModuleAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        // 2 + 2 + 2 for module_name_index, module_flags, module_version_index
         int size = 6;
 
-        // requires_count (u2) + each requires 6 bytes
         size += 2;
         size += requires.size() * 6;
 
-        // exports_count (u2) + each exports => index(2) + flags(2) + to_count(2) + to_count*2
         size += 2;
         for (Exports exp : exports) {
-            size += 6; // index + flags + to_count
-            size += exp.getExportsTo().size() * 2; // each 'to' is 2 bytes
+            size += 6;
+            size += exp.getExportsTo().size() * 2;
         }
 
-        // opens_count (u2) + each opens => index(2) + flags(2) + to_count(2) + to_count*2
         size += 2;
         for (Opens op : opens) {
             size += 6;
             size += op.getOpensTo().size() * 2;
         }
 
-        // uses_count (u2) + each uses => index(2)
         size += 2;
         size += uses.size() * 2;
 
-        // provides_count (u2) + each => provides_index(2) + provides_with_count(2) + provides_with_count*2
         size += 2;
         for (Provides prov : provides) {
-            size += 4; // index + with_count
+            size += 4;
             size += prov.getProvidesWithArguments().size() * 2;
         }
 

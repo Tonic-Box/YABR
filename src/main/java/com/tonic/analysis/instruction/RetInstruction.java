@@ -20,7 +20,7 @@ public class RetInstruction extends Instruction {
      * @param varIndex The local variable index.
      */
     public RetInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, 2); // opcode + one byte varIndex
+        super(opcode, offset, 2);
         if (opcode != 0xA9) {
             throw new IllegalArgumentException("Invalid opcode for RetInstruction: " + opcode);
         }
@@ -51,7 +51,7 @@ public class RetInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // RET does not affect the stack
+        return 0;
     }
 
     /**

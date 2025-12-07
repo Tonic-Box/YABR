@@ -16,17 +16,34 @@ public abstract class Instruction {
     protected int offset;
     protected int length;
 
+    /**
+     * Constructs an Instruction.
+     *
+     * @param opcode The opcode of the instruction.
+     * @param offset The bytecode offset of the instruction.
+     * @param length The length of the instruction in bytes.
+     */
     public Instruction(int opcode, int offset, int length) {
         this.opcode = opcode;
         this.offset = offset;
         this.length = length;
     }
 
+    /**
+     * Returns the length of the instruction in bytes.
+     *
+     * @return The instruction length.
+     */
     public int getLength() {
         Logger.info("Instruction " + this + " has length: " + length);
         return length;
     }
 
+    /**
+     * Accepts a visitor for bytecode analysis.
+     *
+     * @param visitor The visitor to accept.
+     */
     public abstract void accept(AbstractBytecodeVisitor visitor);
 
     /**

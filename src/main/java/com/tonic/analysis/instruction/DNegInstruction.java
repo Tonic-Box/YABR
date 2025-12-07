@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the DNEG instruction (0x77).
+ * Represents the JVM DNEG instruction.
  */
 public class DNegInstruction extends Instruction {
 
@@ -44,7 +44,7 @@ public class DNegInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops two and pushes two (double)
+        return 0;
     }
 
     /**

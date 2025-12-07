@@ -7,7 +7,7 @@ import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 /**
- * Represents a 'uses' entry in the Module attribute.
+ * Represents a uses entry in the Module attribute.
  */
 public class Uses {
     private final ConstPool constPool;

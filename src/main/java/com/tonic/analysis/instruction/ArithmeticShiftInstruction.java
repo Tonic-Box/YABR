@@ -86,16 +86,15 @@ public class ArithmeticShiftInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Pops two operands and pushes one shifted value
         switch (type) {
             case ISHL:
             case ISHR:
             case IUSHR:
-                return -1; // Pops two ints, pushes one int
+                return -1;
             case LSHL:
             case LSHR:
             case LUSHR:
-                return -2; // Pops two longs, pushes one long
+                return -2;
             default:
                 return 0;
         }

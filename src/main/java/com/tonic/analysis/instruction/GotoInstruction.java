@@ -8,7 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the GOTO instructions (GOTO, GOTO_W).
+ * Represents the JVM GOTO and GOTO_W instructions.
  */
 public class GotoInstruction extends Instruction {
     @Getter
@@ -16,9 +16,6 @@ public class GotoInstruction extends Instruction {
     private final int branchOffsetInt;
     private final short branchOffsetShort;
 
-    /**
-     * Enum representing the types of GOTO operations.
-     */
     @Getter
     public enum GotoType {
         GOTO(0xA7, "goto"),
@@ -50,7 +47,7 @@ public class GotoInstruction extends Instruction {
      * @param branchOffset The branch target offset relative to current instruction.
      */
     public GotoInstruction(int opcode, int offset, int branchOffset) {
-        super(opcode, offset, (opcode == 0xA7) ? 3 : 5); // GOTO: opcode + 2 bytes, GOTO_W: opcode + 4 bytes
+        super(opcode, offset, (opcode == 0xA7) ? 3 : 5);
         this.type = GotoType.fromOpcode(opcode);
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid GOTO opcode: " + opcode);
@@ -72,7 +69,7 @@ public class GotoInstruction extends Instruction {
      * @param branchOffset The branch target offset relative to current instruction.
      */
     public GotoInstruction(int opcode, int offset, short branchOffset) {
-        super(opcode, offset, (opcode == 0xA7) ? 3 : 5); // GOTO: opcode + 2 bytes, GOTO_W: opcode + 4 bytes
+        super(opcode, offset, (opcode == 0xA7) ? 3 : 5);
         this.type = GotoType.fromOpcode(opcode);
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid GOTO opcode: " + opcode);
@@ -104,7 +101,7 @@ public class GotoInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // GOTO does not affect the stack
+        return 0;
     }
 
     /**
@@ -126,8 +123,12 @@ public class GotoInstruction extends Instruction {
         return branchOffsetShort;
     }
 
-    public int getBranchOffsetWide()
-    {
+    /**
+     * Returns the wide branch offset.
+     *
+     * @return The wide branch target offset.
+     */
+    public int getBranchOffsetWide() {
         return branchOffsetInt;
     }
 

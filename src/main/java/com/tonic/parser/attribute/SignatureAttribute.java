@@ -36,16 +36,13 @@ public class SignatureAttribute extends Attribute {
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // signature_index (u2)
         dos.writeShort(signatureIndex);
     }
 
     @Override
     public void updateLength() {
-        // 2 bytes
         this.length = 2;
     }
-
 
     @Override
     public String toString() {

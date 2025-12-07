@@ -15,8 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A utility class for high-level bytecode manipulations.
- * It leverages the existing CodeWriter class to perform specific operations.
+ * High-level bytecode manipulation API.
+ * Provides convenient methods for inserting common bytecode instructions into a method.
  */
 @Getter
 public class Bytecode {
@@ -27,7 +27,6 @@ public class Bytecode {
     private int insertBeforeOffset = 0;
     private final boolean isStatic;
 
-    // Mapping from label names to bytecode offsets
     private final Map<String, Integer> labels = new HashMap<>();
 
     /**
@@ -41,12 +40,22 @@ public class Bytecode {
         this.isStatic = Modifiers.isStatic(methodEntry.getAccess());
     }
 
+    /**
+     * Constructs a Bytecode utility for the given CodeWriter.
+     *
+     * @param codeWriter The CodeWriter instance to use for bytecode manipulation.
+     */
     public Bytecode(CodeWriter codeWriter) {
         this.codeWriter = codeWriter;
         this.constPool = codeWriter.getConstPool();
         this.isStatic = Modifiers.isStatic(codeWriter.getMethodEntry().getAccess());
     }
 
+    /**
+     * Sets whether instructions should be inserted before the current position.
+     *
+     * @param insertBefore True to insert before the current position, false to append.
+     */
     public void setInsertBefore(boolean insertBefore)
     {
         this.insertBefore = insertBefore;
@@ -116,12 +125,11 @@ public class Bytecode {
     /**
      * Appends an INVOKEDYNAMIC instruction to the end of the bytecode.
      *
-     * @param bootstrapMethodIndex The bootstrap method index in the constant pool.
-     * @param nameAndTypeIndex     The name and type index in the constant pool.
+     * @param cpIndex The constant pool index to the CONSTANT_InvokeDynamic_info entry.
      */
-    public void addInvokeDynamic(int bootstrapMethodIndex, int nameAndTypeIndex) {
+    public void addInvokeDynamic(int cpIndex) {
         int offset = processOffset();
-        codeWriter.insertInvokeDynamic(offset, bootstrapMethodIndex, nameAndTypeIndex);
+        codeWriter.insertInvokeDynamic(offset, cpIndex);
         insertBeforeOffset += 5;
         Logger.info("Appended INVOKEDYNAMIC at offset " + offset);
     }
@@ -243,22 +251,18 @@ public class Bytecode {
     public void addIConst(int value) {
         Instruction instr;
         if (value >= -1 && value <= 5) {
-            // ICONST_M1 to ICONST_5 (0x02 to 0x08)
-            int opcode = 0x02 + (value + 1); // ICONST_M1 is 0x02
+            int opcode = 0x02 + (value + 1);
             instr = new IConstInstruction(opcode, processOffset(), value);
         } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
-            // BIPUSH (0x10)
             int opcode = 0x10;
             byte operand = (byte) value;
             Logger.info("BIPUSH: " + value + " -> " + operand);
             instr = new BipushInstruction(opcode, processOffset(), operand);
         } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
-            // SIPUSH (0x11)
             int opcode = 0x11;
             short operand = (short) value;
             instr = new SipushInstruction(opcode, processOffset(), operand);
         } else {
-            // LDC (0x12) for integer constants
             int opcode = 0x12;
             IntegerItem intItem = constPool.findOrAddInteger(value);
             int ldcIndex = constPool.getIndexOf(intItem);
@@ -277,11 +281,9 @@ public class Bytecode {
     public void addLConst(long value) {
         Instruction instr;
         if (value == 0L || value == 1L) {
-            // LCONST_0 or LCONST_1 (0x09 or 0x0A)
             int opcode = (value == 0L) ? 0x09 : 0x0A;
             instr = new LConstInstruction(opcode, processOffset(), value);
         } else {
-            // LDC2_W (0x14) for long constants
             int opcode = 0x14;
             LongItem longItem = constPool.findOrAddLong(value);
             int ldc2WIndex = constPool.getIndexOf(longItem);
@@ -300,13 +302,12 @@ public class Bytecode {
     public void addFConst(float value) {
         Instruction instr;
         if (value == 0.0f) {
-            instr = new FConstInstruction(0x0B, processOffset(), 0.0f); // FCONST_0
+            instr = new FConstInstruction(0x0B, processOffset(), 0.0f);
         } else if (value == 1.0f) {
-            instr = new FConstInstruction(0x0C, processOffset(), 1.0f); // FCONST_1
+            instr = new FConstInstruction(0x0C, processOffset(), 1.0f);
         } else if (value == 2.0f) {
-            instr = new FConstInstruction(0x0D, processOffset(), 2.0f); // FCONST_2
+            instr = new FConstInstruction(0x0D, processOffset(), 2.0f);
         } else {
-            // LDC (0x12) for float constants
             int opcode = 0x12;
             FloatItem floatItem = constPool.findOrAddFloat(value);
             int ldcIndex = constPool.getIndexOf(floatItem);
@@ -325,11 +326,9 @@ public class Bytecode {
     public void addDConst(double value) {
         Instruction instr;
         if (value == 0.0d || value == 1.0d) {
-            // DCONST_0 or DCONST_1 (0x0E or 0x0F)
             int opcode = (value == 0.0d) ? 0x0E : 0x0F;
             instr = new DConstInstruction(opcode, processOffset(), value);
         } else {
-            // LDC2_W (0x14) for double constants
             int opcode = 0x14;
             DoubleItem doubleItem = constPool.findOrAddDouble(value);
             int ldc2WIndex = constPool.getIndexOf(doubleItem);
@@ -344,7 +343,7 @@ public class Bytecode {
      * Appends an ACONST_NULL instruction to push a null reference onto the stack.
      */
     public void addAConstNull() {
-        int opcode = 0x01; // ACONST_NULL
+        int opcode = 0x01;
         Instruction instr = new AConstNullInstruction(opcode, processOffset());
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -357,7 +356,7 @@ public class Bytecode {
      * @param index The local variable index to load from.
      */
     public void addLLoad(int index) {
-        int opcode = 0x16; // LLOAD
+        int opcode = 0x16;
         Instruction instr = new LLoadInstruction(opcode, processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -370,7 +369,7 @@ public class Bytecode {
      * @param index The local variable index to load from.
      */
     public void addFLoad(int index) {
-        int opcode = 0x17; // FLOAD
+        int opcode = 0x17;
         Instruction instr = new FLoadInstruction(opcode, processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -383,7 +382,7 @@ public class Bytecode {
      * @param index The local variable index to load from.
      */
     public void addDLoad(int index) {
-        int opcode = 0x18; // DLOAD
+        int opcode = 0x18;
         Instruction instr = new DLoadInstruction(opcode, processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -397,15 +396,12 @@ public class Bytecode {
      * @param labelName The name of the label to jump to.
      */
     public void addGoto(String labelName) {
-        // Define a label at the end to serve as the jump target
         defineLabel(labelName);
         int targetOffset = labels.get(labelName);
 
-        // Calculate the branch offset relative to the GOTO instruction
         int gotoOffset = processOffset();
-        short relativeOffset = (short) (targetOffset - (gotoOffset + 3)); // GOTO is 3 bytes long
+        short relativeOffset = (short) (targetOffset - (gotoOffset + 3));
 
-        // Append the GOTO instruction
         GotoInstruction gotoInstr = new GotoInstruction(0xA7, gotoOffset, relativeOffset);
         codeWriter.appendInstruction(gotoInstr);
         insertBeforeOffset += gotoInstr.getLength();
@@ -418,15 +414,12 @@ public class Bytecode {
      * @param labelName The name of the label to jump to.
      */
     public void addGotoW(String labelName) {
-        // Define a label at the end to serve as the jump target
         defineLabel(labelName);
         int targetOffset = labels.get(labelName);
 
-        // Calculate the branch offset relative to the GOTO_W instruction
         int gotoWOffset = processOffset();
-        int relativeOffset = targetOffset - (gotoWOffset + 5); // GOTO_W is 5 bytes long
+        int relativeOffset = targetOffset - (gotoWOffset + 5);
 
-        // Append the GOTO_W instruction
         GotoInstruction gotoWInstr = new GotoInstruction(0xC8, gotoWOffset, relativeOffset);
         codeWriter.appendInstruction(gotoWInstr);
         insertBeforeOffset += gotoWInstr.getLength();
@@ -478,6 +471,37 @@ public class Bytecode {
         Logger.info("Finalized bytecode modifications.");
     }
 
+    /**
+     * Computes and updates the StackMapTable frames for this method.
+     * This is an opt-in operation - call this after making bytecode modifications.
+     * If the bytecode hasn't been modified and a valid StackMapTable exists, this method preserves the existing frames.
+     */
+    public void computeFrames() {
+        codeWriter.computeFrames();
+    }
+
+    /**
+     * Forces recomputation of StackMapTable frames, even if bytecode wasn't modified.
+     */
+    public void forceComputeFrames() {
+        codeWriter.forceComputeFrames();
+    }
+
+    /**
+     * Returns whether the bytecode has been modified since loading.
+     *
+     * @return true if modified, false otherwise
+     */
+    public boolean isModified() {
+        return codeWriter.isModified();
+    }
+
+    /**
+     * Appends a load instruction based on the type descriptor.
+     *
+     * @param i The local variable index.
+     * @param desc The type descriptor (I, J, F, D, or reference type).
+     */
     public void addLoad(int i, String desc)
     {
         switch (desc)
@@ -507,33 +531,22 @@ public class Bytecode {
      * @param methodDescriptor  The method descriptor (e.g., "()J").
      */
     public void addInvokeStatic(String className, String methodName, String methodDescriptor) {
-        // Step 1: Add or find Utf8 entries for className, methodName, and methodDescriptor
         Utf8Item classNameUtf8 = constPool.findOrAddUtf8(className);
         Utf8Item methodNameUtf8 = constPool.findOrAddUtf8(methodName);
         Utf8Item methodDescUtf8 = constPool.findOrAddUtf8(methodDescriptor);
 
-        // Step 2: Add or find ClassRef entry for className
         ClassRefItem classRef = constPool.findOrAddClass(classNameUtf8.getValue());
 
-        // Step 3: Add or find NameAndType entry for methodName and methodDescriptor
         NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(methodNameUtf8.getIndex(constPool), methodDescUtf8.getIndex(constPool));
 
-        // Step 4: Add or find MethodRef entry for classRef and nameAndType
         MethodRefItem methodRef = constPool.findOrAddMethodRef(classRef.getIndex(constPool), nameAndType.getIndex(constPool));
 
-        // Step 5: Get the index of the MethodRef entry
         int methodRefIndex = constPool.getIndexOf(methodRef);
 
-        // Step 6: Determine the insertion offset
-        // For example, inserting at the end of the bytecode
         int insertOffset = codeWriter.getBytecodeSize();
 
-        // Step 7: Insert the INVOKESTATIC instruction
         Instruction instruction = codeWriter.insertInvokeStatic(insertOffset, methodRefIndex);
         insertBeforeOffset += instruction.getLength();
-
-        // Optional: Update maxStack and maxLocals if necessary
-        // This depends on your implementation of CodeWriter and whether it handles stack analysis automatically
     }
 
 
@@ -553,31 +566,32 @@ public class Bytecode {
             return offset;
 
         for (Instruction instruction : codeWriter.getInstructions()) {
-            // Check for aload_0 (opcode 0x2a)
             if (instruction instanceof ALoadInstruction && ((ALoadInstruction) instruction).getVarIndex() == 0) {
-                ALoadInstruction aLoadInstruction = (ALoadInstruction) instruction; // aload_0
-                offset += instruction.getLength(); // Increment offset by instruction length
-                continue; // Skip to the next instruction
+                ALoadInstruction aLoadInstruction = (ALoadInstruction) instruction;
+                offset += instruction.getLength();
+                continue;
             }
 
-            // Check for invokespecial <init> (opcode 0xb7)
             if (instruction instanceof InvokeSpecialInstruction) {
-                InvokeSpecialInstruction invokeSpecialInstruction = (InvokeSpecialInstruction) instruction; // invokespecial
-                // Validate that it is calling super.<init>
-                String methodName = invokeSpecialInstruction.getMethodName(); // Assume instruction provides method details
+                InvokeSpecialInstruction invokeSpecialInstruction = (InvokeSpecialInstruction) instruction;
+                String methodName = invokeSpecialInstruction.getMethodName();
 
                 if ("<init>".equals(methodName)) {
-                    offset += instruction.getLength(); // Increment offset by instruction length
-                    continue; // Skip to the next instruction
+                    offset += instruction.getLength();
+                    continue;
                 }
             }
 
-            // If no more matching instructions, break the loop
             break;
         }
         return offset;
     }
 
+    /**
+     * Checks if the bytecode ends with a return instruction.
+     *
+     * @return true if the bytecode ends with a return instruction, false otherwise.
+     */
     public boolean endsWithReturn()
     {
         return codeWriter.endsWithReturn();
@@ -590,27 +604,19 @@ public class Bytecode {
      */
     public void addLdc(String value) {
         int offset = processOffset();
-        // Step 1: Add or find Utf8 entry for the string
         Utf8Item stringUtf8 = constPool.findOrAddUtf8(value);
 
-        // Step 2: Add or find StringRef entry
         StringRefItem stringRef = constPool.findOrAddString(stringUtf8.getValue());
 
-        // Step 3: Get the index of the StringRef entry
         int stringRefIndex = constPool.getIndexOf(stringRef);
 
-        // Step 4: Decide whether to use LDC or LDC_W based on the index
         Instruction instruction;
         if (stringRefIndex <= 0xFF) {
-            // Use LDC (opcode 0x12)
             instruction = codeWriter.insertLDC(processOffset(), stringRefIndex);
         } else {
-            // Use LDC_W (opcode 0x13)
             instruction = codeWriter.insertLDCW(processOffset(), stringRefIndex);
         }
         insertBeforeOffset += instruction.getLength();
-        // Optional: Update maxStack if your CodeWriter does not handle it automatically
-        // codeWriter.updateMaxStackForLdc();
     }
 
     /**
@@ -621,27 +627,20 @@ public class Bytecode {
      * @param methodDescriptor The method descriptor (e.g., "(Ljava/lang/String;)V").
      */
     public void addInvokeVirtual(String className, String methodName, String methodDescriptor) {
-        // Step 1: Add or find Utf8 entries for className, methodName, and methodDescriptor
         Utf8Item classNameUtf8 = constPool.findOrAddUtf8(className);
         Utf8Item methodNameUtf8 = constPool.findOrAddUtf8(methodName);
         Utf8Item methodDescUtf8 = constPool.findOrAddUtf8(methodDescriptor);
 
-        // Step 2: Add or find ClassRef entry for className
         ClassRefItem classRef = constPool.findOrAddClass(classNameUtf8.getValue());
 
-        // Step 3: Add or find NameAndType entry for methodName and methodDescriptor
         NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(methodNameUtf8.getIndex(constPool), methodDescUtf8.getIndex(constPool));
 
-        // Step 4: Add or find MethodRef entry for classRef and nameAndType
         MethodRefItem methodRef = constPool.findOrAddMethodRef(classRef.getIndex(constPool), nameAndType.getIndex(constPool));
 
-        // Step 5: Get the index of the MethodRef entry
         int methodRefIndex = constPool.getIndexOf(methodRef);
 
-        // Step 6: Determine the insertion offset
         int insertOffset = processOffset();
 
-        // Step 7: Insert the INVOKEVIRTUAL instruction
         Instruction instruction = codeWriter.insertInvokeVirtual(insertOffset, methodRefIndex);
         insertBeforeOffset += instruction.getLength();
     }
@@ -654,31 +653,21 @@ public class Bytecode {
      * @param fieldDescriptor The field descriptor (e.g., "Ljava/io/PrintStream;").
      */
     public void addGetStatic(String className, String fieldName, String fieldDescriptor) {
-        // Step 1: Add or find Utf8 entries for className, fieldName, and fieldDescriptor
         Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(fieldName);
         Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(fieldDescriptor);
 
-        // Step 2: Add or find ClassRef entry for className
         ClassRefItem classRef = constPool.findOrAddClass(className);
         System.out.println("classRef: " + classRef.getClassName());
 
-        // Step 3: Add or find NameAndType entry for fieldName and fieldDescriptor
         NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
 
-        // Step 4: Add or find FieldRef entry for classRef and nameAndType
         FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
 
-        // Step 5: Get the index of the FieldRef entry
         int fieldRefIndex = constPool.getIndexOf(fieldRef);
 
-        // Step 6: Determine the insertion offset
         int insertOffset = processOffset();
 
-        // Step 7: Insert the GETSTATIC instruction
         Instruction instruction = codeWriter.insertGetStatic(insertOffset, fieldRefIndex);
         insertBeforeOffset += instruction.getLength();
-
-        // Optional: Update maxStack and maxLocals if necessary
-        // This depends on your implementation of CodeWriter and whether it handles stack analysis automatically
     }
 }

@@ -25,7 +25,7 @@ public class WideInstruction extends Instruction {
      * @param varIndex       The local variable index.
      */
     public WideInstruction(int opcode, int offset, Opcode modifiedOpcode, int varIndex) {
-        super(opcode, offset, 4); // opcode + modifiedOpcode + two bytes varIndex
+        super(opcode, offset, 4);
         this.modifiedOpcode = modifiedOpcode;
         this.varIndex = varIndex;
         this.constValue = 0;
@@ -41,7 +41,7 @@ public class WideInstruction extends Instruction {
      * @param constValue     The constant value for IINC.
      */
     public WideInstruction(int opcode, int offset, Opcode modifiedOpcode, int varIndex, int constValue) {
-        super(opcode, offset, 6); // opcode + modifiedOpcode + two bytes varIndex + two bytes constValue
+        super(opcode, offset, 6);
         this.modifiedOpcode = modifiedOpcode;
         this.varIndex = varIndex;
         this.constValue = constValue;
@@ -75,11 +75,10 @@ public class WideInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Shift operations or variable instructions may have specific stack changes
         return switch (modifiedOpcode) {
-            case ILOAD, FLOAD, ALOAD -> 1; // Pushes one value
-            case ISTORE, FSTORE, ASTORE -> -1; // Pops one value
-            case IINC -> 0; // No stack change
+            case ILOAD, FLOAD, ALOAD -> 1;
+            case ISTORE, FSTORE, ASTORE -> -1;
+            case IINC -> 0;
             default -> 0;
         };
     }

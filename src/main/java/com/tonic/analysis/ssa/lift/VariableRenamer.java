@@ -1,0 +1,161 @@
+package com.tonic.analysis.ssa.lift;
+
+import com.tonic.analysis.ssa.analysis.DominatorTree;
+import com.tonic.analysis.ssa.cfg.IRBlock;
+import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
+
+import java.util.*;
+
+/**
+ * Renames variables to complete SSA conversion by walking the dominator tree.
+ */
+public class VariableRenamer {
+
+    private final DominatorTree dominatorTree;
+    private Map<Integer, Deque<SSAValue>> varStacks;
+    private Map<Integer, Integer> varCounters;
+
+    /**
+     * Creates a new variable renamer.
+     *
+     * @param dominatorTree the dominator tree for the method
+     */
+    public VariableRenamer(DominatorTree dominatorTree) {
+        this.dominatorTree = dominatorTree;
+    }
+
+    /**
+     * Performs SSA variable renaming on a method.
+     *
+     * @param method the method to rename
+     */
+    public void rename(IRMethod method) {
+        varStacks = new HashMap<>();
+        varCounters = new HashMap<>();
+
+        initializeParameters(method);
+
+        if (method.getEntryBlock() != null) {
+            renameBlock(method.getEntryBlock());
+        }
+    }
+
+    private void initializeParameters(IRMethod method) {
+        int localIndex = 0;
+        for (SSAValue param : method.getParameters()) {
+            pushVariable(localIndex, param);
+            localIndex++;
+            if (param.getType().isTwoSlot()) {
+                localIndex++;
+            }
+        }
+    }
+
+    private void renameBlock(IRBlock block) {
+        Map<Integer, Integer> savedStackSizes = new HashMap<>();
+        for (Map.Entry<Integer, Deque<SSAValue>> entry : varStacks.entrySet()) {
+            savedStackSizes.put(entry.getKey(), entry.getValue().size());
+        }
+
+        for (PhiInstruction phi : block.getPhiInstructions()) {
+            String name = phi.getResult().getName();
+            if (name.startsWith("phi_")) {
+                int varIndex = Integer.parseInt(name.substring(4));
+                SSAValue newName = createNewName(varIndex, phi.getResult().getType());
+                phi.setResult(newName);
+                newName.setDefinition(phi);
+                pushVariable(varIndex, newName);
+            }
+        }
+
+        List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
+        for (IRInstruction instr : instructions) {
+            renameUses(instr);
+            renameDefinitions(instr, block);
+        }
+
+        for (IRBlock succ : block.getSuccessors()) {
+            for (PhiInstruction phi : succ.getPhiInstructions()) {
+                String name = phi.getResult().getName();
+                if (name.startsWith("phi_") || name.matches("v\\d+(_\\d+)?")) {
+                    int varIndex = extractVarIndex(phi);
+                    if (varIndex >= 0) {
+                        SSAValue currentVal = getCurrentValue(varIndex);
+                        if (currentVal != null) {
+                            phi.addIncoming(currentVal, block);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (IRBlock child : dominatorTree.getDominatorTreeChildren(block)) {
+            renameBlock(child);
+        }
+
+        for (Map.Entry<Integer, Integer> entry : savedStackSizes.entrySet()) {
+            Deque<SSAValue> stack = varStacks.get(entry.getKey());
+            while (stack != null && stack.size() > entry.getValue()) {
+                stack.pop();
+            }
+        }
+    }
+
+    private void renameUses(IRInstruction instr) {
+        if (instr instanceof LoadLocalInstruction load) {
+            int varIndex = load.getLocalIndex();
+            SSAValue currentVal = getCurrentValue(varIndex);
+            if (currentVal != null && load.getResult() != null) {
+                load.getResult().replaceAllUsesWith(currentVal);
+            }
+        }
+    }
+
+    private void renameDefinitions(IRInstruction instr, IRBlock block) {
+        if (instr instanceof StoreLocalInstruction store) {
+            int varIndex = store.getLocalIndex();
+            Value storedValue = store.getValue();
+            if (storedValue instanceof SSAValue ssaVal) {
+                pushVariable(varIndex, ssaVal);
+            }
+        }
+    }
+
+    private int extractVarIndex(PhiInstruction phi) {
+        String name = phi.getResult().getName();
+        if (name.startsWith("phi_")) {
+            try {
+                return Integer.parseInt(name.substring(4));
+            } catch (NumberFormatException e) {
+                return -1;
+            }
+        }
+        if (name.matches("v\\d+_\\d+")) {
+            try {
+                int underscorePos = name.indexOf('_');
+                return Integer.parseInt(name.substring(1, underscorePos));
+            } catch (NumberFormatException e) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    private void pushVariable(int varIndex, SSAValue value) {
+        varStacks.computeIfAbsent(varIndex, k -> new ArrayDeque<>()).push(value);
+    }
+
+    private SSAValue getCurrentValue(int varIndex) {
+        Deque<SSAValue> stack = varStacks.get(varIndex);
+        return stack != null && !stack.isEmpty() ? stack.peek() : null;
+    }
+
+    private SSAValue createNewName(int varIndex, com.tonic.analysis.ssa.type.IRType type) {
+        int count = varCounters.getOrDefault(varIndex, 0);
+        varCounters.put(varIndex, count + 1);
+        return new SSAValue(type, "v" + varIndex + "_" + count);
+    }
+}

@@ -8,21 +8,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the DUP instruction and its variants (0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E).
+ * Represents the JVM DUP instruction and its variants.
  */
 @Getter
 public class DupInstruction extends Instruction {
-    /**
-     * -- GETTER --
-     *  Returns the type of DUP instruction.
-     *
-     * @return The DupType enum value.
-     */
     private final DupType type;
 
-    /**
-     * Enum representing the types of DUP instructions.
-     */
     @Getter
     public enum DupType {
         DUP(0x59, "dup"),
@@ -48,6 +39,15 @@ public class DupInstruction extends Instruction {
             }
             return null;
         }
+    }
+
+    /**
+     * Returns the type of DUP instruction.
+     *
+     * @return The DupType enum value.
+     */
+    public DupType getType() {
+        return type;
     }
 
     /**
@@ -87,7 +87,6 @@ public class DupInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // DUP variants generally do not change the stack size
         return 0;
     }
 

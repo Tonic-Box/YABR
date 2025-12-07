@@ -79,15 +79,14 @@ public class CompareInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Pops two values and pushes one int result
         switch (type) {
             case LCMP:
             case DCMPL:
             case DCMPG:
-                return -1; // Pops two longs/doubles (occupying two slots each), pushes one int
+                return -1;
             case FCMPL:
             case FCMPG:
-                return -1; // Pops two floats (one slot each), pushes one int
+                return -1;
             default:
                 return 0;
         }

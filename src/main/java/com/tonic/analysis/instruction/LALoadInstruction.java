@@ -44,7 +44,7 @@ public class LALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pops two, pushes two (long occupies two stack slots)
+        return 1;
     }
 
     /**

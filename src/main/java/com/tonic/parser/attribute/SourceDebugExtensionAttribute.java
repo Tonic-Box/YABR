@@ -34,13 +34,11 @@ public class SourceDebugExtensionAttribute extends Attribute {
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // debugExtension (u1[size])
         dos.write(debugExtension);
     }
 
     @Override
     public void updateLength() {
-        // just the length of the debugExtension array
         this.length = (debugExtension == null) ? 0 : debugExtension.length;
     }
 

@@ -24,7 +24,7 @@ public class CheckCastInstruction extends Instruction {
      * @param classIndex The constant pool index for the class reference.
      */
     public CheckCastInstruction(ConstPool constPool, int opcode, int offset, int classIndex) {
-        super(opcode, offset, 3); // opcode + two bytes class index
+        super(opcode, offset, 3);
         if (opcode != 0xC0) {
             throw new IllegalArgumentException("Invalid opcode for CheckCastInstruction: " + opcode);
         }
@@ -56,7 +56,7 @@ public class CheckCastInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops one reference, pushes one reference (net change: 0)
+        return 0;
     }
 
     /**

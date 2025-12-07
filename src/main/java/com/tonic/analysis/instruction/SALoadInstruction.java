@@ -44,7 +44,7 @@ public class SALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops two, pushes one (short as int)
+        return 0;
     }
 
     /**

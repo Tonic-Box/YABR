@@ -11,8 +11,7 @@ import java.io.IOException;
 import static com.tonic.parser.constpool.structure.InvokeParameterUtil.*;
 
 /**
- * Represents a Method Reference in the constant pool.
- * The value is a MethodRef object containing class and name-and-type indices.
+ * Represents a CONSTANT_Methodref entry in the constant pool.
  */
 public class MethodRefItem extends Item<MethodRef> {
     @Setter
@@ -44,6 +43,11 @@ public class MethodRefItem extends Item<MethodRef> {
         return value;
     }
 
+    /**
+     * Retrieves the class name from the constant pool.
+     *
+     * @return The class name.
+     */
     public String getClassName() {
         if(classFile == null)
             return null;
@@ -53,6 +57,11 @@ public class MethodRefItem extends Item<MethodRef> {
         return utf8.getValue().replace('/', '.');
     }
 
+    /**
+     * Retrieves the method name from the constant pool.
+     *
+     * @return The method name.
+     */
     public String getName() {
         if(classFile == null)
             return null;
@@ -62,6 +71,11 @@ public class MethodRefItem extends Item<MethodRef> {
         return utf8.getValue();
     }
 
+    /**
+     * Retrieves the method descriptor from the constant pool.
+     *
+     * @return The method descriptor.
+     */
     public String getDescriptor() {
         if(classFile == null)
             return null;
@@ -72,7 +86,7 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     /**
-     * Returns the number of parameters for the invoked method.
+     * Returns the number of parameters for the method.
      *
      * @return The number of parameters.
      */
@@ -81,7 +95,6 @@ public class MethodRefItem extends Item<MethodRef> {
             throw new IllegalStateException("classFile not set. Ensure read(ClassFile) has been called.");
         }
 
-        // Retrieve the NameAndType entry from the constant pool
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) classFile.getConstPool().getItem(value.getNameAndTypeIndex());
         if (nameAndType == null) {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
@@ -92,12 +105,12 @@ public class MethodRefItem extends Item<MethodRef> {
             nameAndType.setConstPool(classFile.getConstPool());
         }
 
-        String descriptor = nameAndType.getDescriptor(); // e.g., "(Ljava/lang/String;)V"
+        String descriptor = nameAndType.getDescriptor();
         return parseDescriptorParameters(descriptor);
     }
 
     /**
-     * Returns the number of slots for the return type of the invoked method.
+     * Returns the number of slots for the return type.
      *
      * @return The number of return type slots.
      */
@@ -106,25 +119,48 @@ public class MethodRefItem extends Item<MethodRef> {
             throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
-        // Retrieve the NameAndType entry from the constant pool
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) classFile.getConstPool().getItem(value.getNameAndTypeIndex());
         if (nameAndType == null) {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
-        String descriptor = nameAndType.getDescriptor(); // e.g., "(Ljava/lang/String;)V"
+        String descriptor = nameAndType.getDescriptor();
         String returnType = parseDescriptorReturnType(descriptor);
         return determineTypeSlots(returnType);
     }
 
+    /**
+     * Sets the class index.
+     *
+     * @param classIndex The class index to set.
+     */
     public void setClassIndex(int classIndex)
     {
         value.setClassIndex(classIndex);
     }
 
+    /**
+     * Sets the name and type index.
+     *
+     * @param nameAndTypeIndex The name and type index to set.
+     */
     public void setNameAndTypeIndex(int nameAndTypeIndex)
     {
         value.setNameAndTypeIndex(nameAndTypeIndex);
+    }
+
+    /**
+     * Retrieves the owner class internal name from the constant pool.
+     *
+     * @return The owner class internal name.
+     */
+    public String getOwner() {
+        if (classFile == null)
+            return null;
+        ConstPool cp = classFile.getConstPool();
+        ClassRefItem classRef = (ClassRefItem) cp.getItem(value.getClassIndex());
+        Utf8Item utf8 = (Utf8Item) cp.getItem(classRef.getValue());
+        return utf8.getValue();
     }
 
     @Override

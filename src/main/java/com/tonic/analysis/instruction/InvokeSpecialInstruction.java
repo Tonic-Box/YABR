@@ -61,7 +61,7 @@ public class InvokeSpecialInstruction extends Instruction {
         MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
         int params = method.getParameterCount();
         int returnSlots = method.getReturnTypeSlots();
-        return -params + returnSlots; // Pops object and parameters, pushes return value
+        return -params + returnSlots;
     }
 
     /**
@@ -84,11 +84,21 @@ public class InvokeSpecialInstruction extends Instruction {
         return method.toString();
     }
 
+    /**
+     * Returns the method name.
+     *
+     * @return The method name.
+     */
     public String getMethodName() {
         MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
         return method.getName();
     }
 
+    /**
+     * Returns the class name that owns the method.
+     *
+     * @return The owner class name.
+     */
     public String getOwnerName() {
         MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
         return method.getClassName();

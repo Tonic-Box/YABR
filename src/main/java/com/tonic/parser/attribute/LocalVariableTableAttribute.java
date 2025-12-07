@@ -70,7 +70,7 @@ public class LocalVariableTableAttribute extends Attribute {
             sb.append(entry).append(", ");
         }
         if (!localVariableTable.isEmpty()) {
-            sb.setLength(sb.length() - 2); // Remove trailing comma and space
+            sb.setLength(sb.length() - 2);
         }
         sb.append("]}");
         return sb.toString();

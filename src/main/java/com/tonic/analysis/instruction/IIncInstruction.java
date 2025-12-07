@@ -1,15 +1,13 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
-import com.tonic.utill.Opcode;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the IINC instruction (0x84).
+ * Represents the JVM IINC instruction.
  */
 @Getter
 public class IIncInstruction extends Instruction {
@@ -25,7 +23,7 @@ public class IIncInstruction extends Instruction {
      * @param constValue The constant value to add to the local variable.
      */
     public IIncInstruction(int opcode, int offset, int varIndex, int constValue) {
-        super(opcode, offset, 3); // opcode + modifiedOpcode + varIndex (2 bytes) + constValue (2 bytes)
+        super(opcode, offset, 3);
         this.varIndex = varIndex;
         this.constValue = constValue;
     }
@@ -44,9 +42,8 @@ public class IIncInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        dos.writeByte(Opcode.WIDE.getCode()); // Assuming WIDE is used here for IINC with wider indices
-        dos.writeShort(varIndex);
-        dos.writeShort(constValue);
+        dos.writeByte(varIndex);
+        dos.writeByte(constValue);
     }
 
     /**
@@ -56,7 +53,7 @@ public class IIncInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // IINC modifies a local variable; no stack change
+        return 0;
     }
 
     /**

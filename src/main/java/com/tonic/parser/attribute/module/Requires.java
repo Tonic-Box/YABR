@@ -7,7 +7,7 @@ import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 /**
- * Represents a 'requires' entry in the Module attribute.
+ * Represents a requires entry in the Module attribute.
  */
 public class Requires {
     private final ConstPool constPool;

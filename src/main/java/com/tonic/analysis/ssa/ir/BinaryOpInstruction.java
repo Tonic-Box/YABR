@@ -1,0 +1,61 @@
+package com.tonic.analysis.ssa.ir;
+
+import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
+import com.tonic.analysis.ssa.visitor.IRVisitor;
+import lombok.Getter;
+
+import java.util.List;
+
+/**
+ * Binary arithmetic/logical operation.
+ */
+@Getter
+public class BinaryOpInstruction extends IRInstruction {
+
+    private final BinaryOp op;
+    private Value left;
+    private Value right;
+
+    public BinaryOpInstruction(SSAValue result, BinaryOp op, Value left, Value right) {
+        super(result);
+        this.op = op;
+        this.left = left;
+        this.right = right;
+        registerUses();
+    }
+
+    private void registerUses() {
+        if (left instanceof SSAValue ssa) ssa.addUse(this);
+        if (right instanceof SSAValue ssa) ssa.addUse(this);
+    }
+
+    @Override
+    public List<Value> getOperands() {
+        return List.of(left, right);
+    }
+
+    @Override
+    public void replaceOperand(Value oldValue, Value newValue) {
+        if (left.equals(oldValue)) {
+            if (left instanceof SSAValue ssa) ssa.removeUse(this);
+            left = newValue;
+            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+        }
+        if (right.equals(oldValue)) {
+            if (right instanceof SSAValue ssa) ssa.removeUse(this);
+            right = newValue;
+            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+        }
+    }
+
+    @Override
+    public <T> T accept(IRVisitor<T> visitor) {
+        return visitor.visitBinaryOp(this);
+    }
+
+    @Override
+    public String toString() {
+        return result + " = " + op.name().toLowerCase() + " " + left + ", " + right;
+    }
+}

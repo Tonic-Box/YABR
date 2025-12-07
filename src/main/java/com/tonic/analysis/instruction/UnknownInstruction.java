@@ -10,6 +10,13 @@ import java.io.IOException;
 public class UnknownInstruction extends Instruction {
     private final byte[] operands;
 
+    /**
+     * Constructs an UnknownInstruction.
+     *
+     * @param opcode The opcode of the instruction.
+     * @param offset The bytecode offset of the instruction.
+     * @param length The total length of the instruction in bytes.
+     */
     public UnknownInstruction(int opcode, int offset, int length) {
         super(opcode, offset, length);
         this.operands = new byte[length - 1];
@@ -20,6 +27,12 @@ public class UnknownInstruction extends Instruction {
         visitor.visit(this);
     }
 
+    /**
+     * Writes the unknown opcode and its operands to the DataOutputStream.
+     *
+     * @param dos The DataOutputStream to write to.
+     * @throws IOException If an I/O error occurs.
+     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
@@ -28,18 +41,31 @@ public class UnknownInstruction extends Instruction {
         }
     }
 
+    /**
+     * Returns the change in stack size caused by this instruction.
+     *
+     * @return The stack size change (assumed to be 0 for unknown instructions).
+     */
     @Override
     public int getStackChange() {
-        // Unknown, assume no change
         return 0;
     }
 
+    /**
+     * Returns the change in local variables caused by this instruction.
+     *
+     * @return The local variables size change (assumed to be 0 for unknown instructions).
+     */
     @Override
     public int getLocalChange() {
-        // Unknown, assume no change
         return 0;
     }
 
+    /**
+     * Returns a string representation of the instruction.
+     *
+     * @return The unknown opcode in hexadecimal format.
+     */
     @Override
     public String toString() {
         return String.format("UNKNOWN_OPCODE_0x%02X", opcode);

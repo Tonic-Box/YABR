@@ -7,8 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a String Reference in the constant pool.
- * The value is an index pointing to a Utf8Item representing the string.
+ * Represents a CONSTANT_String entry in the constant pool.
  */
 public class StringRefItem extends Item<Integer> {
     @Setter

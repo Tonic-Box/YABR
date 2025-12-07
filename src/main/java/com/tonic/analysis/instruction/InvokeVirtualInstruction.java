@@ -60,7 +60,7 @@ public class InvokeVirtualInstruction extends Instruction {
         MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
         int params = method.getParameterCount();
         int returnSlots = method.getReturnTypeSlots();
-        return -params + returnSlots; // Pops object and parameters, pushes return value
+        return -params + returnSlots;
     }
 
     /**
@@ -93,14 +93,22 @@ public class InvokeVirtualInstruction extends Instruction {
         return String.format("INVOKEVIRTUAL #%d // %s", methodIndex, resolveMethod());
     }
 
-    public String getMethodName()
-    {
+    /**
+     * Returns the method name.
+     *
+     * @return The method name.
+     */
+    public String getMethodName() {
         MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
         return method.getName();
     }
 
-    public String getMethodDescriptor()
-    {
+    /**
+     * Returns the method descriptor.
+     *
+     * @return The method descriptor.
+     */
+    public String getMethodDescriptor() {
         MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
         return method.getDescriptor();
     }

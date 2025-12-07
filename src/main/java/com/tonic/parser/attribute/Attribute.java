@@ -54,11 +54,9 @@ public abstract class Attribute {
      * @return An instance of the appropriate Attribute subclass.
      */
     public static Attribute get(ClassFile classFile, ConstPool constPool, MemberEntry parent) {
-        // Record the byte index before reading the attribute
         int preReadIndex = classFile.getIndex();
         Logger.info("Reading attribute at byte index: " + preReadIndex);
 
-        // Read the attribute name index
         int nameIndex = classFile.readUnsignedShort();
         Item<?> nameItem = constPool.getItem(nameIndex);
 
@@ -71,7 +69,6 @@ public abstract class Attribute {
         String name = ((Utf8Item) nameItem).getValue();
         Logger.info("Attribute Name: " + name);
 
-        // Read the attribute length
         long lengthLong = classFile.readUnsignedInt();
         if (lengthLong > Integer.MAX_VALUE) {
             String errorMsg = "Attribute length too large: " + lengthLong;
@@ -91,17 +88,15 @@ public abstract class Attribute {
             attribute = getMethodAttribute(name, nameIndex, length, classFile, parent);
         }
 
-        // Read the attribute-specific data
         try {
             Logger.info("Starting to read attribute data for: " + name);
             attribute.read(classFile, length);
             Logger.info("Completed reading attribute: " + name);
         } catch (Exception e) {
             Logger.error("ERROR: Failed to read attribute '" + name + "'. Exception: " + e.getMessage());
-            throw e; // Re-throw the exception after logging
+            throw e;
         }
 
-        // Calculate the byte index after reading the attribute
         int postReadIndex = classFile.getIndex();
         Logger.info("Finished attribute '" + name + "'. Byte index moved from " + preReadIndex + " to " + postReadIndex);
         Logger.info("---------------------------------------------------");
@@ -140,7 +135,6 @@ public abstract class Attribute {
             case "Module" -> new ModuleAttribute(name, classFile, nameIndex, length);
             case "NestHost" -> new NestHostAttribute(name, classFile, nameIndex, length);
             case "NestMembers" -> new NestMembersAttribute(name, classFile, nameIndex, length);
-            // Add more cases for different attribute types as needed
             default -> {
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
                 yield new GenericAttribute(name, classFile, nameIndex, length);
@@ -179,7 +173,6 @@ public abstract class Attribute {
             case "Module" -> new ModuleAttribute(name, parent, nameIndex, length);
             case "NestHost" -> new NestHostAttribute(name, parent, nameIndex, length);
             case "NestMembers" -> new NestMembersAttribute(name, parent, nameIndex, length);
-            // Add more cases for different attribute types as needed
             default -> {
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
                 yield new GenericAttribute(name, parent, nameIndex, length);
@@ -188,24 +181,25 @@ public abstract class Attribute {
     }
 
     /**
-     * Writes the base attribute fields:
-     *   - attribute_name_index (u2)
-     *   - attribute_length (u4)
-     * then the rest (info) must be written by subclasses.
+     * Writes the attribute to the output stream.
+     *
+     * @param dos The output stream to write to
+     * @throws IOException If an I/O error occurs
      */
     public void write(DataOutputStream dos) throws IOException {
-        // Make sure the length is correct (if you've changed anything)
         updateLength();
 
         dos.writeShort(nameIndex);
         dos.writeInt(length);
 
-        // Then sub-class specific data (info)
         writeInfo(dos);
     }
 
     /**
-     * Let each attribute type write its own body (the 'info' bytes).
+     * Writes the attribute-specific data (info bytes).
+     *
+     * @param dos The output stream to write to
+     * @throws IOException If an I/O error occurs
      */
     protected abstract void writeInfo(DataOutputStream dos) throws IOException;
 

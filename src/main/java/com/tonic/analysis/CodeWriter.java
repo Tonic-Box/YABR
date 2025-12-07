@@ -1,13 +1,13 @@
 package com.tonic.analysis;
 
-import com.tonic.analysis.ir.blocks.Block;
-import com.tonic.analysis.ir.blocks.Expression;
-import com.tonic.analysis.ir.types.OpcodeTypeMapper;
+import com.tonic.analysis.frame.FrameGenerator;
+import com.tonic.analysis.ssa.SSA;
+import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.AbstractBlockVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.StackMapTableAttribute;
 import com.tonic.analysis.instruction.*;
 import com.tonic.utill.Logger;
 import com.tonic.utill.ReturnType;
@@ -33,12 +33,12 @@ public class CodeWriter {
     // Mapping from bytecode offset to Instruction
     protected final Map<Integer, Instruction> instructions = new TreeMap<>();
 
-    // List of blocks (Expressions and Statements)
-    protected final List<Block> blocks = new ArrayList<>();
-
     // Current max stack and locals, updated as we modify bytecode
     private int maxStack;
     private int maxLocals;
+
+    // Track whether bytecode has been modified (for frame preservation)
+    private boolean modified = false;
 
     /**
      * Constructs a CodeWriter for the given MethodEntry.
@@ -54,7 +54,6 @@ public class CodeWriter {
         this.bytecode = this.codeAttribute.getCode();
         this.constPool = methodEntry.getClassFile().getConstPool();
         parseBytecode();
-        parseBlocks();
     }
 
     /**
@@ -63,11 +62,35 @@ public class CodeWriter {
     protected void parseBytecode() {
         instructions.clear();
         int offset = 0;
+        boolean debugMode = false;
         while (offset < bytecode.length) {
             int opcode = Byte.toUnsignedInt(bytecode[offset]);
             Instruction instr = InstructionFactory.createInstruction(opcode, offset, bytecode, constPool);
             instructions.put(offset, instr);
-            offset += instr.getLength();
+            int instrLength = instr.getLength();
+            // Debug: detect potential offset issues
+            if (instr instanceof LdcWInstruction) {
+                LdcWInstruction ldc = (LdcWInstruction) instr;
+                if (ldc.getCpIndex() <= 0) {
+                    debugMode = true;
+                    System.err.println("DEBUG: Invalid LDC_W at offset " + offset + " with cpIndex=" + ldc.getCpIndex());
+                    System.err.println("DEBUG: Bytecode bytes at offset: " +
+                        String.format("%02X %02X %02X", bytecode[offset],
+                            offset+1 < bytecode.length ? bytecode[offset+1] : 0,
+                            offset+2 < bytecode.length ? bytecode[offset+2] : 0));
+                    System.err.println("DEBUG: First 30 bytes of method bytecode:");
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < Math.min(30, bytecode.length); i++) {
+                        sb.append(String.format("%02X ", bytecode[i]));
+                    }
+                    System.err.println(sb.toString());
+                    System.err.println("DEBUG: Previously parsed instructions:");
+                    for (var entry : instructions.entrySet()) {
+                        System.err.println("  offset " + entry.getKey() + ": " + entry.getValue().getClass().getSimpleName() + " length=" + entry.getValue().getLength());
+                    }
+                }
+            }
+            offset += instrLength;
         }
         // Initialize maxStack and maxLocals
         this.maxStack = codeAttribute.getMaxStack();
@@ -98,6 +121,9 @@ public class CodeWriter {
         if (!instructions.containsKey(offset) && offset != bytecode.length) {
             throw new IllegalArgumentException("Invalid bytecode offset: " + offset);
         }
+
+        // Mark as modified for frame regeneration
+        this.modified = true;
 
         Logger.info("Inserting instruction at offset: " + offset);
         Logger.info("Instruction to insert: " + newInstr);
@@ -146,9 +172,8 @@ public class CodeWriter {
         // Rebuild the bytecode
         rebuildBytecode();
 
-        // Re-parse bytecode and blocks to update mappings
+        // Re-parse bytecode to update mappings
         parseBytecode();
-        parseBlocks();
     }
 
 
@@ -217,6 +242,67 @@ public class CodeWriter {
     public void write() throws IOException {
         analyze();
         rebuildBytecode();
+    }
+
+    /**
+     * Returns whether the bytecode has been modified since loading.
+     *
+     * @return true if modified, false otherwise
+     */
+    public boolean isModified() {
+        return modified;
+    }
+
+    /**
+     * Checks if the CodeAttribute has a valid StackMapTable.
+     *
+     * @return true if a StackMapTable exists with frames
+     */
+    public boolean hasValidStackMapTable() {
+        for (var attr : codeAttribute.getAttributes()) {
+            if (attr instanceof StackMapTableAttribute smt) {
+                return smt.getFrames() != null && !smt.getFrames().isEmpty();
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Computes and updates the StackMapTable frames for this method.
+     * This is an opt-in operation - call this after making bytecode modifications.
+     * <p>
+     * If the bytecode hasn't been modified and a valid StackMapTable exists,
+     * this method preserves the existing frames.
+     * <p>
+     * Usage:
+     * <pre>
+     * CodeWriter codeWriter = new CodeWriter(method);
+     * // ... insert instructions ...
+     * codeWriter.write();
+     * codeWriter.computeFrames(); // Regenerate StackMapTable
+     * </pre>
+     */
+    public void computeFrames() {
+        // If not modified and has valid frames, preserve existing
+        if (!modified && hasValidStackMapTable()) {
+            Logger.info("Preserving existing StackMapTable (bytecode not modified)");
+            return;
+        }
+
+        Logger.info("Computing StackMapTable frames for method: " + methodEntry.getName());
+        FrameGenerator generator = new FrameGenerator(constPool);
+        generator.updateStackMapTable(methodEntry);
+        Logger.info("StackMapTable computation complete");
+    }
+
+    /**
+     * Forces recomputation of StackMapTable frames, even if bytecode wasn't modified.
+     */
+    public void forceComputeFrames() {
+        Logger.info("Force computing StackMapTable frames for method: " + methodEntry.getName());
+        FrameGenerator generator = new FrameGenerator(constPool);
+        generator.updateStackMapTable(methodEntry);
+        Logger.info("StackMapTable computation complete");
     }
 
     public int getBytecodeSize()
@@ -629,13 +715,14 @@ public class CodeWriter {
                     return new InvokeInterfaceInstruction(constPool, opcode, offset, invokeInterfaceIndex, count);
 
                 // INVOKEDYNAMIC (0xBA)
+                // Format: opcode (1) + CP index (2) + reserved zeros (2) = 5 bytes
                 case 0xBA: // INVOKEDYNAMIC
                     if (offset + 4 >= bytecode.length) {
                         return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                     }
-                    int invokedynamicBootstrapIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
-                    int invokedynamicNameAndTypeIndex = ((bytecode[offset + 3] & 0xFF) << 8) | (bytecode[offset + 4] & 0xFF);
-                    return new InvokeDynamicInstruction(constPool, opcode, offset, invokedynamicBootstrapIndex, invokedynamicNameAndTypeIndex);
+                    int invokedynamicCpIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
+                    // bytes at offset+3 and offset+4 are reserved zeros per JVM spec
+                    return new InvokeDynamicInstruction(constPool, opcode, offset, invokedynamicCpIndex);
 
                 // GETSTATIC (0xB2) and GETFIELD (0xB4)
                 case 0xB2: // GETSTATIC
@@ -1182,13 +1269,12 @@ public class CodeWriter {
     /**
      * Inserts an INVOKEDYNAMIC instruction at the specified bytecode offset.
      *
-     * @param offset                  The bytecode offset to insert the instruction at.
-     * @param bootstrapMethodIndex    The bootstrap method index in the constant pool.
-     * @param nameAndTypeIndex        The name and type index in the constant pool.
+     * @param offset  The bytecode offset to insert the instruction at.
+     * @param cpIndex The constant pool index to the CONSTANT_InvokeDynamic_info entry.
      */
-    public InvokeDynamicInstruction insertInvokeDynamic(int offset, int bootstrapMethodIndex, int nameAndTypeIndex) {
+    public InvokeDynamicInstruction insertInvokeDynamic(int offset, int cpIndex) {
         int opcode = 0xBA; // INVOKEDYNAMIC
-        InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, opcode, offset, bootstrapMethodIndex, nameAndTypeIndex);
+        InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, opcode, offset, cpIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1475,24 +1561,6 @@ public class CodeWriter {
 
 
     /**
-     * Parses the instructions into Blocks (Expressions and Statements) and assigns their types.
-     */
-    protected void parseBlocks() {
-        blocks.clear();
-        Expression currentBlock;
-
-        for (Instruction instr : instructions.values()) {
-            int opcode = instr.getOpcode();
-            currentBlock = new Expression();
-            currentBlock.setType(OpcodeTypeMapper.getExpressionType(opcode));
-            currentBlock.addInstruction(instr);
-            blocks.add(currentBlock);
-        }
-
-        Logger.info("Parsed into " + blocks.size() + " blocks.");
-    }
-
-    /**
      * Accepts a BytecodeVisitor to traverse and operate on the instructions.
      *
      * @param visitor The BytecodeVisitor implementation.
@@ -1504,14 +1572,39 @@ public class CodeWriter {
         }
     }
 
+    /**
+     * Lifts this method's bytecode to SSA-form IR.
+     *
+     * @return The IRMethod in SSA form
+     */
+    public IRMethod toSSA() {
+        SSA ssa = new SSA(constPool);
+        return ssa.lift(methodEntry);
+    }
 
-    public void accept(AbstractBlockVisitor visitor) {
-        for (Block block : blocks) {
-            if(block instanceof Expression) {
-                visitor.visit((Expression) block);
-            } else {
-                visitor.visit(block);
-            }
-        }
+    /**
+     * Lowers an SSA-form IRMethod back to bytecode and updates this method.
+     *
+     * @param irMethod The IRMethod to lower
+     */
+    public void fromSSA(IRMethod irMethod) {
+        SSA ssa = new SSA(constPool);
+        ssa.lower(irMethod, methodEntry);
+        this.bytecode = codeAttribute.getCode();
+        parseBytecode();
+        this.modified = true;
+    }
+
+    /**
+     * Lifts to SSA, runs standard optimizations, and lowers back to bytecode.
+     */
+    public void optimizeSSA() {
+        SSA ssa = new SSA(constPool).withStandardOptimizations();
+        IRMethod irMethod = ssa.lift(methodEntry);
+        ssa.runTransforms(irMethod);
+        ssa.lower(irMethod, methodEntry);
+        this.bytecode = codeAttribute.getCode();
+        parseBytecode();
+        this.modified = true;
     }
 }

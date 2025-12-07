@@ -18,7 +18,7 @@ public class ArrayLengthInstruction extends Instruction {
      * @param offset The bytecode offset of the instruction.
      */
     public ArrayLengthInstruction(int opcode, int offset) {
-        super(opcode, offset, 1); // opcode only
+        super(opcode, offset, 1);
         if (opcode != 0xBE) {
             throw new IllegalArgumentException("Invalid opcode for ArrayLengthInstruction: " + opcode);
         }
@@ -47,7 +47,7 @@ public class ArrayLengthInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops one reference and pushes one int (net change: 0)
+        return 0;
     }
 
     /**

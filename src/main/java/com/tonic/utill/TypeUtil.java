@@ -1,12 +1,15 @@
 package com.tonic.utill;
 
+/**
+ * Utility class for type descriptor validation and string manipulation.
+ */
 public class TypeUtil
 {
     /**
-     * Converts a JVM descriptor to its corresponding Java type.
+     * Validates and normalizes a JVM type descriptor.
      *
-     * @param desc The JVM descriptor (e.g., "I" for int, "Ljava/lang/String;" for String).
-     * @return The corresponding Java class.
+     * @param desc the JVM descriptor (e.g., "I" for int, "Ljava/lang/String;" for String)
+     * @return the normalized descriptor
      */
     public static String validateDescriptorFormat(String desc) {
         switch (desc) {
@@ -43,8 +46,8 @@ public class TypeUtil
     /**
      * Capitalizes the first letter of a given string.
      *
-     * @param str The string to capitalize.
-     * @return The capitalized string.
+     * @param str the string to capitalize
+     * @return the capitalized string, or the original if null or empty
      */
     public static String capitalize(String str) {
         if (str == null || str.isEmpty()) {

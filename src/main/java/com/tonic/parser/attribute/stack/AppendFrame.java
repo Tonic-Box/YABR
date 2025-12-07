@@ -10,13 +10,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents an AppendFrame.
+ * Represents an AppendFrame in the StackMapTable attribute.
+ * Used when the frame has additional local variables compared to the previous frame.
  */
 @Getter
 public class AppendFrame extends StackMapFrame {
     private final int offsetDelta;
     private final List<VerificationTypeInfo> locals;
 
+    /**
+     * Constructs an AppendFrame by reading from a class file.
+     *
+     * @param frameType the frame type identifier
+     * @param classFile the class file to read from
+     * @param constPool the constant pool for resolving references
+     */
     public AppendFrame(int frameType, ClassFile classFile, ConstPool constPool) {
         super(frameType);
         int numberOfLocals = frameType - 251;
@@ -30,9 +38,7 @@ public class AppendFrame extends StackMapFrame {
 
     @Override
     protected void writeFrameData(DataOutputStream dos) throws IOException {
-        // offset_delta (u2)
         dos.writeShort(offsetDelta);
-        // locals
         for (VerificationTypeInfo local : locals) {
             local.write(dos);
         }
@@ -40,12 +46,7 @@ public class AppendFrame extends StackMapFrame {
 
     @Override
     public int getLength() {
-        // The total size includes:
-        //   1 byte for frameType (already in the "full" frame size)
-        //   2 bytes for offsetDelta
-        //   sum of each local's length
-        int size = 1  // frameType itself
-                + 2; // offsetDelta
+        int size = 1 + 2;
         for (VerificationTypeInfo local : locals) {
             size += local.getLength();
         }

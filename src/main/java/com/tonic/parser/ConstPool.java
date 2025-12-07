@@ -19,9 +19,9 @@ public class ConstPool {
     private final List<Item<?>> items;
 
     /**
-     * Constructs a ConstPool by parsing the constant pool entries from the given ClassFile.
+     * Constructs a ConstPool by parsing constant pool entries from the given ClassFile.
      *
-     * @param classFile The ClassFile utility to read data from.
+     * @param classFile the ClassFile to read data from
      */
     public ConstPool(final ClassFile classFile) {
         this.classFile = classFile;
@@ -29,10 +29,8 @@ public class ConstPool {
         final int constantPoolCount = classFile.readUnsignedShort();
         this.items = new ArrayList<>();
 
-        // Index 0 is unused; add a null to align indices.
         items.add(null);
 
-        // Iterate through constant pool entries.
         for (int i = 1; i < constantPoolCount; i++) {
             byte tag = (byte) classFile.readUnsignedByte();
             Item<?> item = switch (tag) {
@@ -50,45 +48,45 @@ public class ConstPool {
                 case Item.ITEM_METHOD_HANDLE -> new MethodHandleItem();
                 case Item.ITEM_METHOD_TYPE -> new MethodTypeItem();
                 case Item.ITEM_INVOKEDYNAMIC -> new InvokeDynamicItem();
-                case Item.ITEM_PACKAGE -> // CONSTANT_Package
-                        new PackageItem();
-                case Item.ITEM_MODULE -> // CONSTANT_Module
-                        new ModuleItem();
+                case Item.ITEM_PACKAGE -> new PackageItem();
+                case Item.ITEM_MODULE -> new ModuleItem();
                 default -> throw new IllegalArgumentException("Unknown constant pool tag: " + tag + " at index " + i);
             };
 
-            // Read the item's data from the class file.
             item.read(classFile);
             item.setClassFile(classFile);
             items.add(item);
 
-            // Log the parsed item
             Logger.info("Parsed constant pool entry " + i + ": " + item.getClass().getName());
 
-            // Handle Long and Double which occupy two entries.
             if (tag == Item.ITEM_LONG || tag == Item.ITEM_DOUBLE) {
-                // According to JVM Spec, the next entry is invalid and should be skipped.
                 items.add(null);
                 Logger.info("Long/Double entry at " + i + ", skipping next index");
-                i++; // Increment index to skip the next entry.
+                i++;
             }
         }
     }
 
+    /**
+     * Constructs an empty ConstPool.
+     */
     public ConstPool() {
         this.classFile = null;
         this.items = new ArrayList<>();
-        this.items.add(null); // Index 0 is unused.
+        this.items.add(null);
     }
 
+    /**
+     * Sets the ClassFile reference for this constant pool.
+     *
+     * @param classFile the ClassFile to associate with this pool
+     */
     public void setClassFile(ClassFile classFile) {
         this.classFile = classFile;
-        // Assign classFile to existing items that require it
         for (Item<?> item : items) {
             if (item instanceof MethodRefItem) {
                 ((MethodRefItem) item).setClassFile(classFile);
             }
-            // Similarly, set classFile for other item types if needed
         }
     }
 
@@ -96,9 +94,9 @@ public class ConstPool {
     /**
      * Retrieves the constant pool item at the specified index.
      *
-     * @param index The 1-based index of the constant pool item.
-     * @return The constant pool item, or null if the index is invalid or points to an unused slot.
-     * @throws IllegalArgumentException If the index is out of bounds.
+     * @param index the 1-based index of the constant pool item
+     * @return the constant pool item, or null if pointing to an unused slot
+     * @throws IllegalArgumentException if the index is out of bounds
      */
     public Item<?> getItem(final int index) {
         if (index <= 0 || index >= items.size()) {
@@ -107,11 +105,6 @@ public class ConstPool {
         return items.get(index);
     }
 
-    /**
-     * Returns a string representation of the constant pool.
-     *
-     * @return A formatted string listing all constant pool entries.
-     */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("Constant Pool:\n");
@@ -126,21 +119,23 @@ public class ConstPool {
         return sb.toString();
     }
 
+    /**
+     * Adds a new item to the constant pool.
+     *
+     * @param newItem the item to add
+     * @return the index where the item was added
+     * @throws IllegalStateException if the ClassFile reference is not set
+     */
     public int addItem(Item<?> newItem) {
-        if(classFile != null)
-        {
+        if(classFile != null) {
             newItem.setClassFile(classFile);
-        }
-        else
-        {
+        } else {
             throw new IllegalStateException("Cannot add item to constant pool without a ClassFile reference.");
         }
 
-        // The next available index is just the current size of 'items'.
         int index = items.size();
         items.add(newItem);
 
-        // If this is a Long or Double, per the JVM spec we must add a null placeholder entry next.
         if (newItem.getType() == Item.ITEM_LONG || newItem.getType() == Item.ITEM_DOUBLE) {
             items.add(null);
         }
@@ -151,8 +146,8 @@ public class ConstPool {
     /**
      * Finds an existing ClassRefItem with the given name index or adds a new one.
      *
-     * @param nameIndex The index of the class name in the constant pool.
-     * @return The existing or newly added ClassRefItem.
+     * @param nameIndex the index of the class name in the constant pool
+     * @return the existing or newly added ClassRefItem
      */
     public ClassRefItem findOrAddClassRef(int nameIndex) {
         for (int i = 1; i < items.size(); i++) {
@@ -416,5 +411,97 @@ public class ConstPool {
         newClassRef.setClassFile(classFile);
         addItem(newClassRef);
         return newClassRef;
+    }
+
+    /**
+     * Finds an existing MethodRefItem or creates a new one using string parameters.
+     *
+     * @param owner The fully qualified class name (e.g., "java/lang/String").
+     * @param name The method name.
+     * @param descriptor The method descriptor (e.g., "(II)I").
+     * @return The existing or newly added MethodRefItem.
+     */
+    public MethodRefItem findOrAddMethodRef(String owner, String name, String descriptor) {
+        Utf8Item ownerUtf8 = findOrAddUtf8(owner);
+        Utf8Item nameUtf8 = findOrAddUtf8(name);
+        Utf8Item descUtf8 = findOrAddUtf8(descriptor);
+
+        ClassRefItem classRef = findOrAddClassRef(getIndexOf(ownerUtf8));
+        NameAndTypeRefItem nameAndType = findOrAddNameAndType(getIndexOf(nameUtf8), getIndexOf(descUtf8));
+
+        return findOrAddMethodRef(getIndexOf(classRef), getIndexOf(nameAndType));
+    }
+
+    /**
+     * Finds an existing FieldRefItem or creates a new one using string parameters.
+     * Alias for findOrAddField for consistency with method naming.
+     *
+     * @param owner The fully qualified class name (e.g., "java/lang/String").
+     * @param name The field name.
+     * @param descriptor The field descriptor (e.g., "I", "Ljava/lang/String;").
+     * @return The existing or newly added FieldRefItem.
+     */
+    public FieldRefItem findOrAddFieldRef(String owner, String name, String descriptor) {
+        return findOrAddField(owner, name, descriptor);
+    }
+
+    /**
+     * Finds an existing InterfaceRefItem with the given class and name-and-type indices,
+     * or creates a new one if none exists.
+     *
+     * @param classIndex The constant pool index of the class reference.
+     * @param nameAndTypeIndex The constant pool index of the name-and-type reference.
+     * @return The existing or newly added InterfaceRefItem.
+     */
+    public InterfaceRefItem findOrAddInterfaceRef(int classIndex, int nameAndTypeIndex) {
+        for (Item<?> item : items) {
+            if (item instanceof InterfaceRefItem iface) {
+                if (iface.getValue().getClassIndex() == classIndex &&
+                    iface.getValue().getNameAndTypeIndex() == nameAndTypeIndex) {
+                    return iface;
+                }
+            }
+        }
+        // Create new InterfaceRefItem
+        InterfaceRefItem newItem = new InterfaceRefItem();
+        newItem.setValue(new com.tonic.parser.constpool.structure.InterfaceRef(classIndex, nameAndTypeIndex));
+        newItem.setConstPool(this);
+        items.add(newItem);
+        return newItem;
+    }
+
+    /**
+     * Finds an existing InterfaceRefItem or creates a new one using string parameters.
+     *
+     * @param owner The fully qualified interface name (e.g., "java/util/stream/Stream").
+     * @param name The method name.
+     * @param descriptor The method descriptor (e.g., "(Ljava/util/function/Consumer;)V").
+     * @return The existing or newly added InterfaceRefItem.
+     */
+    public InterfaceRefItem findOrAddInterfaceRef(String owner, String name, String descriptor) {
+        Utf8Item ownerUtf8 = findOrAddUtf8(owner);
+        Utf8Item nameUtf8 = findOrAddUtf8(name);
+        Utf8Item descUtf8 = findOrAddUtf8(descriptor);
+
+        ClassRefItem classRef = findOrAddClassRef(getIndexOf(ownerUtf8));
+        NameAndTypeRefItem nameAndType = findOrAddNameAndType(getIndexOf(nameUtf8), getIndexOf(descUtf8));
+
+        return findOrAddInterfaceRef(getIndexOf(classRef), getIndexOf(nameAndType));
+    }
+
+    /**
+     * Gets the class name from a ClassRefItem at the given constant pool index.
+     *
+     * @param classIndex The constant pool index of the ClassRefItem.
+     * @return The class name (internal form), or null if not found.
+     */
+    public String getClassName(int classIndex) {
+        if (classIndex == 0) return null;
+        Item<?> item = getItem(classIndex);
+        if (item instanceof ClassRefItem classRef) {
+            Utf8Item utf8 = (Utf8Item) getItem(classRef.getNameIndex());
+            return utf8.getValue();
+        }
+        return null;
     }
 }

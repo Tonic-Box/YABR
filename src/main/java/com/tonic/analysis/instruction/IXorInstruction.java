@@ -44,7 +44,7 @@ public class IXorInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops two ints, pushes one int
+        return -1;
     }
 
     /**

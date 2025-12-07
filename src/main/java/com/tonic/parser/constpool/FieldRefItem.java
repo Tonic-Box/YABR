@@ -9,8 +9,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a Field Reference in the constant pool.
- * The value is a FieldRef object containing class and name-and-type indices.
+ * Represents a CONSTANT_Fieldref entry in the constant pool.
  */
 @Setter
 public class FieldRefItem extends Item<FieldRef> {
@@ -41,6 +40,11 @@ public class FieldRefItem extends Item<FieldRef> {
         return value;
     }
 
+    /**
+     * Retrieves the class name from the constant pool.
+     *
+     * @return The class name.
+     */
     public String getClassName() {
         if(classFile == null)
             return null;
@@ -50,6 +54,11 @@ public class FieldRefItem extends Item<FieldRef> {
         return utf8.getValue().replace('/', '.');
     }
 
+    /**
+     * Retrieves the field name from the constant pool.
+     *
+     * @return The field name.
+     */
     public String getName() {
         if(classFile == null)
             return null;
@@ -59,12 +68,31 @@ public class FieldRefItem extends Item<FieldRef> {
         return utf8.getValue();
     }
 
+    /**
+     * Retrieves the field descriptor from the constant pool.
+     *
+     * @return The field descriptor.
+     */
     public String getDescriptor() {
         if(classFile == null)
             return null;
         ConstPool constPool = classFile.getConstPool();
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
         Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getDescriptorIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Retrieves the owner class internal name from the constant pool.
+     *
+     * @return The owner class internal name.
+     */
+    public String getOwner() {
+        if (classFile == null)
+            return null;
+        ConstPool cp = classFile.getConstPool();
+        ClassRefItem classRef = (ClassRefItem) cp.getItem(value.getClassIndex());
+        Utf8Item utf8 = (Utf8Item) cp.getItem(classRef.getValue());
         return utf8.getValue();
     }
 

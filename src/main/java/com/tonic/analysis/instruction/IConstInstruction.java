@@ -8,7 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the ICONST_* instructions (0x02 to 0x08).
+ * Represents the JVM ICONST_M1, ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, and ICONST_5 instructions.
  */
 @Getter
 public class IConstInstruction extends Instruction {
@@ -49,7 +49,7 @@ public class IConstInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes an int onto the stack
+        return 1;
     }
 
     /**

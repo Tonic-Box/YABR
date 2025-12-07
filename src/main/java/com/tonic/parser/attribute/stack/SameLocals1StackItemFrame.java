@@ -9,12 +9,20 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a SameLocals1StackItemFrame.
+ * Represents a SameLocals1StackItemFrame in the StackMapTable attribute.
+ * Used when the frame has the same locals as the previous frame and one stack item.
  */
 @Getter
 public class SameLocals1StackItemFrame extends StackMapFrame {
     private final VerificationTypeInfo stack;
 
+    /**
+     * Constructs a SameLocals1StackItemFrame by reading from a class file.
+     *
+     * @param frameType the frame type identifier
+     * @param classFile the class file to read from
+     * @param constPool the constant pool for resolving references
+     */
     public SameLocals1StackItemFrame(int frameType, ClassFile classFile, ConstPool constPool) {
         super(frameType);
         this.stack = VerificationTypeInfo.readVerificationTypeInfo(classFile, constPool);
@@ -22,13 +30,11 @@ public class SameLocals1StackItemFrame extends StackMapFrame {
 
     @Override
     protected void writeFrameData(DataOutputStream dos) throws IOException {
-        // 1 stack item
         stack.write(dos);
     }
 
     @Override
     public int getLength() {
-        // 1 byte for frameType + stack item length
         return 1 + stack.getLength();
     }
 

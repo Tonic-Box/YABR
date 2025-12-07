@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a Float in the constant pool.
+ * Represents a CONSTANT_Float entry in the constant pool.
  */
 @Setter
 public class FloatItem extends Item<Float> {

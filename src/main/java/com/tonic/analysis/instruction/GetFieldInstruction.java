@@ -10,7 +10,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the GETFIELD and GETSTATIC instructions (0xB4, 0xB2).
+ * Represents the JVM GETFIELD and GETSTATIC instructions.
  */
 public class GetFieldInstruction extends Instruction {
     private final FieldType type;
@@ -18,9 +18,6 @@ public class GetFieldInstruction extends Instruction {
     private final int fieldIndex;
     private final ConstPool constPool;
 
-    /**
-     * Enum representing the types of get field operations.
-     */
     @Getter
     public enum FieldType {
         GETFIELD(0xB4, "getfield"),
@@ -53,7 +50,7 @@ public class GetFieldInstruction extends Instruction {
      * @param fieldIndex The constant pool index for the field reference.
      */
     public GetFieldInstruction(ConstPool constPool, int opcode, int offset, int fieldIndex) {
-        super(opcode, offset, 3); // opcode + two bytes field index
+        super(opcode, offset, 3);
         this.type = FieldType.fromOpcode(opcode);
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid GetField opcode: " + opcode);
@@ -86,11 +83,9 @@ public class GetFieldInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Pushes the field type onto the stack
         FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
-        return switch (field.getDescriptor()) { // long
-            case "J", "D" -> // double
-                    2;
+        return switch (field.getDescriptor()) {
+            case "J", "D" -> 2;
             default -> 1;
         };
     }

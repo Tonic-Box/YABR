@@ -17,7 +17,6 @@ public abstract class Item<T> {
     @Setter
     private ClassFile classFile;
 
-    // Constant Pool Tags
     public static final byte ITEM_UTF_8         =  0x1;
     public static final byte ITEM_INTEGER       =  0x3;
     public static final byte ITEM_FLOAT         =  0x4;
@@ -32,8 +31,8 @@ public abstract class Item<T> {
     public static final byte ITEM_METHOD_HANDLE =  0xF;
     public static final byte ITEM_METHOD_TYPE   = 0x10;
     public static final byte ITEM_INVOKEDYNAMIC = 0x12;
-    public static final byte ITEM_PACKAGE = 0x13; // CONSTANT_Package
-    public static final byte ITEM_MODULE  = 0x14; // CONSTANT_Module
+    public static final byte ITEM_PACKAGE = 0x13;
+    public static final byte ITEM_MODULE  = 0x14;
 
     /**
      * Reads the constant pool item from the class file.
@@ -44,6 +43,9 @@ public abstract class Item<T> {
 
     /**
      * Writes the item to the output stream (excluding the tag byte, which is written by the caller).
+     *
+     * @param dos The output stream to write to.
+     * @throws IOException If an I/O error occurs.
      */
     public abstract void write(DataOutputStream dos) throws IOException;
 
@@ -61,11 +63,22 @@ public abstract class Item<T> {
      */
     public abstract T getValue();
 
+    /**
+     * Accepts a visitor for the visitor pattern.
+     *
+     * @param visitor The visitor to accept.
+     */
     public void accept(AbstractClassVisitor visitor)
     {
         visitor.visitConstPoolItem(this);
     }
 
+    /**
+     * Gets the index of this item in the constant pool.
+     *
+     * @param constPool The constant pool to search.
+     * @return The index of this item.
+     */
     public int getIndex(ConstPool constPool)
     {
         return constPool.getIndexOf(this);

@@ -44,7 +44,7 @@ public class SAStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -3; // Pops three: array reference, index, short value
+        return -3;
     }
 
     /**

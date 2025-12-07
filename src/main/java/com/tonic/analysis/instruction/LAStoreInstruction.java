@@ -12,7 +12,7 @@ import java.io.IOException;
 public class LAStoreInstruction extends Instruction {
 
     /**
-     * Constructs a LASToreInstruction.
+     * Constructs a LAStoreInstruction.
      *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
@@ -20,7 +20,7 @@ public class LAStoreInstruction extends Instruction {
     public LAStoreInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
         if (opcode != 0x5D) {
-            throw new IllegalArgumentException("Invalid opcode for LASToreInstruction: " + opcode);
+            throw new IllegalArgumentException("Invalid opcode for LAStoreInstruction: " + opcode);
         }
     }
 
@@ -29,25 +29,44 @@ public class LAStoreInstruction extends Instruction {
         visitor.visit(this);
     }
 
+    /**
+     * Writes the LASTORE opcode to the DataOutputStream.
+     *
+     * @param dos The DataOutputStream to write to.
+     * @throws IOException If an I/O error occurs.
+     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
     }
 
+    /**
+     * Returns the change in stack size caused by this instruction.
+     *
+     * @return The stack size change (pops array reference, index, and long value).
+     */
     @Override
     public int getStackChange() {
-        // LASTORE consumes three values from the stack (value high, value low, and array reference)
         return -3;
     }
 
+    /**
+     * Returns the change in local variables caused by this instruction.
+     *
+     * @return The local variables size change (none).
+     */
     @Override
     public int getLocalChange() {
-        // No change in the number of local variables
         return 0;
     }
 
+    /**
+     * Returns a string representation of the instruction.
+     *
+     * @return The mnemonic of the instruction.
+     */
     @Override
     public String toString() {
-        return "lastore";
+        return "LASTORE";
     }
 }

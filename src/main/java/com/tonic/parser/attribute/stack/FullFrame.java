@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a FullFrame.
+ * Represents a FullFrame in the StackMapTable attribute.
+ * Contains complete type information for all local variables and stack items.
  */
 @Getter
 public class FullFrame extends StackMapFrame {
@@ -18,6 +19,9 @@ public class FullFrame extends StackMapFrame {
     private final List<VerificationTypeInfo> locals;
     private final List<VerificationTypeInfo> stack;
 
+    /**
+     * Constructs a FullFrame by reading from a class file.
+     */
     public FullFrame(int frameType, ClassFile classFile, ConstPool constPool) {
         super(frameType);
         this.offsetDelta = classFile.readUnsignedShort();
@@ -35,21 +39,28 @@ public class FullFrame extends StackMapFrame {
         }
     }
 
+    /**
+     * Constructs a FullFrame programmatically.
+     *
+     * @param offsetDelta the offset delta from the previous frame
+     * @param locals the local variable types
+     * @param stack the operand stack types
+     */
+    public FullFrame(int offsetDelta, List<VerificationTypeInfo> locals, List<VerificationTypeInfo> stack) {
+        super(255);
+        this.offsetDelta = offsetDelta;
+        this.locals = new ArrayList<>(locals);
+        this.stack = new ArrayList<>(stack);
+    }
+
     @Override
     protected void writeFrameData(DataOutputStream dos) throws IOException {
-        // offset_delta (u2)
         dos.writeShort(offsetDelta);
-
-        // number_of_locals (u2)
         dos.writeShort(locals.size());
-        // locals
         for (VerificationTypeInfo local : locals) {
             local.write(dos);
         }
-
-        // number_of_stack_items (u2)
         dos.writeShort(stack.size());
-        // stack
         for (VerificationTypeInfo stackItem : stack) {
             stackItem.write(dos);
         }
@@ -57,15 +68,12 @@ public class FullFrame extends StackMapFrame {
 
     @Override
     public int getLength() {
-        // 1 byte for frameType + 2 for offsetDelta
-        // + 2 for number_of_locals + each local
-        // + 2 for number_of_stack_items + each stack item
-        int size = 1 + 2; // frameType + offsetDelta
-        size += 2; // number_of_locals
+        int size = 1 + 2;
+        size += 2;
         for (VerificationTypeInfo local : locals) {
             size += local.getLength();
         }
-        size += 2; // number_of_stack_items
+        size += 2;
         for (VerificationTypeInfo stackItem : stack) {
             size += stackItem.getLength();
         }

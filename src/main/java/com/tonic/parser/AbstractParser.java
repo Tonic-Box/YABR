@@ -19,21 +19,21 @@ public abstract class AbstractParser {
     /**
      * Constructs an AbstractParser for parsing an existing class file.
      *
-     * @param bytes The byte array representing the class file.
-     * @throws IllegalArgumentException   If the byte array is null.
-     * @throws IncorrectFormatException If the byte array fails verification.
+     * @param bytes the byte array representing the class file
+     * @throws IllegalArgumentException if the byte array is null
+     * @throws IncorrectFormatException if the byte array fails verification
      */
     protected AbstractParser(byte[] bytes) {
         this(bytes, true);
     }
 
     /**
-     * Constructs an AbstractParser with the provided byte array and indicates whether to parse it.
+     * Constructs an AbstractParser with optional parsing.
      *
-     * @param bytes The byte array to parse or build.
-     * @param parse Whether to parse the byte array.
-     * @throws IllegalArgumentException   If the byte array is null.
-     * @throws IncorrectFormatException If the byte array fails verification when parsing.
+     * @param bytes the byte array to parse or build
+     * @param parse whether to parse the byte array
+     * @throws IllegalArgumentException if the byte array is null
+     * @throws IncorrectFormatException if the byte array fails verification when parsing
      */
     protected AbstractParser(byte[] bytes, boolean parse) {
         if (bytes == null) {
@@ -52,28 +52,33 @@ public abstract class AbstractParser {
     /**
      * Returns the length of the byte array.
      *
-     * @return Length of the byte array.
+     * @return length of the byte array
      */
     public final int getLength() {
         return bytes.length;
     }
 
     /**
-     * Processes the byte array. Must be implemented by subclasses.
+     * Processes the byte array.
      */
     protected abstract void process();
 
     /**
      * Verifies the integrity or format of the byte array.
      *
-     * @return True if verification succeeds, false otherwise.
+     * @return true if verification succeeds, false otherwise
      */
     protected boolean verify() {
         return true;
     }
 
-    public final void rebuild() throws IOException
-    {
+    /**
+     * Rebuilds the byte array from the current state.
+     *
+     * @throws IOException if writing fails
+     * @throws IncorrectFormatException if the rebuilt byte array fails verification
+     */
+    public final void rebuild() throws IOException {
         bytes = write();
         if (bytes == null) {
             throw new IllegalArgumentException("Byte array cannot be null.");
@@ -85,6 +90,12 @@ public abstract class AbstractParser {
         process();
     }
 
+    /**
+     * Writes the current state to a byte array.
+     *
+     * @return the byte array representation
+     * @throws IOException if writing fails
+     */
     protected abstract byte[] write() throws IOException;
 
     /**
@@ -242,14 +253,6 @@ public abstract class AbstractParser {
         return value;
     }
 
-    /**
-     * Validates that the byte array has enough bytes starting from the given index
-     * to read the desired number of bytes.
-     *
-     * @param currentIndex The current reading index.
-     * @param length       The number of bytes to read.
-     * @throws IndexOutOfBoundsException If the byte array does not have enough bytes.
-     */
     private void validateIndex(int currentIndex, int length) {
         if (currentIndex < 0 || currentIndex + length > bytes.length) {
             throw new IndexOutOfBoundsException(
@@ -258,9 +261,17 @@ public abstract class AbstractParser {
         }
     }
 
+    /**
+     * Reads multiple bytes into the provided array.
+     *
+     * @param code the destination array
+     * @param start the starting position in the destination array
+     * @param length the number of bytes to read
+     * @throws IndexOutOfBoundsException if there are not enough bytes to read
+     */
     public final void readBytes(byte[] code, int start, int length) {
-        validateIndex(index, length); // Ensure there are enough bytes to read
-        System.arraycopy(bytes, index, code, start, length); // Copy bytes from current index
-        index += length; // Advance the index by the number of bytes read
+        validateIndex(index, length);
+        System.arraycopy(bytes, index, code, start, length);
+        index += length;
     }
 }

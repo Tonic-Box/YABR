@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the DCONST_* instructions (0x0E and 0x0F).
+ * Represents the JVM DCONST_0 and DCONST_1 instructions.
  */
 public class DConstInstruction extends Instruction {
     private final double value;
@@ -47,7 +47,7 @@ public class DConstInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 2; // Double occupies two stack slots
+        return 2;
     }
 
     /**

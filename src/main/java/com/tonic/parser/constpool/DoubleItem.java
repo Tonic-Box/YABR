@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a Double in the constant pool.
+ * Represents a CONSTANT_Double entry in the constant pool.
  */
 @Setter
 public class DoubleItem extends Item<Double> {
@@ -23,7 +23,6 @@ public class DoubleItem extends Item<Double> {
     public void write(DataOutputStream dos) throws IOException {
         dos.writeDouble(value);
     }
-
 
     @Override
     public byte getType() {

@@ -24,7 +24,7 @@ public class ANewArrayInstruction extends Instruction {
      * @param classIndex The constant pool index for the class reference.
      */
     public ANewArrayInstruction(ConstPool constPool, int opcode, int offset, int classIndex, int count) {
-        super(opcode, offset, 3); // opcode + two bytes class index
+        super(opcode, offset, 3);
         if (opcode != 0xBD) {
             throw new IllegalArgumentException("Invalid opcode for ANewArrayInstruction: " + opcode);
         }
@@ -57,7 +57,7 @@ public class ANewArrayInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes a new array reference onto the stack
+        return 1;
     }
 
     /**

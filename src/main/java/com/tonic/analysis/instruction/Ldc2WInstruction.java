@@ -57,12 +57,11 @@ public class Ldc2WInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // LDC2_W is used for Long and Double, which occupy two stack slots
         Item<?> item = constPool.getItem(cpIndex);
         if (item instanceof DoubleItem || item instanceof LongItem) {
             return 2;
         }
-        return 0; // Invalid usage
+        return 0;
     }
 
     /**

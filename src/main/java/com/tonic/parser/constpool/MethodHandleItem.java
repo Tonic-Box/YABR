@@ -7,8 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a Method Handle in the constant pool.
- * The value is a MethodHandle object containing reference kind and reference index.
+ * Represents a CONSTANT_MethodHandle entry in the constant pool.
  */
 public class MethodHandleItem extends Item<MethodHandle> {
 

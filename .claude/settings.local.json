@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:stackoverflow.com)",
+      "Bash(./gradlew build:*)",
+      "Bash(java -version:*)",
+      "Bash(dir /s /b \"C:\\Users\\zacke\\IdeaProjects\\YABR-fixed\\src\\main\\java\\com\\tonic\\analysis\\ir\\*.java\")",
+      "Bash(dir /s /b \"C:\\Users\\zacke\\IdeaProjects\\YABR-fixed\\src\\main\\java\\com\\tonic\\analysis\\cfg\\*.java\")",
+      "Bash(cat:*)",
+      "Bash(.gradlew build:*)",
+      "Bash(cmd /c \"gradlew.bat build\")",
+      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat build)",
+      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat compileJava)",
+      "Bash(cmd /c \"gradlew.bat run -PmainClass=com.tonic.demo.TestSSADemo\")",
+      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat :TestSSADemo.main)",
+      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat clean build)",
+      "Bash(ls:*)",
+      "Bash(java:*)",
+      "Bash(./gradlew.bat compileJava:*)",
+      "Bash(echo:*)",
+      "Bash(javap:*)",
+      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat compileJava:*)",
+      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

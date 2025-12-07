@@ -77,7 +77,6 @@ public class NarrowingConversionInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Pops one int and pushes one narrower type (byte, char, short) as int
         return 0;
     }
 

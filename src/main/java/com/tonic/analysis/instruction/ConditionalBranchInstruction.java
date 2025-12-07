@@ -67,7 +67,7 @@ public class ConditionalBranchInstruction extends Instruction {
      * @param branchOffset The branch target offset relative to current instruction.
      */
     public ConditionalBranchInstruction(int opcode, int offset, short branchOffset) {
-        super(opcode, offset, 3); // opcode + two bytes branch offset
+        super(opcode, offset, 3);
         this.type = BranchType.fromOpcode(opcode);
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid Conditional Branch opcode: " + opcode);
@@ -99,7 +99,6 @@ public class ConditionalBranchInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Conditional branches pop one or two values based on the instruction
         switch (type) {
             case IFEQ:
             case IFNE:
@@ -107,17 +106,17 @@ public class ConditionalBranchInstruction extends Instruction {
             case IFGE:
             case IFGT:
             case IFLE:
-                return -1; // Pops one int
+                return -1;
             case IF_ACMPEQ:
             case IF_ACMPNE:
-                return -2; // Pops two references
+                return -2;
             case IF_ICMPEQ:
             case IF_ICMPNE:
             case IF_ICMPLT:
             case IF_ICMPGE:
             case IF_ICMPGT:
             case IF_ICMPLE:
-                return -2; // Pops two ints
+                return -2;
             default:
                 return 0;
         }

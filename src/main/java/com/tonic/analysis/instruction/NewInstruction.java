@@ -32,7 +32,7 @@ public class NewInstruction extends Instruction {
      * @param classIndex The constant pool index for the class reference.
      */
     public NewInstruction(ConstPool constPool, int opcode, int offset, int classIndex) {
-        super(opcode, offset, 3); // opcode + two bytes class index
+        super(opcode, offset, 3);
         if (opcode != 0xBB) {
             throw new IllegalArgumentException("Invalid opcode for NewInstruction: " + opcode);
         }
@@ -64,7 +64,7 @@ public class NewInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes a reference onto the stack
+        return 1;
     }
 
     /**

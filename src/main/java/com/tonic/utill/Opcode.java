@@ -160,7 +160,6 @@ public enum Opcode {
     FCMPG(0x96, "fcmpg", 0),
     DCMPL(0x97, "dcmpl", 0),
     DCMPG(0x98, "dcmpg", 0),
-    /* Missing "if" instructions from 0x99 to 0xA6 */
     IFEQ(0x99, "ifeq", 2),
     IFNE(0x9A, "ifne", 2),
     IFLT(0x9B, "iflt", 2),
@@ -175,11 +174,9 @@ public enum Opcode {
     IF_ICMPLE(0xA4, "if_icmple", 2),
     IF_ACMPEQ(0xA5, "if_acmpeq", 2),
     IF_ACMPNE(0xA6, "if_acmpne", 2),
-    /* GOTO, JSR, RET */
     GOTO(0xA7, "goto", 2),
     JSR(0xA8, "jsr", 2),
     RET(0xA9, "ret", 1),
-    /* Switch instructions, already present in your code. */
     TABLESWITCH(0xAA, "tableswitch", -1),
     LOOKUPSWITCH(0xAB, "lookupswitch", -1),
 
@@ -215,15 +212,11 @@ public enum Opcode {
     GOTO_W(0xC8, "goto_w", 4),
     JSR_W(0xC9, "jsr_w", 4),
     BREAKPOINT(0xCA, "breakpoint", 0),
-
-    // 0xCB..0xFD => reserved
-    // 0xFE => impdep1, 0xFF => impdep2 are also not standard user bytecodes
-    // Some compilers or special bytecode injectors might use them, so treat them as unknown
     UNKNOWN(-1, "unknown", 0);
 
     private final int code;
     private final String mnemonic;
-    private final int operandCount; // number of bytes of operands
+    private final int operandCount;
 
     Opcode(int code, String mnemonic, int operandCount) {
         this.code = code;
@@ -231,13 +224,18 @@ public enum Opcode {
         this.operandCount = operandCount;
     }
 
+    /**
+     * Retrieves the Opcode enum constant corresponding to the specified bytecode value.
+     *
+     * @param code the bytecode value
+     * @return the corresponding Opcode, or UNKNOWN if not found
+     */
     public static Opcode fromCode(int code) {
         for (Opcode opcode : Opcode.values()) {
             if (opcode.code == code) {
                 return opcode;
             }
         }
-        // For reserved or implementation-dependent opcodes, return UNKNOWN
         return UNKNOWN;
     }
 }

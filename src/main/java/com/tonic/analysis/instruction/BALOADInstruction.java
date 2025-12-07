@@ -42,7 +42,7 @@ public class BALOADInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops two, pushes one (byte as int)
+        return 0;
     }
 
     /**

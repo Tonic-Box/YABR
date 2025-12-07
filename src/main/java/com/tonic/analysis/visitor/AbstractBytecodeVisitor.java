@@ -6,10 +6,21 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.IOException;
 
+/**
+ * Abstract visitor for processing bytecode instructions within methods.
+ * Provides visit methods for all JVM instruction types.
+ */
 public abstract class AbstractBytecodeVisitor implements Visitor<MethodEntry>
 {
     protected CodeWriter codeWriter;
     protected MethodEntry method;
+
+    /**
+     * Processes the given method by visiting its bytecode instructions.
+     *
+     * @param method the method entry to process
+     * @throws IOException if an I/O error occurs during processing
+     */
     @Override
     public void process(MethodEntry method) throws IOException {
         codeWriter = new CodeWriter(method);

@@ -44,7 +44,7 @@ public class AConstNullInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes a reference (null) onto the stack
+        return 1;
     }
 
     /**

@@ -67,7 +67,7 @@ public class ExceptionsAttribute extends Attribute {
             sb.append(classRef.getValue()).append(":").append(getClassName(classRef.getValue())).append(", ");
         }
         if (!exceptionIndexTable.isEmpty()) {
-            sb.setLength(sb.length() - 2); // Remove trailing comma and space
+            sb.setLength(sb.length() - 2);
         }
         sb.append("]}");
         return sb.toString();

@@ -21,7 +21,6 @@ package com.tonic.utill;
  */
 public final class AccessBuilder {
 
-    // Internal integer to hold the access flags
     private int accessFlags;
 
     /**

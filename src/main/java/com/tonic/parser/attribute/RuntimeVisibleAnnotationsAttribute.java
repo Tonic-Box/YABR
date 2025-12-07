@@ -32,7 +32,7 @@ public class RuntimeVisibleAnnotationsAttribute extends Attribute {
 
     @Override
     public void read(ClassFile classFile, int length) {
-        int startIndex = classFile.getIndex(); // Record starting index
+        int startIndex = classFile.getIndex();
 
         if (length < 2) {
             throw new IllegalArgumentException("Annotations attribute length must be at least 2, found: " + length);
@@ -48,16 +48,12 @@ public class RuntimeVisibleAnnotationsAttribute extends Attribute {
         if (bytesRead != length) {
             Logger.error("Warning: " + (visible ? "RuntimeVisible" : "RuntimeInvisible") +
                     "AnnotationsAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
-            // Optionally, throw an exception or handle as needed
-            // throw new IllegalStateException("AnnotationsAttribute read mismatch.");
         }
     }
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // num_annotations (u2)
         dos.writeShort(annotations.size());
-        // each annotation
         for (Annotation ann : annotations) {
             ann.write(dos);
         }
@@ -65,7 +61,6 @@ public class RuntimeVisibleAnnotationsAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        // 2 bytes for num_annotations + sum of each annotation length
         int size = 2;
         for (Annotation ann : annotations) {
             size += ann.getLength();

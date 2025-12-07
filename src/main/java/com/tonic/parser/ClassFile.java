@@ -1,6 +1,7 @@
 package com.tonic.parser;
 
 import com.tonic.analysis.Bytecode;
+import com.tonic.analysis.frame.FrameGenerator;
 import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
@@ -17,6 +18,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Represents a Java class file with full parsing and manipulation capabilities.
+ * Provides access to constant pool, fields, methods, and class attributes.
+ */
 @Getter
 public class ClassFile extends AbstractParser {
     @Setter
@@ -31,173 +36,153 @@ public class ClassFile extends AbstractParser {
     private List<Attribute> classAttributes;
     private List<FieldEntry> fields;
     private List<MethodEntry> methods;
-    private List<Integer> interfaces; // To store interface indices
+    private List<Integer> interfaces;
 
-    // --- Offsets in the raw .class file for the version bytes ---
-    //  0..3  : magic = 0xCAFEBABE
-    //  4..5  : minor_version (u2)
-    //  6..7  : major_version (u2)
     private static final int MINOR_VERSION_OFFSET = 4;
     private static final int MAJOR_VERSION_OFFSET = 6;
 
+    /**
+     * Creates a ClassFile from raw class bytes.
+     *
+     * @param classBytes the raw bytes of a .class file
+     */
     protected ClassFile(final byte[] classBytes) {
         super(classBytes);
     }
 
+    /**
+     * Creates a ClassFile from an InputStream.
+     *
+     * @param inputStream the input stream containing class file data
+     * @throws IOException if reading from the stream fails
+     */
     public ClassFile(final InputStream inputStream) throws IOException {
         super(inputStream.readAllBytes());
     }
 
+    /**
+     * Creates a new class file from scratch with default constructor and class initializer.
+     *
+     * @param className the internal class name (e.g., "com/example/MyClass")
+     * @param accessFlags the class access flags
+     */
     public ClassFile(String className, int accessFlags) {
-        super(new byte[0], false); // Initialize with an empty byte array; actual data will be constructed
+        super(new byte[0], false);
 
-        // Initialize constant pool
         this.constPool = new ConstPool();
         this.constPool.setClassFile(this);
 
-        // Add necessary constant pool entries
         Utf8Item thisClassNameUtf8 = constPool.findOrAddUtf8(className);
         Utf8Item superClassNameUtf8 = constPool.findOrAddUtf8("java/lang/Object");
 
         ClassRefItem thisClassRef = constPool.findOrAddClassRef(constPool.getIndexOf(thisClassNameUtf8));
         ClassRefItem superClassRef = constPool.findOrAddClassRef(constPool.getIndexOf(superClassNameUtf8));
 
-        // Set access flags
         this.access = accessFlags;
 
-        // Set this_class and super_class indices
         thisClass = constPool.getIndexOf(thisClassRef);
         superClass = constPool.getIndexOf(superClassRef);
 
-        // Initialize interfaces, fields, methods, and attributes
         this.interfaces = new ArrayList<>();
         this.fields = new ArrayList<>();
         this.methods = new ArrayList<>();
         this.classAttributes = new ArrayList<>();
 
-        // Set minor and major versions for Java 11
         this.minorVersion = 0;
         this.majorVersion = 55;
 
-        // Add a default constructor
         createDefaultConstructor();
         createDefaultClassInitializer();
     }
 
     /**
      * Creates and adds a default static class initializer.
+     *
+     * @return the created class initializer method
      */
     private MethodEntry createDefaultClassInitializer() {
-        // Define access flags for the constructor (public)
         int constructorAccessFlags = new AccessBuilder().setPublic().setStatic().build();
-
-        // Constructor name is "<init>"
         String constructorName = "<clinit>";
-
-        // Constructor descriptor is "()V" (no arguments, void return)
         String constructorDescriptor = "()V";
 
-        // Add or find Utf8 entries
         Utf8Item nameUtf8 = constPool.findOrAddUtf8(constructorName);
         int nameIndex = constPool.getIndexOf(nameUtf8);
 
         Utf8Item descUtf8 = constPool.findOrAddUtf8(constructorDescriptor);
         int descIndex = constPool.getIndexOf(descUtf8);
 
-        // Create a new MethodEntry for the constructor
         MethodEntry constructor = new MethodEntry(this, constructorAccessFlags, nameIndex, descIndex, new ArrayList<>());
         constructor.setName(constructorName);
         constructor.setDesc(constructorDescriptor);
         constructor.setOwnerName(getClassName());
         constructor.setKey(constructorName + constructorDescriptor);
 
-        // Create CodeAttribute for the constructor
         CodeAttribute codeAttr = new CodeAttribute("Code", constructor, constPool.getIndexOf(constPool.findOrAddUtf8("Code")), 0);
-        codeAttr.setMaxStack(10); // Set an appropriate max stack size
-        codeAttr.setMaxLocals(1); // +1 for 'this' if not static
+        codeAttr.setMaxStack(10);
+        codeAttr.setMaxLocals(1);
         constructor.getAttributes().add(codeAttr);
 
-        // **Initialize the code to an empty byte array to prevent NullPointerException**
         codeAttr.setCode(new byte[0]);
 
-        // Initialize Bytecode for the constructor
         Bytecode bytecode = new Bytecode(constructor);
-        bytecode.addReturn(ReturnType.RETURN); // RETURN
+        bytecode.addReturn(ReturnType.RETURN);
 
-        // Finalize bytecode (which sets the code in codeAttr)
         try {
             bytecode.finalizeBytecode();
         } catch (IOException e) {
             Logger.error("Failed to finalize bytecode for default constructor: " + e.getMessage());
         }
 
-        // Add the constructor to the methods list
         methods.add(constructor);
         return constructor;
     }
 
     /**
      * Creates and adds a default no-argument constructor to the class.
+     *
+     * @return the created constructor method
      */
     private MethodEntry createDefaultConstructor() {
-        // Define access flags for the constructor (public)
         int constructorAccessFlags = Modifiers.PUBLIC;
-
-        // Constructor name is "<init>"
         String constructorName = "<init>";
-
-        // Constructor descriptor is "()V" (no arguments, void return)
         String constructorDescriptor = "()V";
 
-        // Add or find Utf8 entries
         Utf8Item nameUtf8 = constPool.findOrAddUtf8(constructorName);
         int nameIndex = constPool.getIndexOf(nameUtf8);
 
         Utf8Item descUtf8 = constPool.findOrAddUtf8(constructorDescriptor);
         int descIndex = constPool.getIndexOf(descUtf8);
 
-        // Add or find NameAndTypeRefItem
         NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(nameIndex, descIndex);
         int nameAndTypeIndex = constPool.getIndexOf(nameAndType);
 
-        // Add or find MethodRefItem for superclass constructor
         MethodRefItem superConstructorRef = constPool.findOrAddMethodRef(superClass, nameAndTypeIndex);
 
-        // Create a new MethodEntry for the constructor
         MethodEntry constructor = new MethodEntry(this, constructorAccessFlags, nameIndex, descIndex, new ArrayList<>());
         constructor.setName(constructorName);
         constructor.setDesc(constructorDescriptor);
         constructor.setOwnerName(getClassName());
         constructor.setKey(constructorName + constructorDescriptor);
 
-        // Create CodeAttribute for the constructor
         CodeAttribute codeAttr = new CodeAttribute("Code", constructor, constPool.getIndexOf(constPool.findOrAddUtf8("Code")), 0);
-        codeAttr.setMaxStack(10); // Set an appropriate max stack size
-        codeAttr.setMaxLocals(1); // +1 for 'this' if not static
+        codeAttr.setMaxStack(10);
+        codeAttr.setMaxLocals(1);
         constructor.getAttributes().add(codeAttr);
 
-        // **Initialize the code to an empty byte array to prevent NullPointerException**
         codeAttr.setCode(new byte[0]);
 
-        // Initialize Bytecode for the constructor
         Bytecode bytecode = new Bytecode(constructor);
 
-        // Bytecode instructions for:
-        // aload_0
-        // invokespecial <init> of superclass
-        // return
-        bytecode.addALoad(0); // Load 'this'
-        bytecode.addInvokeSpecial(constPool.getIndexOf(superConstructorRef)); // Call super.<init>()
-        bytecode.addReturn(ReturnType.RETURN); // RETURN
+        bytecode.addALoad(0);
+        bytecode.addInvokeSpecial(constPool.getIndexOf(superConstructorRef));
+        bytecode.addReturn(ReturnType.RETURN);
 
-        // Finalize bytecode (which sets the code in codeAttr)
         try {
             bytecode.finalizeBytecode();
         } catch (IOException e) {
             Logger.error("Failed to finalize bytecode for default constructor: " + e.getMessage());
         }
 
-        // Add the constructor to the methods list
         methods.add(constructor);
 
         return constructor;
@@ -206,26 +191,21 @@ public class ClassFile extends AbstractParser {
 
     @Override
     protected void process() {
-        // Read minor and major versions
-        minorVersion = readUnsignedShort();  // read from offsets 4..5
-        majorVersion = readUnsignedShort();  // read from offsets 6..7
+        minorVersion = readUnsignedShort();
+        majorVersion = readUnsignedShort();
         Logger.info("Version: " + majorVersion + "." + minorVersion);
 
-        // Parse constant pool
         new ConstPool(this);
         Logger.info(constPool.toString());
 
-        // Read access flags
         access = readUnsignedShort();
         Logger.info("Access Flags: 0x" + Integer.toHexString(access));
 
-        // Read this_class and super_class
         thisClass = readUnsignedShort();
         superClass = readUnsignedShort();
         Logger.info("This Class Index: " + thisClass);
         Logger.info("Super Class Index: " + superClass);
 
-        // Read interfaces
         final int interfaceCount = readUnsignedShort();
         Logger.info("Interfaces Count: " + interfaceCount);
         interfaces = new ArrayList<>(interfaceCount);
@@ -235,7 +215,6 @@ public class ClassFile extends AbstractParser {
             Logger.info("  Interface " + (i + 1) + " Index: " + ifaceIndex);
         }
 
-        // Read fields
         final int fieldCount = readUnsignedShort();
         Logger.info("Fields Count: " + fieldCount);
         fields = new ArrayList<>(fieldCount);
@@ -245,7 +224,6 @@ public class ClassFile extends AbstractParser {
             Logger.info("  Field " + (i + 1) + ": " + field);
         }
 
-        // Read methods
         final int methodCount = readUnsignedShort();
         Logger.info("Methods Count: " + methodCount);
         methods = new ArrayList<>(methodCount);
@@ -260,13 +238,11 @@ public class ClassFile extends AbstractParser {
             }
         }
 
-        // Read class attributes
         final int attributesCount = readUnsignedShort();
         classAttributes = new ArrayList<>(attributesCount);
         Logger.info("Class Attributes Count: " + attributesCount);
         for (int i = 0; i < attributesCount; i++) {
-            Attribute attribute =
-                    Attribute.get(this, constPool, null); // class attrs have no "parent" member
+            Attribute attribute = Attribute.get(this, constPool, null);
             Logger.info("  Class Attribute " + (i + 1) + ": " + attribute);
             classAttributes.add(attribute);
         }
@@ -274,7 +250,6 @@ public class ClassFile extends AbstractParser {
 
     @Override
     protected boolean verify() {
-        // The first 4 bytes must be 0xCAFEBABE
         return readInt() == 0xCAFEBABE;
     }
 
@@ -294,30 +269,42 @@ public class ClassFile extends AbstractParser {
         return resolveClassName(superClass);
     }
 
-    // -------------------------------------------------------------------------
-    //  MUTATOR METHODS
-    // -------------------------------------------------------------------------
-
     /**
      * Sets the class name (internal name like "com/tonic/TestClass").
-     * <p>
-     * <strong>Warning:</strong> If the new name is longer than the old one,
-     * this may corrupt the class unless you rebuild the constant pool carefully.
      *
-     * @param newName The new internal class name, e.g. "com/tonic/NewName"
+     * @param newName the new internal class name (e.g., "com/tonic/NewName")
      */
     public void setClassName(String newName) {
+        String internalName = newName.replace('.', '/');
+        String oldInternalName = getClassName();
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(thisClass);
         Utf8Item utf8 = (Utf8Item) constPool.getItem(classRef.getValue());
-        utf8.setValue(newName);
+        utf8.setValue(internalName);
+
+        for (MethodEntry method : methods) {
+            method.setOwnerName(internalName);
+        }
+        for (FieldEntry field : fields) {
+            field.setOwnerName(internalName);
+        }
+
+        String oldDescriptor = "L" + oldInternalName + ";";
+        String newDescriptor = "L" + internalName + ";";
+
+        for (Item<?> item : constPool.getItems()) {
+            if (item instanceof Utf8Item u) {
+                String value = u.getValue();
+                if (value.contains(oldDescriptor)) {
+                    u.setValue(value.replace(oldDescriptor, newDescriptor));
+                }
+            }
+        }
     }
 
     /**
      * Sets the superclass name (internal name like "java/lang/Object").
-     * <p>
-     * <strong>Warning:</strong> Same caution about string length as setClassName().
      *
-     * @param newSuperName The new internal name for the superclass, e.g. "java/lang/String"
+     * @param newSuperName the new internal name for the superclass (e.g., "java/lang/String")
      */
     public void setSuperClassName(String newSuperName) {
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(superClass);
@@ -325,26 +312,19 @@ public class ClassFile extends AbstractParser {
         utf8.setValue(newSuperName);
     }
 
-    /****
-     * Adds a new interface to the interfaces list. If the given interface name
-     * does not exist in the constant pool, it creates a new Utf8Item and a new
-     * ClassRefItem for it. Then it adds the resulting index to the interfaces list
-     * (unless it’s already present).
+    /**
+     * Adds a new interface to the interfaces list.
      *
-     * @param interfaceName The internal name of the interface, e.g. "java/util/List".
+     * @param interfaceName the internal name of the interface (e.g., "java/util/List")
      */
     public void addInterface(String interfaceName) {
-        // Ensure the interface name uses '/' instead of '.' (if needed):
         String internalName = interfaceName.replace('.', '/');
 
-        // 1. Check if the constant pool already contains a ClassRefItem for this name.
         int existingIndex = -1;
         List<Item<?>> cpItems = constPool.getItems();
         for (int i = 1; i < cpItems.size(); i++) {
             Item<?> item = cpItems.get(i);
             if (item instanceof ClassRefItem classRef) {
-                // getClassName() returns e.g. "java.util.List" with '.' or null if not set up,
-                // so compare with the underlying Utf8Item or internalName logic:
                 Utf8Item nameUtf8 = (Utf8Item) constPool.getItem(classRef.getValue());
                 if (nameUtf8 != null && nameUtf8.getValue().equals(internalName)) {
                     existingIndex = i;
@@ -353,38 +333,30 @@ public class ClassFile extends AbstractParser {
             }
         }
 
-        // 2. If not found, create a new Utf8Item and a new ClassRefItem
         if (existingIndex == -1) {
-            // Create a new Utf8Item for the interface name
             Utf8Item newUtf8 = new Utf8Item();
             newUtf8.setValue(internalName);
-            int utf8Index = constPool.addItem(newUtf8); // adds to constant pool, returns new index
+            int utf8Index = constPool.addItem(newUtf8);
 
-            // Create a new ClassRefItem that references this UTF-8
             ClassRefItem newClassRef = new ClassRefItem();
-            // We'll set the 'value' to the index of the new Utf8Item
             newClassRef.setValue(utf8Index);
-            // ^ You may need a small helper or setter. If you do not have one, do:
-            // newClassRef.setValue(utf8Index);
 
             existingIndex = constPool.addItem(newClassRef);
         }
 
-        // 3. Finally, add it to the interfaces list if not already present
         if (!interfaces.contains(existingIndex)) {
             interfaces.add(existingIndex);
         }
     }
 
     /**
-     * Adds a new field to the class. If the field name or descriptor does not exist in the constant pool,
-     * it adds the necessary Utf8Item and NameAndTypeRefItem entries. Then, it creates a new FieldEntry
-     * and adds it to the fields list.
+     * Adds a new field to the class.
      *
-     * @param accessFlags    The access flags for the field (e.g., 0x0001 for public).
-     * @param fieldName      The name of the field, e.g., "myField".
-     * @param fieldDescriptor The descriptor of the field, e.g., "Ljava/lang/String;".
-     * @param attributes      A list of attributes for the field. Can be empty or null.
+     * @param accessFlags the access flags for the field (e.g., 0x0001 for public)
+     * @param fieldName the name of the field
+     * @param fieldDescriptor the descriptor of the field (e.g., "Ljava/lang/String;")
+     * @param attributes a list of attributes for the field (can be null)
+     * @return the created FieldEntry
      */
     public FieldEntry createNewField(int accessFlags, String fieldName, String fieldDescriptor, List<Attribute> attributes) {
         if (attributes == null) {
@@ -393,20 +365,14 @@ public class ClassFile extends AbstractParser {
 
         fieldDescriptor = TypeUtil.validateDescriptorFormat(fieldDescriptor);
 
-
-
-        // 1. Add or find Utf8Item for field name
         Utf8Item nameUtf8 = constPool.findOrAddUtf8(fieldName);
         int nameIndex = constPool.getIndexOf(nameUtf8);
 
-        // 2. Add or find Utf8Item for field descriptor
         Utf8Item descUtf8 = constPool.findOrAddUtf8(fieldDescriptor);
         int descIndex = constPool.getIndexOf(descUtf8);
 
-        // 3. Add or find NameAndTypeRefItem
         constPool.findOrAddNameAndType(nameIndex, descIndex);
 
-        // 5. Create the new FieldEntry
         FieldEntry newField = new FieldEntry();
         newField.setClassFile(this);
         newField.setAccess(accessFlags);
@@ -418,12 +384,18 @@ public class ClassFile extends AbstractParser {
         newField.setDesc(fieldDescriptor);
         newField.setKey(fieldName + fieldDescriptor);
 
-        // 6. Add the new FieldEntry to the fields list
         fields.add(newField);
 
         return newField;
     }
 
+    /**
+     * Removes a field from the class.
+     *
+     * @param fieldName the name of the field to remove
+     * @param fieldDescriptor the descriptor of the field to remove
+     * @return true if the field was found and removed
+     */
     public boolean removeField(String fieldName, String fieldDescriptor) {
         for (int i = 0; i < fields.size(); i++) {
             FieldEntry field = fields.get(i);
@@ -436,17 +408,15 @@ public class ClassFile extends AbstractParser {
     }
 
     /**
-     * Sets the initial value of a field in either <clinit> (for static fields) or <init> (for non-static fields).
-     * Creates the <clinit> or <init> method if it does not already exist.
+     * Sets the initial value of a field in either clinit (static) or init (non-static) method.
      *
-     * @param field The FieldEntry to set the initial value for.
-     * @param value The value to set. Supports primitive types and Strings.
-     * @throws IOException If there is an error generating or modifying the method.
+     * @param field the field to set the initial value for
+     * @param value the value to set (supports primitives and Strings)
+     * @throws IOException if there is an error modifying bytecode
      */
     public void setFieldInitialValue(FieldEntry field, Object value) throws IOException {
         boolean isStatic = Modifiers.isStatic(field.getAccess());
 
-        // Determine the target method (<clinit> for static, <init> for non-static)
         MethodEntry method = isStatic
                 ? methods.stream()
                 .filter(m -> m.getName().equals("<clinit>") && m.getDesc().equals("()V"))
@@ -457,23 +427,20 @@ public class ClassFile extends AbstractParser {
                 .findFirst()
                 .orElseGet(this::createDefaultConstructor);
 
-        // Ensure the method has a CodeAttribute
         CodeAttribute codeAttr = method.getCodeAttribute();
         if (codeAttr == null) {
             codeAttr = new CodeAttribute("Code", method, constPool.getIndexOf(constPool.findOrAddUtf8("Code")), 0);
-            codeAttr.setMaxStack(10); // Set max stack size
-            codeAttr.setMaxLocals(isStatic ? 0 : 1); // Non-static methods need 'this'
+            codeAttr.setMaxStack(10);
+            codeAttr.setMaxLocals(isStatic ? 0 : 1);
             method.getAttributes().add(codeAttr);
-            codeAttr.setCode(new byte[0]); // Initialize with empty bytecode
+            codeAttr.setCode(new byte[0]);
         }
 
-        // Prepare Bytecode for the method
         Bytecode bytecode = new Bytecode(method);
-        bytecode.setInsertBefore(true); // Insert before any existing instructions
+        bytecode.setInsertBefore(true);
 
-        if(!isStatic)
-        {
-            bytecode.addALoad(0); // Load 'this'
+        if(!isStatic) {
+            bytecode.addALoad(0);
         }
 
         if (value instanceof Integer) {
@@ -491,15 +458,13 @@ public class ClassFile extends AbstractParser {
             throw new IllegalArgumentException("Unsupported value type: " + value.getClass().getName());
         }
 
-        // Get the field reference index and set the value
         int fieldRefIndex = constPool.getIndexOf(constPool.findOrAddField(field.getOwnerName(), field.getName(), field.getDesc()));
         if (isStatic) {
-            bytecode.addPutStatic(fieldRefIndex); // Set static field
+            bytecode.addPutStatic(fieldRefIndex);
         } else {
-            bytecode.addPutField(fieldRefIndex); // Set non-static field
+            bytecode.addPutField(fieldRefIndex);
         }
 
-        // Finalize the bytecode and update the CodeAttribute
         bytecode.finalizeBytecode();
     }
 
@@ -602,98 +567,75 @@ public class ClassFile extends AbstractParser {
     }
 
 
-    // ------------------------------------------------------------------------
-    // Rebuild logic
-    // ------------------------------------------------------------------------
-
     /**
-     * Rebuilds this ClassFile into a fresh byte[] using the current in-memory state.
+     * Rebuilds this ClassFile into a fresh byte array using the current in-memory state.
      *
-     * @return a new byte[] representing the updated class file.
-     * @throws IOException if an I/O error occurs while writing to the in-memory stream.
+     * @return a new byte array representing the updated class file
+     * @throws IOException if an I/O error occurs while writing
      */
     public byte[] write() throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (DataOutputStream dos = new DataOutputStream(bos)) {
 
-            // 1) magic number
             dos.writeInt(0xCAFEBABE);
 
-            // 2) minor_version, major_version
             dos.writeShort(minorVersion);
             dos.writeShort(majorVersion);
 
-            // 3) constant_pool_count
             int cpCountToWrite = computeConstantPoolCount();
             dos.writeShort(cpCountToWrite);
 
-            // 3a) Write each constant pool item
-            //     Note: The actual item indices run 1..cpCountToWrite-1.
-            //     Some items are null placeholders after longs/doubles.
             List<Item<?>> cpItems = constPool.getItems();
             for (int i = 1; i < cpItems.size(); i++) {
                 Item<?> itm = cpItems.get(i);
                 if (itm == null) {
-                    // skip placeholder slot
                     continue;
                 }
-                // Write tag
                 dos.writeByte(itm.getType());
-                // Write item data
                 itm.write(dos);
 
-                // If it's a Long/Double, skip the next slot
                 if (itm.getType() == Item.ITEM_LONG || itm.getType() == Item.ITEM_DOUBLE) {
                     i++;
                 }
             }
 
-            // 4) access flags, this_class, super_class
             dos.writeShort(access);
             dos.writeShort(thisClass);
             dos.writeShort(superClass);
 
-            // 5) interfaces
             dos.writeShort(interfaces.size());
             for (int ifcIndex : interfaces) {
                 dos.writeShort(ifcIndex);
             }
 
-            // 6) fields
             dos.writeShort(fields.size());
             for (FieldEntry f : fields) {
-                f.write(dos);  // We'll assume FieldEntry has a write(DataOutputStream) method
+                f.write(dos);
             }
 
-            // 7) methods
             dos.writeShort(methods.size());
             for (MethodEntry m : methods) {
-                m.write(dos);  // We'll assume MethodEntry has a write(DataOutputStream) method
+                m.write(dos);
             }
 
-            // 8) class-level attributes
             dos.writeShort(classAttributes.size());
             for (Attribute attr : classAttributes) {
-                attr.write(dos);  // We'll assume Attribute has a write(DataOutputStream) method
+                attr.write(dos);
             }
 
             dos.flush();
         }
 
-        // Return the newly built byte array
         return bos.toByteArray();
     }
 
     /**
-     * Computes the number of entries to write in the constant_pool_count field.
-     * The actual count includes 1-based indices up to the last real item,
-     * but we skip placeholder slots following Long or Double items.
-     * Example:
-     * If the last used index (considering the skip for doubles/longs) is 12,
-     * then constant_pool_count is 13.
+     * Computes the constant pool count for the class file header.
+     *
+     * @return the constant pool count value
      */
     private int computeConstantPoolCount() {
-        int realCount = 1; // The spec says: if the highest index is N, we store (N+1).
+        int realCount = 1;
         List<Item<?>> cpItems = constPool.getItems();
 
         for (int i = 1; i < cpItems.size(); i++) {
@@ -708,7 +650,6 @@ public class ClassFile extends AbstractParser {
         return realCount;
     }
 
-    // --- Utility to resolve class name from thisClass or superClass ---
     private String resolveClassName(int classIndex) {
         try {
             ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
@@ -775,9 +716,6 @@ public class ClassFile extends AbstractParser {
         return sb.toString();
     }
 
-    /**
-     * Provides a human-readable description of access flags.
-     */
     private String getAccessFlagsDescription(int access) {
         List<String> flags = new ArrayList<>();
         if ((access & 0x0001) != 0) flags.add("public");
@@ -793,23 +731,31 @@ public class ClassFile extends AbstractParser {
     }
 
     /**
-     * Creates and adds a new method to the class file using the Bytecode utility.
+     * Creates a new method with Class-based parameter types.
      *
-     * @param accessFlags    The access flags for the method (e.g., 0x0001 for public).
-     * @param methodName     The name of the method, e.g., "myMethod".
-     * @param returnType     The return type of the method as a Class object, e.g., void.class, int.class.
-     * @param parameterTypes The parameter types of the method as Class objects.
+     * @param accessFlags the access flags for the method
+     * @param methodName the name of the method
+     * @param returnType the return type as a Class object
+     * @param parameterTypes the parameter types as Class objects
+     * @return the created MethodEntry
      */
-    public MethodEntry createNewMethod(int accessFlags, String methodName, Class<?> returnType, Class<?>... parameterTypes)
-    {
+    public MethodEntry createNewMethod(int accessFlags, String methodName, Class<?> returnType, Class<?>... parameterTypes) {
         Logger.info("Creating method: " + methodName + " with return type: " + returnType.getName() + " and parameters: " + Arrays.toString(parameterTypes));
         String methodDescriptor = generateMethodDescriptor(returnType, parameterTypes);
         Logger.info("Generated method descriptor: " + methodDescriptor);
         return createNewMethod(false, accessFlags, methodName, methodDescriptor, (Object[]) parameterTypes);
     }
 
-    public MethodEntry createNewMethod(int accessFlags, String methodName, String returnType, String... parameterTypes)
-    {
+    /**
+     * Creates a new method with String-based parameter types.
+     *
+     * @param accessFlags the access flags for the method
+     * @param methodName the name of the method
+     * @param returnType the return type as a descriptor string
+     * @param parameterTypes the parameter types as descriptor strings
+     * @return the created MethodEntry
+     */
+    public MethodEntry createNewMethod(int accessFlags, String methodName, String returnType, String... parameterTypes) {
         returnType = TypeUtil.validateDescriptorFormat(returnType);
         Logger.info("Creating method: " + methodName + " with return type: " + returnType + " and parameters: " + Arrays.toString(parameterTypes));
         String methodDescriptor = generateMethodDescriptor(returnType, parameterTypes);
@@ -818,12 +764,14 @@ public class ClassFile extends AbstractParser {
     }
 
     /**
-     * Creates and adds a new method to the class file using the Bytecode utility.
+     * Creates a new method with optional default body generation.
      *
-     * @param addDefaultBody Whether to add a default body to the method.
-     * @param accessFlags    The access flags for the method (e.g., 0x0001 for public).
-     * @param methodName     The name of the method, e.g., "myMethod".
-     * @param parameterTypes The parameter types of the method as Class objects.
+     * @param addDefaultBody whether to add a default body to the method
+     * @param accessFlags the access flags for the method
+     * @param methodName the name of the method
+     * @param methodDescriptor the method descriptor string
+     * @param parameterTypes the parameter types
+     * @return the created MethodEntry
      */
     public MethodEntry createNewMethod(boolean addDefaultBody, int accessFlags, String methodName, String methodDescriptor, Object... parameterTypes) {
         Logger.info("Generated method descriptor: " + methodDescriptor);
@@ -831,79 +779,68 @@ public class ClassFile extends AbstractParser {
         Utf8Item nameUtf8 = constPool.findOrAddUtf8(methodName);
         int nameIndex = constPool.getIndexOf(nameUtf8);
 
-        // 3. Add method descriptor to constant pool
         Utf8Item descUtf8 = constPool.findOrAddUtf8(methodDescriptor);
         int descIndex = constPool.getIndexOf(descUtf8);
 
-        // 4. Add or find "Code" in the constant pool
         Utf8Item codeUtf8 = constPool.findOrAddUtf8("Code");
         int codeNameIndex = constPool.getIndexOf(codeUtf8);
 
-        // 5. Create CodeAttribute with the correct nameIndex
-        CodeAttribute codeAttr = new CodeAttribute("Code", (MethodEntry)null, codeNameIndex, 0); // Parent will be set later
-        codeAttr.setMaxStack(10); // Set an appropriate max stack size
+        CodeAttribute codeAttr = new CodeAttribute("Code", (MethodEntry)null, codeNameIndex, 0);
+        codeAttr.setMaxStack(10);
         int maxLocals = Modifiers.isStatic(accessFlags) ? parameterTypes.length : parameterTypes.length + 1;
-        codeAttr.setMaxLocals(maxLocals); // +1 for 'this' if not static
-        codeAttr.setCode(new byte[0]); // Initialize with empty bytecode
-        codeAttr.setAttributes(new ArrayList<>()); // Add any additional attributes if necessary
+        codeAttr.setMaxLocals(maxLocals);
+        codeAttr.setCode(new byte[0]);
+        codeAttr.setAttributes(new ArrayList<>());
 
-        // 6. Create a list of attributes and add the CodeAttribute
         List<Attribute> methodAttributes = new ArrayList<>();
         methodAttributes.add(codeAttr);
 
-        // 7. Create the new MethodEntry using the correct constructor
         MethodEntry newMethod = new MethodEntry(this, accessFlags, nameIndex, descIndex, methodAttributes);
         newMethod.setName(methodName);
         newMethod.setDesc(methodDescriptor);
         newMethod.setOwnerName(getClassName());
         newMethod.setKey(methodName + methodDescriptor);
 
-        // 8. Set the parent in CodeAttribute
-        codeAttr.setParent(newMethod); // Ensure CodeAttribute has a setParent method
+        codeAttr.setParent(newMethod);
 
-        // 9. Add the new MethodEntry to the methods list
         methods.add(newMethod);
         Logger.info("Method " + methodName + " created successfully.");
 
-        // 10. Build the method body
         if(!addDefaultBody)
             return newMethod;
 
         Bytecode bytecode = new Bytecode(newMethod);
-        if(!Modifiers.isStatic(accessFlags))
-        {
+        if(!Modifiers.isStatic(accessFlags)) {
             Logger.info("Adding 'this' to the stack");
             bytecode.addALoad(0);
         }
 
-        // Example: Append instructions based on return type
         String returnType = methodDescriptor.split("\\)")[1];
         switch (returnType) {
-            case "V" -> bytecode.addReturn(0xB1); // RETURN
+            case "V" -> bytecode.addReturn(0xB1);
             case "I", "S", "B", "C", "Z" -> {
-                bytecode.addILoad(0); // Example: Load 'this' or a local variable
-                bytecode.addIConst(0); // Push integer constant 0
-                bytecode.addReturn(0xAC); // IRETURN
+                bytecode.addILoad(0);
+                bytecode.addIConst(0);
+                bytecode.addReturn(0xAC);
             }
             case "J" -> {
-                bytecode.addLLoad(0); // Example: Load a long local variable
-                bytecode.addReturn(0xAD); // LRETURN
+                bytecode.addLLoad(0);
+                bytecode.addReturn(0xAD);
             }
             case "F" -> {
-                bytecode.addFLoad(0); // Example: Load a float local variable
-                bytecode.addReturn(0xAE); // FRETURN
+                bytecode.addFLoad(0);
+                bytecode.addReturn(0xAE);
             }
             case "D" -> {
-                bytecode.addDLoad(0); // Example: Load a double local variable
-                bytecode.addReturn(0xAF); // DRETURN
+                bytecode.addDLoad(0);
+                bytecode.addReturn(0xAF);
             }
             default -> {
-                bytecode.addAConstNull(); // Example: Load an object reference
-                bytecode.addReturn(0xB0); // ARETURN
+                bytecode.addAConstNull();
+                bytecode.addReturn(0xB0);
             }
         }
 
-        // Finalize and write back the bytecode modifications
         try {
             bytecode.finalizeBytecode();
             Logger.info("Bytecode for method " + methodName + " finalized successfully.");
@@ -1014,6 +951,66 @@ public class ClassFile extends AbstractParser {
         }
         for (MethodEntry method : methods) {
             method.accept(visitor);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    //  Frame Calculation
+    // -------------------------------------------------------------------------
+
+    /**
+     * Computes StackMapTable frames for all methods in this class.
+     * This should be called after modifying bytecode to ensure the class
+     * passes verification on Java 7+ (class file version 51+).
+     *
+     * <p>Methods without a CodeAttribute (abstract/native) are skipped.
+     *
+     * @return the number of methods that had frames computed
+     */
+    public int computeFrames() {
+        FrameGenerator generator = new FrameGenerator(constPool);
+        int count = 0;
+        for (MethodEntry method : methods) {
+            if (method.getCodeAttribute() != null) {
+                generator.updateStackMapTable(method);
+                count++;
+            }
+        }
+        Logger.info("Computed StackMapTable frames for " + count + " methods in " + getClassName());
+        return count;
+    }
+
+    /**
+     * Computes StackMapTable frames for a specific method by name and descriptor.
+     *
+     * @param methodName the method name (e.g., "myMethod")
+     * @param descriptor the method descriptor (e.g., "(II)I")
+     * @return true if the method was found and frames were computed, false otherwise
+     */
+    public boolean computeFrames(String methodName, String descriptor) {
+        for (MethodEntry method : methods) {
+            if (method.getName().equals(methodName) && method.getDesc().equals(descriptor)) {
+                if (method.getCodeAttribute() != null) {
+                    FrameGenerator generator = new FrameGenerator(constPool);
+                    generator.updateStackMapTable(method);
+                    Logger.info("Computed StackMapTable frames for " + methodName + descriptor);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Computes StackMapTable frames for a specific method.
+     *
+     * @param method the method to compute frames for
+     */
+    public void computeFrames(MethodEntry method) {
+        if (method.getCodeAttribute() != null) {
+            FrameGenerator generator = new FrameGenerator(constPool);
+            generator.updateStackMapTable(method);
+            Logger.info("Computed StackMapTable frames for " + method.getName() + method.getDesc());
         }
     }
 }

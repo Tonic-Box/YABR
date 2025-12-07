@@ -36,16 +36,13 @@ public class NestHostAttribute extends Attribute {
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // hostClassIndex (u2)
         dos.writeShort(hostClassIndex);
     }
 
     @Override
     public void updateLength() {
-        // 2 bytes
         this.length = 2;
     }
-
 
     @Override
     public String toString() {

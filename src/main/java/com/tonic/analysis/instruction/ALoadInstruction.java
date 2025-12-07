@@ -29,7 +29,7 @@ public class ALoadInstruction extends Instruction {
      * @param varIndex The index of the local variable to load. For ALOAD_0-3, this is 0-3 respectively.
      */
     public ALoadInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form ALOAD_0-3 have no operands, regular ALOAD has one operand byte
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
     }
 
@@ -69,7 +69,7 @@ public class ALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes a reference onto the stack
+        return 1;
     }
 
     /**
@@ -89,9 +89,9 @@ public class ALoadInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x19) { // ALOAD with operand
+        if (opcode == 0x19) {
             return String.format("ALOAD %d", varIndex);
-        } else { // ALOAD_0-3
+        } else {
             int index = opcode - 0x2A;
             return String.format("ALOAD_%d", index);
         }

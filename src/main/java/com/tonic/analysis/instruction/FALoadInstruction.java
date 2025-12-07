@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the FALOAD instruction (0x30).
+ * Represents the JVM FALOAD instruction.
  */
 public class FALoadInstruction extends Instruction {
 
@@ -44,7 +44,7 @@ public class FALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops two, pushes one (float)
+        return 0;
     }
 
     /**

@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the FCONST_* instructions (0x0B to 0x0D).
+ * Represents the JVM FCONST_0, FCONST_1, and FCONST_2 instructions.
  */
 public class FConstInstruction extends Instruction {
     private final float value;
@@ -47,7 +47,7 @@ public class FConstInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes a float onto the stack
+        return 1;
     }
 
     /**

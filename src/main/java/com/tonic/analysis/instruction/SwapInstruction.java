@@ -44,7 +44,7 @@ public class SwapInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Swaps the top two stack entries; no net change
+        return 0;
     }
 
     /**

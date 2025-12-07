@@ -6,8 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a Method Type in the constant pool.
- * The value is an index pointing to a Utf8Item representing the method descriptor.
+ * Represents a CONSTANT_MethodType entry in the constant pool.
  */
 public class MethodTypeItem extends Item<Integer> {
 

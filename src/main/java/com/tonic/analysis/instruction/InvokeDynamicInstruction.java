@@ -11,31 +11,59 @@ import java.io.IOException;
 
 /**
  * Represents the INVOKEDYNAMIC instruction (0xBA).
+ *
+ * Per JVM spec, the instruction format is:
+ * - opcode (1 byte)
+ * - constant pool index to CONSTANT_InvokeDynamic_info (2 bytes)
+ * - two reserved zero bytes (2 bytes)
+ * Total: 5 bytes
  */
 public class InvokeDynamicInstruction extends Instruction {
     @Getter
-    private final int bootstrapMethodAttrIndex;
-    @Getter
-    private final int nameAndTypeIndex;
+    private final int cpIndex;
     private final ConstPool constPool;
 
     /**
      * Constructs an InvokeDynamicInstruction.
      *
-     * @param constPool               The constant pool associated with the class.
-     * @param opcode                  The opcode of the instruction.
-     * @param offset                  The bytecode offset of the instruction.
-     * @param bootstrapMethodAttrIndex The bootstrap method attribute index.
-     * @param nameAndTypeIndex        The name and type index for the method.
+     * @param constPool The constant pool associated with the class.
+     * @param opcode    The opcode of the instruction.
+     * @param offset    The bytecode offset of the instruction.
+     * @param cpIndex   The constant pool index to CONSTANT_InvokeDynamic_info.
      */
-    public InvokeDynamicInstruction(ConstPool constPool, int opcode, int offset, int bootstrapMethodAttrIndex, int nameAndTypeIndex) {
-        super(opcode, offset, 5); // opcode + two bytes bootstrap index + two bytes name and type index
+    public InvokeDynamicInstruction(ConstPool constPool, int opcode, int offset, int cpIndex) {
+        super(opcode, offset, 5); // opcode + 2 bytes CP index + 2 reserved zero bytes
         if (opcode != 0xBA) {
             throw new IllegalArgumentException("Invalid opcode for InvokeDynamicInstruction: " + opcode);
         }
-        this.bootstrapMethodAttrIndex = bootstrapMethodAttrIndex;
-        this.nameAndTypeIndex = nameAndTypeIndex;
+        this.cpIndex = cpIndex;
         this.constPool = constPool;
+    }
+
+    /**
+     * Gets the bootstrap method attribute index from the InvokeDynamicItem.
+     *
+     * @return The bootstrap method attribute index, or -1 if invalid.
+     */
+    public int getBootstrapMethodAttrIndex() {
+        var item = constPool.getItem(cpIndex);
+        if (!(item instanceof InvokeDynamicItem)) {
+            return -1;
+        }
+        return ((InvokeDynamicItem) item).getValue().getBootstrapMethodAttrIndex();
+    }
+
+    /**
+     * Gets the name and type index from the InvokeDynamicItem.
+     *
+     * @return The name and type index, or -1 if invalid.
+     */
+    public int getNameAndTypeIndex() {
+        var item = constPool.getItem(cpIndex);
+        if (!(item instanceof InvokeDynamicItem)) {
+            return -1;
+        }
+        return ((InvokeDynamicItem) item).getValue().getNameAndTypeIndex();
     }
 
     @Override
@@ -52,8 +80,8 @@ public class InvokeDynamicInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        dos.writeShort(bootstrapMethodAttrIndex);
-        dos.writeShort(nameAndTypeIndex);
+        dos.writeShort(cpIndex);
+        dos.writeShort(0); // Two reserved zero bytes per JVM spec
     }
 
     /**
@@ -63,10 +91,14 @@ public class InvokeDynamicInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        InvokeDynamicItem method = (InvokeDynamicItem) constPool.getItem(nameAndTypeIndex);
-        int params = method.getParameterCount();
-        int returnSlots = method.getReturnTypeSlots();
-        return -params + returnSlots; // Pops parameters, pushes return value
+        var item = constPool.getItem(cpIndex);
+        if (!(item instanceof InvokeDynamicItem)) {
+            return 0;
+        }
+        InvokeDynamicItem idItem = (InvokeDynamicItem) item;
+        int params = idItem.getParameterCount();
+        int returnSlots = idItem.getReturnTypeSlots();
+        return -params + returnSlots;
     }
 
     /**
@@ -85,21 +117,26 @@ public class InvokeDynamicInstruction extends Instruction {
      * @return The invokedynamic method as a string.
      */
     public String resolveMethod() {
-        if(nameAndTypeIndex == 0)
-        {
+        if (cpIndex == 0) {
             return "NotInClassPool";
         }
-        InvokeDynamicItem method = (InvokeDynamicItem) constPool.getItem(nameAndTypeIndex);
-        return method.toString();
+        var item = constPool.getItem(cpIndex);
+        if (!(item instanceof InvokeDynamicItem)) {
+            return "InvalidCPItem(expected InvokeDynamic, got " + item.getClass().getSimpleName() + ")";
+        }
+        InvokeDynamicItem idItem = (InvokeDynamicItem) item;
+        String name = idItem.getName();
+        String desc = idItem.getDescriptor();
+        return name + desc;
     }
 
     /**
      * Returns a string representation of the instruction.
      *
-     * @return The mnemonic, bootstrap index, name and type index, and resolved method.
+     * @return The mnemonic, CP index, and resolved method.
      */
     @Override
     public String toString() {
-        return String.format("INVOKEDYNAMIC #%d #%d // %s", bootstrapMethodAttrIndex, nameAndTypeIndex, resolveMethod());
+        return String.format("INVOKEDYNAMIC #%d // %s", cpIndex, resolveMethod());
     }
 }

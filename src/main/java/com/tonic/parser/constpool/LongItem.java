@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a Long in the constant pool.
+ * Represents a CONSTANT_Long entry in the constant pool.
  */
 @Setter
 public class LongItem extends Item<Long> {

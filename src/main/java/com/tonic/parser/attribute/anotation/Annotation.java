@@ -29,6 +29,13 @@ public class Annotation {
         this.elementValuePairs = elementValuePairs;
     }
 
+    /**
+     * Reads an annotation structure from the class file.
+     *
+     * @param classFile the class file to read from
+     * @param constPool the constant pool
+     * @return the parsed annotation
+     */
     public static Annotation readAnnotation(ClassFile classFile, ConstPool constPool) {
         int typeIndex = classFile.readUnsignedShort();
         int numElementValuePairs = classFile.readUnsignedShort();
@@ -42,6 +49,12 @@ public class Annotation {
         return new Annotation(constPool, typeIndex, numElementValuePairs, pairs);
     }
 
+    /**
+     * Writes this annotation to the output stream.
+     *
+     * @param dos the output stream
+     * @throws IOException if an I/O error occurs
+     */
     public void write(DataOutputStream dos) throws IOException {
         dos.writeShort(typeIndex);
         dos.writeShort(numElementValuePairs);
@@ -51,10 +64,15 @@ public class Annotation {
         }
     }
 
+    /**
+     * Calculates the total length of this annotation in bytes.
+     *
+     * @return the length in bytes
+     */
     public int getLength() {
-        int size = 4; // 2 bytes for typeIndex + 2 bytes for numElementValuePairs
+        int size = 4;
         for (ElementValuePair pair : elementValuePairs) {
-            size += 2; // name_index
+            size += 2;
             size += pair.getValue().getLength();
         }
         return size;

@@ -8,6 +8,9 @@ import com.tonic.parser.constpool.StringRefItem;
 import com.tonic.utill.Logger;
 import com.tonic.utill.Opcode;
 
+/**
+ * Bytecode disassembler for converting raw bytecode into human-readable format.
+ */
 public class CodePrinter {
 
     /**
@@ -22,24 +25,17 @@ public class CodePrinter {
         int pc = 0;
 
         while (pc < code.length) {
-            // 1) Read the opcode.
             int opcodeValue = Byte.toUnsignedInt(code[pc]);
             Opcode opcode = Opcode.fromCode(opcodeValue);
             String mnemonic = opcode.getMnemonic();
 
-            // Log entering the opcode
             Logger.info("DEBUG: Decoding opcode " + mnemonic + " at pc=" + pc);
 
-            // Print offset and mnemonic
             sb.append(String.format("%04d: %-20s", pc, mnemonic));
 
-            // Advance pc by 1 for the opcode byte
             pc += 1;
 
             switch (opcode) {
-                //----------------------------------------------------------------------
-                // (A) No-operand opcodes
-                //----------------------------------------------------------------------
                 case NOP:
                 case ACONST_NULL:
                 case ICONST_M1:
@@ -188,12 +184,8 @@ public class CodePrinter {
                 case MONITORENTER:
                 case MONITOREXIT:
                 case BREAKPOINT:
-                    // No additional bytes to read.
                     break;
 
-                //----------------------------------------------------------------------
-                // (B) Single-byte immediate (e.g. BIPUSH).
-                //----------------------------------------------------------------------
                 case BIPUSH:
                     if (pc >= code.length) {
                         sb.append(" <invalid>");
@@ -203,9 +195,6 @@ public class CodePrinter {
                     sb.append(byteValue);
                     break;
 
-                //----------------------------------------------------------------------
-                // (C) Single-byte local index instructions (iload, etc.)
-                //----------------------------------------------------------------------
                 case ILOAD:
                 case LLOAD:
                 case FLOAD:
@@ -237,9 +226,6 @@ public class CodePrinter {
                             .append(" (").append(resolveConstantPoolReference(ldcIndex, constPool)).append(")");
                     break;
 
-                //----------------------------------------------------------------------
-                // (D) Two-byte immediate (SIPUSH).
-                //----------------------------------------------------------------------
                 case SIPUSH, IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE, IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL, IFNONNULL:
                     if (pc + 1 >= code.length) {
                         sb.append(" <invalid>");
@@ -250,9 +236,6 @@ public class CodePrinter {
                     pc += 2;
                     break;
 
-                //----------------------------------------------------------------------
-                // (E) Two-byte constant-pool references
-                //----------------------------------------------------------------------
                 case GETSTATIC:
                 case PUTSTATIC:
                 case GETFIELD:
@@ -279,9 +262,6 @@ public class CodePrinter {
                     pc += 2;
                     break;
 
-                //----------------------------------------------------------------------
-                // (F) Four-byte references/instructions
-                //----------------------------------------------------------------------
                 case INVOKEINTERFACE: {
                     if (pc + 3 >= code.length) {
                         sb.append(" <invalid>");
@@ -321,9 +301,6 @@ public class CodePrinter {
                     break;
                 }
 
-                //----------------------------------------------------------------------
-                // (G) NEWARRAY uses a single byte for 'atype'.
-                //----------------------------------------------------------------------
                 case NEWARRAY:
                     if (pc >= code.length) {
                         sb.append(" <invalid>");
@@ -333,9 +310,6 @@ public class CodePrinter {
                     sb.append(atypeDescription(atype));
                     break;
 
-                //----------------------------------------------------------------------
-                // (H) IINC: varIndex, constValue
-                //----------------------------------------------------------------------
                 case IINC:
                     if (pc + 1 >= code.length) {
                         sb.append(" <invalid>");
@@ -346,9 +320,6 @@ public class CodePrinter {
                     sb.append(varIndexIinc).append(", ").append(constValueIinc);
                     break;
 
-                //----------------------------------------------------------------------
-                // (I) WIDE can modify next instruction's operand size
-                //----------------------------------------------------------------------
                 case WIDE:
                     if (pc >= code.length) {
                         sb.append(" <invalid>");
@@ -395,9 +366,6 @@ public class CodePrinter {
                     }
                     break;
 
-                //----------------------------------------------------------------------
-                // (K) GOTO_W, JSR_W => 4-byte offsets
-                //----------------------------------------------------------------------
                 case GOTO_W:
                 case JSR_W:
                     if (pc + 3 >= code.length) {
@@ -412,11 +380,7 @@ public class CodePrinter {
                     pc += 4;
                     break;
 
-                //----------------------------------------------------------------------
-                // (L) Switch instructions (LOOKUPSWITCH, TABLESWITCH)
-                //----------------------------------------------------------------------
                 case TABLESWITCH: {
-                    // Align to 4 bytes
                     int padding = (4 - (pc % 4)) % 4;
                     pc += padding;
 
@@ -444,7 +408,6 @@ public class CodePrinter {
                 }
 
                 case LOOKUPSWITCH: {
-                    // Align to 4 bytes
                     int padding = (4 - (pc % 4)) % 4;
                     pc += padding;
 
@@ -468,9 +431,6 @@ public class CodePrinter {
                     break;
                 }
 
-                //----------------------------------------------------------------------
-                // (M) Default: unknown opcode
-                //----------------------------------------------------------------------
                 default:
                     sb.append(String.format("<unknown opcode 0x%02X>", opcodeValue));
                     break;
@@ -483,7 +443,11 @@ public class CodePrinter {
     }
 
     /**
-     * Reads 4 bytes from the code array at the given offset as a big-endian int.
+     * Reads 4 bytes from the code array as a big-endian int.
+     *
+     * @param code The bytecode array.
+     * @param pos The position to read from.
+     * @return The int value read from the bytecode.
      */
     private static int readIntFromCode(byte[] code, int pos) {
         if (pos + 3 >= code.length) {
@@ -496,7 +460,11 @@ public class CodePrinter {
     }
 
     /**
-     * Resolves a constant pool reference based on the index and returns a human-readable string.
+     * Resolves a constant pool reference to a human-readable string.
+     *
+     * @param index The constant pool index.
+     * @param constPool The constant pool.
+     * @return A human-readable representation of the constant pool entry.
      */
     private static String resolveConstantPoolReference(int index, ConstPool constPool) {
         Logger.info("DEBUG: resolveConstantPoolReference(" + index + ")");
@@ -521,6 +489,9 @@ public class CodePrinter {
 
     /**
      * Provides a description for the atype in NEWARRAY instruction.
+     *
+     * @param atype The array type code.
+     * @return A human-readable type description.
      */
     private static String atypeDescription(int atype) {
         return switch (atype) {

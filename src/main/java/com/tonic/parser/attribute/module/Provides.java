@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a 'provides' entry in the Module attribute.
+ * Represents a provides entry in the Module attribute.
  */
 public class Provides {
     private final ConstPool constPool;

@@ -101,33 +101,31 @@ public class ArithmeticInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // All arithmetic operations pop two operands and push one result
-        // For longs and doubles, each operand/result occupies two stack slots
         switch (type) {
             case IADD:
             case ISUB:
             case IMUL:
             case IDIV:
             case IREM:
-                return -1; // Pops two ints, pushes one int
+                return -1;
             case LADD:
             case LSUB:
             case LMUL:
             case LDIV:
             case LREM:
-                return -2; // Pops two longs, pushes one long
+                return -2;
             case FADD:
             case FSUB:
             case FMUL:
             case FDIV:
             case FREM:
-                return -1; // Pops two floats, pushes one float
+                return -1;
             case DADD:
             case DSUB:
             case DMUL:
             case DDIV:
             case DREM:
-                return -2; // Pops two doubles, pushes one double
+                return -2;
             default:
                 return 0;
         }

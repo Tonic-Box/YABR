@@ -19,10 +19,10 @@ public class IStoreInstruction extends Instruction {
      *
      * @param opcode   The opcode of the instruction.
      * @param offset   The bytecode offset of the instruction.
-     * @param varIndex The index of the local variable to store. For ISTORE_0-3, this is 0-3 respectively.
+     * @param varIndex The index of the local variable to store.
      */
     public IStoreInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form ISTORE_0-3 have no operands, regular ISTORE has one operand byte
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
     }
 
@@ -62,7 +62,7 @@ public class IStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops an int from the stack
+        return -1;
     }
 
     /**
@@ -82,9 +82,9 @@ public class IStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x36) { // ISTORE with operand
+        if (opcode == 0x36) {
             return String.format("ISTORE %d", varIndex);
-        } else { // ISTORE_0-3
+        } else {
             int index = opcode - 0x3B;
             return String.format("ISTORE_%d", index);
         }

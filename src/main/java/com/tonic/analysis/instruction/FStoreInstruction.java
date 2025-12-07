@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the FSTORE instructions (0x38, 0x43-0x46).
+ * Represents the JVM FSTORE instruction.
  */
 @Getter
 public class FStoreInstruction extends Instruction {
@@ -21,7 +21,7 @@ public class FStoreInstruction extends Instruction {
      * @param varIndex The index of the local variable to store. For FSTORE_0-3, this is 0-3 respectively.
      */
     public FStoreInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form FSTORE_0-3 have no operands, regular FSTORE has one operand byte
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
     }
 
@@ -61,7 +61,7 @@ public class FStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops a float from the stack
+        return -1;
     }
 
     /**
@@ -81,9 +81,9 @@ public class FStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x38) { // FSTORE with operand
+        if (opcode == 0x38) {
             return String.format("FSTORE %d", varIndex);
-        } else { // FSTORE_0-3
+        } else {
             int index = opcode - 0x43;
             return String.format("FSTORE_%d", index);
         }

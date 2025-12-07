@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the FASTORE instruction (0x5C).
+ * Represents the JVM FASTORE instruction.
  */
 public class FAStoreInstruction extends Instruction {
 
@@ -29,22 +29,42 @@ public class FAStoreInstruction extends Instruction {
         visitor.visit(this);
     }
 
+    /**
+     * Writes the FASTORE opcode to the DataOutputStream.
+     *
+     * @param dos The DataOutputStream to write to.
+     * @throws IOException If an I/O error occurs.
+     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
     }
 
+    /**
+     * Returns the change in stack size caused by this instruction.
+     *
+     * @return The stack size change (pops three values).
+     */
     @Override
     public int getStackChange() {
-        // FASTORE consumes two values from the stack (value and array reference)
         return -2;
     }
 
+    /**
+     * Returns the change in local variables caused by this instruction.
+     *
+     * @return The local variables size change (none).
+     */
     @Override
     public int getLocalChange() {
-        // No change in the number of local variables
         return 0;
     }
+
+    /**
+     * Returns a string representation of the instruction.
+     *
+     * @return The mnemonic of the instruction.
+     */
 
     @Override
     public String toString() {

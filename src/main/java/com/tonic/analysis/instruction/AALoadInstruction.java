@@ -45,7 +45,7 @@ public class AALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops two, pushes one (reference)
+        return 0;
     }
 
     /**

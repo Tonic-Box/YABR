@@ -23,7 +23,6 @@ package com.tonic.utill;
  */
 public final class Modifiers {
 
-    // Access flag constants based on JVM specification
     public static final int PUBLIC       = 0x0001;
     public static final int PRIVATE      = 0x0002;
     public static final int PROTECTED    = 0x0004;
@@ -39,8 +38,8 @@ public final class Modifiers {
     public static final int SYNTHETIC    = 0x1000;
     public static final int ANNOTATION   = 0x2000;
     public static final int ENUM         = 0x4000;
-    public static final int VOLATILE     = 0x0040;    // Typically used for fields
-    public static final int TRANSIENT    = 0x0080;    // Typically used for fields
+    public static final int VOLATILE     = 0x0040;
+    public static final int TRANSIENT    = 0x0080;
 
     /**
      * Private constructor to prevent instantiation.
@@ -49,10 +48,6 @@ public final class Modifiers {
     private Modifiers() {
         throw new UnsupportedOperationException("Modifiers is a utility class and cannot be instantiated.");
     }
-
-    // ===========================
-    // Static Methods for Setting Flags
-    // ===========================
 
     /**
      * Sets the {@code public} access flag.
@@ -97,6 +92,12 @@ public final class Modifiers {
         return mod | STATIC;
     }
 
+    /**
+     * Sets the {@code interface} access flag.
+     *
+     * @param mod the current access flags
+     * @return the updated access flags with {@code interface} set
+     */
     public static int setInterface(int mod) {
         return mod | INTERFACE;
     }
@@ -226,10 +227,6 @@ public final class Modifiers {
     public static int setTransient(int mod) {
         return mod | TRANSIENT;
     }
-
-    // ===========================
-    // Static Methods for Checking Flags
-    // ===========================
 
     /**
      * Checks if the access flags indicate that the entity is public.

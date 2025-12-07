@@ -37,6 +37,8 @@ public class TestClassCreation {
         classFile.generateGetter(field, false);
         classFile.generateSetter(field, false);
 
+        classFile.computeFrames();
+
         //compile our changes in memory
         classFile.rebuild();
 

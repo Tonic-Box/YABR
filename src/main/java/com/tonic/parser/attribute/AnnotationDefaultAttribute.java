@@ -27,18 +27,14 @@ public class AnnotationDefaultAttribute extends Attribute {
 
     @Override
     public void read(ClassFile classFile, int length) {
-        int startIndex = classFile.getIndex(); // Record starting index
+        int startIndex = classFile.getIndex();
 
-        // Read the ElementValue
         this.defaultValue = ElementValue.readElementValue(classFile, getClassFile().getConstPool());
 
-        // Calculate bytes read
         int bytesRead = classFile.getIndex() - startIndex;
 
         if (bytesRead != length) {
             Logger.error("Warning: AnnotationDefaultAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
-            // Optionally, throw an exception or handle as needed
-            // throw new IllegalStateException("AnnotationDefaultAttribute read mismatch.");
         }
     }
 

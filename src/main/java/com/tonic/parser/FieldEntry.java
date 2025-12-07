@@ -15,40 +15,32 @@ import java.util.ArrayList;
 @Getter
 public class FieldEntry extends MemberEntry {
 
+    /**
+     * Constructs an empty FieldEntry for dynamic creation.
+     */
     public FieldEntry() {
-        // Default constructor for creating a new FieldEntry
     }
 
     /**
-     * Constructor that parses a field entry from the class file.
+     * Constructs a FieldEntry by parsing from the class file.
      *
-     * @param classFile The ClassFile instance being parsed.
+     * @param classFile the ClassFile instance being parsed
      */
     public FieldEntry(ClassFile classFile) {
         this.classFile = classFile;
 
-        // Read access flags (u2)
         this.access = classFile.readUnsignedShort();
-
-        // Read name index (u2)
         this.nameIndex = classFile.readUnsignedShort();
-
-        // Read descriptor index (u2)
         this.descIndex = classFile.readUnsignedShort();
 
-        // Read attributes count (u2)
         final int attributeCount = classFile.readUnsignedShort();
-
-        // Initialize the attributes list
         this.attributes = new ArrayList<>(attributeCount);
 
-        // Parse each attribute
         for (int i = 0; i < attributeCount; i++) {
             Attribute attribute = Attribute.get(classFile, classFile.getConstPool(), this);
             this.attributes.add(attribute);
         }
 
-        // Resolve and set ownerName, name, desc, key
         this.ownerName = classFile.getClassName().replace('.', '/');
         this.name = resolveUtf8(nameIndex);
         this.desc = resolveUtf8(descIndex);
@@ -56,25 +48,12 @@ public class FieldEntry extends MemberEntry {
     }
 
     public void setName(String newName) {
-        // Find or add Utf8Item for the new name
         Utf8Item newNameUtf8 = classFile.getConstPool().findOrAddUtf8(newName);
-
-        // Update the name index
         this.nameIndex = classFile.getConstPool().getIndexOf(newNameUtf8);
-
-        // Update the name field
         this.name = newName;
-
-        // Update the key field
         this.key = computeKey();
     }
 
-    /**
-     * Resolves a Utf8 string from the constant pool using the given index.
-     *
-     * @param index The index in the constant pool.
-     * @return The resolved Utf8 string.
-     */
     private String resolveUtf8(int index) {
         Utf8Item utf8Item = (Utf8Item) classFile.getConstPool().getItem(index);
         if (utf8Item != null) {
@@ -84,11 +63,6 @@ public class FieldEntry extends MemberEntry {
         }
     }
 
-    /**
-     * Computes a unique key for the field by combining its name and descriptor.
-     *
-     * @return The unique key as a String.
-     */
     private String computeKey() {
         return name + desc;
     }

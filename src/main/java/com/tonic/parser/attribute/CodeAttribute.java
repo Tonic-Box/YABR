@@ -39,7 +39,7 @@ public class CodeAttribute extends Attribute {
 
     @Override
     public void read(ClassFile classFile, int length) {
-        int startIndex = classFile.getIndex(); // Record starting index
+        int startIndex = classFile.getIndex();
 
         this.maxStack = classFile.readUnsignedShort();
         this.maxLocals = classFile.readUnsignedShort();
@@ -50,7 +50,6 @@ public class CodeAttribute extends Attribute {
         }
         int codeLength = (int) codeLengthLong;
 
-        // Validate remaining bytes
         if (classFile.getLength() - classFile.getIndex() < codeLength) {
             throw new IllegalArgumentException("Not enough bytes to read code array. Requested: "
                     + codeLength + ", Available: " + (classFile.getLength() - classFile.getIndex()));
@@ -76,14 +75,18 @@ public class CodeAttribute extends Attribute {
             this.attributes.add(attribute);
         }
 
-        int bytesRead = classFile.getIndex() - startIndex; // Calculate bytes read
+        int bytesRead = classFile.getIndex() - startIndex;
 
         if (bytesRead != length) {
             Logger.error("Warning: CodeAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
-            // Optionally, throw an exception or handle as needed
         }
     }
 
+    /**
+     * Sets the parent method entry for this code attribute.
+     *
+     * @param methodEntry The parent method entry
+     */
     public void setParent(MethodEntry methodEntry)
     {
         this.parent = methodEntry;
@@ -91,22 +94,12 @@ public class CodeAttribute extends Attribute {
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // 1. Write max_stack
         dos.writeShort(maxStack);
-
-        // 2. Write max_locals
         dos.writeShort(maxLocals);
-
-        // 3. Write code_length
         dos.writeInt(code.length);
-
-        // 4. Write code bytes
         dos.write(code);
-
-        // 5. Write exception_table_length
         dos.writeShort(exceptionTable.size());
 
-        // 6. Write exception table entries
         for (ExceptionTableEntry entry : exceptionTable) {
             dos.writeShort(entry.getStartPc());
             dos.writeShort(entry.getEndPc());
@@ -114,16 +107,10 @@ public class CodeAttribute extends Attribute {
             dos.writeShort(entry.getCatchType());
         }
 
-        // 7. Write attributes_count
         dos.writeShort(attributes.size());
 
-        // 8. Write each nested attribute
         for (Attribute attr : attributes) {
             attr.write(dos);
-            // 'write' on each sub-attribute will itself write:
-            //   - attribute_name_index (u2)
-            //   - attribute_length (u4)
-            //   - info (the actual body of that attribute)
         }
     }
 
@@ -131,19 +118,16 @@ public class CodeAttribute extends Attribute {
     public void updateLength() {
         int codeLength = (code != null) ? code.length : 0;
 
-        int baseInfoSize = 2  // max_stack
-                + 2  // max_locals
-                + 4  // code_length
+        int baseInfoSize = 2
+                + 2
+                + 4
                 + codeLength
-                + 2  // exception_table_length
+                + 2
                 + (exceptionTable.size() * 8)
-                + 2; // attributes_count
+                + 2;
 
         int subAttributesSize = 0;
         for (Attribute attr : attributes) {
-            // each sub-attribute has 2 (name_index) + 4 (its length) + its own info length
-            // so we rely on the sub-attribute's length field for the "info" portion,
-            // plus 6 bytes overhead (2 + 4).
             subAttributesSize += 6 + attr.length;
         }
 
@@ -151,9 +135,9 @@ public class CodeAttribute extends Attribute {
     }
 
     /**
-     * Pretty prints the bytecode into a human-readable format.
+     * Generates a human-readable disassembly of the bytecode.
      *
-     * @return A String representing the disassembled bytecode.
+     * @return Disassembled bytecode string
      */
     public String prettyPrintCode() {
         return CodePrinter.prettyPrintCode(this.code, getClassFile().getConstPool());
@@ -170,6 +154,11 @@ public class CodeAttribute extends Attribute {
                 '}';
     }
 
+    /**
+     * Accepts a visitor for bytecode analysis.
+     *
+     * @param abstractMethodVisitor The visitor to accept
+     */
     public void accept(AbstractMethodVisitor abstractMethodVisitor)
     {
     }

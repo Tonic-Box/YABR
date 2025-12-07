@@ -7,23 +7,22 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a WIDE IINC instruction in Java bytecode.
- * This instruction increments a local variable by a constant with extended index and constant size.
+ * Represents the JVM WIDE IINC instruction.
  */
 public class WideIIncInstruction extends Instruction {
-    private final int varIndex;    // Two-byte local variable index
-    private final int constValue;  // Two-byte constant increment
+    private final int varIndex;
+    private final int constValue;
 
     /**
      * Constructs a WideIIncInstruction.
      *
-     * @param opcode      The WIDE opcode (0xC4)
-     * @param offset      The bytecode offset where WIDE starts
-     * @param varIndex    The two-byte local variable index
-     * @param constValue  The two-byte constant increment
+     * @param opcode      The WIDE opcode (0xC4).
+     * @param offset      The bytecode offset where WIDE starts.
+     * @param varIndex    The two-byte local variable index.
+     * @param constValue  The two-byte constant increment.
      */
     public WideIIncInstruction(int opcode, int offset, int varIndex, int constValue) {
-        super(opcode, offset, 6); // Total length is 6 bytes
+        super(opcode, offset, 6);
         this.varIndex = varIndex;
         this.constValue = constValue;
     }
@@ -52,24 +51,23 @@ public class WideIIncInstruction extends Instruction {
     }
 
     /**
-     * Writes this instruction to the given DataOutputStream.
+     * Writes the WIDE IINC opcode and its operands to the DataOutputStream.
      *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
      */
     @Override
     public void write(DataOutputStream dos) throws IOException {
-        dos.writeByte(opcode);        // WIDE opcode (0xC4)
-        dos.writeByte(0x84);          // Modified opcode for IINC (0x84)
-        dos.writeShort(varIndex);     // Two-byte variable index
-        dos.writeShort(constValue);   // Two-byte constant value
+        dos.writeByte(opcode);
+        dos.writeByte(0x84);
+        dos.writeShort(varIndex);
+        dos.writeShort(constValue);
     }
 
     /**
-     * Returns the change in the operand stack caused by this instruction.
-     * For IINC, the stack remains unchanged.
+     * Returns the change in stack size caused by this instruction.
      *
-     * @return The stack size change (0).
+     * @return The stack size change (none).
      */
     @Override
     public int getStackChange() {
@@ -78,9 +76,8 @@ public class WideIIncInstruction extends Instruction {
 
     /**
      * Returns the change in local variables caused by this instruction.
-     * IINC modifies an existing local variable without altering the total count.
      *
-     * @return The local variable size change (0).
+     * @return The local variables size change (none).
      */
     @Override
     public int getLocalChange() {
@@ -88,9 +85,9 @@ public class WideIIncInstruction extends Instruction {
     }
 
     /**
-     * Provides a string representation of the instruction for debugging purposes.
+     * Returns a string representation of the instruction.
      *
-     * @return A string describing the instruction.
+     * @return The instruction details.
      */
     @Override
     public String toString() {

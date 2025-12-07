@@ -9,16 +9,29 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a single StackMapFrame.
+ * Base class for stack map frames in the StackMapTable attribute.
+ * Stack map frames describe the type state at specific bytecode offsets.
  */
 @Getter
 public abstract class StackMapFrame {
     protected int frameType;
 
+    /**
+     * Constructs a StackMapFrame with the specified frame type.
+     *
+     * @param frameType the frame type identifier
+     */
     public StackMapFrame(int frameType) {
         this.frameType = frameType;
     }
 
+    /**
+     * Reads a stack map frame from the class file.
+     *
+     * @param classFile the class file to read from
+     * @param constPool the constant pool for resolving references
+     * @return the parsed StackMapFrame
+     */
     public static StackMapFrame readFrame(ClassFile classFile, ConstPool constPool) {
         int frameStartIndex = classFile.getIndex();
         Logger.info("StackMapFrame: Reading frame at byte index: " + frameStartIndex);
@@ -52,24 +65,28 @@ public abstract class StackMapFrame {
     }
 
     /**
-     * Writes this StackMapFrame to the output stream.
-     *  - Writes the frameType (1 byte)
-     *  - Then calls {@code writeFrameData(dos)} in the subclass to handle the rest.
+     * Writes this stack map frame to the output stream.
+     *
+     * @param dos the output stream to write to
+     * @throws IOException if an I/O error occurs
      */
     public final void write(DataOutputStream dos) throws IOException {
-        // 1. Write the frame type
         dos.writeByte(frameType);
-        // 2. Subclass writes any additional data
         writeFrameData(dos);
     }
 
     /**
-     * Each concrete subclass must implement how it writes the rest of its data.
+     * Writes the frame-specific data to the output stream.
+     *
+     * @param dos the output stream to write to
+     * @throws IOException if an I/O error occurs
      */
     protected abstract void writeFrameData(DataOutputStream dos) throws IOException;
 
     /**
-     * If you maintain lengths, you may also declare an abstract getLength() here.
+     * Returns the total length of this frame in bytes.
+     *
+     * @return the length in bytes
      */
     public abstract int getLength();
 

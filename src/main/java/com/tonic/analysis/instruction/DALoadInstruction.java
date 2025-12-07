@@ -44,7 +44,7 @@ public class DALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pops two, pushes two (double occupies two stack slots)
+        return 1;
     }
 
     /**

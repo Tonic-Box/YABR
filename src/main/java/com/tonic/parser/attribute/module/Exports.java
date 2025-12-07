@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents an 'exports' entry in the Module attribute.
+ * Represents an exports entry in the Module attribute.
  */
 public class Exports {
     private final ConstPool constPool;

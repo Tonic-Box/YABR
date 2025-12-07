@@ -44,7 +44,7 @@ public class LXorInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -2; // Pops two longs, pushes one long
+        return -2;
     }
 
     /**

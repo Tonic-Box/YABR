@@ -10,8 +10,7 @@ import java.io.IOException;
 import static com.tonic.parser.constpool.structure.InvokeParameterUtil.*;
 
 /**
- * Represents an InvokeDynamic in the constant pool.
- * The value is an InvokeDynamic object containing bootstrap method attribute index and name-and-type index.
+ * Represents a CONSTANT_InvokeDynamic entry in the constant pool.
  */
 public class InvokeDynamicItem extends Item<InvokeDynamic> {
     private ConstPool constPool;
@@ -42,7 +41,7 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
     }
 
     /**
-     * Returns the number of parameters for the invoked method.
+     * Returns the number of parameters for the dynamic call site.
      *
      * @return The number of parameters.
      */
@@ -51,18 +50,17 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
             throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
-        // Retrieve the NameAndType entry from the constant pool
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
         if (nameAndType == null) {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
-        String descriptor = nameAndType.getDescriptor(); // e.g., "(Ljava/lang/String;)V"
+        String descriptor = nameAndType.getDescriptor();
         return parseDescriptorParameters(descriptor);
     }
 
     /**
-     * Returns the number of slots for the return type of the invoked method.
+     * Returns the number of slots for the return type.
      *
      * @return The number of return type slots.
      */
@@ -71,14 +69,39 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
             throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
-        // Retrieve the NameAndType entry from the constant pool
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
         if (nameAndType == null) {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
-        String descriptor = nameAndType.getDescriptor(); // e.g., "(Ljava/lang/String;)V"
+        String descriptor = nameAndType.getDescriptor();
         String returnType = parseDescriptorReturnType(descriptor);
         return determineTypeSlots(returnType);
+    }
+
+    /**
+     * Retrieves the method name from the constant pool.
+     *
+     * @return The method name.
+     */
+    public String getName() {
+        if (constPool == null)
+            return null;
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getNameIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Retrieves the method descriptor from the constant pool.
+     *
+     * @return The method descriptor.
+     */
+    public String getDescriptor() {
+        if (constPool == null)
+            return null;
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getDescriptorIndex());
+        return utf8.getValue();
     }
 }

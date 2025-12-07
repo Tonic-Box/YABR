@@ -44,7 +44,7 @@ public class Pop2Instruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -2; // Pops two values or one double/long from the stack
+        return -2;
     }
 
     /**

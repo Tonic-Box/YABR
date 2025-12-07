@@ -19,10 +19,10 @@ public class LLoadInstruction extends Instruction {
      *
      * @param opcode   The opcode of the instruction.
      * @param offset   The bytecode offset of the instruction.
-     * @param varIndex The index of the local variable to load. For LLOAD_0-3, this is 0-3 respectively.
+     * @param varIndex The index of the local variable to load.
      */
     public LLoadInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, isShortForm(opcode) ? 1 : 2); // Short-form LLOAD_0-3 have no operands, regular LLOAD has one operand byte
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
     }
 
@@ -62,7 +62,7 @@ public class LLoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 2; // Pushes a long onto the stack
+        return 2;
     }
 
     /**

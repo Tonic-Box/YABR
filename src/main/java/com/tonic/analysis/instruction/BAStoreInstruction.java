@@ -44,7 +44,7 @@ public class BAStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -3; // Pops three: array reference, index, byte value
+        return -3;
     }
 
     /**

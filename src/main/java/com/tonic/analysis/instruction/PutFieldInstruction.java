@@ -58,7 +58,7 @@ public class PutFieldInstruction extends Instruction {
      * @param fieldIndex The constant pool index for the field reference.
      */
     public PutFieldInstruction(ConstPool constPool, int opcode, int offset, int fieldIndex) {
-        super(opcode, offset, 3); // opcode + two bytes field index
+        super(opcode, offset, 3);
         this.type = FieldType.fromOpcode(opcode);
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid PutField opcode: " + opcode);
@@ -91,14 +91,13 @@ public class PutFieldInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // PUTFIELD pops value and object reference
         FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
         switch (field.getDescriptor()) {
-            case "J": // long
-            case "D": // double
-                return -3; // Pops two slots for value and one slot for object reference
+            case "J":
+            case "D":
+                return -3;
             default:
-                return -2; // Pops one slot for value and one slot for object reference
+                return -2;
         }
     }
 

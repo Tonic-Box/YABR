@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the INEG instruction (0x74).
+ * Represents the JVM INEG instruction.
  */
 public class INegInstruction extends Instruction {
 
@@ -44,7 +44,7 @@ public class INegInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops one and pushes one (int)
+        return 0;
     }
 
     /**

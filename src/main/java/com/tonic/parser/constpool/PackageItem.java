@@ -6,6 +6,9 @@ import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+/**
+ * Represents a CONSTANT_Package entry in the constant pool.
+ */
 @Getter
 public class PackageItem extends Item<Integer> {
     private int nameIndex;
@@ -22,7 +25,7 @@ public class PackageItem extends Item<Integer> {
 
     @Override
     public byte getType() {
-        return 19; // Tag for CONSTANT_Package
+        return 19;
     }
 
     @Override

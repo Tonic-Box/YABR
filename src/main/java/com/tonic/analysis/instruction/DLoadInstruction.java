@@ -8,7 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the DLOAD instruction (0x18).
+ * Represents the JVM DLOAD instruction.
  */
 @Getter
 public class DLoadInstruction extends Instruction {
@@ -19,11 +19,21 @@ public class DLoadInstruction extends Instruction {
      *
      * @param opcode   The opcode of the instruction.
      * @param offset   The bytecode offset of the instruction.
-     * @param varIndex The index of the local variable to load.
+     * @param varIndex The index of the local variable to load. For DLOAD_0-3, this is 0-3 respectively.
      */
     public DLoadInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, 2);
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
+    }
+
+    /**
+     * Determines if the opcode is a short-form DLOAD instruction.
+     *
+     * @param opcode The opcode to check.
+     * @return True if the opcode is DLOAD_0-3, false otherwise.
+     */
+    private static boolean isShortForm(int opcode) {
+        return opcode >= 0x26 && opcode <= 0x29;
     }
 
     @Override
@@ -32,7 +42,7 @@ public class DLoadInstruction extends Instruction {
     }
 
     /**
-     * Writes the DLOAD opcode and its operand to the DataOutputStream.
+     * Writes the DLOAD opcode and its operand (if any) to the DataOutputStream.
      *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
@@ -40,7 +50,9 @@ public class DLoadInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        dos.writeByte(varIndex);
+        if (!isShortForm(opcode)) {
+            dos.writeByte(varIndex);
+        }
     }
 
     /**
@@ -50,7 +62,7 @@ public class DLoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 2; // Pushes a double onto the stack
+        return 2;
     }
 
     /**

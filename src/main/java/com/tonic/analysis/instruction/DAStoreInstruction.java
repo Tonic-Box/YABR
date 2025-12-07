@@ -29,25 +29,45 @@ public class DAStoreInstruction extends Instruction {
         visitor.visit(this);
     }
 
+    /**
+     * Writes the DASTORE opcode to the DataOutputStream.
+     *
+     * @param dos The DataOutputStream to write to.
+     * @throws IOException If an I/O error occurs.
+     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
     }
 
+    /**
+     * Returns the change in stack size caused by this instruction.
+     *
+     * @return The stack size change (pops array reference, index, and double value; no push).
+     */
     @Override
     public int getStackChange() {
-        // DASTORE consumes three values from the stack (value high, value low, and array reference)
         return -3;
     }
 
+    /**
+     * Returns the change in local variables caused by this instruction.
+     *
+     * @return The local variables size change (none).
+     */
     @Override
     public int getLocalChange() {
-        // No change in the number of local variables
         return 0;
     }
 
+    /**
+     * Returns a string representation of the instruction.
+     *
+     * @return The mnemonic of the instruction.
+     */
+
     @Override
     public String toString() {
-        return "dastore";
+        return "DASTORE";
     }
 }

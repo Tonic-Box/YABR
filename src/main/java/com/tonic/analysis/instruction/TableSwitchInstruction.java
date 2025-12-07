@@ -31,7 +31,7 @@ public class TableSwitchInstruction extends Instruction {
      * @param jumpOffsets   The map of key to branch target offsets.
      */
     public TableSwitchInstruction(int opcode, int offset, int padding, int defaultOffset, int low, int high, Map<Integer, Integer> jumpOffsets) {
-        super(opcode, offset, 12 + ((high - low + 1) * 4)); // opcode + padding + default + low + high + jumpOffsets
+        super(opcode, offset, 1 + padding + 12 + ((high - low + 1) * 4));
         if (opcode != 0xAA) {
             throw new IllegalArgumentException("Invalid opcode for TableSwitchInstruction: " + opcode);
         }
@@ -74,7 +74,7 @@ public class TableSwitchInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops one int (the key to match)
+        return -1;
     }
 
     /**
@@ -100,7 +100,7 @@ public class TableSwitchInstruction extends Instruction {
             sb.append(key).append("->").append(jumpOffsets.getOrDefault(key, defaultOffset)).append(", ");
         }
         if (!jumpOffsets.isEmpty()) {
-            sb.setLength(sb.length() - 2); // Remove last comma and space
+            sb.setLength(sb.length() - 2);
         }
         sb.append("}");
         return sb.toString();

@@ -8,7 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the ILOAD instruction (0x15).
+ * Represents the JVM ILOAD instruction.
  */
 @Getter
 public class ILoadInstruction extends Instruction {
@@ -22,8 +22,12 @@ public class ILoadInstruction extends Instruction {
      * @param varIndex The index of the local variable to load.
      */
     public ILoadInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, 2);
+        super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
+    }
+
+    private static boolean isShortForm(int opcode) {
+        return opcode >= 0x1A && opcode <= 0x1D;
     }
 
     @Override
@@ -40,7 +44,9 @@ public class ILoadInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        dos.writeByte(varIndex);
+        if (!isShortForm(opcode)) {
+            dos.writeByte(varIndex);
+        }
     }
 
     /**
@@ -50,7 +56,7 @@ public class ILoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes an int onto the stack
+        return 1;
     }
 
     /**

@@ -54,12 +54,12 @@ public class ReturnInstruction extends Instruction {
             case IRETURN:
             case FRETURN:
             case ARETURN:
-                return -1; // Pops one int, float, or reference
+                return -1;
             case LRETURN:
             case DRETURN:
-                return -2; // Pops one long or double
+                return -2;
             case RETURN:
-                return 0; // Pops nothing
+                return 0;
             default:
                 return 0;
         }

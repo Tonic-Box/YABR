@@ -6,13 +6,24 @@ import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 /**
- * Represents an entry in the LocalVariableTable.
+ * Represents an entry in the LocalVariableTable attribute.
+ * Describes a local variable's name, type, and scope within a method.
  */
 public class LocalVariableTableEntry {
     private final ConstPool constPool;
     @Getter
     private final int startPc, lengthPc, nameIndex, descriptorIndex, index;
 
+    /**
+     * Constructs a local variable table entry.
+     *
+     * @param constPool the constant pool for resolving references
+     * @param startPc the bytecode offset where the variable scope begins
+     * @param lengthPc the length of the variable scope in bytecode
+     * @param nameIndex constant pool index of the variable name
+     * @param descriptorIndex constant pool index of the variable type descriptor
+     * @param index the local variable index in the frame
+     */
     public LocalVariableTableEntry(ConstPool constPool, int startPc, int lengthPc, int nameIndex, int descriptorIndex, int index) {
         this.constPool = constPool;
         this.startPc = startPc;

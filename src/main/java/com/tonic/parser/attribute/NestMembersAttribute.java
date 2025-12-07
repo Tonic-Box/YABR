@@ -46,9 +46,7 @@ public class NestMembersAttribute extends Attribute {
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // number_of_classes (u2)
         dos.writeShort(classes.size());
-        // each class index (u2)
         for (int classIndex : classes) {
             dos.writeShort(classIndex);
         }
@@ -56,10 +54,8 @@ public class NestMembersAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        // 2 + (classes.size() * 2)
         this.length = 2 + (classes.size() * 2);
     }
-
 
     @Override
     public String toString() {
@@ -69,7 +65,7 @@ public class NestMembersAttribute extends Attribute {
             sb.append(className).append(", ");
         }
         if (!classes.isEmpty()) {
-            sb.setLength(sb.length() - 2); // Remove trailing comma and space
+            sb.setLength(sb.length() - 2);
         }
         sb.append("]}");
         return sb.toString();

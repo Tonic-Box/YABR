@@ -44,7 +44,7 @@ public class CAStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -3; // Pops three: array reference, index, char value
+        return -3;
     }
 
     /**

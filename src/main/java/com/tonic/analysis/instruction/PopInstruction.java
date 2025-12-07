@@ -44,7 +44,7 @@ public class PopInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops one value from the stack
+        return -1;
     }
 
     /**

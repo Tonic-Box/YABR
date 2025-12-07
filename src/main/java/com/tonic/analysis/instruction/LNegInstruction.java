@@ -44,7 +44,7 @@ public class LNegInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops two and pushes two (long)
+        return 0;
     }
 
     /**

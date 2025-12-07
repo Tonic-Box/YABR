@@ -45,9 +45,7 @@ public class MethodParametersAttribute extends Attribute {
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // 1 byte for the count
         dos.writeByte(parameters.size());
-        // Each parameter => name_index (u2) + access_flags (u2)
         for (MethodParameter param : parameters) {
             dos.writeShort(param.getNameIndex());
             dos.writeShort(param.getAccessFlags());
@@ -56,7 +54,6 @@ public class MethodParametersAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        // 1 byte for parameters_count + 4 bytes per parameter
         this.length = 1 + (parameters.size() * 4);
     }
 
@@ -67,7 +64,7 @@ public class MethodParametersAttribute extends Attribute {
             sb.append(param).append(", ");
         }
         if (!parameters.isEmpty()) {
-            sb.setLength(sb.length() - 2); // Remove trailing comma and space
+            sb.setLength(sb.length() - 2);
         }
         sb.append("]}");
         return sb.toString();

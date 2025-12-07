@@ -91,8 +91,6 @@ public class ConversionInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        // Conversion generally pops one value and pushes one value of different type
-        // Stack size remains the same except for types occupying different slots
         switch (type) {
             case I2F:
             case I2D:
@@ -108,7 +106,6 @@ public class ConversionInstruction extends Instruction {
                 if (type == ConversionType.I2D || type == ConversionType.L2I || type == ConversionType.L2F ||
                         type == ConversionType.L2D || type == ConversionType.D2I || type == ConversionType.D2L ||
                         type == ConversionType.D2F) {
-                    // Some conversions might change stack slots
                     return 0;
                 }
                 return 0;

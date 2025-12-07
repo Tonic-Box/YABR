@@ -25,12 +25,10 @@ public class SyntheticAttribute extends Attribute {
         if (length != 0) {
             throw new IllegalArgumentException("Synthetic attribute length must be 0, found: " + length);
         }
-        // No additional data to read
     }
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // No additional info
     }
 
     @Override

@@ -29,7 +29,7 @@ public class MultiANewArrayInstruction extends Instruction {
      * @param dimensions The number of dimensions for the new array.
      */
     public MultiANewArrayInstruction(ConstPool constPool, int opcode, int offset, int classIndex, int dimensions) {
-        super(opcode, offset, 4); // opcode + two bytes class index + one byte dimensions
+        super(opcode, offset, 4);
         if (opcode != 0xC5) {
             throw new IllegalArgumentException("Invalid opcode for MultiANewArrayInstruction: " + opcode);
         }
@@ -63,7 +63,7 @@ public class MultiANewArrayInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1 - dimensions; // Pops 'dimensions' count, pushes one array reference
+        return 1 - dimensions;
     }
 
     /**

@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents an Integer in the constant pool.
+ * Represents a CONSTANT_Integer entry in the constant pool.
  */
 @Setter
 public class IntegerItem extends Item<Integer> {

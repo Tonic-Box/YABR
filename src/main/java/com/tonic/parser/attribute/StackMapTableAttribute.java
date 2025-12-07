@@ -23,15 +23,44 @@ public class StackMapTableAttribute extends Attribute {
 
     public StackMapTableAttribute(String name, MemberEntry parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+        this.frames = new ArrayList<>();
     }
 
     public StackMapTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+        this.frames = new ArrayList<>();
+    }
+
+    /**
+     * Sets the frames for this StackMapTable.
+     * Used when programmatically generating frames.
+     *
+     * @param frames The list of StackMapFrame entries
+     */
+    public void setFrames(List<StackMapFrame> frames) {
+        this.frames = new ArrayList<>(frames);
+        this.numberOfEntries = frames.size();
+    }
+
+    /**
+     * Creates a new StackMapTableAttribute with the given frames.
+     *
+     * @param name The attribute name ("StackMapTable")
+     * @param parent The parent MemberEntry (method)
+     * @param nameIndex The constant pool index for the attribute name
+     * @param frames The list of frames
+     * @return A new StackMapTableAttribute
+     */
+    public static StackMapTableAttribute create(String name, MemberEntry parent, int nameIndex, List<StackMapFrame> frames) {
+        StackMapTableAttribute attr = new StackMapTableAttribute(name, parent, nameIndex, 0);
+        attr.setFrames(frames);
+        attr.updateLength();
+        return attr;
     }
 
     @Override
     public void read(ClassFile classFile, int length) {
-        int startIndex = classFile.getIndex(); // Record starting index
+        int startIndex = classFile.getIndex();
 
         this.numberOfEntries = classFile.readUnsignedShort();
         this.frames = new ArrayList<>(numberOfEntries);
@@ -43,16 +72,12 @@ public class StackMapTableAttribute extends Attribute {
         int bytesRead = classFile.getIndex() - startIndex;
         if (bytesRead != length) {
             Logger.error("Warning: StackMapTableAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
-            // Optionally, throw an exception or handle as needed
-            // throw new IllegalStateException("StackMapTableAttribute read mismatch.");
         }
     }
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // number_of_entries (u2)
         dos.writeShort(numberOfEntries);
-        // each frame
         for (StackMapFrame frame : frames) {
             frame.write(dos);
         }
@@ -60,10 +85,9 @@ public class StackMapTableAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        // 2 bytes for number_of_entries, plus sum of each frame's length
         int size = 2;
         for (StackMapFrame frame : frames) {
-            size += frame.getLength(); // you need a method getLength() in StackMapFrame
+            size += frame.getLength();
         }
         this.length = size;
     }

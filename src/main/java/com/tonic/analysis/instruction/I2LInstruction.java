@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the I2L instruction (0x85).
+ * Represents the JVM I2L instruction.
  */
 public class I2LInstruction extends Instruction {
 
@@ -44,7 +44,7 @@ public class I2LInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pops one int, pushes one long (net +1)
+        return 1;
     }
 
     /**

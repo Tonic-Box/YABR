@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the IASTORE instruction (0x53).
+ * Represents the JVM IASTORE instruction.
  */
 public class IAStoreInstruction extends Instruction {
 
@@ -19,7 +19,7 @@ public class IAStoreInstruction extends Instruction {
      */
     public IAStoreInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
-        if (opcode != 0x53) {
+        if (opcode != 0x4F) {
             throw new IllegalArgumentException("Invalid opcode for IASToreInstruction: " + opcode);
         }
     }
@@ -29,22 +29,42 @@ public class IAStoreInstruction extends Instruction {
         visitor.visit(this);
     }
 
+    /**
+     * Writes the IASTORE opcode to the DataOutputStream.
+     *
+     * @param dos The DataOutputStream to write to.
+     * @throws IOException If an I/O error occurs.
+     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
     }
 
+    /**
+     * Returns the change in stack size caused by this instruction.
+     *
+     * @return The stack size change (pops three values).
+     */
     @Override
     public int getStackChange() {
-        // IASTORE consumes two values from the stack (value and array reference)
         return -2;
     }
 
+    /**
+     * Returns the change in local variables caused by this instruction.
+     *
+     * @return The local variables size change (none).
+     */
     @Override
     public int getLocalChange() {
-        // No change in the number of local variables
         return 0;
     }
+
+    /**
+     * Returns a string representation of the instruction.
+     *
+     * @return The mnemonic of the instruction.
+     */
 
     @Override
     public String toString() {

@@ -50,7 +50,7 @@ public class SipushInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes an int onto the stack
+        return 1;
     }
 
     /**

@@ -54,7 +54,7 @@ public class InvokeInterfaceInstruction extends Instruction {
         dos.writeByte(opcode);
         dos.writeShort(methodIndex);
         dos.writeByte(count);
-        dos.writeByte(0); // Must be zero as per JVM specification
+        dos.writeByte(0);
     }
 
     /**
@@ -67,7 +67,7 @@ public class InvokeInterfaceInstruction extends Instruction {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         int params = method.getParameterCount();
         int returnSlots = method.getReturnTypeSlots();
-        return -params + returnSlots; // Pops object and parameters, pushes return value
+        return -params + returnSlots;
     }
 
     /**

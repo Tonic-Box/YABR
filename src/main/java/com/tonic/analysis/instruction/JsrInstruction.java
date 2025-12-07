@@ -53,7 +53,7 @@ public class JsrInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 1; // Pushes the return address onto the stack
+        return 1;
     }
 
     /**

@@ -45,7 +45,7 @@ public class AAStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -3; // Pops three: array reference, index, value
+        return -3;
     }
 
     /**

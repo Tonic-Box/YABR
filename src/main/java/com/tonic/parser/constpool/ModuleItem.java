@@ -6,6 +6,9 @@ import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+/**
+ * Represents a CONSTANT_Module entry in the constant pool.
+ */
 @Getter
 public class ModuleItem extends Item<Integer> {
     private int nameIndex;
@@ -22,7 +25,7 @@ public class ModuleItem extends Item<Integer> {
 
     @Override
     public byte getType() {
-        return 20; // Tag for CONSTANT_Module
+        return 20;
     }
 
     @Override

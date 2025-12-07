@@ -33,13 +33,11 @@ public class SourceFileAttribute extends Attribute {
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // sourceFileIndex (u2)
         dos.writeShort(sourceFileIndex);
     }
 
     @Override
     public void updateLength() {
-        // always 2
         this.length = 2;
     }
 

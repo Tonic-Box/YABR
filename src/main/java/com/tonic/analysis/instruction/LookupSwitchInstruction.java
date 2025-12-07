@@ -25,13 +25,13 @@ public class LookupSwitchInstruction extends Instruction {
      *
      * @param opcode        The opcode of the instruction.
      * @param offset        The bytecode offset of the instruction.
-     * @param padding       The number of padding bytes to align to 4-byte boundary.
-     * @param defaultOffset The branch target offset if no key matches.
+     * @param padding       The number of padding bytes.
+     * @param defaultOffset The default branch target offset.
      * @param npairs        The number of key-offset pairs.
      * @param matchOffsets  The map of keys to branch target offsets.
      */
     public LookupSwitchInstruction(int opcode, int offset, int padding, int defaultOffset, int npairs, Map<Integer, Integer> matchOffsets) {
-        super(opcode, offset, 12 + (npairs * 8)); // opcode + padding + defaultOffset + npairs + match-offset pairs
+        super(opcode, offset, 1 + padding + 8 + (npairs * 8));
         if (opcode != 0xAB) {
             throw new IllegalArgumentException("Invalid opcode for LookupSwitchInstruction: " + opcode);
         }
@@ -73,7 +73,7 @@ public class LookupSwitchInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops one int (the key to match)
+        return -1;
     }
 
     /**
@@ -99,7 +99,7 @@ public class LookupSwitchInstruction extends Instruction {
             sb.append(entry.getKey()).append("->").append(entry.getValue()).append(", ");
         }
         if (!matchOffsets.isEmpty()) {
-            sb.setLength(sb.length() - 2); // Remove last comma and space
+            sb.setLength(sb.length() - 2);
         }
         sb.append("}");
         return sb.toString();

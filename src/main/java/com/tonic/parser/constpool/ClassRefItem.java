@@ -8,8 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a Class Reference in the constant pool.
- * The value is an index pointing to a Utf8Item representing the class name.
+ * Represents a CONSTANT_Class entry in the constant pool.
  */
 public class ClassRefItem extends Item<Integer> {
     @Setter
@@ -37,6 +36,11 @@ public class ClassRefItem extends Item<Integer> {
         return value;
     }
 
+    /**
+     * Retrieves the class name from the constant pool.
+     *
+     * @return The class name.
+     */
     public String getClassName() {
         if(classFile == null)
             return null;
@@ -50,19 +54,30 @@ public class ClassRefItem extends Item<Integer> {
     }
 
     /**
-     * for code readability. Simply returns the result of getValue()
-     * @return name index in constant pool
+     * Gets the name index in the constant pool.
+     *
+     * @return The name index.
      */
     public int getNameIndex()
     {
         return getValue();
     }
 
+    /**
+     * Sets the constant pool index value.
+     *
+     * @param itemIndex The index to set.
+     */
     public void setValue(int itemIndex)
     {
         this.value = itemIndex;
     }
 
+    /**
+     * Sets the name index in the constant pool.
+     *
+     * @param nameIndex The name index to set.
+     */
     public void setNameIndex(int nameIndex)
     {
         setValue(nameIndex);

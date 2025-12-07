@@ -61,7 +61,7 @@ public class InvokeStaticInstruction extends Instruction {
         MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
         int params = method.getParameterCount();
         int returnSlots = method.getReturnTypeSlots();
-        return -params + returnSlots; // Pops parameters, pushes return value
+        return -params + returnSlots;
     }
 
     /**

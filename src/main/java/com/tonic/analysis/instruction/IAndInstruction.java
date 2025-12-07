@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the IAND instruction (0x7E).
+ * Represents the JVM IAND instruction.
  */
 public class IAndInstruction extends Instruction {
 
@@ -44,7 +44,7 @@ public class IAndInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops two ints, pushes one int
+        return -1;
     }
 
     /**

@@ -22,7 +22,7 @@ public class LStoreInstruction extends Instruction {
      * @param varIndex The index of the local variable to store. For LSTORE_0-3, this is 0-3 respectively.
      */
     public LStoreInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, (opcode == 0x37) ? 2 : 1); // LSTORE has 1 operand byte, LSTORE_0-3 have no operands
+        super(opcode, offset, (opcode == 0x37) ? 2 : 1);
         this.varIndex = varIndex;
     }
 
@@ -40,7 +40,7 @@ public class LStoreInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        if (opcode == 0x37) { // LSTORE with operand
+        if (opcode == 0x37) {
             dos.writeByte(varIndex);
         }
     }
@@ -52,7 +52,7 @@ public class LStoreInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -2; // Pops a long from the stack (occupies two stack slots)
+        return -2;
     }
 
     /**
@@ -72,9 +72,9 @@ public class LStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x37) { // LSTORE with operand
+        if (opcode == 0x37) {
             return String.format("LSTORE %d", varIndex);
-        } else { // LSTORE_0-3
+        } else {
             int index = opcode - 0x3F;
             return String.format("LSTORE_%d", index);
         }

@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents an 'opens' entry in the Module attribute.
+ * Represents an opens entry in the Module attribute.
  */
 public class Opens {
     private final ConstPool constPool;

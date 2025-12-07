@@ -32,7 +32,7 @@ public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute {
 
     @Override
     public void read(ClassFile classFile, int length) {
-        int startIndex = classFile.getIndex(); // Record starting index
+        int startIndex = classFile.getIndex();
 
         if (length < 1) {
             throw new IllegalArgumentException("ParameterAnnotations attribute length must be at least 1, found: " + length);
@@ -53,16 +53,12 @@ public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute {
         if (bytesRead != length) {
             Logger.error("Warning: " + (visible ? "RuntimeVisible" : "RuntimeInvisible") +
                     "ParameterAnnotationsAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
-            // Optionally, throw an exception or handle as needed
-            // throw new IllegalStateException("ParameterAnnotationsAttribute read mismatch.");
         }
     }
 
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
-        // num_parameters (u1)
         dos.writeByte(parameterAnnotations.size());
-        // for each parameter: num_annotations (u2) + each annotation
         for (List<Annotation> annotationList : parameterAnnotations) {
             dos.writeShort(annotationList.size());
             for (Annotation ann : annotationList) {
@@ -73,11 +69,9 @@ public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        // 1 byte for num_parameters
         int size = 1;
-        // each parameter => 2 bytes for num_annotations, then each annotation's length
         for (List<Annotation> annotationList : parameterAnnotations) {
-            size += 2; // num_annotations
+            size += 2;
             for (Annotation ann : annotationList) {
                 size += ann.getLength();
             }

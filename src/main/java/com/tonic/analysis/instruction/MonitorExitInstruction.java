@@ -18,7 +18,7 @@ public class MonitorExitInstruction extends Instruction {
      * @param offset The bytecode offset of the instruction.
      */
     public MonitorExitInstruction(int opcode, int offset) {
-        super(opcode, offset, 1); // opcode only
+        super(opcode, offset, 1);
         if (opcode != 0xC3) {
             throw new IllegalArgumentException("Invalid opcode for MonitorExitInstruction: " + opcode);
         }
@@ -47,7 +47,7 @@ public class MonitorExitInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return -1; // Pops one reference (object to monitor)
+        return -1;
     }
 
     /**

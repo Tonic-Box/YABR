@@ -38,7 +38,7 @@ public class ConstantValueAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        this.length = 2; // constant_value_index (u2)
+        this.length = 2;
     }
 
     @Override

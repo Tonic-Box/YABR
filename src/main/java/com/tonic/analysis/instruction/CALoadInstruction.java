@@ -44,7 +44,7 @@ public class CALoadInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return 0; // Pops two, pushes one (char as int)
+        return 0;
     }
 
     /**
