@@ -87,3 +87,5 @@ Inspired by [classpooly](https://github.com/d-o-g/classpooly).
 ## License
 
 MIT
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Tonic-Box/YABR)
