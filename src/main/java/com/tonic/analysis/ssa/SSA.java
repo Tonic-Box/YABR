@@ -104,12 +104,51 @@ public class SSA {
     }
 
     /**
+     * Enables strength reduction optimization.
+     * Replaces expensive operations with cheaper equivalents:
+     * - x * 2^n -> x << n
+     * - x / 2^n -> x >> n
+     * - x % 2^n -> x & (2^n - 1)
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withStrengthReduction() {
+        return addTransform(new StrengthReduction());
+    }
+
+    /**
+     * Enables algebraic simplification optimization.
+     * Applies mathematical identities:
+     * - x + 0 -> x, x * 1 -> x, x * 0 -> 0
+     * - x - x -> 0, x ^ x -> 0
+     * - x & 0 -> 0, x | 0 -> x
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withAlgebraicSimplification() {
+        return addTransform(new AlgebraicSimplification());
+    }
+
+    /**
      * Enables the standard set of optimizations.
      *
      * @return this SSA instance for chaining
      */
     public SSA withStandardOptimizations() {
         return withConstantFolding()
+                .withCopyPropagation()
+                .withDeadCodeElimination();
+    }
+
+    /**
+     * Enables all available optimizations.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withAllOptimizations() {
+        return withConstantFolding()
+                .withAlgebraicSimplification()
+                .withStrengthReduction()
                 .withCopyPropagation()
                 .withDeadCodeElimination();
     }

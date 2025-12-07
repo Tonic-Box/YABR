@@ -280,6 +280,111 @@ public class SSAShowcase {
     }
 
     // ========================================
+    // Strength Reduction Examples
+    // ========================================
+
+    /**
+     * Demonstrates strength reduction for multiplication by powers of 2.
+     * x * 2 -> x << 1
+     * x * 4 -> x << 2
+     * x * 8 -> x << 3
+     */
+    public int strengthReductionMul(int x) {
+        int a = x * 2;    // Should become x << 1
+        int b = x * 4;    // Should become x << 2
+        int c = x * 8;    // Should become x << 3
+        return a + b + c; // x*2 + x*4 + x*8 = x*14
+    }
+
+    /**
+     * Demonstrates strength reduction for division by powers of 2.
+     * x / 2 -> x >> 1
+     * x / 4 -> x >> 2
+     */
+    public int strengthReductionDiv(int x) {
+        int a = x / 2;    // Should become x >> 1
+        int b = x / 4;    // Should become x >> 2
+        return a + b;
+    }
+
+    /**
+     * Demonstrates strength reduction for modulo by powers of 2.
+     * x % 2 -> x & 1
+     * x % 8 -> x & 7
+     */
+    public int strengthReductionMod(int x) {
+        int a = x % 2;    // Should become x & 1
+        int b = x % 8;    // Should become x & 7
+        return a + b;
+    }
+
+    // ========================================
+    // Algebraic Simplification Examples
+    // ========================================
+
+    /**
+     * Demonstrates algebraic simplification with addition/subtraction.
+     * x + 0 -> x
+     * x - 0 -> x
+     */
+    public int algebraicAddSub(int x) {
+        int a = x + 0;    // Should become x
+        int b = a - 0;    // Should become a (which is x)
+        return b;
+    }
+
+    /**
+     * Demonstrates algebraic simplification with multiplication.
+     * x * 1 -> x
+     * x * 0 -> 0
+     */
+    public int algebraicMul(int x, int y) {
+        int a = x * 1;    // Should become x
+        int b = y * 0;    // Should become 0
+        return a + b;     // Should simplify to just x
+    }
+
+    /**
+     * Demonstrates algebraic simplification with bitwise operations.
+     * x & 0 -> 0
+     * x | 0 -> x
+     * x ^ 0 -> x
+     */
+    public int algebraicBitwise(int x) {
+        int a = x & 0;    // Should become 0
+        int b = x | 0;    // Should become x
+        int c = x ^ 0;    // Should become x
+        return a + b + c; // Should become 0 + x + x = 2*x
+    }
+
+    /**
+     * Demonstrates algebraic simplification with self-operations.
+     * x - x -> 0
+     * x ^ x -> 0
+     * x & x -> x
+     * x | x -> x
+     */
+    public int algebraicSelfOps(int x) {
+        int a = x - x;    // Should become 0
+        int b = x ^ x;    // Should become 0
+        int c = x & x;    // Should become x
+        int d = x | x;    // Should become x
+        return a + b + c + d; // Should become 0 + 0 + x + x = 2*x
+    }
+
+    /**
+     * Combined strength reduction and algebraic simplification.
+     */
+    public int combinedNewOptimizations(int x) {
+        int a = x * 8;      // Strength reduction: x << 3
+        int b = a + 0;      // Algebraic: a
+        int c = b * 1;      // Algebraic: b
+        int d = c / 2;      // Strength reduction: c >> 1
+        int e = x - x;      // Algebraic: 0
+        return d + e;       // Should be (x << 3) >> 1 + 0 = x * 4
+    }
+
+    // ========================================
     // Main Method for Testing
     // ========================================
 
@@ -323,6 +428,26 @@ public class SSAShowcase {
         // Static calls
         System.out.println("staticCalls(-15) = " + showcase.staticCalls(-15) + " (expected: 15)");
         System.out.println("staticFieldAccess() = " + SSAShowcase.staticFieldAccess() + " (expected: 200)");
+        System.out.println();
+
+        // Strength Reduction tests
+        System.out.println("=== Strength Reduction Tests ===");
+        System.out.println("strengthReductionMul(10) = " + showcase.strengthReductionMul(10) + " (expected: 140)");
+        System.out.println("strengthReductionDiv(100) = " + showcase.strengthReductionDiv(100) + " (expected: 75)");
+        System.out.println("strengthReductionMod(100) = " + showcase.strengthReductionMod(100) + " (expected: 4)");
+        System.out.println();
+
+        // Algebraic Simplification tests
+        System.out.println("=== Algebraic Simplification Tests ===");
+        System.out.println("algebraicAddSub(42) = " + showcase.algebraicAddSub(42) + " (expected: 42)");
+        System.out.println("algebraicMul(42, 99) = " + showcase.algebraicMul(42, 99) + " (expected: 42)");
+        System.out.println("algebraicBitwise(10) = " + showcase.algebraicBitwise(10) + " (expected: 20)");
+        System.out.println("algebraicSelfOps(15) = " + showcase.algebraicSelfOps(15) + " (expected: 30)");
+        System.out.println();
+
+        // Combined new optimizations
+        System.out.println("=== Combined New Optimizations ===");
+        System.out.println("combinedNewOptimizations(10) = " + showcase.combinedNewOptimizations(10) + " (expected: 40)");
         System.out.println();
 
         System.out.println("=== All tests complete ===");

@@ -55,7 +55,18 @@ public class TestSSADemo {
                 "nestedConditional",
                 "simpleLoop",
                 "combinedOptimizations",
-                "arithmetic"
+                "arithmetic",
+                // Strength Reduction tests
+                "strengthReductionMul",
+                "strengthReductionDiv",
+                "strengthReductionMod",
+                // Algebraic Simplification tests
+                "algebraicAddSub",
+                "algebraicMul",
+                "algebraicBitwise",
+                "algebraicSelfOps",
+                // Combined new optimizations
+                "combinedNewOptimizations"
             );
 
             for (MethodEntry method : classFile.getMethods()) {
@@ -133,8 +144,8 @@ public class TestSSADemo {
         int instrBefore = countInstructions(irMethod);
         printIRDetails(irMethod);
 
-        // Optimize
-        SSA optimizer = new SSA(constPool).withStandardOptimizations();
+        // Optimize with all available transforms including new ones
+        SSA optimizer = new SSA(constPool).withAllOptimizations();
         optimizer.runTransforms(irMethod);
 
         // IR after optimization
