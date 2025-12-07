@@ -6,30 +6,25 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 
 ## System Architecture
 
-```mermaid
-graph TB
-    subgraph Parser["Parser Layer"]
-        CP[ClassPool] --> CF[ClassFile]
-        CF --> ME[MethodEntry]
-        CF --> FE[FieldEntry]
-        CF --> CONST[ConstPool]
-        CF --> ATTR[Attributes]
-    end
-
-    subgraph Analysis["Analysis Layer"]
-        ME --> BC[Bytecode API]
-        BC --> CW[CodeWriter]
-        ME --> VIS[Visitors]
-        ME --> SSA[SSA System]
-    end
-
-    subgraph SSA_Pipeline["SSA Pipeline"]
-        SSA --> LIFT[Lifter]
-        LIFT --> IR[IRMethod]
-        IR --> TRANS[Transforms]
-        TRANS --> LOWER[Lowerer]
-        LOWER --> ME
-    end
+```
++------------------+     +-------------------+     +------------------+
+|   Parser Layer   |     |  Analysis Layer   |     |   SSA Pipeline   |
++------------------+     +-------------------+     +------------------+
+|                  |     |                   |     |                  |
+|  ClassPool       |     |  MethodEntry --+  |     |  SSA             |
+|      |           |     |       |        |  |     |   |              |
+|      v           |     |       v        |  |     |   v              |
+|  ClassFile ---+  |     |  Bytecode API  |  |     |  Lifter          |
+|      |        |  |     |       |        |  |     |   |              |
+|      +-----+  |  |     |       v        |  |     |   v              |
+|      |     |  |  |     |  CodeWriter    |  |     |  IRMethod        |
+|      v     v  v  |     |                |  |     |   |              |
+| Methods Fields   |     |  Visitors <----+  |     |   v              |
+|      |           |     |                |  |     |  Transforms      |
+|      v           |     |  SSA System <--+  |     |   |              |
+|  ConstPool       |     |                   |     |   v              |
+|  Attributes      |     |                   |     |  Lowerer -> Back |
++------------------+     +-------------------+     +------------------+
 ```
 
 ## Package Structure
@@ -92,11 +87,8 @@ bc.finalizeBytecode();
 
 **SSA** - Main entry point for SSA operations:
 
-```mermaid
-graph LR
-    A[Bytecode] -->|lift| B[SSA IR]
-    B -->|transform| C[Optimized IR]
-    C -->|lower| D[Bytecode]
+```
+Bytecode --[lift]--> SSA IR --[transform]--> Optimized IR --[lower]--> Bytecode
 ```
 
 The SSA pipeline:

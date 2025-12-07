@@ -35,11 +35,8 @@ store local[0] = v5
 
 ## SSA Pipeline
 
-```mermaid
-graph LR
-    A[Bytecode] -->|BytecodeLifter| B[SSA IR]
-    B -->|Transforms| C[Optimized IR]
-    C -->|BytecodeLowerer| D[Bytecode]
+```
+Bytecode --[BytecodeLifter]--> SSA IR --[Transforms]--> Optimized IR --[BytecodeLowerer]--> Bytecode
 ```
 
 The pipeline has three stages:
