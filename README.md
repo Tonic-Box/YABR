@@ -1,125 +1,89 @@
-A simple java ClassFIle and bytecode reader/writer I wrote as a learning exercize.
+# YABR - Yet Another Bytecode Reader/Writer
 
-Demos can be found here: https://github.com/Tonic-Box/YABR/tree/main/src/main/java/com/tonic/demo
+A Java bytecode manipulation library with SSA-form intermediate representation for analysis and optimization.
 
-Inspired by: https://github.com/d-o-g/classpooly
+## Features
 
-## Example Code:
+- **Class file parsing** - Read and write Java `.class` files
+- **Bytecode manipulation** - High-level and low-level APIs for modifying bytecode
+- **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
+- **Visitor patterns** - Traverse classes at multiple abstraction levels
+- **Frame computation** - Automatic StackMapTable generation for Java 7+
 
-### New Class Creation:
+## Quick Start
+
 ```java
-ClassPool classPool = ClassPool.getDefault();
-ClassFile classFile = classPool.createNewClass("com/tonic/ANewClass", classAccess);
+// Load a class
+ClassPool pool = ClassPool.getDefault();
+ClassFile cf = pool.loadClass(inputStream);
+
+// Create a new class
+int access = new AccessBuilder().setPublic().build();
+ClassFile newClass = pool.createNewClass("com/example/MyClass", access);
+
+// Add a field with getter/setter
+FieldEntry field = newClass.createNewField(access, "value", "I", new ArrayList<>());
+newClass.generateGetter(field, false);
+newClass.generateSetter(field, false);
+
+// Write the class
+newClass.rebuild();
+byte[] bytes = newClass.write();
 ```
 
+## Documentation
 
-### Load a class from disk:
-```java
-ClassPool classPool = ClassPool.getDefault();
+| Guide | Description |
+|-------|-------------|
+| [Quick Start](docs/quick-start.md) | Get running in 5 minutes |
+| [Architecture](docs/architecture.md) | System overview and design |
+| [Class Files](docs/class-files.md) | ClassPool, ClassFile, ConstPool |
+| [Bytecode API](docs/bytecode-api.md) | Bytecode manipulation |
+| [Visitors](docs/visitors.md) | Traversal patterns |
+| [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
+| [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
+| [Frame Computation](docs/frame-computation.md) | StackMapTable generation |
 
-try (InputStream is = TestClassCreation.class.getResourceAsStream("TestCase.class")) {
-    if (is == null) {
-        throw new IOException("Resource 'TestCase.class' not found.");
-    }
+## Examples
 
-    ClassFile classFile = classPool.loadClass(is);
+Runnable examples are in [`src/main/java/com/tonic/demo/`](src/main/java/com/tonic/demo/):
 
-    // ...
-}
+- `TestBlocks.java` - SSA IR block visitor
+- `TestBytecodeVisitor.java` - Bytecode-level visitor
+- `TestClassCreation.java` - Creating classes programmatically
+- `TestSSADemo.java` - Complete SSA transformation
+
+## SSA Pipeline
+
+YABR includes a full SSA transformation system:
+
+```
+Bytecode -> Lift -> SSA IR -> Optimize -> Lower -> Bytecode
 ```
 
-### Load a builtin java class:
 ```java
-ClassPool.getDefault().loadClass("java/lang/Object.class");
+SSA ssa = new SSA(constPool)
+    .withConstantFolding()
+    .withCopyPropagation()
+    .withDeadCodeElimination();
+
+ssa.transform(method);  // Lift, optimize, and lower
 ```
 
+## Building
 
-### Field creation:
-```java
-ClassFile classFile = ...;
-
-int staticAccessPrivate = new AccessBuilder()
-    .setPrivate()
-    .setStatic()
-    .build();
-
-FieldEntry staticField = classFile.createNewField(
-    staticAccessPrivate, 
-    "testStaticIntField", 
-    "I", 
-    new ArrayList<>()
-);
-
-classFile.setFieldInitialValue(staticField, 12);
+```bash
+./gradlew build
 ```
 
+## Requirements
 
-### Method creation and Bytecode Api:
-```java
-// Initialize class pool and access modifiers
-ClassPool classPool = ...;
-int access = new AccessBuilder()
-    .setPublic()
-    .setStatic()
-    .build();
+- Java 17+
 
-// Create a new field in the class
-classFile.createNewField(
-    access, 
-    "testIntField", 
-    "I", 
-    new ArrayList<>()
-);
+## Acknowledgements
 
-// Create a new method
-MethodEntry method = classFile.createNewMethod(access, "demoGetter", int.class);
-Bytecode bytecode = new Bytecode(method);
-ConstPool constPool = bytecode.getConstPool();
+Inspired by [classpooly](https://github.com/d-o-g/classpooly).
 
-// Add field reference and generate bytecode instructions
-int fieldRefIndex = constPool.findOrAddField("com/tonic/TestCase", "testIntField", "I");
-bytecode.addGetStatic(fieldRefIndex);
-bytecode.addReturn(ReturnType.IRETURN); // Add IRETURN opcode
-bytecode.finalizeBytecode();
+## License
 
-// Rebuild the class and print it
-classFile.rebuild();
-System.out.println(classFile);
-```
-
-### Visitor Example:
-```java
-/**
- * This visitor will add a System.out.println call to each exit point of the method with a void return and the beginning of each method with a return type
- * method with a void return and the beginning of each method with a return type.
- */
-public final class TestBytecodeVisitor extends AbstractBytecodeVisitor {
-
-    /**
-     * We add a System.out.println call to each exit point of the method just before the return
-     * instruction with a void return and the beginning of each method with a return type.
-     * @param instruction the return instruction
-     */
-    @Override
-    public void visit(ReturnInstruction instruction) {
-        super.visit(instruction);
-
-        Bytecode bytecode = new Bytecode(codeWriter);
-        bytecode.setInsertBefore(true);
-
-        if (method.isVoidReturn()) {
-            bytecode.setInsertBeforeOffset(instruction.getOffset());
-        }
-
-        bytecode.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-        bytecode.addLdc("Hello, World!");
-        bytecode.addInvokeVirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
-
-        try {
-            bytecode.finalizeBytecode();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-}
-```
+MIT

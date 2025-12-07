@@ -21,7 +21,8 @@
       "Bash(echo:*)",
       "Bash(javap:*)",
       "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat compileJava:*)",
-      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat:*)"
+      "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
