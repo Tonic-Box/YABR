@@ -66,7 +66,15 @@ public class TestSSADemo {
                 "algebraicBitwise",
                 "algebraicSelfOps",
                 // Combined new optimizations
-                "combinedNewOptimizations"
+                "combinedNewOptimizations",
+                // New optimization tests
+                "phiConstantProp",
+                "peepholeOpt",
+                "commonSubexpr",
+                "nullCheckTest",
+                "conditionalConst",
+                "loopInvariant",
+                "inductionVar"
             );
 
             for (MethodEntry method : classFile.getMethods()) {

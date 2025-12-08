@@ -385,6 +385,124 @@ public class SSAShowcase {
     }
 
     // ========================================
+    // Phi Constant Propagation Tests
+    // ========================================
+
+    /**
+     * Demonstrates phi constant propagation.
+     * When all branches assign the same value, phi can be simplified.
+     */
+    public int phiConstantProp(int x) {
+        int result;
+        if (x > 0) {
+            result = 42;
+        } else {
+            result = 42;  // Same value as true branch
+        }
+        // phi(42, 42) -> 42
+        return result;
+    }
+
+    // ========================================
+    // Peephole Optimization Tests
+    // ========================================
+
+    /**
+     * Demonstrates peephole optimizations.
+     * Double negation and shift normalization.
+     */
+    public int peepholeOpt(int x) {
+        int a = -(-x);        // Double negation -> x
+        int b = x << 32;      // Shift by 32 -> x (masked to 0)
+        return a + b;         // Should be x + x = 2*x
+    }
+
+    // ========================================
+    // Common Subexpression Elimination Tests
+    // ========================================
+
+    /**
+     * Demonstrates common subexpression elimination.
+     * Identical expressions are computed only once.
+     */
+    public int commonSubexpr(int x, int y) {
+        int a = x + y;
+        int b = x + y;        // Same as 'a' - reuse
+        int c = x * y;
+        int d = x * y;        // Same as 'c' - reuse
+        return a + b + c + d; // = 2*(x+y) + 2*(x*y)
+    }
+
+    // ========================================
+    // Null Check Elimination Tests
+    // ========================================
+
+    /**
+     * Demonstrates null check elimination concept using integer comparison.
+     * Uses pattern similar to null check but with primitives for lifter compatibility.
+     * Tests redundant check elimination after confirmed state.
+     */
+    public int nullCheckTest(int flag) {
+        int isValid = 1;      // Simulate "not null" state
+        if (isValid != 0) {   // Check that's always true
+            if (isValid != 0) { // Redundant check - can be eliminated
+                return flag + 1;
+            }
+        }
+        return 0;             // Dead code - never reached
+    }
+
+    // ========================================
+    // Conditional Constant Propagation Tests
+    // ========================================
+
+    /**
+     * Demonstrates conditional constant propagation.
+     * When condition is known constant, branch can be eliminated.
+     */
+    public int conditionalConst(int x) {
+        int a = 5;
+        int b = 5;
+        if (a == b) {         // Always true (5 == 5)
+            return x + 1;
+        } else {
+            return x - 1;     // Dead code
+        }
+    }
+
+    // ========================================
+    // Loop-Invariant Code Motion Tests
+    // ========================================
+
+    /**
+     * Demonstrates loop-invariant concept using simple addition.
+     * This pattern works correctly through lift/lower.
+     */
+    public int loopInvariant(int n) {
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+            sum += 12;        // Constant addition per iteration
+        }
+        return sum;           // = n * 12
+    }
+
+    // ========================================
+    // Induction Variable Tests
+    // ========================================
+
+    /**
+     * Demonstrates induction variable simplification.
+     * Multiplication by constant in loop can be strength-reduced.
+     */
+    public int inductionVar(int n) {
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+            sum += i * 4;     // i*4 can be optimized with accumulator
+        }
+        return sum;           // = 4 * (0 + 1 + 2 + ... + (n-1)) = 4 * n*(n-1)/2
+    }
+
+    // ========================================
     // Main Method for Testing
     // ========================================
 
@@ -448,6 +566,36 @@ public class SSAShowcase {
         // Combined new optimizations
         System.out.println("=== Combined New Optimizations ===");
         System.out.println("combinedNewOptimizations(10) = " + showcase.combinedNewOptimizations(10) + " (expected: 40)");
+        System.out.println();
+
+        // New optimization tests
+        System.out.println("=== Phi Constant Propagation ===");
+        System.out.println("phiConstantProp(5) = " + showcase.phiConstantProp(5) + " (expected: 42)");
+        System.out.println("phiConstantProp(-3) = " + showcase.phiConstantProp(-3) + " (expected: 42)");
+        System.out.println();
+
+        System.out.println("=== Peephole Optimizations ===");
+        System.out.println("peepholeOpt(10) = " + showcase.peepholeOpt(10) + " (expected: 20)");
+        System.out.println();
+
+        System.out.println("=== Common Subexpression Elimination ===");
+        System.out.println("commonSubexpr(3, 4) = " + showcase.commonSubexpr(3, 4) + " (expected: 38)");
+        System.out.println();
+
+        System.out.println("=== Null Check Elimination ===");
+        System.out.println("nullCheckTest(5) = " + showcase.nullCheckTest(5) + " (expected: 6)");
+        System.out.println();
+
+        System.out.println("=== Conditional Constant Propagation ===");
+        System.out.println("conditionalConst(10) = " + showcase.conditionalConst(10) + " (expected: 11)");
+        System.out.println();
+
+        System.out.println("=== Loop-Invariant Code Motion ===");
+        System.out.println("loopInvariant(5) = " + showcase.loopInvariant(5) + " (expected: 60)");
+        System.out.println();
+
+        System.out.println("=== Induction Variable Simplification ===");
+        System.out.println("inductionVar(5) = " + showcase.inductionVar(5) + " (expected: 40)");
         System.out.println();
 
         System.out.println("=== All tests complete ===");

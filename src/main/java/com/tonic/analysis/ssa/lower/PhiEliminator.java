@@ -87,16 +87,27 @@ public class PhiEliminator {
     }
 
     private void insertCopies(IRMethod method) {
+        int copyId = 0;
+        Map<SSAValue, List<CopyInfo>> phiCopies = new HashMap<>();
+
         for (IRBlock block : method.getBlocks()) {
             for (PhiInstruction phi : block.getPhiInstructions()) {
-                SSAValue result = phi.getResult();
-                if (result == null) continue;
+                SSAValue phiResult = phi.getResult();
+                if (phiResult == null) continue;
 
                 for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
                     IRBlock pred = entry.getKey();
                     Value incoming = entry.getValue();
 
-                    CopyInstruction copy = new CopyInstruction(result, incoming);
+                    // Create a FRESH SSAValue for this specific copy to maintain proper SSA semantics
+                    // This prevents the bug where multiple copies to the same value causes
+                    // incorrect live interval computation in RegisterAllocator
+                    SSAValue copyResult = new SSAValue(
+                        phiResult.getType(),
+                        phiResult.getName() + "_copy" + copyId++
+                    );
+
+                    CopyInstruction copy = new CopyInstruction(copyResult, incoming);
 
                     IRInstruction terminator = pred.getTerminator();
                     if (terminator != null) {
@@ -105,9 +116,16 @@ public class PhiEliminator {
                     } else {
                         pred.addInstruction(copy);
                     }
+
+                    // Track this copy for register coalescing
+                    phiCopies.computeIfAbsent(phiResult, k -> new ArrayList<>())
+                        .add(new CopyInfo(copyResult, pred));
                 }
             }
         }
+
+        // Store copy mapping for RegisterAllocator to use during coalescing
+        method.setPhiCopyMapping(phiCopies);
     }
 
     private void removePhis(IRMethod method) {

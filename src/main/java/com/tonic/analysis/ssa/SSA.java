@@ -130,6 +130,76 @@ public class SSA {
     }
 
     /**
+     * Enables phi constant propagation optimization.
+     * Simplifies phi nodes when all incoming values are identical.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withPhiConstantPropagation() {
+        return addTransform(new PhiConstantPropagation());
+    }
+
+    /**
+     * Enables peephole optimizations.
+     * Applies small pattern-based optimizations like double negation removal.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withPeepholeOptimizations() {
+        return addTransform(new PeepholeOptimizations());
+    }
+
+    /**
+     * Enables common subexpression elimination.
+     * Identifies identical expressions and reuses the first computed result.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withCommonSubexpressionElimination() {
+        return addTransform(new CommonSubexpressionElimination());
+    }
+
+    /**
+     * Enables null check elimination optimization.
+     * Removes redundant null checks when an object is provably non-null.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withNullCheckElimination() {
+        return addTransform(new NullCheckElimination());
+    }
+
+    /**
+     * Enables conditional constant propagation optimization.
+     * Propagates constants through conditional branches, eliminating unreachable code.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withConditionalConstantPropagation() {
+        return addTransform(new ConditionalConstantPropagation());
+    }
+
+    /**
+     * Enables loop-invariant code motion optimization.
+     * Moves loop-invariant computations outside the loop.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withLoopInvariantCodeMotion() {
+        return addTransform(new LoopInvariantCodeMotion());
+    }
+
+    /**
+     * Enables induction variable simplification optimization.
+     * Simplifies loop counters and derived induction variables.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withInductionVariableSimplification() {
+        return addTransform(new InductionVariableSimplification());
+    }
+
+    /**
      * Enables the standard set of optimizations.
      *
      * @return this SSA instance for chaining
@@ -142,14 +212,22 @@ public class SSA {
 
     /**
      * Enables all available optimizations.
+     * Transforms are applied in optimal order for best results.
      *
      * @return this SSA instance for chaining
      */
     public SSA withAllOptimizations() {
         return withConstantFolding()
+                .withPhiConstantPropagation()
+                .withConditionalConstantPropagation()
                 .withAlgebraicSimplification()
+                .withPeepholeOptimizations()
                 .withStrengthReduction()
+                .withCommonSubexpressionElimination()
                 .withCopyPropagation()
+                .withNullCheckElimination()
+                .withLoopInvariantCodeMotion()
+                .withInductionVariableSimplification()
                 .withDeadCodeElimination();
     }
 

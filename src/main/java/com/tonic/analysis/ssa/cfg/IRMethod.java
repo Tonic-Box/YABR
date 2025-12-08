@@ -2,6 +2,7 @@ package com.tonic.analysis.ssa.cfg;
 
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
+import com.tonic.analysis.ssa.lower.CopyInfo;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.MethodEntry;
@@ -36,6 +37,13 @@ public class IRMethod {
     private int maxLocals;
     @Setter
     private int maxStack;
+
+    /**
+     * Mapping from phi results to their copy instructions for register coalescing.
+     * Used by RegisterAllocator to coalesce phi copies into the same register.
+     */
+    @Setter
+    private Map<SSAValue, List<CopyInfo>> phiCopyMapping;
 
     /**
      * Creates a new IR method.

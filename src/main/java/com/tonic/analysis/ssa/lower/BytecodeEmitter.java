@@ -753,9 +753,33 @@ public class BytecodeEmitter {
         }
     }
 
+    /**
+     * For phi copy values, returns the phi result's register slot.
+     * Returns -1 if the value is not a phi copy.
+     */
+    private int getPhiCopyDestination(SSAValue copyValue) {
+        Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
+        if (phiCopies == null) return -1;
+
+        for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
+            for (CopyInfo copyInfo : entry.getValue()) {
+                if (copyInfo.copyValue().equals(copyValue)) {
+                    // This is a phi copy - return the phi result's register
+                    return regAlloc.getRegister(entry.getKey());
+                }
+            }
+        }
+        return -1;
+    }
+
     private void emitCopy(CopyInstruction instr) throws IOException {
         Value source = instr.getSource();
-        int dstReg = regAlloc.getRegister(instr.getResult());
+
+        // For phi copies, the destination should be the phi result's slot, not the copy's slot
+        int dstReg = getPhiCopyDestination(instr.getResult());
+        if (dstReg < 0) {
+            dstReg = regAlloc.getRegister(instr.getResult());
+        }
 
         if (source instanceof SSAValue ssa) {
             if (stackResidentValues.contains(ssa)) {

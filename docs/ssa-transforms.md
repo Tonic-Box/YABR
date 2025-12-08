@@ -79,6 +79,281 @@ SSA ssa = new SSA(constPool).withDeadCodeElimination();
 ssa.transform(method);
 ```
 
+### Strength Reduction
+
+Replaces expensive operations with cheaper equivalents.
+
+```java
+// Before
+v1 = MUL x, 8      // Multiplication by power of 2
+v2 = DIV y, 4      // Division by power of 2
+v3 = REM z, 16     // Remainder by power of 2
+
+// After
+v1 = SHL x, 3      // x << 3
+v2 = SHR y, 2      // y >> 2
+v3 = AND z, 15     // z & 15
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withStrengthReduction();
+ssa.transform(method);
+```
+
+**Supported patterns:**
+- `x * 2^n` → `x << n` (multiplication by power of 2)
+- `x / 2^n` → `x >> n` (division by power of 2, positive values)
+- `x % 2^n` → `x & (2^n - 1)` (remainder by power of 2)
+
+### Algebraic Simplification
+
+Applies algebraic identities to simplify expressions.
+
+```java
+// Before
+v1 = ADD x, 0      // Identity
+v2 = MUL y, 1      // Identity
+v3 = SUB z, z      // Self-subtraction
+v4 = XOR w, w      // Self-XOR
+v5 = AND a, 0      // Zero annihilator
+
+// After
+v1 = x             // copy
+v2 = y             // copy
+v3 = const 0       // always 0
+v4 = const 0       // always 0
+v5 = const 0       // always 0
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withAlgebraicSimplification();
+ssa.transform(method);
+```
+
+**Supported patterns:**
+- **Additive identity:** `x + 0` → `x`, `0 + x` → `x`, `x - 0` → `x`
+- **Multiplicative identity:** `x * 1` → `x`, `1 * x` → `x`
+- **Zero annihilator:** `x * 0` → `0`, `0 * x` → `0`, `x & 0` → `0`
+- **Self-operations:** `x - x` → `0`, `x ^ x` → `0`
+- **Bitwise identity:** `x | 0` → `x`, `x & -1` → `x`, `x ^ 0` → `x`
+- **Shift identity:** `x << 0` → `x`, `x >> 0` → `x`, `x >>> 0` → `x`
+
+### Phi Constant Propagation
+
+Simplifies phi nodes when all incoming values are identical.
+
+```java
+// Before
+B1:
+    v1 = const 42
+    goto B3
+B2:
+    v2 = const 42
+    goto B3
+B3:
+    v3 = phi(B1:v1, B2:v2)   // Both incoming are 42
+    return v3
+
+// After
+B3:
+    v3 = const 42            // Phi replaced with constant
+    return v3
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withPhiConstantPropagation();
+ssa.transform(method);
+```
+
+**Supported patterns:**
+- All incoming values are the same constant → replace with constant
+- All incoming values are the same SSA value → replace with copy
+
+### Peephole Optimizations
+
+Small pattern-based optimizations on instruction sequences.
+
+```java
+// Before
+v1 = NEG x
+v2 = NEG v1        // Double negation
+
+v3 = SHL y, 32     // Shift by type width (int)
+v4 = SHL z, 0      // Shift by 0
+
+// After
+v2 = x             // Double negation eliminated
+
+v3 = y             // Shift by 32 is identity for int
+v4 = z             // Shift by 0 eliminated
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withPeepholeOptimizations();
+ssa.transform(method);
+```
+
+**Supported patterns:**
+- **Double negation:** `NEG(NEG(x))` → `x`
+- **Shift normalization:** `x << 32` → `x` (for int), `x << 64` → `x` (for long)
+- **Zero shift:** `x << 0` → `x`, `x >> 0` → `x`
+- **Consecutive shifts:** `(x << a) << b` → `x << (a+b)` when safe
+
+### Common Subexpression Elimination
+
+Identifies identical expressions and reuses the first computed result.
+
+```java
+// Before
+v1 = ADD x, y
+v2 = MUL a, b
+v3 = ADD x, y      // Same as v1
+v4 = MUL a, b      // Same as v2
+
+// After
+v1 = ADD x, y
+v2 = MUL a, b
+v3 = v1            // Reuse v1
+v4 = v2            // Reuse v2
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withCommonSubexpressionElimination();
+ssa.transform(method);
+```
+
+**Features:**
+- Expression hashing for efficient lookup
+- Handles commutative operations (a+b equals b+a)
+- Works across basic blocks within dominance region
+
+### Null Check Elimination
+
+Removes redundant null checks when objects are provably non-null.
+
+```java
+// Before
+v1 = new Object()
+if (v1 == null) goto error    // Redundant - v1 is non-null
+
+// After
+v1 = new Object()
+// Null check eliminated
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withNullCheckElimination();
+ssa.transform(method);
+```
+
+**Provably non-null sources:**
+- After `new` instruction
+- After successful null check in dominating block
+- `this` reference in instance methods
+
+### Conditional Constant Propagation
+
+Evaluates constant branch conditions and eliminates unreachable code.
+
+```java
+// Before
+v1 = const true
+if (v1) goto B1 else goto B2    // Constant condition
+B1:
+    return 1
+B2:
+    return 2                     // Unreachable
+
+// After
+goto B1                          // Unconditional jump
+B1:
+    return 1
+// B2 eliminated
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withConditionalConstantPropagation();
+ssa.transform(method);
+```
+
+**Supported patterns:**
+- Boolean constant conditions → eliminate dead branch
+- Integer comparison with constants → evaluate at compile time
+- Cascading elimination of unreachable blocks
+
+### Loop-Invariant Code Motion
+
+Moves computations that produce the same result in every loop iteration to the loop preheader.
+
+```java
+// Before
+for (int i = 0; i < n; i++) {
+    int k = a * b;     // a and b don't change in loop
+    sum += k;
+}
+
+// After
+int k = a * b;         // Hoisted to preheader
+for (int i = 0; i < n; i++) {
+    sum += k;
+}
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withLoopInvariantCodeMotion();
+ssa.transform(method);
+```
+
+**Requirements for hoisting:**
+- All operands defined outside the loop or are constants
+- Instruction has no side effects
+- Instruction is not a phi, branch, or memory operation
+
+### Induction Variable Simplification
+
+Identifies and simplifies induction variables in loops.
+
+```java
+// Before
+for (int i = 0; i < n; i++) {
+    sum += i * 4;      // Derived induction variable
+}
+
+// After
+int stride = 0;
+for (int i = 0; i < n; i++) {
+    sum += stride;     // Use derived variable directly
+    stride += 4;       // Increment by stride
+}
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withInductionVariableSimplification();
+ssa.transform(method);
+```
+
+**Detected patterns:**
+- **Basic induction variable:** `i = i + c` where c is constant
+- **Derived induction variable:** `j = i * c + d` linear function of basic IV
+
 ### Combining Transforms
 
 Apply multiple transforms for best results:
@@ -89,9 +364,27 @@ SSA ssa = new SSA(constPool)
     .withCopyPropagation()
     .withDeadCodeElimination();
 
-// Or use the standard set
+// Standard set (basic optimizations)
 SSA ssa = new SSA(constPool).withStandardOptimizations();
+
+// All optimizations including loop transforms
+SSA ssa = new SSA(constPool).withAllOptimizations();
 ```
+
+**Recommended transform order:**
+
+1. ConstantFolding - Evaluate constant expressions first
+2. PhiConstantPropagation - Simplify redundant phi nodes
+3. ConditionalConstantPropagation - Eliminate dead branches
+4. AlgebraicSimplification - Apply algebraic identities
+5. PeepholeOptimizations - Small pattern optimizations
+6. StrengthReduction - Replace expensive operations
+7. CommonSubexpressionElimination - Reuse computed values
+8. CopyPropagation - Eliminate redundant copies
+9. NullCheckElimination - Remove redundant null checks
+10. LoopInvariantCodeMotion - Hoist loop-invariant code
+11. InductionVariableSimplification - Optimize loop counters
+12. DeadCodeElimination - Clean up unused instructions (run last)
 
 Transforms run iteratively until a fixed point is reached (no more changes) or a maximum iteration count (10).
 
@@ -249,76 +542,6 @@ SSA ssa = new SSA(constPool)
     .withStandardOptimizations();
 ```
 
-### Example: Strength Reduction
-
-Replace expensive operations with cheaper ones:
-
-```java
-public class StrengthReduction implements IRTransform {
-
-    @Override
-    public boolean run(IRMethod method) {
-        boolean changed = false;
-
-        for (IRBlock block : method.getBlocksInOrder()) {
-            List<IRInstruction> instrs = new ArrayList<>(block.getInstructions());
-
-            for (int i = 0; i < instrs.size(); i++) {
-                IRInstruction instr = instrs.get(i);
-
-                if (instr instanceof BinaryOpInstruction bin) {
-                    IRInstruction replacement = tryReduce(bin);
-                    if (replacement != null) {
-                        block.getInstructions().set(i, replacement);
-                        changed = true;
-                    }
-                }
-            }
-        }
-
-        return changed;
-    }
-
-    private IRInstruction tryReduce(BinaryOpInstruction bin) {
-        // x * 2 -> x << 1
-        if (bin.getOp() == BinaryOp.MUL) {
-            if (isConstant(bin.getRight(), 2)) {
-                return new BinaryOpInstruction(
-                    bin.getResult(),
-                    BinaryOp.SHL,
-                    bin.getLeft(),
-                    constantValue(1)
-                );
-            }
-        }
-
-        // x / 2 -> x >> 1 (for positive x)
-        if (bin.getOp() == BinaryOp.DIV) {
-            if (isConstant(bin.getRight(), 2)) {
-                return new BinaryOpInstruction(
-                    bin.getResult(),
-                    BinaryOp.SHR,
-                    bin.getLeft(),
-                    constantValue(1)
-                );
-            }
-        }
-
-        return null;
-    }
-
-    private boolean isConstant(SSAValue value, int expected) {
-        // Check if value is a constant with expected value
-        return false;
-    }
-
-    private SSAValue constantValue(int value) {
-        // Create a constant value
-        return null;
-    }
-}
-```
-
 ## Lowering Back to Bytecode
 
 After optimization, lower the IR back to bytecode:
@@ -349,34 +572,31 @@ The lowerer handles:
 public void optimizeClass(ClassFile classFile) {
     ConstPool cp = classFile.getConstPool();
 
-    // Configure optimizations
-    SSA ssa = new SSA(cp)
-        .withConstantFolding()
-        .withCopyPropagation()
-        .withDeadCodeElimination()
-        .addTransform(new StrengthReduction());
+    // Configure optimizations - use all available transforms
+    SSA ssa = new SSA(cp).withAllOptimizations();
 
     // Process each method
     for (MethodEntry method : classFile.getMethods()) {
         if (method.getCodeAttribute() == null) continue;
         if (method.getName().startsWith("<")) continue;  // Skip init
 
-        // Lift
+        // Lift to SSA
         IRMethod ir = ssa.lift(method);
 
         // Analyze
         DominatorTree domTree = ssa.computeDominators(ir);
         LoopAnalysis loops = ssa.computeLoops(ir);
+        DefUseChains defUse = ssa.computeDefUse(ir);
 
-        // Log loop info
-        for (Loop loop : loops.getLoops()) {
-            System.out.println("Found loop at " + loop.getHeader().getName());
-        }
+        // Log analysis info
+        System.out.println("Method: " + method.getName());
+        System.out.println("  Loops: " + loops.getLoops().size());
+        System.out.println("  Definitions: " + defUse.getDefinitions().size());
 
-        // Optimize
+        // Optimize (runs all transforms iteratively)
         ssa.runTransforms(ir);
 
-        // Lower
+        // Lower back to bytecode
         ssa.lower(ir, method);
     }
 
