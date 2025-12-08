@@ -20,12 +20,17 @@ public class InvokeInstruction extends IRInstruction {
     private final String descriptor;
     private final List<Value> arguments;
     private final int originalCpIndex;
+    private final BootstrapMethodInfo bootstrapInfo; // For invokedynamic
 
     public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments) {
-        this(result, invokeType, owner, name, descriptor, arguments, 0);
+        this(result, invokeType, owner, name, descriptor, arguments, 0, null);
     }
 
     public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex) {
+        this(result, invokeType, owner, name, descriptor, arguments, originalCpIndex, null);
+    }
+
+    public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex, BootstrapMethodInfo bootstrapInfo) {
         super(result);
         this.invokeType = invokeType;
         this.owner = owner;
@@ -33,14 +38,19 @@ public class InvokeInstruction extends IRInstruction {
         this.descriptor = descriptor;
         this.arguments = new ArrayList<>(arguments);
         this.originalCpIndex = originalCpIndex;
+        this.bootstrapInfo = bootstrapInfo;
         registerUses();
     }
 
     public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments) {
-        this(invokeType, owner, name, descriptor, arguments, 0);
+        this(invokeType, owner, name, descriptor, arguments, 0, null);
     }
 
     public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex) {
+        this(invokeType, owner, name, descriptor, arguments, originalCpIndex, null);
+    }
+
+    public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex, BootstrapMethodInfo bootstrapInfo) {
         super();
         this.invokeType = invokeType;
         this.owner = owner;
@@ -48,6 +58,7 @@ public class InvokeInstruction extends IRInstruction {
         this.descriptor = descriptor;
         this.arguments = new ArrayList<>(arguments);
         this.originalCpIndex = originalCpIndex;
+        this.bootstrapInfo = bootstrapInfo;
         registerUses();
     }
 
@@ -75,6 +86,24 @@ public class InvokeInstruction extends IRInstruction {
     public List<Value> getMethodArguments() {
         if (invokeType == InvokeType.STATIC) return arguments;
         return arguments.size() > 1 ? arguments.subList(1, arguments.size()) : List.of();
+    }
+
+    /**
+     * Checks if this is an invokedynamic instruction.
+     *
+     * @return true if this is a dynamic invocation
+     */
+    public boolean isDynamic() {
+        return invokeType == InvokeType.DYNAMIC;
+    }
+
+    /**
+     * Checks if this invocation has bootstrap method info available.
+     *
+     * @return true if bootstrap info is available
+     */
+    public boolean hasBootstrapInfo() {
+        return bootstrapInfo != null;
     }
 
     @Override

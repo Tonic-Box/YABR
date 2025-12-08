@@ -30,6 +30,7 @@ public abstract class Item<T> {
     public static final byte ITEM_NAME_TYPE_REF =  0xC;
     public static final byte ITEM_METHOD_HANDLE =  0xF;
     public static final byte ITEM_METHOD_TYPE   = 0x10;
+    public static final byte ITEM_DYNAMIC       = 0x11;
     public static final byte ITEM_INVOKEDYNAMIC = 0x12;
     public static final byte ITEM_PACKAGE = 0x13;
     public static final byte ITEM_MODULE  = 0x14;

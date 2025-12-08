@@ -7,6 +7,7 @@ import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
+import com.tonic.parser.constpool.structure.MethodHandle;
 import lombok.Getter;
 
 import java.util.*;
@@ -204,30 +205,37 @@ public class InstructionTranslator {
     }
 
     private void translateLdc(LdcInstruction instr, AbstractState state, IRBlock block) {
-        Item<?> item = constPool.getItem(instr.getCpIndex());
-        Constant constant = itemToConstant(item);
+        int cpIndex = instr.getCpIndex();
+        Item<?> item = constPool.getItem(cpIndex);
+        Constant constant = itemToConstant(item, cpIndex);
         SSAValue result = new SSAValue(constant.getType());
         block.addInstruction(new ConstantInstruction(result, constant));
         state.push(result);
     }
 
     private void translateLdcW(LdcWInstruction instr, AbstractState state, IRBlock block) {
-        Item<?> item = constPool.getItem(instr.getCpIndex());
-        Constant constant = itemToConstant(item);
+        int cpIndex = instr.getCpIndex();
+        Item<?> item = constPool.getItem(cpIndex);
+        Constant constant = itemToConstant(item, cpIndex);
         SSAValue result = new SSAValue(constant.getType());
         block.addInstruction(new ConstantInstruction(result, constant));
         state.push(result);
     }
 
     private void translateLdc2W(Ldc2WInstruction instr, AbstractState state, IRBlock block) {
-        Item<?> item = constPool.getItem(instr.getCpIndex());
-        Constant constant = itemToConstant(item);
+        int cpIndex = instr.getCpIndex();
+        Item<?> item = constPool.getItem(cpIndex);
+        Constant constant = itemToConstant(item, cpIndex);
         SSAValue result = new SSAValue(constant.getType());
         block.addInstruction(new ConstantInstruction(result, constant));
         state.push(result);
     }
 
     private Constant itemToConstant(Item<?> item) {
+        return itemToConstant(item, 0);
+    }
+
+    private Constant itemToConstant(Item<?> item, int cpIndex) {
         if (item instanceof IntegerItem intItem) {
             return IntConstant.of(intItem.getValue());
         } else if (item instanceof LongItem longItem) {
@@ -241,8 +249,60 @@ public class InstructionTranslator {
             return new StringConstant(utf8.getValue());
         } else if (item instanceof ClassRefItem classItem) {
             return new ClassConstant(classItem.getClassName());
+        } else if (item instanceof MethodHandleItem mhItem) {
+            return resolveMethodHandle(mhItem);
+        } else if (item instanceof MethodTypeItem mtItem) {
+            int descIndex = mtItem.getValue();
+            Utf8Item utf8 = (Utf8Item) constPool.getItem(descIndex);
+            return new MethodTypeConstant(utf8.getValue());
+        } else if (item instanceof ConstantDynamicItem cdItem) {
+            return resolveDynamicConstant(cdItem, cpIndex);
         }
         throw new UnsupportedOperationException("Unsupported constant type: " + item.getClass());
+    }
+
+    /**
+     * Resolves a MethodHandle constant pool item to an IR MethodHandleConstant.
+     */
+    private MethodHandleConstant resolveMethodHandle(MethodHandleItem mhItem) {
+        MethodHandle mh = mhItem.getValue();
+        int refKind = mh.getReferenceKind();
+        int refIndex = mh.getReferenceIndex();
+        Item<?> refItem = constPool.getItem(refIndex);
+
+        String owner;
+        String name;
+        String desc;
+
+        // The reference index points to different item types based on reference kind
+        if (refItem instanceof FieldRefItem fieldRef) {
+            owner = fieldRef.getOwner();
+            name = fieldRef.getName();
+            desc = fieldRef.getDescriptor();
+        } else if (refItem instanceof MethodRefItem methodRef) {
+            owner = methodRef.getOwner();
+            name = methodRef.getName();
+            desc = methodRef.getDescriptor();
+        } else if (refItem instanceof InterfaceRefItem interfaceRef) {
+            owner = interfaceRef.getOwner();
+            name = interfaceRef.getName();
+            desc = interfaceRef.getDescriptor();
+        } else {
+            throw new UnsupportedOperationException(
+                    "Unsupported MethodHandle reference type: " + refItem.getClass());
+        }
+
+        return new MethodHandleConstant(refKind, owner, name, desc);
+    }
+
+    /**
+     * Resolves a ConstantDynamic constant pool item to an IR DynamicConstant.
+     */
+    private DynamicConstant resolveDynamicConstant(ConstantDynamicItem cdItem, int cpIndex) {
+        String name = cdItem.getName();
+        String desc = cdItem.getDescriptor();
+        int bsmIndex = cdItem.getBootstrapMethodAttrIndex();
+        return new DynamicConstant(name, desc, bsmIndex, cpIndex);
     }
 
     private void translateILoad(int index, AbstractState state, IRBlock block) {

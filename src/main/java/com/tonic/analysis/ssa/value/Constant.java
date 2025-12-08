@@ -5,7 +5,8 @@ package com.tonic.analysis.ssa.value;
  */
 public abstract sealed class Constant implements Value
         permits IntConstant, LongConstant, FloatConstant, DoubleConstant,
-                StringConstant, NullConstant, ClassConstant {
+                StringConstant, NullConstant, ClassConstant,
+                MethodHandleConstant, MethodTypeConstant, DynamicConstant {
 
     @Override
     public boolean isConstant() {

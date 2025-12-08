@@ -2,6 +2,8 @@ package com.tonic.parser;
 
 import com.tonic.parser.constpool.*;
 import com.tonic.parser.constpool.structure.FieldRef;
+import com.tonic.parser.constpool.structure.InterfaceRef;
+import com.tonic.parser.constpool.structure.MethodHandle;
 import com.tonic.parser.constpool.structure.MethodRef;
 import com.tonic.parser.constpool.structure.NameAndType;
 import com.tonic.utill.Logger;
@@ -47,6 +49,7 @@ public class ConstPool {
                 case Item.ITEM_NAME_TYPE_REF -> new NameAndTypeRefItem();
                 case Item.ITEM_METHOD_HANDLE -> new MethodHandleItem();
                 case Item.ITEM_METHOD_TYPE -> new MethodTypeItem();
+                case Item.ITEM_DYNAMIC -> new ConstantDynamicItem();
                 case Item.ITEM_INVOKEDYNAMIC -> new InvokeDynamicItem();
                 case Item.ITEM_PACKAGE -> new PackageItem();
                 case Item.ITEM_MODULE -> new ModuleItem();
@@ -503,5 +506,75 @@ public class ConstPool {
             return utf8.getValue();
         }
         return null;
+    }
+
+    /**
+     * Finds or adds a MethodHandle constant pool entry.
+     *
+     * @param refKind The reference kind (1-9 per JVM spec).
+     * @param owner The class containing the referenced member.
+     * @param name The name of the referenced member.
+     * @param desc The descriptor of the referenced member.
+     * @return The MethodHandleItem.
+     */
+    public MethodHandleItem findOrAddMethodHandle(int refKind, String owner, String name, String desc) {
+        // First, find or create the referenced member
+        int refIndex;
+        if (refKind >= 1 && refKind <= 4) {
+            // Field reference (getField, getStatic, putField, putStatic)
+            FieldRefItem fieldRef = findOrAddFieldRef(owner, name, desc);
+            refIndex = getIndexOf(fieldRef);
+        } else if (refKind == 9) {
+            // Interface method reference
+            InterfaceRefItem interfaceRef = findOrAddInterfaceRef(owner, name, desc);
+            refIndex = getIndexOf(interfaceRef);
+        } else {
+            // Method reference (invokeVirtual, invokeStatic, invokeSpecial, newInvokeSpecial)
+            MethodRefItem methodRef = findOrAddMethodRef(owner, name, desc);
+            refIndex = getIndexOf(methodRef);
+        }
+
+        // Search for existing MethodHandle with same ref kind and ref index
+        for (Item<?> item : items) {
+            if (item instanceof MethodHandleItem mhItem) {
+                MethodHandle mh = mhItem.getValue();
+                if (mh.getReferenceKind() == refKind && mh.getReferenceIndex() == refIndex) {
+                    return mhItem;
+                }
+            }
+        }
+
+        // Create new MethodHandle
+        MethodHandle mh = new MethodHandle(refKind, refIndex);
+        MethodHandleItem newItem = new MethodHandleItem();
+        newItem.setMethodHandle(mh);
+        items.add(newItem);
+        return newItem;
+    }
+
+    /**
+     * Finds or adds a MethodType constant pool entry.
+     *
+     * @param descriptor The method descriptor (e.g., "(II)V").
+     * @return The MethodTypeItem.
+     */
+    public MethodTypeItem findOrAddMethodType(String descriptor) {
+        Utf8Item descUtf8 = findOrAddUtf8(descriptor);
+        int descIndex = getIndexOf(descUtf8);
+
+        // Search for existing MethodType
+        for (Item<?> item : items) {
+            if (item instanceof MethodTypeItem mtItem) {
+                if (mtItem.getValue() == descIndex) {
+                    return mtItem;
+                }
+            }
+        }
+
+        // Create new MethodType
+        MethodTypeItem newItem = new MethodTypeItem();
+        newItem.setDescriptorIndex(descIndex);
+        items.add(newItem);
+        return newItem;
     }
 }

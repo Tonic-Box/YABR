@@ -12,6 +12,14 @@ public class MethodTypeItem extends Item<Integer> {
 
     private Integer value;
 
+    /**
+     * Sets the descriptor index.
+     * @param descriptorIndex the index of the UTF8 descriptor entry
+     */
+    public void setDescriptorIndex(int descriptorIndex) {
+        this.value = descriptorIndex;
+    }
+
     @Override
     public void read(ClassFile classFile) {
         this.value = classFile.readUnsignedShort();

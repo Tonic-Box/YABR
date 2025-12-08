@@ -13,6 +13,14 @@ public class MethodHandleItem extends Item<MethodHandle> {
 
     private MethodHandle value;
 
+    /**
+     * Sets the method handle value.
+     * @param methodHandle the method handle to set
+     */
+    public void setMethodHandle(MethodHandle methodHandle) {
+        this.value = methodHandle;
+    }
+
     @Override
     public void read(ClassFile classFile) {
         int referenceKind = classFile.readUnsignedByte();

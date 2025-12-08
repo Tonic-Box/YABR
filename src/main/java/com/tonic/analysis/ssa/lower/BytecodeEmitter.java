@@ -446,6 +446,32 @@ public class BytecodeEmitter {
         } else if (constant instanceof ClassConstant classConst) {
             int index = constPool.findOrAddClass(classConst.getClassName()).getIndex(constPool);
             emitLdc(index);
+        } else if (constant instanceof MethodHandleConstant mhConst) {
+            int index = constPool.findOrAddMethodHandle(
+                    mhConst.getReferenceKind(),
+                    mhConst.getOwner(),
+                    mhConst.getName(),
+                    mhConst.getDescriptor()
+            ).getIndex(constPool);
+            emitLdc(index);
+        } else if (constant instanceof MethodTypeConstant mtConst) {
+            int index = constPool.findOrAddMethodType(mtConst.getDescriptor()).getIndex(constPool);
+            emitLdc(index);
+        } else if (constant instanceof DynamicConstant dynConst) {
+            // For condy, use original CP index if available (roundtrip preservation)
+            int cpIndex = dynConst.getOriginalCpIndex();
+            if (cpIndex > 0) {
+                if (dynConst.getType().isTwoSlot()) {
+                    emit(0x14); // ldc2_w
+                    emitShort((short) cpIndex);
+                } else {
+                    emitLdc(cpIndex);
+                }
+            } else {
+                throw new UnsupportedOperationException(
+                        "Cannot emit DynamicConstant without original constant pool index. " +
+                        "Dynamic: " + dynConst.getName() + ":" + dynConst.getDescriptor());
+            }
         }
     }
 
