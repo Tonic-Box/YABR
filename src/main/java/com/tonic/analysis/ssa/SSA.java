@@ -5,6 +5,7 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.lift.*;
 import com.tonic.analysis.ssa.lower.BytecodeLowerer;
 import com.tonic.analysis.ssa.transform.*;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 
@@ -19,6 +20,7 @@ public class SSA {
 
     private final ConstPool constPool;
     private final List<IRTransform> transforms;
+    private final List<ClassTransform> classTransforms;
 
     /**
      * Creates a new SSA processor.
@@ -28,6 +30,16 @@ public class SSA {
     public SSA(ConstPool constPool) {
         this.constPool = constPool;
         this.transforms = new ArrayList<>();
+        this.classTransforms = new ArrayList<>();
+    }
+
+    /**
+     * Gets the constant pool associated with this SSA processor.
+     *
+     * @return the constant pool
+     */
+    public ConstPool getConstPool() {
+        return constPool;
     }
 
     /**
@@ -222,6 +234,38 @@ public class SSA {
     }
 
     /**
+     * Adds a class-level transform to be applied.
+     *
+     * @param transform the class transform to add
+     * @return this SSA instance for chaining
+     */
+    public SSA addClassTransform(ClassTransform transform) {
+        classTransforms.add(transform);
+        return this;
+    }
+
+    /**
+     * Enables method inlining optimization.
+     * Replaces method calls with the body of the called method for
+     * private, final, and static methods within the same class.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withMethodInlining() {
+        return addClassTransform(new MethodInlining());
+    }
+
+    /**
+     * Enables dead method elimination.
+     * Removes private methods that are never called after inlining.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withDeadMethodElimination() {
+        return addClassTransform(new DeadMethodElimination());
+    }
+
+    /**
      * Enables the standard set of optimizations.
      *
      * @return this SSA instance for chaining
@@ -356,5 +400,54 @@ public class SSA {
     public void transform(MethodEntry method) {
         IRMethod irMethod = liftAndOptimize(method);
         lower(irMethod, method);
+    }
+
+    /**
+     * Runs all registered class-level transforms on a class file.
+     * Class transforms (like method inlining) have access to the entire class
+     * and can perform cross-method optimizations.
+     *
+     * @param classFile the class file to transform
+     * @return true if any transform modified the class
+     */
+    public boolean runClassTransforms(ClassFile classFile) {
+        boolean changed = false;
+        for (ClassTransform transform : classTransforms) {
+            if (transform.run(classFile, this)) {
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /**
+     * Transforms an entire class file with all registered transforms.
+     * First runs class-level transforms (like inlining), then runs
+     * method-level transforms on each method.
+     *
+     * @param classFile the class file to transform
+     */
+    public void transformClass(ClassFile classFile) {
+        // Run class-level transforms first (e.g., method inlining)
+        runClassTransforms(classFile);
+
+        // Then run method-level transforms on each method
+        for (MethodEntry method : classFile.getMethods()) {
+            if (method.getCodeAttribute() == null) continue;
+            if (method.getName().startsWith("<")) continue; // Skip init methods
+
+            IRMethod irMethod = lift(method);
+            runTransforms(irMethod);
+            lower(irMethod, method);
+        }
+    }
+
+    /**
+     * Gets the list of registered class-level transforms.
+     *
+     * @return unmodifiable list of class transforms
+     */
+    public List<ClassTransform> getClassTransforms() {
+        return java.util.Collections.unmodifiableList(classTransforms);
     }
 }

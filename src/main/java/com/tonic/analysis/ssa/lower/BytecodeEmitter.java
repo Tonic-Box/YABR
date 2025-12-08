@@ -460,8 +460,17 @@ public class BytecodeEmitter {
     }
 
     private void emitLoad(LoadLocalInstruction instr) throws IOException {
-        int index = instr.getLocalIndex();
-        IRType type = instr.getResult().getType();
+        // Use the RegisterAllocator's slot for the result value, not the original local index.
+        // The original local index may be stale after transformations like method inlining.
+        SSAValue result = instr.getResult();
+        int index = regAlloc.getRegister(result);
+        if (index < 0) {
+            // No register allocation for this result - it was likely replaced by replaceAllUsesWith
+            // during inlining. Skip emitting this instruction entirely.
+            // The value has been replaced with another SSAValue that will be loaded when needed.
+            return;
+        }
+        IRType type = result.getType();
 
         if (type instanceof PrimitiveType prim) {
             switch (prim) {
@@ -476,8 +485,17 @@ public class BytecodeEmitter {
     }
 
     private void emitStore(StoreLocalInstruction instr) throws IOException {
-        int index = instr.getLocalIndex();
+        // For StoreLocal, we need to determine the destination slot.
+        // The original local index may be stale after transformations like method inlining.
+        // Try to use the allocator's slot for the value being stored.
         Value value = instr.getValue();
+        int index = instr.getLocalIndex();
+        if (value instanceof SSAValue ssa) {
+            int allocIndex = regAlloc.getRegister(ssa);
+            if (allocIndex >= 0) {
+                index = allocIndex;
+            }
+        }
         IRType type = value.getType();
 
         if (type instanceof PrimitiveType prim) {

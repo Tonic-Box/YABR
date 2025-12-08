@@ -22,6 +22,7 @@ public class RegisterAllocator {
     private final LivenessAnalysis liveness;
     private Map<SSAValue, Integer> allocation;
     private int maxLocals;
+    private int reservedSlotCount; // Slots reserved for parameters, never released
 
     public RegisterAllocator(IRMethod method, LivenessAnalysis liveness) {
         this.method = method;
@@ -42,7 +43,11 @@ public class RegisterAllocator {
         List<LiveInterval> active = new ArrayList<>();
         Set<Integer> freeRegs = new TreeSet<>();
 
-        maxLocals = method.getParameters().size();
+        // Reserve parameter slots - these must not be reused for values of different types
+        // For instance methods, slot 0 is 'this' (object reference)
+        // Reusing parameter slots can cause type conflicts in the verifier
+        reservedSlotCount = method.getParameters().size();
+        maxLocals = reservedSlotCount;
         for (int i = 0; i < maxLocals; i++) {
             if (i < method.getParameters().size()) {
                 allocation.put(method.getParameters().get(i), i);
@@ -205,6 +210,15 @@ public class RegisterAllocator {
 
             it.remove();
             int reg = allocation.get(interval.value);
+
+            // Never release reserved slots (parameter slots)
+            // These must preserve their types throughout the method
+            // For instance methods, slot 0 is 'this' (object reference)
+            // Reusing these slots could cause type conflicts after inlining
+            if (reg < reservedSlotCount) {
+                continue; // Don't release reserved slots
+            }
+
             freeRegs.add(reg);
             if (interval.value.getType().isTwoSlot()) {
                 freeRegs.add(reg + 1);
