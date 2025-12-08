@@ -44,6 +44,10 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.ssa.lower` | SSA to bytecode lowering |
 | `com.tonic.analysis.ssa.transform` | IR optimizations |
 | `com.tonic.analysis.ssa.analysis` | Analysis passes (dominators, liveness) |
+| `com.tonic.analysis.source.ast` | Source-level AST node definitions |
+| `com.tonic.analysis.source.recovery` | IR to AST recovery |
+| `com.tonic.analysis.source.lower` | AST to IR lowering |
+| `com.tonic.analysis.source.emit` | Java source code generation |
 | `com.tonic.analysis.frame` | StackMapTable frame computation |
 | `com.tonic.utill` | Utilities (AccessBuilder, Logger, etc.) |
 | `com.tonic.demo` | Example programs |
@@ -161,6 +165,43 @@ IRTransforms - optimizations
 BytecodeLowerer.lower() - back to bytecode
 ```
 
+### Source AST System
+
+The AST layer provides source-level representation for bytecode analysis and transformation:
+
+```
++--------------------------------------------------------------+
+|                      Source AST Layer                         |
++----------------+-----------------+---------------------------+
+|    Recovery    |    AST Nodes    |        Emission           |
+|   (IR -> AST)  |   (expr/stmt)   |    (AST -> Source)        |
++----------------+-----------------+---------------------------+
+|                        Lowering                               |
+|                      (AST -> IR)                              |
++--------------------------------------------------------------+
+```
+
+**MethodRecoverer** - Converts SSA IR to structured AST:
+```java
+BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, methodEntry);
+```
+
+**SourceEmitter** - Generates readable Java source:
+```java
+String source = SourceEmitter.emit(ast);
+```
+
+**ASTLowerer** - Converts AST back to SSA IR:
+```java
+new ASTLowerer(constPool).lower(ast, irMethod, methodEntry);
+```
+
+The AST system enables:
+- Source-level code analysis
+- High-level code transformations
+- Decompilation to readable Java
+- Round-trip bytecode modification
+
 ## Key Design Decisions
 
 1. **Lazy Loading** - ClassPool loads built-in classes on demand from JRT (Java 9+) or rt.jar (Java 8)
@@ -179,6 +220,7 @@ BytecodeLowerer.lower() - back to bytecode
 - [Bytecode API](bytecode-api.md) - Bytecode and CodeWriter usage
 - [Visitors](visitors.md) - Traversal and transformation patterns
 - [SSA Guide](ssa-guide.md) - SSA IR system in depth
+- [AST Guide](ast-guide.md) - Source-level AST recovery, mutation, and emission
 - [Frame Computation](frame-computation.md) - StackMapTable generation
 
 ---

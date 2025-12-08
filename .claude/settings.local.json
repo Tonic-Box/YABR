@@ -23,7 +23,8 @@
       "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat compileJava:*)",
       "Bash(C:/Users/zacke/IdeaProjects/YABR-fixed/gradlew.bat:*)",
       "Bash(dir:*)",
-      "Bash(javac:*)"
+      "Bash(javac:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

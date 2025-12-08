@@ -7,6 +7,7 @@ A Java bytecode manipulation library with SSA-form intermediate representation f
 - **Class file parsing** - Read and write Java `.class` files
 - **Bytecode manipulation** - High-level and low-level APIs for modifying bytecode
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
+- **Source AST system** - Recover, mutate, and emit Java source from bytecode
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+
 
@@ -42,6 +43,7 @@ byte[] bytes = newClass.write();
 | [Visitors](docs/visitors.md) | Traversal patterns |
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
+| [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [Frame Computation](docs/frame-computation.md) | StackMapTable generation |
 
 ## Examples
@@ -52,6 +54,8 @@ Runnable examples are in [`src/main/java/com/tonic/demo/`](src/main/java/com/ton
 - `TestBytecodeVisitor.java` - Bytecode-level visitor
 - `TestClassCreation.java` - Creating classes programmatically
 - `TestSSADemo.java` - Complete SSA transformation
+- `ASTMutationDemo.java` - AST recovery, mutation, and recompilation
+- `SourceASTDemo.java` - AST node construction and source emission
 
 ## SSA Pipeline
 
@@ -59,6 +63,11 @@ YABR includes a full SSA transformation system:
 
 ```
 Bytecode -> Lift -> SSA IR -> Optimize -> Lower -> Bytecode
+                       |                    ^
+                   [Recover]            [Lower]
+                       |                    |
+                       v                    |
+                      AST ----[Mutate]----> AST
 ```
 
 ```java
@@ -68,6 +77,19 @@ SSA ssa = new SSA(constPool)
     .withDeadCodeElimination();
 
 ssa.transform(method);  // Lift, optimize, and lower
+```
+
+The AST path enables source-level transformations:
+
+```java
+// Recover AST from IR
+BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, method);
+System.out.println(SourceEmitter.emit(ast));  // Print as Java source
+
+// Mutate and recompile
+ast.getStatements().forEach(stmt -> { /* modify */ });
+new ASTLowerer(constPool).lower(ast, irMethod, method);
+ssa.lower(irMethod, method);
 ```
 
 ## Building
