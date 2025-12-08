@@ -447,6 +447,161 @@ ssa.transform(method);
 - Block B has no phi instructions
 - Block A ends with unconditional goto to B
 
+## Class-Level Transforms
+
+These transforms operate on entire classes rather than individual methods.
+
+### Method Inlining
+
+Replaces method calls with the body of the called method, eliminating call overhead and enabling further optimizations.
+
+```java
+// Before
+public int compute(int x) {
+    return helper(x) + 10;
+}
+
+private static int helper(int y) {
+    return y * 2;
+}
+
+// After inlining helper into compute
+public int compute(int x) {
+    return (x * 2) + 10;  // helper body inlined
+}
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withMethodInlining();
+ssa.runClassTransforms(classFile);
+```
+
+**Inlining criteria:**
+- **Private methods** - No virtual dispatch concerns
+- **Final methods** - Cannot be overridden
+- **Static methods** - No receiver type issues
+- **Small methods** - Max 35 bytecodes (configurable)
+- **No exception handlers** - Simplifies inlining (MVP limitation)
+- **Same class only** - Intra-class inlining for safety
+
+**Benefits:**
+- Eliminates method call overhead (invoke, stack frame setup)
+- Enables cross-method optimizations (constant folding, CSE)
+- Reduces code indirection
+
+**Limitations (MVP):**
+- Only inlines within the same class
+- Skips methods with exception handlers
+- Skips synchronized and native methods
+- Maximum inline depth of 5 levels
+
+### Dead Method Elimination
+
+Removes private methods that are never called after inlining.
+
+```java
+// Before (after inlining helper into compute)
+public int compute(int x) {
+    return (x * 2) + 10;
+}
+
+private static int helper(int y) {  // No longer called
+    return y * 2;
+}
+
+// After dead method elimination
+public int compute(int x) {
+    return (x * 2) + 10;
+}
+// helper method removed
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withDeadMethodElimination();
+ssa.runClassTransforms(classFile);
+```
+
+**Elimination criteria:**
+- **Private methods only** - Cannot be called from outside the class
+- **Not called by any method** in the class
+- **Not a constructor** or static initializer
+
+**Best when combined with Method Inlining:**
+
+```java
+SSA ssa = new SSA(constPool)
+    .withMethodInlining()
+    .withDeadMethodElimination();  // Run after inlining
+
+ssa.runClassTransforms(classFile);
+```
+
+### Running Class-Level Transforms
+
+Class-level transforms use a different API than method-level transforms:
+
+```java
+// Create SSA with class-level transforms
+SSA ssa = new SSA(constPool)
+    .withMethodInlining()
+    .withDeadMethodElimination();
+
+// Run class-level transforms (inlining, dead method elimination)
+boolean classModified = ssa.runClassTransforms(classFile);
+
+// Optionally run method-level transforms after
+ssa.withAllOptimizations();
+for (MethodEntry method : classFile.getMethods()) {
+    if (method.getCodeAttribute() == null) continue;
+    ssa.transform(method);
+}
+
+// Rebuild class file
+classFile.computeFrames();
+classFile.rebuild();
+```
+
+### Writing Custom Class Transforms
+
+Implement the `ClassTransform` interface:
+
+```java
+import com.tonic.analysis.ssa.transform.ClassTransform;
+import com.tonic.analysis.ssa.SSA;
+import com.tonic.parser.ClassFile;
+
+public class MyClassTransform implements ClassTransform {
+
+    @Override
+    public String getName() {
+        return "MyClassTransform";
+    }
+
+    @Override
+    public boolean run(ClassFile classFile, SSA ssa) {
+        boolean changed = false;
+
+        for (MethodEntry method : classFile.getMethods()) {
+            // Process each method with access to the full class
+            if (processMethod(classFile, method, ssa)) {
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private boolean processMethod(ClassFile classFile, MethodEntry method, SSA ssa) {
+        // Your transformation logic here
+        return false;
+    }
+}
+```
+
 ## Analysis Passes
 
 ### Dominator Tree

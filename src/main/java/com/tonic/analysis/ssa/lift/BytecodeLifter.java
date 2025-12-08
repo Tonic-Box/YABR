@@ -119,6 +119,18 @@ public class BytecodeLifter {
                 if (fallthrough < getTotalCodeLength(instructions)) {
                     blockStarts.add(fallthrough);
                 }
+            } else if (instr instanceof JsrInstruction jsrInstr) {
+                // JSR jumps to subroutine and eventually returns to continuation
+                int subroutineTarget = offset + jsrInstr.getBranchOffset();
+                int continuationOffset = offset + jsrInstr.getLength();
+                blockStarts.add(subroutineTarget);
+                blockStarts.add(continuationOffset);
+            } else if (instr instanceof RetInstruction) {
+                // RET is a terminator - block ends here
+                int fallthrough = offset + instr.getLength();
+                if (fallthrough < getTotalCodeLength(instructions)) {
+                    blockStarts.add(fallthrough);
+                }
             } else if (instr instanceof TableSwitchInstruction tableSwitch) {
                 blockStarts.add(offset + tableSwitch.getDefaultOffset());
                 for (int jumpOffset : tableSwitch.getJumpOffsets().values()) {
@@ -391,13 +403,15 @@ public class BytecodeLifter {
     }
 
     private boolean isTerminator(int opcode) {
-        return opcode == 0xAC
-                || opcode == 0xAD
-                || opcode == 0xAE
-                || opcode == 0xAF
-                || opcode == 0xB0
-                || opcode == 0xB1
-                || opcode == 0xBF
-                || opcode == 0xA9;
+        return opcode == 0xAC   // ireturn
+                || opcode == 0xAD   // lreturn
+                || opcode == 0xAE   // freturn
+                || opcode == 0xAF   // dreturn
+                || opcode == 0xB0   // areturn
+                || opcode == 0xB1   // return
+                || opcode == 0xBF   // athrow
+                || opcode == 0xA8   // jsr
+                || opcode == 0xA9   // ret
+                || opcode == 0xC9;  // jsr_w
     }
 }

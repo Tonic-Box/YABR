@@ -977,6 +977,12 @@ public class BytecodeEmitter {
                 code[jump.offset + 2] = (byte) (relativeOffset >> 8);
                 code[jump.offset + 3] = (byte) relativeOffset;
             } else {
+                // Check for overflow - offset must fit in signed 16-bit
+                if (relativeOffset < Short.MIN_VALUE || relativeOffset > Short.MAX_VALUE) {
+                    throw new IllegalStateException(
+                        "Branch offset " + relativeOffset + " exceeds 16-bit range. " +
+                        "Method is too large and requires wide branch instructions (goto_w).");
+                }
                 code[jump.offset] = (byte) (relativeOffset >> 8);
                 code[jump.offset + 1] = (byte) relativeOffset;
             }
