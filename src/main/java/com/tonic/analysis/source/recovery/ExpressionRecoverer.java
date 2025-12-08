@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.expr.*;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.*;
@@ -28,14 +29,43 @@ public class ExpressionRecoverer {
             return recoverConstant(c);
         }
         SSAValue ssa = (SSAValue) value;
+
+        // Check for cached expression first
         if (context.isRecovered(ssa)) {
             return context.getCachedExpression(ssa);
         }
-        // Create variable reference
+
+        // For values without cached expressions, check if they should be inlined
+        IRInstruction def = ssa.getDefinition();
+        if (def != null && shouldInlineExpression(def)) {
+            Expression expr = recover(def);
+            context.cacheExpression(ssa, expr);
+            return expr;
+        }
+
+        // Fall back to variable reference
         String name = context.getVariableName(ssa);
         if (name == null) name = "v" + ssa.getId();
         SourceType type = typeRecoverer.recoverType(ssa);
+        // Return ThisExpr for 'this' references
+        if ("this".equals(name)) {
+            return new ThisExpr(type);
+        }
         return new VarRefExpr(name, type, ssa);
+    }
+
+    /**
+     * Determines if an instruction's result should be inlined at usage sites
+     * rather than assigned to an intermediate variable.
+     */
+    private boolean shouldInlineExpression(IRInstruction instr) {
+        // Pure expressions that should be inlined:
+        // - Field accesses (static and instance)
+        // - Constants
+        // - Method invocations (for conditions like `if (obj.method())`)
+        return instr instanceof GetFieldInstruction ||
+               instr instanceof ConstantInstruction ||
+               instr instanceof InvokeInstruction;
     }
 
     private Expression recoverConstant(Constant c) {
@@ -117,6 +147,12 @@ public class ExpressionRecoverer {
             Expression index = recoverOperand(instr.getIndex());
             SourceType type = typeRecoverer.recoverType(instr.getResult());
             return new ArrayAccessExpr(array, index, type);
+        }
+
+        @Override
+        public Expression visitLoadLocal(LoadLocalInstruction instr) {
+            // LoadLocal just returns the variable reference for the SSA result
+            return recoverOperand(instr.getResult());
         }
 
         @Override

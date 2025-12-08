@@ -7,20 +7,20 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the DASTORE instruction (0x5B).
+ * Represents the DASTORE instruction (0x52).
  */
 public class DAStoreInstruction extends Instruction {
 
     /**
-     * Constructs a DASToreInstruction.
+     * Constructs a DAStoreInstruction.
      *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
     public DAStoreInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
-        if (opcode != 0x5B) {
-            throw new IllegalArgumentException("Invalid opcode for DASToreInstruction: " + opcode);
+        if (opcode != 0x52) {
+            throw new IllegalArgumentException("Invalid opcode for DAStoreInstruction: " + opcode);
         }
     }
 

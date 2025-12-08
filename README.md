@@ -8,6 +8,7 @@ A Java bytecode manipulation library with SSA-form intermediate representation f
 - **Bytecode manipulation** - High-level and low-level APIs for modifying bytecode
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
+- **Class decompilation** - Full class decompilation with imports, fields, and methods
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+
 
@@ -56,6 +57,7 @@ Runnable examples are in [`src/main/java/com/tonic/demo/`](src/main/java/com/ton
 - `TestSSADemo.java` - Complete SSA transformation
 - `ASTMutationDemo.java` - AST recovery, mutation, and recompilation
 - `SourceASTDemo.java` - AST node construction and source emission
+- `ast/Decompile.java` - Command-line class decompiler
 
 ## SSA Pipeline
 
@@ -90,6 +92,32 @@ System.out.println(SourceEmitter.emit(ast));  // Print as Java source
 ast.getStatements().forEach(stmt -> { /* modify */ });
 new ASTLowerer(constPool).lower(ast, irMethod, method);
 ssa.lower(irMethod, method);
+```
+
+## Class Decompilation
+
+Decompile entire class files to Java source with imports:
+
+```java
+import com.tonic.analysis.source.decompile.ClassDecompiler;
+
+// Simple one-liner
+String source = ClassDecompiler.decompile(classFile);
+
+// With configuration
+SourceEmitterConfig config = SourceEmitterConfig.builder()
+    .useFullyQualifiedNames(false)  // Use simple names + imports
+    .alwaysUseBraces(true)
+    .build();
+
+String source = ClassDecompiler.decompile(classFile, config);
+```
+
+Command-line usage:
+
+```bash
+java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
+java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn
 ```
 
 ## Building

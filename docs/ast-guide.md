@@ -37,6 +37,48 @@ The pipeline has two paths:
 
 ## Basic Usage
 
+### Decompiling a Complete Class
+
+The easiest way to decompile an entire class file to Java source is using `ClassDecompiler`:
+
+```java
+import com.tonic.analysis.source.decompile.ClassDecompiler;
+import com.tonic.analysis.source.emit.SourceEmitterConfig;
+import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
+
+// Load the class
+ClassFile cf = ClassPool.getDefault().loadClass(inputStream);
+
+// Decompile with default settings (simple class names, includes imports)
+String source = ClassDecompiler.decompile(cf);
+System.out.println(source);
+
+// Or with custom configuration
+SourceEmitterConfig config = SourceEmitterConfig.builder()
+    .useFullyQualifiedNames(false)  // Use simple names with imports
+    .alwaysUseBraces(true)
+    .build();
+
+String source = ClassDecompiler.decompile(cf, config);
+```
+
+This produces complete Java source with:
+- Package declaration
+- Import statements (when using simple class names)
+- Class declaration with modifiers, extends, implements
+- Fields with access modifiers
+- Static initializer blocks
+- Constructors
+- Methods
+
+**Command-line usage:**
+
+```bash
+java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
+java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn  # fully qualified names
+```
+
 ### Recovering AST from Bytecode
 
 ```java
@@ -462,6 +504,100 @@ LiteralCounter counter = new LiteralCounter();
 statement.accept(counter);
 System.out.println("Literals found: " + counter.getCount());
 ```
+
+## Class Decompilation
+
+### ClassDecompiler
+
+The `ClassDecompiler` provides full class decompilation to Java source:
+
+```java
+import com.tonic.analysis.source.decompile.ClassDecompiler;
+import com.tonic.analysis.source.emit.SourceEmitterConfig;
+
+// Simple usage
+String source = ClassDecompiler.decompile(classFile);
+
+// With configuration
+SourceEmitterConfig config = SourceEmitterConfig.builder()
+    .useFullyQualifiedNames(false)  // Simple names + imports (default)
+    .alwaysUseBraces(true)
+    .useVarKeyword(false)
+    .build();
+
+String source = ClassDecompiler.decompile(classFile, config);
+
+// Using the instance API for more control
+ClassDecompiler decompiler = new ClassDecompiler(classFile, config);
+String source = decompiler.decompile();
+
+// Or write directly to a custom writer
+IndentingWriter writer = new IndentingWriter(new FileWriter("Output.java"));
+decompiler.decompile(writer);
+```
+
+### Import Statement Generation
+
+When `useFullyQualifiedNames` is `false` (the default), the decompiler automatically generates import statements by:
+
+1. Scanning the constant pool for all referenced class types
+2. Filtering out `java.lang.*` classes (implicitly imported in Java)
+3. Filtering out classes in the same package as the decompiled class
+4. Sorting imports alphabetically
+
+Note that subpackages of `java.lang` (like `java.lang.invoke.*` or `java.lang.reflect.*`) are NOT implicitly imported and will be included in the import list.
+
+Example output:
+
+```java
+package com.example;
+
+import java.awt.Canvas;
+import java.awt.Graphics;
+import java.util.List;
+import javax.swing.JFrame;
+
+public class MyClass extends JFrame {
+    private Canvas canvas;
+    private List items;
+
+    // ... methods
+}
+```
+
+### Output Structure
+
+The decompiler produces properly structured Java source:
+
+```
+package declaration
+<blank line>
+import statements (sorted, when using simple names)
+<blank line>
+class declaration {
+
+    fields
+    <blank line>
+    static initializer (if present)
+    <blank line>
+    constructors
+    <blank line>
+    methods
+
+}
+```
+
+### Handling Decompilation Failures
+
+If a method body fails to decompile, the decompiler inserts a comment instead of crashing:
+
+```java
+public void problematicMethod() {
+    // Failed to decompile: <error message>
+}
+```
+
+This allows partial decompilation of classes even when some methods have complex or unsupported bytecode patterns.
 
 ## Related Documentation
 

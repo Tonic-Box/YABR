@@ -10,6 +10,7 @@ import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.ir.CompareOp;
 import com.tonic.analysis.ssa.value.SSAValue;
 
 import java.util.*;
@@ -182,6 +183,37 @@ public class StatementRecoverer {
             return recoverThrow(throwInstr);
         }
 
+        // Skip LoadLocal instructions - they don't need variable declarations
+        // (they load from already-declared locals or parameters like 'this')
+        if (instr instanceof LoadLocalInstruction) {
+            // Cache the expression but don't emit a declaration
+            if (instr.getResult() != null) {
+                Expression value = exprRecoverer.recover(instr);
+                context.getExpressionContext().cacheExpression(instr.getResult(), value);
+            }
+            return null;
+        }
+
+        // Skip GetField instructions - they produce pure expressions that should be inlined
+        // at usage sites rather than assigned to intermediate variables
+        if (instr instanceof GetFieldInstruction) {
+            // Cache the expression but don't emit a declaration
+            if (instr.getResult() != null) {
+                Expression value = exprRecoverer.recover(instr);
+                context.getExpressionContext().cacheExpression(instr.getResult(), value);
+            }
+            return null;
+        }
+
+        // Skip ConstantInstruction - constants should be inlined at usage sites
+        if (instr instanceof ConstantInstruction) {
+            if (instr.getResult() != null) {
+                Expression value = exprRecoverer.recover(instr);
+                context.getExpressionContext().cacheExpression(instr.getResult(), value);
+            }
+            return null;
+        }
+
         // Other instructions with results - may need variable declaration
         if (instr.getResult() != null) {
             return recoverVarDecl(instr);
@@ -269,7 +301,11 @@ public class StatementRecoverer {
     }
 
     private Statement recoverIfThen(IRBlock header, RegionInfo info) {
-        Expression condition = recoverCondition(header);
+        // Mark header as processed BEFORE recursing to prevent infinite loops
+        context.markProcessed(header);
+
+        // Use negation flag from structural analysis to get correct condition polarity
+        Expression condition = recoverCondition(header, info.isConditionNegated());
         Set<IRBlock> stopBlocks = new HashSet<>();
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
@@ -278,12 +314,15 @@ public class StatementRecoverer {
         List<Statement> thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
         BlockStmt thenBlock = new BlockStmt(thenStmts);
 
-        context.markProcessed(header);
         return new IfStmt(condition, thenBlock, null);
     }
 
     private Statement recoverIfThenElse(IRBlock header, RegionInfo info) {
-        Expression condition = recoverCondition(header);
+        // Mark header as processed BEFORE recursing to prevent infinite loops
+        context.markProcessed(header);
+
+        // Use negation flag from structural analysis to get correct condition polarity
+        Expression condition = recoverCondition(header, info.isConditionNegated());
         Set<IRBlock> stopBlocks = new HashSet<>();
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
@@ -295,12 +334,15 @@ public class StatementRecoverer {
         BlockStmt thenBlock = new BlockStmt(thenStmts);
         BlockStmt elseBlock = new BlockStmt(elseStmts);
 
-        context.markProcessed(header);
         return new IfStmt(condition, thenBlock, elseBlock);
     }
 
     private Statement recoverWhileLoop(IRBlock header, RegionInfo info) {
-        Expression condition = recoverCondition(header);
+        // Mark header as processed BEFORE recursing to prevent infinite loops
+        context.markProcessed(header);
+
+        // Use negation flag from structural analysis to get correct condition polarity
+        Expression condition = recoverCondition(header, info.isConditionNegated());
 
         Set<IRBlock> stopBlocks = new HashSet<>();
         stopBlocks.add(header); // Don't re-enter header
@@ -311,11 +353,13 @@ public class StatementRecoverer {
         List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
         BlockStmt body = new BlockStmt(bodyStmts);
 
-        context.markProcessed(header);
         return new WhileStmt(condition, body);
     }
 
     private Statement recoverDoWhileLoop(IRBlock header, RegionInfo info) {
+        // Mark header as processed BEFORE recursing to prevent infinite loops
+        context.markProcessed(header);
+
         Set<IRBlock> stopBlocks = new HashSet<>();
         stopBlocks.add(header);
         if (info.getLoopExit() != null) {
@@ -325,9 +369,9 @@ public class StatementRecoverer {
         List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
         BlockStmt body = new BlockStmt(bodyStmts);
 
-        Expression condition = recoverCondition(header);
+        // Use negation flag from structural analysis to get correct condition polarity
+        Expression condition = recoverCondition(header, info.isConditionNegated());
 
-        context.markProcessed(header);
         return new DoWhileStmt(body, condition);
     }
 
@@ -338,6 +382,9 @@ public class StatementRecoverer {
     }
 
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
+        // Mark header as processed BEFORE recursing to prevent infinite loops
+        context.markProcessed(header);
+
         IRInstruction terminator = header.getTerminator();
         if (!(terminator instanceof SwitchInstruction sw)) {
             return new IRRegionStmt(List.of(header));
@@ -373,7 +420,6 @@ public class StatementRecoverer {
             cases.add(SwitchCase.defaultCase(defaultStmts));
         }
 
-        context.markProcessed(header);
         return new SwitchStmt(selector, cases);
     }
 
@@ -384,21 +430,64 @@ public class StatementRecoverer {
         return new IRRegionStmt(new ArrayList<>(blocks));
     }
 
-    private Expression recoverCondition(IRBlock block) {
+    private Expression recoverCondition(IRBlock block, boolean negate) {
         IRInstruction terminator = block.getTerminator();
         if (terminator instanceof BranchInstruction branch) {
             Expression left = exprRecoverer.recoverOperand(branch.getLeft());
+            CompareOp condition = branch.getCondition();
+
             if (branch.getRight() != null) {
                 Expression right = exprRecoverer.recoverOperand(branch.getRight());
                 com.tonic.analysis.source.ast.expr.BinaryOperator op =
-                    OperatorMapper.mapCompareOp(branch.getCondition());
+                    OperatorMapper.mapCompareOp(condition);
+                if (negate) {
+                    op = negateOperator(op);
+                }
                 return new com.tonic.analysis.source.ast.expr.BinaryExpr(
                     op, left, right, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
             }
-            // Unary condition (e.g., IFNULL, IFNONNULL)
-            return left;
+
+            // Single-operand conditions (IFEQ, IFNE, IFNULL, IFNONNULL, etc.)
+            if (OperatorMapper.isNullCheck(condition)) {
+                // For null checks, compare to null explicitly
+                Expression nullExpr = LiteralExpr.ofNull();
+                com.tonic.analysis.source.ast.expr.BinaryOperator op =
+                    OperatorMapper.mapCompareOp(condition);
+                if (negate) {
+                    op = negateOperator(op);
+                }
+                return new com.tonic.analysis.source.ast.expr.BinaryExpr(
+                    op, left, nullExpr, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+            }
+
+            // For zero comparisons (IFEQ, IFNE, etc.), compare to 0
+            com.tonic.analysis.source.ast.expr.BinaryOperator op =
+                OperatorMapper.mapCompareOp(condition);
+            if (negate) {
+                op = negateOperator(op);
+            }
+            Expression zero = LiteralExpr.ofInt(0);
+            return new com.tonic.analysis.source.ast.expr.BinaryExpr(
+                op, left, zero, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
         }
-        return LiteralExpr.ofBoolean(true);
+        return LiteralExpr.ofBoolean(!negate);
+    }
+
+    private Expression recoverCondition(IRBlock block) {
+        return recoverCondition(block, false);
+    }
+
+    private com.tonic.analysis.source.ast.expr.BinaryOperator negateOperator(
+            com.tonic.analysis.source.ast.expr.BinaryOperator op) {
+        return switch (op) {
+            case EQ -> com.tonic.analysis.source.ast.expr.BinaryOperator.NE;
+            case NE -> com.tonic.analysis.source.ast.expr.BinaryOperator.EQ;
+            case LT -> com.tonic.analysis.source.ast.expr.BinaryOperator.GE;
+            case GE -> com.tonic.analysis.source.ast.expr.BinaryOperator.LT;
+            case GT -> com.tonic.analysis.source.ast.expr.BinaryOperator.LE;
+            case LE -> com.tonic.analysis.source.ast.expr.BinaryOperator.GT;
+            default -> op; // For non-relational operators, wrap in NOT
+        };
     }
 
     private IRBlock getNextSequentialBlock(IRBlock block) {
@@ -435,12 +524,17 @@ public class StatementRecoverer {
     }
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result, Set<IRBlock> stopBlocks) {
-        if (result.contains(start) || stopBlocks.contains(start)) {
-            return;
-        }
-        result.add(start);
-        for (IRBlock succ : start.getSuccessors()) {
-            collectReachableBlocks(succ, result, stopBlocks);
+        // Use iterative approach with worklist to avoid stack overflow on deep CFGs
+        Deque<IRBlock> worklist = new ArrayDeque<>();
+        worklist.add(start);
+
+        while (!worklist.isEmpty()) {
+            IRBlock current = worklist.poll();
+            if (result.contains(current) || stopBlocks.contains(current)) {
+                continue;
+            }
+            result.add(current);
+            worklist.addAll(current.getSuccessors());
         }
     }
 }

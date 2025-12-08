@@ -31,7 +31,9 @@ public class ConditionalBranchInstruction extends Instruction {
         IF_ICMPGT(0xA3, "if_icmpgt"),
         IF_ICMPLE(0xA4, "if_icmple"),
         IF_ACMPEQ(0xA5, "if_acmpeq"),
-        IF_ACMPNE(0xA6, "if_acmpne");
+        IF_ACMPNE(0xA6, "if_acmpne"),
+        IFNULL(0xC6, "ifnull"),
+        IFNONNULL(0xC7, "ifnonnull");
 
         private final int opcode;
         private final String mnemonic;
@@ -106,6 +108,8 @@ public class ConditionalBranchInstruction extends Instruction {
             case IFGE:
             case IFGT:
             case IFLE:
+            case IFNULL:
+            case IFNONNULL:
                 return -1;
             case IF_ACMPEQ:
             case IF_ACMPNE:

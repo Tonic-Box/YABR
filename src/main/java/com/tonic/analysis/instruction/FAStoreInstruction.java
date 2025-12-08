@@ -7,20 +7,20 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the JVM FASTORE instruction.
+ * Represents the JVM FASTORE instruction (0x51).
  */
 public class FAStoreInstruction extends Instruction {
 
     /**
-     * Constructs a FASToreInstruction.
+     * Constructs a FAStoreInstruction.
      *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
     public FAStoreInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
-        if (opcode != 0x5C) {
-            throw new IllegalArgumentException("Invalid opcode for FASToreInstruction: " + opcode);
+        if (opcode != 0x51) {
+            throw new IllegalArgumentException("Invalid opcode for FAStoreInstruction: " + opcode);
         }
     }
 

@@ -81,13 +81,19 @@ public class StructuralAnalyzer {
         // Determine which target is the loop body and which is the exit
         IRBlock bodyBlock;
         IRBlock exitBlock;
+        boolean conditionNegated;
 
         if (loop.contains(trueTarget) && !loop.contains(falseTarget)) {
+            // True branch continues the loop: while (condition) { body }
             bodyBlock = trueTarget;
             exitBlock = falseTarget;
+            conditionNegated = false;
         } else if (loop.contains(falseTarget) && !loop.contains(trueTarget)) {
+            // False branch continues the loop: while (!condition) { body }
+            // We need to negate the condition to get: while (negated_condition) { body }
             bodyBlock = falseTarget;
             exitBlock = trueTarget;
+            conditionNegated = true;
         } else {
             // Both inside or both outside - complex case
             return new RegionInfo(StructuredRegion.IRREDUCIBLE, header);
@@ -99,6 +105,7 @@ public class StructuralAnalyzer {
             info.setLoopBody(bodyBlock);
             info.setLoopExit(exitBlock);
             info.setLoop(loop);
+            info.setConditionNegated(conditionNegated);
             return info;
         }
 
@@ -108,6 +115,7 @@ public class StructuralAnalyzer {
             info.setLoopBody(bodyBlock);
             info.setLoopExit(exitBlock);
             info.setLoop(loop);
+            info.setConditionNegated(conditionNegated);
             return info;
         }
 
@@ -116,6 +124,7 @@ public class StructuralAnalyzer {
         info.setLoopBody(bodyBlock);
         info.setLoopExit(exitBlock);
         info.setLoop(loop);
+        info.setConditionNegated(conditionNegated);
         return info;
     }
 
@@ -179,16 +188,22 @@ public class StructuralAnalyzer {
 
         // Check if it's if-then (one branch goes directly to merge)
         if (trueTarget == mergePoint) {
+            // The "then" body is the false branch, so condition must be negated
+            // if (cond) goto merge; body; -> if (!cond) { body }
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(falseTarget);
             info.setMergeBlock(mergePoint);
+            info.setConditionNegated(true);
             return info;
         }
 
         if (falseTarget == mergePoint) {
+            // The "then" body is the true branch, condition is as-is
+            // if (!cond) goto merge; body; -> if (cond) { body }
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(trueTarget);
             info.setMergeBlock(mergePoint);
+            info.setConditionNegated(false);
             return info;
         }
 
@@ -286,6 +301,7 @@ public class StructuralAnalyzer {
         private IRBlock thenBlock;
         private IRBlock elseBlock;
         private IRBlock mergeBlock;
+        private boolean conditionNegated; // true if condition should be negated for source
 
         // For loops
         private IRBlock loopBody;
@@ -336,6 +352,10 @@ public class StructuralAnalyzer {
 
         public void setDefaultTarget(IRBlock defaultTarget) {
             this.defaultTarget = defaultTarget;
+        }
+
+        public void setConditionNegated(boolean conditionNegated) {
+            this.conditionNegated = conditionNegated;
         }
     }
 }

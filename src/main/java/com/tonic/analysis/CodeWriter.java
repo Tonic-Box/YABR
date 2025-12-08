@@ -824,6 +824,15 @@ public class CodeWriter {
                 case 0xC2: // MONITORENTER
                     return new MonitorEnterInstruction(opcode, offset);
 
+                // IFNULL and IFNONNULL (0xC6, 0xC7)
+                case 0xC6: // IFNULL
+                case 0xC7: // IFNONNULL
+                    if (offset + 2 >= bytecode.length) {
+                        return new UnknownInstruction(opcode, offset, bytecode.length - offset);
+                    }
+                    short branchOffsetNull = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
+                    return new ConditionalBranchInstruction(opcode, offset, branchOffsetNull);
+
                 // UNKNOWN or UNIMPLEMENTED OPCODES
                 default:
                     return new UnknownInstruction(opcode, offset, 1);

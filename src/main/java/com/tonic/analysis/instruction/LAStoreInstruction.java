@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the LASTORE instruction (0x5D).
+ * Represents the LASTORE instruction (0x50).
  */
 public class LAStoreInstruction extends Instruction {
 
@@ -19,7 +19,7 @@ public class LAStoreInstruction extends Instruction {
      */
     public LAStoreInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
-        if (opcode != 0x5D) {
+        if (opcode != 0x50) {
             throw new IllegalArgumentException("Invalid opcode for LAStoreInstruction: " + opcode);
         }
     }
