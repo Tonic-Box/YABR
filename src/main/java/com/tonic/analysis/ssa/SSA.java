@@ -200,6 +200,28 @@ public class SSA {
     }
 
     /**
+     * Enables jump threading optimization.
+     * Eliminates redundant jump chains by threading through empty goto blocks.
+     * For example: goto A; A: goto B -> goto B
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withJumpThreading() {
+        return addTransform(new JumpThreading());
+    }
+
+    /**
+     * Enables block merging optimization.
+     * Merges blocks with a single predecessor/successor relationship
+     * where no phi instructions are present.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withBlockMerging() {
+        return addTransform(new BlockMerging());
+    }
+
+    /**
      * Enables the standard set of optimizations.
      *
      * @return this SSA instance for chaining
@@ -228,6 +250,8 @@ public class SSA {
                 .withNullCheckElimination()
                 .withLoopInvariantCodeMotion()
                 .withInductionVariableSimplification()
+                .withJumpThreading()
+                .withBlockMerging()
                 .withDeadCodeElimination();
     }
 

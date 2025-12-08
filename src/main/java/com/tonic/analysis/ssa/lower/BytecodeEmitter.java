@@ -32,6 +32,9 @@ public class BytecodeEmitter {
 
     private Set<SSAValue> stackResidentValues;
 
+    // For fall-through optimization
+    private IRBlock nextBlock;
+
     /**
      * Creates a new bytecode emitter.
      *
@@ -63,7 +66,11 @@ public class BytecodeEmitter {
         analyzeStackResidentValues();
 
         try {
-            for (IRBlock block : method.getBlocksInOrder()) {
+            List<IRBlock> orderedBlocks = computeOptimalBlockOrder();
+            for (int i = 0; i < orderedBlocks.size(); i++) {
+                IRBlock block = orderedBlocks.get(i);
+                // Track what block comes next for fall-through optimization
+                nextBlock = (i + 1 < orderedBlocks.size()) ? orderedBlocks.get(i + 1) : null;
                 emitBlock(block);
             }
             fixupJumps();
@@ -72,6 +79,73 @@ public class BytecodeEmitter {
         }
 
         return bytecode.toByteArray();
+    }
+
+    /**
+     * Computes an optimal block ordering that maximizes fall-through opportunities.
+     * Uses a greedy algorithm that places fall-through successors immediately after their predecessors.
+     */
+    private List<IRBlock> computeOptimalBlockOrder() {
+        List<IRBlock> order = new ArrayList<>();
+        Set<IRBlock> placed = new HashSet<>();
+        Deque<IRBlock> worklist = new ArrayDeque<>();
+
+        IRBlock entry = method.getEntryBlock();
+        if (entry == null) {
+            return method.getBlocksInOrder(); // Fallback to original order
+        }
+
+        worklist.add(entry);
+
+        while (!worklist.isEmpty()) {
+            IRBlock block = worklist.pollFirst();
+            if (placed.contains(block)) continue;
+
+            placed.add(block);
+            order.add(block);
+
+            // Determine preferred fall-through successor
+            IRBlock fallThrough = getFallThroughSuccessor(block);
+
+            // Add fall-through first (will be processed next)
+            if (fallThrough != null && !placed.contains(fallThrough)) {
+                worklist.addFirst(fallThrough);
+            }
+
+            // Add other successors to back of queue
+            for (IRBlock succ : block.getSuccessors()) {
+                if (!placed.contains(succ)) {
+                    worklist.addLast(succ);
+                }
+            }
+        }
+
+        // Add any remaining blocks (shouldn't happen with well-formed CFG)
+        for (IRBlock block : method.getBlocks()) {
+            if (!placed.contains(block)) {
+                order.add(block);
+            }
+        }
+
+        return order;
+    }
+
+    /**
+     * Determines the preferred fall-through successor for a block.
+     * For branches, prefers the false target as fall-through.
+     * For gotos, the only successor is the fall-through candidate.
+     */
+    private IRBlock getFallThroughSuccessor(IRBlock block) {
+        IRInstruction term = block.getTerminator();
+        if (term instanceof BranchInstruction branch) {
+            // Prefer false branch as fall-through (allows skipping the goto)
+            return branch.getFalseTarget();
+        }
+        if (term instanceof GotoInstruction gotoInstr) {
+            // Goto's target is the only successor - prefer it as fall-through
+            return gotoInstr.getTarget();
+        }
+        return null;
     }
 
     /**
@@ -493,7 +567,10 @@ public class BytecodeEmitter {
     }
 
     private void emitGoto(GotoInstruction instr) throws IOException {
-        int jumpOffset = currentOffset;
+        // Skip goto if target is the next block (fall-through optimization)
+        if (instr.getTarget() == nextBlock) {
+            return;
+        }
         emit(0xA7);
         pendingJumps.add(new PendingJump(currentOffset, instr.getTarget(), false));
         emitShort((short) 0);
@@ -523,9 +600,12 @@ public class BytecodeEmitter {
         pendingJumps.add(new PendingJump(currentOffset, instr.getTrueTarget(), false));
         emitShort((short) 0);
 
-        emit(0xA7);
-        pendingJumps.add(new PendingJump(currentOffset, instr.getFalseTarget(), false));
-        emitShort((short) 0);
+        // Skip false-branch goto if target is the next block (fall-through optimization)
+        if (instr.getFalseTarget() != nextBlock) {
+            emit(0xA7);
+            pendingJumps.add(new PendingJump(currentOffset, instr.getFalseTarget(), false));
+            emitShort((short) 0);
+        }
     }
 
     private void emitReturn(ReturnInstruction instr) throws IOException {

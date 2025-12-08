@@ -384,9 +384,68 @@ SSA ssa = new SSA(constPool).withAllOptimizations();
 9. NullCheckElimination - Remove redundant null checks
 10. LoopInvariantCodeMotion - Hoist loop-invariant code
 11. InductionVariableSimplification - Optimize loop counters
-12. DeadCodeElimination - Clean up unused instructions (run last)
+12. JumpThreading - Thread jump chains
+13. BlockMerging - Merge single-edge blocks
+14. DeadCodeElimination - Clean up unused instructions (run last)
 
 Transforms run iteratively until a fixed point is reached (no more changes) or a maximum iteration count (10).
+
+### Jump Threading
+
+Eliminates redundant jump chains by threading through empty goto blocks.
+
+```java
+// Before
+B1: goto A
+A:  goto B    // Empty goto block
+B:  ...
+
+// After
+B1: goto B    // Direct jump to ultimate target
+B:  ...
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withJumpThreading();
+ssa.transform(method);
+```
+
+**Supported patterns:**
+- `goto A; A: goto B` → `goto B`
+- `if (cond) goto A; A: goto B` → `if (cond) goto B`
+- Empty blocks (only a goto) in switch targets
+
+### Block Merging
+
+Merges blocks with a single predecessor/successor relationship.
+
+```java
+// Before
+A: x = 1
+   goto B
+B: y = 2      // B has only A as predecessor
+   return
+
+// After
+A: x = 1
+   y = 2      // B's code merged into A
+   return
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withBlockMerging();
+ssa.transform(method);
+```
+
+**Merge conditions:**
+- Block A has exactly one successor (B)
+- Block B has exactly one predecessor (A)
+- Block B has no phi instructions
+- Block A ends with unconditional goto to B
 
 ## Analysis Passes
 
