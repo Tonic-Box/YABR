@@ -372,11 +372,14 @@ public final class TypeState {
      * @return merged state valid for both paths
      */
     public TypeState merge(TypeState other) {
-        int minLocals = Math.min(locals.size(), other.locals.size());
-        List<VerificationType> mergedLocals = new ArrayList<>();
-        for (int i = 0; i < minLocals; i++) {
-            VerificationType a = locals.get(i);
-            VerificationType b = other.locals.get(i);
+        // Use MAX to preserve all locals from both paths
+        int maxLocals = Math.max(locals.size(), other.locals.size());
+        List<VerificationType> mergedLocals = new ArrayList<>(maxLocals);
+
+        for (int i = 0; i < maxLocals; i++) {
+            VerificationType a = (i < locals.size()) ? locals.get(i) : VerificationType.TOP;
+            VerificationType b = (i < other.locals.size()) ? other.locals.get(i) : VerificationType.TOP;
+
             if (a.equals(b)) {
                 mergedLocals.add(a);
             } else {
