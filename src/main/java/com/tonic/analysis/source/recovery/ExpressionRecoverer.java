@@ -106,6 +106,12 @@ public class ExpressionRecoverer {
             return true;
         }
 
+        // PHI instructions should NEVER be inlined - they represent merged values
+        // and should always reference the declared variable
+        if (instr instanceof PhiInstruction) {
+            return false;
+        }
+
         // Check for single-use values - these can be safely inlined
         SSAValue result = instr.getResult();
         if (result != null) {
@@ -307,6 +313,15 @@ public class ExpressionRecoverer {
             String name = "local" + localIndex;
             SourceType type = typeRecoverer.recoverType(instr.getResult());
             return new VarRefExpr(name, type, instr.getResult());
+        }
+
+        @Override
+        public Expression visitCast(CastInstruction instr) {
+            // Recover the operand being cast
+            Expression operand = recoverOperand(instr.getObjectRef());
+            // Get the target type from the instruction
+            SourceType targetType = SourceType.fromIRType(instr.getTargetType());
+            return new CastExpr(targetType, operand);
         }
 
         @Override

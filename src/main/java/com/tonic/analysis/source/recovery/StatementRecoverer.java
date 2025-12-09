@@ -720,9 +720,10 @@ public class StatementRecoverer {
         // This handles cases where different paths have different types (e.g., Insets vs Graphics)
         SourceType type = computePhiUnifiedType(phi);
 
-        // Mark as declared
+        // Mark as declared and materialized so subsequent uses reference this variable
         declaredNames.add(name);
         context.getExpressionContext().markDeclared(name);
+        context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
 
         // Phi variables get default values (they'll be assigned in control flow)
@@ -862,6 +863,27 @@ public class StatementRecoverer {
             if (use instanceof PhiInstruction) return false;
         }
         return true;
+    }
+
+    /**
+     * Checks if an SSA value is used by a StoreLocalInstruction.
+     * In this case, the instruction producing the value should be skipped
+     * and let StoreLocalInstruction handle the emission. The StoreLocal
+     * will create the local variable, and other uses will reference that local.
+     */
+    private boolean isUsedByStoreLocal(SSAValue value) {
+        if (value == null) return false;
+
+        java.util.List<IRInstruction> uses = value.getUses();
+        if (uses.isEmpty()) return false;
+
+        // Check if any use is a StoreLocalInstruction
+        for (IRInstruction use : uses) {
+            if (use instanceof StoreLocalInstruction) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1027,9 +1049,18 @@ public class StatementRecoverer {
                 Expression expr = exprRecoverer.recover(invoke);
                 return new ExprStmt(expr);
             }
+            // Skip invoke results that are used by a StoreLocalInstruction
+            // StoreLocalInstruction will handle the emission with proper local name
+            // But we still need to recover and cache the expression so recoverOperand can find it
+            SSAValue result = invoke.getResult();
+            if (result != null && isUsedByStoreLocal(result)) {
+                // Recover and cache for later use by StoreLocal
+                Expression expr = exprRecoverer.recover(invoke);
+                context.getExpressionContext().cacheExpression(result, expr);
+                return null;
+            }
             // Skip intermediate invoke results that are only used by other instructions
             // These will be inlined at their usage site
-            SSAValue result = invoke.getResult();
             if (result != null && isIntermediateValue(result)) {
                 // Cache the expression for later inlining
                 exprRecoverer.recover(invoke);
@@ -1091,6 +1122,14 @@ public class StatementRecoverer {
 
         // Other instructions with results - may need variable declaration
         if (instr.getResult() != null) {
+            // Skip if result is used by a StoreLocalInstruction
+            // StoreLocalInstruction will handle the emission with proper local name
+            // But we still need to recover and cache the expression so recoverOperand can find it
+            if (isUsedByStoreLocal(instr.getResult())) {
+                Expression expr = exprRecoverer.recover(instr);
+                context.getExpressionContext().cacheExpression(instr.getResult(), expr);
+                return null;
+            }
             return recoverVarDecl(instr);
         }
 
@@ -1214,6 +1253,10 @@ public class StatementRecoverer {
 
         // Cache the expression for later reference
         context.getExpressionContext().cacheExpression(result, value);
+
+        // Mark as materialized so subsequent uses will reference this variable
+        context.getExpressionContext().markMaterialized(result);
+        context.getExpressionContext().setVariableName(result, name);
 
         // Check if already declared - if so, emit assignment instead
         if (context.getExpressionContext().isDeclared(name)) {

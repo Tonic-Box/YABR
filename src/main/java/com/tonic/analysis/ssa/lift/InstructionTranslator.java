@@ -893,6 +893,12 @@ public class InstructionTranslator {
     }
 
     private IRType getBinaryOpResultType(int opcode) {
+        // Shift and bitwise operations (0x78-0x83) only have INT and LONG variants
+        // They alternate: even=INT, odd=LONG
+        if (opcode >= 0x78 && opcode <= 0x83) {
+            return (opcode % 2 == 0) ? PrimitiveType.INT : PrimitiveType.LONG;
+        }
+        // Arithmetic operations (0x60-0x73) have all 4 variants
         int typeVariant = (opcode - 0x60) % 4;
         return switch (typeVariant) {
             case 0 -> PrimitiveType.INT;
