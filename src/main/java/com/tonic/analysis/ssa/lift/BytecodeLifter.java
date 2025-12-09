@@ -322,6 +322,9 @@ public class BytecodeLifter {
                     break;
                 }
 
+                // Set debug context for error messages
+                AbstractState.setDebugContext(currentBlock.getName(), offset);
+
                 translator.translate(instr, state, currentBlock);
 
                 if (currentBlock.hasTerminator()) {

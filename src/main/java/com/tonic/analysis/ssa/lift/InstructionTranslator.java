@@ -86,7 +86,7 @@ public class InstructionTranslator {
             case 0x4B, 0x4C, 0x4D, 0x4E -> translateAStore(opcode - 0x4B, state, block);
             case 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56 -> translateArrayStore(opcode, state, block);
             case 0x57 -> state.pop();
-            case 0x58 -> { state.pop(); state.pop(); }
+            case 0x58 -> translatePop2(state);
             case 0x59 -> translateDup(state);
             case 0x5A -> translateDupX1(state);
             case 0x5B -> translateDupX2(state);
@@ -385,6 +385,27 @@ public class InstructionTranslator {
         block.addInstruction(new ArrayStoreInstruction(array, index, value));
     }
 
+    /**
+     * Translates the pop2 instruction.
+     * pop2 pops either:
+     * - Two category-1 values (int, float, reference), OR
+     * - One category-2 value (long, double)
+     *
+     * In our SSA representation, longs and doubles are single Values with
+     * a type marker, so we check the type to determine how many pops to do.
+     */
+    private void translatePop2(AbstractState state) {
+        Value top = state.peek();
+        if (top.getType() != null && top.getType().isTwoSlot()) {
+            // Category-2 value (long/double) - single pop
+            state.pop();
+        } else {
+            // Two category-1 values - double pop
+            state.pop();
+            state.pop();
+        }
+    }
+
     private void translateDup(AbstractState state) {
         Value top = state.peek();
         state.push(top);
@@ -408,36 +429,110 @@ public class InstructionTranslator {
         state.push(v1);
     }
 
+    /**
+     * dup2 - duplicate top one or two values:
+     * Form 1 (category-2): ..., value → ..., value, value
+     * Form 2 (two category-1): ..., value2, value1 → ..., value2, value1, value2, value1
+     */
     private void translateDup2(AbstractState state) {
-        Value v1 = state.pop();
-        Value v2 = state.peek();
-        state.push(v1);
-        state.push(v2);
-        state.push(v1);
+        Value v1 = state.peek();
+        if (v1.getType() != null && v1.getType().isTwoSlot()) {
+            // Form 1: single category-2 value
+            state.push(v1);
+        } else {
+            // Form 2: two category-1 values
+            v1 = state.pop();
+            Value v2 = state.peek();
+            state.push(v1);
+            state.push(v2);
+            state.push(v1);
+        }
     }
 
+    /**
+     * dup2_x1 - duplicate top one or two values and insert beneath:
+     * Form 1 (category-2): ..., value2, value1 → ..., value1, value2, value1
+     * Form 2 (two category-1): ..., value3, value2, value1 → ..., value2, value1, value3, value2, value1
+     */
     private void translateDup2X1(AbstractState state) {
-        Value v1 = state.pop();
-        Value v2 = state.pop();
-        Value v3 = state.pop();
-        state.push(v2);
-        state.push(v1);
-        state.push(v3);
-        state.push(v2);
-        state.push(v1);
+        Value v1 = state.peek();
+        if (v1.getType() != null && v1.getType().isTwoSlot()) {
+            // Form 1: category-2 value over category-1 value
+            v1 = state.pop();
+            Value v2 = state.pop();
+            state.push(v1);
+            state.push(v2);
+            state.push(v1);
+        } else {
+            // Form 2: two category-1 values over one category-1 value
+            v1 = state.pop();
+            Value v2 = state.pop();
+            Value v3 = state.pop();
+            state.push(v2);
+            state.push(v1);
+            state.push(v3);
+            state.push(v2);
+            state.push(v1);
+        }
     }
 
+    /**
+     * dup2_x2 - duplicate top one or two values and insert beneath:
+     * Form 1: category-2 over category-2
+     * Form 2: two category-1 over category-2
+     * Form 3: category-2 over two category-1
+     * Form 4: two category-1 over two category-1
+     */
     private void translateDup2X2(AbstractState state) {
-        Value v1 = state.pop();
-        Value v2 = state.pop();
-        Value v3 = state.pop();
-        Value v4 = state.pop();
-        state.push(v2);
-        state.push(v1);
-        state.push(v4);
-        state.push(v3);
-        state.push(v2);
-        state.push(v1);
+        Value v1 = state.peek();
+        boolean v1TwoSlot = v1.getType() != null && v1.getType().isTwoSlot();
+
+        if (v1TwoSlot) {
+            // Forms 1 or 3: category-2 on top
+            v1 = state.pop();
+            Value v2 = state.peek();
+            boolean v2TwoSlot = v2.getType() != null && v2.getType().isTwoSlot();
+
+            if (v2TwoSlot) {
+                // Form 1: category-2 over category-2
+                state.push(v1);
+                state.push(v2);
+                state.push(v1);
+            } else {
+                // Form 3: category-2 over two category-1
+                v2 = state.pop();
+                Value v3 = state.pop();
+                state.push(v1);
+                state.push(v3);
+                state.push(v2);
+                state.push(v1);
+            }
+        } else {
+            // Forms 2 or 4: two category-1 on top
+            v1 = state.pop();
+            Value v2 = state.pop();
+            Value v3 = state.peek();
+            boolean v3TwoSlot = v3.getType() != null && v3.getType().isTwoSlot();
+
+            if (v3TwoSlot) {
+                // Form 2: two category-1 over category-2
+                state.push(v2);
+                state.push(v1);
+                state.push(v3);
+                state.push(v2);
+                state.push(v1);
+            } else {
+                // Form 4: two category-1 over two category-1
+                v3 = state.pop();
+                Value v4 = state.pop();
+                state.push(v2);
+                state.push(v1);
+                state.push(v4);
+                state.push(v3);
+                state.push(v2);
+                state.push(v1);
+            }
+        }
     }
 
     private void translateSwap(AbstractState state) {

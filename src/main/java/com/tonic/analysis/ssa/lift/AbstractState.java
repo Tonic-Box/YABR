@@ -28,9 +28,20 @@ public class AbstractState {
         stack.push(value);
     }
 
+    // Debug context for tracking where underflow occurs
+    private static String currentBlockName = "unknown";
+    private static int currentInstructionOffset = -1;
+
+    public static void setDebugContext(String blockName, int offset) {
+        currentBlockName = blockName;
+        currentInstructionOffset = offset;
+    }
+
     public Value pop() {
         if (stack.isEmpty()) {
-            throw new IllegalStateException("Stack underflow");
+            String msg = String.format("Stack underflow at block=%s, offset=%d",
+                currentBlockName, currentInstructionOffset);
+            throw new IllegalStateException(msg);
         }
         return stack.pop();
     }

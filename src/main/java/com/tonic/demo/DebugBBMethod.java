@@ -22,8 +22,9 @@ public class DebugBBMethod {
         ClassFile cf = ClassPool.getDefault().loadClass(new FileInputStream(args[0]));
         ConstPool constPool = cf.getConstPool();
 
+        String targetMethod = args.length > 1 ? args[1] : "run";
         for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals("run")) {
+            if (method.getName().equals(targetMethod)) {
                 System.out.println("=== Method: " + method.getName() + " ===");
                 // Skip descriptor
 
