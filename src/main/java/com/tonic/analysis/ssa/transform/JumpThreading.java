@@ -3,6 +3,7 @@ package com.tonic.analysis.ssa.transform;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
 
@@ -38,6 +39,8 @@ public class JumpThreading implements IRTransform {
                     block.removeSuccessor(original);
                     block.addSuccessor(ultimate);
                     gotoInstr.setTarget(ultimate);
+                    // Update phi nodes at ultimate target: redirect incoming values from bypassed blocks
+                    updatePhisForThreading(block, original, ultimate);
                     changed = true;
                 }
             } else if (term instanceof BranchInstruction branch) {
@@ -48,6 +51,8 @@ public class JumpThreading implements IRTransform {
                     block.removeSuccessor(origTrue);
                     block.addSuccessor(ultimateTrue);
                     branch.setTrueTarget(ultimateTrue);
+                    // Update phi nodes at ultimate target
+                    updatePhisForThreading(block, origTrue, ultimateTrue);
                     changed = true;
                 }
 
@@ -58,6 +63,8 @@ public class JumpThreading implements IRTransform {
                     block.removeSuccessor(origFalse);
                     block.addSuccessor(ultimateFalse);
                     branch.setFalseTarget(ultimateFalse);
+                    // Update phi nodes at ultimate target
+                    updatePhisForThreading(block, origFalse, ultimateFalse);
                     changed = true;
                 }
             } else if (term instanceof SwitchInstruction switchInstr) {
@@ -68,6 +75,8 @@ public class JumpThreading implements IRTransform {
                     block.removeSuccessor(origDefault);
                     block.addSuccessor(ultimateDefault);
                     switchInstr.setDefaultTarget(ultimateDefault);
+                    // Update phi nodes at ultimate target
+                    updatePhisForThreading(block, origDefault, ultimateDefault);
                     changed = true;
                 }
 
@@ -80,6 +89,8 @@ public class JumpThreading implements IRTransform {
                         block.removeSuccessor(origCase);
                         block.addSuccessor(ultimateCase);
                         cases.put(entry.getKey(), ultimateCase);
+                        // Update phi nodes at ultimate target
+                        updatePhisForThreading(block, origCase, ultimateCase);
                         changed = true;
                     }
                 }
@@ -92,6 +103,28 @@ public class JumpThreading implements IRTransform {
         }
 
         return changed;
+    }
+
+    /**
+     * Updates phi nodes at the ultimate target when threading through a bypassed block.
+     *
+     * When we thread from 'source' through 'bypassed' to 'ultimate', any phi at 'ultimate'
+     * that has an incoming value from 'bypassed' needs to be updated to have that value
+     * come from 'source' instead.
+     *
+     * @param source the block that is being threaded (the new direct predecessor)
+     * @param bypassed the original intermediate block being bypassed
+     * @param ultimate the ultimate target block containing phis to update
+     */
+    private void updatePhisForThreading(IRBlock source, IRBlock bypassed, IRBlock ultimate) {
+        for (PhiInstruction phi : ultimate.getPhiInstructions()) {
+            Value bypassedValue = phi.getIncoming(bypassed);
+            if (bypassedValue != null) {
+                // Remove the incoming from the bypassed block and add it from source
+                phi.removeIncoming(bypassed);
+                phi.addIncoming(bypassedValue, source);
+            }
+        }
     }
 
     /**

@@ -504,6 +504,9 @@ public class BytecodeLifter {
     }
 
     private void handleExceptionHandlers(IRMethod irMethod, CodeAttribute codeAttr, Map<Integer, IRBlock> offsetToBlock) {
+        // Track which handler blocks already have exception marker inserted
+        Set<IRBlock> processedHandlerBlocks = new HashSet<>();
+
         for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
             IRBlock handlerBlock = offsetToBlock.get(entry.getHandlerPc());
             if (handlerBlock == null) continue;
@@ -521,13 +524,19 @@ public class BytecodeLifter {
                 ExceptionHandler handler = new ExceptionHandler(tryStart, tryEnd, handlerBlock, catchType);
                 irMethod.addExceptionHandler(handler);
 
-                SSAValue exceptionValue = new SSAValue(
-                        catchType != null ? catchType : ReferenceType.THROWABLE,
-                        "exc"
-                );
-                if (handlerBlock.getInstructions().isEmpty() ||
-                        !(handlerBlock.getInstructions().get(0) instanceof LoadLocalInstruction)) {
-                    handlerBlock.insertInstruction(0, new CopyInstruction(exceptionValue, exceptionValue));
+                // Only insert exception marker once per handler block
+                if (!processedHandlerBlocks.contains(handlerBlock)) {
+                    processedHandlerBlocks.add(handlerBlock);
+
+                    // Skip if block already starts with a load (bytecode handles exception)
+                    if (handlerBlock.getInstructions().isEmpty() ||
+                            !(handlerBlock.getInstructions().get(0) instanceof LoadLocalInstruction)) {
+                        SSAValue exceptionValue = new SSAValue(
+                                catchType != null ? catchType : ReferenceType.THROWABLE,
+                                "exc"
+                        );
+                        handlerBlock.insertInstruction(0, new CopyInstruction(exceptionValue, exceptionValue));
+                    }
                 }
             }
         }

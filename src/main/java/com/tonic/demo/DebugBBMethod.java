@@ -29,7 +29,16 @@ public class DebugBBMethod {
                 // Skip descriptor
 
                 SSA ssa = new SSA(constPool);
+                boolean optimize = args.length > 2 && args[2].equals("--optimize");
+                if (optimize) {
+                    ssa.withRedundantCopyElimination()
+                       .withCopyPropagation()
+                       .withDeadCodeElimination();
+                }
                 IRMethod irMethod = ssa.lift(method);
+                if (optimize) {
+                    ssa.runTransforms(irMethod);
+                }
 
                 System.out.println("\n=== Exception Handlers ===");
                 for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {

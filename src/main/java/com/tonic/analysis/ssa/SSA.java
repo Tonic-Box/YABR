@@ -268,6 +268,17 @@ public class SSA {
     }
 
     /**
+     * Enables redundant copy elimination optimization.
+     * Removes identity copies (x = x), redundant load-store sequences,
+     * and propagates copy chains to their ultimate sources.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withRedundantCopyElimination() {
+        return addTransform(new RedundantCopyElimination());
+    }
+
+    /**
      * Adds a class-level transform to be applied.
      *
      * @param transform the class transform to add
@@ -325,6 +336,7 @@ public class SSA {
                 .withStrengthReduction()
                 .withCommonSubexpressionElimination()
                 .withCopyPropagation()
+                .withRedundantCopyElimination()
                 .withNullCheckElimination()
                 .withLoopInvariantCodeMotion()
                 .withInductionVariableSimplification()
