@@ -503,6 +503,41 @@ public class SSAShowcase {
     }
 
     // ========================================
+    // Reassociation Tests
+    // ========================================
+
+    /**
+     * Demonstrates reassociation for constant grouping.
+     * (x + 5) + 10 should reassociate to x + (5 + 10) = x + 15
+     */
+    public int reassociateConstants(int x) {
+        int a = x + 5;
+        int b = a + 10;       // Should become x + 15 after reassociate + fold
+        return b;
+    }
+
+    /**
+     * Demonstrates reassociation with multiplication.
+     * (x * 2) * 4 should reassociate to x * (2 * 4) = x * 8
+     */
+    public int reassociateMul(int x) {
+        int a = x * 2;
+        int b = a * 4;        // Should become x * 8 after reassociate + fold
+        return b;
+    }
+
+    /**
+     * Demonstrates reassociation with multiple variables.
+     * Groups constants together: (x + 3) + y + 7 -> x + y + 10
+     */
+    public int reassociateMultiVar(int x, int y) {
+        int a = x + 3;
+        int b = a + y;
+        int c = b + 7;        // Constants 3 and 7 should group to 10
+        return c;
+    }
+
+    // ========================================
     // Main Method for Testing
     // ========================================
 
@@ -596,6 +631,12 @@ public class SSAShowcase {
 
         System.out.println("=== Induction Variable Simplification ===");
         System.out.println("inductionVar(5) = " + showcase.inductionVar(5) + " (expected: 40)");
+        System.out.println();
+
+        System.out.println("=== Reassociation ===");
+        System.out.println("reassociateConstants(5) = " + showcase.reassociateConstants(5) + " (expected: 20)");
+        System.out.println("reassociateMul(3) = " + showcase.reassociateMul(3) + " (expected: 24)");
+        System.out.println("reassociateMultiVar(2, 3) = " + showcase.reassociateMultiVar(2, 3) + " (expected: 15)");
         System.out.println();
 
         System.out.println("=== All tests complete ===");

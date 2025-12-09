@@ -142,6 +142,17 @@ public class SSA {
     }
 
     /**
+     * Enables reassociation optimization.
+     * Reorders commutative operations to group constants together for folding.
+     * Example: (x + 5) + 10 -> x + (5 + 10) -> x + 15
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withReassociate() {
+        return addTransform(new Reassociate());
+    }
+
+    /**
      * Enables phi constant propagation optimization.
      * Simplifies phi nodes when all incoming values are identical.
      *
@@ -328,7 +339,8 @@ public class SSA {
      * @return this SSA instance for chaining
      */
     public SSA withAllOptimizations() {
-        return withConstantFolding()
+        return withReassociate()
+                .withConstantFolding()
                 .withPhiConstantPropagation()
                 .withConditionalConstantPropagation()
                 .withAlgebraicSimplification()

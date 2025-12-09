@@ -142,6 +142,42 @@ ssa.transform(method);
 - **Bitwise identity:** `x | 0` → `x`, `x & -1` → `x`, `x ^ 0` → `x`
 - **Shift identity:** `x << 0` → `x`, `x >> 0` → `x`, `x >>> 0` → `x`
 
+### Reassociate
+
+Canonicalizes commutative operations by putting higher-rank operands on the left and constants on the right. This enables better constant folding by grouping constants together.
+
+```java
+// Before
+v1 = ADD const(5), x    // Constant on left
+v2 = ADD v1, const(10)  // (5 + x) + 10
+
+// After canonicalization (constants on right)
+v1 = ADD x, const(5)    // x + 5
+v2 = ADD v1, const(10)  // (x + 5) + 10
+// Then constant folding can optimize further
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withReassociate();
+ssa.transform(method);
+```
+
+**Rank system:**
+- **Rank 0:** Constants (lowest rank, moved to right)
+- **Rank 1:** Parameters
+- **Rank 2+:** Instructions (by block order)
+
+**Supported operations:**
+- Arithmetic: ADD, MUL
+- Bitwise: AND, OR, XOR
+
+**Benefits:**
+- Groups constants together for folding: `(x + 5) + 10` → `x + 15`
+- Creates canonical form for pattern matching
+- Enables better CSE by normalizing operand order
+
 ### Phi Constant Propagation
 
 Simplifies phi nodes when all incoming values are identical.
@@ -373,20 +409,22 @@ SSA ssa = new SSA(constPool).withAllOptimizations();
 
 **Recommended transform order:**
 
-1. ConstantFolding - Evaluate constant expressions first
-2. PhiConstantPropagation - Simplify redundant phi nodes
-3. ConditionalConstantPropagation - Eliminate dead branches
-4. AlgebraicSimplification - Apply algebraic identities
-5. PeepholeOptimizations - Small pattern optimizations
-6. StrengthReduction - Replace expensive operations
-7. CommonSubexpressionElimination - Reuse computed values
-8. CopyPropagation - Eliminate redundant copies
-9. NullCheckElimination - Remove redundant null checks
-10. LoopInvariantCodeMotion - Hoist loop-invariant code
-11. InductionVariableSimplification - Optimize loop counters
-12. JumpThreading - Thread jump chains
-13. BlockMerging - Merge single-edge blocks
-14. DeadCodeElimination - Clean up unused instructions (run last)
+1. Reassociate - Canonicalize commutative ops, group constants
+2. ConstantFolding - Evaluate constant expressions
+3. PhiConstantPropagation - Simplify redundant phi nodes
+4. ConditionalConstantPropagation - Eliminate dead branches
+5. AlgebraicSimplification - Apply algebraic identities
+6. PeepholeOptimizations - Small pattern optimizations
+7. StrengthReduction - Replace expensive operations
+8. CommonSubexpressionElimination - Reuse computed values
+9. CopyPropagation - Eliminate redundant copies
+10. RedundantCopyElimination - Remove identity copies
+11. NullCheckElimination - Remove redundant null checks
+12. LoopInvariantCodeMotion - Hoist loop-invariant code
+13. InductionVariableSimplification - Optimize loop counters
+14. JumpThreading - Thread jump chains
+15. BlockMerging - Merge single-edge blocks
+16. DeadCodeElimination - Clean up unused instructions (run last)
 
 Transforms run iteratively until a fixed point is reached (no more changes) or a maximum iteration count (10).
 

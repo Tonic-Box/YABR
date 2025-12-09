@@ -74,7 +74,11 @@ public class TestSSADemo {
                 "nullCheckTest",
                 "conditionalConst",
                 "loopInvariant",
-                "inductionVar"
+                "inductionVar",
+                // Reassociation tests
+                "reassociateConstants",
+                "reassociateMul",
+                "reassociateMultiVar"
             );
 
             for (MethodEntry method : classFile.getMethods()) {
