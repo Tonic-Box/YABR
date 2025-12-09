@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [SSA Transforms ->](ssa-transforms.md)
+[<- Back to README](../README.md) | [SSA Transforms](ssa-transforms.md) | [Frame Computation ->](frame-computation.md)
 
 # AST Guide
 
@@ -607,4 +607,4 @@ This allows partial decompilation of classes even when some methods have complex
 
 ---
 
-[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [SSA Transforms ->](ssa-transforms.md)
+[<- Back to README](../README.md) | [SSA Transforms](ssa-transforms.md) | [Frame Computation ->](frame-computation.md)

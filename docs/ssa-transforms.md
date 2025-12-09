@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [Frame Computation ->](frame-computation.md)
+[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [AST Guide ->](ast-guide.md)
 
 # SSA Transforms
 
@@ -447,6 +447,99 @@ ssa.transform(method);
 - Block B has no phi instructions
 - Block A ends with unconditional goto to B
 
+### Control Flow Reducibility
+
+Transforms irreducible control flow into reducible form using node splitting. This enables the decompiler to emit structured Java code (if-else, while, for) instead of unstructured IR regions.
+
+```java
+// Before (irreducible CFG with multiple loop entries)
+A: goto B or C
+B: ... goto C
+C: ... goto B     // C can be entered from both A and B
+
+// After (reducible - each loop has single entry)
+A: goto B or C
+B: ... goto C_copy
+C: ... goto B
+C_copy: ... goto B    // C duplicated to break multiple-entry pattern
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withControlFlowReducibility();
+ssa.transform(method);
+```
+
+**Features:**
+- Detects multi-entry loops using dominance analysis
+- Splits nodes to create single-entry regions
+- Preserves semantics through PHI node updates
+- Iterates until CFG is fully reducible
+
+### Duplicate Block Merging
+
+Merges duplicate blocks created by node splitting while preserving reducibility. This is a cleanup pass to reduce code size after Control Flow Reducibility.
+
+```java
+// Before (after reducibility transform)
+B: x = 1
+   goto D
+B_copy: x = 1    // Identical to B
+   goto D
+
+// After
+B: x = 1
+   goto D
+// B_copy merged back into B (all references updated)
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withDuplicateBlockMerging();
+ssa.transform(method);
+
+// Or with aggressive mode (merges more patterns)
+SSA ssa = new SSA(constPool).withDuplicateBlockMerging(true);
+```
+
+**Features:**
+- Identifies structurally identical blocks
+- Merges duplicates without breaking reducibility
+- Updates all predecessor/successor references
+- Aggressive mode enables more merging patterns
+
+### Redundant Copy Elimination
+
+Removes redundant copy instructions and simplifies assignment chains.
+
+```java
+// Before
+v1 = load local[0]
+v2 = v1            // Redundant copy
+v3 = ADD v2, 1
+store local[0] = v1
+v4 = load local[0] // Redundant - same value as v1
+
+// After
+v1 = load local[0]
+v3 = ADD v1, 1     // v2 replaced with v1
+// v4 replaced with v1
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withRedundantCopyElimination();
+ssa.transform(method);
+```
+
+**Eliminates:**
+- **Identity copies:** `x = x` (no-ops)
+- **Redundant load-store pairs:** `store x, v; load x` → `v` (when no intervening store)
+- **Copy chains:** `a = b; c = a` → `c = b` (propagates through chains)
+
 ## Class-Level Transforms
 
 These transforms operate on entire classes rather than individual methods.
@@ -821,4 +914,4 @@ public void optimizeClass(ClassFile classFile) {
 
 ---
 
-[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [Frame Computation ->](frame-computation.md)
+[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [AST Guide ->](ast-guide.md)

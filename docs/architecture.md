@@ -49,6 +49,7 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.source.lower` | AST to IR lowering |
 | `com.tonic.analysis.source.emit` | Java source code generation |
 | `com.tonic.analysis.frame` | StackMapTable frame computation |
+| `com.tonic.analysis.source.decompile` | Full class decompilation |
 | `com.tonic.utill` | Utilities (AccessBuilder, Logger, etc.) |
 | `com.tonic.demo` | Example programs |
 

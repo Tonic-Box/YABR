@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [SSA Transforms](ssa-transforms.md)
+[<- Back to README](../README.md) | [AST Guide](ast-guide.md)
 
 # Frame Computation
 
@@ -296,4 +296,4 @@ public void modifyAndVerify(ClassFile classFile) throws IOException {
 
 ---
 
-[<- Back to README](../README.md) | [SSA Transforms](ssa-transforms.md)
+[<- Back to README](../README.md) | [AST Guide](ast-guide.md)
