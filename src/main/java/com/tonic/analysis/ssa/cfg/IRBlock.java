@@ -69,6 +69,15 @@ public class IRBlock {
     }
 
     /**
+     * Alias for addPhi to match common naming convention.
+     *
+     * @param phi the phi instruction to add
+     */
+    public void addPhiInstruction(PhiInstruction phi) {
+        addPhi(phi);
+    }
+
+    /**
      * Removes a phi instruction from this block.
      *
      * @param phi the phi instruction to remove
@@ -169,6 +178,42 @@ public class IRBlock {
         if (instructions.isEmpty()) return null;
         IRInstruction last = instructions.get(instructions.size() - 1);
         return last.isTerminator() ? last : null;
+    }
+
+    /**
+     * Sets the terminator instruction for this block.
+     * If a terminator already exists, it will be replaced.
+     *
+     * @param terminator the terminator instruction to set
+     */
+    public void setTerminator(IRInstruction terminator) {
+        if (!instructions.isEmpty()) {
+            IRInstruction last = instructions.get(instructions.size() - 1);
+            if (last.isTerminator()) {
+                instructions.remove(instructions.size() - 1);
+            }
+        }
+        addInstruction(terminator);
+    }
+
+    /**
+     * Adds a predecessor block directly (for use in block duplication).
+     *
+     * @param pred the predecessor block
+     */
+    public void addPredecessor(IRBlock pred) {
+        if (!predecessors.contains(pred)) {
+            predecessors.add(pred);
+        }
+    }
+
+    /**
+     * Removes a predecessor block directly.
+     *
+     * @param pred the predecessor block to remove
+     */
+    public void removePredecessor(IRBlock pred) {
+        predecessors.remove(pred);
     }
 
     /**

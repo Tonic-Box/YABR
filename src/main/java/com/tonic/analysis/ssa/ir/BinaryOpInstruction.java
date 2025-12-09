@@ -55,6 +55,12 @@ public class BinaryOpInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, java.util.List<Value> newOperands) {
+        if (newOperands.size() < 2) return null;
+        return new BinaryOpInstruction(newResult, op, newOperands.get(0), newOperands.get(1));
+    }
+
+    @Override
     public String toString() {
         return result + " = " + op.name().toLowerCase() + " " + left + ", " + right;
     }

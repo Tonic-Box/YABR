@@ -76,6 +76,26 @@ public class BranchInstruction extends IRInstruction {
     }
 
     @Override
+    public void replaceTarget(IRBlock oldTarget, IRBlock newTarget) {
+        if (trueTarget == oldTarget) {
+            trueTarget = newTarget;
+        }
+        if (falseTarget == oldTarget) {
+            falseTarget = newTarget;
+        }
+    }
+
+    @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        if (newOperands.isEmpty()) return null;
+        if (right == null) {
+            return new BranchInstruction(condition, newOperands.get(0), trueTarget, falseTarget);
+        }
+        if (newOperands.size() < 2) return null;
+        return new BranchInstruction(condition, newOperands.get(0), newOperands.get(1), trueTarget, falseTarget);
+    }
+
+    @Override
     public String toString() {
         if (right == null) {
             return "if " + condition.name().toLowerCase() + " " + left + " goto " + trueTarget.getName() + " else " + falseTarget.getName();

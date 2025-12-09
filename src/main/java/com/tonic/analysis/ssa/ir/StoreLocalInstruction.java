@@ -43,6 +43,12 @@ public class StoreLocalInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        if (newOperands.isEmpty()) return null;
+        return new StoreLocalInstruction(localIndex, newOperands.get(0));
+    }
+
+    @Override
     public String toString() {
         return "store_local " + localIndex + ", " + value;
     }

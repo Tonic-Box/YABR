@@ -67,6 +67,14 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitIf(IfStmt stmt) {
+        // Skip empty if statements entirely (opaque predicates, dead code)
+        boolean thenEmpty = isEmptyBlock(stmt.getThenBranch());
+        boolean elseEmpty = stmt.getElseBranch() == null || isEmptyBlock(stmt.getElseBranch());
+        if (thenEmpty && elseEmpty) {
+            // Completely empty if statement - skip it
+            return null;
+        }
+
         writer.write("if (");
         stmt.getCondition().accept(this);
         writer.write(") ");
@@ -86,7 +94,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.dedent();
         }
 
-        if (stmt.getElseBranch() != null) {
+        if (stmt.getElseBranch() != null && !isEmptyBlock(stmt.getElseBranch())) {
             writer.write("else ");
             if (stmt.getElseBranch() instanceof IfStmt) {
                 stmt.getElseBranch().accept(this);
@@ -343,6 +351,16 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitIRRegion(IRRegionStmt stmt) {
         writer.writeLine("/* IR Region - irreducible control flow */");
         writer.writeLine("/* Blocks: " + stmt.getBlocks().size() + " */");
+        // Emit block contents as comments for debugging
+        for (var block : stmt.getBlocks()) {
+            writer.writeLine("// " + block.getName() + ":");
+            for (var phi : block.getPhiInstructions()) {
+                writer.writeLine("//   " + phi);
+            }
+            for (var instr : block.getInstructions()) {
+                writer.writeLine("//   " + instr);
+            }
+        }
         return null;
     }
 
@@ -629,6 +647,16 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     // ==================== Helpers ====================
+
+    /**
+     * Checks if a statement is an empty block (no statements inside).
+     */
+    private boolean isEmptyBlock(Statement stmt) {
+        if (stmt instanceof BlockStmt block) {
+            return block.getStatements().isEmpty();
+        }
+        return false;
+    }
 
     private void emitBody(Statement body) {
         if (body instanceof BlockStmt) {

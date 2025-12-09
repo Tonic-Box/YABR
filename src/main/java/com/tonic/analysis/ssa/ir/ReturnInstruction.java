@@ -60,6 +60,14 @@ public class ReturnInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        if (newOperands.isEmpty()) {
+            return new ReturnInstruction();
+        }
+        return new ReturnInstruction(newOperands.get(0));
+    }
+
+    @Override
     public String toString() {
         return returnValue != null ? "return " + returnValue : "return";
     }

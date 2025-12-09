@@ -31,6 +31,15 @@ public class RecoveryContext {
     /** Counter for synthetic names */
     private int syntheticCounter = 0;
 
+    /** Pending NewInstruction results waiting for <init> call */
+    private final Map<SSAValue, String> pendingNewInstructions = new HashMap<>();
+
+    /** Declared variable names in current scope */
+    private final Set<String> declaredVariables = new HashSet<>();
+
+    /** SSA values that have been assigned to variables (should use var ref, not inline) */
+    private final Set<SSAValue> materializedValues = new HashSet<>();
+
     public RecoveryContext(IRMethod irMethod, MethodEntry sourceMethod, DefUseChains defUseChains) {
         this.irMethod = irMethod;
         this.sourceMethod = sourceMethod;
@@ -67,5 +76,62 @@ public class RecoveryContext {
 
     public int nextSyntheticId() {
         return syntheticCounter++;
+    }
+
+    /**
+     * Registers a pending NewInstruction result that awaits its <init> call.
+     */
+    public void registerPendingNew(SSAValue result, String className) {
+        pendingNewInstructions.put(result, className);
+    }
+
+    /**
+     * Checks if a value is a pending NewInstruction result.
+     */
+    public boolean isPendingNew(SSAValue value) {
+        return pendingNewInstructions.containsKey(value);
+    }
+
+    /**
+     * Gets and removes the pending new class name for a value.
+     */
+    public String consumePendingNew(SSAValue value) {
+        return pendingNewInstructions.remove(value);
+    }
+
+    /**
+     * Marks a variable name as declared.
+     */
+    public void markDeclared(String name) {
+        declaredVariables.add(name);
+    }
+
+    /**
+     * Checks if a variable name has been declared.
+     */
+    public boolean isDeclared(String name) {
+        return declaredVariables.contains(name);
+    }
+
+    /**
+     * Clears declared variables (for new scope).
+     */
+    public void clearDeclaredVariables() {
+        declaredVariables.clear();
+    }
+
+    /**
+     * Marks an SSA value as materialized into a variable.
+     * After this, subsequent uses should reference the variable, not inline the expression.
+     */
+    public void markMaterialized(SSAValue value) {
+        materializedValues.add(value);
+    }
+
+    /**
+     * Checks if an SSA value has been materialized into a variable.
+     */
+    public boolean isMaterialized(SSAValue value) {
+        return materializedValues.contains(value);
     }
 }

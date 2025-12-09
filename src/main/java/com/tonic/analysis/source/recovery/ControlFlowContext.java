@@ -32,6 +32,9 @@ public class ControlFlowContext {
     /** Labels generated for break/continue targets */
     private final Map<IRBlock, String> blockLabels = new HashMap<>();
 
+    /** Pending statements to be added before the next statement */
+    private final List<Statement> pendingStatements = new ArrayList<>();
+
     private int labelCounter = 0;
 
     public ControlFlowContext(IRMethod irMethod, DominatorTree dominatorTree,
@@ -76,6 +79,27 @@ public class ControlFlowContext {
 
     public String getLabel(IRBlock block) {
         return blockLabels.get(block);
+    }
+
+    /**
+     * Adds statements that should be emitted before the next structured statement.
+     * Used for header block instructions in if/while/etc.
+     */
+    public void addPendingStatements(List<Statement> stmts) {
+        pendingStatements.addAll(stmts);
+    }
+
+    /**
+     * Collects and clears any pending statements.
+     * @return the pending statements, now cleared from context
+     */
+    public List<Statement> collectPendingStatements() {
+        if (pendingStatements.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Statement> result = new ArrayList<>(pendingStatements);
+        pendingStatements.clear();
+        return result;
     }
 
     /**

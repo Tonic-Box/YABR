@@ -102,4 +102,27 @@ public abstract class IRInstruction {
     public static void resetIdCounter() {
         nextId = 0;
     }
+
+    /**
+     * Creates a copy of this instruction with new result and operands.
+     * Subclasses should override for proper deep copying.
+     *
+     * @param newResult the new result value (may be null)
+     * @param newOperands the new operand values
+     * @return a copy of this instruction, or null if copying not supported
+     */
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        return null; // Default: copying not supported
+    }
+
+    /**
+     * Replaces a target block in terminator instructions.
+     * Only meaningful for branch/jump instructions.
+     *
+     * @param oldTarget the block to replace
+     * @param newTarget the replacement block
+     */
+    public void replaceTarget(IRBlock oldTarget, IRBlock newTarget) {
+        // Default: no-op for non-terminator instructions
+    }
 }

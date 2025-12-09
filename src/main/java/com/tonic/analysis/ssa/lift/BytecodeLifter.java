@@ -63,7 +63,7 @@ public class BytecodeLifter {
         }
 
         initializeParameters(irMethod, method);
-        translateInstructions(irMethod, instructions, offsetToBlock, translator);
+        translateInstructions(irMethod, instructions, offsetToBlock, translator, codeAttr);
         connectBlocks(irMethod, offsetToBlock, instructions);
         handleExceptionHandlers(irMethod, codeAttr, offsetToBlock);
 
@@ -238,7 +238,8 @@ public class BytecodeLifter {
     }
 
     private void translateInstructions(IRMethod irMethod, List<Instruction> instructions,
-                                       Map<Integer, IRBlock> offsetToBlock, InstructionTranslator translator) {
+                                       Map<Integer, IRBlock> offsetToBlock, InstructionTranslator translator,
+                                       CodeAttribute codeAttr) {
         if (instructions.isEmpty()) return;
 
         AbstractState state = new AbstractState();
@@ -252,6 +253,30 @@ public class BytecodeLifter {
 
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(currentBlock);
+
+        // Also add exception handler blocks to the worklist
+        // They're not reachable via normal control flow but need to be translated
+        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
+            IRBlock handlerBlock = offsetToBlock.get(entry.getHandlerPc());
+            if (handlerBlock != null && !worklist.contains(handlerBlock)) {
+                // Initialize state for handler block - the exception is on the stack
+                AbstractState handlerState = new AbstractState();
+                initializeState(handlerState, irMethod);
+                // Push the caught exception onto the stack
+                ReferenceType catchType = null;
+                if (entry.getCatchType() != 0) {
+                    String className = constPool.getClassName(entry.getCatchType());
+                    catchType = new ReferenceType(className);
+                }
+                SSAValue exceptionValue = new SSAValue(
+                        catchType != null ? catchType : ReferenceType.THROWABLE,
+                        "exc_" + handlerBlock.getName()
+                );
+                handlerState.push(exceptionValue);
+                blockStates.put(handlerBlock, handlerState);
+                worklist.add(handlerBlock);
+            }
+        }
 
         Map<Integer, Integer> offsetToInstrIndex = new HashMap<>();
         for (int i = 0; i < instructions.size(); i++) {

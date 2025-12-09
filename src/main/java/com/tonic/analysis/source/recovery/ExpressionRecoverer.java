@@ -25,22 +25,52 @@ public class ExpressionRecoverer {
     }
 
     public Expression recoverOperand(Value value) {
+        return recoverOperand(value, null);
+    }
+
+    /**
+     * Recovers an operand with optional type hint for boolean detection.
+     */
+    public Expression recoverOperand(Value value, SourceType typeHint) {
         if (value instanceof Constant c) {
-            return recoverConstant(c);
+            return recoverConstant(c, typeHint);
         }
         SSAValue ssa = (SSAValue) value;
 
-        // Check for cached expression first
-        if (context.isRecovered(ssa)) {
-            return context.getCachedExpression(ssa);
+        // If this value has been materialized into a variable, return a variable reference
+        // This prevents inlining the same expression multiple times
+        if (context.isMaterialized(ssa)) {
+            String name = context.getVariableName(ssa);
+            if (name != null) {
+                SourceType type = typeRecoverer.recoverType(ssa);
+                if ("this".equals(name)) {
+                    return new ThisExpr(type);
+                }
+                return new VarRefExpr(name, type, ssa);
+            }
         }
 
         // For values without cached expressions, check if they should be inlined
         IRInstruction def = ssa.getDefinition();
         if (def != null && shouldInlineExpression(def)) {
+            // Special handling for constants - don't use cache since type hint matters
+            // The same int value 0 could be boolean false in one context, int 0 in another
+            if (def instanceof ConstantInstruction constInstr) {
+                return recoverConstant(constInstr.getConstant(), typeHint);
+            }
+
+            // For non-constants, check cache
+            if (context.isRecovered(ssa)) {
+                return context.getCachedExpression(ssa);
+            }
             Expression expr = recover(def);
             context.cacheExpression(ssa, expr);
             return expr;
+        }
+
+        // Check cache for non-inlined values
+        if (context.isRecovered(ssa)) {
+            return context.getCachedExpression(ssa);
         }
 
         // Fall back to variable reference
@@ -59,18 +89,45 @@ public class ExpressionRecoverer {
      * rather than assigned to an intermediate variable.
      */
     private boolean shouldInlineExpression(IRInstruction instr) {
-        // Pure expressions that should be inlined:
-        // - Field accesses (static and instance)
-        // - Constants
-        // - Method invocations (for conditions like `if (obj.method())`)
-        return instr instanceof GetFieldInstruction ||
-               instr instanceof ConstantInstruction ||
-               instr instanceof InvokeInstruction;
+        // Constants should always be inlined
+        if (instr instanceof ConstantInstruction) {
+            return true;
+        }
+
+        // For method calls and field accesses, only inline if single-use
+        // Multi-use values should be referenced by variable name
+        if (instr instanceof InvokeInstruction || instr instanceof GetFieldInstruction) {
+            SSAValue result = instr.getResult();
+            if (result != null) {
+                // Check use count - only inline if used once
+                int useCount = result.getUses().size();
+                if (useCount > 1) {
+                    return false; // Multi-use: don't inline, use variable reference
+                }
+            }
+            return true;
+        }
+
+        return false;
     }
 
     private Expression recoverConstant(Constant c) {
+        return recoverConstant(c, null);
+    }
+
+    /**
+     * Recovers a constant with optional type hint for boolean detection.
+     */
+    public Expression recoverConstant(Constant c, SourceType typeHint) {
         if (c instanceof IntConstant i) {
-            return LiteralExpr.ofInt(i.getValue());
+            int val = i.getValue();
+            // Check if this is a boolean context
+            if (typeHint instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType pst
+                && pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
+                return LiteralExpr.ofBoolean(val != 0);
+            }
+            // Heuristic: 0 or 1 in certain contexts may be boolean
+            return LiteralExpr.ofInt(val);
         } else if (c instanceof LongConstant l) {
             return LiteralExpr.ofLong(l.getValue());
         } else if (c instanceof FloatConstant f) {
@@ -81,6 +138,13 @@ public class ExpressionRecoverer {
             return LiteralExpr.ofString(s.getValue());
         } else if (c instanceof NullConstant) {
             return LiteralExpr.ofNull();
+        } else if (c instanceof ClassConstant cc) {
+            // Handle class literals like MyClass.class
+            String className = cc.getClassName();
+            // className is in internal format (e.g., "java/lang/String" or "bm")
+            // Create ReferenceSourceType directly from internal name
+            SourceType classType = new ReferenceSourceType(className, java.util.Collections.emptyList());
+            return new ClassExpr(classType);
         }
         return LiteralExpr.ofNull();
     }
@@ -115,9 +179,23 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitInvoke(InvokeInstruction instr) {
+            // Handle <init> constructor calls
+            if ("<init>".equals(instr.getName())) {
+                return handleConstructorCall(instr);
+            }
+
             Expression receiver = null;
             if (instr.getInvokeType() != InvokeType.STATIC && !instr.getArguments().isEmpty()) {
-                receiver = recoverOperand(instr.getArguments().get(0));
+                Value receiverValue = instr.getArguments().get(0);
+                // Skip 'this' receiver for method calls in same class
+                if (receiverValue instanceof SSAValue ssaReceiver) {
+                    String name = context.getVariableName(ssaReceiver);
+                    if (!"this".equals(name)) {
+                        receiver = recoverOperand(receiverValue);
+                    }
+                } else {
+                    receiver = recoverOperand(receiverValue);
+                }
             }
             java.util.List<Expression> args = new java.util.ArrayList<>();
             int start = (instr.getInvokeType() == InvokeType.STATIC) ? 0 : 1;
@@ -129,8 +207,59 @@ public class ExpressionRecoverer {
             return new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType);
         }
 
+        private Expression handleConstructorCall(InvokeInstruction instr) {
+            java.util.List<Expression> args = new java.util.ArrayList<>();
+            // Constructor args start at index 1 (index 0 is the uninitialized object)
+            for (int i = 1; i < instr.getArguments().size(); i++) {
+                args.add(recoverOperand(instr.getArguments().get(i)));
+            }
+
+            // Check if this is super() or this() call
+            if (!instr.getArguments().isEmpty()) {
+                Value receiver = instr.getArguments().get(0);
+                if (receiver instanceof SSAValue ssaReceiver) {
+                    String name = context.getVariableName(ssaReceiver);
+                    if ("this".equals(name)) {
+                        // this.<init>() is either super() or this()
+                        String ownerClass = instr.getOwner();
+                        String methodClass = context.getIrMethod().getOwnerClass();
+                        if (ownerClass != null && methodClass != null && !ownerClass.equals(methodClass)) {
+                            // Calling parent constructor
+                            return new MethodCallExpr(null, "super", ownerClass, args, false, null);
+                        } else {
+                            // Calling this() - delegating constructor
+                            return new MethodCallExpr(null, "this", ownerClass, args, false, null);
+                        }
+                    }
+
+                    // Check if receiver is a pending new instruction
+                    if (context.isPendingNew(ssaReceiver)) {
+                        String className = context.consumePendingNew(ssaReceiver);
+                        NewExpr newExpr = new NewExpr(className);
+                        for (Expression arg : args) {
+                            newExpr.addArgument(arg);
+                        }
+                        // Cache this combined expression for later use
+                        context.cacheExpression(ssaReceiver, newExpr);
+                        return newExpr;
+                    }
+                }
+            }
+
+            // Fallback: create NewExpr with the owner class
+            NewExpr newExpr = new NewExpr(instr.getOwner());
+            for (Expression arg : args) {
+                newExpr.addArgument(arg);
+            }
+            return newExpr;
+        }
+
         @Override
         public Expression visitNew(NewInstruction instr) {
+            // Register this as a pending new instruction - will be combined with <init> call
+            if (instr.getResult() != null) {
+                context.registerPendingNew(instr.getResult(), instr.getClassName());
+            }
             return new NewExpr(instr.getClassName());
         }
 

@@ -43,7 +43,8 @@ public final class MethodCallExpr implements Expression {
         this.ownerClass = Objects.requireNonNull(ownerClass, "ownerClass cannot be null");
         this.arguments = new ArrayList<>(arguments != null ? arguments : List.of());
         this.isStatic = isStatic;
-        this.type = Objects.requireNonNull(type, "type cannot be null");
+        // Allow null type for void methods and super()/this() calls
+        this.type = type != null ? type : com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
         if (receiver != null) {

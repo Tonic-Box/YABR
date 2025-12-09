@@ -36,6 +36,11 @@ public class ConstantInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        return new ConstantInstruction(newResult, constant);
+    }
+
+    @Override
     public String toString() {
         return result + " = const " + constant;
     }

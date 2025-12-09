@@ -76,6 +76,16 @@ public class PutFieldInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        if (isStatic) {
+            if (newOperands.isEmpty()) return null;
+            return new PutFieldInstruction(owner, name, descriptor, newOperands.get(0));
+        }
+        if (newOperands.size() < 2) return null;
+        return new PutFieldInstruction(owner, name, descriptor, newOperands.get(0), newOperands.get(1));
+    }
+
+    @Override
     public String toString() {
         if (isStatic) {
             return "putstatic " + owner + "." + name + " : " + descriptor + " = " + value;

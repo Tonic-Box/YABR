@@ -35,6 +35,11 @@ public class LoadLocalInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        return new LoadLocalInstruction(newResult, localIndex);
+    }
+
+    @Override
     public String toString() {
         return result + " = load_local " + localIndex;
     }

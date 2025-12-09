@@ -94,8 +94,15 @@ public class StructuralAnalyzer {
             bodyBlock = falseTarget;
             exitBlock = trueTarget;
             conditionNegated = true;
+        } else if (loop.contains(trueTarget) && loop.contains(falseTarget)) {
+            // Both branches stay inside the loop - this is a conditional inside a loop
+            // Treat as an infinite loop with internal conditional
+            // Pick true target as body, loop exit will be determined by break/return inside
+            bodyBlock = trueTarget;
+            exitBlock = null; // No clear exit from header
+            conditionNegated = false;
         } else {
-            // Both inside or both outside - complex case
+            // Both outside - shouldn't happen for a loop header, mark as irreducible
             return new RegionInfo(StructuredRegion.IRREDUCIBLE, header);
         }
 

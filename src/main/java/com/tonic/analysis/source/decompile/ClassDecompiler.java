@@ -8,6 +8,8 @@ import com.tonic.analysis.source.recovery.MethodRecoverer;
 import com.tonic.analysis.source.recovery.TypeRecoverer;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.transform.ControlFlowReducibility;
+import com.tonic.analysis.ssa.transform.DuplicateBlockMerging;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
@@ -31,6 +33,8 @@ public class ClassDecompiler {
     private final SSA ssa;
     private final SourceEmitterConfig config;
     private final TypeRecoverer typeRecoverer;
+    private final ControlFlowReducibility reducibility;
+    private final DuplicateBlockMerging duplicateMerging;
 
     public ClassDecompiler(ClassFile classFile) {
         this(classFile, SourceEmitterConfig.defaults());
@@ -41,6 +45,8 @@ public class ClassDecompiler {
         this.ssa = new SSA(classFile.getConstPool());
         this.config = config;
         this.typeRecoverer = new TypeRecoverer();
+        this.reducibility = new ControlFlowReducibility();
+        this.duplicateMerging = new DuplicateBlockMerging();
     }
 
     /**
@@ -202,6 +208,8 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(clinit);
+            reducibility.run(ir);
+            duplicateMerging.run(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -246,6 +254,8 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(ctor);
+            reducibility.run(ir);
+            duplicateMerging.run(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -296,6 +306,8 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(method);
+            reducibility.run(ir);
+            duplicateMerging.run(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             emitBlockContents(writer, body);
         } catch (Exception e) {

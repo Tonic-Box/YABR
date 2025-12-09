@@ -75,6 +75,18 @@ public class SwitchInstruction extends IRInstruction {
     }
 
     @Override
+    public void replaceTarget(IRBlock oldTarget, IRBlock newTarget) {
+        if (defaultTarget == oldTarget) {
+            defaultTarget = newTarget;
+        }
+        for (Map.Entry<Integer, IRBlock> entry : cases.entrySet()) {
+            if (entry.getValue() == oldTarget) {
+                entry.setValue(newTarget);
+            }
+        }
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("switch ").append(key).append(" {\n");

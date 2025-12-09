@@ -58,6 +58,15 @@ public class GetFieldInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        if (isStatic) {
+            return new GetFieldInstruction(newResult, owner, name, descriptor);
+        }
+        if (newOperands.isEmpty()) return null;
+        return new GetFieldInstruction(newResult, owner, name, descriptor, newOperands.get(0));
+    }
+
+    @Override
     public String toString() {
         if (isStatic) {
             return result + " = getstatic " + owner + "." + name + " : " + descriptor;

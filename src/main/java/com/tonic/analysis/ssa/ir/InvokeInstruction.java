@@ -128,6 +128,11 @@ public class InvokeInstruction extends IRInstruction {
     }
 
     @Override
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+        return new InvokeInstruction(newResult, invokeType, owner, name, descriptor, newOperands, originalCpIndex, bootstrapInfo);
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         if (result != null) {

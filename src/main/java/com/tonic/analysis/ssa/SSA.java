@@ -234,6 +234,40 @@ public class SSA {
     }
 
     /**
+     * Enables control flow reducibility transformation.
+     * Converts irreducible control flow to reducible form using node splitting,
+     * allowing the decompiler to emit structured Java code.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withControlFlowReducibility() {
+        return addTransform(new ControlFlowReducibility());
+    }
+
+    /**
+     * Enables duplicate block merging optimization.
+     * Merges duplicate blocks created by node splitting while preserving reducibility.
+     * Use after withControlFlowReducibility() to clean up duplicated code.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withDuplicateBlockMerging() {
+        return addTransform(new DuplicateBlockMerging());
+    }
+
+    /**
+     * Enables duplicate block merging optimization with configurable aggression.
+     * Conservative mode (false): only merge when one predecessor dominates all others.
+     * Aggressive mode (true): also merge when no loop entry conflict would be created.
+     *
+     * @param aggressive true for aggressive merging, false for conservative
+     * @return this SSA instance for chaining
+     */
+    public SSA withDuplicateBlockMerging(boolean aggressive) {
+        return addTransform(new DuplicateBlockMerging(aggressive));
+    }
+
+    /**
      * Adds a class-level transform to be applied.
      *
      * @param transform the class transform to add

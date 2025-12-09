@@ -122,7 +122,7 @@ public class DominatorTree {
         for (IRBlock block : method.getBlocks()) {
             IRBlock idom = immediateDominator.get(block);
             if (idom != null && idom != block) {
-                dominatorTreeChildren.get(idom).add(block);
+                dominatorTreeChildren.computeIfAbsent(idom, k -> new HashSet<>()).add(block);
             }
         }
     }
@@ -137,7 +137,7 @@ public class DominatorTree {
                 for (IRBlock pred : block.getPredecessors()) {
                     IRBlock runner = pred;
                     while (runner != null && runner != immediateDominator.get(block)) {
-                        dominanceFrontier.get(runner).add(block);
+                        dominanceFrontier.computeIfAbsent(runner, k -> new HashSet<>()).add(block);
                         runner = immediateDominator.get(runner);
                     }
                 }
