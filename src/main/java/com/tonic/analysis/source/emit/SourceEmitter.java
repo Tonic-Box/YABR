@@ -517,7 +517,16 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitUnary(UnaryExpr expr) {
         if (expr.getOperator().isPrefix()) {
             writer.write(getUnaryOperatorSymbol(expr.getOperator()));
+            // Add parentheses for binary expressions to ensure correct precedence
+            // e.g., !(a != b) instead of !a != b
+            boolean needsParens = expr.getOperand() instanceof com.tonic.analysis.source.ast.expr.BinaryExpr;
+            if (needsParens) {
+                writer.write("(");
+            }
             expr.getOperand().accept(this);
+            if (needsParens) {
+                writer.write(")");
+            }
         } else {
             expr.getOperand().accept(this);
             writer.write(getUnaryOperatorSymbol(expr.getOperator()));

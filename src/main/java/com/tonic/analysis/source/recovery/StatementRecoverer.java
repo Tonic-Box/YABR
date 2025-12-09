@@ -371,9 +371,13 @@ public class StatementRecoverer {
         }
 
         // Recursively recover all blocks reachable from the handler
-        Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
-        visitedHandlerBlocks.add(handlerBlock);
-        recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts);
+        // BUT skip if the handler block ends with a goto (meaning empty catch body)
+        IRInstruction handlerTerminator = handlerBlock.getTerminator();
+        if (!(handlerTerminator instanceof GotoInstruction)) {
+            Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
+            visitedHandlerBlocks.add(handlerBlock);
+            recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts);
+        }
 
         // Filter out redundant assignments to exception variable AND unreachable code after return/throw
         List<Statement> filteredStmts = new ArrayList<>();
@@ -415,7 +419,9 @@ public class StatementRecoverer {
     }
 
     /**
-     * Recursively recovers all blocks reachable from the handler until we hit a throw or return.
+     * Recursively recovers all blocks reachable from the handler until we hit a throw, return, or goto.
+     * IMPORTANT: A GotoInstruction in a catch handler typically means "exit the catch and continue",
+     * so we should NOT follow goto targets - they are the merge point, not part of the catch body.
      */
     private void recoverHandlerBlocks(List<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts) {
         for (IRBlock block : successors) {
@@ -448,7 +454,14 @@ public class StatementRecoverer {
                 continue;
             }
 
-            // Continue to successors
+            // Check for goto terminator - this means exit the catch block
+            // The goto target is the merge point (code after try-catch), not part of catch body
+            if (terminator instanceof GotoInstruction) {
+                // Stop recursion - don't follow goto into merge block
+                continue;
+            }
+
+            // Continue to successors only for branches/conditionals within the catch
             recoverHandlerBlocks(block.getSuccessors(), visited, stmts);
         }
     }
@@ -582,6 +595,172 @@ public class StatementRecoverer {
      * Represents a try region defined by start and end blocks.
      */
     private record TryRegion(IRBlock start, IRBlock end) {}
+
+    /**
+     * Finds an exception handler whose try region starts at the given block.
+     */
+    private ExceptionHandler findHandlerStartingAt(IRBlock block) {
+        IRMethod irMethod = context.getIrMethod();
+        List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
+        if (handlers == null || handlers.isEmpty()) {
+            return null;
+        }
+        for (ExceptionHandler handler : handlers) {
+            // Compare by object identity or bytecode offset
+            IRBlock tryStart = handler.getTryStart();
+            if (tryStart == block ||
+                (tryStart != null && tryStart.getBytecodeOffset() == block.getBytecodeOffset())) {
+                return handler;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Recovers a try-catch statement starting at the given block.
+     */
+    private TryCatchStmt recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler,
+                                          Set<IRBlock> originalStopBlocks, Set<IRBlock> visited) {
+        // Collect all handlers that cover the same try region
+        IRMethod irMethod = context.getIrMethod();
+        List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
+        List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
+        for (ExceptionHandler h : handlers) {
+            if (h.getTryStart() == mainHandler.getTryStart()) {
+                sameRegionHandlers.add(h);
+            }
+        }
+
+        // Calculate the stop blocks for the try body: handler blocks + original stop blocks
+        Set<IRBlock> tryStopBlocks = new HashSet<>(originalStopBlocks);
+        for (ExceptionHandler h : sameRegionHandlers) {
+            if (h.getHandlerBlock() != null) {
+                tryStopBlocks.add(h.getHandlerBlock());
+            }
+        }
+
+        // Also stop at the end of the try region - blocks strictly after tryEnd
+        if (mainHandler.getTryEnd() != null) {
+            // The tryEnd offset is exclusive - stop at blocks AFTER the end
+            int tryEndOffset = mainHandler.getTryEnd().getBytecodeOffset();
+            for (IRBlock block : irMethod.getBlocks()) {
+                // Only stop at blocks strictly after the try region ends
+                if (block.getBytecodeOffset() > tryEndOffset) {
+                    tryStopBlocks.add(block);
+                }
+            }
+        }
+
+        // Recover the try block content
+        List<Statement> tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited);
+        BlockStmt tryBlock = new BlockStmt(tryStmts);
+
+        // Recover catch clauses
+        List<CatchClause> catchClauses = new ArrayList<>();
+        for (ExceptionHandler h : sameRegionHandlers) {
+            CatchClause clause = recoverCatchClause(h);
+            if (clause != null) {
+                catchClauses.add(clause);
+            }
+        }
+
+        if (catchClauses.isEmpty()) {
+            // No valid catch clauses - return null to fall back to normal recovery
+            return null;
+        }
+
+        return new TryCatchStmt(tryBlock, catchClauses);
+    }
+
+    /**
+     * Recovers blocks for a try region, stopping at the specified stop blocks.
+     */
+    private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited) {
+        List<Statement> result = new ArrayList<>();
+        IRBlock current = startBlock;
+
+        while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
+            visited.add(current);
+
+            if (context.isProcessed(current)) {
+                result.addAll(context.getStatements(current));
+                current = getNextSequentialBlock(current);
+                continue;
+            }
+
+            RegionInfo info = analyzer.getRegionInfo(current);
+            if (info == null) {
+                result.addAll(recoverSimpleBlock(current));
+                context.markProcessed(current);
+                current = getNextSequentialBlock(current);
+                continue;
+            }
+
+            switch (info.getType()) {
+                case IF_THEN -> {
+                    Statement ifStmt = recoverIfThen(current, info);
+                    result.addAll(context.collectPendingStatements());
+                    result.add(ifStmt);
+                    current = info.getMergeBlock();
+                }
+                case IF_THEN_ELSE -> {
+                    Statement ifStmt = recoverIfThenElse(current, info);
+                    result.addAll(context.collectPendingStatements());
+                    result.add(ifStmt);
+                    current = info.getMergeBlock();
+                }
+                case WHILE_LOOP -> {
+                    result.add(recoverWhileLoop(current, info));
+                    current = info.getLoopExit();
+                }
+                case DO_WHILE_LOOP -> {
+                    result.add(recoverDoWhileLoop(current, info));
+                    current = info.getLoopExit();
+                }
+                case FOR_LOOP -> {
+                    result.add(recoverForLoop(current, info));
+                    current = info.getLoopExit();
+                }
+                default -> {
+                    result.addAll(recoverSimpleBlock(current));
+                    context.markProcessed(current);
+                    current = getNextSequentialBlock(current);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds the block to continue from after a try-catch region.
+     */
+    private IRBlock findBlockAfterTryCatch(ExceptionHandler handler, Set<IRBlock> visited) {
+        // The merge point is typically reachable from both the try end and the catch handler
+        // Look for a successor of the handler block that is after the try region
+        IRBlock handlerBlock = handler.getHandlerBlock();
+        if (handlerBlock != null) {
+            for (IRBlock succ : handlerBlock.getSuccessors()) {
+                // Find a block that's not already visited and not part of the handler
+                if (!visited.contains(succ)) {
+                    return succ;
+                }
+            }
+        }
+
+        // If tryEnd is specified, look for block at that offset
+        if (handler.getTryEnd() != null) {
+            IRMethod irMethod = context.getIrMethod();
+            int endOffset = handler.getTryEnd().getBytecodeOffset();
+            for (IRBlock block : irMethod.getBlocks()) {
+                if (block.getBytecodeOffset() >= endOffset && !visited.contains(block)) {
+                    return block;
+                }
+            }
+        }
+
+        return null;
+    }
 
     /** Map from local slot name to unified type (computed from all assignments) */
     private Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
@@ -910,12 +1089,34 @@ public class StatementRecoverer {
     /**
      * Recovers statements starting from a block, following control flow.
      */
+    /** Tracks try handlers that have already been processed to avoid infinite loops */
+    private Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
+
     public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks) {
         List<Statement> result = new ArrayList<>();
         Set<IRBlock> visited = new HashSet<>();
         IRBlock current = startBlock;
 
         while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
+            // Check if this block starts a try region BEFORE marking as visited
+            ExceptionHandler tryHandler = findHandlerStartingAt(current);
+            if (tryHandler != null && !processedTryHandlers.contains(tryHandler)) {
+                // Mark this handler as processed to avoid infinite loops
+                processedTryHandlers.add(tryHandler);
+                // Use a new visited set for try recovery that starts fresh for the try block
+                Set<IRBlock> tryVisited = new HashSet<>(visited);
+                // Emit try-catch for this protected region
+                TryCatchStmt tryCatch = recoverTryCatch(current, tryHandler, stopBlocks, tryVisited);
+                if (tryCatch != null) {
+                    result.add(tryCatch);
+                    // Merge the try-visited blocks back
+                    visited.addAll(tryVisited);
+                    // Skip to after the try-catch region
+                    current = findBlockAfterTryCatch(tryHandler, visited);
+                    continue;
+                }
+            }
+
             visited.add(current);
 
             if (context.isProcessed(current)) {
@@ -1314,6 +1515,35 @@ public class StatementRecoverer {
         List<Statement> thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
         List<Statement> elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
 
+        // Check for boolean return pattern: if(cond) return true/false; else return false/true;
+        // This collapses patterns like isClientThread() { if(x==y) return true; else return false; }
+        // into the simpler: return x == y;
+        if (isBooleanReturnPattern(thenStmts, elseStmts)) {
+            Statement booleanReturn = collapseToBooleanReturn(condition, thenStmts, elseStmts);
+            // If there are header instructions, we need to include them
+            if (!headerStmts.isEmpty()) {
+                context.addPendingStatements(headerStmts);
+            }
+            return booleanReturn;
+        }
+
+        // Check for PHI-based boolean return pattern:
+        // if(cond) { } else { } followed by merge block with PHI(true,false) + return PHI
+        // This happens when bytecode uses: IF_xCMP -> ICONST_0 -> GOTO merge; ICONST_1 -> merge: IRETURN
+        if (isBooleanPhiReturnPattern(thenStmts, elseStmts, info.getMergeBlock())) {
+            Statement booleanReturn = collapsePhiToBooleanReturn(condition, info.getMergeBlock());
+            if (booleanReturn != null) {
+                // Mark merge block as processed since we're consuming it
+                if (info.getMergeBlock() != null) {
+                    context.markProcessed(info.getMergeBlock());
+                }
+                if (!headerStmts.isEmpty()) {
+                    context.addPendingStatements(headerStmts);
+                }
+                return booleanReturn;
+            }
+        }
+
         BlockStmt thenBlock = new BlockStmt(thenStmts);
         BlockStmt elseBlock = new BlockStmt(elseStmts);
 
@@ -1480,8 +1710,10 @@ public class StatementRecoverer {
 
             // Check if the expression is boolean-typed
             // If so, simplify: "x == 0" becomes "!x", "x != 0" becomes "x"
-            if (isBooleanExpression(left)) {
-                boolean wantTrue = (condition == CompareOp.NE); // NE to 0 means we want true
+            // Also check the SSAValue's type directly as a fallback
+            if (isBooleanExpression(left) || isBooleanSSAValue(branch.getLeft())) {
+                // NE/IFNE to 0 means we want true (branch taken if value is non-zero/true)
+                boolean wantTrue = (condition == CompareOp.NE || condition == CompareOp.IFNE);
                 if (negate) {
                     wantTrue = !wantTrue;
                 }
@@ -1554,6 +1786,18 @@ public class StatementRecoverer {
             }
         }
 
+        return false;
+    }
+
+    /**
+     * Checks if an SSAValue has boolean type directly from its IR type.
+     * This is a fallback when the recovered expression type isn't detected as boolean.
+     */
+    private boolean isBooleanSSAValue(com.tonic.analysis.ssa.value.Value value) {
+        if (value instanceof com.tonic.analysis.ssa.value.SSAValue ssaValue) {
+            com.tonic.analysis.ssa.type.IRType type = ssaValue.getType();
+            return type == com.tonic.analysis.ssa.type.PrimitiveType.BOOLEAN;
+        }
         return false;
     }
 
@@ -1693,5 +1937,217 @@ public class StatementRecoverer {
             result.add(current);
             worklist.addAll(current.getSuccessors());
         }
+    }
+
+    /**
+     * Checks if the then/else branches form a boolean return pattern.
+     * Pattern: if(cond) return true/false; else return false/true;
+     * This is common in bytecode for boolean comparison methods.
+     */
+    private boolean isBooleanReturnPattern(List<Statement> thenStmts, List<Statement> elseStmts) {
+        if (thenStmts.size() != 1 || elseStmts.size() != 1) {
+            return false;
+        }
+
+        Statement thenStmt = thenStmts.get(0);
+        Statement elseStmt = elseStmts.get(0);
+
+        if (!(thenStmt instanceof ReturnStmt thenRet)) {
+            return false;
+        }
+        if (!(elseStmt instanceof ReturnStmt elseRet)) {
+            return false;
+        }
+
+        // Check if both return boolean literals (true/false or 0/1)
+        return isBooleanLiteral(thenRet.getValue()) && isBooleanLiteral(elseRet.getValue());
+    }
+
+    /**
+     * Checks if an expression is a boolean literal (true/false or integer 0/1).
+     */
+    private boolean isBooleanLiteral(Expression expr) {
+        if (expr instanceof LiteralExpr lit) {
+            Object val = lit.getValue();
+            if (val instanceof Boolean) {
+                return true;
+            }
+            if (val instanceof Integer i) {
+                return i == 0 || i == 1;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets the boolean value from a literal expression.
+     */
+    private boolean getBooleanValue(Expression expr) {
+        if (expr instanceof LiteralExpr lit) {
+            Object val = lit.getValue();
+            if (val instanceof Boolean b) {
+                return b;
+            }
+            if (val instanceof Integer i) {
+                return i != 0;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Collapses a boolean return pattern into a single return statement.
+     * if(cond) return true; else return false; -> return cond;
+     * if(cond) return false; else return true; -> return !cond;
+     */
+    private Statement collapseToBooleanReturn(Expression condition,
+                                               List<Statement> thenStmts,
+                                               List<Statement> elseStmts) {
+        ReturnStmt thenRet = (ReturnStmt) thenStmts.get(0);
+        boolean thenValue = getBooleanValue(thenRet.getValue());
+
+        // If then returns true, the condition is the return value
+        // If then returns false, the negated condition is the return value
+        if (thenValue) {
+            return new ReturnStmt(condition);
+        } else {
+            return new ReturnStmt(new UnaryExpr(UnaryOperator.NOT, condition,
+                    com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN));
+        }
+    }
+
+    /**
+     * Checks for a PHI-based boolean return pattern.
+     * This pattern occurs when both branches are empty/trivial (just assign constants)
+     * and the merge block has a PHI of boolean values followed by return.
+     */
+    private boolean isBooleanPhiReturnPattern(List<Statement> thenStmts, List<Statement> elseStmts, IRBlock mergeBlock) {
+        // Both branches should be empty or trivial (just variable declarations)
+        if (thenStmts.size() > 1 || elseStmts.size() > 1) {
+            return false;
+        }
+
+        if (mergeBlock == null) {
+            return false;
+        }
+
+        // Merge block should have exactly one PHI and one return
+        if (mergeBlock.getPhiInstructions().size() != 1) {
+            return false;
+        }
+
+        List<IRInstruction> mergeInstrs = mergeBlock.getInstructions();
+        if (mergeInstrs.size() != 1 || !(mergeInstrs.get(0) instanceof ReturnInstruction)) {
+            return false;
+        }
+
+        // Check if PHI has boolean values (0/1 or true/false)
+        // The operands may be SSAValues defined by ConstantInstructions
+        PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
+        for (com.tonic.analysis.ssa.value.Value val : phi.getOperands()) {
+            Integer boolValue = extractBooleanConstant(val);
+            if (boolValue == null) {
+                return false;
+            }
+        }
+
+        // Check if return uses the PHI result
+        ReturnInstruction ret = (ReturnInstruction) mergeInstrs.get(0);
+        return ret.getReturnValue() == phi.getResult();
+    }
+
+    /**
+     * Collapses a PHI-based boolean return pattern into a single return statement.
+     * Examines the PHI's incoming values to determine if condition should be negated.
+     */
+    private Statement collapsePhiToBooleanReturn(Expression condition, IRBlock mergeBlock) {
+        if (mergeBlock == null) {
+            return null;
+        }
+
+        PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
+
+        // Determine which value corresponds to "true" path
+        // The PHI has values from different predecessors
+        // We need to figure out if the "then" path contributes 0 or 1
+        List<com.tonic.analysis.ssa.value.Value> operands = phi.getOperands();
+        if (operands.size() != 2) {
+            return null;
+        }
+
+        // Get the values - handle SSAValues defined by ConstantInstructions
+        Integer val0 = extractBooleanConstant(operands.get(0));
+        Integer val1 = extractBooleanConstant(operands.get(1));
+
+        if (val0 == null || val1 == null) {
+            return null;
+        }
+
+        // If both are the same, no boolean pattern
+        if (val0 == val1) {
+            return null;
+        }
+
+        // The condition leads to different branches - we need to figure out the polarity
+        // For now, assume the first operand corresponds to the "true" branch of the condition
+        // If first operand is 1 (true), return condition as-is
+        // If first operand is 0 (false), negate the condition
+        if (val0 == 1) {
+            return new ReturnStmt(condition);
+        } else {
+            // Instead of wrapping in !(expr), try to invert the comparison operator
+            // This transforms !(a != b) into a == b, which is cleaner
+            Expression negatedCondition = invertCondition(condition);
+            return new ReturnStmt(negatedCondition);
+        }
+    }
+
+    /**
+     * Inverts a condition expression.
+     * For binary comparisons, inverts the operator (e.g., != to ==).
+     * For other expressions, wraps in NOT.
+     */
+    private Expression invertCondition(Expression condition) {
+        if (condition instanceof com.tonic.analysis.source.ast.expr.BinaryExpr binExpr) {
+            BinaryOperator op = binExpr.getOperator();
+            BinaryOperator inverted = negateOperator(op);
+            if (inverted != op) {
+                return new com.tonic.analysis.source.ast.expr.BinaryExpr(
+                    inverted, binExpr.getLeft(), binExpr.getRight(), binExpr.getType());
+            }
+        }
+        // Fallback to NOT wrapper
+        return new UnaryExpr(UnaryOperator.NOT, condition,
+                com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+    }
+
+    /**
+     * Extracts a boolean constant value (0 or 1) from an IR Value.
+     * Handles both direct IntConstants and SSAValues defined by ConstantInstructions.
+     */
+    private Integer extractBooleanConstant(com.tonic.analysis.ssa.value.Value val) {
+        if (val instanceof com.tonic.analysis.ssa.value.IntConstant ic) {
+            int v = ic.getValue();
+            if (v == 0 || v == 1) {
+                return v;
+            }
+            return null;
+        }
+
+        if (val instanceof com.tonic.analysis.ssa.value.SSAValue ssaVal) {
+            // Check if this SSA value is defined by a constant instruction
+            IRInstruction def = ssaVal.getDefinition();
+            if (def instanceof ConstantInstruction constInstr) {
+                com.tonic.analysis.ssa.value.Constant c = constInstr.getConstant();
+                if (c instanceof com.tonic.analysis.ssa.value.IntConstant ic) {
+                    int v = ic.getValue();
+                    if (v == 0 || v == 1) {
+                        return v;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }

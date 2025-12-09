@@ -325,6 +325,17 @@ public class ExpressionRecoverer {
         }
 
         @Override
+        public Expression visitNewArray(NewArrayInstruction instr) {
+            // Recover the element type and dimensions
+            SourceType elementType = SourceType.fromIRType(instr.getElementType());
+            java.util.List<Expression> dims = new java.util.ArrayList<>();
+            for (com.tonic.analysis.ssa.value.Value dimValue : instr.getDimensions()) {
+                dims.add(recoverOperand(dimValue));
+            }
+            return new NewArrayExpr(elementType, dims);
+        }
+
+        @Override
         protected Expression defaultValue() {
             return LiteralExpr.ofNull();
         }

@@ -67,6 +67,9 @@ public class BytecodeLifter {
         connectBlocks(irMethod, offsetToBlock, instructions);
         handleExceptionHandlers(irMethod, codeAttr, offsetToBlock);
 
+        // Fix up PHI uses - ensure instructions use PHI values instead of raw incoming values
+        fixupPhiUses(irMethod);
+
         return irMethod;
     }
 
@@ -283,6 +286,9 @@ public class BytecodeLifter {
             offsetToInstrIndex.put(instructions.get(i).getOffset(), i);
         }
 
+        // Track source block for each successor's initial state (for PHI creation)
+        Map<IRBlock, IRBlock> stateSourceBlocks = new HashMap<>();
+
         while (!worklist.isEmpty()) {
             currentBlock = worklist.poll();
             if (processedBlocks.contains(currentBlock)) continue;
@@ -305,7 +311,13 @@ public class BytecodeLifter {
                     }
                     if (!blockStates.containsKey(nextBlock)) {
                         blockStates.put(nextBlock, state.copy());
+                        stateSourceBlocks.put(nextBlock, currentBlock);
                         worklist.add(nextBlock);
+                    } else {
+                        // Merge states when block already has state from another path
+                        AbstractState existingState = blockStates.get(nextBlock);
+                        IRBlock firstSourceBlock = stateSourceBlocks.get(nextBlock);
+                        mergeStackWithPhis(state, existingState, nextBlock, currentBlock, firstSourceBlock);
                     }
                     break;
                 }
@@ -313,7 +325,7 @@ public class BytecodeLifter {
                 translator.translate(instr, state, currentBlock);
 
                 if (currentBlock.hasTerminator()) {
-                    propagateState(state, currentBlock, blockStates, worklist, offsetToBlock);
+                    propagateState(state, currentBlock, blockStates, worklist, offsetToBlock, stateSourceBlocks);
                     break;
                 }
             }
@@ -332,7 +344,8 @@ public class BytecodeLifter {
     }
 
     private void propagateState(AbstractState state, IRBlock block, Map<IRBlock, AbstractState> blockStates,
-                                Queue<IRBlock> worklist, Map<Integer, IRBlock> offsetToBlock) {
+                                Queue<IRBlock> worklist, Map<Integer, IRBlock> offsetToBlock,
+                                Map<IRBlock, IRBlock> stateSourceBlocks) {
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return;
 
@@ -348,11 +361,113 @@ public class BytecodeLifter {
         }
 
         for (IRBlock succ : successors) {
-            if (succ != null && !blockStates.containsKey(succ)) {
+            if (succ == null) continue;
+
+            if (!blockStates.containsKey(succ)) {
+                // First time visiting this block - just copy state and record source
                 blockStates.put(succ, state.copy());
+                stateSourceBlocks.put(succ, block);
                 worklist.add(succ);
+            } else {
+                // Block already has a state from another path - need to merge
+                // Insert PHI nodes for stack values that differ
+                AbstractState existingState = blockStates.get(succ);
+                IRBlock firstSourceBlock = stateSourceBlocks.get(succ);
+                mergeStackWithPhis(state, existingState, succ, block, firstSourceBlock);
             }
         }
+    }
+
+
+    /**
+     * Merges stack values from incoming state with existing state using PHI nodes.
+     * When two control flow paths merge at a block and have different stack values,
+     * we need to insert PHI nodes to properly represent the merged values.
+     */
+    private void mergeStackWithPhis(AbstractState incomingState, AbstractState existingState,
+                                     IRBlock targetBlock, IRBlock incomingBlock, IRBlock firstSourceBlock) {
+        List<Value> incomingStack = incomingState.getStackValues();
+        List<Value> existingStack = existingState.getStackValues();
+
+        // Stack sizes should match at merge points
+        if (incomingStack.size() != existingStack.size()) {
+            return; // Mismatch - can't merge safely
+        }
+
+        // Check each stack slot and create PHI if values differ
+        for (int i = 0; i < incomingStack.size(); i++) {
+            Value incomingVal = incomingStack.get(i);
+            Value existingVal = existingStack.get(i);
+
+            // If values are identical, no PHI needed
+            if (incomingVal.equals(existingVal)) {
+                continue;
+            }
+
+            // Check if there's already a PHI for this stack slot
+            PhiInstruction existingPhi = findStackPhi(targetBlock, i);
+            if (existingPhi != null) {
+                // Add the incoming value to the existing PHI
+                existingPhi.addIncoming(incomingVal, incomingBlock);
+            } else {
+                // Create a new PHI for this stack slot
+                IRType type = incomingVal instanceof SSAValue ssaVal ? ssaVal.getType() :
+                              existingVal instanceof SSAValue ssaVal2 ? ssaVal2.getType() :
+                              PrimitiveType.INT;
+                SSAValue phiResult = new SSAValue(type, "stack_phi_" + i);
+                PhiInstruction phi = new PhiInstruction(phiResult);
+                // Use tracked first source block for the existing value
+                phi.addIncoming(existingVal, firstSourceBlock);
+                phi.addIncoming(incomingVal, incomingBlock);
+                targetBlock.addPhi(phi);
+
+                // Update the existing state to use the PHI value
+                existingState.getStackValues().set(i, phiResult);
+
+                // Also update any instructions in the block that use the old value
+                replaceValueInBlock(targetBlock, existingVal, phiResult);
+            }
+        }
+    }
+
+    /**
+     * Replaces all uses of oldValue with newValue in the given block's instructions.
+     */
+    private void replaceValueInBlock(IRBlock block, Value oldValue, Value newValue) {
+        for (IRInstruction instr : block.getInstructions()) {
+            instr.replaceOperand(oldValue, newValue);
+        }
+    }
+
+    /**
+     * Post-processing pass to fix up PHI uses.
+     * For each PHI instruction, ensures all instructions in the block
+     * use the PHI result instead of any of the incoming values.
+     */
+    private void fixupPhiUses(IRMethod method) {
+        for (IRBlock block : method.getBlocks()) {
+            for (PhiInstruction phi : block.getPhiInstructions()) {
+                SSAValue phiResult = phi.getResult();
+                // Replace uses of any incoming value with the PHI result
+                for (Value incomingValue : phi.getOperands()) {
+                    for (IRInstruction instr : block.getInstructions()) {
+                        instr.replaceOperand(incomingValue, phiResult);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds an existing PHI instruction for a specific stack slot.
+     */
+    private PhiInstruction findStackPhi(IRBlock block, int stackSlot) {
+        for (PhiInstruction phi : block.getPhiInstructions()) {
+            if (phi.getResult().getName().equals("stack_phi_" + stackSlot)) {
+                return phi;
+            }
+        }
+        return null;
     }
 
     private void connectBlocks(IRMethod irMethod, Map<Integer, IRBlock> offsetToBlock, List<Instruction> instructions) {
