@@ -13,8 +13,9 @@ import com.tonic.analysis.ssa.transform.DuplicateBlockMerging;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
-import com.tonic.parser.constpool.ClassRefItem;
-import com.tonic.parser.constpool.Item;
+import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.ConstantValueAttribute;
+import com.tonic.parser.constpool.*;
 import com.tonic.utill.Modifiers;
 
 import java.io.StringWriter;
@@ -196,10 +197,95 @@ public class ClassDecompiler {
         // Name
         sb.append(field.getName());
 
-        // TODO: Could recover constant values from ConstantValue attribute
+        // Recover constant value from ConstantValue attribute if present
+        String constantValue = getConstantValue(field);
+        if (constantValue != null) {
+            sb.append(" = ").append(constantValue);
+        }
 
         sb.append(";");
         writer.writeLine(sb.toString());
+    }
+
+    /**
+     * Extracts the constant value from a field's ConstantValue attribute if present.
+     *
+     * @param field the field entry
+     * @return the constant value as a string, or null if no constant value
+     */
+    private String getConstantValue(FieldEntry field) {
+        if (field.getAttributes() == null) return null;
+
+        for (Attribute attr : field.getAttributes()) {
+            if (attr instanceof ConstantValueAttribute cva) {
+                int cpIndex = cva.getConstantValueIndex();
+                Item item = classFile.getConstPool().getItem(cpIndex);
+
+                if (item instanceof IntegerItem intItem) {
+                    // Handle boolean type specially
+                    if ("Z".equals(field.getDesc())) {
+                        return intItem.getValue() != 0 ? "true" : "false";
+                    }
+                    // Handle char type
+                    if ("C".equals(field.getDesc())) {
+                        char c = (char) intItem.getValue().intValue();
+                        if (c >= 32 && c < 127 && c != '\'' && c != '\\') {
+                            return "'" + c + "'";
+                        }
+                        return "'" + String.format("\\u%04x", (int) c) + "'";
+                    }
+                    return String.valueOf(intItem.getValue().intValue());
+                } else if (item instanceof LongItem longItem) {
+                    return longItem.getValue() + "L";
+                } else if (item instanceof FloatItem floatItem) {
+                    float f = floatItem.getValue();
+                    if (Float.isNaN(f)) return "Float.NaN";
+                    if (f == Float.POSITIVE_INFINITY) return "Float.POSITIVE_INFINITY";
+                    if (f == Float.NEGATIVE_INFINITY) return "Float.NEGATIVE_INFINITY";
+                    return f + "f";
+                } else if (item instanceof DoubleItem doubleItem) {
+                    double d = doubleItem.getValue();
+                    if (Double.isNaN(d)) return "Double.NaN";
+                    if (d == Double.POSITIVE_INFINITY) return "Double.POSITIVE_INFINITY";
+                    if (d == Double.NEGATIVE_INFINITY) return "Double.NEGATIVE_INFINITY";
+                    return String.valueOf(d);
+                } else if (item instanceof Utf8Item utf8Item) {
+                    // String constant - escape special characters
+                    return "\"" + escapeString(utf8Item.getValue()) + "\"";
+                } else if (item instanceof StringRefItem strItem) {
+                    Utf8Item strUtf8 = (Utf8Item) classFile.getConstPool().getItem(strItem.getValue());
+                    if (strUtf8 != null) {
+                        return "\"" + escapeString(strUtf8.getValue()) + "\"";
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Escapes special characters in a string for Java source output.
+     */
+    private String escapeString(String s) {
+        if (s == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (char c : s.toCharArray()) {
+            switch (c) {
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\\' -> sb.append("\\\\");
+                case '"' -> sb.append("\\\"");
+                default -> {
+                    if (c < 32 || c > 126) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 
     private void emitStaticInitializer(IndentingWriter writer, MethodEntry clinit) {

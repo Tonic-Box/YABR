@@ -69,10 +69,13 @@ public class StructuralAnalyzer {
 
         // Check if this is a loop header
         if (loopAnalysis.isLoopHeader(block)) {
-            LoopAnalysis.Loop loop = loopAnalysis.getLoop(block);
-            RegionInfo info = analyzeLoop(block, loop, branch);
-            regionInfos.put(block, info);
-            return;
+            // Find the loop whose header IS this block (not just any loop containing this block)
+            LoopAnalysis.Loop loop = findLoopWithHeader(block);
+            if (loop != null) {
+                RegionInfo info = analyzeLoop(block, loop, branch);
+                regionInfos.put(block, info);
+                return;
+            }
         }
 
         // Check if this is an if-then or if-then-else
@@ -199,6 +202,42 @@ public class StructuralAnalyzer {
             return info;
         }
 
+        // If the merge point is an exit block (return/throw), it's not a real "merge" point
+        // where code continues - it's just where paths terminate. Look for a better merge
+        // point that's a common destination reachable from both branches.
+        if (isExitBlock(mergePoint)) {
+            IRBlock altMerge = findAlternativeMergePoint(trueTarget, falseTarget, mergePoint);
+            if (altMerge != null && altMerge != mergePoint) {
+                mergePoint = altMerge;
+            }
+        }
+
+        // Check for early exit pattern: if one branch is an early exit (return/throw),
+        // treat it as the then-body, not the merge point
+        // Pattern: if (cond) { return; } continuation...
+        if (isEarlyExitBlock(falseTarget) && !isEarlyExitBlock(trueTarget)) {
+            // falseTarget is early exit - it should be the then-body, not merge
+            // The condition needs to be NEGATED because bytecode condition leads to trueTarget
+            // Original: if (bytecode_cond) goto trueTarget else falseTarget
+            // We want: if (!bytecode_cond) { early_exit } continuation...
+            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+            info.setThenBlock(falseTarget);  // Early exit is the then-body
+            info.setMergeBlock(trueTarget);  // Continuation is where we merge (go after if)
+            info.setConditionNegated(true);  // Negate: we enter then when bytecode condition is FALSE
+            return info;
+        }
+
+        if (isEarlyExitBlock(trueTarget) && !isEarlyExitBlock(falseTarget)) {
+            // trueTarget is early exit - it should be the then-body
+            // Original: if (bytecode_cond) goto trueTarget else falseTarget
+            // We want: if (bytecode_cond) { early_exit } continuation...
+            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+            info.setThenBlock(trueTarget);   // Early exit is the then-body
+            info.setMergeBlock(falseTarget); // Continuation is where we merge
+            info.setConditionNegated(false); // No negate: we enter then when bytecode condition is TRUE
+            return info;
+        }
+
         // Check if it's if-then (one branch goes directly to merge)
         if (trueTarget == mergePoint) {
             // The "then" body is the false branch, so condition must be negated
@@ -226,6 +265,119 @@ public class StructuralAnalyzer {
         info.setElseBlock(falseTarget);
         info.setMergeBlock(mergePoint);
         return info;
+    }
+
+    /**
+     * Checks if a block is an early exit block (contains only return or throw).
+     * Early exit blocks are simple blocks that immediately exit the method
+     * without any other control flow.
+     *
+     * IMPORTANT: An early exit block must NOT be a merge point (multiple predecessors),
+     * because a merge point represents a common destination that should be visited
+     * after either branch, not skipped as an "early" exit.
+     */
+    private boolean isEarlyExitBlock(IRBlock block) {
+        if (block == null) return false;
+
+        // Check if this block has a single exit terminator (return or throw)
+        // and no successors (doesn't continue to other code)
+        IRInstruction terminator = block.getTerminator();
+        if (terminator == null) return false;
+
+        // Must be a return or throw instruction
+        boolean isExit = terminator instanceof ReturnInstruction ||
+                         terminator instanceof ThrowInstruction;
+        if (!isExit) return false;
+
+        // An early exit block should have no successors (no continuation)
+        if (!block.getSuccessors().isEmpty()) return false;
+
+        // CRITICAL: An early exit block should NOT be a merge point (multiple predecessors).
+        // If multiple paths lead to this block, it's a common exit point, not an early exit.
+        // Examples:
+        // - Early exit: if (error) { return; } // Only reached from one path
+        // - NOT early exit: if (cond) { work(); } cleanup(); return; // Merge point
+        if (block.getPredecessors().size() > 1) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks if a block is an exit block (ends with return or throw).
+     * Unlike isEarlyExitBlock, this doesn't check predecessor count.
+     */
+    private boolean isExitBlock(IRBlock block) {
+        if (block == null) return false;
+        IRInstruction terminator = block.getTerminator();
+        if (terminator == null) return false;
+        return (terminator instanceof ReturnInstruction || terminator instanceof ThrowInstruction)
+               && block.getSuccessors().isEmpty();
+    }
+
+    /**
+     * Finds an alternative merge point when the post-dominator is an exit block.
+     * Looks for a block that is reachable from both branches and has multiple predecessors,
+     * indicating it's a true merge point where multiple paths converge.
+     *
+     * Example: if (a) { B } else { C; if (d) return; E } F
+     * Post-dominator might be the inner return, but F is the real merge for paths that don't return.
+     */
+    private IRBlock findAlternativeMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock exitMerge) {
+        // Find blocks reachable from true branch
+        Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
+        // Find blocks reachable from false branch
+        Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
+
+        // Find common reachable blocks (excluding the exit merge itself)
+        Set<IRBlock> common = new HashSet<>(reachableFromTrue);
+        common.retainAll(reachableFromFalse);
+        common.remove(exitMerge);
+
+        if (common.isEmpty()) {
+            return null;
+        }
+
+        // Look for a block with multiple predecessors (true merge point)
+        // Prefer the one with the most predecessors (strongest convergence)
+        IRBlock bestMerge = null;
+        int maxPreds = 1;
+
+        for (IRBlock candidate : common) {
+            int predCount = candidate.getPredecessors().size();
+
+            // Skip single-predecessor exit blocks (true early exits)
+            // But keep multi-predecessor exit blocks (merge points that happen to end with return)
+            if (isExitBlock(candidate) && predCount <= 1) continue;
+
+            // Skip blocks that have non-trivial code - these are "shared action" blocks,
+            // not true merge points. A true merge point typically has only control flow.
+            if (hasNonTrivialInstructions(candidate) && !isExitBlock(candidate)) continue;
+
+            if (predCount > maxPreds) {
+                maxPreds = predCount;
+                bestMerge = candidate;
+            }
+        }
+
+        return bestMerge;
+    }
+
+    /**
+     * Checks if a block has non-trivial instructions (more than just jumps/returns).
+     * Blocks with actual computation are likely shared action blocks, not merge points.
+     */
+    private boolean hasNonTrivialInstructions(IRBlock block) {
+        for (IRInstruction instr : block.getInstructions()) {
+            // Skip trivial instructions
+            if (instr.isTerminator()) continue;
+            if (instr instanceof GotoInstruction) continue;
+
+            // Any other instruction is non-trivial
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -321,6 +473,19 @@ public class StructuralAnalyzer {
         }
 
         regionInfos.put(block, new RegionInfo(StructuredRegion.SEQUENCE, block));
+    }
+
+    /**
+     * Finds the loop whose header is the specified block.
+     * This is different from getLoop() which returns any loop containing the block.
+     */
+    private LoopAnalysis.Loop findLoopWithHeader(IRBlock block) {
+        for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+            if (loop.getHeader() == block) {
+                return loop;
+            }
+        }
+        return null;
     }
 
     /**

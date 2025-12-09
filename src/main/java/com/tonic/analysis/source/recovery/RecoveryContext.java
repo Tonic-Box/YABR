@@ -134,4 +134,12 @@ public class RecoveryContext {
     public boolean isMaterialized(SSAValue value) {
         return materializedValues.contains(value);
     }
+
+    /**
+     * Unmarks an SSA value as materialized, allowing it to be inlined again.
+     * Used when a PHI variable is collapsed to a boolean expression.
+     */
+    public void unmarkMaterialized(SSAValue value) {
+        materializedValues.remove(value);
+    }
 }

@@ -588,8 +588,14 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
         writer.write(" -> ");
 
-        if (expr.getBody() instanceof BlockStmt) {
-            expr.getBody().accept(this);
+        if (expr.getBody() instanceof BlockStmt blockStmt) {
+            // For empty lambda blocks, emit { } inline
+            if (blockStmt.getStatements().isEmpty()) {
+                writer.write("{ }");
+            } else {
+                // For non-empty blocks, use normal block formatting
+                expr.getBody().accept(this);
+            }
         } else if (expr.getBody() instanceof ExprStmt exprStmt) {
             exprStmt.getExpression().accept(this);
         } else {
