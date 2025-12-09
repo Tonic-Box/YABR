@@ -453,13 +453,14 @@ SSA ssa = new SSA(constPool).withAllOptimizations();
 8. CommonSubexpressionElimination - Reuse computed values
 9. CopyPropagation - Eliminate redundant copies
 10. RedundantCopyElimination - Remove identity copies
-11. NullCheckElimination - Remove redundant null checks
-12. LoopInvariantCodeMotion - Hoist loop-invariant code
-13. InductionVariableSimplification - Optimize loop counters
-14. LoopPredication - Eliminate provably-true loop guards
-15. JumpThreading - Thread jump chains
-16. BlockMerging - Merge single-edge blocks
-17. DeadCodeElimination - Clean up unused instructions (run last)
+11. BitTrackingDCE - Track demanded bits, mark dead operations
+12. NullCheckElimination - Remove redundant null checks
+13. LoopInvariantCodeMotion - Hoist loop-invariant code
+14. InductionVariableSimplification - Optimize loop counters
+15. LoopPredication - Eliminate provably-true loop guards
+16. JumpThreading - Thread jump chains
+17. BlockMerging - Merge single-edge blocks
+18. DeadCodeElimination - Clean up unused instructions (run last)
 
 Transforms run iteratively until a fixed point is reached (no more changes) or a maximum iteration count (10).
 
@@ -612,6 +613,38 @@ ssa.transform(method);
 - **Identity copies:** `x = x` (no-ops)
 - **Redundant load-store pairs:** `store x, v; load x` → `v` (when no intervening store)
 - **Copy chains:** `a = b; c = a` → `c = b` (propagates through chains)
+
+### Bit-Tracking Dead Code Elimination (BDCE)
+
+Tracks which bits of a value are actually used downstream and eliminates operations on bits that are never used.
+
+```java
+// Before
+int x = a * 1000;      // Full 32-bit multiply
+return x & 0xFF;       // Only low 8 bits used
+
+// After BDCE analysis
+// High 24 bits of x are never used - operations on them may be eliminated
+// BDCE marks dead bits, allowing subsequent DCE to clean up
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withBitTrackingDCE();
+ssa.transform(method);
+```
+
+**Tracked bit patterns:**
+- **AND with constant mask:** `x & 0xFF` - only demands low 8 bits
+- **Shift operations:** `x << 24` - bits shifted out aren't needed in source
+- **OR/XOR:** Demand propagates to both operands
+- **ADD/SUB/MUL:** Conservative - demands all bits (carry propagation)
+
+**Classic optimization targets:**
+- Sign extension followed by mask: `(x << 24) >> 24 & 0xFF`
+- High bits combined but masked out: `(a | (b << 16)) & 0xFFFF`
+- Intermediate computations with final truncation
 
 ## Class-Level Transforms
 

@@ -301,6 +301,17 @@ public class SSA {
     }
 
     /**
+     * Enables bit-tracking dead code elimination.
+     * Tracks which bits of a value are actually used downstream and
+     * eliminates operations on bits that are never used.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withBitTrackingDCE() {
+        return addTransform(new BitTrackingDCE());
+    }
+
+    /**
      * Adds a class-level transform to be applied.
      *
      * @param transform the class transform to add
@@ -360,6 +371,7 @@ public class SSA {
                 .withCommonSubexpressionElimination()
                 .withCopyPropagation()
                 .withRedundantCopyElimination()
+                .withBitTrackingDCE()
                 .withNullCheckElimination()
                 .withLoopInvariantCodeMotion()
                 .withLoopPredication()

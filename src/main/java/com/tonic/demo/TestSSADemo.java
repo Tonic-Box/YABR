@@ -82,7 +82,12 @@ public class TestSSADemo {
                 // Loop Predication tests
                 "loopPredicationSimple",
                 "loopPredicationRedundant",
-                "loopPredicationLimit"
+                "loopPredicationLimit",
+                // Bit-Tracking DCE tests
+                "bdceMaskDead",
+                "bdceShiftMask",
+                "bdceCascade",
+                "bdceAllLive"
             );
 
             for (MethodEntry method : classFile.getMethods()) {

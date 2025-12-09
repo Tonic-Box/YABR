@@ -584,6 +584,47 @@ public class SSAShowcase {
     }
 
     // ========================================
+    // Bit-Tracking DCE Tests
+    // ========================================
+
+    /**
+     * Demonstrates BDCE with mask making high bits dead.
+     * Only low 8 bits of result are used.
+     */
+    public int bdceMaskDead(int a) {
+        int x = a * 1000;      // Full 32-bit multiply
+        return x & 0xFF;       // Only low 8 bits used
+    }
+
+    /**
+     * Demonstrates BDCE with shift-mask pattern.
+     * Classic pattern where shifts become unnecessary.
+     */
+    public int bdceShiftMask(int a) {
+        int x = a << 24;       // Shift to high bits
+        int y = x >> 24;       // Shift back (sign extend)
+        return y & 0xFF;       // Mask to byte - only low 8 bits matter
+    }
+
+    /**
+     * Demonstrates BDCE with cascading dead bits.
+     * High bits contribution from b is dead.
+     */
+    public int bdceCascade(int a, int b) {
+        int x = a | (b << 16); // Combine values
+        return x & 0xFFFF;     // Only low 16 bits used - b's contribution dead
+    }
+
+    /**
+     * Demonstrates case where all bits are live.
+     * No BDCE optimization possible.
+     */
+    public int bdceAllLive(int a) {
+        int x = a * 2;
+        return x;              // All bits returned - nothing dead
+    }
+
+    // ========================================
     // Main Method for Testing
     // ========================================
 
@@ -689,6 +730,13 @@ public class SSAShowcase {
         System.out.println("loopPredicationSimple(10) = " + showcase.loopPredicationSimple(10) + " (expected: 45)");
         System.out.println("loopPredicationRedundant(5) = " + showcase.loopPredicationRedundant(5) + " (expected: 20)");
         System.out.println("loopPredicationLimit(5, 10) = " + showcase.loopPredicationLimit(5, 10) + " (expected: 10)");
+        System.out.println();
+
+        System.out.println("=== Bit-Tracking DCE ===");
+        System.out.println("bdceMaskDead(100) = " + showcase.bdceMaskDead(100) + " (expected: 160)");
+        System.out.println("bdceShiftMask(255) = " + showcase.bdceShiftMask(255) + " (expected: 255)");
+        System.out.println("bdceCascade(255, 1000) = " + showcase.bdceCascade(255, 1000) + " (expected: 255)");
+        System.out.println("bdceAllLive(50) = " + showcase.bdceAllLive(50) + " (expected: 100)");
         System.out.println();
 
         System.out.println("=== All tests complete ===");
