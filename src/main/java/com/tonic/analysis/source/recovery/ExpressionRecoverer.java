@@ -3,6 +3,7 @@ package com.tonic.analysis.source.recovery;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.analysis.ssa.visitor.AbstractIRVisitor;
@@ -59,6 +60,12 @@ public class ExpressionRecoverer {
                 return recoverConstant(constInstr.getConstant(), typeHint);
             }
 
+            // LoadLocal should ALWAYS be freshly recovered - don't use cache
+            // This ensures slot 0 always returns 'this' in instance methods
+            if (def instanceof LoadLocalInstruction) {
+                return recover(def);
+            }
+
             // For non-constants, check cache
             if (context.isRecovered(ssa)) {
                 return context.getCachedExpression(ssa);
@@ -94,20 +101,24 @@ public class ExpressionRecoverer {
             return true;
         }
 
-        // For method calls and field accesses, only inline if single-use
-        // Multi-use values should be referenced by variable name
-        if (instr instanceof InvokeInstruction || instr instanceof GetFieldInstruction) {
-            SSAValue result = instr.getResult();
-            if (result != null) {
-                // Check use count - only inline if used once
-                int useCount = result.getUses().size();
-                if (useCount > 1) {
-                    return false; // Multi-use: don't inline, use variable reference
-                }
-            }
+        // LoadLocal should always be inlined - it just returns the local variable or 'this'
+        if (instr instanceof LoadLocalInstruction) {
             return true;
         }
 
+        // Check for single-use values - these can be safely inlined
+        SSAValue result = instr.getResult();
+        if (result != null) {
+            int useCount = result.getUses().size();
+            if (useCount <= 1) {
+                // Single-use values can be inlined for most instruction types
+                // This includes: BinaryOp, UnaryOp, ArrayLoad, GetField, Invoke, Cast, etc.
+                return true;
+            }
+        }
+
+        // For multi-use method calls and field accesses, don't inline (use variable)
+        // Other multi-use instructions should also not be inlined
         return false;
     }
 
@@ -280,8 +291,22 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitLoadLocal(LoadLocalInstruction instr) {
-            // LoadLocal just returns the variable reference for the SSA result
-            return recoverOperand(instr.getResult());
+            // LoadLocal should return a reference to the source local slot
+            int localIndex = instr.getLocalIndex();
+            // For instance methods, slot 0 is 'this'
+            IRMethod method = instr.getBlock() != null ? instr.getBlock().getMethod() : null;
+            boolean isStatic = method == null || method.isStatic();
+
+            if (!isStatic && localIndex == 0) {
+                // Return 'this' reference
+                SourceType type = typeRecoverer.recoverType(instr.getResult());
+                return new ThisExpr(type);
+            }
+
+            // For other locals, return a variable reference
+            String name = "local" + localIndex;
+            SourceType type = typeRecoverer.recoverType(instr.getResult());
+            return new VarRefExpr(name, type, instr.getResult());
         }
 
         @Override

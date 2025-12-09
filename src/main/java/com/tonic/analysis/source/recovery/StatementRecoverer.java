@@ -14,6 +14,7 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.ir.CompareOp;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
 
@@ -336,6 +337,13 @@ public class StatementRecoverer {
             exceptionVarName = simpleName.substring(0, 1) + "_ex";
         }
 
+        // Find and register all SSA values that represent the exception in the handler
+        // This includes the initial exception value from CopyInstruction and any values derived from it
+        registerExceptionVariables(handlerBlock, exceptionVarName);
+
+        // Collect all exception-related SSA values for filtering
+        Set<SSAValue> exceptionValues = collectExceptionValues(handlerBlock);
+
         // Recover handler body - directly recover instructions from handler block
         List<Statement> handlerStmts = new ArrayList<>();
 
@@ -344,6 +352,16 @@ public class StatementRecoverer {
             // Skip CopyInstruction that just copies exception to itself
             if (instr instanceof CopyInstruction) {
                 continue;
+            }
+
+            // Skip StoreLocal that stores the exception to a local slot
+            // This is common in bytecode but redundant in decompiled code
+            if (instr instanceof StoreLocalInstruction store) {
+                if (store.getValue() instanceof SSAValue ssaValue) {
+                    if (exceptionValues.contains(ssaValue)) {
+                        continue;
+                    }
+                }
             }
 
             Statement stmt = recoverInstruction(instr);
@@ -357,9 +375,14 @@ public class StatementRecoverer {
         visitedHandlerBlocks.add(handlerBlock);
         recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts);
 
-        // Filter out redundant assignments to exception variable
+        // Filter out redundant assignments to exception variable AND unreachable code after return/throw
         List<Statement> filteredStmts = new ArrayList<>();
+        boolean reachedTerminator = false;
         for (Statement stmt : handlerStmts) {
+            // Skip everything after a return or throw (unreachable code)
+            if (reachedTerminator) {
+                continue;
+            }
             // Skip VarDeclStmt for exception variable (it's implicit in catch)
             if (stmt instanceof VarDeclStmt varDecl) {
                 if (varDecl.getName().equals(exceptionVarName)) {
@@ -379,6 +402,11 @@ public class StatementRecoverer {
                 }
             }
             filteredStmts.add(stmt);
+
+            // Check if this statement is a terminator
+            if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
+                reachedTerminator = true;
+            }
         }
 
         BlockStmt handlerBody = new BlockStmt(filteredStmts.isEmpty() ? handlerStmts : filteredStmts);
@@ -451,9 +479,112 @@ public class StatementRecoverer {
     }
 
     /**
+     * Collects all SSA values that represent the caught exception in a handler block.
+     * These values come from CopyInstruction at the start of the handler.
+     */
+    private Set<SSAValue> collectExceptionValues(IRBlock handlerBlock) {
+        Set<SSAValue> exceptionValues = new HashSet<>();
+        for (IRInstruction instr : handlerBlock.getInstructions()) {
+            if (instr instanceof CopyInstruction copy) {
+                if (copy.getResult() != null) {
+                    exceptionValues.add(copy.getResult());
+                }
+                if (copy.getSource() instanceof SSAValue ssaSrc) {
+                    exceptionValues.add(ssaSrc);
+                }
+            }
+            // Also check for values with "exc_" prefix (exception naming convention)
+            SSAValue result = instr.getResult();
+            if (result != null) {
+                String name = result.getName();
+                if (name != null && name.startsWith("exc_")) {
+                    exceptionValues.add(result);
+                }
+            }
+            // Check for StoreLocal that stores to a local - the value being stored
+            // at the start of a handler is typically the exception
+            if (instr instanceof StoreLocalInstruction store) {
+                if (store.getValue() instanceof SSAValue ssaValue) {
+                    // First StoreLocal in handler is usually storing the exception
+                    exceptionValues.add(ssaValue);
+                }
+                break; // Only first StoreLocal
+            }
+        }
+        return exceptionValues;
+    }
+
+    /**
+     * Registers all SSA values that represent the exception in an exception handler.
+     * This ensures they reference the catch parameter instead of undefined "v#" names.
+     */
+    private void registerExceptionVariables(IRBlock handlerBlock, String exceptionVarName) {
+        Set<IRBlock> visited = new HashSet<>();
+        registerExceptionVariablesRecursive(handlerBlock, exceptionVarName, visited);
+    }
+
+    private void registerExceptionVariablesRecursive(IRBlock block, String exceptionVarName, Set<IRBlock> visited) {
+        if (visited.contains(block)) return;
+        visited.add(block);
+
+        for (IRInstruction instr : block.getInstructions()) {
+            // For CopyInstruction (exception capture), register both the source and result
+            if (instr instanceof CopyInstruction copy) {
+                if (copy.getResult() != null) {
+                    context.getExpressionContext().setVariableName(copy.getResult(), exceptionVarName);
+                }
+                if (copy.getSource() instanceof SSAValue ssaSrc) {
+                    context.getExpressionContext().setVariableName(ssaSrc, exceptionVarName);
+                }
+            }
+
+            // For StoreLocal, register the stored value
+            if (instr instanceof StoreLocalInstruction store) {
+                if (store.getValue() instanceof SSAValue ssaValue) {
+                    // Only register if it's the exception being stored (check by name pattern)
+                    String name = ssaValue.getName();
+                    if (name != null && name.startsWith("exc_")) {
+                        context.getExpressionContext().setVariableName(ssaValue, exceptionVarName);
+                    }
+                }
+            }
+
+            // For InvokeInstruction arguments, check if any are exception values
+            if (instr instanceof InvokeInstruction invoke) {
+                for (Value arg : invoke.getArguments()) {
+                    if (arg instanceof SSAValue ssaArg) {
+                        String name = ssaArg.getName();
+                        if (name != null && name.startsWith("exc_")) {
+                            context.getExpressionContext().setVariableName(ssaArg, exceptionVarName);
+                        }
+                    }
+                }
+            }
+
+            // For ThrowInstruction, register the exception being thrown
+            if (instr instanceof ThrowInstruction throwInstr) {
+                if (throwInstr.getException() instanceof SSAValue ssaExc) {
+                    String name = ssaExc.getName();
+                    if (name != null && name.startsWith("exc_")) {
+                        context.getExpressionContext().setVariableName(ssaExc, exceptionVarName);
+                    }
+                }
+            }
+        }
+
+        // Recurse into successors
+        for (IRBlock succ : block.getSuccessors()) {
+            registerExceptionVariablesRecursive(succ, exceptionVarName, visited);
+        }
+    }
+
+    /**
      * Represents a try region defined by start and end blocks.
      */
     private record TryRegion(IRBlock start, IRBlock end) {}
+
+    /** Map from local slot name to unified type (computed from all assignments) */
+    private Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
 
     /**
      * Emits declarations for phi variables at method scope.
@@ -469,25 +600,60 @@ public class StatementRecoverer {
 
         // First pass: Set up variable names for LoadLocal and StoreLocal instructions
         // This ensures consistent naming across all references to the same local slot
+        boolean isStatic = method.isStatic();
+
+        // Collect all types assigned to each local slot for unified type computation
+        Map<String, List<SourceType>> localSlotTypes = new HashMap<>();
+
         for (IRBlock block : method.getBlocks()) {
             for (IRInstruction instr : block.getInstructions()) {
                 if (instr instanceof LoadLocalInstruction loadLocal) {
                     if (loadLocal.getResult() != null) {
-                        String localName = "local" + loadLocal.getLocalIndex();
+                        int localIndex = loadLocal.getLocalIndex();
+                        // For instance methods, slot 0 is 'this'
+                        String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
                         context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                     }
                 } else if (instr instanceof StoreLocalInstruction storeLocal) {
                     // Track which local slots are used so we can declare them
-                    String localName = "local" + storeLocal.getLocalIndex();
+                    int localIndex = storeLocal.getLocalIndex();
+                    // For instance methods, slot 0 is 'this' (though storing to 'this' is unusual)
+                    String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
+
+                    // Collect the type being stored for unified type computation
+                    Value storedValue = storeLocal.getValue();
+                    SourceType storedType = typeRecoverer.recoverType(storedValue);
+                    if (storedType != null && !storedType.isVoid()) {
+                        localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
+                    }
+
                     // If the value being stored is an SSA value, track its name too
+                    // BUT don't rename if the value is a parameter (already named this/arg#)
                     if (storeLocal.getValue() instanceof SSAValue ssaValue) {
-                        context.getExpressionContext().setVariableName(ssaValue, localName);
+                        // Check if this value is a parameter (has no definition)
+                        // Parameters have names set by assignParameterNames ("this" or "arg#")
+                        boolean isParameter = ssaValue.getDefinition() == null && method.getParameters().contains(ssaValue);
+                        if (!isParameter) {
+                            context.getExpressionContext().setVariableName(ssaValue, localName);
+                        }
                     }
                 }
             }
         }
 
-        // Only collect PHI variables that need early declaration
+        // Compute unified types for each local slot
+        localSlotUnifiedTypes.clear();
+        for (Map.Entry<String, List<SourceType>> entry : localSlotTypes.entrySet()) {
+            String slotName = entry.getKey();
+            List<SourceType> types = entry.getValue();
+            if (!types.isEmpty()) {
+                SourceType unifiedType = typeRecoverer.computeCommonType(types);
+                localSlotUnifiedTypes.put(slotName, unifiedType);
+            }
+        }
+
+        // Only collect PHI instructions that need early declaration
+        List<PhiInstruction> phiInstructions = new ArrayList<>();
         for (IRBlock block : method.getBlocks()) {
             // Skip exception handler blocks - their variables are declared inline
             if (handlerBlocks.contains(block)) {
@@ -498,6 +664,7 @@ public class StatementRecoverer {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 if (phi.getResult() != null) {
                     phiValues.add(phi.getResult());
+                    phiInstructions.add(phi);
                 }
             }
         }
@@ -505,16 +672,33 @@ public class StatementRecoverer {
         // Sort phi values by dependency order
         List<SSAValue> sortedValues = sortByDependencies(phiValues);
 
+        // Create a map from SSAValue to PhiInstruction for lookup
+        Map<SSAValue, PhiInstruction> valueToPhiMap = new HashMap<>();
+        for (PhiInstruction phi : phiInstructions) {
+            valueToPhiMap.put(phi.getResult(), phi);
+        }
+
         // Emit declarations only for phi variables
         for (SSAValue value : sortedValues) {
-            emitPhiDeclaration(value, statements, declaredNames);
+            PhiInstruction phi = valueToPhiMap.get(value);
+            emitPhiDeclaration(phi, statements, declaredNames);
         }
     }
 
     /**
-     * Emits a phi variable declaration with default value.
+     * Gets the unified type for a local slot, or null if not computed.
      */
-    private void emitPhiDeclaration(SSAValue result, List<Statement> statements, Set<String> declaredNames) {
+    public SourceType getLocalSlotUnifiedType(String slotName) {
+        return localSlotUnifiedTypes.get(slotName);
+    }
+
+    /**
+     * Emits a phi variable declaration with default value.
+     * Uses unified type from all incoming phi values.
+     */
+    private void emitPhiDeclaration(PhiInstruction phi, List<Statement> statements, Set<String> declaredNames) {
+        if (phi == null) return;
+        SSAValue result = phi.getResult();
         if (result == null) return;
 
         String name = context.getExpressionContext().getVariableName(result);
@@ -532,7 +716,9 @@ public class StatementRecoverer {
             return;
         }
 
-        SourceType type = typeRecoverer.recoverType(result);
+        // Compute unified type from all incoming phi values
+        // This handles cases where different paths have different types (e.g., Insets vs Graphics)
+        SourceType type = computePhiUnifiedType(phi);
 
         // Mark as declared
         declaredNames.add(name);
@@ -542,6 +728,38 @@ public class StatementRecoverer {
         // Phi variables get default values (they'll be assigned in control flow)
         Expression initValue = getDefaultValue(type);
         statements.add(new VarDeclStmt(type, name, initValue));
+    }
+
+    /**
+     * Computes a unified type for a phi instruction by examining all incoming values.
+     * For incompatible types (e.g., Insets and Graphics), returns their common supertype (Object).
+     */
+    private SourceType computePhiUnifiedType(PhiInstruction phi) {
+        SSAValue result = phi.getResult();
+
+        // First, try to get the unified type from StoreLocal instructions
+        // This is more comprehensive as it includes ALL assignments to the local slot,
+        // not just those that flow into the PHI
+        String localName = context.getExpressionContext().getVariableName(result);
+        if (localName != null && localSlotUnifiedTypes.containsKey(localName)) {
+            return localSlotUnifiedTypes.get(localName);
+        }
+
+        // Fallback: collect types from PHI operands
+        List<SourceType> incomingTypes = new ArrayList<>();
+        for (Value value : phi.getOperands()) {
+            SourceType valueType = typeRecoverer.recoverType(value);
+            if (valueType != null && !valueType.isVoid()) {
+                incomingTypes.add(valueType);
+            }
+        }
+
+        if (!incomingTypes.isEmpty()) {
+            return typeRecoverer.computeCommonType(incomingTypes);
+        }
+
+        // Final fallback: use PHI result type
+        return typeRecoverer.recoverType(result);
     }
 
     /**
@@ -841,7 +1059,9 @@ public class StatementRecoverer {
         if (instr instanceof LoadLocalInstruction loadLocal) {
             // Set the variable name for this SSA value so it's consistent with StoreLocal naming
             if (loadLocal.getResult() != null) {
-                String localName = "local" + loadLocal.getLocalIndex();
+                int localIndex = loadLocal.getLocalIndex();
+                boolean isStatic = context.getIrMethod().isStatic();
+                String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
                 context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                 Expression value = exprRecoverer.recover(loadLocal);
                 context.getExpressionContext().cacheExpression(loadLocal.getResult(), value);
@@ -892,20 +1112,31 @@ public class StatementRecoverer {
         Expression value = exprRecoverer.recoverOperand(store.getValue());
         int localIndex = store.getLocalIndex();
 
-        // Use consistent local slot naming
-        String name = "local" + localIndex;
+        // Use consistent local slot naming - slot 0 in instance methods is 'this'
+        boolean isStatic = context.getIrMethod().isStatic();
+        String name = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
 
-        // Try to infer type from the value being stored
-        SourceType type = value.getType();
+        // Use the pre-computed unified type for this local slot if available
+        // This ensures the declared type is compatible with ALL values assigned to this slot
+        SourceType type = getLocalSlotUnifiedType(name);
+        if (type == null) {
+            // Fallback to the current expression's type
+            type = value.getType();
+        }
         if (type == null) {
             type = com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
         }
 
         // Mark the stored value as materialized - subsequent uses should reference the variable
+        // BUT don't rename parameters (they keep their arg# names)
         if (store.getValue() instanceof SSAValue ssaValue) {
-            context.getExpressionContext().markMaterialized(ssaValue);
-            // Also set the variable name for this SSA value so lookups work
-            context.getExpressionContext().setVariableName(ssaValue, name);
+            boolean isParameter = ssaValue.getDefinition() == null &&
+                                  context.getIrMethod().getParameters().contains(ssaValue);
+            if (!isParameter) {
+                context.getExpressionContext().markMaterialized(ssaValue);
+                // Also set the variable name for this SSA value so lookups work
+                context.getExpressionContext().setVariableName(ssaValue, name);
+            }
         }
 
         // Check if already declared - if so, emit assignment instead of declaration

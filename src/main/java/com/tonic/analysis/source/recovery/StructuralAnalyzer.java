@@ -2,6 +2,7 @@ package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
+import com.tonic.analysis.ssa.analysis.PostDominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -20,6 +21,7 @@ public class StructuralAnalyzer {
     private final IRMethod method;
     private final DominatorTree dominatorTree;
     private final LoopAnalysis loopAnalysis;
+    private PostDominatorTree postDominatorTree;
 
     /** Analysis results */
     private final Map<IRBlock, RegionInfo> regionInfos = new HashMap<>();
@@ -34,6 +36,10 @@ public class StructuralAnalyzer {
      * Analyzes the method and identifies structured regions.
      */
     public void analyze() {
+        // Compute post-dominator tree for accurate merge point detection
+        postDominatorTree = new PostDominatorTree(method);
+        postDominatorTree.compute();
+
         for (IRBlock block : method.getBlocks()) {
             analyzeBlock(block);
         }
@@ -182,10 +188,10 @@ public class StructuralAnalyzer {
     }
 
     private RegionInfo analyzeConditional(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
-        // Find the merge point (immediate post-dominator)
-        IRBlock mergePoint = findMergePoint(trueTarget, falseTarget);
+        // Find the merge point using post-dominator (the first block all paths must pass through)
+        IRBlock mergePoint = findMergePoint(block);
 
-        if (mergePoint == null) {
+        if (mergePoint == null || mergePoint == block) {
             // No merge - possibly returns or throws in both branches
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
             info.setThenBlock(trueTarget);
@@ -222,7 +228,35 @@ public class StructuralAnalyzer {
         return info;
     }
 
-    private IRBlock findMergePoint(IRBlock branch1, IRBlock branch2) {
+    /**
+     * Finds the merge point for a conditional branch using post-dominator analysis.
+     * The merge point is the immediate post-dominator of the branch block -
+     * the first block that all paths from the branch must pass through.
+     *
+     * @param branchBlock the block containing the conditional branch
+     * @return the merge point block, or null if not found
+     */
+    private IRBlock findMergePoint(IRBlock branchBlock) {
+        if (postDominatorTree == null) {
+            // Fallback to old algorithm if post-dominator not available
+            return findMergePointFallback(branchBlock);
+        }
+        return postDominatorTree.getImmediatePostDominator(branchBlock);
+    }
+
+    /**
+     * Fallback merge point finder using forward reachability.
+     * Less accurate than post-dominator but works when post-dominator unavailable.
+     */
+    private IRBlock findMergePointFallback(IRBlock branchBlock) {
+        if (branchBlock.getSuccessors().size() != 2) {
+            return null;
+        }
+
+        Iterator<IRBlock> it = branchBlock.getSuccessors().iterator();
+        IRBlock branch1 = it.next();
+        IRBlock branch2 = it.next();
+
         // Find the first block that both branches can reach
         Set<IRBlock> reachable1 = getReachableBlocks(branch1);
         Set<IRBlock> reachable2 = getReachableBlocks(branch2);

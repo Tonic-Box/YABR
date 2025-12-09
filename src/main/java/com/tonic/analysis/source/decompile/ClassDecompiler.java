@@ -306,8 +306,9 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(method);
-            reducibility.run(ir);
-            duplicateMerging.run(ir);
+            // NOTE: Disabled transforms for now as they incorrectly merge semantically different blocks
+            // reducibility.run(ir);
+            // duplicateMerging.run(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             emitBlockContents(writer, body);
         } catch (Exception e) {
