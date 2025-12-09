@@ -312,6 +312,17 @@ public class SSA {
     }
 
     /**
+     * Enables correlated value propagation optimization.
+     * Uses control flow to derive facts about values - when passing a branch
+     * like if (x < 10), CVP knows x is in range [MIN, 9] in the true branch.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withCorrelatedValuePropagation() {
+        return addTransform(new CorrelatedValuePropagation());
+    }
+
+    /**
      * Adds a class-level transform to be applied.
      *
      * @param transform the class transform to add
@@ -365,6 +376,7 @@ public class SSA {
                 .withConstantFolding()
                 .withPhiConstantPropagation()
                 .withConditionalConstantPropagation()
+                .withCorrelatedValuePropagation()
                 .withAlgebraicSimplification()
                 .withPeepholeOptimizations()
                 .withStrengthReduction()

@@ -87,7 +87,12 @@ public class TestSSADemo {
                 "bdceMaskDead",
                 "bdceShiftMask",
                 "bdceCascade",
-                "bdceAllLive"
+                "bdceAllLive",
+                // Correlated Value Propagation tests
+                "cvpRedundantCheck",
+                "cvpImpossibleCheck",
+                "cvpNestedRange",
+                "cvpNoOptimization"
             );
 
             for (MethodEntry method : classFile.getMethods()) {

@@ -625,6 +625,68 @@ public class SSAShowcase {
     }
 
     // ========================================
+    // Correlated Value Propagation Tests
+    // ========================================
+
+    /**
+     * Demonstrates CVP with redundant comparison after first check.
+     * After if (x < 10), x is in range [MIN, 9], so x < 20 is always true.
+     */
+    public int cvpRedundantCheck(int x) {
+        if (x < 10) {
+            if (x < 20) {     // Always true - x is [MIN, 9]
+                return x + 1;
+            }
+            return 0;         // Dead code
+        }
+        return x;
+    }
+
+    /**
+     * Demonstrates CVP with impossible comparison after first check.
+     * After if (x >= 10), x is in range [10, MAX], so x < 5 is always false.
+     */
+    public int cvpImpossibleCheck(int x) {
+        if (x >= 10) {
+            if (x < 5) {      // Always false - x is [10, MAX]
+                return 0;     // Dead code
+            }
+            return x * 2;
+        }
+        return x;
+    }
+
+    /**
+     * Demonstrates CVP with nested range narrowing.
+     * After x > 0, x is [1, MAX]. After x < 100, x is [1, 99].
+     * Then x >= 1 is always true.
+     */
+    public int cvpNestedRange(int x) {
+        if (x > 0) {          // x is [1, MAX]
+            if (x < 100) {    // x is [1, 99]
+                if (x >= 1) { // Always true - x is [1, 99]
+                    return x;
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Demonstrates case where CVP cannot optimize.
+     * After x < 50, x is [MIN, 49]. x < 25 could be true or false.
+     */
+    public int cvpNoOptimization(int x) {
+        if (x < 50) {
+            if (x < 25) {     // Cannot prove - x is [MIN, 49]
+                return 1;
+            }
+            return 2;
+        }
+        return 0;
+    }
+
+    // ========================================
     // Main Method for Testing
     // ========================================
 
@@ -737,6 +799,17 @@ public class SSAShowcase {
         System.out.println("bdceShiftMask(255) = " + showcase.bdceShiftMask(255) + " (expected: 255)");
         System.out.println("bdceCascade(255, 1000) = " + showcase.bdceCascade(255, 1000) + " (expected: 255)");
         System.out.println("bdceAllLive(50) = " + showcase.bdceAllLive(50) + " (expected: 100)");
+        System.out.println();
+
+        System.out.println("=== Correlated Value Propagation ===");
+        System.out.println("cvpRedundantCheck(5) = " + showcase.cvpRedundantCheck(5) + " (expected: 6)");
+        System.out.println("cvpRedundantCheck(15) = " + showcase.cvpRedundantCheck(15) + " (expected: 15)");
+        System.out.println("cvpImpossibleCheck(5) = " + showcase.cvpImpossibleCheck(5) + " (expected: 5)");
+        System.out.println("cvpImpossibleCheck(15) = " + showcase.cvpImpossibleCheck(15) + " (expected: 30)");
+        System.out.println("cvpNestedRange(50) = " + showcase.cvpNestedRange(50) + " (expected: 50)");
+        System.out.println("cvpNestedRange(0) = " + showcase.cvpNestedRange(0) + " (expected: 0)");
+        System.out.println("cvpNoOptimization(10) = " + showcase.cvpNoOptimization(10) + " (expected: 1)");
+        System.out.println("cvpNoOptimization(30) = " + showcase.cvpNoOptimization(30) + " (expected: 2)");
         System.out.println();
 
         System.out.println("=== All tests complete ===");

@@ -331,6 +331,51 @@ ssa.transform(method);
 - Integer comparison with constants → evaluate at compile time
 - Cascading elimination of unreachable blocks
 
+### Correlated Value Propagation
+
+Uses control flow to derive facts about values. When passing a branch condition, CVP learns range constraints about values and uses them to eliminate redundant comparisons.
+
+```java
+// Before
+if (x < 10) {
+    if (x < 20) {     // x is [MIN, 9], so this is always true
+        return x + 1;
+    }
+    return 0;         // Dead code
+}
+return x;
+
+// After CVP
+if (x < 10) {
+    return x + 1;     // Redundant check eliminated
+}
+return x;
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withCorrelatedValuePropagation();
+ssa.transform(method);
+```
+
+**How it works:**
+1. Computes dominator tree for the method
+2. Propagates value ranges through CFG in dominator order
+3. At each branch, derives constraints from the comparison:
+   - `if (x < 10)` → true branch: x ∈ [MIN, 9], false branch: x ∈ [10, MAX]
+4. Intersects inherited ranges from dominator with edge constraints
+5. When a comparison's result is provable from ranges, replaces branch with goto
+
+**Supported comparison patterns:**
+- Binary: `LT`, `LE`, `GT`, `GE`, `EQ`, `NE` (x op constant)
+- Unary: `IFLT`, `IFLE`, `IFGT`, `IFGE`, `IFEQ`, `IFNE` (x op 0)
+
+**Example transformations:**
+- `if (x < 10) { if (x < 20) }` → inner check eliminated (x is [MIN, 9])
+- `if (x >= 10) { if (x < 5) }` → inner check eliminated (always false)
+- Nested constraints intersect: `if (x > 0) { if (x < 100) }` → x is [1, 99]
+
 ### Loop-Invariant Code Motion
 
 Moves computations that produce the same result in every loop iteration to the loop preheader.
@@ -447,20 +492,21 @@ SSA ssa = new SSA(constPool).withAllOptimizations();
 2. ConstantFolding - Evaluate constant expressions
 3. PhiConstantPropagation - Simplify redundant phi nodes
 4. ConditionalConstantPropagation - Eliminate dead branches
-5. AlgebraicSimplification - Apply algebraic identities
-6. PeepholeOptimizations - Small pattern optimizations
-7. StrengthReduction - Replace expensive operations
-8. CommonSubexpressionElimination - Reuse computed values
-9. CopyPropagation - Eliminate redundant copies
-10. RedundantCopyElimination - Remove identity copies
-11. BitTrackingDCE - Track demanded bits, mark dead operations
-12. NullCheckElimination - Remove redundant null checks
-13. LoopInvariantCodeMotion - Hoist loop-invariant code
-14. InductionVariableSimplification - Optimize loop counters
-15. LoopPredication - Eliminate provably-true loop guards
-16. JumpThreading - Thread jump chains
-17. BlockMerging - Merge single-edge blocks
-18. DeadCodeElimination - Clean up unused instructions (run last)
+5. CorrelatedValuePropagation - Use control flow to derive value ranges
+6. AlgebraicSimplification - Apply algebraic identities
+7. PeepholeOptimizations - Small pattern optimizations
+8. StrengthReduction - Replace expensive operations
+9. CommonSubexpressionElimination - Reuse computed values
+10. CopyPropagation - Eliminate redundant copies
+11. RedundantCopyElimination - Remove identity copies
+12. BitTrackingDCE - Track demanded bits, mark dead operations
+13. NullCheckElimination - Remove redundant null checks
+14. LoopInvariantCodeMotion - Hoist loop-invariant code
+15. InductionVariableSimplification - Optimize loop counters
+16. LoopPredication - Eliminate provably-true loop guards
+17. JumpThreading - Thread jump chains
+18. BlockMerging - Merge single-edge blocks
+19. DeadCodeElimination - Clean up unused instructions (run last)
 
 Transforms run iteratively until a fixed point is reached (no more changes) or a maximum iteration count (10).
 
