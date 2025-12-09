@@ -33,7 +33,52 @@ public class TypeRecoverer {
             return VoidSourceType.INSTANCE;
         }
         if (value instanceof SSAValue ssa) {
-            return recoverType(ssa);
+            return recoverTypeWithInstructionContext(ssa);
+        }
+        if (value instanceof Constant c) {
+            IRType type = c.getType();
+            if (type == null) {
+                return VoidSourceType.INSTANCE;
+            }
+            return SourceType.fromIRType(type);
+        }
+        return VoidSourceType.INSTANCE;
+    }
+
+    /**
+     * Recovers a source type from an SSAValue, considering its defining instruction.
+     * This handles cases where the IR type is INT but the actual semantic type is BOOLEAN.
+     */
+    public SourceType recoverTypeWithInstructionContext(SSAValue ssa) {
+        if (ssa == null || ssa.getType() == null) {
+            return VoidSourceType.INSTANCE;
+        }
+
+        // Check if this value is defined by a binary operation that should be boolean
+        com.tonic.analysis.ssa.ir.IRInstruction def = ssa.getDefinition();
+        if (def instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp) {
+            com.tonic.analysis.ssa.ir.BinaryOp op = binOp.getOp();
+            // For IAND/IOR/IXOR, check if either operand is boolean
+            if (op == com.tonic.analysis.ssa.ir.BinaryOp.AND ||
+                op == com.tonic.analysis.ssa.ir.BinaryOp.OR ||
+                op == com.tonic.analysis.ssa.ir.BinaryOp.XOR) {
+                SourceType leftType = recoverTypeWithInstructionContext(binOp.getLeft());
+                SourceType rightType = recoverTypeWithInstructionContext(binOp.getRight());
+                if (leftType == PrimitiveSourceType.BOOLEAN || rightType == PrimitiveSourceType.BOOLEAN) {
+                    return PrimitiveSourceType.BOOLEAN;
+                }
+            }
+        }
+
+        return SourceType.fromIRType(ssa.getType());
+    }
+
+    /**
+     * Recovers type from a Value operand of a binary operation.
+     */
+    private SourceType recoverTypeWithInstructionContext(com.tonic.analysis.ssa.value.Value value) {
+        if (value instanceof SSAValue ssa) {
+            return recoverTypeWithInstructionContext(ssa);
         }
         if (value instanceof Constant c) {
             IRType type = c.getType();

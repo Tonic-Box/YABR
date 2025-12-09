@@ -166,6 +166,55 @@ public class ExpressionRecoverer {
         return LiteralExpr.ofNull();
     }
 
+    /**
+     * Parses parameter types from a method descriptor.
+     * E.g., "(ZILjava/lang/String;)V" returns ["Z", "I", "Ljava/lang/String;"]
+     */
+    private java.util.List<String> parseParameterTypes(String desc) {
+        java.util.List<String> types = new java.util.ArrayList<>();
+        if (desc == null || !desc.startsWith("(")) return types;
+
+        int idx = 1;
+        while (idx < desc.length() && desc.charAt(idx) != ')') {
+            int start = idx;
+            char c = desc.charAt(idx);
+            if (c == 'L') {
+                int end = desc.indexOf(';', idx);
+                if (end > 0) {
+                    types.add(desc.substring(start, end + 1));
+                    idx = end + 1;
+                } else {
+                    break;
+                }
+            } else if (c == '[') {
+                // Array type - need to capture the whole array descriptor
+                StringBuilder arrayDesc = new StringBuilder();
+                while (idx < desc.length() && desc.charAt(idx) == '[') {
+                    arrayDesc.append('[');
+                    idx++;
+                }
+                if (idx < desc.length()) {
+                    char elemType = desc.charAt(idx);
+                    if (elemType == 'L') {
+                        int end = desc.indexOf(';', idx);
+                        if (end > 0) {
+                            arrayDesc.append(desc, idx, end + 1);
+                            idx = end + 1;
+                        }
+                    } else {
+                        arrayDesc.append(elemType);
+                        idx++;
+                    }
+                }
+                types.add(arrayDesc.toString());
+            } else {
+                types.add(String.valueOf(c));
+                idx++;
+            }
+        }
+        return types;
+    }
+
     private class RecoveryVisitor extends AbstractIRVisitor<Expression> {
         @Override
         public Expression visitBinaryOp(BinaryOpInstruction instr) {
@@ -173,7 +222,21 @@ public class ExpressionRecoverer {
             Expression right = recoverOperand(instr.getRight());
             BinaryOperator op = OperatorMapper.mapBinaryOp(instr.getOp());
             SourceType type = typeRecoverer.recoverType(instr.getResult());
+
+            // For bitwise AND/OR/XOR, if at least one operand is boolean, result is boolean
+            // JVM uses IAND/IOR/IXOR for boolean operations, but result should be typed as boolean
+            // This also handles cases where one operand is boolean and the other is a boolean PHI
+            // (which may be typed as int because it comes from 0/1 constants)
+            if ((op == BinaryOperator.BAND || op == BinaryOperator.BOR || op == BinaryOperator.BXOR) &&
+                (isBooleanType(left.getType()) || isBooleanType(right.getType()))) {
+                type = com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN;
+            }
+
             return new BinaryExpr(op, left, right, type);
+        }
+
+        private boolean isBooleanType(SourceType type) {
+            return type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN;
         }
 
         @Override
@@ -221,8 +284,17 @@ public class ExpressionRecoverer {
             }
             java.util.List<Expression> args = new java.util.ArrayList<>();
             int start = (instr.getInvokeType() == InvokeType.STATIC) ? 0 : 1;
+
+            // Parse parameter types from descriptor to provide type hints for boolean detection
+            java.util.List<String> paramTypes = parseParameterTypes(instr.getDescriptor());
+
             for (int i = start; i < instr.getArguments().size(); i++) {
-                args.add(recoverOperand(instr.getArguments().get(i)));
+                int paramIndex = i - start;
+                SourceType typeHint = null;
+                if (paramIndex < paramTypes.size()) {
+                    typeHint = typeRecoverer.recoverType(paramTypes.get(paramIndex));
+                }
+                args.add(recoverOperand(instr.getArguments().get(i), typeHint));
             }
             SourceType retType = typeRecoverer.recoverType(instr.getResult());
             boolean isStatic = instr.getInvokeType() == InvokeType.STATIC;
@@ -232,8 +304,16 @@ public class ExpressionRecoverer {
         private Expression handleConstructorCall(InvokeInstruction instr) {
             java.util.List<Expression> args = new java.util.ArrayList<>();
             // Constructor args start at index 1 (index 0 is the uninitialized object)
+            // Parse parameter types for boolean detection
+            java.util.List<String> paramTypes = parseParameterTypes(instr.getDescriptor());
+
             for (int i = 1; i < instr.getArguments().size(); i++) {
-                args.add(recoverOperand(instr.getArguments().get(i)));
+                int paramIndex = i - 1; // Offset by 1 since index 0 is the receiver
+                SourceType typeHint = null;
+                if (paramIndex < paramTypes.size()) {
+                    typeHint = typeRecoverer.recoverType(paramTypes.get(paramIndex));
+                }
+                args.add(recoverOperand(instr.getArguments().get(i), typeHint));
             }
 
             // Check if this is super() or this() call
