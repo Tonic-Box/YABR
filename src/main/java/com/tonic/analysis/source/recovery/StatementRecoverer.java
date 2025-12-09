@@ -36,6 +36,9 @@ public class StatementRecoverer {
         this.typeRecoverer = new TypeRecoverer();
     }
 
+    // PHIs that will be collapsed into ternary expressions (don't declare these)
+    private final Set<SSAValue> ternaryPhiValues = new HashSet<>();
+
     /**
      * Recovers statements for the entire method.
      */
@@ -49,8 +52,11 @@ public class StatementRecoverer {
 
         List<Statement> statements = new ArrayList<>();
 
-        // First, emit declarations for all phi variables at method scope
-        // This ensures they're declared before any use
+        // Pre-pass: identify PHIs that will be collapsed into ternary expressions
+        // These don't need variable declarations since they'll be inlined
+        collectTernaryPhis(method);
+
+        // Emit declarations for phi variables (excluding ternary PHIs)
         emitPhiDeclarations(method, statements);
 
         // Check if method has exception handlers
@@ -1133,6 +1139,11 @@ public class StatementRecoverer {
             return;
         }
 
+        // Skip PHIs that will be collapsed into ternary expressions
+        if (ternaryPhiValues.contains(result)) {
+            return;
+        }
+
         // Compute unified type from all incoming phi values
         // This handles cases where different paths have different types (e.g., Insets vs Graphics)
         SourceType type = computePhiUnifiedType(phi);
@@ -1408,7 +1419,10 @@ public class StatementRecoverer {
                     Statement ifStmt = recoverIfThenElse(current, info);
                     // Collect any header statements that were placed in pending
                     result.addAll(context.collectPendingStatements());
-                    result.add(ifStmt);
+                    // Only add if not null (ternary patterns return null)
+                    if (ifStmt != null) {
+                        result.add(ifStmt);
+                    }
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
                         current = merge;
@@ -1580,6 +1594,12 @@ public class StatementRecoverer {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
+            }
+            // If the result is unused (no uses), this is a statement with side effects - emit it!
+            // This handles cases like: setProperty(...) where the return value is discarded
+            if (result != null && result.getUses().isEmpty()) {
+                Expression expr = exprRecoverer.recover(invoke);
+                return new ExprStmt(expr);
             }
             // Skip intermediate invoke results that are only used by other instructions
             // These will be inlined at their usage site
@@ -1847,6 +1867,7 @@ public class StatementRecoverer {
         // First, recover any instructions in the header block BEFORE the branch
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
+
         // Use negation flag from structural analysis to get correct condition polarity
         Expression condition = recoverCondition(header, info.isConditionNegated());
         Set<IRBlock> stopBlocks = new HashSet<>();
@@ -1912,6 +1933,24 @@ public class StatementRecoverer {
                 context.addPendingStatements(headerStmts);
                 return new BlockStmt(new ArrayList<>()); // Empty block to hold pending statements
             }
+            return null;
+        }
+
+        // Check for general ternary PHI pattern:
+        // if(cond) { value1 } else { value2 } followed by PHI that merges these values
+        // This happens with: x == null ? "" : x  which compiles to if-else with PHI merge
+        // We collapse this to a ternary expression: cond ? thenValue : elseValue
+        PhiInstruction ternaryPhi = findTernaryPhiPattern(header, info);
+        if (ternaryPhi != null) {
+            collapseToTernaryPhiExpression(condition, ternaryPhi, info.getThenBlock(), info.getElseBlock());
+            // Mark the then/else blocks as processed since we're consuming them
+            context.markProcessed(info.getThenBlock());
+            context.markProcessed(info.getElseBlock());
+            // Add header statements to pending for the caller to collect
+            if (!headerStmts.isEmpty()) {
+                context.addPendingStatements(headerStmts);
+            }
+            // Return null to skip emitting the if-else - the ternary expression is cached for the PHI
             return null;
         }
 
@@ -2788,6 +2827,214 @@ public class StatementRecoverer {
             context.getExpressionContext().cacheExpression(phiResult, booleanExpr);
             // Un-mark as materialized so it gets inlined rather than referenced as a variable
             // The PHI was declared at method start, but we want to inline the boolean expression
+            context.getExpressionContext().unmarkMaterialized(phiResult);
+        }
+    }
+
+    /**
+     * Pre-pass to collect PHI values that will be collapsed into ternary expressions.
+     * This allows us to skip declaring variables for these PHIs.
+     */
+    private void collectTernaryPhis(IRMethod method) {
+        ternaryPhiValues.clear();
+
+        for (IRBlock block : method.getBlocks()) {
+            RegionInfo info = analyzer.getRegionInfo(block);
+            if (info == null || info.getType() != ControlFlowContext.StructuredRegion.IF_THEN_ELSE) {
+                continue;
+            }
+
+            // Check for boolean PHI pattern
+            PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(block, info);
+            if (booleanPhi != null && booleanPhi.getResult() != null) {
+                ternaryPhiValues.add(booleanPhi.getResult());
+                continue;
+            }
+
+            // Check for general ternary PHI pattern
+            PhiInstruction ternaryPhi = findTernaryPhiPatternForPrepass(info);
+            if (ternaryPhi != null && ternaryPhi.getResult() != null) {
+                ternaryPhiValues.add(ternaryPhi.getResult());
+            }
+        }
+    }
+
+    /**
+     * Simplified version of findTernaryPhiPattern for the pre-pass.
+     * Doesn't require header block since we just need to check the pattern.
+     */
+    private PhiInstruction findTernaryPhiPatternForPrepass(RegionInfo info) {
+        IRBlock thenBlock = info.getThenBlock();
+        IRBlock elseBlock = info.getElseBlock();
+        IRBlock mergeBlock = info.getMergeBlock();
+
+        if (thenBlock == null || elseBlock == null || mergeBlock == null) {
+            return null;
+        }
+
+        // Check if then block only produces a single value (constant, field load, etc.)
+        SSAValue thenValue = extractSingleProducedValue(thenBlock);
+        SSAValue elseValue = extractSingleProducedValue(elseBlock);
+
+        if (thenValue == null || elseValue == null) {
+            return null;
+        }
+
+        // Find the PHI in the merge block that receives these values
+        for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
+            if (phiReceivesValues(phi, thenBlock, elseBlock, thenValue, elseValue)) {
+                return phi;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Detects a general ternary pattern where then/else blocks each produce a single value
+     * that feeds into a PHI in the merge block. This pattern occurs with code like:
+     * x == null ? "" : x
+     *
+     * The bytecode pattern is:
+     * - if(cond) goto thenBlock else elseBlock
+     * - thenBlock: load value1, goto mergeBlock
+     * - elseBlock: load value2, goto mergeBlock
+     * - mergeBlock: PHI(value1, value2), use PHI in method call/assignment
+     */
+    private PhiInstruction findTernaryPhiPattern(IRBlock header, RegionInfo info) {
+        IRBlock thenBlock = info.getThenBlock();
+        IRBlock elseBlock = info.getElseBlock();
+        IRBlock mergeBlock = info.getMergeBlock();
+
+        if (thenBlock == null || elseBlock == null || mergeBlock == null) {
+            return null;
+        }
+
+        // Check if then block only produces a single value (constant, field load, etc.)
+        SSAValue thenValue = extractSingleProducedValue(thenBlock);
+        SSAValue elseValue = extractSingleProducedValue(elseBlock);
+
+        if (thenValue == null || elseValue == null) {
+            return null;
+        }
+
+        // Find the PHI in the merge block that receives these values
+        for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
+            if (phiReceivesValues(phi, thenBlock, elseBlock, thenValue, elseValue)) {
+                return phi;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extracts the single SSA value produced by a block (excluding the goto terminator).
+     * The block should only contain one value-producing instruction.
+     * Returns null if the block produces no values or multiple values.
+     */
+    private SSAValue extractSingleProducedValue(IRBlock block) {
+        List<IRInstruction> instructions = block.getInstructions();
+
+        SSAValue producedValue = null;
+        for (IRInstruction instr : instructions) {
+            // Skip goto terminators
+            if (instr instanceof GotoInstruction) {
+                continue;
+            }
+            // Skip other terminators
+            if (instr.isTerminator()) {
+                continue;
+            }
+
+            // This instruction produces a value
+            SSAValue result = instr.getResult();
+            if (result != null) {
+                // If we already found a produced value, this is not a single-value block
+                if (producedValue != null) {
+                    return null;
+                }
+                producedValue = result;
+            }
+        }
+
+        return producedValue;
+    }
+
+    /**
+     * Checks if a PHI receives the given values from the then/else blocks.
+     */
+    private boolean phiReceivesValues(PhiInstruction phi, IRBlock thenBlock, IRBlock elseBlock,
+                                       SSAValue thenValue, SSAValue elseValue) {
+        Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
+
+        if (incomingBlocks.size() != 2) {
+            return false;
+        }
+
+        // Check that the PHI receives values from exactly the then and else blocks
+        if (!incomingBlocks.contains(thenBlock) || !incomingBlocks.contains(elseBlock)) {
+            return false;
+        }
+
+        // Check that the PHI receives the expected values from each block
+        Value phiThenValue = phi.getIncoming(thenBlock);
+        Value phiElseValue = phi.getIncoming(elseBlock);
+
+        // The PHI should receive our extracted values (either as SSAValue or as their definition's result)
+        boolean thenMatches = valuesMatch(phiThenValue, thenValue);
+        boolean elseMatches = valuesMatch(phiElseValue, elseValue);
+
+        return thenMatches && elseMatches;
+    }
+
+    /**
+     * Checks if two values match, accounting for both direct SSAValue equality
+     * and cases where one is a constant.
+     */
+    private boolean valuesMatch(Value phiValue, SSAValue blockValue) {
+        if (phiValue == blockValue) {
+            return true;
+        }
+        if (phiValue instanceof SSAValue ssaPhiValue) {
+            return ssaPhiValue == blockValue;
+        }
+        // PHI might receive a constant directly
+        if (phiValue instanceof com.tonic.analysis.ssa.value.Constant) {
+            // Check if the block value's definition is a ConstantInstruction with the same constant
+            if (blockValue != null && blockValue.getDefinition() instanceof ConstantInstruction ci) {
+                return ci.getConstant().equals(phiValue);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Collapses a ternary PHI pattern to a cached TernaryExpr.
+     * Creates: condition ? thenValue : elseValue
+     * and caches it for the PHI result so it gets inlined at usage sites.
+     */
+    private void collapseToTernaryPhiExpression(Expression condition, PhiInstruction phi,
+                                                 IRBlock thenBlock, IRBlock elseBlock) {
+        // Get the values from each branch
+        Value thenValue = phi.getIncoming(thenBlock);
+        Value elseValue = phi.getIncoming(elseBlock);
+
+        // Recover expressions for the then and else values
+        Expression thenExpr = exprRecoverer.recoverOperand(thenValue);
+        Expression elseExpr = exprRecoverer.recoverOperand(elseValue);
+
+        // Determine the type from the PHI result
+        SSAValue phiResult = phi.getResult();
+        SourceType type = typeRecoverer.recoverType(phiResult);
+
+        // Create the ternary expression
+        TernaryExpr ternaryExpr = new TernaryExpr(condition, thenExpr, elseExpr, type);
+
+        // Cache this expression for the PHI result so it gets inlined at usage sites
+        if (phiResult != null) {
+            context.getExpressionContext().cacheExpression(phiResult, ternaryExpr);
+            // Un-mark as materialized so it gets inlined rather than referenced as a variable
             context.getExpressionContext().unmarkMaterialized(phiResult);
         }
     }

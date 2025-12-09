@@ -1,8 +1,9 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.constpool.InterfaceRefItem;
+import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodRefItem;
 import lombok.Getter;
 
@@ -58,9 +59,17 @@ public class InvokeSpecialInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
-        int params = method.getParameterCount();
-        int returnSlots = method.getReturnTypeSlots();
+        Item<?> item = constPool.getItem(methodIndex);
+        int params, returnSlots;
+        if (item instanceof MethodRefItem method) {
+            params = method.getParameterCount();
+            returnSlots = method.getReturnTypeSlots();
+        } else if (item instanceof InterfaceRefItem iface) {
+            params = iface.getParameterCount();
+            returnSlots = iface.getReturnTypeSlots();
+        } else {
+            throw new IllegalStateException("Unexpected ref type: " + item.getClass());
+        }
         return -params + returnSlots;
     }
 
@@ -80,8 +89,8 @@ public class InvokeSpecialInstruction extends Instruction {
      * @return The method as a string.
      */
     public String resolveMethod() {
-        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
-        return method.toString();
+        Item<?> item = constPool.getItem(methodIndex);
+        return item.toString();
     }
 
     /**
@@ -90,8 +99,13 @@ public class InvokeSpecialInstruction extends Instruction {
      * @return The method name.
      */
     public String getMethodName() {
-        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
-        return method.getName();
+        Item<?> item = constPool.getItem(methodIndex);
+        if (item instanceof MethodRefItem method) {
+            return method.getName();
+        } else if (item instanceof InterfaceRefItem iface) {
+            return iface.getName();
+        }
+        throw new IllegalStateException("Unexpected ref type: " + item.getClass());
     }
 
     /**
@@ -100,8 +114,13 @@ public class InvokeSpecialInstruction extends Instruction {
      * @return The owner class name.
      */
     public String getOwnerName() {
-        MethodRefItem method = (MethodRefItem) constPool.getItem(methodIndex);
-        return method.getClassName();
+        Item<?> item = constPool.getItem(methodIndex);
+        if (item instanceof MethodRefItem method) {
+            return method.getClassName();
+        } else if (item instanceof InterfaceRefItem iface) {
+            return iface.getOwner().replace('/', '.');
+        }
+        throw new IllegalStateException("Unexpected ref type: " + item.getClass());
     }
 
     /**

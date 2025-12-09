@@ -824,27 +824,38 @@ public class InstructionTranslator {
     }
 
     private void translateInvokeVirtual(InvokeVirtualInstruction instr, AbstractState state, IRBlock block) {
-        MethodRefItem methodRef = (MethodRefItem) constPool.getItem(instr.getMethodIndex());
-        translateInvoke(InvokeType.VIRTUAL, methodRef.getOwner(), methodRef.getName(),
-                methodRef.getDescriptor(), false, state, block);
+        String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokevirtual");
+        translateInvoke(InvokeType.VIRTUAL, ref[0], ref[1], ref[2], false, state, block);
     }
 
     private void translateInvokeSpecial(InvokeSpecialInstruction instr, AbstractState state, IRBlock block) {
-        MethodRefItem methodRef = (MethodRefItem) constPool.getItem(instr.getMethodIndex());
-        translateInvoke(InvokeType.SPECIAL, methodRef.getOwner(), methodRef.getName(),
-                methodRef.getDescriptor(), false, state, block);
+        String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokespecial");
+        translateInvoke(InvokeType.SPECIAL, ref[0], ref[1], ref[2], false, state, block);
     }
 
     private void translateInvokeStatic(InvokeStaticInstruction instr, AbstractState state, IRBlock block) {
-        MethodRefItem methodRef = (MethodRefItem) constPool.getItem(instr.getMethodIndex());
-        translateInvoke(InvokeType.STATIC, methodRef.getOwner(), methodRef.getName(),
-                methodRef.getDescriptor(), true, state, block);
+        String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokestatic");
+        translateInvoke(InvokeType.STATIC, ref[0], ref[1], ref[2], true, state, block);
     }
 
     private void translateInvokeInterface(InvokeInterfaceInstruction instr, AbstractState state, IRBlock block) {
-        InterfaceRefItem methodRef = (InterfaceRefItem) constPool.getItem(instr.getMethodIndex());
-        translateInvoke(InvokeType.INTERFACE, methodRef.getOwner(), methodRef.getName(),
-                methodRef.getDescriptor(), false, state, block);
+        String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokeinterface");
+        translateInvoke(InvokeType.INTERFACE, ref[0], ref[1], ref[2], false, state, block);
+    }
+
+    /**
+     * Extracts method reference info from either MethodRefItem or InterfaceRefItem.
+     * Since Java 8, invokestatic and invokespecial can reference InterfaceMethodRef.
+     * @return array of [owner, name, descriptor]
+     */
+    private String[] getMethodRefInfo(int cpIndex, String opcode) {
+        Item<?> refItem = constPool.getItem(cpIndex);
+        if (refItem instanceof MethodRefItem methodRef) {
+            return new String[] { methodRef.getOwner(), methodRef.getName(), methodRef.getDescriptor() };
+        } else if (refItem instanceof InterfaceRefItem ifaceRef) {
+            return new String[] { ifaceRef.getOwner(), ifaceRef.getName(), ifaceRef.getDescriptor() };
+        }
+        throw new IllegalStateException("Unexpected ref type for " + opcode + ": " + refItem.getClass());
     }
 
     private void translateInvokeDynamic(InvokeDynamicInstruction instr, AbstractState state, IRBlock block) {

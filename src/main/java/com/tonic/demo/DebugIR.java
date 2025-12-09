@@ -31,7 +31,11 @@ public class DebugIR {
 
         for (MethodEntry method : cf.getMethods()) {
             String methodName = method.getName();
-            if (!targetMethod.equals(methodName)) {
+            String methodDesc = method.getDesc();
+            // Match by name, or by name+desc if target includes descriptor
+            boolean matches = targetMethod.equals(methodName) ||
+                             targetMethod.equals(methodName + methodDesc);
+            if (!matches) {
                 continue;
             }
 
