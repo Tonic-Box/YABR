@@ -390,6 +390,40 @@ ssa.transform(method);
 - **Basic induction variable:** `i = i + c` where c is constant
 - **Derived induction variable:** `j = i * c + d` linear function of basic IV
 
+### Loop Predication
+
+Converts loop-variant guards into loop-invariant predicates. Eliminates guards that can be proven always true for all loop iterations.
+
+```java
+// Before
+for (int i = 0; i < n; i++) {
+    if (i < limit) {     // Guard checked every iteration
+        sum += i;
+    }
+}
+
+// After (when n <= limit is provable)
+for (int i = 0; i < n; i++) {
+    sum += i;            // Guard eliminated - always true
+}
+```
+
+**Usage:**
+
+```java
+SSA ssa = new SSA(constPool).withLoopPredication();
+ssa.transform(method);
+```
+
+**Eliminates guards when:**
+- Guard limit equals loop bound (`i < n` inside loop `for i < n`)
+- Guard limit is provably >= loop bound (constant analysis)
+- Initial value and final value both satisfy the guard
+
+**Supported guard patterns:**
+- `iv < limit` where iv is induction variable and limit is loop-invariant
+- `iv <= limit`, `iv > limit`, `iv >= limit` comparisons
+
 ### Combining Transforms
 
 Apply multiple transforms for best results:
@@ -422,9 +456,10 @@ SSA ssa = new SSA(constPool).withAllOptimizations();
 11. NullCheckElimination - Remove redundant null checks
 12. LoopInvariantCodeMotion - Hoist loop-invariant code
 13. InductionVariableSimplification - Optimize loop counters
-14. JumpThreading - Thread jump chains
-15. BlockMerging - Merge single-edge blocks
-16. DeadCodeElimination - Clean up unused instructions (run last)
+14. LoopPredication - Eliminate provably-true loop guards
+15. JumpThreading - Thread jump chains
+16. BlockMerging - Merge single-edge blocks
+17. DeadCodeElimination - Clean up unused instructions (run last)
 
 Transforms run iteratively until a fixed point is reached (no more changes) or a maximum iteration count (10).
 

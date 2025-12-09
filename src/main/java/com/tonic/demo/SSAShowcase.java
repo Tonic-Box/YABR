@@ -538,6 +538,52 @@ public class SSAShowcase {
     }
 
     // ========================================
+    // Loop Predication Tests
+    // ========================================
+
+    /**
+     * Demonstrates loop predication with constant limit.
+     * Guard i < 100 is always true when n <= 100.
+     */
+    public int loopPredicationSimple(int n) {
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+            if (i < 100) {    // Guard: can be predicated if n <= 100
+                sum += i;
+            }
+        }
+        return sum;
+    }
+
+    /**
+     * Demonstrates loop predication with redundant guard.
+     * Guard i < len is always true when loop bound is i < len.
+     */
+    public int loopPredicationRedundant(int n) {
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+            if (i < n) {      // Redundant guard - always true
+                sum += i * 2;
+            }
+        }
+        return sum;
+    }
+
+    /**
+     * Demonstrates loop predication with separate limit.
+     * Guard can be predicated when n <= limit.
+     */
+    public int loopPredicationLimit(int n, int limit) {
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+            if (i < limit) {  // Can predicate if n <= limit
+                sum += i;
+            }
+        }
+        return sum;
+    }
+
+    // ========================================
     // Main Method for Testing
     // ========================================
 
@@ -637,6 +683,12 @@ public class SSAShowcase {
         System.out.println("reassociateConstants(5) = " + showcase.reassociateConstants(5) + " (expected: 20)");
         System.out.println("reassociateMul(3) = " + showcase.reassociateMul(3) + " (expected: 24)");
         System.out.println("reassociateMultiVar(2, 3) = " + showcase.reassociateMultiVar(2, 3) + " (expected: 15)");
+        System.out.println();
+
+        System.out.println("=== Loop Predication ===");
+        System.out.println("loopPredicationSimple(10) = " + showcase.loopPredicationSimple(10) + " (expected: 45)");
+        System.out.println("loopPredicationRedundant(5) = " + showcase.loopPredicationRedundant(5) + " (expected: 20)");
+        System.out.println("loopPredicationLimit(5, 10) = " + showcase.loopPredicationLimit(5, 10) + " (expected: 10)");
         System.out.println();
 
         System.out.println("=== All tests complete ===");

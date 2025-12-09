@@ -78,7 +78,11 @@ public class TestSSADemo {
                 // Reassociation tests
                 "reassociateConstants",
                 "reassociateMul",
-                "reassociateMultiVar"
+                "reassociateMultiVar",
+                // Loop Predication tests
+                "loopPredicationSimple",
+                "loopPredicationRedundant",
+                "loopPredicationLimit"
             );
 
             for (MethodEntry method : classFile.getMethods()) {

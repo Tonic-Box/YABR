@@ -213,6 +213,17 @@ public class SSA {
     }
 
     /**
+     * Enables loop predication optimization.
+     * Converts loop-variant guards into loop-invariant predicates.
+     * Eliminates guards that can be proven always true for all iterations.
+     *
+     * @return this SSA instance for chaining
+     */
+    public SSA withLoopPredication() {
+        return addTransform(new LoopPredication());
+    }
+
+    /**
      * Enables induction variable simplification optimization.
      * Simplifies loop counters and derived induction variables.
      *
@@ -351,6 +362,7 @@ public class SSA {
                 .withRedundantCopyElimination()
                 .withNullCheckElimination()
                 .withLoopInvariantCodeMotion()
+                .withLoopPredication()
                 .withInductionVariableSimplification()
                 .withJumpThreading()
                 .withBlockMerging()
