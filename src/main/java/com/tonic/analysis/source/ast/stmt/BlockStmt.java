@@ -21,7 +21,13 @@ public final class BlockStmt implements Statement {
     private ASTNode parent;
 
     public BlockStmt(List<Statement> statements, SourceLocation location) {
-        this.statements = new ArrayList<>(statements);
+        // Filter out null statements to prevent NPE
+        this.statements = new ArrayList<>();
+        for (Statement stmt : statements) {
+            if (stmt != null) {
+                this.statements.add(stmt);
+            }
+        }
         this.location = location != null ? location : SourceLocation.UNKNOWN;
         // Set parent references
         for (Statement stmt : this.statements) {
@@ -41,6 +47,7 @@ public final class BlockStmt implements Statement {
      * Adds a statement to the end of this block.
      */
     public void addStatement(Statement stmt) {
+        if (stmt == null) return;
         stmt.setParent(this);
         statements.add(stmt);
     }
@@ -49,6 +56,7 @@ public final class BlockStmt implements Statement {
      * Inserts a statement at the specified index.
      */
     public void insertStatement(int index, Statement stmt) {
+        if (stmt == null) return;
         stmt.setParent(this);
         statements.add(index, stmt);
     }

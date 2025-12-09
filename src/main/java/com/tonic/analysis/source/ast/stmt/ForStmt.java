@@ -31,9 +31,24 @@ public final class ForStmt implements Statement {
 
     public ForStmt(List<Statement> init, Expression condition, List<Expression> update,
                    Statement body, String label, SourceLocation location) {
-        this.init = new ArrayList<>(init != null ? init : List.of());
+        // Filter out null statements and expressions
+        this.init = new ArrayList<>();
+        if (init != null) {
+            for (Statement s : init) {
+                if (s != null) {
+                    this.init.add(s);
+                }
+            }
+        }
         this.condition = condition; // Can be null for infinite loop
-        this.update = new ArrayList<>(update != null ? update : List.of());
+        this.update = new ArrayList<>();
+        if (update != null) {
+            for (Expression e : update) {
+                if (e != null) {
+                    this.update.add(e);
+                }
+            }
+        }
         this.body = Objects.requireNonNull(body, "body cannot be null");
         this.label = label;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
@@ -73,6 +88,7 @@ public final class ForStmt implements Statement {
      * Adds an initialization statement.
      */
     public void addInit(Statement stmt) {
+        if (stmt == null) return;
         stmt.setParent(this);
         init.add(stmt);
     }
@@ -81,6 +97,7 @@ public final class ForStmt implements Statement {
      * Adds an update expression.
      */
     public void addUpdate(Expression expr) {
+        if (expr == null) return;
         expr.setParent(this);
         update.add(expr);
     }

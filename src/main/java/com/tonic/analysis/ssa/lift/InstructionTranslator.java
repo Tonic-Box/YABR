@@ -155,7 +155,7 @@ public class InstructionTranslator {
             case 0xC1 -> translateInstanceOf((com.tonic.analysis.instruction.InstanceOfInstruction) instr, state, block);
             case 0xC2 -> translateMonitorEnter(state, block);
             case 0xC3 -> translateMonitorExit(state, block);
-            case 0xC4 -> translateWide((WideInstruction) instr, state, block);
+            case 0xC4 -> translateWide(instr, state, block);
             case 0xC5 -> translateMultiANewArray((MultiANewArrayInstruction) instr, state, block);
             case 0xC6 -> translateIfNull((ConditionalBranchInstruction) instr, state, block);
             case 0xC7 -> translateIfNonNull((ConditionalBranchInstruction) instr, state, block);
@@ -1046,9 +1046,19 @@ public class InstructionTranslator {
         return count;
     }
 
-    private void translateWide(WideInstruction instr, AbstractState state, IRBlock block) {
-        int varIndex = instr.getVarIndex();
-        switch (instr.getModifiedOpcode()) {
+    private void translateWide(Instruction instr, AbstractState state, IRBlock block) {
+        // Handle WideIIncInstruction (wide iinc) separately from WideInstruction
+        if (instr instanceof WideIIncInstruction wideIInc) {
+            translateWideIInc(wideIInc, state, block);
+            return;
+        }
+
+        if (!(instr instanceof WideInstruction wide)) {
+            throw new UnsupportedOperationException("Expected WideInstruction or WideIIncInstruction, got: " + instr.getClass().getName());
+        }
+
+        int varIndex = wide.getVarIndex();
+        switch (wide.getModifiedOpcode()) {
             case ILOAD -> translateILoad(varIndex, state, block);
             case LLOAD -> translateLLoad(varIndex, state, block);
             case FLOAD -> translateFLoad(varIndex, state, block);
@@ -1060,7 +1070,7 @@ public class InstructionTranslator {
             case DSTORE -> translateDStore(varIndex, state, block);
             case ASTORE -> translateAStore(varIndex, state, block);
             case IINC -> {
-                int increment = instr.getConstValue();
+                int increment = wide.getConstValue();
                 SSAValue loaded = new SSAValue(PrimitiveType.INT);
                 block.addInstruction(new LoadLocalInstruction(loaded, varIndex));
                 SSAValue incConst = new SSAValue(PrimitiveType.INT);
@@ -1070,7 +1080,24 @@ public class InstructionTranslator {
                 state.setLocal(varIndex, result);
                 block.addInstruction(new StoreLocalInstruction(varIndex, result));
             }
-            default -> throw new UnsupportedOperationException("Unsupported WIDE opcode: " + instr.getModifiedOpcode());
+            default -> throw new UnsupportedOperationException("Unsupported WIDE opcode: " + wide.getModifiedOpcode());
         }
+    }
+
+    private void translateWideIInc(WideIIncInstruction instr, AbstractState state, IRBlock block) {
+        int varIndex = instr.getVarIndex();
+        int increment = instr.getConstValue();
+
+        SSAValue loaded = new SSAValue(PrimitiveType.INT);
+        block.addInstruction(new LoadLocalInstruction(loaded, varIndex));
+
+        SSAValue incConst = new SSAValue(PrimitiveType.INT);
+        block.addInstruction(new ConstantInstruction(incConst, IntConstant.of(increment)));
+
+        SSAValue result = new SSAValue(PrimitiveType.INT);
+        block.addInstruction(new BinaryOpInstruction(result, BinaryOp.ADD, loaded, incConst));
+
+        state.setLocal(varIndex, result);
+        block.addInstruction(new StoreLocalInstruction(varIndex, result));
     }
 }

@@ -22,7 +22,8 @@ public class TypeRecoverer {
         if (value == null || value.getType() == null) {
             return VoidSourceType.INSTANCE;
         }
-        return SourceType.fromIRType(value.getType());
+        // Use instruction context to get proper semantic types (e.g., boolean for instanceof)
+        return recoverTypeWithInstructionContext(value);
     }
 
     /**
@@ -54,8 +55,15 @@ public class TypeRecoverer {
             return VoidSourceType.INSTANCE;
         }
 
-        // Check if this value is defined by a binary operation that should be boolean
+        // Check if this value is defined by an instruction that should be boolean
         com.tonic.analysis.ssa.ir.IRInstruction def = ssa.getDefinition();
+
+        // instanceof always returns boolean (JVM uses int 0/1, but semantically it's boolean)
+        if (def instanceof com.tonic.analysis.ssa.ir.InstanceOfInstruction) {
+            return PrimitiveSourceType.BOOLEAN;
+        }
+
+        // For IAND/IOR/IXOR binary ops, check if either operand is boolean
         if (def instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp) {
             com.tonic.analysis.ssa.ir.BinaryOp op = binOp.getOp();
             // For IAND/IOR/IXOR, check if either operand is boolean

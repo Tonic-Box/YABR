@@ -1090,6 +1090,22 @@ public class ExpressionRecoverer {
         }
 
         @Override
+        public Expression visitArrayLength(ArrayLengthInstruction instr) {
+            // array.length - use "[]" as pseudo owner for arrays
+            Expression array = recoverOperand(instr.getArray());
+            SourceType type = com.tonic.analysis.source.ast.type.PrimitiveSourceType.INT;
+            return new FieldAccessExpr(array, "length", "[]", false, type);
+        }
+
+        @Override
+        public Expression visitInstanceOf(InstanceOfInstruction instr) {
+            // expr instanceof Type
+            Expression operand = recoverOperand(instr.getObjectRef());
+            SourceType targetType = SourceType.fromIRType(instr.getCheckType());
+            return new InstanceOfExpr(operand, targetType);
+        }
+
+        @Override
         protected Expression defaultValue() {
             return LiteralExpr.ofNull();
         }

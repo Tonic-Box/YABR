@@ -2166,8 +2166,17 @@ public class StatementRecoverer {
      */
     private boolean isBooleanSSAValue(com.tonic.analysis.ssa.value.Value value) {
         if (value instanceof com.tonic.analysis.ssa.value.SSAValue ssaValue) {
+            // Check if IR type is already BOOLEAN
             com.tonic.analysis.ssa.type.IRType type = ssaValue.getType();
-            return type == com.tonic.analysis.ssa.type.PrimitiveType.BOOLEAN;
+            if (type == com.tonic.analysis.ssa.type.PrimitiveType.BOOLEAN) {
+                return true;
+            }
+            // Check if defined by an instruction that produces boolean semantically
+            // (e.g., instanceof uses INT in JVM but is semantically boolean)
+            com.tonic.analysis.ssa.ir.IRInstruction def = ssaValue.getDefinition();
+            if (def instanceof com.tonic.analysis.ssa.ir.InstanceOfInstruction) {
+                return true;
+            }
         }
         return false;
     }
