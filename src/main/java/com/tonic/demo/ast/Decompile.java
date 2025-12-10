@@ -109,6 +109,7 @@ public class Decompile {
                 .build();
 
         // Decompile and print
+        System.out.println("Decompiling class: " + cf.getClassName());
         String source = new ClassDecompiler(cf, decompilerConfig).decompile();
         Files.writeString(Path.of("output.java"), source);
 

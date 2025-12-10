@@ -374,18 +374,22 @@ public class ClassDecompiler {
     }
 
     /**
-     * Applies all transforms to the IR method.
-     * First applies baseline transforms (ControlFlowReducibility, DuplicateBlockMerging),
-     * then applies any additional transforms from the config.
+     * Applies baseline transforms (ControlFlowReducibility, DuplicateBlockMerging) to the IR method.
+     * Used for static initializers and constructors where these transforms are known to work.
      *
      * @param ir the IR method to transform
      */
-    private void applyTransforms(IRMethod ir) {
-        // Baseline transforms (always applied)
+    private void applyBaselineTransforms(IRMethod ir) {
         reducibility.run(ir);
         duplicateMerging.run(ir);
+    }
 
-        // Additional transforms from config
+    /**
+     * Applies additional transforms from the config to the IR method.
+     *
+     * @param ir the IR method to transform
+     */
+    private void applyAdditionalTransforms(IRMethod ir) {
         for (IRTransform transform : decompilerConfig.getAdditionalTransforms()) {
             transform.run(ir);
         }
@@ -397,7 +401,8 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(clinit);
-            applyTransforms(ir);
+            applyBaselineTransforms(ir);
+            applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -442,7 +447,8 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(ctor);
-            applyTransforms(ir);
+            applyBaselineTransforms(ir);
+            applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -493,7 +499,10 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(method);
-            applyTransforms(ir);
+            // NOTE: Baseline transforms (reducibility, duplicateMerging) are NOT applied
+            // to regular methods as they can cause issues with complex control flow.
+            // Only additional transforms from config are applied.
+            applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             emitBlockContents(writer, body);
         } catch (Exception e) {
