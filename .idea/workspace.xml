@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Added missing visitors to ExpressionRecoverer">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
-    </list>
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="fixed a loop structure recovery issue in the decompiler." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -61,18 +58,19 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/zacke/IdeaProjects/YABR-fixed/build.gradle.kts&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/zacke/IdeaProjects/YABR-fixed/build.gradle.kts",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "reference.settingsdialog.project.gradle"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Application.Decompile">
     <configuration name="ASTMutationDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ASTMutationDemo" />
@@ -140,12 +138,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="TestVisitor" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.TestVisitor" />
+    <configuration name="Trainer" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.analysis.naming.Trainer" />
       <module name="YABR.main" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.tonic.demo.*" />
+          <option name="PATTERN" value="com.tonic.analysis.naming.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -168,19 +166,19 @@
     </configuration>
     <list>
       <item itemvalue="Application.Decompile" />
+      <item itemvalue="Application.Trainer" />
       <item itemvalue="Application.ASTMutationDemo" />
       <item itemvalue="Application.SourceASTDemo" />
       <item itemvalue="Application.TestBlocks" />
       <item itemvalue="Application.TestSSADemo" />
-      <item itemvalue="Application.TestVisitor" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.Trainer" />
         <item itemvalue="Application.ASTMutationDemo" />
         <item itemvalue="Application.TestSSADemo" />
         <item itemvalue="Application.SourceASTDemo" />
         <item itemvalue="Application.TestBlocks" />
-        <item itemvalue="Application.TestVisitor" />
       </list>
     </recent_temporary>
   </component>
@@ -409,7 +407,127 @@
       <option name="project" value="LOCAL" />
       <updated>1765309927576</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="Changes made to StatementRecoverer.java:&#10;  1. Added ternaryPhiValues field to track PHIs that will become ternary expressions&#10;  2. Added collectTernaryPhis() method called early in recoverMethod() to identify these PHIs&#10;  3. Added findTernaryPhiPatternForPrepass() helper method to detect ternary PHI patterns&#10;  4. Modified emitPhiDeclaration() to skip PHIs in the ternaryPhiValues set">
+      <option name="closed" value="true" />
+      <created>1765313097748</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1765313097748</updated>
+    </task>
+    <task id="LOCAL-00029" summary="Readme docs update">
+      <option name="closed" value="true" />
+      <created>1765314167195</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1765314167195</updated>
+    </task>
+    <task id="LOCAL-00030" summary="Reassociate optimization transformer">
+      <option name="closed" value="true" />
+      <created>1765318507658</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1765318507658</updated>
+    </task>
+    <task id="LOCAL-00031" summary="LoopPrediction optimization transformer">
+      <option name="closed" value="true" />
+      <created>1765319573401</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1765319573401</updated>
+    </task>
+    <task id="LOCAL-00032" summary="BDCE optimization transformer">
+      <option name="closed" value="true" />
+      <created>1765320975929</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1765320975929</updated>
+    </task>
+    <task id="LOCAL-00033" summary="CVE optimization transformer">
+      <option name="closed" value="true" />
+      <created>1765323679511</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1765323679511</updated>
+    </task>
+    <task id="LOCAL-00034" summary="better source emition for string concatenation">
+      <option name="closed" value="true" />
+      <created>1765325449938</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1765325449938</updated>
+    </task>
+    <task id="LOCAL-00035" summary="better dynamic family handling in IR/ast/source">
+      <option name="closed" value="true" />
+      <created>1765346924702</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1765346924703</updated>
+    </task>
+    <task id="LOCAL-00036" summary="better dynamic family handling in IR/ast/source">
+      <option name="closed" value="true" />
+      <created>1765347951815</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1765347951815</updated>
+    </task>
+    <task id="LOCAL-00037" summary="java 11 migration">
+      <option name="closed" value="true" />
+      <created>1765381819536</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1765381819536</updated>
+    </task>
+    <task id="LOCAL-00038" summary="configuration for transforms used in compilation">
+      <option name="closed" value="true" />
+      <created>1765386200730</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1765386200730</updated>
+    </task>
+    <task id="LOCAL-00039" summary="configuration for transforms used in compilation">
+      <option name="closed" value="true" />
+      <created>1765387212033</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1765387212033</updated>
+    </task>
+    <task id="LOCAL-00040" summary="ASTTransform">
+      <option name="closed" value="true" />
+      <created>1765392815426</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1765392815426</updated>
+    </task>
+    <task id="LOCAL-00041" summary="ASTTransform docs">
+      <option name="closed" value="true" />
+      <created>1765393052919</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1765393052919</updated>
+    </task>
+    <task id="LOCAL-00042" summary="fixed a loop structure recovery issue in the decompiler.">
+      <option name="closed" value="true" />
+      <created>1765394618446</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1765394618446</updated>
+    </task>
+    <option name="localTasksCounter" value="43" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -424,15 +542,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Inicial push" />
-    <MESSAGE value="incorrect length fix for ILoadInstruction" />
-    <MESSAGE value="AccessBuilder" />
-    <MESSAGE value="Moved demos to demo package. Implimented Byttecode class and other QoL builder classes." />
-    <MESSAGE value="Fixed a bug with class attributes, and also added 2 missing attribute types (0x13 and 0x14)" />
-    <MESSAGE value="Cleanup" />
-    <MESSAGE value="Cleanup of demo classes. Implimented ClassFile::setFieldInitialValue, ClassFile::generateSetter, and ClassFile::generateGetter" />
-    <MESSAGE value="implimented a simple visitor pattern api" />
-    <MESSAGE value="implemented a simple visitor pattern api" />
     <MESSAGE value="Visitors implemented and VisitorTest demo class written" />
     <MESSAGE value="Super basic implementation of Expression/Statement block parsing/abstractions. Added a Demo to show them off @ TestBlocks.java&#10;&#10;Very basic so far and a bit lack luster, will take more work." />
     <MESSAGE value="AST api" />
@@ -445,7 +554,20 @@
     <MESSAGE value="Exception block lifting fix" />
     <MESSAGE value="JumpThreading fix&#10;- When JumpThreading bypassed an intermediate block, it didn't update the phi nodes at the target to reflect the new predecessor" />
     <MESSAGE value="Added missing visitors to ExpressionRecoverer" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added missing visitors to ExpressionRecoverer" />
+    <MESSAGE value="Changes made to StatementRecoverer.java:&#10;  1. Added ternaryPhiValues field to track PHIs that will become ternary expressions&#10;  2. Added collectTernaryPhis() method called early in recoverMethod() to identify these PHIs&#10;  3. Added findTernaryPhiPatternForPrepass() helper method to detect ternary PHI patterns&#10;  4. Modified emitPhiDeclaration() to skip PHIs in the ternaryPhiValues set" />
+    <MESSAGE value="Readme docs update" />
+    <MESSAGE value="Reassociate optimization transformer" />
+    <MESSAGE value="LoopPrediction optimization transformer" />
+    <MESSAGE value="BDCE optimization transformer" />
+    <MESSAGE value="CVE optimization transformer" />
+    <MESSAGE value="better source emition for string concatenation" />
+    <MESSAGE value="better dynamic family handling in IR/ast/source" />
+    <MESSAGE value="java 11 migration" />
+    <MESSAGE value="configuration for transforms used in compilation" />
+    <MESSAGE value="ASTTransform" />
+    <MESSAGE value="ASTTransform docs" />
+    <MESSAGE value="fixed a loop structure recovery issue in the decompiler." />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed a loop structure recovery issue in the decompiler." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
