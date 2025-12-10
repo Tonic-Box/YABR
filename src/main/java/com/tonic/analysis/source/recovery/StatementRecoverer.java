@@ -1271,7 +1271,7 @@ public class StatementRecoverer {
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.isEmpty()) return true; // Unused - can skip
 
-        // Check if all uses are "consuming" instructions (invoke arguments, throw, return)
+        // Check if all uses are "consuming" instructions (invoke arguments, throw, return, etc.)
         for (IRInstruction use : uses) {
             // If used as argument to another invoke - intermediate
             if (use instanceof InvokeInstruction) continue;
@@ -1279,11 +1279,26 @@ public class StatementRecoverer {
             if (use instanceof ThrowInstruction) continue;
             // If returned - final use
             if (use instanceof ReturnInstruction) continue;
+            // If used in arithmetic/logic - intermediate (can inline)
+            if (use instanceof BinaryOpInstruction) continue;
+            if (use instanceof UnaryOpInstruction) continue;
+            // If used in cast - intermediate
+            if (use instanceof CastInstruction) continue;
+            // If used for array length - intermediate
+            if (use instanceof ArrayLengthInstruction) continue;
+            // If used for array load - intermediate
+            if (use instanceof ArrayLoadInstruction) continue;
+            // If used for field get - intermediate
+            if (use instanceof GetFieldInstruction) continue;
+            // If used for instanceof check - intermediate
+            if (use instanceof InstanceOfInstruction) continue;
+            // If used for new array size - intermediate
+            if (use instanceof NewArrayInstruction) continue;
             // If used in a branch condition - not intermediate
             if (use instanceof BranchInstruction) return false;
             // If stored to field - not intermediate
             if (use instanceof PutFieldInstruction) return false;
-            // If stored to array - not intermediate
+            // If stored to array - not intermediate (the array/index are intermediate, but value being stored isn't)
             if (use instanceof ArrayStoreInstruction) return false;
             // If stored to local - not intermediate
             if (use instanceof StoreLocalInstruction) return false;
@@ -1291,6 +1306,17 @@ public class StatementRecoverer {
             if (use instanceof PhiInstruction) return false;
         }
         return true;
+    }
+
+    /**
+     * Checks if an SSA value is used exactly once and that use is a PutFieldInstruction.
+     * Such values can be safely inlined into the field assignment.
+     */
+    private boolean isSingleUsePutField(SSAValue value) {
+        if (value == null) return false;
+        java.util.List<IRInstruction> uses = value.getUses();
+        if (uses.size() != 1) return false;
+        return uses.get(0) instanceof PutFieldInstruction;
     }
 
     /**
@@ -1609,6 +1635,13 @@ public class StatementRecoverer {
                 context.getExpressionContext().cacheExpression(result, exprRecoverer.recover(invoke));
                 return null;
             }
+            // Also skip invoke results that have exactly one use and that use is PutField
+            // These can be safely inlined into the field assignment
+            if (result != null && isSingleUsePutField(result)) {
+                Expression expr = exprRecoverer.recover(invoke);
+                context.getExpressionContext().cacheExpression(result, expr);
+                return null;
+            }
         }
 
         // Skip NewInstruction - will be combined with <init> call
@@ -1655,6 +1688,15 @@ public class StatementRecoverer {
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
             }
             return null;
+        }
+
+        // Skip BinaryOp/UnaryOp/Cast that are intermediate - will be inlined at usage sites
+        if (instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction || instr instanceof CastInstruction) {
+            if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
+                Expression value = exprRecoverer.recover(instr);
+                context.getExpressionContext().cacheExpression(instr.getResult(), value);
+                return null;
+            }
         }
 
         // Handle ConstantInstruction - check if it flows into a PHI
