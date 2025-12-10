@@ -686,6 +686,168 @@ public void problematicMethod() {
 
 This allows partial decompilation of classes even when some methods have complex or unsupported bytecode patterns.
 
+## AST Transforms
+
+AST transforms operate on the recovered AST to improve output readability. Unlike IR transforms (which operate on SSA form), AST transforms work on the high-level Java-like structure after recovery.
+
+### ASTTransform Interface
+
+```java
+package com.tonic.analysis.source.ast.transform;
+
+public interface ASTTransform {
+    String getName();
+    boolean transform(BlockStmt block);
+}
+```
+
+The `transform` method modifies the block in place and returns `true` if any changes were made.
+
+### ControlFlowSimplifier
+
+The `ControlFlowSimplifier` applies multiple cleanup passes to improve decompiled output quality:
+
+```java
+import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
+
+ControlFlowSimplifier simplifier = new ControlFlowSimplifier();
+boolean changed = simplifier.transform(methodBody);
+```
+
+**Transformations Applied:**
+
+| Transform | Before | After |
+|-----------|--------|-------|
+| Empty block inversion | `if (x) { } else { body }` | `if (!x) { body }` |
+| Guard clause conversion | `if (x) { long } else { return; }` | `if (!x) return; long` |
+| Comparison flipping | `if (!(a == b))` | `if (a != b)` |
+| AND-chain merging | `if (a) { if (b) { body } }` | `if (a && b) { body }` |
+| Self-assignment removal | `x = x;` | *(removed)* |
+| Duplicate assignment removal | `x = 0; x = 0;` | `x = 0;` |
+| If-else to ternary | `if (c) { x = 0; } else { x = 1; }` | `x = c ? 0 : 1;` |
+| Declaration movement | `int x = 0; ... x = val;` | `int x = val;` |
+| Declaration into blocks | Declarations at method start | Moved into try/nested blocks |
+
+**Comparison Flipping:**
+
+When negating comparisons, the simplifier flips operators instead of wrapping with `!`:
+
+| Original | Flipped |
+|----------|---------|
+| `!(a == b)` | `a != b` |
+| `!(a != b)` | `a == b` |
+| `!(a < b)` | `a >= b` |
+| `!(a <= b)` | `a > b` |
+| `!(a > b)` | `a <= b` |
+| `!(a >= b)` | `a < b` |
+
+**Declaration Movement:**
+
+The simplifier moves variable declarations from method/block start to their first assignment when safe:
+
+```java
+// Before
+int local3 = 0;
+int local4 = 0;
+doSomething();
+local3 = computeValue();
+local4 = otherValue();
+
+// After
+doSomething();
+int local3 = computeValue();
+int local4 = otherValue();
+```
+
+Safety checks ensure:
+- Variable is not read between declaration and first assignment
+- First assignment is a simple `=` (not `+=`, etc.)
+- No control flow between declaration and assignment
+
+**Moving Declarations Into Nested Blocks:**
+
+When a variable is only used inside a try block (not in catch/finally), the declaration is moved inside:
+
+```java
+// Before
+int local2 = 0;
+try {
+    local2 = getValue();
+    use(local2);
+} catch (Exception e) {
+    // local2 not used here
+}
+
+// After
+try {
+    int local2 = getValue();
+    use(local2);
+} catch (Exception e) {
+}
+```
+
+### Integration with ClassDecompiler
+
+AST transforms are applied automatically after method recovery:
+
+```java
+// In ClassDecompiler, after recovering method body:
+BlockStmt body = methodRecoverer.recover();
+astSimplifier.transform(body);  // Apply AST transforms
+emitBlockContents(body, writer);
+```
+
+### Writing Custom AST Transforms
+
+```java
+public class MyTransform implements ASTTransform {
+
+    @Override
+    public String getName() {
+        return "MyTransform";
+    }
+
+    @Override
+    public boolean transform(BlockStmt block) {
+        boolean changed = false;
+        List<Statement> stmts = block.getStatements();
+
+        for (int i = 0; i < stmts.size(); i++) {
+            Statement stmt = stmts.get(i);
+
+            // Your transformation logic here
+            if (shouldTransform(stmt)) {
+                stmts.set(i, transformStatement(stmt));
+                changed = true;
+            }
+
+            // Recurse into nested blocks
+            if (stmt instanceof IfStmt) {
+                IfStmt ifStmt = (IfStmt) stmt;
+                if (ifStmt.getThenBranch() instanceof BlockStmt) {
+                    changed |= transform((BlockStmt) ifStmt.getThenBranch());
+                }
+            }
+            // ... handle other control structures
+        }
+
+        return changed;
+    }
+}
+```
+
+### Measured Improvements
+
+On obfuscated code, the ControlFlowSimplifier achieves:
+
+| Metric | Improvement |
+|--------|-------------|
+| Else blocks | -14% |
+| Negated conditions `if (!(...)` | -92% |
+| Self-assignments | -98% |
+| Ternary expressions | +148 (from if-else conversion) |
+| AND conditions | +315 (from nested if merging) |
+
 ## Related Documentation
 
 - [SSA Guide](ssa-guide.md) - SSA intermediate representation
