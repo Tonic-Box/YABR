@@ -386,17 +386,17 @@ public class StatementRecoverer {
                 }
                 case WHILE_LOOP: {
                     result.add(recoverWhileLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
                 case DO_WHILE_LOOP: {
                     result.add(recoverDoWhileLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
                 case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
                 default: {
@@ -916,17 +916,17 @@ public class StatementRecoverer {
                 }
                 case WHILE_LOOP: {
                     result.add(recoverWhileLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, new HashSet<>());
                     break;
                 }
                 case DO_WHILE_LOOP: {
                     result.add(recoverDoWhileLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, new HashSet<>());
                     break;
                 }
                 case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, new HashSet<>());
                     break;
                 }
                 default: {
@@ -1369,17 +1369,17 @@ public class StatementRecoverer {
                 }
                 case WHILE_LOOP: {
                     result.add(recoverWhileLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
                 case DO_WHILE_LOOP: {
                     result.add(recoverDoWhileLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
                 case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
-                    current = info.getLoopExit();
+                    current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
                 case SWITCH: {
@@ -1741,7 +1741,7 @@ public class StatementRecoverer {
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
         Expression condition = recoverCondition(header, info.isConditionNegated());
-        Set<IRBlock> stopBlocks = new HashSet<>();
+        Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
         }
@@ -1764,7 +1764,7 @@ public class StatementRecoverer {
 
 
         Expression condition = recoverCondition(header, info.isConditionNegated());
-        Set<IRBlock> stopBlocks = new HashSet<>();
+        Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
         }
@@ -1871,12 +1871,28 @@ public class StatementRecoverer {
         stopBlocks.add(header);
         if (info.getLoopExit() != null) {
             stopBlocks.add(info.getLoopExit());
+        } else if (info.getLoop() != null) {
+            // When no explicit exit block, find blocks outside the loop
+            // that are reachable from within the loop
+            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+            for (IRBlock loopBlock : loopBlocks) {
+                for (IRBlock succ : loopBlock.getSuccessors()) {
+                    if (!loopBlocks.contains(succ)) {
+                        stopBlocks.add(succ);
+                    }
+                }
+            }
         }
 
-        List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
-        BlockStmt body = new BlockStmt(bodyStmts);
-
-        return new WhileStmt(condition, body);
+        // Push stop blocks so inner control structures respect loop exits
+        context.pushStopBlocks(stopBlocks);
+        try {
+            List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
+            BlockStmt body = new BlockStmt(bodyStmts);
+            return new WhileStmt(condition, body);
+        } finally {
+            context.popStopBlocks();
+        }
     }
 
     private Statement recoverDoWhileLoop(IRBlock header, RegionInfo info) {
@@ -1886,14 +1902,28 @@ public class StatementRecoverer {
         stopBlocks.add(header);
         if (info.getLoopExit() != null) {
             stopBlocks.add(info.getLoopExit());
+        } else if (info.getLoop() != null) {
+            // When no explicit exit block, find blocks outside the loop
+            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+            for (IRBlock loopBlock : loopBlocks) {
+                for (IRBlock succ : loopBlock.getSuccessors()) {
+                    if (!loopBlocks.contains(succ)) {
+                        stopBlocks.add(succ);
+                    }
+                }
+            }
         }
 
-        List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
-        BlockStmt body = new BlockStmt(bodyStmts);
-
-        Expression condition = recoverCondition(header, info.isConditionNegated());
-
-        return new DoWhileStmt(body, condition);
+        // Push stop blocks so inner control structures respect loop exits
+        context.pushStopBlocks(stopBlocks);
+        try {
+            List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
+            BlockStmt body = new BlockStmt(bodyStmts);
+            Expression condition = recoverCondition(header, info.isConditionNegated());
+            return new DoWhileStmt(body, condition);
+        } finally {
+            context.popStopBlocks();
+        }
     }
 
     private Statement recoverForLoop(IRBlock header, RegionInfo info) {
@@ -2161,6 +2191,32 @@ public class StatementRecoverer {
         if (block.getSuccessors().size() == 1) {
             return block.getSuccessors().get(0);
         }
+        return null;
+    }
+
+    /**
+     * Finds the exit block for a loop, handling cases where the exit block
+     * is not directly set (when both loop header successors are in the loop).
+     */
+    private IRBlock findLoopExit(RegionInfo info, Set<IRBlock> visited, Set<IRBlock> stopBlocks) {
+        // If there's an explicit exit, use it
+        if (info.getLoopExit() != null) {
+            return info.getLoopExit();
+        }
+
+        // Find blocks outside the loop that are reachable from within
+        if (info.getLoop() != null) {
+            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+            for (IRBlock loopBlock : loopBlocks) {
+                for (IRBlock succ : loopBlock.getSuccessors()) {
+                    if (!loopBlocks.contains(succ) && !visited.contains(succ) && !stopBlocks.contains(succ)) {
+                        // Found an unvisited block outside the loop
+                        return succ;
+                    }
+                }
+            }
+        }
+
         return null;
     }
 

@@ -35,6 +35,9 @@ public class ControlFlowContext {
     /** Pending statements to be added before the next statement */
     private final List<Statement> pendingStatements = new ArrayList<>();
 
+    /** Stack of stop blocks from outer control structures (e.g., loop exits) */
+    private final Deque<Set<IRBlock>> stopBlocksStack = new ArrayDeque<>();
+
     private int labelCounter = 0;
 
     public ControlFlowContext(IRMethod irMethod, DominatorTree dominatorTree,
@@ -100,6 +103,36 @@ public class ControlFlowContext {
         List<Statement> result = new ArrayList<>(pendingStatements);
         pendingStatements.clear();
         return result;
+    }
+
+    /**
+     * Pushes a new set of stop blocks onto the stack.
+     * Used when entering a control structure like a loop.
+     */
+    public void pushStopBlocks(Set<IRBlock> stopBlocks) {
+        stopBlocksStack.push(stopBlocks);
+    }
+
+    /**
+     * Pops the current stop blocks from the stack.
+     * Used when exiting a control structure.
+     */
+    public void popStopBlocks() {
+        if (!stopBlocksStack.isEmpty()) {
+            stopBlocksStack.pop();
+        }
+    }
+
+    /**
+     * Gets all stop blocks from the entire stack (combined).
+     * Used by inner control structures to respect outer exit points.
+     */
+    public Set<IRBlock> getAllStopBlocks() {
+        Set<IRBlock> combined = new HashSet<>();
+        for (Set<IRBlock> stopBlocks : stopBlocksStack) {
+            combined.addAll(stopBlocks);
+        }
+        return combined;
     }
 
     /**
