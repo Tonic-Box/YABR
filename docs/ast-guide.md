@@ -75,8 +75,15 @@ This produces complete Java source with:
 **Command-line usage:**
 
 ```bash
+# Basic usage
 java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
-java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn  # fully qualified names
+
+# With fully qualified names
+java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn
+
+# With transform preset (none, minimal, standard, aggressive)
+java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=standard
+java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=aggressive --fqn
 ```
 
 ### Recovering AST from Bytecode
@@ -513,28 +520,108 @@ The `ClassDecompiler` provides full class decompilation to Java source:
 
 ```java
 import com.tonic.analysis.source.decompile.ClassDecompiler;
+import com.tonic.analysis.source.decompile.DecompilerConfig;
+import com.tonic.analysis.source.decompile.TransformPreset;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 
 // Simple usage
 String source = ClassDecompiler.decompile(classFile);
 
-// With configuration
-SourceEmitterConfig config = SourceEmitterConfig.builder()
+// With emitter configuration
+SourceEmitterConfig emitterConfig = SourceEmitterConfig.builder()
     .useFullyQualifiedNames(false)  // Simple names + imports (default)
     .alwaysUseBraces(true)
     .useVarKeyword(false)
     .build();
 
-String source = ClassDecompiler.decompile(classFile, config);
+String source = ClassDecompiler.decompile(classFile, emitterConfig);
 
-// Using the instance API for more control
-ClassDecompiler decompiler = new ClassDecompiler(classFile, config);
+// Using the builder API with transform presets
+ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
+    .config(emitterConfig)
+    .preset(TransformPreset.STANDARD)
+    .build();
+
 String source = decompiler.decompile();
 
 // Or write directly to a custom writer
 IndentingWriter writer = new IndentingWriter(new FileWriter("Output.java"));
 decompiler.decompile(writer);
 ```
+
+### Configurable Transform Pipeline
+
+The decompiler applies IR transforms to improve output quality. You can configure which transforms run using presets or by adding transforms manually.
+
+**Transform Presets:**
+
+| Preset | Description | Transforms |
+|--------|-------------|------------|
+| `NONE` | No additional transforms (baseline only) | - |
+| `MINIMAL` | Safe, minimal cleanup | ConstantFolding, CopyPropagation |
+| `STANDARD` | Balanced optimization | Above + AlgebraicSimplification, RedundantCopyElimination, DeadCodeElimination |
+| `AGGRESSIVE` | Maximum simplification | Above + StrengthReduction, Reassociate, CommonSubexpressionElimination, PhiConstantPropagation |
+
+**Using Presets:**
+
+```java
+// Use a preset
+ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
+    .config(emitterConfig)
+    .preset(TransformPreset.AGGRESSIVE)
+    .build();
+
+String source = decompiler.decompile();
+```
+
+**Manual Transform Configuration:**
+
+```java
+import com.tonic.analysis.ssa.transform.*;
+
+// Add specific transforms manually
+ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
+    .config(emitterConfig)
+    .addTransform(new ConstantFolding())
+    .addTransform(new CopyPropagation())
+    .addTransform(new DeadCodeElimination())
+    .build();
+```
+
+**Combining Presets with Additional Transforms:**
+
+```java
+// Start with a preset, then add more transforms
+ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
+    .config(emitterConfig)
+    .preset(TransformPreset.MINIMAL)
+    .addTransform(new NullCheckElimination())
+    .addTransform(new AlgebraicSimplification())
+    .build();
+```
+
+**Using DecompilerConfig Directly:**
+
+```java
+// Build config separately for reuse
+DecompilerConfig decompilerConfig = DecompilerConfig.builder()
+    .emitterConfig(emitterConfig)
+    .preset(TransformPreset.STANDARD)
+    .addTransform(new LoopInvariantCodeMotion())
+    .build();
+
+// Use with multiple class files
+ClassDecompiler decompiler1 = new ClassDecompiler(classFile1, decompilerConfig);
+ClassDecompiler decompiler2 = new ClassDecompiler(classFile2, decompilerConfig);
+```
+
+**Baseline Transforms:**
+
+The decompiler always applies these baseline transforms regardless of configuration:
+- `ControlFlowReducibility` - Converts irreducible control flow to reducible form
+- `DuplicateBlockMerging` - Merges duplicate blocks created by reducibility
+
+Additional transforms from presets or manual configuration run after these baseline transforms.
 
 ### Import Statement Generation
 

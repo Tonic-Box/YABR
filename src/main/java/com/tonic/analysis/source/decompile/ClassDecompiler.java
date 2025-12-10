@@ -10,6 +10,7 @@ import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.transform.ControlFlowReducibility;
 import com.tonic.analysis.ssa.transform.DuplicateBlockMerging;
+import com.tonic.analysis.ssa.transform.IRTransform;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
@@ -32,22 +33,89 @@ public class ClassDecompiler {
 
     private final ClassFile classFile;
     private final SSA ssa;
-    private final SourceEmitterConfig config;
+    private final SourceEmitterConfig emitterConfig;
+    private final DecompilerConfig decompilerConfig;
     private final TypeRecoverer typeRecoverer;
     private final ControlFlowReducibility reducibility;
     private final DuplicateBlockMerging duplicateMerging;
 
     public ClassDecompiler(ClassFile classFile) {
-        this(classFile, SourceEmitterConfig.defaults());
+        this(classFile, DecompilerConfig.defaults());
     }
 
     public ClassDecompiler(ClassFile classFile, SourceEmitterConfig config) {
+        this(classFile, DecompilerConfig.builder().emitterConfig(config).build());
+    }
+
+    public ClassDecompiler(ClassFile classFile, DecompilerConfig config) {
         this.classFile = classFile;
         this.ssa = new SSA(classFile.getConstPool());
-        this.config = config;
+        this.decompilerConfig = config != null ? config : DecompilerConfig.defaults();
+        this.emitterConfig = decompilerConfig.getEmitterConfig();
         this.typeRecoverer = new TypeRecoverer();
         this.reducibility = new ControlFlowReducibility();
         this.duplicateMerging = new DuplicateBlockMerging();
+    }
+
+    /**
+     * Creates a builder for configuring a ClassDecompiler.
+     *
+     * @param classFile the class file to decompile
+     * @return a new builder instance
+     */
+    public static Builder builder(ClassFile classFile) {
+        return new Builder(classFile);
+    }
+
+    /**
+     * Builder for ClassDecompiler with fluent configuration API.
+     */
+    public static class Builder {
+        private final ClassFile classFile;
+        private final DecompilerConfig.Builder configBuilder = DecompilerConfig.builder();
+
+        private Builder(ClassFile classFile) {
+            this.classFile = classFile;
+        }
+
+        /**
+         * Sets the source emitter configuration.
+         */
+        public Builder config(SourceEmitterConfig config) {
+            configBuilder.emitterConfig(config);
+            return this;
+        }
+
+        /**
+         * Applies a transform preset.
+         */
+        public Builder preset(TransformPreset preset) {
+            configBuilder.preset(preset);
+            return this;
+        }
+
+        /**
+         * Adds a single transform to the pipeline.
+         */
+        public Builder addTransform(IRTransform transform) {
+            configBuilder.addTransform(transform);
+            return this;
+        }
+
+        /**
+         * Adds multiple transforms to the pipeline.
+         */
+        public Builder addTransforms(List<IRTransform> transforms) {
+            configBuilder.addTransforms(transforms);
+            return this;
+        }
+
+        /**
+         * Builds the ClassDecompiler with the configured settings.
+         */
+        public ClassDecompiler build() {
+            return new ClassDecompiler(classFile, configBuilder.build());
+        }
     }
 
     /**
@@ -73,7 +141,7 @@ public class ClassDecompiler {
         }
 
         // Import statements (only when using simple names)
-        if (!config.isUseFullyQualifiedNames()) {
+        if (!emitterConfig.isUseFullyQualifiedNames()) {
             emitImports(writer, className);
         }
 
@@ -305,14 +373,31 @@ public class ClassDecompiler {
         return sb.toString();
     }
 
+    /**
+     * Applies all transforms to the IR method.
+     * First applies baseline transforms (ControlFlowReducibility, DuplicateBlockMerging),
+     * then applies any additional transforms from the config.
+     *
+     * @param ir the IR method to transform
+     */
+    private void applyTransforms(IRMethod ir) {
+        // Baseline transforms (always applied)
+        reducibility.run(ir);
+        duplicateMerging.run(ir);
+
+        // Additional transforms from config
+        for (IRTransform transform : decompilerConfig.getAdditionalTransforms()) {
+            transform.run(ir);
+        }
+    }
+
     private void emitStaticInitializer(IndentingWriter writer, MethodEntry clinit) {
         writer.writeLine("static {");
         writer.indent();
 
         try {
             IRMethod ir = ssa.lift(clinit);
-            reducibility.run(ir);
-            duplicateMerging.run(ir);
+            applyTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -357,8 +442,7 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(ctor);
-            reducibility.run(ir);
-            duplicateMerging.run(ir);
+            applyTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -409,9 +493,7 @@ public class ClassDecompiler {
 
         try {
             IRMethod ir = ssa.lift(method);
-            // NOTE: Disabled transforms for now as they incorrectly merge semantically different blocks
-            // reducibility.run(ir);
-            // duplicateMerging.run(ir);
+            applyTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -424,7 +506,7 @@ public class ClassDecompiler {
 
     private void emitBlockContents(IndentingWriter writer, BlockStmt block) {
         // Use SourceEmitter to emit the block contents (without the outer braces)
-        SourceEmitter emitter = new SourceEmitter(writer, config);
+        SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
         for (com.tonic.analysis.source.ast.stmt.Statement stmt : block.getStatements()) {
             stmt.accept(emitter);
         }
@@ -441,7 +523,7 @@ public class ClassDecompiler {
 
     private String formatClassName(String internalName) {
         if (internalName == null) return "";
-        if (config.isUseFullyQualifiedNames()) {
+        if (emitterConfig.isUseFullyQualifiedNames()) {
             return internalName.replace('/', '.');
         }
         int lastSlash = internalName.lastIndexOf('/');

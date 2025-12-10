@@ -1064,6 +1064,80 @@ public void optimizeClass(ClassFile classFile) {
 }
 ```
 
+## Using Transforms with Decompilation
+
+The `ClassDecompiler` supports a configurable transform pipeline. You can use presets or add transforms manually to improve decompiled output quality.
+
+### Transform Presets for Decompilation
+
+```java
+import com.tonic.analysis.source.decompile.ClassDecompiler;
+import com.tonic.analysis.source.decompile.TransformPreset;
+
+// Use a preset for quick configuration
+ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
+    .preset(TransformPreset.STANDARD)
+    .build();
+
+String source = decompiler.decompile();
+```
+
+**Available Presets:**
+
+| Preset | Transforms | Use Case |
+|--------|------------|----------|
+| `NONE` | Baseline only | Debugging, minimal processing |
+| `MINIMAL` | ConstantFolding, CopyPropagation | Safe, conservative cleanup |
+| `STANDARD` | Above + AlgebraicSimplification, RedundantCopyElimination, DeadCodeElimination | Balanced quality/safety |
+| `AGGRESSIVE` | Above + StrengthReduction, Reassociate, CSE, PhiConstantPropagation | Maximum cleanup |
+
+### Custom Transform Pipeline for Decompilation
+
+```java
+import com.tonic.analysis.source.decompile.ClassDecompiler;
+import com.tonic.analysis.source.decompile.DecompilerConfig;
+import com.tonic.analysis.ssa.transform.*;
+
+// Build a custom transform pipeline
+DecompilerConfig config = DecompilerConfig.builder()
+    .addTransform(new ConstantFolding())
+    .addTransform(new AlgebraicSimplification())
+    .addTransform(new CopyPropagation())
+    .addTransform(new CommonSubexpressionElimination())
+    .addTransform(new DeadCodeElimination())
+    .build();
+
+ClassDecompiler decompiler = new ClassDecompiler(classFile, config);
+String source = decompiler.decompile();
+```
+
+### Combining Presets with Additional Transforms
+
+```java
+// Start with a preset, add specific transforms
+ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
+    .preset(TransformPreset.MINIMAL)
+    .addTransform(new NullCheckElimination())
+    .addTransform(new LoopInvariantCodeMotion())
+    .build();
+```
+
+### Transforms Most Useful for Decompilation
+
+| Transform | Benefit |
+|-----------|---------|
+| `ConstantFolding` | Simplifies constant expressions to literals |
+| `CopyPropagation` | Eliminates redundant temporary variables |
+| `AlgebraicSimplification` | Cleans up arithmetic (x+0 → x, x*1 → x) |
+| `DeadCodeElimination` | Removes unreachable/unused code |
+| `CommonSubexpressionElimination` | Reduces redundant computations |
+| `RedundantCopyElimination` | Cleaner variable assignments |
+| `PhiConstantPropagation` | Simplifies merge points |
+
+**Note:** The decompiler always applies `ControlFlowReducibility` and `DuplicateBlockMerging` as baseline transforms before any additional transforms.
+
+See [AST Guide - Configurable Transform Pipeline](ast-guide.md#configurable-transform-pipeline) for more details.
+
 ---
 
 [<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [AST Guide ->](ast-guide.md)
