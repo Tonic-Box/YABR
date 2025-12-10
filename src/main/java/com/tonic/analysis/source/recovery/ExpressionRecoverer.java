@@ -138,12 +138,15 @@ public class ExpressionRecoverer {
     public Expression recoverConstant(Constant c, SourceType typeHint) {
         if (c instanceof IntConstant i) {
             int val = i.getValue();
-            // Check if this is a boolean context
-            if (typeHint instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType pst
-                && pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
-                return LiteralExpr.ofBoolean(val != 0);
+            // Check if this is a boolean or char context based on type hint
+            if (typeHint instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType pst) {
+                if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
+                    return LiteralExpr.ofBoolean(val != 0);
+                }
+                if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.CHAR) {
+                    return LiteralExpr.ofChar((char) val);
+                }
             }
-            // Heuristic: 0 or 1 in certain contexts may be boolean
             return LiteralExpr.ofInt(val);
         } else if (c instanceof LongConstant l) {
             return LiteralExpr.ofLong(l.getValue());
@@ -213,6 +216,62 @@ public class ExpressionRecoverer {
             }
         }
         return types;
+    }
+
+    /**
+     * Attempts to collapse a StringBuilder chain into a string concatenation expression.
+     * Pattern: new StringBuilder().append(a).append(b).toString() → a + b
+     */
+    private Expression tryCollapseStringBuilder(MethodCallExpr call) {
+        // Only handle toString() calls
+        if (!"toString".equals(call.getMethodName())) return null;
+        if (!isStringBuilderExpr(call.getReceiver())) return null;
+
+        // Collect append chain arguments
+        java.util.List<Expression> parts = new java.util.ArrayList<>();
+        Expression current = call.getReceiver();
+
+        while (current instanceof MethodCallExpr mc) {
+            if ("append".equals(mc.getMethodName()) && isStringBuilderExpr(mc)) {
+                if (!mc.getArguments().isEmpty()) {
+                    parts.add(0, mc.getArguments().get(0)); // prepend to maintain order
+                }
+                current = mc.getReceiver();
+            } else {
+                break;
+            }
+        }
+
+        // Check if base is new StringBuilder() or new StringBuilder(initialCapacity)
+        if (!(current instanceof NewExpr ne) ||
+            !ne.getClassName().contains("StringBuilder")) {
+            return null;
+        }
+
+        // Build concat expression: part0 + part1 + part2...
+        if (parts.isEmpty()) {
+            return LiteralExpr.ofString("");
+        }
+
+        Expression result = parts.get(0);
+        for (int i = 1; i < parts.size(); i++) {
+            result = new BinaryExpr(BinaryOperator.ADD, result, parts.get(i),
+                                    ReferenceSourceType.STRING);
+        }
+        return result;
+    }
+
+    /**
+     * Checks if an expression is a StringBuilder (method call on StringBuilder or new StringBuilder).
+     */
+    private boolean isStringBuilderExpr(Expression expr) {
+        if (expr instanceof MethodCallExpr mc) {
+            return mc.getOwnerClass().contains("StringBuilder");
+        }
+        if (expr instanceof NewExpr ne) {
+            return ne.getClassName().contains("StringBuilder");
+        }
+        return false;
     }
 
     private class RecoveryVisitor extends AbstractIRVisitor<Expression> {
@@ -298,7 +357,11 @@ public class ExpressionRecoverer {
             }
             SourceType retType = typeRecoverer.recoverType(instr.getResult());
             boolean isStatic = instr.getInvokeType() == InvokeType.STATIC;
-            return new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType);
+            MethodCallExpr call = new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType);
+
+            // Try to collapse StringBuilder chains into string concatenation
+            Expression collapsed = tryCollapseStringBuilder(call);
+            return collapsed != null ? collapsed : call;
         }
 
         private Expression handleConstructorCall(InvokeInstruction instr) {
