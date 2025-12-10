@@ -1,6 +1,8 @@
 package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.transform.ASTTransform;
+import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
@@ -38,6 +40,7 @@ public class ClassDecompiler {
     private final TypeRecoverer typeRecoverer;
     private final ControlFlowReducibility reducibility;
     private final DuplicateBlockMerging duplicateMerging;
+    private final ControlFlowSimplifier astSimplifier;
 
     public ClassDecompiler(ClassFile classFile) {
         this(classFile, DecompilerConfig.defaults());
@@ -55,6 +58,7 @@ public class ClassDecompiler {
         this.typeRecoverer = new TypeRecoverer();
         this.reducibility = new ControlFlowReducibility();
         this.duplicateMerging = new DuplicateBlockMerging();
+        this.astSimplifier = new ControlFlowSimplifier();
     }
 
     /**
@@ -404,6 +408,7 @@ public class ClassDecompiler {
             applyBaselineTransforms(ir);
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
+            astSimplifier.transform(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile static initializer: " + e.getMessage());
@@ -450,6 +455,7 @@ public class ClassDecompiler {
             applyBaselineTransforms(ir);
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
+            astSimplifier.transform(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile constructor: " + e.getMessage());
@@ -504,6 +510,7 @@ public class ClassDecompiler {
             // Only additional transforms from config are applied.
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
+            astSimplifier.transform(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile: " + e.getMessage());
