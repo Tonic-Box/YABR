@@ -430,8 +430,13 @@ public class ExpressionRecoverer {
             // Try to look up bootstrap info from the ClassFile
             BootstrapMethodInfo bsInfo = lookupBootstrapInfo(instr);
 
-            if (bsInfo != null && bsInfo.isLambdaMetafactory()) {
-                return handleLambdaMetafactory(instr, bsInfo, returnType);
+            if (bsInfo != null) {
+                if (bsInfo.isLambdaMetafactory()) {
+                    return handleLambdaMetafactory(instr, bsInfo, returnType);
+                }
+                if (bsInfo.isStringConcatFactory()) {
+                    return handleStringConcat(instr, bsInfo);
+                }
             }
 
             // Fallback: generate lambda with method call body
@@ -565,9 +570,161 @@ public class ExpressionRecoverer {
             } else if (item instanceof com.tonic.parser.constpool.StringRefItem strItem) {
                 String value = ((com.tonic.parser.constpool.Utf8Item) cp.getItem(strItem.getValue())).getValue();
                 return new StringConstant(value);
+            } else if (item instanceof com.tonic.parser.constpool.ConstantDynamicItem cdItem) {
+                // Nested ConstantDynamic - return as DynamicConstant for later resolution
+                return new DynamicConstant(
+                    cdItem.getName(),
+                    cdItem.getDescriptor(),
+                    cdItem.getBootstrapMethodAttrIndex(),
+                    index
+                );
             }
 
             return null;
+        }
+
+        /**
+         * Handles StringConcatFactory bootstrap - builds string concatenation expression.
+         */
+        private Expression handleStringConcat(InvokeInstruction instr, BootstrapMethodInfo bsInfo) {
+            java.util.List<Constant> bsArgs = bsInfo.getBootstrapArguments();
+            java.util.List<Value> stackArgs = instr.getArguments();
+
+            // First bootstrap arg is the recipe string
+            String recipe = "";
+            if (!bsArgs.isEmpty() && bsArgs.get(0) instanceof StringConstant sc) {
+                recipe = sc.getValue();
+            }
+
+            // Build list of all parts to concatenate
+            java.util.List<Expression> parts = new java.util.ArrayList<>();
+            int stackIdx = 0;
+            int constantIdx = 1; // Start after recipe
+
+            for (int i = 0; i < recipe.length(); i++) {
+                char c = recipe.charAt(i);
+                if (c == '\u0001') {
+                    // Stack argument
+                    if (stackIdx < stackArgs.size()) {
+                        parts.add(recoverOperand(stackArgs.get(stackIdx++)));
+                    }
+                } else if (c == '\u0002') {
+                    // Bootstrap constant argument (may be CONDY)
+                    if (constantIdx < bsArgs.size()) {
+                        Constant arg = bsArgs.get(constantIdx++);
+                        parts.add(recoverConstantAsExpression(arg));
+                    }
+                } else {
+                    // Literal character - accumulate into string
+                    StringBuilder sb = new StringBuilder();
+                    while (i < recipe.length() && recipe.charAt(i) != '\u0001' && recipe.charAt(i) != '\u0002') {
+                        sb.append(recipe.charAt(i++));
+                    }
+                    i--; // Back up for loop increment
+                    if (sb.length() > 0) {
+                        parts.add(LiteralExpr.ofString(sb.toString()));
+                    }
+                }
+            }
+
+            // Build binary expression chain: part0 + part1 + part2...
+            if (parts.isEmpty()) {
+                return LiteralExpr.ofString("");
+            }
+            Expression result = parts.get(0);
+            for (int i = 1; i < parts.size(); i++) {
+                result = new BinaryExpr(BinaryOperator.ADD, result, parts.get(i), ReferenceSourceType.STRING);
+            }
+            return result;
+        }
+
+        /**
+         * Converts a Constant to an Expression, handling DynamicConstant specially.
+         */
+        private Expression recoverConstantAsExpression(Constant c) {
+            if (c instanceof DynamicConstant dc) {
+                return resolveDynamicConstantExpression(dc);
+            }
+            return recoverConstant(c, null);
+        }
+
+        /**
+         * Resolves a DynamicConstant (CONDY) to a method call expression.
+         */
+        private Expression resolveDynamicConstantExpression(DynamicConstant dc) {
+            try {
+                com.tonic.parser.ClassFile classFile = context.getSourceMethod().getClassFile();
+                if (classFile == null) return LiteralExpr.ofNull();
+
+                // Get bootstrap method for this CONDY
+                com.tonic.parser.attribute.BootstrapMethodsAttribute bsmAttr = null;
+                for (com.tonic.parser.attribute.Attribute attr : classFile.getClassAttributes()) {
+                    if (attr instanceof com.tonic.parser.attribute.BootstrapMethodsAttribute bma) {
+                        bsmAttr = bma;
+                        break;
+                    }
+                }
+                if (bsmAttr == null) return LiteralExpr.ofNull();
+
+                int bsmIndex = dc.getBootstrapMethodIndex();
+                if (bsmIndex < 0 || bsmIndex >= bsmAttr.getBootstrapMethods().size()) {
+                    return LiteralExpr.ofNull();
+                }
+
+                com.tonic.parser.attribute.table.BootstrapMethod bsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
+                com.tonic.parser.constpool.MethodHandleItem bsmHandleItem =
+                    (com.tonic.parser.constpool.MethodHandleItem) classFile.getConstPool().getItem(bsm.getBootstrapMethodRef());
+                com.tonic.parser.constpool.structure.MethodHandle bsmHandle = bsmHandleItem.getValue();
+
+                String bsmOwner = resolveMethodHandleOwner(classFile.getConstPool(), bsmHandle);
+                String bsmName = resolveMethodHandleName(classFile.getConstPool(), bsmHandle);
+
+                // Check for ConstantBootstraps.invoke - this wraps a method call
+                if ("java/lang/invoke/ConstantBootstraps".equals(bsmOwner) && "invoke".equals(bsmName)) {
+                    return resolveConstantBootstrapsInvoke(classFile, bsm);
+                }
+
+                // Fallback: return as unknown dynamic constant
+                return LiteralExpr.ofNull();
+            } catch (Exception e) {
+                return LiteralExpr.ofNull();
+            }
+        }
+
+        /**
+         * Resolves ConstantBootstraps.invoke to the actual method call it wraps.
+         */
+        private Expression resolveConstantBootstrapsInvoke(com.tonic.parser.ClassFile classFile,
+                                                           com.tonic.parser.attribute.table.BootstrapMethod bsm) {
+            java.util.List<Integer> args = bsm.getBootstrapArguments();
+            // Args: [0] = MethodHandle to invoke, [1..n] = arguments
+            if (args.isEmpty()) return LiteralExpr.ofNull();
+
+            com.tonic.parser.constpool.Item<?> mhItem = classFile.getConstPool().getItem(args.get(0));
+            if (!(mhItem instanceof com.tonic.parser.constpool.MethodHandleItem handleItem)) {
+                return LiteralExpr.ofNull();
+            }
+
+            com.tonic.parser.constpool.structure.MethodHandle handle = handleItem.getValue();
+            String owner = resolveMethodHandleOwner(classFile.getConstPool(), handle);
+            String name = resolveMethodHandleName(classFile.getConstPool(), handle);
+            String desc = resolveMethodHandleDesc(classFile.getConstPool(), handle);
+
+            // Build argument list
+            java.util.List<Expression> callArgs = new java.util.ArrayList<>();
+            for (int i = 1; i < args.size(); i++) {
+                Constant argConst = convertCPItemToConstant(classFile.getConstPool(), args.get(i));
+                if (argConst != null) {
+                    callArgs.add(recoverConstant(argConst, null));
+                }
+            }
+
+            // Determine return type from descriptor
+            String retDesc = desc.substring(desc.indexOf(')') + 1);
+            SourceType retType = SourceType.fromIRType(com.tonic.analysis.ssa.type.IRType.fromDescriptor(retDesc));
+
+            // Create static method call
+            return MethodCallExpr.staticCall(owner, name, callArgs, retType);
         }
 
         /**

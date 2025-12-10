@@ -42,3 +42,5 @@ bin/
 .DS_Store
 /.claude/settings.local.json
 /nul
+/src/main/java/com/tonic/analysis/naming/
+/src/main/resources/com/tonic/analysis/naming/

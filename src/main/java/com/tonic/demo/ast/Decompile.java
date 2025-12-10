@@ -1,9 +1,17 @@
 package com.tonic.demo.ast;
 
+import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.decompile.ClassDecompiler;
+import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
+import com.tonic.analysis.source.recovery.MethodRecoverer;
+import com.tonic.analysis.ssa.SSA;
+import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.ConstantInstruction;
+import com.tonic.analysis.ssa.value.LongConstant;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
@@ -43,6 +51,27 @@ public class Decompile {
 
         // Load the class file
         ClassFile cf = ClassPool.getDefault().loadClass(new FileInputStream(classPath));
+
+//        for (MethodEntry method : cf.getMethods()) {
+//            if (method.getCodeAttribute() == null) continue;
+//
+//            SSA ssa = new SSA(cf.getConstPool());
+//            IRMethod irMethod = ssa.lift(method);
+//            if (irMethod == null) continue;
+//
+//            boolean has1000L = irMethod.getBlocks().stream()
+//                    .flatMap(b -> b.getInstructions().stream())
+//                    .anyMatch(insn -> insn instanceof ConstantInstruction ci
+//                            && ci.getConstant() instanceof LongConstant lc
+//                            && lc.getValue().equals(1000L));
+//
+//            if (has1000L) {
+//                System.out.println("# Found: " + method.getName() + method.getDesc());
+//                BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, method);
+//                System.out.println(SourceEmitter.emit(ast));
+//                System.out.println("\n\n");
+//            }
+//        }
 
         // Configure the emitter
         SourceEmitterConfig config = SourceEmitterConfig.builder()
