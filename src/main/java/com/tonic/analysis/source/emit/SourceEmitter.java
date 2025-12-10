@@ -51,8 +51,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return writer.toString();
     }
 
-    // ==================== Statements ====================
-
     @Override
     public Void visitBlock(BlockStmt stmt) {
         writer.writeLine("{");
@@ -67,11 +65,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitIf(IfStmt stmt) {
-        // Skip empty if statements entirely (opaque predicates, dead code)
         boolean thenEmpty = isEmptyBlock(stmt.getThenBranch());
         boolean elseEmpty = stmt.getElseBranch() == null || isEmptyBlock(stmt.getElseBranch());
         if (thenEmpty && elseEmpty) {
-            // Completely empty if statement - skip it
             return null;
         }
 
@@ -139,29 +135,27 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitFor(ForStmt stmt) {
         writer.write("for (");
 
-        // Init - these are statements
         List<Statement> init = stmt.getInit();
         if (!init.isEmpty()) {
-            // For init, we emit without semicolon (for loop provides structure)
             for (int i = 0; i < init.size(); i++) {
                 if (i > 0) writer.write(", ");
                 Statement s = init.get(i);
-                if (s instanceof VarDeclStmt vds) {
+                if (s instanceof VarDeclStmt) {
+                    VarDeclStmt vds = (VarDeclStmt) s;
                     emitVarDeclNoSemicolon(vds);
-                } else if (s instanceof ExprStmt es) {
+                } else if (s instanceof ExprStmt) {
+                    ExprStmt es = (ExprStmt) s;
                     es.getExpression().accept(this);
                 }
             }
         }
         writer.write("; ");
 
-        // Condition
         if (stmt.getCondition() != null) {
             stmt.getCondition().accept(this);
         }
         writer.write("; ");
 
-        // Update
         List<Expression> update = stmt.getUpdate();
         for (int i = 0; i < update.size(); i++) {
             if (i > 0) writer.write(", ");
@@ -218,7 +212,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitTryCatch(TryCatchStmt stmt) {
         writer.write("try ");
 
-        // Resources
         if (!stmt.getResources().isEmpty()) {
             writer.write("(");
             List<Expression> resources = stmt.getResources();
@@ -229,13 +222,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.write(") ");
         }
 
-        // Try block
         stmt.getTryBlock().accept(this);
 
-        // Catch clauses
         for (CatchClause catchClause : stmt.getCatches()) {
             writer.write("catch (");
-            // Multi-catch support
             List<SourceType> types = catchClause.exceptionTypes();
             for (int i = 0; i < types.size(); i++) {
                 if (i > 0) writer.write(" | ");
@@ -247,7 +237,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
             catchClause.body().accept(this);
         }
 
-        // Finally
         if (stmt.getFinallyBlock() != null) {
             writer.write("finally ");
             stmt.getFinallyBlock().accept(this);
@@ -364,8 +353,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    // ==================== Expressions ====================
-
     @Override
     public Void visitLiteral(LiteralExpr expr) {
         writer.write(formatLiteral(expr));
@@ -377,22 +364,28 @@ public class SourceEmitter implements SourceVisitor<Void> {
         if (value == null) {
             return "null";
         }
-        if (value instanceof String s) {
+        if (value instanceof String) {
+            String s = (String) value;
             return "\"" + escapeString(s) + "\"";
         }
-        if (value instanceof Character c) {
+        if (value instanceof Character) {
+            Character c = (Character) value;
             return "'" + escapeChar(c) + "'";
         }
-        if (value instanceof Long l) {
+        if (value instanceof Long) {
+            Long l = (Long) value;
             return l + "L";
         }
-        if (value instanceof Float f) {
+        if (value instanceof Float) {
+            Float f = (Float) value;
             return f + "f";
         }
-        if (value instanceof Double d) {
+        if (value instanceof Double) {
+            Double d = (Double) value;
             return d + "d";
         }
-        if (value instanceof Boolean b) {
+        if (value instanceof Boolean) {
+            Boolean b = (Boolean) value;
             return b.toString();
         }
         return value.toString();
@@ -407,15 +400,22 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     private String escapeChar(char c) {
-        return switch (c) {
-            case '\n' -> "\\n";
-            case '\r' -> "\\r";
-            case '\t' -> "\\t";
-            case '\\' -> "\\\\";
-            case '"' -> "\\\"";
-            case '\'' -> "\\'";
-            default -> c < 32 ? String.format("\\u%04x", (int) c) : String.valueOf(c);
-        };
+        switch (c) {
+            case '\n':
+                return "\\n";
+            case '\r':
+                return "\\r";
+            case '\t':
+                return "\\t";
+            case '\\':
+                return "\\\\";
+            case '"':
+                return "\\\"";
+            case '\'':
+                return "\\'";
+            default:
+                return c < 32 ? String.format("\\u%04x", (int) c) : String.valueOf(c);
+        }
     }
 
     @Override
@@ -517,8 +517,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitUnary(UnaryExpr expr) {
         if (expr.getOperator().isPrefix()) {
             writer.write(getUnaryOperatorSymbol(expr.getOperator()));
-            // Add parentheses for binary expressions to ensure correct precedence
-            // e.g., !(a != b) instead of !a != b
             boolean needsParens = expr.getOperand() instanceof com.tonic.analysis.source.ast.expr.BinaryExpr;
             if (needsParens) {
                 writer.write("(");
@@ -588,15 +586,15 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
         writer.write(" -> ");
 
-        if (expr.getBody() instanceof BlockStmt blockStmt) {
-            // For empty lambda blocks, emit { } inline
+        if (expr.getBody() instanceof BlockStmt) {
+            BlockStmt blockStmt = (BlockStmt) expr.getBody();
             if (blockStmt.getStatements().isEmpty()) {
                 writer.write("{ }");
             } else {
-                // For non-empty blocks, use normal block formatting
                 expr.getBody().accept(this);
             }
-        } else if (expr.getBody() instanceof ExprStmt exprStmt) {
+        } else if (expr.getBody() instanceof ExprStmt) {
+            ExprStmt exprStmt = (ExprStmt) expr.getBody();
             exprStmt.getExpression().accept(this);
         } else {
             expr.getBody().accept(this);
@@ -635,8 +633,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    // ==================== Types ====================
-
     @Override
     public Void visitPrimitiveType(PrimitiveSourceType type) {
         writer.write(type.toJavaSource());
@@ -661,13 +657,12 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    // ==================== Helpers ====================
-
     /**
      * Checks if a statement is an empty block (no statements inside).
      */
     private boolean isEmptyBlock(Statement stmt) {
-        if (stmt instanceof BlockStmt block) {
+        if (stmt instanceof BlockStmt) {
+            BlockStmt block = (BlockStmt) stmt;
             return block.getStatements().isEmpty();
         }
         return false;
@@ -707,22 +702,33 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     private boolean needsParentheses(BinaryExpr expr) {
-        if (expr.getParent() instanceof BinaryExpr parent) {
+        if (expr.getParent() instanceof BinaryExpr) {
+            BinaryExpr parent = (BinaryExpr) expr.getParent();
             return expr.getOperator().getPrecedence() < parent.getOperator().getPrecedence();
         }
         return false;
     }
 
     private String getUnaryOperatorSymbol(UnaryOperator op) {
-        return switch (op) {
-            case NEG -> "-";
-            case POS -> "+";
-            case NOT -> "!";
-            case BNOT -> "~";
-            case PRE_INC -> "++";
-            case PRE_DEC -> "--";
-            case POST_INC -> "++";
-            case POST_DEC -> "--";
-        };
+        switch (op) {
+            case NEG:
+                return "-";
+            case POS:
+                return "+";
+            case NOT:
+                return "!";
+            case BNOT:
+                return "~";
+            case PRE_INC:
+                return "++";
+            case PRE_DEC:
+                return "--";
+            case POST_INC:
+                return "++";
+            case POST_DEC:
+                return "--";
+            default:
+                throw new IllegalArgumentException("Unknown unary operator: " + op);
+        }
     }
 }

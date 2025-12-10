@@ -63,18 +63,18 @@ public class VerificationTypeInfo {
     public static VerificationTypeInfo readVerificationTypeInfo(ClassFile classFile, ConstPool constPool) {
         int tag = classFile.readUnsignedByte();
         switch (tag) {
-            case 0: // Top_variable_info
-            case 1: // Integer_variable_info
-            case 2: // Float_variable_info
-            case 3: // Double_variable_info
-            case 4: // Long_variable_info
-            case 5: // Null_variable_info
-            case 6: // UninitializedThis_variable_info
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
                 return new VerificationTypeInfo(tag, null);
-            case 7: // Object_variable_info
+            case 7:
                 int cpoolIndex = classFile.readUnsignedShort();
                 return new VerificationTypeInfo(tag, cpoolIndex);
-            case 8: // Uninitialized_variable_info
+            case 8:
                 int offset = classFile.readUnsignedShort();
                 return new VerificationTypeInfo(tag, offset);
             default:

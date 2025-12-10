@@ -29,17 +29,14 @@ public class DeadMethodElimination implements ClassTransform {
     public boolean run(ClassFile classFile, SSA ssa) {
         String className = classFile.getClassName();
 
-        // Build the call graph
         Set<String> referencedMethods = buildReferencedMethods(classFile, className);
 
-        // Find dead methods (private methods that are never called)
         List<MethodEntry> deadMethods = findDeadMethods(classFile, referencedMethods);
 
         if (deadMethods.isEmpty()) {
             return false;
         }
 
-        // Remove dead methods
         for (MethodEntry method : deadMethods) {
             classFile.getMethods().remove(method);
         }
@@ -57,19 +54,15 @@ public class DeadMethodElimination implements ClassTransform {
             CodeAttribute code = method.getCodeAttribute();
             if (code == null) continue;
 
-            // Scan bytecode for invoke instructions
             byte[] bytecode = code.getCode();
             int i = 0;
 
             while (i < bytecode.length) {
                 int opcode = bytecode[i] & 0xFF;
 
-                // Check for invoke instructions
                 if (isInvokeInstruction(opcode)) {
-                    // Get the constant pool index
                     int cpIndex = ((bytecode[i + 1] & 0xFF) << 8) | (bytecode[i + 2] & 0xFF);
 
-                    // Resolve the method reference
                     String targetOwner = resolveMethodOwner(classFile, cpIndex);
                     if (targetOwner != null && targetOwner.equals(className)) {
                         String targetName = resolveMethodName(classFile, cpIndex);
@@ -80,12 +73,10 @@ public class DeadMethodElimination implements ClassTransform {
                     }
                 }
 
-                // Advance to next instruction
                 i += getInstructionLength(opcode, bytecode, i);
             }
         }
 
-        // Entry points are always considered referenced
         for (MethodEntry method : classFile.getMethods()) {
             if (isEntryPoint(method)) {
                 referenced.add(method.getName() + method.getDesc());
@@ -104,18 +95,15 @@ public class DeadMethodElimination implements ClassTransform {
         for (MethodEntry method : classFile.getMethods()) {
             String key = method.getName() + method.getDesc();
 
-            // Skip if referenced
             if (referencedMethods.contains(key)) {
                 continue;
             }
 
-            // Only remove private methods
             int access = method.getAccess();
             if (!Modifier.isPrivate(access)) {
                 continue;
             }
 
-            // Skip constructors and class initializers
             String name = method.getName();
             if (name.equals("<init>") || name.equals("<clinit>")) {
                 continue;
@@ -134,18 +122,15 @@ public class DeadMethodElimination implements ClassTransform {
         String name = method.getName();
         int access = method.getAccess();
 
-        // Constructors and class initializers
         if (name.equals("<init>") || name.equals("<clinit>")) {
             return true;
         }
 
-        // main method
         if (name.equals("main") && method.getDesc().equals("([Ljava/lang/String;)V")
                 && Modifier.isPublic(access) && Modifier.isStatic(access)) {
             return true;
         }
 
-        // Non-private methods (may be called externally)
         if (!Modifier.isPrivate(access)) {
             return true;
         }
@@ -169,25 +154,30 @@ public class DeadMethodElimination implements ClassTransform {
     private String resolveMethodOwner(ClassFile classFile, int cpIndex) {
         try {
             var item = classFile.getConstPool().getItem(cpIndex);
-            if (item instanceof com.tonic.parser.constpool.MethodRefItem mri) {
+            if (item instanceof com.tonic.parser.constpool.MethodRefItem) {
+                com.tonic.parser.constpool.MethodRefItem mri = (com.tonic.parser.constpool.MethodRefItem) item;
                 var classRef = classFile.getConstPool().getItem(mri.getValue().getClassIndex());
-                if (classRef instanceof com.tonic.parser.constpool.ClassRefItem cri) {
+                if (classRef instanceof com.tonic.parser.constpool.ClassRefItem) {
+                    com.tonic.parser.constpool.ClassRefItem cri = (com.tonic.parser.constpool.ClassRefItem) classRef;
                     var nameUtf8 = classFile.getConstPool().getItem(cri.getValue());
-                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item ui) {
+                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
+                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) nameUtf8;
                         return ui.getValue();
                     }
                 }
-            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem imri) {
+            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+                com.tonic.parser.constpool.InterfaceRefItem imri = (com.tonic.parser.constpool.InterfaceRefItem) item;
                 var classRef = classFile.getConstPool().getItem(imri.getValue().getClassIndex());
-                if (classRef instanceof com.tonic.parser.constpool.ClassRefItem cri) {
+                if (classRef instanceof com.tonic.parser.constpool.ClassRefItem) {
+                    com.tonic.parser.constpool.ClassRefItem cri = (com.tonic.parser.constpool.ClassRefItem) classRef;
                     var nameUtf8 = classFile.getConstPool().getItem(cri.getValue());
-                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item ui) {
+                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
+                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) nameUtf8;
                         return ui.getValue();
                     }
                 }
             }
         } catch (Exception e) {
-            // Ignore resolution errors
         }
         return null;
     }
@@ -199,22 +189,25 @@ public class DeadMethodElimination implements ClassTransform {
         try {
             var item = classFile.getConstPool().getItem(cpIndex);
             int natIndex = -1;
-            if (item instanceof com.tonic.parser.constpool.MethodRefItem mri) {
+            if (item instanceof com.tonic.parser.constpool.MethodRefItem) {
+                com.tonic.parser.constpool.MethodRefItem mri = (com.tonic.parser.constpool.MethodRefItem) item;
                 natIndex = mri.getValue().getNameAndTypeIndex();
-            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem imri) {
+            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+                com.tonic.parser.constpool.InterfaceRefItem imri = (com.tonic.parser.constpool.InterfaceRefItem) item;
                 natIndex = imri.getValue().getNameAndTypeIndex();
             }
             if (natIndex > 0) {
                 var nat = classFile.getConstPool().getItem(natIndex);
-                if (nat instanceof com.tonic.parser.constpool.NameAndTypeRefItem nati) {
+                if (nat instanceof com.tonic.parser.constpool.NameAndTypeRefItem) {
+                    com.tonic.parser.constpool.NameAndTypeRefItem nati = (com.tonic.parser.constpool.NameAndTypeRefItem) nat;
                     var nameUtf8 = classFile.getConstPool().getItem(nati.getValue().getNameIndex());
-                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item ui) {
+                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
+                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) nameUtf8;
                         return ui.getValue();
                     }
                 }
             }
         } catch (Exception e) {
-            // Ignore resolution errors
         }
         return null;
     }
@@ -226,22 +219,25 @@ public class DeadMethodElimination implements ClassTransform {
         try {
             var item = classFile.getConstPool().getItem(cpIndex);
             int natIndex = -1;
-            if (item instanceof com.tonic.parser.constpool.MethodRefItem mri) {
+            if (item instanceof com.tonic.parser.constpool.MethodRefItem) {
+                com.tonic.parser.constpool.MethodRefItem mri = (com.tonic.parser.constpool.MethodRefItem) item;
                 natIndex = mri.getValue().getNameAndTypeIndex();
-            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem imri) {
+            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+                com.tonic.parser.constpool.InterfaceRefItem imri = (com.tonic.parser.constpool.InterfaceRefItem) item;
                 natIndex = imri.getValue().getNameAndTypeIndex();
             }
             if (natIndex > 0) {
                 var nat = classFile.getConstPool().getItem(natIndex);
-                if (nat instanceof com.tonic.parser.constpool.NameAndTypeRefItem nati) {
+                if (nat instanceof com.tonic.parser.constpool.NameAndTypeRefItem) {
+                    com.tonic.parser.constpool.NameAndTypeRefItem nati = (com.tonic.parser.constpool.NameAndTypeRefItem) nat;
                     var descUtf8 = classFile.getConstPool().getItem(nati.getValue().getDescriptorIndex());
-                    if (descUtf8 instanceof com.tonic.parser.constpool.Utf8Item ui) {
+                    if (descUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
+                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) descUtf8;
                         return ui.getValue();
                     }
                 }
             }
         } catch (Exception e) {
-            // Ignore resolution errors
         }
         return null;
     }
@@ -250,16 +246,15 @@ public class DeadMethodElimination implements ClassTransform {
      * Gets the length of a bytecode instruction.
      */
     private int getInstructionLength(int opcode, byte[] bytecode, int offset) {
-        // Variable length instructions
-        if (opcode == 0xC4) { // wide
+        if (opcode == 0xC4) {
             int nextOpcode = bytecode[offset + 1] & 0xFF;
-            if (nextOpcode == 0x84) { // iinc
+            if (nextOpcode == 0x84) {
                 return 6;
             }
             return 4;
         }
 
-        if (opcode == 0xAA) { // tableswitch
+        if (opcode == 0xAA) {
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int base = offset + 1 + padding;
             int low = ((bytecode[base + 4] & 0xFF) << 24) | ((bytecode[base + 5] & 0xFF) << 16)
@@ -269,7 +264,7 @@ public class DeadMethodElimination implements ClassTransform {
             return 1 + padding + 12 + (high - low + 1) * 4;
         }
 
-        if (opcode == 0xAB) { // lookupswitch
+        if (opcode == 0xAB) {
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int base = offset + 1 + padding;
             int npairs = ((bytecode[base + 4] & 0xFF) << 24) | ((bytecode[base + 5] & 0xFF) << 16)
@@ -277,7 +272,6 @@ public class DeadMethodElimination implements ClassTransform {
             return 1 + padding + 8 + npairs * 8;
         }
 
-        // Fixed length instructions
         return INSTRUCTION_LENGTHS[opcode];
     }
 

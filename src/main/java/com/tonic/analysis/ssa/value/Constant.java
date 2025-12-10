@@ -3,10 +3,7 @@ package com.tonic.analysis.ssa.value;
 /**
  * Base class for all constant values.
  */
-public abstract sealed class Constant implements Value
-        permits IntConstant, LongConstant, FloatConstant, DoubleConstant,
-                StringConstant, NullConstant, ClassConstant,
-                MethodHandleConstant, MethodTypeConstant, DynamicConstant {
+public abstract class Constant implements Value {
 
     @Override
     public boolean isConstant() {

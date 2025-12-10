@@ -34,11 +34,13 @@ public class PhiInserter {
 
         for (IRBlock block : method.getBlocks()) {
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof StoreLocalInstruction store) {
+                if (instr instanceof StoreLocalInstruction) {
+                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
                     int localIndex = store.getLocalIndex();
                     varDefBlocks.computeIfAbsent(localIndex, k -> new HashSet<>()).add(block);
 
-                    if (store.getValue() instanceof SSAValue ssaVal) {
+                    if (store.getValue() instanceof SSAValue) {
+                        SSAValue ssaVal = (SSAValue) store.getValue();
                         varTypes.putIfAbsent(localIndex, ssaVal.getType());
                     }
                 }

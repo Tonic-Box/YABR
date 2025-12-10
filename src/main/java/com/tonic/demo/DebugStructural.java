@@ -38,9 +38,9 @@ public class DebugStructural {
                 loopAnalysis.compute();
 
                 System.out.println("\n=== Loop Analysis ===");
-                for (var loop : loopAnalysis.getLoops()) {
+                for (com.tonic.analysis.ssa.analysis.LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
                     System.out.println("Loop header: " + loop.getHeader().getName());
-                    System.out.println("  Blocks: " + loop.getBlocks().stream().map(IRBlock::getName).toList());
+                    System.out.println("  Blocks: " + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                 }
 
                 StructuralAnalyzer analyzer = new StructuralAnalyzer(irMethod, domTree, loopAnalysis);
@@ -48,9 +48,9 @@ public class DebugStructural {
 
                 System.out.println("\n=== Region Info ===");
                 for (IRBlock block : irMethod.getBlocks()) {
-                    var info = analyzer.getRegionInfo(block);
+                    com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo info = analyzer.getRegionInfo(block);
                     if (info != null) {
-                        System.out.println(block.getName() + ": " + info.getType() + 
+                        System.out.println(block.getName() + ": " + info.getType() +
                             (info.getLoopBody() != null ? " body=" + info.getLoopBody().getName() : "") +
                             (info.getLoopExit() != null ? " exit=" + info.getLoopExit().getName() : "") +
                             (info.isConditionNegated() ? " NEGATED" : ""));

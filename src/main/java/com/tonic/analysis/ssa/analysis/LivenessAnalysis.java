@@ -83,14 +83,16 @@ public class LivenessAnalysis {
         Set<SSAValue> uses = new HashSet<>();
         for (PhiInstruction phi : block.getPhiInstructions()) {
             for (Value v : phi.getOperands()) {
-                if (v instanceof SSAValue ssa) {
+                if (v instanceof SSAValue) {
+                    SSAValue ssa = (SSAValue) v;
                     uses.add(ssa);
                 }
             }
         }
         for (IRInstruction instr : block.getInstructions()) {
             for (Value v : instr.getOperands()) {
-                if (v instanceof SSAValue ssa) {
+                if (v instanceof SSAValue) {
+                    SSAValue ssa = (SSAValue) v;
                     uses.add(ssa);
                 }
             }

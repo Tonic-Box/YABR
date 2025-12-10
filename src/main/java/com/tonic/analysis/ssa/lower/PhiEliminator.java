@@ -34,18 +34,18 @@ public class PhiEliminator {
         }
 
         for (EdgeToSplit edge : edgesToSplit) {
-            IRBlock splitBlock = new IRBlock("split_" + edge.from.getName() + "_" + edge.to.getName());
+            IRBlock splitBlock = new IRBlock("split_" + edge.from().getName() + "_" + edge.to().getName());
             method.addBlock(splitBlock);
 
-            edge.from.removeSuccessor(edge.to);
-            edge.from.addSuccessor(splitBlock);
-            splitBlock.addSuccessor(edge.to);
+            edge.from().removeSuccessor(edge.to());
+            edge.from().addSuccessor(splitBlock);
+            splitBlock.addSuccessor(edge.to());
 
-            splitBlock.addInstruction(new GotoInstruction(edge.to));
+            splitBlock.addInstruction(new GotoInstruction(edge.to()));
 
-            updatePhiPredecessor(edge.to, edge.from, splitBlock);
+            updatePhiPredecessor(edge.to(), edge.from(), splitBlock);
 
-            updateTerminator(edge.from, edge.to, splitBlock);
+            updateTerminator(edge.from(), edge.to(), splitBlock);
         }
     }
 
@@ -63,18 +63,21 @@ public class PhiEliminator {
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return;
 
-        if (terminator instanceof GotoInstruction gotoInstr) {
+        if (terminator instanceof GotoInstruction) {
+            GotoInstruction gotoInstr = (GotoInstruction) terminator;
             if (gotoInstr.getTarget() == oldTarget) {
                 gotoInstr.setTarget(newTarget);
             }
-        } else if (terminator instanceof BranchInstruction branch) {
+        } else if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) terminator;
             if (branch.getTrueTarget() == oldTarget) {
                 branch.setTrueTarget(newTarget);
             }
             if (branch.getFalseTarget() == oldTarget) {
                 branch.setFalseTarget(newTarget);
             }
-        } else if (terminator instanceof SwitchInstruction switchInstr) {
+        } else if (terminator instanceof SwitchInstruction) {
+            SwitchInstruction switchInstr = (SwitchInstruction) terminator;
             if (switchInstr.getDefaultTarget() == oldTarget) {
                 switchInstr.setDefaultTarget(newTarget);
             }
@@ -134,5 +137,43 @@ public class PhiEliminator {
         }
     }
 
-    private record EdgeToSplit(IRBlock from, IRBlock to) {}
+    private static final class EdgeToSplit {
+        private final IRBlock from;
+        private final IRBlock to;
+
+        public EdgeToSplit(IRBlock from, IRBlock to) {
+            this.from = from;
+            this.to = to;
+        }
+
+        public IRBlock from() {
+            return from;
+        }
+
+        public IRBlock to() {
+            return to;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            EdgeToSplit that = (EdgeToSplit) obj;
+            return Objects.equals(from, that.from) &&
+                   Objects.equals(to, that.to);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(from, to);
+        }
+
+        @Override
+        public String toString() {
+            return "EdgeToSplit{" +
+                   "from=" + from +
+                   ", to=" + to +
+                   '}';
+        }
+    }
 }

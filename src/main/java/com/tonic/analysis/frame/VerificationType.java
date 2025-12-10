@@ -11,10 +11,7 @@ import java.util.Objects;
  * and reference types (as subclasses with additional data).
  */
 @Getter
-public abstract sealed class VerificationType permits
-        VerificationType.PrimitiveType,
-        VerificationType.ObjectType,
-        VerificationType.UninitializedType {
+public abstract class VerificationType {
 
     public static final int TAG_TOP = 0;
     public static final int TAG_INTEGER = 1;
@@ -99,13 +96,22 @@ public abstract sealed class VerificationType permits
      * @return corresponding VerificationType
      */
     public static VerificationType fromDescriptor(char c) {
-        return switch (c) {
-            case 'B', 'C', 'I', 'S', 'Z' -> INTEGER;
-            case 'F' -> FLOAT;
-            case 'D' -> DOUBLE;
-            case 'J' -> LONG;
-            default -> throw new IllegalArgumentException("Unknown primitive descriptor: " + c);
-        };
+        switch (c) {
+            case 'B':
+            case 'C':
+            case 'I':
+            case 'S':
+            case 'Z':
+                return INTEGER;
+            case 'F':
+                return FLOAT;
+            case 'D':
+                return DOUBLE;
+            case 'J':
+                return LONG;
+            default:
+                throw new IllegalArgumentException("Unknown primitive descriptor: " + c);
+        }
     }
 
     /**
@@ -120,14 +126,25 @@ public abstract sealed class VerificationType permits
             throw new IllegalArgumentException("Empty descriptor");
         }
         char first = descriptor.charAt(0);
-        return switch (first) {
-            case 'B', 'C', 'I', 'S', 'Z' -> INTEGER;
-            case 'F' -> FLOAT;
-            case 'D' -> DOUBLE;
-            case 'J' -> LONG;
-            case 'L', '[' -> object(classIndex);
-            default -> throw new IllegalArgumentException("Unknown descriptor: " + descriptor);
-        };
+        switch (first) {
+            case 'B':
+            case 'C':
+            case 'I':
+            case 'S':
+            case 'Z':
+                return INTEGER;
+            case 'F':
+                return FLOAT;
+            case 'D':
+                return DOUBLE;
+            case 'J':
+                return LONG;
+            case 'L':
+            case '[':
+                return object(classIndex);
+            default:
+                throw new IllegalArgumentException("Unknown descriptor: " + descriptor);
+        }
     }
 
     /**
@@ -155,7 +172,8 @@ public abstract sealed class VerificationType permits
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof PrimitiveType that)) return false;
+            if (!(o instanceof PrimitiveType)) return false;
+            PrimitiveType that = (PrimitiveType) o;
             return tag == that.tag;
         }
 
@@ -198,7 +216,8 @@ public abstract sealed class VerificationType permits
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof ObjectType that)) return false;
+            if (!(o instanceof ObjectType)) return false;
+            ObjectType that = (ObjectType) o;
             return classIndex == that.classIndex;
         }
 
@@ -233,7 +252,8 @@ public abstract sealed class VerificationType permits
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof UninitializedType that)) return false;
+            if (!(o instanceof UninitializedType)) return false;
+            UninitializedType that = (UninitializedType) o;
             return newInstructionOffset == that.newInstructionOffset;
         }
 

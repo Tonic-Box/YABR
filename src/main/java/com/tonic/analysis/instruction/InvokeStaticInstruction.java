@@ -62,10 +62,12 @@ public class InvokeStaticInstruction extends Instruction {
     public int getStackChange() {
         Item<?> item = constPool.getItem(methodIndex);
         int params, returnSlots;
-        if (item instanceof MethodRefItem method) {
+        if (item instanceof MethodRefItem) {
+            MethodRefItem method = (MethodRefItem) item;
             params = method.getParameterCount();
             returnSlots = method.getReturnTypeSlots();
-        } else if (item instanceof InterfaceRefItem iface) {
+        } else if (item instanceof InterfaceRefItem) {
+            InterfaceRefItem iface = (InterfaceRefItem) item;
             params = iface.getParameterCount();
             returnSlots = iface.getReturnTypeSlots();
         } else {

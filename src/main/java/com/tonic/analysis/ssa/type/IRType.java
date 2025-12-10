@@ -3,7 +3,7 @@ package com.tonic.analysis.ssa.type;
 /**
  * Base interface for all IR types in the SSA representation.
  */
-public sealed interface IRType permits PrimitiveType, ReferenceType, ArrayType, VoidType {
+public interface IRType {
 
     String getDescriptor();
 
@@ -25,26 +25,26 @@ public sealed interface IRType permits PrimitiveType, ReferenceType, ArrayType, 
         }
 
         char first = descriptor.charAt(0);
-        return switch (first) {
-            case 'V' -> VoidType.INSTANCE;
-            case 'Z' -> PrimitiveType.BOOLEAN;
-            case 'B' -> PrimitiveType.BYTE;
-            case 'C' -> PrimitiveType.CHAR;
-            case 'S' -> PrimitiveType.SHORT;
-            case 'I' -> PrimitiveType.INT;
-            case 'J' -> PrimitiveType.LONG;
-            case 'F' -> PrimitiveType.FLOAT;
-            case 'D' -> PrimitiveType.DOUBLE;
-            case 'L' -> {
+        switch (first) {
+            case 'V': return VoidType.INSTANCE;
+            case 'Z': return PrimitiveType.BOOLEAN;
+            case 'B': return PrimitiveType.BYTE;
+            case 'C': return PrimitiveType.CHAR;
+            case 'S': return PrimitiveType.SHORT;
+            case 'I': return PrimitiveType.INT;
+            case 'J': return PrimitiveType.LONG;
+            case 'F': return PrimitiveType.FLOAT;
+            case 'D': return PrimitiveType.DOUBLE;
+            case 'L': {
                 int end = descriptor.indexOf(';');
                 if (end == -1) {
                     throw new IllegalArgumentException("Invalid object descriptor: " + descriptor);
                 }
-                yield new ReferenceType(descriptor.substring(1, end));
+                return new ReferenceType(descriptor.substring(1, end));
             }
-            case '[' -> ArrayType.fromDescriptor(descriptor);
-            default -> throw new IllegalArgumentException("Unknown type descriptor: " + descriptor);
-        };
+            case '[': return ArrayType.fromDescriptor(descriptor);
+            default: throw new IllegalArgumentException("Unknown type descriptor: " + descriptor);
+        }
     }
 
     static IRType fromInternalName(String internalName) {

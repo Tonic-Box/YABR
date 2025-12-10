@@ -49,22 +49,26 @@ public enum ReturnType {
             throw new IllegalArgumentException("Descriptor cannot be null or empty");
         }
 
-        return switch (desc) {
-            case "I" -> IRETURN;
-            case "J" -> LRETURN;
-            case "F" -> FRETURN;
-            case "D" -> DRETURN;
-            case "V" -> RETURN;
-            default -> {
+        switch (desc) {
+            case "I":
+                return IRETURN;
+            case "J":
+                return LRETURN;
+            case "F":
+                return FRETURN;
+            case "D":
+                return DRETURN;
+            case "V":
+                return RETURN;
+            default:
                 if (desc.startsWith("L") && desc.endsWith(";")) {
-                    yield ARETURN;
+                    return ARETURN;
                 }
                 if (desc.startsWith("[")) {
-                    yield ARETURN;
+                    return ARETURN;
                 }
                 throw new IllegalArgumentException("Unknown descriptor: " + desc);
-            }
-        };
+        }
     }
 
     /**

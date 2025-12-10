@@ -42,7 +42,6 @@ public final class TryCatchStmt implements Statement {
         for (Expression resource : this.resources) {
             resource.setParent(this);
         }
-        // Note: CatchClause is a record with its own body that needs parent setting
         for (CatchClause clause : this.catches) {
             clause.body().setParent(this);
         }

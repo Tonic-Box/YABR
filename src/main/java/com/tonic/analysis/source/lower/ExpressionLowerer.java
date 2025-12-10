@@ -22,6 +22,11 @@ public class ExpressionLowerer {
 
     private final LoweringContext ctx;
 
+    /**
+     * Creates a new expression lowerer.
+     *
+     * @param ctx the lowering context
+     */
     public ExpressionLowerer(LoweringContext ctx) {
         this.ctx = ctx;
     }
@@ -66,7 +71,6 @@ public class ExpressionLowerer {
     private Value lowerLiteral(LiteralExpr lit) {
         Constant constant = toConstant(lit.getValue(), lit.getType());
 
-        // Create SSA value and instruction
         IRType irType = lit.getType().toIRType();
         SSAValue result = ctx.newValue(irType);
         ConstantInstruction instr = new ConstantInstruction(result, constant);
@@ -104,39 +108,31 @@ public class ExpressionLowerer {
     }
 
     private Value lowerVarRef(VarRefExpr var) {
-        // If the VarRefExpr has an attached SSAValue, use it directly
         if (var.getSsaValue() != null) {
             return var.getSsaValue();
         }
-
-        // Otherwise look up by name in context
         return ctx.getVariable(var.getName());
     }
 
     private Value lowerBinary(BinaryExpr bin) {
         BinaryOperator op = bin.getOperator();
 
-        // Handle assignment
         if (op == BinaryOperator.ASSIGN) {
             return lowerAssignment(bin);
         }
 
-        // Handle compound assignment (+=, -=, etc.)
         if (op.isAssignment()) {
             return lowerCompoundAssignment(bin);
         }
 
-        // Handle short-circuit logical operators
         if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
             return lowerShortCircuit(bin);
         }
 
-        // Handle comparison operators
         if (op.isComparison()) {
             return lowerComparison(bin);
         }
 
-        // Handle arithmetic/bitwise operators
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
@@ -159,7 +155,6 @@ public class ExpressionLowerer {
         Expression left = bin.getLeft();
         if (left instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) left;
-            // Update variable in context
             ctx.setVariable(varRef.getName(), (SSAValue) rhs);
             return rhs;
         } else if (left instanceof FieldAccessExpr) {
@@ -177,7 +172,6 @@ public class ExpressionLowerer {
             throw new LoweringException("Unknown compound assignment: " + bin.getOperator());
         }
 
-        // Load current value, apply operation, store result
         Expression left = bin.getLeft();
         Value leftVal = lower(left);
         Value rightVal = lower(bin.getRight());
@@ -188,7 +182,6 @@ public class ExpressionLowerer {
         BinaryOpInstruction instr = new BinaryOpInstruction(result, irOp, leftVal, rightVal);
         ctx.getCurrentBlock().addInstruction(instr);
 
-        // Store back
         if (left instanceof VarRefExpr) {
             ctx.setVariable(((VarRefExpr) left).getName(), result);
         } else if (left instanceof FieldAccessExpr) {
@@ -203,38 +196,30 @@ public class ExpressionLowerer {
     private Value lowerShortCircuit(BinaryExpr bin) {
         boolean isAnd = bin.getOperator() == BinaryOperator.AND;
 
-        // Evaluate left operand
         Value left = lower(bin.getLeft());
 
-        // Create blocks for short-circuit evaluation
         IRBlock evalRight = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
 
-        // Branch based on left value
         CompareOp cmp = isAnd ? CompareOp.IFEQ : CompareOp.IFNE;
         BranchInstruction branch;
         if (isAnd) {
-            // AND: if left == 0, skip to merge with false
             branch = new BranchInstruction(cmp, left, mergeBlock, evalRight);
         } else {
-            // OR: if left != 0, skip to merge with true
             branch = new BranchInstruction(cmp, left, mergeBlock, evalRight);
         }
 
         ctx.getCurrentBlock().addInstruction(branch);
 
-        // Evaluate right in evalRight block
         ctx.setCurrentBlock(evalRight);
         Value right = lower(bin.getRight());
         IRBlock rightEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
 
-        // In merge block, create phi to select result
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
         PhiInstruction phi = new PhiInstruction(result);
 
-        // From left evaluation (short-circuit path)
         IntConstant shortCircuitValue = isAnd ? IntConstant.ZERO : IntConstant.ONE;
         phi.addIncoming(shortCircuitValue, ctx.getCurrentBlock());
         phi.addIncoming(right, rightEndBlock);
@@ -248,23 +233,18 @@ public class ExpressionLowerer {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
-        // Create blocks for comparison result
         IRBlock trueBlock = ctx.createBlock();
         IRBlock falseBlock = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
 
-        // Get comparison operation
         CompareOp cmpOp = ReverseOperatorMapper.toCompareOp(bin.getOperator());
 
-        // For non-int types, we need a compare instruction first
         SourceType leftType = bin.getLeft().getType();
         if (leftType == PrimitiveSourceType.LONG) {
-            // LCMP produces -1, 0, or 1
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOpInstruction lcmp = new BinaryOpInstruction(cmpResult, BinaryOp.LCMP, left, right);
             ctx.getCurrentBlock().addInstruction(lcmp);
 
-            // Then compare result against 0
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             ctx.getCurrentBlock().addInstruction(branch);
@@ -287,24 +267,20 @@ public class ExpressionLowerer {
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             ctx.getCurrentBlock().addInstruction(branch);
         } else {
-            // Integer comparison - direct branch
             BranchInstruction branch = new BranchInstruction(cmpOp, left, right, trueBlock, falseBlock);
             ctx.getCurrentBlock().addInstruction(branch);
         }
 
-        // True block: set result to 1
         ctx.setCurrentBlock(trueBlock);
         SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
         ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
 
-        // False block: set result to 0
         ctx.setCurrentBlock(falseBlock);
         SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
         ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
 
-        // Merge block with phi
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
         PhiInstruction phi = new PhiInstruction(result);
@@ -326,10 +302,8 @@ public class ExpressionLowerer {
             ctx.getCurrentBlock().addInstruction(instr);
             return result;
         } else if (op == UnaryOperator.POS) {
-            // No-op, return operand directly
             return operand;
         } else if (op == UnaryOperator.BNOT) {
-            // Bitwise NOT: x ^ -1
             IRType resultType = unary.getType().toIRType();
             SSAValue minusOne = ctx.newValue(resultType);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(minusOne, IntConstant.MINUS_ONE));
@@ -338,7 +312,6 @@ public class ExpressionLowerer {
             ctx.getCurrentBlock().addInstruction(new BinaryOpInstruction(result, BinaryOp.XOR, operand, minusOne));
             return result;
         } else if (op == UnaryOperator.NOT) {
-            // Logical NOT: compare with 0, invert result
             IRBlock trueBlock = ctx.createBlock();
             IRBlock falseBlock = ctx.createBlock();
             IRBlock mergeBlock = ctx.createBlock();
@@ -346,13 +319,11 @@ public class ExpressionLowerer {
             BranchInstruction branch = new BranchInstruction(CompareOp.IFEQ, operand, trueBlock, falseBlock);
             ctx.getCurrentBlock().addInstruction(branch);
 
-            // operand == 0 -> result is 1 (true)
             ctx.setCurrentBlock(trueBlock);
             SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
             ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
 
-            // operand != 0 -> result is 0 (false)
             ctx.setCurrentBlock(falseBlock);
             SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
@@ -367,10 +338,8 @@ public class ExpressionLowerer {
 
             return result;
         } else if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC) {
-            // ++x or --x: add/sub 1, store, return new value
             return lowerIncDec(unary, true);
         } else if (op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC) {
-            // x++ or x--: save old value, add/sub 1, store, return old value
             return lowerIncDec(unary, false);
         } else {
             throw new LoweringException("Unsupported unary operator: " + op);
@@ -384,7 +353,6 @@ public class ExpressionLowerer {
         Expression operand = unary.getOperand();
         Value oldValue = lower(operand);
 
-        // Create the increment/decrement
         IRType type = unary.getType().toIRType();
         SSAValue one = ctx.newValue(type);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(one, IntConstant.ONE));
@@ -393,7 +361,6 @@ public class ExpressionLowerer {
         BinaryOp binOp = isInc ? BinaryOp.ADD : BinaryOp.SUB;
         ctx.getCurrentBlock().addInstruction(new BinaryOpInstruction(newValue, binOp, oldValue, one));
 
-        // Store back
         if (operand instanceof VarRefExpr) {
             ctx.setVariable(((VarRefExpr) operand).getName(), newValue);
         } else if (operand instanceof FieldAccessExpr) {
@@ -406,33 +373,27 @@ public class ExpressionLowerer {
     }
 
     private Value lowerMethodCall(MethodCallExpr call) {
-        // Determine invoke type and gather arguments
         InvokeType invokeType;
         List<Value> args = new ArrayList<>();
 
         if (call.isStatic()) {
             invokeType = InvokeType.STATIC;
         } else {
-            // Instance call - first argument is receiver
             Expression receiver = call.getReceiver();
             if (receiver != null) {
                 args.add(lower(receiver));
             } else {
-                // Implicit this
                 args.add(ctx.getVariable("this"));
             }
             invokeType = InvokeType.VIRTUAL;
         }
 
-        // Lower arguments
         for (Expression arg : call.getArguments()) {
             args.add(lower(arg));
         }
 
-        // Build method descriptor from argument types
         String descriptor = buildMethodDescriptor(call);
 
-        // Create result value if not void
         IRType returnType = call.getType().toIRType();
         SSAValue result = null;
         if (!(call.getType() instanceof com.tonic.analysis.source.ast.type.VoidSourceType)) {
@@ -531,19 +492,16 @@ public class ExpressionLowerer {
         IRType type = new ReferenceType(className);
         SSAValue result = ctx.newValue(type);
 
-        // NEW instruction allocates the object
         NewInstruction newInstr = new NewInstruction(result, className);
         ctx.getCurrentBlock().addInstruction(newInstr);
 
-        // DUP and invoke <init> constructor
         List<Value> args = new ArrayList<>();
-        args.add(result); // receiver for <init>
+        args.add(result);
 
         for (Expression arg : newExpr.getArguments()) {
             args.add(lower(arg));
         }
 
-        // Build constructor descriptor
         StringBuilder descBuilder = new StringBuilder("(");
         for (Expression arg : newExpr.getArguments()) {
             descBuilder.append(arg.getType().toIRType().getDescriptor());
@@ -559,7 +517,6 @@ public class ExpressionLowerer {
     }
 
     private Value lowerNewArray(NewArrayExpr newArr) {
-        // Get dimensions
         List<Value> dims = new ArrayList<>();
         for (Expression dim : newArr.getDimensions()) {
             dims.add(lower(dim));
@@ -589,7 +546,6 @@ public class ExpressionLowerer {
         SourceType fromType = cast.getExpression().getType();
         SourceType toType = cast.getTargetType();
 
-        // Check for primitive cast
         UnaryOp castOp = ReverseOperatorMapper.getCastOp(fromType, toType);
         if (castOp != null) {
             IRType resultType = toType.toIRType();
@@ -599,7 +555,6 @@ public class ExpressionLowerer {
             return result;
         }
 
-        // Reference cast (checkcast)
         if (toType instanceof ReferenceSourceType) {
             ReferenceSourceType refType = (ReferenceSourceType) toType;
             IRType resultType = toType.toIRType();
@@ -609,7 +564,6 @@ public class ExpressionLowerer {
             return result;
         }
 
-        // No cast needed (widening that doesn't require instruction)
         return operand;
     }
 
@@ -623,19 +577,16 @@ public class ExpressionLowerer {
         BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, condition, thenBlock, elseBlock);
         ctx.getCurrentBlock().addInstruction(branch);
 
-        // Then branch
         ctx.setCurrentBlock(thenBlock);
         Value thenVal = lower(ternary.getThenExpr());
         IRBlock thenEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
 
-        // Else branch
         ctx.setCurrentBlock(elseBlock);
         Value elseVal = lower(ternary.getElseExpr());
         IRBlock elseEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
 
-        // Merge with phi
         ctx.setCurrentBlock(mergeBlock);
         IRType resultType = ternary.getType().toIRType();
         SSAValue result = ctx.newValue(resultType);
@@ -669,7 +620,6 @@ public class ExpressionLowerer {
     }
 
     private Value lowerArrayInit(ArrayInitExpr arrInit) {
-        // Create array with size
         int size = arrInit.getElements().size();
         IRType elementType = getElementType(arrInit.getType());
         IRType arrayType = arrInit.getType().toIRType();
@@ -681,7 +631,6 @@ public class ExpressionLowerer {
         NewArrayInstruction newArr = new NewArrayInstruction(result, elementType, List.of(sizeVal));
         ctx.getCurrentBlock().addInstruction(newArr);
 
-        // Store each element
         int i = 0;
         for (Expression elem : arrInit.getElements()) {
             Value elemVal = lower(elem);

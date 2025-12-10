@@ -18,7 +18,10 @@ public class ThrowInstruction extends IRInstruction {
     public ThrowInstruction(Value exception) {
         super();
         this.exception = exception;
-        if (exception instanceof SSAValue ssa) ssa.addUse(this);
+        if (exception instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) exception;
+            ssa.addUse(this);
+        }
     }
 
     @Override
@@ -29,9 +32,15 @@ public class ThrowInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (exception.equals(oldValue)) {
-            if (exception instanceof SSAValue ssa) ssa.removeUse(this);
+            if (exception instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) exception;
+                ssa.removeUse(this);
+            }
             exception = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

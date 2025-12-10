@@ -32,7 +32,6 @@ public class PhiConstantPropagation implements IRTransform {
                 IRInstruction replacement = trySimplifyPhi(phi);
                 if (replacement != null) {
                     replacement.setBlock(block);
-                    // Add the replacement as a regular instruction at the start
                     block.insertInstruction(0, replacement);
                     block.removePhi(phi);
                     changed = true;
@@ -50,10 +49,8 @@ public class PhiConstantPropagation implements IRTransform {
             return null;
         }
 
-        // Get the first value to compare against
         Value firstValue = incomingValues.iterator().next();
 
-        // Check if all incoming values are the same
         boolean allSame = true;
         for (Value value : incomingValues) {
             if (!areSameValue(firstValue, value)) {
@@ -68,10 +65,11 @@ public class PhiConstantPropagation implements IRTransform {
 
         SSAValue result = phi.getResult();
 
-        // All values are the same - create appropriate replacement
-        if (firstValue instanceof Constant constant) {
+        if (firstValue instanceof Constant) {
+            Constant constant = (Constant) firstValue;
             return new ConstantInstruction(result, constant);
-        } else if (firstValue instanceof SSAValue ssaValue) {
+        } else if (firstValue instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) firstValue;
             return new CopyInstruction(result, ssaValue);
         }
 
@@ -83,22 +81,30 @@ public class PhiConstantPropagation implements IRTransform {
             return true;
         }
 
-        // Check if both are the same SSA value by ID
-        if (a instanceof SSAValue ssaA && b instanceof SSAValue ssaB) {
+        if (a instanceof SSAValue && b instanceof SSAValue) {
+            SSAValue ssaA = (SSAValue) a;
+            SSAValue ssaB = (SSAValue) b;
             return ssaA.getId() == ssaB.getId();
         }
 
-        // Check if both are constants with same value
-        if (a instanceof IntConstant icA && b instanceof IntConstant icB) {
+        if (a instanceof IntConstant && b instanceof IntConstant) {
+            IntConstant icA = (IntConstant) a;
+            IntConstant icB = (IntConstant) b;
             return icA.getValue() == icB.getValue();
         }
-        if (a instanceof LongConstant lcA && b instanceof LongConstant lcB) {
+        if (a instanceof LongConstant && b instanceof LongConstant) {
+            LongConstant lcA = (LongConstant) a;
+            LongConstant lcB = (LongConstant) b;
             return lcA.getValue() == lcB.getValue();
         }
-        if (a instanceof FloatConstant fcA && b instanceof FloatConstant fcB) {
+        if (a instanceof FloatConstant && b instanceof FloatConstant) {
+            FloatConstant fcA = (FloatConstant) a;
+            FloatConstant fcB = (FloatConstant) b;
             return Float.compare(fcA.getValue(), fcB.getValue()) == 0;
         }
-        if (a instanceof DoubleConstant dcA && b instanceof DoubleConstant dcB) {
+        if (a instanceof DoubleConstant && b instanceof DoubleConstant) {
+            DoubleConstant dcA = (DoubleConstant) a;
+            DoubleConstant dcB = (DoubleConstant) b;
             return Double.compare(dcA.getValue(), dcB.getValue()) == 0;
         }
         if (a instanceof NullConstant && b instanceof NullConstant) {

@@ -4,14 +4,12 @@ package com.tonic.analysis.source.ast.expr;
  * Binary operators for expressions.
  */
 public enum BinaryOperator {
-    // Arithmetic
     ADD("+", 12, true),
     SUB("-", 12, true),
     MUL("*", 13, true),
     DIV("/", 13, true),
     MOD("%", 13, true),
 
-    // Bitwise
     BAND("&", 8, true),
     BOR("|", 6, true),
     BXOR("^", 7, true),
@@ -19,7 +17,6 @@ public enum BinaryOperator {
     SHR(">>", 11, true),
     USHR(">>>", 11, true),
 
-    // Comparison
     EQ("==", 9, true),
     NE("!=", 9, true),
     LT("<", 10, true),
@@ -27,11 +24,9 @@ public enum BinaryOperator {
     GT(">", 10, true),
     GE(">=", 10, true),
 
-    // Logical (short-circuit)
     AND("&&", 5, true),
     OR("||", 4, true),
 
-    // Assignment operators (for compound assignments)
     ASSIGN("=", 1, false),
     ADD_ASSIGN("+=", 1, false),
     SUB_ASSIGN("-=", 1, false),

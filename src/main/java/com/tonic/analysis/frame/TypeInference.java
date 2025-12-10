@@ -413,7 +413,8 @@ public class TypeInference {
 
         if (opcode == 0xC0) {
             state = state.pop();
-            if (instr instanceof CheckCastInstruction checkCast) {
+            if (instr instanceof CheckCastInstruction) {
+                CheckCastInstruction checkCast = (CheckCastInstruction) instr;
                 int classIndex = checkCast.getClassIndex();
                 return state.push(VerificationType.object(classIndex));
             }
@@ -433,7 +434,8 @@ public class TypeInference {
         }
 
         if (opcode == 0xC5) {
-            if (instr instanceof MultiANewArrayInstruction multiArray) {
+            if (instr instanceof MultiANewArrayInstruction) {
+                MultiANewArrayInstruction multiArray = (MultiANewArrayInstruction) instr;
                 int dimensions = multiArray.getDimensions();
                 state = state.pop(dimensions);
                 return state.push(VerificationType.object(multiArray.getClassIndex()));
@@ -457,14 +459,17 @@ public class TypeInference {
      */
     private TypeState applyLdc(TypeState state, Instruction instr) {
         int cpIndex;
-        if (instr instanceof LdcInstruction ldc) {
+        if (instr instanceof LdcInstruction) {
+            LdcInstruction ldc = (LdcInstruction) instr;
             cpIndex = ldc.getCpIndex();
-        } else if (instr instanceof LdcWInstruction ldcW) {
+        } else if (instr instanceof LdcWInstruction) {
+            LdcWInstruction ldcW = (LdcWInstruction) instr;
             cpIndex = ldcW.getCpIndex();
-        } else if (instr instanceof Ldc2WInstruction ldc2W) {
+        } else if (instr instanceof Ldc2WInstruction) {
+            Ldc2WInstruction ldc2W = (Ldc2WInstruction) instr;
             cpIndex = ldc2W.getCpIndex();
         } else {
-            return state.push(VerificationType.INTEGER); // Fallback
+            return state.push(VerificationType.INTEGER);
         }
 
         Item<?> item = constPool.getItem(cpIndex);
@@ -497,13 +502,15 @@ public class TypeInference {
      */
     private TypeState applyGetField(TypeState state, Instruction instr, boolean isStatic) {
         if (!isStatic) {
-            state = state.pop(); // Pop objectref
+            state = state.pop();
         }
 
-        if (instr instanceof GetFieldInstruction getField) {
+        if (instr instanceof GetFieldInstruction) {
+            GetFieldInstruction getField = (GetFieldInstruction) instr;
             int fieldIndex = getField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
-            if (item instanceof FieldRefItem fieldRefItem) {
+            if (item instanceof FieldRefItem) {
+                FieldRefItem fieldRefItem = (FieldRefItem) item;
                 String desc = fieldRefItem.getDescriptor();
                 if (desc != null) {
                     VerificationType type = descriptorToType(desc);
@@ -524,10 +531,12 @@ public class TypeInference {
      * @return updated state with value and object popped
      */
     private TypeState applyPutField(TypeState state, Instruction instr, boolean isStatic) {
-        if (instr instanceof PutFieldInstruction putField) {
+        if (instr instanceof PutFieldInstruction) {
+            PutFieldInstruction putField = (PutFieldInstruction) instr;
             int fieldIndex = putField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
-            if (item instanceof FieldRefItem fieldRefItem) {
+            if (item instanceof FieldRefItem) {
+                FieldRefItem fieldRefItem = (FieldRefItem) item;
                 String desc = fieldRefItem.getDescriptor();
                 if (desc != null) {
                     int slots = getDescriptorSlots(desc);
@@ -543,7 +552,7 @@ public class TypeInference {
         }
 
         if (!isStatic) {
-            state = state.pop(); // Pop objectref
+            state = state.pop();
         }
 
         return state;
@@ -562,38 +571,48 @@ public class TypeInference {
         String descriptor = null;
         String methodName = null;
 
-        if (instr instanceof InvokeVirtualInstruction invoke) {
+        if (instr instanceof InvokeVirtualInstruction) {
+            InvokeVirtualInstruction invoke = (InvokeVirtualInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof MethodRefItem methodRefItem) {
+            if (item instanceof MethodRefItem) {
+                MethodRefItem methodRefItem = (MethodRefItem) item;
                 descriptor = methodRefItem.getDescriptor();
                 methodName = methodRefItem.getName();
             }
-        } else if (instr instanceof InvokeSpecialInstruction invoke) {
+        } else if (instr instanceof InvokeSpecialInstruction) {
+            InvokeSpecialInstruction invoke = (InvokeSpecialInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof MethodRefItem methodRefItem) {
+            if (item instanceof MethodRefItem) {
+                MethodRefItem methodRefItem = (MethodRefItem) item;
                 descriptor = methodRefItem.getDescriptor();
                 methodName = methodRefItem.getName();
             }
-        } else if (instr instanceof InvokeStaticInstruction invoke) {
+        } else if (instr instanceof InvokeStaticInstruction) {
+            InvokeStaticInstruction invoke = (InvokeStaticInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof MethodRefItem methodRefItem) {
+            if (item instanceof MethodRefItem) {
+                MethodRefItem methodRefItem = (MethodRefItem) item;
                 descriptor = methodRefItem.getDescriptor();
                 methodName = methodRefItem.getName();
             }
-        } else if (instr instanceof InvokeInterfaceInstruction invoke) {
+        } else if (instr instanceof InvokeInterfaceInstruction) {
+            InvokeInterfaceInstruction invoke = (InvokeInterfaceInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof InterfaceRefItem interfaceRefItem) {
+            if (item instanceof InterfaceRefItem) {
+                InterfaceRefItem interfaceRefItem = (InterfaceRefItem) item;
                 int nameAndTypeIndex = interfaceRefItem.getValue().getNameAndTypeIndex();
                 Item<?> natItem = constPool.getItem(nameAndTypeIndex);
-                if (natItem instanceof NameAndTypeRefItem nameAndType) {
+                if (natItem instanceof NameAndTypeRefItem) {
+                    NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) natItem;
                     descriptor = nameAndType.getDescriptor();
                     int nameIndex = nameAndType.getValue().getNameIndex();
                     Item<?> nameItem = constPool.getItem(nameIndex);
-                    if (nameItem instanceof Utf8Item utf8) {
+                    if (nameItem instanceof Utf8Item) {
+                        Utf8Item utf8 = (Utf8Item) nameItem;
                         methodName = utf8.getValue();
                     }
                 }
@@ -632,13 +651,15 @@ public class TypeInference {
      * @return updated state with arguments popped and return value pushed
      */
     private TypeState applyInvokeDynamic(TypeState state, Instruction instr) {
-        if (instr instanceof InvokeDynamicInstruction invoke) {
+        if (instr instanceof InvokeDynamicInstruction) {
+            InvokeDynamicInstruction invoke = (InvokeDynamicInstruction) instr;
             int natIndex = invoke.getNameAndTypeIndex();
             if (natIndex <= 0) {
                 return state;
             }
             Item<?> natItem = constPool.getItem(natIndex);
-            if (natItem instanceof NameAndTypeRefItem nat) {
+            if (natItem instanceof NameAndTypeRefItem) {
+                NameAndTypeRefItem nat = (NameAndTypeRefItem) natItem;
                 String descriptor = nat.getDescriptor();
 
                 int argSlots = countArgumentSlots(descriptor);
@@ -661,23 +682,29 @@ public class TypeInference {
      */
     private int countArgumentSlots(String descriptor) {
         int slots = 0;
-        int i = 1; // Skip opening '('
+        int i = 1;
         while (i < descriptor.length() && descriptor.charAt(i) != ')') {
             char c = descriptor.charAt(i);
             switch (c) {
-                case 'B', 'C', 'F', 'I', 'S', 'Z' -> {
+                case 'B':
+                case 'C':
+                case 'F':
+                case 'I':
+                case 'S':
+                case 'Z':
                     slots++;
                     i++;
-                }
-                case 'D', 'J' -> {
+                    break;
+                case 'D':
+                case 'J':
                     slots += 2;
                     i++;
-                }
-                case 'L' -> {
+                    break;
+                case 'L':
                     slots++;
                     i = descriptor.indexOf(';', i) + 1;
-                }
-                case '[' -> {
+                    break;
+                case '[':
                     slots++;
                     while (i < descriptor.length() && descriptor.charAt(i) == '[') i++;
                     if (i < descriptor.length() && descriptor.charAt(i) == 'L') {
@@ -685,8 +712,10 @@ public class TypeInference {
                     } else {
                         i++;
                     }
-                }
-                default -> i++;
+                    break;
+                default:
+                    i++;
+                    break;
             }
         }
         return slots;
@@ -701,22 +730,29 @@ public class TypeInference {
     private VerificationType descriptorToType(String desc) {
         if (desc.isEmpty()) return VerificationType.TOP;
         char c = desc.charAt(0);
-        return switch (c) {
-            case 'B', 'C', 'I', 'S', 'Z' -> VerificationType.INTEGER;
-            case 'F' -> VerificationType.FLOAT;
-            case 'D' -> VerificationType.DOUBLE;
-            case 'J' -> VerificationType.LONG;
-            case 'L' -> {
+        switch (c) {
+            case 'B':
+            case 'C':
+            case 'I':
+            case 'S':
+            case 'Z':
+                return VerificationType.INTEGER;
+            case 'F':
+                return VerificationType.FLOAT;
+            case 'D':
+                return VerificationType.DOUBLE;
+            case 'J':
+                return VerificationType.LONG;
+            case 'L':
                 String className = desc.substring(1, desc.length() - 1);
                 int classIndex = constPool.findOrAddClass(className).getIndex(constPool);
-                yield VerificationType.object(classIndex);
-            }
-            case '[' -> {
-                int classIndex = constPool.findOrAddClass(desc).getIndex(constPool);
-                yield VerificationType.object(classIndex);
-            }
-            default -> VerificationType.TOP;
-        };
+                return VerificationType.object(classIndex);
+            case '[':
+                int classIndex2 = constPool.findOrAddClass(desc).getIndex(constPool);
+                return VerificationType.object(classIndex2);
+            default:
+                return VerificationType.TOP;
+        }
     }
 
     /**
@@ -738,16 +774,36 @@ public class TypeInference {
      * @return local variable index
      */
     private int getLocalIndex(Instruction instr) {
-        if (instr instanceof ILoadInstruction load) return load.getVarIndex();
-        if (instr instanceof LLoadInstruction load) return load.getVarIndex();
-        if (instr instanceof FLoadInstruction load) return load.getVarIndex();
-        if (instr instanceof DLoadInstruction load) return load.getVarIndex();
-        if (instr instanceof ALoadInstruction load) return load.getVarIndex();
-        if (instr instanceof IStoreInstruction store) return store.getVarIndex();
-        if (instr instanceof LStoreInstruction store) return store.getVarIndex();
-        if (instr instanceof FStoreInstruction store) return store.getVarIndex();
-        if (instr instanceof DStoreInstruction store) return store.getVarIndex();
-        if (instr instanceof AStoreInstruction store) return store.getVarIndex();
+        if (instr instanceof ILoadInstruction) {
+            return ((ILoadInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof LLoadInstruction) {
+            return ((LLoadInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof FLoadInstruction) {
+            return ((FLoadInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof DLoadInstruction) {
+            return ((DLoadInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof ALoadInstruction) {
+            return ((ALoadInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof IStoreInstruction) {
+            return ((IStoreInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof LStoreInstruction) {
+            return ((LStoreInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof FStoreInstruction) {
+            return ((FStoreInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof DStoreInstruction) {
+            return ((DStoreInstruction) instr).getVarIndex();
+        }
+        if (instr instanceof AStoreInstruction) {
+            return ((AStoreInstruction) instr).getVarIndex();
+        }
         return 0;
     }
 

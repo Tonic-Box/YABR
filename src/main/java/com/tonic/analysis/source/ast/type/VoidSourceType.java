@@ -16,7 +16,6 @@ public final class VoidSourceType implements SourceType {
     public static final VoidSourceType INSTANCE = new VoidSourceType();
 
     private VoidSourceType() {
-        // Private constructor for singleton
     }
 
     @Override

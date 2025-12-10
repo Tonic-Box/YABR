@@ -522,13 +522,11 @@ public class SSA {
      * @param classFile the class file to transform
      */
     public void transformClass(ClassFile classFile) {
-        // Run class-level transforms first (e.g., method inlining)
         runClassTransforms(classFile);
 
-        // Then run method-level transforms on each method
         for (MethodEntry method : classFile.getMethods()) {
             if (method.getCodeAttribute() == null) continue;
-            if (method.getName().startsWith("<")) continue; // Skip init methods
+            if (method.getName().startsWith("<")) continue;
 
             IRMethod irMethod = lift(method);
             runTransforms(irMethod);

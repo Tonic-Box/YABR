@@ -15,10 +15,10 @@ import java.util.Objects;
 @Getter
 public final class DynamicConstant extends Constant {
 
-    private final String name;              // Name of the constant
-    private final String descriptor;        // Type descriptor of the constant
-    private final int bootstrapMethodIndex; // Index into BootstrapMethods attribute
-    private final int originalCpIndex;      // Original constant pool index for roundtrip
+    private final String name;
+    private final String descriptor;
+    private final int bootstrapMethodIndex;
+    private final int originalCpIndex;
 
     /**
      * Creates a dynamic constant.
@@ -53,7 +53,8 @@ public final class DynamicConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DynamicConstant that)) return false;
+        if (!(o instanceof DynamicConstant)) return false;
+        DynamicConstant that = (DynamicConstant) o;
         return bootstrapMethodIndex == that.bootstrapMethodIndex &&
                 Objects.equals(name, that.name) &&
                 Objects.equals(descriptor, that.descriptor);

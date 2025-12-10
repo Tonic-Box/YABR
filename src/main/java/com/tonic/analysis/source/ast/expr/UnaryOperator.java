@@ -4,17 +4,13 @@ package com.tonic.analysis.source.ast.expr;
  * Unary operators for expressions.
  */
 public enum UnaryOperator {
-    // Arithmetic
     NEG("-", true),
     POS("+", true),
 
-    // Bitwise
     BNOT("~", true),
 
-    // Logical
     NOT("!", true),
 
-    // Increment/Decrement
     PRE_INC("++", true),
     PRE_DEC("--", true),
     POST_INC("++", false),

@@ -29,27 +29,24 @@ public class ConditionalConstantPropagation implements IRTransform {
         for (IRBlock block : method.getBlocks()) {
             IRInstruction terminator = block.getTerminator();
 
-            if (terminator instanceof BranchInstruction branch) {
+            if (terminator instanceof BranchInstruction) {
+                BranchInstruction branch = (BranchInstruction) terminator;
                 Boolean constantResult = evaluateBranchCondition(branch);
 
                 if (constantResult != null) {
-                    // Branch condition is constant - replace with goto
                     IRBlock targetBlock = constantResult ? branch.getTrueTarget() : branch.getFalseTarget();
                     IRBlock deadBlock = constantResult ? branch.getFalseTarget() : branch.getTrueTarget();
 
                     GotoInstruction gotoInstr = new GotoInstruction(targetBlock);
                     gotoInstr.setBlock(block);
 
-                    // Replace branch with goto
                     int idx = block.getInstructions().indexOf(branch);
                     block.removeInstruction(branch);
                     block.insertInstruction(idx, gotoInstr);
 
-                    // Update successors
                     block.removeSuccessor(deadBlock);
                     deadBlock.getPredecessors().remove(block);
 
-                    // Remove phi entries from the dead path
                     removePhiEntriesFromBlock(targetBlock, deadBlock);
 
                     changed = true;
@@ -65,53 +62,49 @@ public class ConditionalConstantPropagation implements IRTransform {
         Value left = branch.getLeft();
         Value right = branch.getRight();
 
-        // Resolve constants
         Constant leftConst = resolveConstant(left);
         Constant rightConst = (right != null) ? resolveConstant(right) : null;
 
-        // Handle unary comparisons (IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE)
-        if (right == null && leftConst instanceof IntConstant ic) {
+        if (right == null && leftConst instanceof IntConstant) {
+            IntConstant ic = (IntConstant) leftConst;
             int value = ic.getValue();
-            return switch (cond) {
-                case IFEQ -> value == 0;
-                case IFNE -> value != 0;
-                case IFLT -> value < 0;
-                case IFGE -> value >= 0;
-                case IFGT -> value > 0;
-                case IFLE -> value <= 0;
-                default -> null;
-            };
+            switch (cond) {
+                case IFEQ: return value == 0;
+                case IFNE: return value != 0;
+                case IFLT: return value < 0;
+                case IFGE: return value >= 0;
+                case IFGT: return value > 0;
+                case IFLE: return value <= 0;
+                default: break;
+            }
         }
 
-        // Handle binary integer comparisons
-        if (leftConst instanceof IntConstant lc && rightConst instanceof IntConstant rc) {
+        if (leftConst instanceof IntConstant && rightConst instanceof IntConstant) {
+            IntConstant lc = (IntConstant) leftConst;
+            IntConstant rc = (IntConstant) rightConst;
             int l = lc.getValue();
             int r = rc.getValue();
-            return switch (cond) {
-                case EQ -> l == r;
-                case NE -> l != r;
-                case LT -> l < r;
-                case GE -> l >= r;
-                case GT -> l > r;
-                case LE -> l <= r;
-                default -> null;
-            };
+            switch (cond) {
+                case EQ: return l == r;
+                case NE: return l != r;
+                case LT: return l < r;
+                case GE: return l >= r;
+                case GT: return l > r;
+                case LE: return l <= r;
+                default: break;
+            }
         }
 
-        // Handle null comparisons
         if (cond == CompareOp.IFNULL) {
             if (leftConst instanceof NullConstant) {
                 return true;
             }
-            // If we know it's not null (e.g., from NEW), return false
-            // This is handled by NullCheckElimination
         } else if (cond == CompareOp.IFNONNULL) {
             if (leftConst instanceof NullConstant) {
                 return false;
             }
         }
 
-        // Handle reference equality with null
         if (cond == CompareOp.ACMPEQ) {
             if (leftConst instanceof NullConstant && rightConst instanceof NullConstant) {
                 return true;
@@ -126,12 +119,14 @@ public class ConditionalConstantPropagation implements IRTransform {
     }
 
     private Constant resolveConstant(Value value) {
-        if (value instanceof Constant c) {
-            return c;
+        if (value instanceof Constant) {
+            return (Constant) value;
         }
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction ci) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) def;
                 return ci.getConstant();
             }
         }
@@ -139,10 +134,6 @@ public class ConditionalConstantPropagation implements IRTransform {
     }
 
     private void removePhiEntriesFromBlock(IRBlock block, IRBlock deadPredecessor) {
-        // When we remove an edge, we should also remove phi entries from the
-        // target block that came from the dead predecessor
-        // Note: The actual target block doesn't need cleanup since we're keeping it
-        // The dead block's successors might need phi cleanup
         for (IRBlock succ : deadPredecessor.getSuccessors()) {
             for (PhiInstruction phi : succ.getPhiInstructions()) {
                 phi.removeIncoming(deadPredecessor);

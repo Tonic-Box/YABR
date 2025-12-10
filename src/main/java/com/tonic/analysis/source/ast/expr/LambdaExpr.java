@@ -61,8 +61,8 @@ public final class LambdaExpr implements Expression {
      * Gets the body as an expression (throws if block body).
      */
     public Expression getExpressionBody() {
-        if (body instanceof Expression expr) {
-            return expr;
+        if (body instanceof Expression) {
+            return (Expression) body;
         }
         throw new IllegalStateException("Lambda has block body, not expression body");
     }
@@ -71,8 +71,8 @@ public final class LambdaExpr implements Expression {
      * Gets the body as a statement (throws if expression body).
      */
     public Statement getBlockBody() {
-        if (body instanceof Statement stmt) {
-            return stmt;
+        if (body instanceof Statement) {
+            return (Statement) body;
         }
         throw new IllegalStateException("Lambda has expression body, not block body");
     }
@@ -100,7 +100,6 @@ public final class LambdaExpr implements Expression {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        // Parameters
         if (parameters.size() == 1 && hasImplicitParameterTypes()) {
             sb.append(parameters.get(0).name());
         } else {
@@ -114,7 +113,6 @@ public final class LambdaExpr implements Expression {
 
         sb.append(" -> ");
 
-        // Body
         if (isExpressionBody()) {
             sb.append(body);
         } else {

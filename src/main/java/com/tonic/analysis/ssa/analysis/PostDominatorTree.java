@@ -38,8 +38,6 @@ public class PostDominatorTree {
 
         findExitBlocks();
         if (exitBlocks.isEmpty()) {
-            // No exit blocks - method has infinite loops or only exceptions
-            // Mark all return/throw terminators as exits
             for (IRBlock block : method.getBlocks()) {
                 if (isExitTerminator(block)) {
                     exitBlocks.add(block);
@@ -47,7 +45,6 @@ public class PostDominatorTree {
             }
         }
         if (exitBlocks.isEmpty()) {
-            // Still no exits - just use all blocks with no successors
             for (IRBlock block : method.getBlocks()) {
                 if (block.getSuccessors().isEmpty()) {
                     exitBlocks.add(block);
@@ -64,14 +61,10 @@ public class PostDominatorTree {
         if (block == null || block.getInstructions().isEmpty()) return false;
         var terminator = block.getTerminator();
         if (terminator == null) return false;
-        // For decompilation merge point detection, only consider return as true exit
-        // Throws typically represent exceptional paths that shouldn't affect merge point detection
         return terminator instanceof com.tonic.analysis.ssa.ir.ReturnInstruction;
     }
 
     private void findExitBlocks() {
-        // Exit blocks are blocks with return terminators (not throws)
-        // Throws represent exceptional paths and shouldn't affect normal merge point detection
         for (IRBlock block : method.getBlocks()) {
             if (isExitTerminator(block)) {
                 exitBlocks.add(block);
@@ -80,8 +73,6 @@ public class PostDominatorTree {
     }
 
     private void computeReversePostOrder() {
-        // Compute reverse postorder on the reverse CFG
-        // Start from exit blocks and traverse predecessors
         Set<IRBlock> visited = new HashSet<>();
         List<IRBlock> postorderList = new ArrayList<>();
 
@@ -102,7 +93,6 @@ public class PostDominatorTree {
     private void dfsReversePostorder(IRBlock block, Set<IRBlock> visited, List<IRBlock> result) {
         if (visited.contains(block)) return;
         visited.add(block);
-        // In reverse CFG, predecessors become successors
         for (IRBlock pred : block.getPredecessors()) {
             dfsReversePostorder(pred, visited, result);
         }
@@ -110,12 +100,10 @@ public class PostDominatorTree {
     }
 
     private void computePostDominators() {
-        // Initialize exit blocks as their own post-dominator
         for (IRBlock exit : exitBlocks) {
             immediatePostDominator.put(exit, exit);
         }
 
-        // Get blocks in reverse postorder (on reverse CFG)
         List<IRBlock> rpo = new ArrayList<>();
         for (IRBlock block : method.getBlocks()) {
             if (reversePreorder.containsKey(block)) {
@@ -124,7 +112,6 @@ public class PostDominatorTree {
         }
         rpo.sort(Comparator.comparingInt(b -> reversePreorder.getOrDefault(b, Integer.MAX_VALUE)));
 
-        // Safety limit to prevent infinite loops
         int maxIterations = method.getBlocks().size() * 3;
         int iterations = 0;
 
@@ -136,7 +123,6 @@ public class PostDominatorTree {
                 if (exitBlocks.contains(block)) continue;
 
                 IRBlock newIpdom = null;
-                // In reverse CFG, successors become predecessors
                 for (IRBlock succ : block.getSuccessors()) {
                     if (immediatePostDominator.containsKey(succ)) {
                         if (newIpdom == null) {
@@ -162,7 +148,6 @@ public class PostDominatorTree {
         IRBlock finger1 = b1;
         IRBlock finger2 = b2;
 
-        // Add iteration limit to prevent infinite loops
         int maxIterations = method.getBlocks().size() * 2;
         int iterations = 0;
 
@@ -172,7 +157,6 @@ public class PostDominatorTree {
             int order1 = getReversePostorder(finger1);
             int order2 = getReversePostorder(finger2);
 
-            // If either block is not in the reverse postorder, bail out
             if (order1 < 0) return b2;
             if (order2 < 0) return b1;
 

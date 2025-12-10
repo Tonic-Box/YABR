@@ -6,25 +6,7 @@ import com.tonic.analysis.source.ast.type.SourceType;
 /**
  * Sealed interface representing all expression types in the source AST.
  */
-public sealed interface Expression extends ASTNode permits
-        LiteralExpr,
-        VarRefExpr,
-        FieldAccessExpr,
-        ArrayAccessExpr,
-        MethodCallExpr,
-        NewExpr,
-        NewArrayExpr,
-        ArrayInitExpr,
-        BinaryExpr,
-        UnaryExpr,
-        CastExpr,
-        InstanceOfExpr,
-        TernaryExpr,
-        LambdaExpr,
-        MethodRefExpr,
-        ThisExpr,
-        SuperExpr,
-        ClassExpr {
+public interface Expression extends ASTNode {
 
     /**
      * Gets the inferred type of this expression.

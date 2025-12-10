@@ -45,7 +45,8 @@ public final class MethodTypeConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof MethodTypeConstant that)) return false;
+        if (!(o instanceof MethodTypeConstant)) return false;
+        MethodTypeConstant that = (MethodTypeConstant) o;
         return Objects.equals(descriptor, that.descriptor);
     }
 

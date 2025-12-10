@@ -20,7 +20,7 @@ public class InvokeInstruction extends IRInstruction {
     private final String descriptor;
     private final List<Value> arguments;
     private final int originalCpIndex;
-    private final BootstrapMethodInfo bootstrapInfo; // For invokedynamic
+    private final BootstrapMethodInfo bootstrapInfo;
 
     public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments) {
         this(result, invokeType, owner, name, descriptor, arguments, 0, null);
@@ -64,7 +64,10 @@ public class InvokeInstruction extends IRInstruction {
 
     private void registerUses() {
         for (Value arg : arguments) {
-            if (arg instanceof SSAValue ssa) ssa.addUse(this);
+            if (arg instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) arg;
+                ssa.addUse(this);
+            }
         }
     }
 
@@ -115,9 +118,15 @@ public class InvokeInstruction extends IRInstruction {
     public void replaceOperand(Value oldValue, Value newValue) {
         for (int i = 0; i < arguments.size(); i++) {
             if (arguments.get(i).equals(oldValue)) {
-                if (arguments.get(i) instanceof SSAValue ssa) ssa.removeUse(this);
+                if (arguments.get(i) instanceof SSAValue) {
+                    SSAValue ssa = (SSAValue) arguments.get(i);
+                    ssa.removeUse(this);
+                }
                 arguments.set(i, newValue);
-                if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+                if (newValue instanceof SSAValue) {
+                    SSAValue ssa = (SSAValue) newValue;
+                    ssa.addUse(this);
+                }
             }
         }
     }

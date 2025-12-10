@@ -5,24 +5,7 @@ import com.tonic.analysis.source.ast.ASTNode;
 /**
  * Sealed interface representing all statement types in the source AST.
  */
-public sealed interface Statement extends ASTNode permits
-        BlockStmt,
-        IfStmt,
-        WhileStmt,
-        DoWhileStmt,
-        ForStmt,
-        ForEachStmt,
-        SwitchStmt,
-        TryCatchStmt,
-        ReturnStmt,
-        ThrowStmt,
-        VarDeclStmt,
-        ExprStmt,
-        SynchronizedStmt,
-        LabeledStmt,
-        BreakStmt,
-        ContinueStmt,
-        IRRegionStmt {
+public interface Statement extends ASTNode {
 
     /**
      * Gets the label for this statement, if any.

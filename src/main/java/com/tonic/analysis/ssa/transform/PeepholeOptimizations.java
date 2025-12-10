@@ -48,9 +48,11 @@ public class PeepholeOptimizations implements IRTransform {
     }
 
     private IRInstruction tryOptimize(IRInstruction instr) {
-        if (instr instanceof UnaryOpInstruction unaryOp) {
+        if (instr instanceof UnaryOpInstruction) {
+            UnaryOpInstruction unaryOp = (UnaryOpInstruction) instr;
             return tryOptimizeUnary(unaryOp);
-        } else if (instr instanceof BinaryOpInstruction binOp) {
+        } else if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
             return tryOptimizeBinary(binOp);
         }
         return null;
@@ -61,11 +63,14 @@ public class PeepholeOptimizations implements IRTransform {
         Value operand = instr.getOperand();
         SSAValue result = instr.getResult();
 
-        // Double negation: NEG(NEG(x)) -> x
-        if (op == UnaryOp.NEG && operand instanceof SSAValue ssaOperand) {
+        if (op == UnaryOp.NEG && operand instanceof SSAValue) {
+            SSAValue ssaOperand = (SSAValue) operand;
             IRInstruction def = ssaOperand.getDefinition();
-            if (def instanceof UnaryOpInstruction innerUnary && innerUnary.getOp() == UnaryOp.NEG) {
-                return new CopyInstruction(result, innerUnary.getOperand());
+            if (def instanceof UnaryOpInstruction) {
+                UnaryOpInstruction innerUnary = (UnaryOpInstruction) def;
+                if (innerUnary.getOp() == UnaryOp.NEG) {
+                    return new CopyInstruction(result, innerUnary.getOperand());
+                }
             }
         }
 
@@ -78,59 +83,66 @@ public class PeepholeOptimizations implements IRTransform {
         Value right = instr.getRight();
         SSAValue result = instr.getResult();
 
-        // Shift normalization: x << 32 -> x for int (shifts are masked by 31 for int)
-        // In Java, int shifts are masked by 31, so x << 32 is x << 0 = x
         if ((op == BinaryOp.SHL || op == BinaryOp.SHR || op == BinaryOp.USHR)) {
             Integer shiftAmount = getIntConstant(right);
             if (shiftAmount != null) {
-                // For int: shift amount is masked by 31, so 32 -> 0
                 int effective = shiftAmount & 31;
                 if (effective == 0) {
                     return new CopyInstruction(result, left);
                 }
-                // If effective shift is different from original, create normalized instruction
                 if (effective != shiftAmount) {
                     return new BinaryOpInstruction(result, op, left, IntConstant.of(effective));
                 }
             }
         }
 
-        // x + (-y) -> x - y
-        if (op == BinaryOp.ADD && right instanceof SSAValue ssaRight) {
+        if (op == BinaryOp.ADD && right instanceof SSAValue) {
+            SSAValue ssaRight = (SSAValue) right;
             IRInstruction rightDef = ssaRight.getDefinition();
-            if (rightDef instanceof UnaryOpInstruction rightUnary && rightUnary.getOp() == UnaryOp.NEG) {
-                return new BinaryOpInstruction(result, BinaryOp.SUB, left, rightUnary.getOperand());
+            if (rightDef instanceof UnaryOpInstruction) {
+                UnaryOpInstruction rightUnary = (UnaryOpInstruction) rightDef;
+                if (rightUnary.getOp() == UnaryOp.NEG) {
+                    return new BinaryOpInstruction(result, BinaryOp.SUB, left, rightUnary.getOperand());
+                }
             }
         }
 
-        // (-x) + y -> y - x
-        if (op == BinaryOp.ADD && left instanceof SSAValue ssaLeft) {
+        if (op == BinaryOp.ADD && left instanceof SSAValue) {
+            SSAValue ssaLeft = (SSAValue) left;
             IRInstruction leftDef = ssaLeft.getDefinition();
-            if (leftDef instanceof UnaryOpInstruction leftUnary && leftUnary.getOp() == UnaryOp.NEG) {
-                return new BinaryOpInstruction(result, BinaryOp.SUB, right, leftUnary.getOperand());
+            if (leftDef instanceof UnaryOpInstruction) {
+                UnaryOpInstruction leftUnary = (UnaryOpInstruction) leftDef;
+                if (leftUnary.getOp() == UnaryOp.NEG) {
+                    return new BinaryOpInstruction(result, BinaryOp.SUB, right, leftUnary.getOperand());
+                }
             }
         }
 
-        // x - (-y) -> x + y
-        if (op == BinaryOp.SUB && right instanceof SSAValue ssaRight) {
+        if (op == BinaryOp.SUB && right instanceof SSAValue) {
+            SSAValue ssaRight = (SSAValue) right;
             IRInstruction rightDef = ssaRight.getDefinition();
-            if (rightDef instanceof UnaryOpInstruction rightUnary && rightUnary.getOp() == UnaryOp.NEG) {
-                return new BinaryOpInstruction(result, BinaryOp.ADD, left, rightUnary.getOperand());
+            if (rightDef instanceof UnaryOpInstruction) {
+                UnaryOpInstruction rightUnary = (UnaryOpInstruction) rightDef;
+                if (rightUnary.getOp() == UnaryOp.NEG) {
+                    return new BinaryOpInstruction(result, BinaryOp.ADD, left, rightUnary.getOperand());
+                }
             }
         }
 
-        // Consecutive shifts: (x << a) << b -> x << (a + b) when a + b < 32
-        if ((op == BinaryOp.SHL || op == BinaryOp.SHR || op == BinaryOp.USHR) && left instanceof SSAValue ssaLeft) {
+        if ((op == BinaryOp.SHL || op == BinaryOp.SHR || op == BinaryOp.USHR) && left instanceof SSAValue) {
+            SSAValue ssaLeft = (SSAValue) left;
             Integer outerShift = getIntConstant(right);
             IRInstruction leftDef = ssaLeft.getDefinition();
 
-            if (outerShift != null && leftDef instanceof BinaryOpInstruction innerBin && innerBin.getOp() == op) {
-                Integer innerShift = getIntConstant(innerBin.getRight());
-                if (innerShift != null) {
-                    int totalShift = innerShift + outerShift;
-                    // For int, if total >= 32, result depends on operation
-                    if (totalShift < 32) {
-                        return new BinaryOpInstruction(result, op, innerBin.getLeft(), IntConstant.of(totalShift));
+            if (outerShift != null && leftDef instanceof BinaryOpInstruction) {
+                BinaryOpInstruction innerBin = (BinaryOpInstruction) leftDef;
+                if (innerBin.getOp() == op) {
+                    Integer innerShift = getIntConstant(innerBin.getRight());
+                    if (innerShift != null) {
+                        int totalShift = innerShift + outerShift;
+                        if (totalShift < 32) {
+                            return new BinaryOpInstruction(result, op, innerBin.getLeft(), IntConstant.of(totalShift));
+                        }
                     }
                 }
             }
@@ -140,14 +152,18 @@ public class PeepholeOptimizations implements IRTransform {
     }
 
     private Integer getIntConstant(Value value) {
-        if (value instanceof IntConstant ic) {
+        if (value instanceof IntConstant) {
+            IntConstant ic = (IntConstant) value;
             return ic.getValue();
         }
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction ci) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant ic) {
+                if (c instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) c;
                     return ic.getValue();
                 }
             }

@@ -28,7 +28,6 @@ public final class ClassExpr implements Expression {
 
     public ClassExpr(SourceType classType, SourceLocation location) {
         this.classType = Objects.requireNonNull(classType, "classType cannot be null");
-        // Type is Class<T> where T is classType
         this.type = new ReferenceSourceType("java/lang/Class", List.of(classType));
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }

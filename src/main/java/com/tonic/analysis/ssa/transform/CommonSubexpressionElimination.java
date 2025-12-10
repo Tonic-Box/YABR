@@ -37,7 +37,6 @@ public class CommonSubexpressionElimination implements IRTransform {
 
     private boolean eliminateInBlock(IRBlock block) {
         boolean changed = false;
-        // Map from expression key to the SSA value that computes it
         Map<String, SSAValue> expressionMap = new HashMap<>();
         List<IRInstruction> toReplace = new ArrayList<>();
         Map<IRInstruction, SSAValue> replacements = new HashMap<>();
@@ -47,18 +46,15 @@ public class CommonSubexpressionElimination implements IRTransform {
 
             if (exprKey != null && instr.getResult() != null) {
                 if (expressionMap.containsKey(exprKey)) {
-                    // Found a common subexpression - mark for replacement
                     SSAValue existing = expressionMap.get(exprKey);
                     toReplace.add(instr);
                     replacements.put(instr, existing);
                 } else {
-                    // First occurrence - record it
                     expressionMap.put(exprKey, instr.getResult());
                 }
             }
         }
 
-        // Replace common subexpressions with copies
         for (IRInstruction instr : toReplace) {
             SSAValue existing = replacements.get(instr);
             SSAValue result = instr.getResult();
@@ -75,13 +71,13 @@ public class CommonSubexpressionElimination implements IRTransform {
     }
 
     private String computeExpressionKey(IRInstruction instr) {
-        if (instr instanceof BinaryOpInstruction binOp) {
+        if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
             return computeBinaryKey(binOp);
-        } else if (instr instanceof UnaryOpInstruction unaryOp) {
+        } else if (instr instanceof UnaryOpInstruction) {
+            UnaryOpInstruction unaryOp = (UnaryOpInstruction) instr;
             return computeUnaryKey(unaryOp);
         }
-        // Other instruction types (field access, method calls, etc.)
-        // are not candidates for CSE due to potential side effects
         return null;
     }
 
@@ -94,9 +90,7 @@ public class CommonSubexpressionElimination implements IRTransform {
             return null;
         }
 
-        // Normalize commutative operations for matching
         if (isCommutative(op)) {
-            // Use lexicographic ordering for canonical form
             if (leftKey.compareTo(rightKey) > 0) {
                 String temp = leftKey;
                 leftKey = rightKey;
@@ -116,15 +110,20 @@ public class CommonSubexpressionElimination implements IRTransform {
     }
 
     private String getValueKey(Value value) {
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             return "v" + ssa.getId();
-        } else if (value instanceof IntConstant ic) {
+        } else if (value instanceof IntConstant) {
+            IntConstant ic = (IntConstant) value;
             return "i" + ic.getValue();
-        } else if (value instanceof LongConstant lc) {
+        } else if (value instanceof LongConstant) {
+            LongConstant lc = (LongConstant) value;
             return "l" + lc.getValue();
-        } else if (value instanceof FloatConstant fc) {
+        } else if (value instanceof FloatConstant) {
+            FloatConstant fc = (FloatConstant) value;
             return "f" + Float.floatToIntBits(fc.getValue());
-        } else if (value instanceof DoubleConstant dc) {
+        } else if (value instanceof DoubleConstant) {
+            DoubleConstant dc = (DoubleConstant) value;
             return "d" + Double.doubleToLongBits(dc.getValue());
         } else if (value instanceof NullConstant) {
             return "null";
@@ -133,9 +132,15 @@ public class CommonSubexpressionElimination implements IRTransform {
     }
 
     private boolean isCommutative(BinaryOp op) {
-        return switch (op) {
-            case ADD, MUL, AND, OR, XOR -> true;
-            default -> false;
-        };
+        switch (op) {
+            case ADD:
+            case MUL:
+            case AND:
+            case OR:
+            case XOR:
+                return true;
+            default:
+                return false;
+        }
     }
 }

@@ -217,11 +217,13 @@ public class ClassDecompiler {
         if (field.getAttributes() == null) return null;
 
         for (Attribute attr : field.getAttributes()) {
-            if (attr instanceof ConstantValueAttribute cva) {
+            if (attr instanceof ConstantValueAttribute) {
+                ConstantValueAttribute cva = (ConstantValueAttribute) attr;
                 int cpIndex = cva.getConstantValueIndex();
                 Item item = classFile.getConstPool().getItem(cpIndex);
 
-                if (item instanceof IntegerItem intItem) {
+                if (item instanceof IntegerItem) {
+                    IntegerItem intItem = (IntegerItem) item;
                     // Handle boolean type specially
                     if ("Z".equals(field.getDesc())) {
                         return intItem.getValue() != 0 ? "true" : "false";
@@ -235,24 +237,29 @@ public class ClassDecompiler {
                         return "'" + String.format("\\u%04x", (int) c) + "'";
                     }
                     return String.valueOf(intItem.getValue().intValue());
-                } else if (item instanceof LongItem longItem) {
+                } else if (item instanceof LongItem) {
+                    LongItem longItem = (LongItem) item;
                     return longItem.getValue() + "L";
-                } else if (item instanceof FloatItem floatItem) {
+                } else if (item instanceof FloatItem) {
+                    FloatItem floatItem = (FloatItem) item;
                     float f = floatItem.getValue();
                     if (Float.isNaN(f)) return "Float.NaN";
                     if (f == Float.POSITIVE_INFINITY) return "Float.POSITIVE_INFINITY";
                     if (f == Float.NEGATIVE_INFINITY) return "Float.NEGATIVE_INFINITY";
                     return f + "f";
-                } else if (item instanceof DoubleItem doubleItem) {
+                } else if (item instanceof DoubleItem) {
+                    DoubleItem doubleItem = (DoubleItem) item;
                     double d = doubleItem.getValue();
                     if (Double.isNaN(d)) return "Double.NaN";
                     if (d == Double.POSITIVE_INFINITY) return "Double.POSITIVE_INFINITY";
                     if (d == Double.NEGATIVE_INFINITY) return "Double.NEGATIVE_INFINITY";
                     return String.valueOf(d);
-                } else if (item instanceof Utf8Item utf8Item) {
+                } else if (item instanceof Utf8Item) {
+                    Utf8Item utf8Item = (Utf8Item) item;
                     // String constant - escape special characters
                     return "\"" + escapeString(utf8Item.getValue()) + "\"";
-                } else if (item instanceof StringRefItem strItem) {
+                } else if (item instanceof StringRefItem) {
+                    StringRefItem strItem = (StringRefItem) item;
                     Utf8Item strUtf8 = (Utf8Item) classFile.getConstPool().getItem(strItem.getValue());
                     if (strUtf8 != null) {
                         return "\"" + escapeString(strUtf8.getValue()) + "\"";
@@ -271,18 +278,28 @@ public class ClassDecompiler {
         StringBuilder sb = new StringBuilder();
         for (char c : s.toCharArray()) {
             switch (c) {
-                case '\n' -> sb.append("\\n");
-                case '\r' -> sb.append("\\r");
-                case '\t' -> sb.append("\\t");
-                case '\\' -> sb.append("\\\\");
-                case '"' -> sb.append("\\\"");
-                default -> {
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                case '\r':
+                    sb.append("\\r");
+                    break;
+                case '\t':
+                    sb.append("\\t");
+                    break;
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                case '"':
+                    sb.append("\\\"");
+                    break;
+                default:
                     if (c < 32 || c > 126) {
                         sb.append(String.format("\\u%04x", (int) c));
                     } else {
                         sb.append(c);
                     }
-                }
+                    break;
             }
         }
         return sb.toString();
@@ -408,7 +425,7 @@ public class ClassDecompiler {
     private void emitBlockContents(IndentingWriter writer, BlockStmt block) {
         // Use SourceEmitter to emit the block contents (without the outer braces)
         SourceEmitter emitter = new SourceEmitter(writer, config);
-        for (var stmt : block.getStatements()) {
+        for (com.tonic.analysis.source.ast.stmt.Statement stmt : block.getStatements()) {
             stmt.accept(emitter);
         }
     }
@@ -433,7 +450,7 @@ public class ClassDecompiler {
 
     private String resolveClassName(int classIndex) {
         try {
-            var classRef = (com.tonic.parser.constpool.ClassRefItem) classFile.getConstPool().getItem(classIndex);
+            com.tonic.parser.constpool.ClassRefItem classRef = (com.tonic.parser.constpool.ClassRefItem) classFile.getConstPool().getItem(classIndex);
             return classRef.getClassName();
         } catch (Exception e) {
             return "Unknown";
@@ -503,7 +520,7 @@ public class ClassDecompiler {
                 .filter(name -> !name.equals(thisClassName)) // Skip self
                 .map(name -> name.replace('/', '.'))
                 .sorted()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
 
         if (!imports.isEmpty()) {
             for (String imp : imports) {
@@ -520,7 +537,8 @@ public class ClassDecompiler {
         Set<String> types = new TreeSet<>();
 
         for (Item<?> item : classFile.getConstPool().getItems()) {
-            if (item instanceof ClassRefItem classRef) {
+            if (item instanceof ClassRefItem) {
+                ClassRefItem classRef = (ClassRefItem) item;
                 String className = classRef.getClassName();
                 if (className != null && !className.startsWith("[")) {
                     types.add(className);

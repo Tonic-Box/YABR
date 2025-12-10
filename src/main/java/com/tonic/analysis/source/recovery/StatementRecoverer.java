@@ -36,7 +36,6 @@ public class StatementRecoverer {
         this.typeRecoverer = new TypeRecoverer();
     }
 
-    // PHIs that will be collapsed into ternary expressions (don't declare these)
     private final Set<SSAValue> ternaryPhiValues = new HashSet<>();
 
     /**
@@ -52,20 +51,14 @@ public class StatementRecoverer {
 
         List<Statement> statements = new ArrayList<>();
 
-        // Pre-pass: identify PHIs that will be collapsed into ternary expressions
-        // These don't need variable declarations since they'll be inlined
         collectTernaryPhis(method);
 
-        // Emit declarations for phi variables (excluding ternary PHIs)
         emitPhiDeclarations(method, statements);
 
-        // Check if method has exception handlers
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
         if (handlers != null && !handlers.isEmpty()) {
-            // Recover with exception handling
             statements.addAll(recoverWithExceptionHandling(entry, handlers));
         } else {
-            // Simple recovery without exception handling
             statements.addAll(recoverBlockSequence(entry, new HashSet<>()));
         }
 
@@ -79,30 +72,23 @@ public class StatementRecoverer {
     private List<Statement> recoverWithExceptionHandling(IRBlock entry, List<ExceptionHandler> handlers) {
         List<Statement> result = new ArrayList<>();
 
-        // Track which blocks are handler blocks (should be skipped in normal flow)
         Set<IRBlock> handlerBlocks = new HashSet<>();
         for (ExceptionHandler handler : handlers) {
             if (handler.getHandlerBlock() != null) {
                 handlerBlocks.add(handler.getHandlerBlock());
-                // Also collect blocks reachable from handler
                 collectReachableBlocks(handler.getHandlerBlock(), handlerBlocks);
             }
         }
 
-        // Merge handlers that share the same handler block - these are split try regions
-        // (e.g., when a try block has return statements that break the contiguous range)
         List<ExceptionHandler> mergedHandlers = mergeHandlersWithSameTarget(handlers);
 
-        // Find the outermost handler (one that starts at entry or covers most code)
         ExceptionHandler outerHandler = findOutermostHandler(entry, mergedHandlers);
 
         if (outerHandler != null) {
-            // Get all handlers for this try region - handlers sharing same handler block are the same region
             List<ExceptionHandler> outerHandlers = new ArrayList<>();
             List<ExceptionHandler> innerHandlers = new ArrayList<>();
 
             for (ExceptionHandler h : mergedHandlers) {
-                // Handlers with the same handler block belong to the same try-catch
                 if (h.getHandlerBlock() == outerHandler.getHandlerBlock()) {
                     outerHandlers.add(h);
                 } else {
@@ -110,18 +96,15 @@ public class StatementRecoverer {
                 }
             }
 
-            // Recover try block content - may contain nested try-catch
             Set<IRBlock> stopBlocks = new HashSet<>(handlerBlocks);
             List<Statement> tryStmts;
             if (!innerHandlers.isEmpty()) {
-                // Has nested handlers - recover with nesting
                 tryStmts = recoverWithNestedHandlers(entry, innerHandlers, stopBlocks);
             } else {
                 tryStmts = recoverBlockSequence(entry, stopBlocks);
             }
             BlockStmt tryBlock = new BlockStmt(tryStmts);
 
-            // Recover catch clauses - only emit one catch per unique handler block
             List<CatchClause> catchClauses = new ArrayList<>();
             Set<IRBlock> emittedHandlerBlocks = new HashSet<>();
             for (ExceptionHandler handler : outerHandlers) {
@@ -134,7 +117,6 @@ public class StatementRecoverer {
                 }
             }
 
-            // Create TryCatchStmt
             if (!catchClauses.isEmpty()) {
                 TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, catchClauses);
                 result.add(tryCatch);
@@ -142,7 +124,6 @@ public class StatementRecoverer {
                 result.addAll(tryStmts);
             }
         } else {
-            // No outer handler found, just recover normally
             result.addAll(recoverBlockSequence(entry, handlerBlocks));
         }
 
@@ -155,7 +136,6 @@ public class StatementRecoverer {
      * due to return statements within the try block.
      */
     private List<ExceptionHandler> mergeHandlersWithSameTarget(List<ExceptionHandler> handlers) {
-        // Group handlers by handler block
         Map<IRBlock, List<ExceptionHandler>> byHandlerBlock = new LinkedHashMap<>();
         for (ExceptionHandler h : handlers) {
             byHandlerBlock.computeIfAbsent(h.getHandlerBlock(), k -> new ArrayList<>()).add(h);
@@ -166,7 +146,6 @@ public class StatementRecoverer {
             if (group.size() == 1) {
                 merged.add(group.get(0));
             } else {
-                // Find the earliest tryStart and latest tryEnd
                 IRBlock earliestStart = null;
                 IRBlock latestEnd = null;
                 int minOffset = Integer.MAX_VALUE;
@@ -183,7 +162,6 @@ public class StatementRecoverer {
                     }
                 }
 
-                // Create a merged handler with the union range
                 ExceptionHandler mergedHandler = new ExceptionHandler(
                     earliestStart,
                     latestEnd,
@@ -204,7 +182,6 @@ public class StatementRecoverer {
         int maxCoverage = -1;
 
         for (ExceptionHandler handler : handlers) {
-            // Check if this handler starts at or before entry
             int startOffset = handler.getTryStart().getBytecodeOffset();
             int endOffset = handler.getTryEnd() != null ? handler.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
             int coverage = endOffset - startOffset;
@@ -223,7 +200,6 @@ public class StatementRecoverer {
      * The inner handlers may start at blocks different from the entry block.
      */
     private List<Statement> recoverWithNestedHandlers(IRBlock start, List<ExceptionHandler> innerHandlers, Set<IRBlock> stopBlocks) {
-        // Collect all handler blocks - these should not be treated as normal try starts
         Set<IRBlock> allHandlerBlocks = new HashSet<>();
         for (ExceptionHandler h : innerHandlers) {
             if (h.getHandlerBlock() != null) {
@@ -231,8 +207,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Filter out handlers whose tryStart is a handler block
-        // These are internal exception handlers for catch blocks themselves (e.g., monitorexit protection)
         List<ExceptionHandler> normalHandlers = new ArrayList<>();
         for (ExceptionHandler h : innerHandlers) {
             if (!allHandlerBlocks.contains(h.getTryStart())) {
@@ -240,13 +214,11 @@ public class StatementRecoverer {
             }
         }
 
-        // Find blocks that are inner try region starts
         Set<IRBlock> innerTryStarts = new HashSet<>();
         for (ExceptionHandler h : normalHandlers) {
             innerTryStarts.add(h.getTryStart());
         }
 
-        // Recursively recover, emitting inner try-catch when we reach their start blocks
         return recoverWithInnerTryCatch(start, normalHandlers, innerTryStarts, stopBlocks, new HashSet<>());
     }
 
@@ -258,22 +230,17 @@ public class StatementRecoverer {
                                                       Set<IRBlock> visited) {
         List<Statement> result = new ArrayList<>();
 
-        // Create a combined stop set that includes inner try starts
-        // This prevents normal block recovery from entering inner try regions
         Set<IRBlock> combinedStops = new HashSet<>(stopBlocks);
         combinedStops.addAll(innerTryStarts);
 
         while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
-            // If we've reached an inner try start, don't mark as visited yet
             if (!innerTryStarts.contains(current)) {
                 visited.add(current);
             }
 
-            // Check if this block starts an inner try region
             ExceptionHandler innerHandler = findHandlerStartingAt(current, innerHandlers);
 
             if (innerHandler != null) {
-                // Collect all handlers for this inner try region
                 List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
                 List<ExceptionHandler> remainingHandlers = new ArrayList<>();
 
@@ -285,7 +252,6 @@ public class StatementRecoverer {
                     }
                 }
 
-                // Collect handler blocks for this inner region
                 Set<IRBlock> innerHandlerBlocks = new HashSet<>();
                 for (ExceptionHandler h : sameRegionHandlers) {
                     if (h.getHandlerBlock() != null) {
@@ -293,12 +259,9 @@ public class StatementRecoverer {
                     }
                 }
 
-                // Recover try block
                 Set<IRBlock> innerStopBlocks = new HashSet<>(stopBlocks);
                 innerStopBlocks.addAll(innerHandlerBlocks);
 
-                // Also stop at blocks after the try region (successors of tryEnd)
-                // This ensures we don't recover code that should be outside the try block
                 IRBlock innerTryEnd = innerHandler.getTryEnd();
                 if (innerTryEnd != null) {
                     for (IRBlock succ : innerTryEnd.getSuccessors()) {
@@ -310,19 +273,16 @@ public class StatementRecoverer {
 
                 List<Statement> tryStmts;
                 if (!remainingHandlers.isEmpty()) {
-                    // Find remaining inner try starts
                     Set<IRBlock> remainingTryStarts = new HashSet<>();
                     for (ExceptionHandler h : remainingHandlers) {
                         remainingTryStarts.add(h.getTryStart());
                     }
                     tryStmts = recoverWithInnerTryCatch(current, remainingHandlers, remainingTryStarts, innerStopBlocks, new HashSet<>());
                 } else {
-                    // Use recoverBlocksForTry to avoid re-entering exception handling
                     tryStmts = recoverBlocksForTry(current, innerStopBlocks, new HashSet<>());
                 }
                 BlockStmt tryBlock = new BlockStmt(tryStmts);
 
-                // Recover catch clauses
                 List<CatchClause> catchClauses = new ArrayList<>();
                 for (ExceptionHandler h : sameRegionHandlers) {
                     CatchClause catchClause = recoverCatchClause(h);
@@ -337,12 +297,9 @@ public class StatementRecoverer {
                     result.addAll(tryStmts);
                 }
 
-                // Continue from AFTER the try region (the successor of tryEnd, not tryEnd itself)
-                // tryEnd was already processed as part of the try body
                 IRBlock tryEnd = innerHandler.getTryEnd();
                 if (tryEnd != null) {
-                    visited.add(tryEnd); // Mark try end as visited
-                    // Find the next block to continue from - successor of tryEnd
+                    visited.add(tryEnd);
                     IRBlock next = null;
                     for (IRBlock succ : tryEnd.getSuccessors()) {
                         if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
@@ -362,11 +319,8 @@ public class StatementRecoverer {
                 continue;
             }
 
-            // Use structural analysis to recover blocks properly
-            // This ensures IF_THEN, IF_THEN_ELSE, and other structures are recognized
             if (context.isProcessed(current)) {
                 result.addAll(context.getStatements(current));
-                // Find next unvisited successor
                 IRBlock next = null;
                 for (IRBlock succ : current.getSuccessors()) {
                     if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
@@ -385,12 +339,10 @@ public class StatementRecoverer {
 
             RegionInfo info = analyzer.getRegionInfo(current);
             if (info == null) {
-                // Simple block
                 List<Statement> blockStmts = recoverSimpleBlock(current);
                 result.addAll(blockStmts);
-                context.setStatements(current, blockStmts);  /* Store for later retrieval */
+                context.setStatements(current, blockStmts);
                 context.markProcessed(current);
-                // Find next unvisited successor
                 IRBlock next = null;
                 for (IRBlock succ : current.getSuccessors()) {
                     if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
@@ -407,21 +359,20 @@ public class StatementRecoverer {
                 continue;
             }
 
-            // Handle structured regions
             switch (info.getType()) {
-                case IF_THEN -> {
+                case IF_THEN: {
                     Statement ifStmt = recoverIfThen(current, info);
                     result.addAll(context.collectPendingStatements());
                     result.add(ifStmt);
-                    // After IF_THEN, continue from merge block
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null && !visited.contains(merge) && !stopBlocks.contains(merge)) {
                         current = merge;
                     } else {
                         current = null;
                     }
+                    break;
                 }
-                case IF_THEN_ELSE -> {
+                case IF_THEN_ELSE: {
                     Statement ifStmt = recoverIfThenElse(current, info);
                     result.addAll(context.collectPendingStatements());
                     result.add(ifStmt);
@@ -431,25 +382,28 @@ public class StatementRecoverer {
                     } else {
                         current = null;
                     }
+                    break;
                 }
-                case WHILE_LOOP -> {
+                case WHILE_LOOP: {
                     result.add(recoverWhileLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                case DO_WHILE_LOOP -> {
+                case DO_WHILE_LOOP: {
                     result.add(recoverDoWhileLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                case FOR_LOOP -> {
+                case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                default -> {
+                default: {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
-                result.addAll(blockStmts);
-                context.setStatements(current, blockStmts);  /* Store for later retrieval */
+                    result.addAll(blockStmts);
+                    context.setStatements(current, blockStmts);
                     context.markProcessed(current);
-                    // Find next unvisited successor
                     IRBlock next = null;
                     for (IRBlock succ : current.getSuccessors()) {
                         if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
@@ -463,6 +417,7 @@ public class StatementRecoverer {
                         }
                     }
                     current = next;
+                    break;
                 }
             }
         }
@@ -503,47 +458,41 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Determine exception type
         SourceType exceptionType;
         if (handler.isCatchAll()) {
-            // catch-all typically catches Throwable or Exception
             exceptionType = new ReferenceSourceType("java/lang/Throwable", Collections.emptyList());
         } else {
             String typeName = handler.getCatchType().getInternalName();
             exceptionType = new ReferenceSourceType(typeName, Collections.emptyList());
         }
 
-        // Generate exception variable name from exception type
         String exceptionVarName = findExceptionVariableName(handlerBlock);
         if (exceptionVarName == null) {
-            // Generate name based on type
-            String simpleName = exceptionType instanceof ReferenceSourceType refType
-                    ? refType.getSimpleName().toLowerCase()
-                    : "ex";
+            String simpleName;
+            if (exceptionType instanceof ReferenceSourceType) {
+                ReferenceSourceType refType = (ReferenceSourceType) exceptionType;
+                simpleName = refType.getSimpleName().toLowerCase();
+            } else {
+                simpleName = "ex";
+            }
             exceptionVarName = simpleName.substring(0, 1) + "_ex";
         }
 
-        // Find and register all SSA values that represent the exception in the handler
-        // This includes the initial exception value from CopyInstruction and any values derived from it
         registerExceptionVariables(handlerBlock, exceptionVarName);
 
-        // Collect all exception-related SSA values for filtering
         Set<SSAValue> exceptionValues = collectExceptionValues(handlerBlock);
 
-        // Recover handler body - directly recover instructions from handler block
         List<Statement> handlerStmts = new ArrayList<>();
 
-        // Process all instructions in the handler block (including terminator)
         for (IRInstruction instr : handlerBlock.getInstructions()) {
-            // Skip CopyInstruction that just copies exception to itself
             if (instr instanceof CopyInstruction) {
                 continue;
             }
 
-            // Skip StoreLocal that stores the exception to a local slot
-            // This is common in bytecode but redundant in decompiled code
-            if (instr instanceof StoreLocalInstruction store) {
-                if (store.getValue() instanceof SSAValue ssaValue) {
+            if (instr instanceof StoreLocalInstruction) {
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                if (store.getValue() instanceof SSAValue) {
+                    SSAValue ssaValue = (SSAValue) store.getValue();
                     if (exceptionValues.contains(ssaValue)) {
                         continue;
                     }
@@ -556,8 +505,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Recursively recover all blocks reachable from the handler
-        // BUT skip if the handler block ends with a goto (meaning empty catch body)
         IRInstruction handlerTerminator = handlerBlock.getTerminator();
         if (!(handlerTerminator instanceof GotoInstruction)) {
             Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
@@ -565,25 +512,25 @@ public class StatementRecoverer {
             recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts);
         }
 
-        // Filter out redundant assignments to exception variable AND unreachable code after return/throw
         List<Statement> filteredStmts = new ArrayList<>();
         boolean reachedTerminator = false;
         for (Statement stmt : handlerStmts) {
-            // Skip everything after a return or throw (unreachable code)
             if (reachedTerminator) {
                 continue;
             }
-            // Skip VarDeclStmt for exception variable (it's implicit in catch)
-            if (stmt instanceof VarDeclStmt varDecl) {
+            if (stmt instanceof VarDeclStmt) {
+                VarDeclStmt varDecl = (VarDeclStmt) stmt;
                 if (varDecl.getName().equals(exceptionVarName)) {
                     continue;
                 }
             }
-            // Skip self-assignments to the exception variable
-            if (stmt instanceof ExprStmt exprStmt) {
-                if (exprStmt.getExpression() instanceof BinaryExpr binExpr) {
+            if (stmt instanceof ExprStmt) {
+                ExprStmt exprStmt = (ExprStmt) stmt;
+                if (exprStmt.getExpression() instanceof BinaryExpr) {
+                    BinaryExpr binExpr = (BinaryExpr) exprStmt.getExpression();
                     if (binExpr.getOperator() == BinaryOperator.ASSIGN) {
-                        if (binExpr.getLeft() instanceof VarRefExpr varRef) {
+                        if (binExpr.getLeft() instanceof VarRefExpr) {
+                            VarRefExpr varRef = (VarRefExpr) binExpr.getLeft();
                             if (varRef.getName().equals(exceptionVarName)) {
                                 continue;
                             }
@@ -593,7 +540,6 @@ public class StatementRecoverer {
             }
             filteredStmts.add(stmt);
 
-            // Check if this statement is a terminator
             if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
                 reachedTerminator = true;
             }
@@ -614,7 +560,6 @@ public class StatementRecoverer {
             if (visited.contains(block)) continue;
             visited.add(block);
 
-            // Recover instructions from this block
             for (IRInstruction instr : block.getInstructions()) {
                 if (instr instanceof CopyInstruction) continue;
                 Statement stmt = recoverInstruction(instr);
@@ -623,31 +568,24 @@ public class StatementRecoverer {
                 }
             }
 
-            // Check for throw terminator
             IRInstruction terminator = block.getTerminator();
-            if (terminator instanceof ThrowInstruction throwInstr) {
+            if (terminator instanceof ThrowInstruction) {
+                ThrowInstruction throwInstr = (ThrowInstruction) terminator;
                 Statement throwStmt = recoverThrow(throwInstr);
                 if (throwStmt != null) {
                     stmts.add(throwStmt);
                 }
-                // Stop recursion after throw
                 continue;
             }
 
-            // Check for return terminator
             if (terminator instanceof ReturnInstruction) {
-                // Stop recursion after return
                 continue;
             }
 
-            // Check for goto terminator - this means exit the catch block
-            // The goto target is the merge point (code after try-catch), not part of catch body
             if (terminator instanceof GotoInstruction) {
-                // Stop recursion - don't follow goto into merge block
                 continue;
             }
 
-            // Continue to successors only for branches/conditionals within the catch
             recoverHandlerBlocks(block.getSuccessors(), visited, stmts);
         }
     }
@@ -657,12 +595,13 @@ public class StatementRecoverer {
      * The first instruction in a catch handler typically stores the exception to a local.
      */
     private String findExceptionVariableName(IRBlock handlerBlock) {
-        // Look for CopyInstruction or StoreLocal that captures the exception
         for (IRInstruction instr : handlerBlock.getInstructions()) {
-            if (instr instanceof StoreLocalInstruction store) {
+            if (instr instanceof StoreLocalInstruction) {
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
                 return "local" + store.getLocalIndex();
             }
-            if (instr instanceof CopyInstruction copy) {
+            if (instr instanceof CopyInstruction) {
+                CopyInstruction copy = (CopyInstruction) instr;
                 SSAValue result = copy.getResult();
                 if (result != null) {
                     String name = context.getExpressionContext().getVariableName(result);
@@ -671,7 +610,6 @@ public class StatementRecoverer {
                     }
                 }
             }
-            // Don't look past the first few instructions
             break;
         }
         return null;
@@ -684,15 +622,16 @@ public class StatementRecoverer {
     private Set<SSAValue> collectExceptionValues(IRBlock handlerBlock) {
         Set<SSAValue> exceptionValues = new HashSet<>();
         for (IRInstruction instr : handlerBlock.getInstructions()) {
-            if (instr instanceof CopyInstruction copy) {
+            if (instr instanceof CopyInstruction) {
+                CopyInstruction copy = (CopyInstruction) instr;
                 if (copy.getResult() != null) {
                     exceptionValues.add(copy.getResult());
                 }
-                if (copy.getSource() instanceof SSAValue ssaSrc) {
+                if (copy.getSource() instanceof SSAValue) {
+                    SSAValue ssaSrc = (SSAValue) copy.getSource();
                     exceptionValues.add(ssaSrc);
                 }
             }
-            // Also check for values with "exc_" prefix (exception naming convention)
             SSAValue result = instr.getResult();
             if (result != null) {
                 String name = result.getName();
@@ -700,14 +639,13 @@ public class StatementRecoverer {
                     exceptionValues.add(result);
                 }
             }
-            // Check for StoreLocal that stores to a local - the value being stored
-            // at the start of a handler is typically the exception
-            if (instr instanceof StoreLocalInstruction store) {
-                if (store.getValue() instanceof SSAValue ssaValue) {
-                    // First StoreLocal in handler is usually storing the exception
+            if (instr instanceof StoreLocalInstruction) {
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                if (store.getValue() instanceof SSAValue) {
+                    SSAValue ssaValue = (SSAValue) store.getValue();
                     exceptionValues.add(ssaValue);
                 }
-                break; // Only first StoreLocal
+                break;
             }
         }
         return exceptionValues;
@@ -718,11 +656,9 @@ public class StatementRecoverer {
      * This ensures they reference the catch parameter instead of undefined "v#" names.
      */
     private void registerExceptionVariables(IRBlock handlerBlock, String exceptionVarName) {
-        // First, find the original exception SSA value (has name starting with "exc_")
         Set<SSAValue> exceptionValuesSet = new HashSet<>();
         findExceptionSSAValues(handlerBlock, exceptionValuesSet, new HashSet<>());
 
-        // Now register all found exception values with the exception variable name
         for (SSAValue excVal : exceptionValuesSet) {
             context.getExpressionContext().setVariableName(excVal, exceptionVarName);
         }
@@ -733,13 +669,10 @@ public class StatementRecoverer {
      * Starts from values with "exc_" prefix and tracks through copies and local stores/loads.
      */
     private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result, Set<IRBlock> visited) {
-        // Track which local slots contain the exception
         Set<Integer> exceptionLocalSlots = new HashSet<>();
 
-        // First pass: find exc_ values and which slots they're stored to
         findExceptionSSAValuesPass1(block, result, exceptionLocalSlots, new HashSet<>());
 
-        // Second pass: find LoadLocal from those slots
         if (!exceptionLocalSlots.isEmpty()) {
             findExceptionSSAValuesPass2(block, result, exceptionLocalSlots, new HashSet<>());
         }
@@ -754,12 +687,13 @@ public class StatementRecoverer {
         visited.add(block);
 
         for (IRInstruction instr : block.getInstructions()) {
-            // For CopyInstruction, if source is an exception value, result is too
-            if (instr instanceof CopyInstruction copy) {
+            if (instr instanceof CopyInstruction) {
+                CopyInstruction copy = (CopyInstruction) instr;
                 SSAValue copyResult = copy.getResult();
                 Value copySource = copy.getSource();
 
-                if (copySource instanceof SSAValue ssaSrc) {
+                if (copySource instanceof SSAValue) {
+                    SSAValue ssaSrc = (SSAValue) copySource;
                     String name = ssaSrc.getName();
                     if (name != null && name.startsWith("exc_")) {
                         result.add(ssaSrc);
@@ -774,10 +708,10 @@ public class StatementRecoverer {
                 }
             }
 
-            // For StoreLocal, check if value being stored is exception
-            // If so, record which local slot now contains the exception
-            if (instr instanceof StoreLocalInstruction store) {
-                if (store.getValue() instanceof SSAValue ssaValue) {
+            if (instr instanceof StoreLocalInstruction) {
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                if (store.getValue() instanceof SSAValue) {
+                    SSAValue ssaValue = (SSAValue) store.getValue();
                     String name = ssaValue.getName();
                     if (name != null && name.startsWith("exc_")) {
                         result.add(ssaValue);
@@ -788,9 +722,9 @@ public class StatementRecoverer {
                 }
             }
 
-            // Check all operands for exc_ prefix values
             for (Value operand : instr.getOperands()) {
-                if (operand instanceof SSAValue ssaOp) {
+                if (operand instanceof SSAValue) {
+                    SSAValue ssaOp = (SSAValue) operand;
                     String name = ssaOp.getName();
                     if (name != null && name.startsWith("exc_")) {
                         result.add(ssaOp);
@@ -799,7 +733,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Recurse into successors
         for (IRBlock succ : block.getSuccessors()) {
             findExceptionSSAValuesPass1(succ, result, exceptionSlots, visited);
         }
@@ -814,8 +747,8 @@ public class StatementRecoverer {
         visited.add(block);
 
         for (IRInstruction instr : block.getInstructions()) {
-            // For LoadLocal from exception slots, mark the result as exception value
-            if (instr instanceof LoadLocalInstruction load) {
+            if (instr instanceof LoadLocalInstruction) {
+                LoadLocalInstruction load = (LoadLocalInstruction) instr;
                 if (exceptionSlots.contains(load.getLocalIndex())) {
                     SSAValue loadResult = load.getResult();
                     if (loadResult != null) {
@@ -825,7 +758,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Recurse into successors
         for (IRBlock succ : block.getSuccessors()) {
             findExceptionSSAValuesPass2(succ, result, exceptionSlots, visited);
         }
@@ -834,7 +766,45 @@ public class StatementRecoverer {
     /**
      * Represents a try region defined by start and end blocks.
      */
-    private record TryRegion(IRBlock start, IRBlock end) {}
+    private static final class TryRegion {
+        private final IRBlock start;
+        private final IRBlock end;
+
+        public TryRegion(IRBlock start, IRBlock end) {
+            this.start = start;
+            this.end = end;
+        }
+
+        public IRBlock start() {
+            return start;
+        }
+
+        public IRBlock end() {
+            return end;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            TryRegion that = (TryRegion) obj;
+            return Objects.equals(start, that.start) &&
+                   Objects.equals(end, that.end);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(start, end);
+        }
+
+        @Override
+        public String toString() {
+            return "TryRegion{" +
+                   "start=" + start +
+                   ", end=" + end +
+                   '}';
+        }
+    }
 
     /**
      * Finds an exception handler whose try region starts at the given block.
@@ -846,7 +816,6 @@ public class StatementRecoverer {
             return null;
         }
         for (ExceptionHandler handler : handlers) {
-            // Compare by object identity or bytecode offset
             IRBlock tryStart = handler.getTryStart();
             if (tryStart == block ||
                 (tryStart != null && tryStart.getBytecodeOffset() == block.getBytecodeOffset())) {
@@ -861,7 +830,6 @@ public class StatementRecoverer {
      */
     private TryCatchStmt recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler,
                                           Set<IRBlock> originalStopBlocks, Set<IRBlock> visited) {
-        // Collect all handlers that cover the same try region
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
         List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
@@ -871,7 +839,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Calculate the stop blocks for the try body: handler blocks + original stop blocks
         Set<IRBlock> tryStopBlocks = new HashSet<>(originalStopBlocks);
         for (ExceptionHandler h : sameRegionHandlers) {
             if (h.getHandlerBlock() != null) {
@@ -879,23 +846,18 @@ public class StatementRecoverer {
             }
         }
 
-        // Also stop at the end of the try region - blocks strictly after tryEnd
         if (mainHandler.getTryEnd() != null) {
-            // The tryEnd offset is exclusive - stop at blocks AFTER the end
             int tryEndOffset = mainHandler.getTryEnd().getBytecodeOffset();
             for (IRBlock block : irMethod.getBlocks()) {
-                // Only stop at blocks strictly after the try region ends
                 if (block.getBytecodeOffset() > tryEndOffset) {
                     tryStopBlocks.add(block);
                 }
             }
         }
 
-        // Recover the try block content
         List<Statement> tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited);
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
-        // Recover catch clauses
         List<CatchClause> catchClauses = new ArrayList<>();
         for (ExceptionHandler h : sameRegionHandlers) {
             CatchClause clause = recoverCatchClause(h);
@@ -905,7 +867,6 @@ public class StatementRecoverer {
         }
 
         if (catchClauses.isEmpty()) {
-            // No valid catch clauses - return null to fall back to normal recovery
             return null;
         }
 
@@ -932,43 +893,49 @@ public class StatementRecoverer {
             if (info == null) {
                 List<Statement> blockStmts = recoverSimpleBlock(current);
                 result.addAll(blockStmts);
-                context.setStatements(current, blockStmts);  /* Store for later retrieval */
+                context.setStatements(current, blockStmts);
                 context.markProcessed(current);
                 current = getNextSequentialBlock(current);
                 continue;
             }
 
             switch (info.getType()) {
-                case IF_THEN -> {
+                case IF_THEN: {
                     Statement ifStmt = recoverIfThen(current, info);
                     result.addAll(context.collectPendingStatements());
                     result.add(ifStmt);
                     current = info.getMergeBlock();
+                    break;
                 }
-                case IF_THEN_ELSE -> {
+                case IF_THEN_ELSE: {
                     Statement ifStmt = recoverIfThenElse(current, info);
                     result.addAll(context.collectPendingStatements());
                     result.add(ifStmt);
                     current = info.getMergeBlock();
+                    break;
                 }
-                case WHILE_LOOP -> {
+                case WHILE_LOOP: {
                     result.add(recoverWhileLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                case DO_WHILE_LOOP -> {
+                case DO_WHILE_LOOP: {
                     result.add(recoverDoWhileLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                case FOR_LOOP -> {
+                case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                default -> {
+                default: {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
-                result.addAll(blockStmts);
-                context.setStatements(current, blockStmts);  /* Store for later retrieval */
+                    result.addAll(blockStmts);
+                    context.setStatements(current, blockStmts);
                     context.markProcessed(current);
                     current = getNextSequentialBlock(current);
+                    break;
                 }
             }
         }
@@ -980,19 +947,15 @@ public class StatementRecoverer {
      * Finds the block to continue from after a try-catch region.
      */
     private IRBlock findBlockAfterTryCatch(ExceptionHandler handler, Set<IRBlock> visited) {
-        // The merge point is typically reachable from both the try end and the catch handler
-        // Look for a successor of the handler block that is after the try region
         IRBlock handlerBlock = handler.getHandlerBlock();
         if (handlerBlock != null) {
             for (IRBlock succ : handlerBlock.getSuccessors()) {
-                // Find a block that's not already visited and not part of the handler
                 if (!visited.contains(succ)) {
                     return succ;
                 }
             }
         }
 
-        // If tryEnd is specified, look for block at that offset
         if (handler.getTryEnd() != null) {
             IRMethod irMethod = context.getIrMethod();
             int endOffset = handler.getTryEnd().getBytecodeOffset();
@@ -1018,43 +981,34 @@ public class StatementRecoverer {
         Set<SSAValue> phiValues = new LinkedHashSet<>();
         Set<String> declaredNames = new HashSet<>();
 
-        // Identify exception handler blocks - don't declare their phi values at method start
         Set<IRBlock> handlerBlocks = collectExceptionHandlerBlocks(method);
 
-        // First pass: Set up variable names for LoadLocal and StoreLocal instructions
-        // This ensures consistent naming across all references to the same local slot
         boolean isStatic = method.isStatic();
 
-        // Collect all types assigned to each local slot for unified type computation
         Map<String, List<SourceType>> localSlotTypes = new HashMap<>();
 
         for (IRBlock block : method.getBlocks()) {
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof LoadLocalInstruction loadLocal) {
+                if (instr instanceof LoadLocalInstruction) {
+                    LoadLocalInstruction loadLocal = (LoadLocalInstruction) instr;
                     if (loadLocal.getResult() != null) {
                         int localIndex = loadLocal.getLocalIndex();
-                        // For instance methods, slot 0 is 'this'
                         String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
                         context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                     }
-                } else if (instr instanceof StoreLocalInstruction storeLocal) {
-                    // Track which local slots are used so we can declare them
+                } else if (instr instanceof StoreLocalInstruction) {
+                    StoreLocalInstruction storeLocal = (StoreLocalInstruction) instr;
                     int localIndex = storeLocal.getLocalIndex();
-                    // For instance methods, slot 0 is 'this' (though storing to 'this' is unusual)
                     String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
 
-                    // Collect the type being stored for unified type computation
                     Value storedValue = storeLocal.getValue();
                     SourceType storedType = typeRecoverer.recoverType(storedValue);
                     if (storedType != null && !storedType.isVoid()) {
                         localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
                     }
 
-                    // If the value being stored is an SSA value, track its name too
-                    // BUT don't rename if the value is a parameter (already named this/arg#)
-                    if (storeLocal.getValue() instanceof SSAValue ssaValue) {
-                        // Check if this value is a parameter (has no definition)
-                        // Parameters have names set by assignParameterNames ("this" or "arg#")
+                    if (storeLocal.getValue() instanceof SSAValue) {
+                        SSAValue ssaValue = (SSAValue) storeLocal.getValue();
                         boolean isParameter = ssaValue.getDefinition() == null && method.getParameters().contains(ssaValue);
                         if (!isParameter) {
                             context.getExpressionContext().setVariableName(ssaValue, localName);
@@ -1064,7 +1018,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Compute unified types for each local slot
         localSlotUnifiedTypes.clear();
         for (Map.Entry<String, List<SourceType>> entry : localSlotTypes.entrySet()) {
             String slotName = entry.getKey();
@@ -1075,15 +1028,12 @@ public class StatementRecoverer {
             }
         }
 
-        // Only collect PHI instructions that need early declaration
         List<PhiInstruction> phiInstructions = new ArrayList<>();
         for (IRBlock block : method.getBlocks()) {
-            // Skip exception handler blocks - their variables are declared inline
             if (handlerBlocks.contains(block)) {
                 continue;
             }
 
-            // Only phi results need early declaration (they merge values from multiple paths)
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 if (phi.getResult() != null) {
                     phiValues.add(phi.getResult());
@@ -1092,16 +1042,13 @@ public class StatementRecoverer {
             }
         }
 
-        // Sort phi values by dependency order
         List<SSAValue> sortedValues = sortByDependencies(phiValues);
 
-        // Create a map from SSAValue to PhiInstruction for lookup
         Map<SSAValue, PhiInstruction> valueToPhiMap = new HashMap<>();
         for (PhiInstruction phi : phiInstructions) {
             valueToPhiMap.put(phi.getResult(), phi);
         }
 
-        // Emit declarations only for phi variables
         for (SSAValue value : sortedValues) {
             PhiInstruction phi = valueToPhiMap.get(value);
             emitPhiDeclaration(phi, statements, declaredNames);
@@ -1129,32 +1076,25 @@ public class StatementRecoverer {
             name = "v" + result.getId();
         }
 
-        // Skip 'this' and parameters - already declared by method signature
         if ("this".equals(name) || name.startsWith("arg")) {
             return;
         }
 
-        // Skip if already declared
         if (declaredNames.contains(name) || context.getExpressionContext().isDeclared(name)) {
             return;
         }
 
-        // Skip PHIs that will be collapsed into ternary expressions
         if (ternaryPhiValues.contains(result)) {
             return;
         }
 
-        // Compute unified type from all incoming phi values
-        // This handles cases where different paths have different types (e.g., Insets vs Graphics)
         SourceType type = computePhiUnifiedType(phi);
 
-        // Mark as declared and materialized so subsequent uses reference this variable
         declaredNames.add(name);
         context.getExpressionContext().markDeclared(name);
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
 
-        // Phi variables get default values (they'll be assigned in control flow)
         Expression initValue = getDefaultValue(type);
         statements.add(new VarDeclStmt(type, name, initValue));
     }
@@ -1166,15 +1106,11 @@ public class StatementRecoverer {
     private SourceType computePhiUnifiedType(PhiInstruction phi) {
         SSAValue result = phi.getResult();
 
-        // First, try to get the unified type from StoreLocal instructions
-        // This is more comprehensive as it includes ALL assignments to the local slot,
-        // not just those that flow into the PHI
         String localName = context.getExpressionContext().getVariableName(result);
         if (localName != null && localSlotUnifiedTypes.containsKey(localName)) {
             return localSlotUnifiedTypes.get(localName);
         }
 
-        // Fallback: collect types from PHI operands
         List<SourceType> incomingTypes = new ArrayList<>();
         for (Value value : phi.getOperands()) {
             SourceType valueType = typeRecoverer.recoverType(value);
@@ -1187,7 +1123,6 @@ public class StatementRecoverer {
             return typeRecoverer.computeCommonType(incomingTypes);
         }
 
-        // Final fallback: use PHI result type
         return typeRecoverer.recoverType(result);
     }
 
@@ -1204,7 +1139,6 @@ public class StatementRecoverer {
         for (ExceptionHandler handler : handlers) {
             IRBlock handlerBlock = handler.getHandlerBlock();
             if (handlerBlock != null) {
-                // Collect the handler block and all blocks reachable from it
                 collectReachableBlocks(handlerBlock, handlerBlocks);
             }
         }
@@ -1242,16 +1176,18 @@ public class StatementRecoverer {
                               Set<SSAValue> visited, Set<SSAValue> inProgress,
                               List<SSAValue> result) {
         if (visited.contains(value)) return;
-        if (inProgress.contains(value)) return; // Cycle detected, skip
+        if (inProgress.contains(value)) return;
 
         inProgress.add(value);
 
-        // Visit dependencies first (operands of the defining instruction)
         IRInstruction def = value.getDefinition();
         if (def != null) {
             for (com.tonic.analysis.ssa.value.Value operand : def.getOperands()) {
-                if (operand instanceof SSAValue ssaDep && allValues.contains(ssaDep)) {
-                    visitForSort(ssaDep, allValues, visited, inProgress, result);
+                if (operand instanceof SSAValue) {
+                    SSAValue ssaDep = (SSAValue) operand;
+                    if (allValues.contains(ssaDep)) {
+                        visitForSort(ssaDep, allValues, visited, inProgress, result);
+                    }
                 }
             }
         }
@@ -1269,40 +1205,24 @@ public class StatementRecoverer {
         if (value == null) return false;
 
         java.util.List<IRInstruction> uses = value.getUses();
-        if (uses.isEmpty()) return true; // Unused - can skip
+        if (uses.isEmpty()) return true;
 
-        // Check if all uses are "consuming" instructions (invoke arguments, throw, return, etc.)
         for (IRInstruction use : uses) {
-            // If used as argument to another invoke - intermediate
             if (use instanceof InvokeInstruction) continue;
-            // If thrown - final use
             if (use instanceof ThrowInstruction) continue;
-            // If returned - final use
             if (use instanceof ReturnInstruction) continue;
-            // If used in arithmetic/logic - intermediate (can inline)
             if (use instanceof BinaryOpInstruction) continue;
             if (use instanceof UnaryOpInstruction) continue;
-            // If used in cast - intermediate
             if (use instanceof CastInstruction) continue;
-            // If used for array length - intermediate
             if (use instanceof ArrayLengthInstruction) continue;
-            // If used for array load - intermediate
             if (use instanceof ArrayLoadInstruction) continue;
-            // If used for field get - intermediate
             if (use instanceof GetFieldInstruction) continue;
-            // If used for instanceof check - intermediate
             if (use instanceof InstanceOfInstruction) continue;
-            // If used for new array size - intermediate
             if (use instanceof NewArrayInstruction) continue;
-            // If used in a branch condition - not intermediate
             if (use instanceof BranchInstruction) return false;
-            // If stored to field - not intermediate
             if (use instanceof PutFieldInstruction) return false;
-            // If stored to array - not intermediate (the array/index are intermediate, but value being stored isn't)
             if (use instanceof ArrayStoreInstruction) return false;
-            // If stored to local - not intermediate
             if (use instanceof StoreLocalInstruction) return false;
-            // If used in a phi - not intermediate (needs to be assigned for phi merge)
             if (use instanceof PhiInstruction) return false;
         }
         return true;
@@ -1331,7 +1251,6 @@ public class StatementRecoverer {
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.isEmpty()) return false;
 
-        // Check if any use is a StoreLocalInstruction
         for (IRInstruction use : uses) {
             if (use instanceof StoreLocalInstruction) {
                 return true;
@@ -1349,7 +1268,8 @@ public class StatementRecoverer {
 
         java.util.List<IRInstruction> uses = value.getUses();
         for (IRInstruction use : uses) {
-            if (use instanceof PhiInstruction phi) {
+            if (use instanceof PhiInstruction) {
+                PhiInstruction phi = (PhiInstruction) use;
                 return phi;
             }
         }
@@ -1360,7 +1280,8 @@ public class StatementRecoverer {
      * Gets a default value for the given type.
      */
     private Expression getDefaultValue(SourceType type) {
-        if (type instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType pst) {
+        if (type instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType) {
+            com.tonic.analysis.source.ast.type.PrimitiveSourceType pst = (com.tonic.analysis.source.ast.type.PrimitiveSourceType) type;
             if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
                 return LiteralExpr.ofBoolean(false);
             } else if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.LONG) {
@@ -1370,7 +1291,6 @@ public class StatementRecoverer {
             } else if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.DOUBLE) {
                 return LiteralExpr.ofDouble(0.0);
             } else {
-                // INT, SHORT, BYTE, CHAR
                 return LiteralExpr.ofInt(0);
             }
         }
@@ -1389,20 +1309,14 @@ public class StatementRecoverer {
         IRBlock current = startBlock;
 
         while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
-            // Check if this block starts a try region BEFORE marking as visited
             ExceptionHandler tryHandler = findHandlerStartingAt(current);
             if (tryHandler != null && !processedTryHandlers.contains(tryHandler)) {
-                // Mark this handler as processed to avoid infinite loops
                 processedTryHandlers.add(tryHandler);
-                // Use a new visited set for try recovery that starts fresh for the try block
                 Set<IRBlock> tryVisited = new HashSet<>(visited);
-                // Emit try-catch for this protected region
                 TryCatchStmt tryCatch = recoverTryCatch(current, tryHandler, stopBlocks, tryVisited);
                 if (tryCatch != null) {
                     result.add(tryCatch);
-                    // Merge the try-visited blocks back
                     visited.addAll(tryVisited);
-                    // Skip to after the try-catch region
                     current = findBlockAfterTryCatch(tryHandler, visited);
                     continue;
                 }
@@ -1418,34 +1332,30 @@ public class StatementRecoverer {
 
             RegionInfo info = analyzer.getRegionInfo(current);
             if (info == null) {
-                // No structural info - recover as simple block
                 List<Statement> blockStmts = recoverSimpleBlock(current);
                 result.addAll(blockStmts);
-                context.setStatements(current, blockStmts);  /* Store for later retrieval */
+                context.setStatements(current, blockStmts);
                 context.markProcessed(current);
                 current = getNextSequentialBlock(current);
                 continue;
             }
 
             switch (info.getType()) {
-                case IF_THEN -> {
+                case IF_THEN: {
                     Statement ifStmt = recoverIfThen(current, info);
-                    // Collect any header statements that were placed in pending
                     result.addAll(context.collectPendingStatements());
                     result.add(ifStmt);
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
                         current = merge;
                     } else {
-                        // Null merge - find next unprocessed block
                         current = findNextUnprocessedBlock(current, visited, stopBlocks);
                     }
+                    break;
                 }
-                case IF_THEN_ELSE -> {
+                case IF_THEN_ELSE: {
                     Statement ifStmt = recoverIfThenElse(current, info);
-                    // Collect any header statements that were placed in pending
                     result.addAll(context.collectPendingStatements());
-                    // Only add if not null (ternary patterns return null)
                     if (ifStmt != null) {
                         result.add(ifStmt);
                     }
@@ -1453,36 +1363,42 @@ public class StatementRecoverer {
                     if (merge != null) {
                         current = merge;
                     } else {
-                        // Null merge - find next unprocessed block
                         current = findNextUnprocessedBlock(current, visited, stopBlocks);
                     }
+                    break;
                 }
-                case WHILE_LOOP -> {
+                case WHILE_LOOP: {
                     result.add(recoverWhileLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                case DO_WHILE_LOOP -> {
+                case DO_WHILE_LOOP: {
                     result.add(recoverDoWhileLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                case FOR_LOOP -> {
+                case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
                     current = info.getLoopExit();
+                    break;
                 }
-                case SWITCH -> {
+                case SWITCH: {
                     result.add(recoverSwitch(current, info));
                     current = findSwitchMerge(info);
+                    break;
                 }
-                case IRREDUCIBLE -> {
+                case IRREDUCIBLE: {
                     result.add(recoverIrreducible(current, info));
                     current = null;
+                    break;
                 }
-                default -> {
+                default: {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
-                result.addAll(blockStmts);
-                context.setStatements(current, blockStmts);  /* Store for later retrieval */
+                    result.addAll(blockStmts);
+                    context.setStatements(current, blockStmts);
                     context.markProcessed(current);
                     current = getNextSequentialBlock(current);
+                    break;
                 }
             }
         }
@@ -1496,24 +1412,20 @@ public class StatementRecoverer {
      * (e.g., if both branches return or throw).
      */
     private IRBlock findNextUnprocessedBlock(IRBlock current, Set<IRBlock> visited, Set<IRBlock> stopBlocks) {
-        // First try: sequential successor (common case)
         IRBlock next = getNextSequentialBlock(current);
         if (next != null && !visited.contains(next) && !stopBlocks.contains(next)) {
             return next;
         }
 
-        // Second try: any unvisited successor
         for (IRBlock succ : current.getSuccessors()) {
             if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
                 return succ;
             }
         }
 
-        // Third try: scan all method blocks for unvisited reachable blocks
         IRMethod method = context.getIrMethod();
         for (IRBlock block : method.getBlocks()) {
             if (!visited.contains(block) && !stopBlocks.contains(block) && !context.isProcessed(block)) {
-                // Check if block is reachable from entry
                 if (isReachableFromEntry(block, method)) {
                     return block;
                 }
@@ -1544,7 +1456,6 @@ public class StatementRecoverer {
     private List<Statement> recoverSimpleBlock(IRBlock block) {
         List<Statement> statements = new ArrayList<>();
 
-        // Process phi instructions as variable assignments
         for (PhiInstruction phi : block.getPhiInstructions()) {
             Statement stmt = recoverPhiAssignment(phi);
             if (stmt != null) {
@@ -1552,7 +1463,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Process regular instructions
         for (IRInstruction instr : block.getInstructions()) {
             Statement stmt = recoverInstruction(instr);
             if (stmt != null) {
@@ -1564,10 +1474,6 @@ public class StatementRecoverer {
     }
 
     private Statement recoverPhiAssignment(PhiInstruction phi) {
-        // Phi declarations are emitted at method start by emitPhiDeclarations()
-        // At block level, we don't need to emit anything for phi nodes
-        // The phi variable is already declared and will be assigned through
-        // the incoming values from predecessor blocks
         return null;
     }
 
@@ -1576,67 +1482,56 @@ public class StatementRecoverer {
             return recoverTerminator(instr);
         }
 
-        if (instr instanceof StoreLocalInstruction store) {
+        if (instr instanceof StoreLocalInstruction) {
+            StoreLocalInstruction store = (StoreLocalInstruction) instr;
             return recoverStoreLocal(store);
         }
 
-        if (instr instanceof PutFieldInstruction putField) {
+        if (instr instanceof PutFieldInstruction) {
+            PutFieldInstruction putField = (PutFieldInstruction) instr;
             return recoverPutField(putField);
         }
 
-        if (instr instanceof ArrayStoreInstruction arrayStore) {
+        if (instr instanceof ArrayStoreInstruction) {
+            ArrayStoreInstruction arrayStore = (ArrayStoreInstruction) instr;
             return recoverArrayStore(arrayStore);
         }
 
-        if (instr instanceof InvokeInstruction invoke) {
-            // Handle <init> calls specially
+        if (instr instanceof InvokeInstruction) {
+            InvokeInstruction invoke = (InvokeInstruction) instr;
             if ("<init>".equals(invoke.getName())) {
                 Expression expr = exprRecoverer.recover(invoke);
-                // For super()/this() calls, emit as expression statement
-                if (expr instanceof MethodCallExpr mce) {
+                if (expr instanceof MethodCallExpr) {
+                    MethodCallExpr mce = (MethodCallExpr) expr;
                     String methodName = mce.getMethodName();
                     if ("super".equals(methodName) || "this".equals(methodName)) {
                         return new ExprStmt(expr);
                     }
                 }
-                // For new X(...) combined expressions, check if it's assigned somewhere
                 if (expr instanceof NewExpr) {
-                    // Skip - will be used where the value is consumed
                     return null;
                 }
                 return new ExprStmt(expr);
             }
-            // Void invocations become expression statements
             if (invoke.getResult() == null || invoke.getResult().getType() == null) {
                 Expression expr = exprRecoverer.recover(invoke);
                 return new ExprStmt(expr);
             }
-            // Skip invoke results that are used by a StoreLocalInstruction
-            // StoreLocalInstruction will handle the emission with proper local name
-            // But we still need to recover and cache the expression so recoverOperand can find it
             SSAValue result = invoke.getResult();
             if (result != null && isUsedByStoreLocal(result)) {
-                // Recover and cache for later use by StoreLocal
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
             }
-            // If the result is unused (no uses), this is a statement with side effects - emit it!
-            // This handles cases like: setProperty(...) where the return value is discarded
             if (result != null && result.getUses().isEmpty()) {
                 Expression expr = exprRecoverer.recover(invoke);
                 return new ExprStmt(expr);
             }
-            // Skip intermediate invoke results that are only used by other instructions
-            // These will be inlined at their usage site
             if (result != null && isIntermediateValue(result)) {
-                // Cache the expression for later inlining
                 exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, exprRecoverer.recover(invoke));
                 return null;
             }
-            // Also skip invoke results that have exactly one use and that use is PutField
-            // These can be safely inlined into the field assignment
             if (result != null && isSingleUsePutField(result)) {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
@@ -1644,27 +1539,19 @@ public class StatementRecoverer {
             }
         }
 
-        // Skip NewInstruction - will be combined with <init> call
         if (instr instanceof NewInstruction) {
-            // Register the pending new and skip emission
             if (instr.getResult() != null) {
-                exprRecoverer.recover(instr); // This registers the pending new
+                exprRecoverer.recover(instr);
             }
             return null;
         }
 
         if (instr instanceof MonitorEnterInstruction || instr instanceof MonitorExitInstruction) {
-            // Monitor instructions handled by synchronized recovery
             return null;
         }
 
-        // Note: ThrowInstruction is handled in recoverTerminator()
-
-        // Skip LoadLocal instructions - they don't need variable declarations
-        // (they load from already-declared locals or parameters like 'this')
-        if (instr instanceof LoadLocalInstruction loadLocal) {
-            // Set the variable name for this SSA value so it's consistent with StoreLocal naming
-            // BUT don't overwrite if already set (e.g., by registerExceptionVariables for catch params)
+        if (instr instanceof LoadLocalInstruction) {
+            LoadLocalInstruction loadLocal = (LoadLocalInstruction) instr;
             if (loadLocal.getResult() != null) {
                 String existingName = context.getExpressionContext().getVariableName(loadLocal.getResult());
                 if (existingName == null) {
@@ -1679,10 +1566,7 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Skip GetField instructions - they produce pure expressions that should be inlined
-        // at usage sites rather than assigned to intermediate variables
         if (instr instanceof GetFieldInstruction) {
-            // Cache the expression but don't emit a declaration
             if (instr.getResult() != null) {
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
@@ -1690,7 +1574,6 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Skip BinaryOp/UnaryOp/Cast that are intermediate - will be inlined at usage sites
         if (instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction || instr instanceof CastInstruction) {
             if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
                 Expression value = exprRecoverer.recover(instr);
@@ -1699,14 +1582,12 @@ public class StatementRecoverer {
             }
         }
 
-        // Handle ConstantInstruction - check if it flows into a PHI
-        if (instr instanceof ConstantInstruction constInstr) {
+        if (instr instanceof ConstantInstruction) {
+            ConstantInstruction constInstr = (ConstantInstruction) instr;
             SSAValue result = constInstr.getResult();
             if (result != null) {
-                // Check if this constant feeds directly into a PHI instruction
                 PhiInstruction targetPhi = getPhiUsingValue(result);
                 if (targetPhi != null && targetPhi.getResult() != null) {
-                    // Emit an assignment to the PHI variable
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                     if (phiVarName != null) {
                         Expression value = exprRecoverer.recover(constInstr);
@@ -1718,18 +1599,13 @@ public class StatementRecoverer {
                         return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
                     }
                 }
-                // Default: cache for inlining at usage sites
                 Expression value = exprRecoverer.recover(constInstr);
                 context.getExpressionContext().cacheExpression(result, value);
             }
             return null;
         }
 
-        // Other instructions with results - may need variable declaration
         if (instr.getResult() != null) {
-            // Skip if result is used by a StoreLocalInstruction
-            // StoreLocalInstruction will handle the emission with proper local name
-            // But we still need to recover and cache the expression so recoverOperand can find it
             if (isUsedByStoreLocal(instr.getResult())) {
                 Expression expr = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), expr);
@@ -1742,13 +1618,14 @@ public class StatementRecoverer {
     }
 
     private Statement recoverTerminator(IRInstruction instr) {
-        if (instr instanceof ReturnInstruction ret) {
+        if (instr instanceof ReturnInstruction) {
+            ReturnInstruction ret = (ReturnInstruction) instr;
             return recoverReturn(ret);
         }
-        if (instr instanceof ThrowInstruction throwInstr) {
+        if (instr instanceof ThrowInstruction) {
+            ThrowInstruction throwInstr = (ThrowInstruction) instr;
             return recoverThrow(throwInstr);
         }
-        // Branch, Goto, Switch handled by structural analysis
         return null;
     }
 
@@ -1756,41 +1633,32 @@ public class StatementRecoverer {
         Expression value = exprRecoverer.recoverOperand(store.getValue());
         int localIndex = store.getLocalIndex();
 
-        // Use consistent local slot naming - slot 0 in instance methods is 'this'
         boolean isStatic = context.getIrMethod().isStatic();
         String name = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
 
-        // Use the pre-computed unified type for this local slot if available
-        // This ensures the declared type is compatible with ALL values assigned to this slot
         SourceType type = getLocalSlotUnifiedType(name);
         if (type == null) {
-            // Fallback to the current expression's type
             type = value.getType();
         }
         if (type == null) {
             type = com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
         }
 
-        // Mark the stored value as materialized - subsequent uses should reference the variable
-        // BUT don't rename parameters (they keep their arg# names)
-        if (store.getValue() instanceof SSAValue ssaValue) {
+        if (store.getValue() instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) store.getValue();
             boolean isParameter = ssaValue.getDefinition() == null &&
                                   context.getIrMethod().getParameters().contains(ssaValue);
             if (!isParameter) {
                 context.getExpressionContext().markMaterialized(ssaValue);
-                // Also set the variable name for this SSA value so lookups work
                 context.getExpressionContext().setVariableName(ssaValue, name);
             }
         }
 
-        // Check if already declared - if so, emit assignment instead of declaration
         if (context.getExpressionContext().isDeclared(name)) {
-            // Create assignment: name = value
             VarRefExpr target = new VarRefExpr(name, type, null);
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
         }
 
-        // Mark as declared and return declaration
         context.getExpressionContext().markDeclared(name);
         return new VarDeclStmt(type, name, value);
     }
@@ -1798,12 +1666,9 @@ public class StatementRecoverer {
     private Statement recoverPutField(PutFieldInstruction putField) {
         Expression receiver = putField.isStatic() ? null : exprRecoverer.recoverOperand(putField.getObjectRef());
 
-        // Get field type for boolean detection
         SourceType fieldType = typeRecoverer.recoverType(putField.getDescriptor());
-        // Pass type hint for boolean detection
         Expression value = exprRecoverer.recoverOperand(putField.getValue(), fieldType);
 
-        // Create field access expression as assignment target
         Expression target = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
                 receiver, putField.getName(), putField.getOwner(), putField.isStatic(), fieldType);
 
@@ -1827,7 +1692,6 @@ public class StatementRecoverer {
         if (ret.isVoidReturn()) {
             return new ReturnStmt(null);
         }
-        // Get method return type for boolean detection
         String methodDesc = context.getIrMethod().getDescriptor();
         SourceType returnType = null;
         if (methodDesc != null) {
@@ -1856,34 +1720,26 @@ public class StatementRecoverer {
         SourceType type = typeRecoverer.recoverType(result);
         Expression value = exprRecoverer.recover(instr);
 
-        // Cache the expression for later reference
         context.getExpressionContext().cacheExpression(result, value);
 
-        // Mark as materialized so subsequent uses will reference this variable
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
 
-        // Check if already declared - if so, emit assignment instead
         if (context.getExpressionContext().isDeclared(name)) {
             VarRefExpr target = new VarRefExpr(name, type, result);
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
         }
 
-        // Mark as declared
         context.getExpressionContext().markDeclared(name);
 
         return new VarDeclStmt(type, name, value);
     }
 
     private Statement recoverIfThen(IRBlock header, RegionInfo info) {
-        // Mark header as processed BEFORE recursing to prevent infinite loops
         context.markProcessed(header);
 
-        // First, recover any instructions in the header block BEFORE the branch
-        // These are setup instructions that should execute before the condition
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
-        // Use negation flag from structural analysis to get correct condition polarity
         Expression condition = recoverCondition(header, info.isConditionNegated());
         Set<IRBlock> stopBlocks = new HashSet<>();
         if (info.getMergeBlock() != null) {
@@ -1895,7 +1751,6 @@ public class StatementRecoverer {
 
         IfStmt ifStmt = new IfStmt(condition, thenBlock, null);
 
-        // If there are header instructions, store them in context for the caller to collect
         if (!headerStmts.isEmpty()) {
             context.addPendingStatements(headerStmts);
         }
@@ -1903,14 +1758,11 @@ public class StatementRecoverer {
     }
 
     private Statement recoverIfThenElse(IRBlock header, RegionInfo info) {
-        // Mark header as processed BEFORE recursing to prevent infinite loops
         context.markProcessed(header);
 
-        // First, recover any instructions in the header block BEFORE the branch
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
 
-        // Use negation flag from structural analysis to get correct condition polarity
         Expression condition = recoverCondition(header, info.isConditionNegated());
         Set<IRBlock> stopBlocks = new HashSet<>();
         if (info.getMergeBlock() != null) {
@@ -1920,21 +1772,14 @@ public class StatementRecoverer {
         List<Statement> thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
         List<Statement> elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
 
-        // Check for boolean return pattern: if(cond) return true/false; else return false/true;
-        // This collapses patterns like isClientThread() { if(x==y) return true; else return false; }
-        // into the simpler: return x == y;
         if (isBooleanReturnPattern(thenStmts, elseStmts)) {
             Statement booleanReturn = collapseToBooleanReturn(condition, thenStmts, elseStmts);
-            // If there are header instructions, we need to include them
             if (!headerStmts.isEmpty()) {
                 context.addPendingStatements(headerStmts);
             }
             return booleanReturn;
         }
 
-        // Check for OR condition chain pattern: if(a) { body } else { if(b) { body } else { ... } }
-        // This merges into: if(a || b) { body } else { ... }
-        // Common pattern when bytecode compiles "if (a || b)" as sequential condition checks
         if (isOrConditionChain(thenStmts, elseStmts)) {
             Statement mergedIf = mergeOrConditions(condition, thenStmts, elseStmts);
             if (!headerStmts.isEmpty()) {
@@ -1943,13 +1788,9 @@ public class StatementRecoverer {
             return mergedIf;
         }
 
-        // Check for PHI-based boolean return pattern:
-        // if(cond) { } else { } followed by merge block with PHI(true,false) + return PHI
-        // This happens when bytecode uses: IF_xCMP -> ICONST_0 -> GOTO merge; ICONST_1 -> merge: IRETURN
         if (isBooleanPhiReturnPattern(thenStmts, elseStmts, info.getMergeBlock())) {
             Statement booleanReturn = collapsePhiToBooleanReturn(condition, info.getMergeBlock());
             if (booleanReturn != null) {
-                // Mark merge block as processed since we're consuming it
                 if (info.getMergeBlock() != null) {
                     context.markProcessed(info.getMergeBlock());
                 }
@@ -1960,39 +1801,26 @@ public class StatementRecoverer {
             }
         }
 
-        // Check for PHI-based boolean assignment pattern:
-        // if(cond) { const 0 } else { const 1 } followed by PHI that merges these constants
-        // This collapses to just using the condition or !condition directly in the expression
-        // Common pattern for: x & !flag where flag is a method call result
         PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(header, info);
         if (booleanPhi != null) {
             collapseToBooleanPhiExpressionIR(condition, booleanPhi, info.getThenBlock());
-            // Mark the then/else blocks as processed since we're consuming them
             context.markProcessed(info.getThenBlock());
             context.markProcessed(info.getElseBlock());
-            // Return null to skip emitting the if-else - the boolean expression is cached for the PHI
             if (!headerStmts.isEmpty()) {
                 context.addPendingStatements(headerStmts);
-                return new BlockStmt(new ArrayList<>()); // Empty block to hold pending statements
+                return new BlockStmt(new ArrayList<>());
             }
             return null;
         }
 
-        // Check for general ternary PHI pattern:
-        // if(cond) { value1 } else { value2 } followed by PHI that merges these values
-        // This happens with: x == null ? "" : x  which compiles to if-else with PHI merge
-        // We collapse this to a ternary expression: cond ? thenValue : elseValue
         PhiInstruction ternaryPhi = findTernaryPhiPattern(header, info);
         if (ternaryPhi != null) {
             collapseToTernaryPhiExpression(condition, ternaryPhi, info.getThenBlock(), info.getElseBlock());
-            // Mark the then/else blocks as processed since we're consuming them
             context.markProcessed(info.getThenBlock());
             context.markProcessed(info.getElseBlock());
-            // Add header statements to pending for the caller to collect
             if (!headerStmts.isEmpty()) {
                 context.addPendingStatements(headerStmts);
             }
-            // Return null to skip emitting the if-else - the ternary expression is cached for the PHI
             return null;
         }
 
@@ -2001,7 +1829,6 @@ public class StatementRecoverer {
 
         IfStmt ifStmt = new IfStmt(condition, thenBlock, elseBlock);
 
-        // If there are header instructions, store them in context for the caller to collect
         if (!headerStmts.isEmpty()) {
             context.addPendingStatements(headerStmts);
         }
@@ -2015,7 +1842,6 @@ public class StatementRecoverer {
     private List<Statement> recoverBlockInstructions(IRBlock block) {
         List<Statement> statements = new ArrayList<>();
 
-        // Process phi instructions as variable assignments
         for (PhiInstruction phi : block.getPhiInstructions()) {
             Statement stmt = recoverPhiAssignment(phi);
             if (stmt != null) {
@@ -2023,10 +1849,9 @@ public class StatementRecoverer {
             }
         }
 
-        // Process regular instructions (excluding terminators)
         for (IRInstruction instr : block.getInstructions()) {
             if (instr.isTerminator()) {
-                continue; // Skip terminators - handled by control flow
+                continue;
             }
             Statement stmt = recoverInstruction(instr);
             if (stmt != null) {
@@ -2038,14 +1863,12 @@ public class StatementRecoverer {
     }
 
     private Statement recoverWhileLoop(IRBlock header, RegionInfo info) {
-        // Mark header as processed BEFORE recursing to prevent infinite loops
         context.markProcessed(header);
 
-        // Use negation flag from structural analysis to get correct condition polarity
         Expression condition = recoverCondition(header, info.isConditionNegated());
 
         Set<IRBlock> stopBlocks = new HashSet<>();
-        stopBlocks.add(header); // Don't re-enter header
+        stopBlocks.add(header);
         if (info.getLoopExit() != null) {
             stopBlocks.add(info.getLoopExit());
         }
@@ -2057,7 +1880,6 @@ public class StatementRecoverer {
     }
 
     private Statement recoverDoWhileLoop(IRBlock header, RegionInfo info) {
-        // Mark header as processed BEFORE recursing to prevent infinite loops
         context.markProcessed(header);
 
         Set<IRBlock> stopBlocks = new HashSet<>();
@@ -2069,38 +1891,34 @@ public class StatementRecoverer {
         List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
         BlockStmt body = new BlockStmt(bodyStmts);
 
-        // Use negation flag from structural analysis to get correct condition polarity
         Expression condition = recoverCondition(header, info.isConditionNegated());
 
         return new DoWhileStmt(body, condition);
     }
 
     private Statement recoverForLoop(IRBlock header, RegionInfo info) {
-        // For simplicity, recover as while loop
-        // Full for-loop recovery would require detecting init and update expressions
         return recoverWhileLoop(header, info);
     }
 
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
-        // Mark header as processed BEFORE recursing to prevent infinite loops
         context.markProcessed(header);
 
         IRInstruction terminator = header.getTerminator();
-        if (!(terminator instanceof SwitchInstruction sw)) {
+        if (!(terminator instanceof SwitchInstruction)) {
             return new IRRegionStmt(List.of(header));
         }
+
+        SwitchInstruction sw = (SwitchInstruction) terminator;
 
         Expression selector = exprRecoverer.recoverOperand(sw.getKey());
         List<SwitchCase> cases = new ArrayList<>();
 
-        // Find merge point for switch
         IRBlock mergeBlock = findSwitchMerge(info);
         Set<IRBlock> stopBlocks = new HashSet<>();
         if (mergeBlock != null) {
             stopBlocks.add(mergeBlock);
         }
 
-        // Recover each case
         Map<IRBlock, List<Integer>> targetToCases = new LinkedHashMap<>();
         for (Map.Entry<Integer, IRBlock> entry : info.getSwitchCases().entrySet()) {
             targetToCases.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
@@ -2114,7 +1932,6 @@ public class StatementRecoverer {
             cases.add(SwitchCase.of(labels, caseStmts));
         }
 
-        // Default case
         if (info.getDefaultTarget() != null) {
             List<Statement> defaultStmts = recoverBlockSequence(info.getDefaultTarget(), stopBlocks);
             cases.add(SwitchCase.defaultCase(defaultStmts));
@@ -2124,7 +1941,6 @@ public class StatementRecoverer {
     }
 
     private Statement recoverIrreducible(IRBlock header, RegionInfo info) {
-        // Fall back to IR region for irreducible control flow
         Set<IRBlock> blocks = new HashSet<>();
         collectReachableBlocks(header, blocks, new HashSet<>());
         return new IRRegionStmt(new ArrayList<>(blocks));
@@ -2132,7 +1948,8 @@ public class StatementRecoverer {
 
     private Expression recoverCondition(IRBlock block, boolean negate) {
         IRInstruction terminator = block.getTerminator();
-        if (terminator instanceof BranchInstruction branch) {
+        if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) terminator;
             Expression left = exprRecoverer.recoverOperand(branch.getLeft());
             CompareOp condition = branch.getCondition();
 
@@ -2147,9 +1964,7 @@ public class StatementRecoverer {
                     op, left, right, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
             }
 
-            // Single-operand conditions (IFEQ, IFNE, IFNULL, IFNONNULL, etc.)
             if (OperatorMapper.isNullCheck(condition)) {
-                // For null checks, compare to null explicitly
                 Expression nullExpr = LiteralExpr.ofNull();
                 com.tonic.analysis.source.ast.expr.BinaryOperator op =
                     OperatorMapper.mapCompareOp(condition);
@@ -2160,25 +1975,19 @@ public class StatementRecoverer {
                     op, left, nullExpr, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
             }
 
-            // Check if the expression is boolean-typed
-            // If so, simplify: "x == 0" becomes "!x", "x != 0" becomes "x"
-            // Also check the SSAValue's type directly as a fallback
             if (isBooleanExpression(left) || isBooleanSSAValue(branch.getLeft())) {
-                // NE/IFNE to 0 means we want true (branch taken if value is non-zero/true)
                 boolean wantTrue = (condition == CompareOp.NE || condition == CompareOp.IFNE);
                 if (negate) {
                     wantTrue = !wantTrue;
                 }
                 if (wantTrue) {
-                    return left; // expr != 0 -> expr
+                    return left;
                 } else {
-                    // expr == 0 -> !expr
                     return new UnaryExpr(UnaryOperator.NOT, left,
                         com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
                 }
             }
 
-            // For zero comparisons (IFEQ, IFNE, etc.), compare to 0
             com.tonic.analysis.source.ast.expr.BinaryOperator op =
                 OperatorMapper.mapCompareOp(condition);
             if (negate) {
@@ -2195,16 +2004,14 @@ public class StatementRecoverer {
      * Checks if an expression is boolean-typed.
      */
     private boolean isBooleanExpression(Expression expr) {
-        // Check expression type directly
         SourceType type = expr.getType();
         if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
             return true;
         }
 
-        // Check for method calls that return boolean
-        if (expr instanceof MethodCallExpr mce) {
+        if (expr instanceof MethodCallExpr) {
+            MethodCallExpr mce = (MethodCallExpr) expr;
             String name = mce.getMethodName();
-            // Common boolean methods
             if (name.startsWith("is") || name.startsWith("has") || name.startsWith("can") ||
                 name.startsWith("should") || name.startsWith("was") ||
                 "equals".equals(name) || "contains".equals(name) ||
@@ -2214,18 +2021,17 @@ public class StatementRecoverer {
             }
         }
 
-        // Check for field accesses with boolean type
-        if (expr instanceof FieldAccessExpr fae) {
+        if (expr instanceof FieldAccessExpr) {
+            FieldAccessExpr fae = (FieldAccessExpr) expr;
             SourceType fieldType = fae.getType();
             if (fieldType == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
                 return true;
             }
         }
 
-        // Check for variable references to boolean parameters
-        if (expr instanceof VarRefExpr vre) {
+        if (expr instanceof VarRefExpr) {
+            VarRefExpr vre = (VarRefExpr) expr;
             String varName = vre.getName();
-            // Check if this is a parameter reference (arg0, arg1, etc.)
             if (varName != null && varName.startsWith("arg")) {
                 try {
                     int argIndex = Integer.parseInt(varName.substring(3));
@@ -2233,7 +2039,6 @@ public class StatementRecoverer {
                         return true;
                     }
                 } catch (NumberFormatException ignored) {
-                    // Not a valid arg index
                 }
             }
         }
@@ -2246,14 +2051,12 @@ public class StatementRecoverer {
      * This is a fallback when the recovered expression type isn't detected as boolean.
      */
     private boolean isBooleanSSAValue(com.tonic.analysis.ssa.value.Value value) {
-        if (value instanceof com.tonic.analysis.ssa.value.SSAValue ssaValue) {
-            // Check if IR type is already BOOLEAN
+        if (value instanceof com.tonic.analysis.ssa.value.SSAValue) {
+            com.tonic.analysis.ssa.value.SSAValue ssaValue = (com.tonic.analysis.ssa.value.SSAValue) value;
             com.tonic.analysis.ssa.type.IRType type = ssaValue.getType();
             if (type == com.tonic.analysis.ssa.type.PrimitiveType.BOOLEAN) {
                 return true;
             }
-            // Check if defined by an instruction that produces boolean semantically
-            // (e.g., instanceof uses INT in JVM but is semantically boolean)
             com.tonic.analysis.ssa.ir.IRInstruction def = ssaValue.getDefinition();
             if (def instanceof com.tonic.analysis.ssa.ir.InstanceOfInstruction) {
                 return true;
@@ -2294,11 +2097,9 @@ public class StatementRecoverer {
             char c = descriptor.charAt(index);
             if (c == 'B' || c == 'C' || c == 'D' || c == 'F' ||
                 c == 'I' || c == 'J' || c == 'S' || c == 'Z') {
-                // Primitive type
                 types.add(String.valueOf(c));
                 index++;
             } else if (c == 'L') {
-                // Object type - find the semicolon
                 int semicolon = descriptor.indexOf(';', index);
                 if (semicolon > index) {
                     types.add(descriptor.substring(index, semicolon + 1));
@@ -2307,7 +2108,6 @@ public class StatementRecoverer {
                     break;
                 }
             } else if (c == '[') {
-                // Array type - collect all dimensions and base type
                 int arrayStart = index;
                 while (index < end && descriptor.charAt(index) == '[') {
                     index++;
@@ -2323,7 +2123,6 @@ public class StatementRecoverer {
                             break;
                         }
                     } else {
-                        // Primitive array
                         types.add(descriptor.substring(arrayStart, index + 1));
                         index++;
                     }
@@ -2341,15 +2140,21 @@ public class StatementRecoverer {
 
     private com.tonic.analysis.source.ast.expr.BinaryOperator negateOperator(
             com.tonic.analysis.source.ast.expr.BinaryOperator op) {
-        return switch (op) {
-            case EQ -> com.tonic.analysis.source.ast.expr.BinaryOperator.NE;
-            case NE -> com.tonic.analysis.source.ast.expr.BinaryOperator.EQ;
-            case LT -> com.tonic.analysis.source.ast.expr.BinaryOperator.GE;
-            case GE -> com.tonic.analysis.source.ast.expr.BinaryOperator.LT;
-            case GT -> com.tonic.analysis.source.ast.expr.BinaryOperator.LE;
-            case LE -> com.tonic.analysis.source.ast.expr.BinaryOperator.GT;
-            default -> op; // For non-relational operators, wrap in NOT
-        };
+        if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.EQ) {
+            return com.tonic.analysis.source.ast.expr.BinaryOperator.NE;
+        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.NE) {
+            return com.tonic.analysis.source.ast.expr.BinaryOperator.EQ;
+        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.LT) {
+            return com.tonic.analysis.source.ast.expr.BinaryOperator.GE;
+        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.GE) {
+            return com.tonic.analysis.source.ast.expr.BinaryOperator.LT;
+        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.GT) {
+            return com.tonic.analysis.source.ast.expr.BinaryOperator.LE;
+        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.LE) {
+            return com.tonic.analysis.source.ast.expr.BinaryOperator.GT;
+        } else {
+            return op;
+        }
     }
 
     private IRBlock getNextSequentialBlock(IRBlock block) {
@@ -2360,7 +2165,6 @@ public class StatementRecoverer {
     }
 
     private IRBlock findSwitchMerge(RegionInfo info) {
-        // Find the common successor of all switch targets
         Set<IRBlock> allTargets = new HashSet<>(info.getSwitchCases().values());
         if (info.getDefaultTarget() != null) {
             allTargets.add(info.getDefaultTarget());
@@ -2386,7 +2190,6 @@ public class StatementRecoverer {
     }
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result, Set<IRBlock> stopBlocks) {
-        // Use iterative approach with worklist to avoid stack overflow on deep CFGs
         Deque<IRBlock> worklist = new ArrayDeque<>();
         worklist.add(start);
 
@@ -2413,14 +2216,16 @@ public class StatementRecoverer {
         Statement thenStmt = thenStmts.get(0);
         Statement elseStmt = elseStmts.get(0);
 
-        if (!(thenStmt instanceof ReturnStmt thenRet)) {
+        if (!(thenStmt instanceof ReturnStmt)) {
             return false;
         }
-        if (!(elseStmt instanceof ReturnStmt elseRet)) {
+        if (!(elseStmt instanceof ReturnStmt)) {
             return false;
         }
 
-        // Check if both return boolean literals (true/false or 0/1)
+        ReturnStmt thenRet = (ReturnStmt) thenStmt;
+        ReturnStmt elseRet = (ReturnStmt) elseStmt;
+
         return isBooleanLiteral(thenRet.getValue()) && isBooleanLiteral(elseRet.getValue());
     }
 
@@ -2428,12 +2233,14 @@ public class StatementRecoverer {
      * Checks if an expression is a boolean literal (true/false or integer 0/1).
      */
     private boolean isBooleanLiteral(Expression expr) {
-        if (expr instanceof LiteralExpr lit) {
+        if (expr instanceof LiteralExpr) {
+            LiteralExpr lit = (LiteralExpr) expr;
             Object val = lit.getValue();
             if (val instanceof Boolean) {
                 return true;
             }
-            if (val instanceof Integer i) {
+            if (val instanceof Integer) {
+                Integer i = (Integer) val;
                 return i == 0 || i == 1;
             }
         }
@@ -2444,12 +2251,15 @@ public class StatementRecoverer {
      * Gets the boolean value from a literal expression.
      */
     private boolean getBooleanValue(Expression expr) {
-        if (expr instanceof LiteralExpr lit) {
+        if (expr instanceof LiteralExpr) {
+            LiteralExpr lit = (LiteralExpr) expr;
             Object val = lit.getValue();
-            if (val instanceof Boolean b) {
+            if (val instanceof Boolean) {
+                Boolean b = (Boolean) val;
                 return b;
             }
-            if (val instanceof Integer i) {
+            if (val instanceof Integer) {
+                Integer i = (Integer) val;
                 return i != 0;
             }
         }
@@ -2467,8 +2277,6 @@ public class StatementRecoverer {
         ReturnStmt thenRet = (ReturnStmt) thenStmts.get(0);
         boolean thenValue = getBooleanValue(thenRet.getValue());
 
-        // If then returns true, the condition is the return value
-        // If then returns false, the negated condition is the return value
         if (thenValue) {
             return new ReturnStmt(condition);
         } else {
@@ -2483,7 +2291,6 @@ public class StatementRecoverer {
      * and the merge block has a PHI of boolean values followed by return.
      */
     private boolean isBooleanPhiReturnPattern(List<Statement> thenStmts, List<Statement> elseStmts, IRBlock mergeBlock) {
-        // Both branches should be empty or trivial (just variable declarations)
         if (thenStmts.size() > 1 || elseStmts.size() > 1) {
             return false;
         }
@@ -2492,7 +2299,6 @@ public class StatementRecoverer {
             return false;
         }
 
-        // Merge block should have exactly one PHI and one return
         if (mergeBlock.getPhiInstructions().size() != 1) {
             return false;
         }
@@ -2502,8 +2308,6 @@ public class StatementRecoverer {
             return false;
         }
 
-        // Check if PHI has boolean values (0/1 or true/false)
-        // The operands may be SSAValues defined by ConstantInstructions
         PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
         for (com.tonic.analysis.ssa.value.Value val : phi.getOperands()) {
             Integer boolValue = extractBooleanConstant(val);
@@ -2512,7 +2316,6 @@ public class StatementRecoverer {
             }
         }
 
-        // Check if return uses the PHI result
         ReturnInstruction ret = (ReturnInstruction) mergeInstrs.get(0);
         return ret.getReturnValue() == phi.getResult();
     }
@@ -2528,15 +2331,11 @@ public class StatementRecoverer {
 
         PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
 
-        // Determine which value corresponds to "true" path
-        // The PHI has values from different predecessors
-        // We need to figure out if the "then" path contributes 0 or 1
         List<com.tonic.analysis.ssa.value.Value> operands = phi.getOperands();
         if (operands.size() != 2) {
             return null;
         }
 
-        // Get the values - handle SSAValues defined by ConstantInstructions
         Integer val0 = extractBooleanConstant(operands.get(0));
         Integer val1 = extractBooleanConstant(operands.get(1));
 
@@ -2544,20 +2343,13 @@ public class StatementRecoverer {
             return null;
         }
 
-        // If both are the same, no boolean pattern
         if (val0 == val1) {
             return null;
         }
 
-        // The condition leads to different branches - we need to figure out the polarity
-        // For now, assume the first operand corresponds to the "true" branch of the condition
-        // If first operand is 1 (true), return condition as-is
-        // If first operand is 0 (false), negate the condition
         if (val0 == 1) {
             return new ReturnStmt(condition);
         } else {
-            // Instead of wrapping in !(expr), try to invert the comparison operator
-            // This transforms !(a != b) into a == b, which is cleaner
             Expression negatedCondition = invertCondition(condition);
             return new ReturnStmt(negatedCondition);
         }
@@ -2569,7 +2361,8 @@ public class StatementRecoverer {
      * For other expressions, wraps in NOT.
      */
     private Expression invertCondition(Expression condition) {
-        if (condition instanceof com.tonic.analysis.source.ast.expr.BinaryExpr binExpr) {
+        if (condition instanceof com.tonic.analysis.source.ast.expr.BinaryExpr) {
+            com.tonic.analysis.source.ast.expr.BinaryExpr binExpr = (com.tonic.analysis.source.ast.expr.BinaryExpr) condition;
             BinaryOperator op = binExpr.getOperator();
             BinaryOperator inverted = negateOperator(op);
             if (inverted != op) {
@@ -2577,7 +2370,6 @@ public class StatementRecoverer {
                     inverted, binExpr.getLeft(), binExpr.getRight(), binExpr.getType());
             }
         }
-        // Fallback to NOT wrapper
         return new UnaryExpr(UnaryOperator.NOT, condition,
                 com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
     }
@@ -2587,7 +2379,8 @@ public class StatementRecoverer {
      * Handles both direct IntConstants and SSAValues defined by ConstantInstructions.
      */
     private Integer extractBooleanConstant(com.tonic.analysis.ssa.value.Value val) {
-        if (val instanceof com.tonic.analysis.ssa.value.IntConstant ic) {
+        if (val instanceof com.tonic.analysis.ssa.value.IntConstant) {
+            com.tonic.analysis.ssa.value.IntConstant ic = (com.tonic.analysis.ssa.value.IntConstant) val;
             int v = ic.getValue();
             if (v == 0 || v == 1) {
                 return v;
@@ -2595,12 +2388,14 @@ public class StatementRecoverer {
             return null;
         }
 
-        if (val instanceof com.tonic.analysis.ssa.value.SSAValue ssaVal) {
-            // Check if this SSA value is defined by a constant instruction
+        if (val instanceof com.tonic.analysis.ssa.value.SSAValue) {
+            com.tonic.analysis.ssa.value.SSAValue ssaVal = (com.tonic.analysis.ssa.value.SSAValue) val;
             IRInstruction def = ssaVal.getDefinition();
-            if (def instanceof ConstantInstruction constInstr) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction constInstr = (ConstantInstruction) def;
                 com.tonic.analysis.ssa.value.Constant c = constInstr.getConstant();
-                if (c instanceof com.tonic.analysis.ssa.value.IntConstant ic) {
+                if (c instanceof com.tonic.analysis.ssa.value.IntConstant) {
+                    com.tonic.analysis.ssa.value.IntConstant ic = (com.tonic.analysis.ssa.value.IntConstant) c;
                     int v = ic.getValue();
                     if (v == 0 || v == 1) {
                         return v;
@@ -2612,32 +2407,30 @@ public class StatementRecoverer {
         return null;
     }
 
-    // ========== OR/AND Condition Merging ==========
-
     /**
      * Checks if the then/else branches form an OR condition chain pattern.
      * Pattern: if(a) { body } else { if(b) { sameBody } ... }
      * This is how bytecode represents "if (a || b) { body }".
      */
     private boolean isOrConditionChain(List<Statement> thenStmts, List<Statement> elseStmts) {
-        // The else branch must be a single IfStmt
         if (elseStmts.size() != 1) {
             return false;
         }
-        if (!(elseStmts.get(0) instanceof IfStmt nestedIf)) {
+        if (!(elseStmts.get(0) instanceof IfStmt)) {
             return false;
         }
 
-        // Get the then branch of the nested if
+        IfStmt nestedIf = (IfStmt) elseStmts.get(0);
+
         Statement nestedThenBranch = nestedIf.getThenBranch();
         List<Statement> nestedThen;
-        if (nestedThenBranch instanceof BlockStmt nestedBlock) {
+        if (nestedThenBranch instanceof BlockStmt) {
+            BlockStmt nestedBlock = (BlockStmt) nestedThenBranch;
             nestedThen = nestedBlock.getStatements();
         } else {
             nestedThen = List.of(nestedThenBranch);
         }
 
-        // Compare if the then bodies are structurally equivalent
         return statementsEqual(thenStmts, nestedThen);
     }
 
@@ -2651,32 +2444,28 @@ public class StatementRecoverer {
         IfStmt nestedIf = (IfStmt) elseStmts.get(0);
         Expression cond2 = nestedIf.getCondition();
 
-        // Create merged condition: cond1 || cond2
         Expression merged = new BinaryExpr(BinaryOperator.OR, cond1, cond2,
                 com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
 
-        // Check if the nested else is also a chain (for a || b || c patterns)
         Statement nestedElseBranch = nestedIf.getElseBranch();
         List<Statement> finalElseStmts = null;
 
         if (nestedElseBranch != null) {
             List<Statement> nestedElse;
-            if (nestedElseBranch instanceof BlockStmt nestedBlock) {
+            if (nestedElseBranch instanceof BlockStmt) {
+                BlockStmt nestedBlock = (BlockStmt) nestedElseBranch;
                 nestedElse = nestedBlock.getStatements();
             } else {
                 nestedElse = List.of(nestedElseBranch);
             }
 
-            // Check if we can continue merging (a || b || c)
             if (isOrConditionChain(thenStmts, nestedElse)) {
-                // Recursively merge
                 Statement furtherMerged = mergeOrConditions(merged, thenStmts, nestedElse);
                 return furtherMerged;
             }
             finalElseStmts = nestedElse;
         }
 
-        // Create the final merged if statement
         BlockStmt thenBlock = new BlockStmt(thenStmts);
         BlockStmt elseBlock = (finalElseStmts != null && !finalElseStmts.isEmpty())
                 ? new BlockStmt(finalElseStmts) : null;
@@ -2707,13 +2496,8 @@ public class StatementRecoverer {
         if (a == null || b == null) return false;
         if (a.getClass() != b.getClass()) return false;
 
-        // Compare by string representation for simplicity
-        // This is a heuristic - for bytecode decompilation it's usually sufficient
-        // because the same bytecode patterns produce the same AST structure
         return a.toString().equals(b.toString());
     }
-
-    // ========== Boolean PHI Assignment Pattern ==========
 
     /**
      * Finds a PHI instruction that is assigned boolean constants (0/1) from the then/else branches.
@@ -2739,7 +2523,6 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Check if then block only contains a constant instruction (and goto)
         Integer thenConst = extractSingleBooleanConstant(thenBlock);
         Integer elseConst = extractSingleBooleanConstant(elseBlock);
 
@@ -2747,12 +2530,10 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Values should be different (one 0, one 1)
         if (thenConst.equals(elseConst)) {
             return null;
         }
 
-        // Find the PHI in the merge block that receives these constants
         for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
             if (phiReceivesBooleanConstants(phi, thenBlock, elseBlock)) {
                 return phi;
@@ -2769,20 +2550,17 @@ public class StatementRecoverer {
     private Integer extractSingleBooleanConstant(IRBlock block) {
         List<IRInstruction> instructions = block.getInstructions();
 
-        // Should have 1 or 2 instructions: constant, and optionally a goto
         if (instructions.isEmpty() || instructions.size() > 2) {
             return null;
         }
 
-        // Find the constant instruction
         ConstantInstruction constInstr = null;
         for (IRInstruction instr : instructions) {
-            if (instr instanceof ConstantInstruction ci) {
+            if (instr instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) instr;
                 constInstr = ci;
             } else if (instr instanceof GotoInstruction) {
-                // OK, expected
             } else if (!instr.isTerminator()) {
-                // Other non-terminator instruction - not a pure constant block
                 return null;
             }
         }
@@ -2791,7 +2569,6 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Extract the boolean value from the constant
         return extractBooleanConstant(constInstr.getConstant());
     }
 
@@ -2806,7 +2583,6 @@ public class StatementRecoverer {
             return false;
         }
 
-        // Check that the operands come from the then/else blocks
         boolean hasThen = incomingBlocks.contains(thenBlock);
         boolean hasElse = incomingBlocks.contains(elseBlock);
 
@@ -2814,7 +2590,6 @@ public class StatementRecoverer {
             return false;
         }
 
-        // Check that both operands are boolean constants
         for (com.tonic.analysis.ssa.value.Value val : operands) {
             Integer constVal = extractBooleanConstant(val);
             if (constVal == null) {
@@ -2832,8 +2607,6 @@ public class StatementRecoverer {
         List<com.tonic.analysis.ssa.value.Value> operands = phi.getOperands();
         Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
 
-        // PHI operands and incoming blocks are correlated by index
-        // Convert set to list for indexed access (order matches operand order)
         List<IRBlock> blockList = new ArrayList<>(incomingBlocks);
         for (int i = 0; i < blockList.size(); i++) {
             if (blockList.get(i) == thenBlock) {
@@ -2851,24 +2624,18 @@ public class StatementRecoverer {
      * in expressions like (x & i), it becomes (x & !cond).
      */
     private void collapseToBooleanPhiExpressionIR(Expression condition, PhiInstruction phi, IRBlock thenBlock) {
-        // Determine which branch contributes 1 (true) to know if we need negation
         int thenVal = getThenBlockBooleanValue(phi, thenBlock);
 
         Expression booleanExpr;
         if (thenVal == 1) {
-            // Then contributes 1 (true), so the expression is just the condition
             booleanExpr = condition;
         } else {
-            // Then contributes 0 (false), else contributes 1 (true), so the expression is !condition
             booleanExpr = invertCondition(condition);
         }
 
-        // Cache this expression for the PHI result so it gets inlined at usage sites
         SSAValue phiResult = phi.getResult();
         if (phiResult != null) {
             context.getExpressionContext().cacheExpression(phiResult, booleanExpr);
-            // Un-mark as materialized so it gets inlined rather than referenced as a variable
-            // The PHI was declared at method start, but we want to inline the boolean expression
             context.getExpressionContext().unmarkMaterialized(phiResult);
         }
     }
@@ -2886,14 +2653,12 @@ public class StatementRecoverer {
                 continue;
             }
 
-            // Check for boolean PHI pattern
             PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(block, info);
             if (booleanPhi != null && booleanPhi.getResult() != null) {
                 ternaryPhiValues.add(booleanPhi.getResult());
                 continue;
             }
 
-            // Check for general ternary PHI pattern
             PhiInstruction ternaryPhi = findTernaryPhiPatternForPrepass(info);
             if (ternaryPhi != null && ternaryPhi.getResult() != null) {
                 ternaryPhiValues.add(ternaryPhi.getResult());
@@ -2914,7 +2679,6 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Check if then block only produces a single value (constant, field load, etc.)
         SSAValue thenValue = extractSingleProducedValue(thenBlock);
         SSAValue elseValue = extractSingleProducedValue(elseBlock);
 
@@ -2922,7 +2686,6 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Find the PHI in the merge block that receives these values
         for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
             if (phiReceivesValues(phi, thenBlock, elseBlock, thenValue, elseValue)) {
                 return phi;
@@ -2952,7 +2715,6 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Check if then block only produces a single value (constant, field load, etc.)
         SSAValue thenValue = extractSingleProducedValue(thenBlock);
         SSAValue elseValue = extractSingleProducedValue(elseBlock);
 
@@ -2960,7 +2722,6 @@ public class StatementRecoverer {
             return null;
         }
 
-        // Find the PHI in the merge block that receives these values
         for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
             if (phiReceivesValues(phi, thenBlock, elseBlock, thenValue, elseValue)) {
                 return phi;
@@ -2980,19 +2741,15 @@ public class StatementRecoverer {
 
         SSAValue producedValue = null;
         for (IRInstruction instr : instructions) {
-            // Skip goto terminators
             if (instr instanceof GotoInstruction) {
                 continue;
             }
-            // Skip other terminators
             if (instr.isTerminator()) {
                 continue;
             }
 
-            // This instruction produces a value
             SSAValue result = instr.getResult();
             if (result != null) {
-                // If we already found a produced value, this is not a single-value block
                 if (producedValue != null) {
                     return null;
                 }
@@ -3014,16 +2771,13 @@ public class StatementRecoverer {
             return false;
         }
 
-        // Check that the PHI receives values from exactly the then and else blocks
         if (!incomingBlocks.contains(thenBlock) || !incomingBlocks.contains(elseBlock)) {
             return false;
         }
 
-        // Check that the PHI receives the expected values from each block
         Value phiThenValue = phi.getIncoming(thenBlock);
         Value phiElseValue = phi.getIncoming(elseBlock);
 
-        // The PHI should receive our extracted values (either as SSAValue or as their definition's result)
         boolean thenMatches = valuesMatch(phiThenValue, thenValue);
         boolean elseMatches = valuesMatch(phiElseValue, elseValue);
 
@@ -3038,13 +2792,13 @@ public class StatementRecoverer {
         if (phiValue == blockValue) {
             return true;
         }
-        if (phiValue instanceof SSAValue ssaPhiValue) {
+        if (phiValue instanceof SSAValue) {
+            SSAValue ssaPhiValue = (SSAValue) phiValue;
             return ssaPhiValue == blockValue;
         }
-        // PHI might receive a constant directly
         if (phiValue instanceof com.tonic.analysis.ssa.value.Constant) {
-            // Check if the block value's definition is a ConstantInstruction with the same constant
-            if (blockValue != null && blockValue.getDefinition() instanceof ConstantInstruction ci) {
+            if (blockValue != null && blockValue.getDefinition() instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) blockValue.getDefinition();
                 return ci.getConstant().equals(phiValue);
             }
         }
@@ -3058,25 +2812,19 @@ public class StatementRecoverer {
      */
     private void collapseToTernaryPhiExpression(Expression condition, PhiInstruction phi,
                                                  IRBlock thenBlock, IRBlock elseBlock) {
-        // Get the values from each branch
         Value thenValue = phi.getIncoming(thenBlock);
         Value elseValue = phi.getIncoming(elseBlock);
 
-        // Recover expressions for the then and else values
         Expression thenExpr = exprRecoverer.recoverOperand(thenValue);
         Expression elseExpr = exprRecoverer.recoverOperand(elseValue);
 
-        // Determine the type from the PHI result
         SSAValue phiResult = phi.getResult();
         SourceType type = typeRecoverer.recoverType(phiResult);
 
-        // Create the ternary expression
         TernaryExpr ternaryExpr = new TernaryExpr(condition, thenExpr, elseExpr, type);
 
-        // Cache this expression for the PHI result so it gets inlined at usage sites
         if (phiResult != null) {
             context.getExpressionContext().cacheExpression(phiResult, ternaryExpr);
-            // Un-mark as materialized so it gets inlined rather than referenced as a variable
             context.getExpressionContext().unmarkMaterialized(phiResult);
         }
     }

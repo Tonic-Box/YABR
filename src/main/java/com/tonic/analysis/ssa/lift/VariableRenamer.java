@@ -105,7 +105,8 @@ public class VariableRenamer {
     }
 
     private void renameUses(IRInstruction instr) {
-        if (instr instanceof LoadLocalInstruction load) {
+        if (instr instanceof LoadLocalInstruction) {
+            LoadLocalInstruction load = (LoadLocalInstruction) instr;
             int varIndex = load.getLocalIndex();
             SSAValue currentVal = getCurrentValue(varIndex);
             if (currentVal != null && load.getResult() != null) {
@@ -115,10 +116,12 @@ public class VariableRenamer {
     }
 
     private void renameDefinitions(IRInstruction instr, IRBlock block) {
-        if (instr instanceof StoreLocalInstruction store) {
+        if (instr instanceof StoreLocalInstruction) {
+            StoreLocalInstruction store = (StoreLocalInstruction) instr;
             int varIndex = store.getLocalIndex();
             Value storedValue = store.getValue();
-            if (storedValue instanceof SSAValue ssaVal) {
+            if (storedValue instanceof SSAValue) {
+                SSAValue ssaVal = (SSAValue) storedValue;
                 pushVariable(varIndex, ssaVal);
             }
         }

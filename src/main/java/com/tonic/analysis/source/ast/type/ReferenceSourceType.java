@@ -31,7 +31,6 @@ public final class ReferenceSourceType implements SourceType {
      */
     private final boolean useSimpleName;
 
-    // Common reference types
     public static final ReferenceSourceType OBJECT = new ReferenceSourceType("java/lang/Object");
     public static final ReferenceSourceType STRING = new ReferenceSourceType("java/lang/String");
     public static final ReferenceSourceType CLASS = new ReferenceSourceType("java/lang/Class");
@@ -124,7 +123,8 @@ public final class ReferenceSourceType implements SourceType {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (!(obj instanceof ReferenceSourceType other)) return false;
+        if (!(obj instanceof ReferenceSourceType)) return false;
+        ReferenceSourceType other = (ReferenceSourceType) obj;
         return internalName.equals(other.internalName) &&
                typeArguments.equals(other.typeArguments);
     }

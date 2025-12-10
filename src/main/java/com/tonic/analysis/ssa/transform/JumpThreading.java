@@ -30,57 +30,51 @@ public class JumpThreading implements IRTransform {
             IRInstruction term = block.getTerminator();
             if (term == null) continue;
 
-            if (term instanceof GotoInstruction gotoInstr) {
+            if (term instanceof GotoInstruction) {
+                GotoInstruction gotoInstr = (GotoInstruction) term;
                 IRBlock original = gotoInstr.getTarget();
                 IRBlock ultimate = findUltimateTarget(original);
 
                 if (ultimate != original) {
-                    // Update CFG edges
                     block.removeSuccessor(original);
                     block.addSuccessor(ultimate);
                     gotoInstr.setTarget(ultimate);
-                    // Update phi nodes at ultimate target: redirect incoming values from bypassed blocks
                     updatePhisForThreading(block, original, ultimate);
                     changed = true;
                 }
-            } else if (term instanceof BranchInstruction branch) {
-                // Thread true target
+            } else if (term instanceof BranchInstruction) {
+                BranchInstruction branch = (BranchInstruction) term;
                 IRBlock origTrue = branch.getTrueTarget();
                 IRBlock ultimateTrue = findUltimateTarget(origTrue);
                 if (ultimateTrue != origTrue) {
                     block.removeSuccessor(origTrue);
                     block.addSuccessor(ultimateTrue);
                     branch.setTrueTarget(ultimateTrue);
-                    // Update phi nodes at ultimate target
                     updatePhisForThreading(block, origTrue, ultimateTrue);
                     changed = true;
                 }
 
-                // Thread false target
                 IRBlock origFalse = branch.getFalseTarget();
                 IRBlock ultimateFalse = findUltimateTarget(origFalse);
                 if (ultimateFalse != origFalse) {
                     block.removeSuccessor(origFalse);
                     block.addSuccessor(ultimateFalse);
                     branch.setFalseTarget(ultimateFalse);
-                    // Update phi nodes at ultimate target
                     updatePhisForThreading(block, origFalse, ultimateFalse);
                     changed = true;
                 }
-            } else if (term instanceof SwitchInstruction switchInstr) {
-                // Thread default target
+            } else if (term instanceof SwitchInstruction) {
+                SwitchInstruction switchInstr = (SwitchInstruction) term;
                 IRBlock origDefault = switchInstr.getDefaultTarget();
                 IRBlock ultimateDefault = findUltimateTarget(origDefault);
                 if (ultimateDefault != origDefault) {
                     block.removeSuccessor(origDefault);
                     block.addSuccessor(ultimateDefault);
                     switchInstr.setDefaultTarget(ultimateDefault);
-                    // Update phi nodes at ultimate target
                     updatePhisForThreading(block, origDefault, ultimateDefault);
                     changed = true;
                 }
 
-                // Thread case targets
                 Map<Integer, IRBlock> cases = switchInstr.getCases();
                 for (Map.Entry<Integer, IRBlock> entry : new ArrayList<>(cases.entrySet())) {
                     IRBlock origCase = entry.getValue();
@@ -89,7 +83,6 @@ public class JumpThreading implements IRTransform {
                         block.removeSuccessor(origCase);
                         block.addSuccessor(ultimateCase);
                         cases.put(entry.getKey(), ultimateCase);
-                        // Update phi nodes at ultimate target
                         updatePhisForThreading(block, origCase, ultimateCase);
                         changed = true;
                     }
@@ -97,7 +90,6 @@ public class JumpThreading implements IRTransform {
             }
         }
 
-        // Remove now-unreachable blocks
         if (changed) {
             removeUnreachableBlocks(method);
         }
@@ -120,7 +112,6 @@ public class JumpThreading implements IRTransform {
         for (PhiInstruction phi : ultimate.getPhiInstructions()) {
             Value bypassedValue = phi.getIncoming(bypassed);
             if (bypassedValue != null) {
-                // Remove the incoming from the bypassed block and add it from source
                 phi.removeIncoming(bypassed);
                 phi.addIncoming(bypassedValue, source);
             }

@@ -75,7 +75,8 @@ public final class ArrayType implements IRType {
     }
 
     public IRType getBaseElementType() {
-        if (elementType instanceof ArrayType arr) {
+        if (elementType instanceof ArrayType) {
+            ArrayType arr = (ArrayType) elementType;
             return arr.getBaseElementType();
         }
         return elementType;

@@ -31,13 +31,10 @@ public class BitTrackingDCE implements IRTransform {
         demandedBits = new HashMap<>();
         inWorklist = new HashSet<>();
 
-        // Phase 1: Seed demanded bits from sinks
         seedDemandedBits(method);
 
-        // Phase 2: Propagate backward through def-use chains
         propagateDemandedBits(method);
 
-        // Phase 3: Eliminate dead operations
         return eliminateDeadOps(method);
     }
 
@@ -50,36 +47,42 @@ public class BitTrackingDCE implements IRTransform {
     }
 
     private void seedFromInstruction(IRInstruction instr) {
-        // Sinks: instructions where all bits of operands are demanded
-        if (instr instanceof ReturnInstruction ret) {
+        if (instr instanceof ReturnInstruction) {
+            ReturnInstruction ret = (ReturnInstruction) instr;
             if (ret.getReturnValue() != null) {
                 demandAllBits(ret.getReturnValue());
             }
-        } else if (instr instanceof InvokeInstruction invoke) {
+        } else if (instr instanceof InvokeInstruction) {
+            InvokeInstruction invoke = (InvokeInstruction) instr;
             for (Value arg : invoke.getArguments()) {
                 demandAllBits(arg);
             }
-        } else if (instr instanceof ArrayStoreInstruction store) {
+        } else if (instr instanceof ArrayStoreInstruction) {
+            ArrayStoreInstruction store = (ArrayStoreInstruction) instr;
             demandAllBits(store.getArray());
             demandAllBits(store.getIndex());
             demandAllBits(store.getValue());
-        } else if (instr instanceof PutFieldInstruction put) {
+        } else if (instr instanceof PutFieldInstruction) {
+            PutFieldInstruction put = (PutFieldInstruction) instr;
             demandAllBits(put.getValue());
             if (put.getObjectRef() != null) {
                 demandAllBits(put.getObjectRef());
             }
-        } else if (instr instanceof BranchInstruction branch) {
+        } else if (instr instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) instr;
             demandAllBits(branch.getLeft());
             if (branch.getRight() != null) {
                 demandAllBits(branch.getRight());
             }
-        } else if (instr instanceof SwitchInstruction sw) {
+        } else if (instr instanceof SwitchInstruction) {
+            SwitchInstruction sw = (SwitchInstruction) instr;
             demandAllBits(sw.getKey());
         }
     }
 
     private void demandAllBits(Value value) {
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             long allBits = getAllBitsForType(ssa);
             addDemandedBits(ssa, allBits);
         }
@@ -115,20 +118,24 @@ public class BitTrackingDCE implements IRTransform {
     }
 
     private void propagateToOperands(IRInstruction instr, long demanded) {
-        if (instr instanceof BinaryOpInstruction bin) {
+        if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction bin = (BinaryOpInstruction) instr;
             propagateBinaryOp(bin, demanded);
-        } else if (instr instanceof CopyInstruction copy) {
-            if (copy.getSource() instanceof SSAValue src) {
+        } else if (instr instanceof CopyInstruction) {
+            CopyInstruction copy = (CopyInstruction) instr;
+            if (copy.getSource() instanceof SSAValue) {
+                SSAValue src = (SSAValue) copy.getSource();
                 addDemandedBits(src, demanded);
             }
-        } else if (instr instanceof PhiInstruction phi) {
+        } else if (instr instanceof PhiInstruction) {
+            PhiInstruction phi = (PhiInstruction) instr;
             for (Value v : phi.getOperands()) {
-                if (v instanceof SSAValue src) {
+                if (v instanceof SSAValue) {
+                    SSAValue src = (SSAValue) v;
                     addDemandedBits(src, demanded);
                 }
             }
         } else {
-            // Conservative: demand all bits from all operands
             for (Value v : instr.getOperands()) {
                 demandAllBits(v);
             }
@@ -140,60 +147,74 @@ public class BitTrackingDCE implements IRTransform {
         Value right = bin.getRight();
 
         switch (bin.getOp()) {
-            case AND -> {
-                // AND with constant: only demand bits that survive the mask
-                if (right instanceof IntConstant ic) {
+            case AND: {
+                if (right instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) right;
                     long mask = ic.getValue() & ALL_BITS_INT;
-                    if (left instanceof SSAValue src) {
+                    if (left instanceof SSAValue) {
+                        SSAValue src = (SSAValue) left;
                         addDemandedBits(src, demanded & mask);
                     }
-                } else if (right instanceof LongConstant lc) {
+                } else if (right instanceof LongConstant) {
+                    LongConstant lc = (LongConstant) right;
                     long mask = lc.getValue();
-                    if (left instanceof SSAValue src) {
+                    if (left instanceof SSAValue) {
+                        SSAValue src = (SSAValue) left;
                         addDemandedBits(src, demanded & mask);
                     }
                 } else {
                     propagateBothOperands(left, right, demanded);
                 }
+                break;
             }
-            case OR, XOR -> propagateBothOperands(left, right, demanded);
-            case SHL -> {
-                // Shift left: bits shifted out aren't needed in source
-                if (right instanceof IntConstant ic) {
+            case OR:
+            case XOR:
+                propagateBothOperands(left, right, demanded);
+                break;
+            case SHL: {
+                if (right instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) right;
                     int shift = ic.getValue() & 0x1F;
-                    if (left instanceof SSAValue src) {
+                    if (left instanceof SSAValue) {
+                        SSAValue src = (SSAValue) left;
                         addDemandedBits(src, demanded >>> shift);
                     }
                 } else {
                     demandAllBits(left);
                     demandAllBits(right);
                 }
+                break;
             }
-            case SHR, USHR -> {
-                // Shift right: demand bits that shift into demanded positions
-                if (right instanceof IntConstant ic) {
+            case SHR:
+            case USHR: {
+                if (right instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) right;
                     int shift = ic.getValue() & 0x1F;
-                    if (left instanceof SSAValue src) {
+                    if (left instanceof SSAValue) {
+                        SSAValue src = (SSAValue) left;
                         addDemandedBits(src, demanded << shift);
                     }
                 } else {
                     demandAllBits(left);
                     demandAllBits(right);
                 }
+                break;
             }
-            default -> {
-                // ADD, SUB, MUL, DIV, etc: conservative - demand all bits
+            default: {
                 demandAllBits(left);
                 demandAllBits(right);
+                break;
             }
         }
     }
 
     private void propagateBothOperands(Value left, Value right, long demanded) {
-        if (left instanceof SSAValue src) {
+        if (left instanceof SSAValue) {
+            SSAValue src = (SSAValue) left;
             addDemandedBits(src, demanded);
         }
-        if (right instanceof SSAValue src) {
+        if (right instanceof SSAValue) {
+            SSAValue src = (SSAValue) right;
             addDemandedBits(src, demanded);
         }
     }
@@ -220,13 +241,11 @@ public class BitTrackingDCE implements IRTransform {
     }
 
     private boolean isDeadInstruction(IRInstruction instr) {
-        // Only consider instructions with results
         if (!instr.hasResult()) return false;
 
         SSAValue result = instr.getResult();
         long demanded = demandedBits.getOrDefault(result, 0L);
 
-        // If no bits are demanded and instruction has no side effects, it's dead
         if (demanded == 0L && !hasSideEffects(instr)) {
             return true;
         }

@@ -63,7 +63,8 @@ public class BootstrapMethodInfo {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BootstrapMethodInfo that)) return false;
+        if (!(o instanceof BootstrapMethodInfo)) return false;
+        BootstrapMethodInfo that = (BootstrapMethodInfo) o;
         return Objects.equals(bootstrapMethod, that.bootstrapMethod) &&
                 Objects.equals(bootstrapArguments, that.bootstrapArguments);
     }

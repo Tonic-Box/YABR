@@ -23,7 +23,10 @@ public class NewArrayInstruction extends IRInstruction {
         this.elementType = elementType;
         this.dimensions = new ArrayList<>();
         this.dimensions.add(length);
-        if (length instanceof SSAValue ssa) ssa.addUse(this);
+        if (length instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) length;
+            ssa.addUse(this);
+        }
     }
 
     public NewArrayInstruction(SSAValue result, IRType elementType, List<Value> dimensions) {
@@ -31,7 +34,10 @@ public class NewArrayInstruction extends IRInstruction {
         this.elementType = elementType;
         this.dimensions = new ArrayList<>(dimensions);
         for (Value dim : dimensions) {
-            if (dim instanceof SSAValue ssa) ssa.addUse(this);
+            if (dim instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) dim;
+                ssa.addUse(this);
+            }
         }
     }
 
@@ -53,9 +59,15 @@ public class NewArrayInstruction extends IRInstruction {
     public void replaceOperand(Value oldValue, Value newValue) {
         for (int i = 0; i < dimensions.size(); i++) {
             if (dimensions.get(i).equals(oldValue)) {
-                if (dimensions.get(i) instanceof SSAValue ssa) ssa.removeUse(this);
+                if (dimensions.get(i) instanceof SSAValue) {
+                    SSAValue ssa = (SSAValue) dimensions.get(i);
+                    ssa.removeUse(this);
+                }
                 dimensions.set(i, newValue);
-                if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+                if (newValue instanceof SSAValue) {
+                    SSAValue ssa = (SSAValue) newValue;
+                    ssa.addUse(this);
+                }
             }
         }
     }

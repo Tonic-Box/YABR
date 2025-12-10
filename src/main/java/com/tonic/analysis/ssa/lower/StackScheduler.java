@@ -90,7 +90,8 @@ public class StackScheduler {
     }
 
     private void emitLoad(Value value) {
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             int reg = regAlloc.getRegister(ssa);
             schedule.add(new ScheduledInstruction(
                     new LoadLocalInstruction(ssa, reg),

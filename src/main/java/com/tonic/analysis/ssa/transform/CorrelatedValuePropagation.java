@@ -27,22 +27,17 @@ public class CorrelatedValuePropagation implements IRTransform {
     public boolean run(IRMethod method) {
         if (method.getEntryBlock() == null) return false;
 
-        // 1. Compute dominators
         domTree = new DominatorTree(method);
         domTree.compute();
 
-        // 2. Initialize range tracking
         blockRanges = new HashMap<>();
 
-        // 3. Propagate ranges through CFG
         propagateRanges(method);
 
-        // 4. Optimize branches using derived ranges
         return optimizeBranches(method);
     }
 
     private void propagateRanges(IRMethod method) {
-        // Process blocks in dominator tree order (BFS from entry)
         Queue<IRBlock> worklist = new LinkedList<>();
         Set<IRBlock> visited = new HashSet<>();
         worklist.add(method.getEntryBlock());
@@ -52,21 +47,18 @@ public class CorrelatedValuePropagation implements IRTransform {
             if (visited.contains(block)) continue;
             visited.add(block);
 
-            // Get inherited ranges from immediate dominator
             Map<Integer, ValueRange> ranges = new HashMap<>();
             IRBlock idom = domTree.getImmediateDominator(block);
             if (idom != null && blockRanges.containsKey(idom)) {
                 ranges.putAll(blockRanges.get(idom));
             }
 
-            // Apply edge constraints from predecessor branches
             for (IRBlock pred : block.getPredecessors()) {
                 applyEdgeConstraints(pred, block, ranges);
             }
 
             blockRanges.put(block, ranges);
 
-            // Add successors to worklist
             for (IRBlock succ : block.getSuccessors()) {
                 if (!visited.contains(succ)) {
                     worklist.add(succ);
@@ -77,49 +69,55 @@ public class CorrelatedValuePropagation implements IRTransform {
 
     private void applyEdgeConstraints(IRBlock pred, IRBlock target, Map<Integer, ValueRange> ranges) {
         IRInstruction term = pred.getTerminator();
-        if (!(term instanceof BranchInstruction branch)) return;
+        if (!(term instanceof BranchInstruction)) return;
+        BranchInstruction branch = (BranchInstruction) term;
 
         boolean isTrueEdge = branch.getTrueTarget() == target;
         Value left = branch.getLeft();
         Value right = branch.getRight();
         CompareOp op = branch.getCondition();
 
-        // Only handle SSAValue on left side compared to constant
-        if (!(left instanceof SSAValue ssa)) return;
+        if (!(left instanceof SSAValue)) return;
+        SSAValue ssa = (SSAValue) left;
         int valueId = ssa.getId();
 
-        // Get constant from right side (or 0 for unary ops)
         Long constant = getConstantValue(right, op);
         if (constant == null) return;
 
-        // Derive range constraint based on comparison and edge
         ValueRange constraint = deriveConstraint(op, constant, isTrueEdge);
         if (constraint == null || constraint.equals(ValueRange.FULL_INT)) return;
 
-        // Intersect with existing range
         ValueRange existing = ranges.getOrDefault(valueId, ValueRange.FULL_INT);
         ValueRange newRange = existing.intersect(constraint);
         ranges.put(valueId, newRange);
     }
 
     private Long getConstantValue(Value value, CompareOp op) {
-        // Unary ops compare against 0
         if (value == null) {
             return isUnaryOp(op) ? 0L : null;
         }
-        if (value instanceof IntConstant ic) {
+        if (value instanceof IntConstant) {
+            IntConstant ic = (IntConstant) value;
             return (long) ic.getValue();
         }
-        if (value instanceof LongConstant lc) {
+        if (value instanceof LongConstant) {
+            LongConstant lc = (LongConstant) value;
             return lc.getValue();
         }
-        // Try to resolve through constant instruction
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction ci) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant ic) return (long) ic.getValue();
-                if (c instanceof LongConstant lc) return lc.getValue();
+                if (c instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) c;
+                    return (long) ic.getValue();
+                }
+                if (c instanceof LongConstant) {
+                    LongConstant lc = (LongConstant) c;
+                    return lc.getValue();
+                }
             }
         }
         return null;
@@ -132,26 +130,41 @@ public class CorrelatedValuePropagation implements IRTransform {
     }
 
     private ValueRange deriveConstraint(CompareOp op, long constant, boolean isTrueEdge) {
-        return switch (op) {
-            // Binary comparisons: x op constant
-            case LT -> isTrueEdge ? ValueRange.lessThan(constant) : ValueRange.greaterOrEqual(constant);
-            case LE -> isTrueEdge ? ValueRange.lessOrEqual(constant) : ValueRange.greaterThan(constant);
-            case GT -> isTrueEdge ? ValueRange.greaterThan(constant) : ValueRange.lessOrEqual(constant);
-            case GE -> isTrueEdge ? ValueRange.greaterOrEqual(constant) : ValueRange.lessThan(constant);
-            case EQ -> isTrueEdge ? ValueRange.equalTo(constant) : null; // Can't represent "not equal" as range
-            case NE -> isTrueEdge ? null : ValueRange.equalTo(constant); // False edge means it equals
+        switch (op) {
+            case LT:
+                return isTrueEdge ? ValueRange.lessThan(constant) : ValueRange.greaterOrEqual(constant);
+            case LE:
+                return isTrueEdge ? ValueRange.lessOrEqual(constant) : ValueRange.greaterThan(constant);
+            case GT:
+                return isTrueEdge ? ValueRange.greaterThan(constant) : ValueRange.lessOrEqual(constant);
+            case GE:
+                return isTrueEdge ? ValueRange.greaterOrEqual(constant) : ValueRange.lessThan(constant);
+            case EQ:
+                return isTrueEdge ? ValueRange.equalTo(constant) : null; // Can't represent "not equal" as range
+            case NE:
+                return isTrueEdge ? null : ValueRange.equalTo(constant);
 
-            // Unary comparisons: x op 0
-            case IFLT -> isTrueEdge ? ValueRange.lessThan(0) : ValueRange.greaterOrEqual(0);
-            case IFLE -> isTrueEdge ? ValueRange.lessOrEqual(0) : ValueRange.greaterThan(0);
-            case IFGT -> isTrueEdge ? ValueRange.greaterThan(0) : ValueRange.lessOrEqual(0);
-            case IFGE -> isTrueEdge ? ValueRange.greaterOrEqual(0) : ValueRange.lessThan(0);
-            case IFEQ -> isTrueEdge ? ValueRange.equalTo(0) : null;
-            case IFNE -> isTrueEdge ? null : ValueRange.equalTo(0);
+            case IFLT:
+                return isTrueEdge ? ValueRange.lessThan(0) : ValueRange.greaterOrEqual(0);
+            case IFLE:
+                return isTrueEdge ? ValueRange.lessOrEqual(0) : ValueRange.greaterThan(0);
+            case IFGT:
+                return isTrueEdge ? ValueRange.greaterThan(0) : ValueRange.lessOrEqual(0);
+            case IFGE:
+                return isTrueEdge ? ValueRange.greaterOrEqual(0) : ValueRange.lessThan(0);
+            case IFEQ:
+                return isTrueEdge ? ValueRange.equalTo(0) : null;
+            case IFNE:
+                return isTrueEdge ? null : ValueRange.equalTo(0);
 
-            // Reference comparisons - not applicable for value ranges
-            case IFNULL, IFNONNULL, ACMPEQ, ACMPNE -> null;
-        };
+            case IFNULL:
+            case IFNONNULL:
+            case ACMPEQ:
+            case ACMPNE:
+                return null;
+            default:
+                return null;
+        }
     }
 
     private boolean optimizeBranches(IRMethod method) {
@@ -159,7 +172,8 @@ public class CorrelatedValuePropagation implements IRTransform {
 
         for (IRBlock block : new ArrayList<>(method.getBlocks())) {
             IRInstruction term = block.getTerminator();
-            if (!(term instanceof BranchInstruction branch)) continue;
+            if (!(term instanceof BranchInstruction)) continue;
+            BranchInstruction branch = (BranchInstruction) term;
 
             Map<Integer, ValueRange> ranges = blockRanges.get(block);
             if (ranges == null) continue;
@@ -167,7 +181,6 @@ public class CorrelatedValuePropagation implements IRTransform {
             Boolean result = evaluateBranchWithRanges(branch, ranges);
             if (result == null) continue;
 
-            // Replace branch with goto
             IRBlock target = result ? branch.getTrueTarget() : branch.getFalseTarget();
             IRBlock deadTarget = result ? branch.getFalseTarget() : branch.getTrueTarget();
 
@@ -176,11 +189,9 @@ public class CorrelatedValuePropagation implements IRTransform {
             block.removeInstruction(branch);
             block.insertInstruction(idx, gotoInstr);
 
-            // Update CFG
             block.removeSuccessor(deadTarget);
             deadTarget.getPredecessors().remove(block);
 
-            // Update phi instructions in dead target
             for (PhiInstruction phi : deadTarget.getPhiInstructions()) {
                 phi.removeIncoming(block);
             }
@@ -196,7 +207,8 @@ public class CorrelatedValuePropagation implements IRTransform {
         Value right = branch.getRight();
         CompareOp op = branch.getCondition();
 
-        if (!(left instanceof SSAValue ssa)) return null;
+        if (!(left instanceof SSAValue)) return null;
+        SSAValue ssa = (SSAValue) left;
         int valueId = ssa.getId();
 
         ValueRange range = ranges.get(valueId);
@@ -211,38 +223,39 @@ public class CorrelatedValuePropagation implements IRTransform {
     private Boolean evaluateComparison(ValueRange range, CompareOp op, long constant) {
         if (range.isEmpty()) return null;
 
-        return switch (op) {
-            case LT, IFLT -> {
-                if (range.getMax() < constant) yield true;   // All values satisfy x < c
-                if (range.getMin() >= constant) yield false; // No values satisfy x < c
-                yield null;
-            }
-            case LE, IFLE -> {
-                if (range.getMax() <= constant) yield true;
-                if (range.getMin() > constant) yield false;
-                yield null;
-            }
-            case GT, IFGT -> {
-                if (range.getMin() > constant) yield true;
-                if (range.getMax() <= constant) yield false;
-                yield null;
-            }
-            case GE, IFGE -> {
-                if (range.getMin() >= constant) yield true;
-                if (range.getMax() < constant) yield false;
-                yield null;
-            }
-            case EQ, IFEQ -> {
-                if (range.isConstant() && range.getMin() == constant) yield true;
-                if (!range.contains(constant)) yield false;
-                yield null;
-            }
-            case NE, IFNE -> {
-                if (!range.contains(constant)) yield true;
-                if (range.isConstant() && range.getMin() == constant) yield false;
-                yield null;
-            }
-            default -> null;
-        };
+        switch (op) {
+            case LT:
+            case IFLT:
+                if (range.getMax() < constant) return true;
+                if (range.getMin() >= constant) return false;
+                return null;
+            case LE:
+            case IFLE:
+                if (range.getMax() <= constant) return true;
+                if (range.getMin() > constant) return false;
+                return null;
+            case GT:
+            case IFGT:
+                if (range.getMin() > constant) return true;
+                if (range.getMax() <= constant) return false;
+                return null;
+            case GE:
+            case IFGE:
+                if (range.getMin() >= constant) return true;
+                if (range.getMax() < constant) return false;
+                return null;
+            case EQ:
+            case IFEQ:
+                if (range.isConstant() && range.getMin() == constant) return true;
+                if (!range.contains(constant)) return false;
+                return null;
+            case NE:
+            case IFNE:
+                if (!range.contains(constant)) return true;
+                if (range.isConstant() && range.getMin() == constant) return false;
+                return null;
+            default:
+                return null;
+        }
     }
 }

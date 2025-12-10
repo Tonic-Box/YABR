@@ -33,7 +33,6 @@ public final class LiteralExpr implements Expression {
         this(value, type, SourceLocation.UNKNOWN);
     }
 
-    // Factory methods for common literals
     public static LiteralExpr ofInt(int value) {
         return new LiteralExpr(value, PrimitiveSourceType.INT);
     }
@@ -97,19 +96,24 @@ public final class LiteralExpr implements Expression {
         if (value == null) {
             return "null";
         }
-        if (value instanceof String s) {
+        if (value instanceof String) {
+            String s = (String) value;
             return "\"" + escapeString(s) + "\"";
         }
-        if (value instanceof Character c) {
+        if (value instanceof Character) {
+            Character c = (Character) value;
             return "'" + escapeChar(c) + "'";
         }
-        if (value instanceof Long l) {
+        if (value instanceof Long) {
+            Long l = (Long) value;
             return l + "L";
         }
-        if (value instanceof Float f) {
+        if (value instanceof Float) {
+            Float f = (Float) value;
             return f + "f";
         }
-        if (value instanceof Double d) {
+        if (value instanceof Double) {
+            Double d = (Double) value;
             return d + "d";
         }
         return value.toString();
@@ -124,14 +128,21 @@ public final class LiteralExpr implements Expression {
     }
 
     private static String escapeChar(char c) {
-        return switch (c) {
-            case '\n' -> "\\n";
-            case '\r' -> "\\r";
-            case '\t' -> "\\t";
-            case '\\' -> "\\\\";
-            case '"' -> "\\\"";
-            case '\'' -> "\\'";
-            default -> c < 32 || c > 126 ? String.format("\\u%04x", (int) c) : String.valueOf(c);
-        };
+        switch (c) {
+            case '\n':
+                return "\\n";
+            case '\r':
+                return "\\r";
+            case '\t':
+                return "\\t";
+            case '\\':
+                return "\\\\";
+            case '"':
+                return "\\\"";
+            case '\'':
+                return "\\'";
+            default:
+                return c < 32 || c > 126 ? String.format("\\u%04x", (int) c) : String.valueOf(c);
+        }
     }
 }

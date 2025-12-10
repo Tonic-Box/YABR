@@ -26,8 +26,14 @@ public class BinaryOpInstruction extends IRInstruction {
     }
 
     private void registerUses() {
-        if (left instanceof SSAValue ssa) ssa.addUse(this);
-        if (right instanceof SSAValue ssa) ssa.addUse(this);
+        if (left instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) left;
+            ssa.addUse(this);
+        }
+        if (right instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) right;
+            ssa.addUse(this);
+        }
     }
 
     @Override
@@ -38,14 +44,26 @@ public class BinaryOpInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (left.equals(oldValue)) {
-            if (left instanceof SSAValue ssa) ssa.removeUse(this);
+            if (left instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) left;
+                ssa.removeUse(this);
+            }
             left = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
         if (right.equals(oldValue)) {
-            if (right instanceof SSAValue ssa) ssa.removeUse(this);
+            if (right instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) right;
+                ssa.removeUse(this);
+            }
             right = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

@@ -21,23 +21,20 @@ public class InvokeParameterUtil
             char c = descriptor.charAt(index);
             if (c == 'B' || c == 'C' || c == 'D' || c == 'F' ||
                     c == 'I' || c == 'J' || c == 'S' || c == 'Z') {
-                // Primitive types occupy one slot
                 count++;
                 index++;
             } else if (c == 'L') {
-                // Object type; skip until ';'
                 index++;
                 while (index < end && descriptor.charAt(index) != ';') {
                     index++;
                 }
                 if (index < end) {
                     count++;
-                    index++; // Skip ';'
+                    index++;
                 } else {
                     throw new IllegalArgumentException("Invalid object type in descriptor: " + descriptor);
                 }
             } else if (c == '[') {
-                // Array type; skip all '[' and the type that follows
                 while (index < end && descriptor.charAt(index) == '[') {
                     index++;
                 }
@@ -47,12 +44,12 @@ public class InvokeParameterUtil
                         index++;
                     }
                     if (index < end) {
-                        index++; // Skip ';'
+                        index++;
                     } else {
                         throw new IllegalArgumentException("Invalid array type in descriptor: " + descriptor);
                     }
                 } else if (index < end) {
-                    index++; // Skip the primitive type
+                    index++;
                 } else {
                     throw new IllegalArgumentException("Invalid array type in descriptor: " + descriptor);
                 }

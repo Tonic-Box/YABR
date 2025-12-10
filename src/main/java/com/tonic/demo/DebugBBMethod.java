@@ -51,8 +51,8 @@ public class DebugBBMethod {
                 System.out.println("\n=== All Blocks ===");
                 for (IRBlock block : irMethod.getBlocks()) {
                     System.out.println("\n--- Block: " + block.getName() + " ---");
-                    System.out.println("Predecessors: " + block.getPredecessors().stream().map(IRBlock::getName).toList());
-                    System.out.println("Successors: " + block.getSuccessors().stream().map(IRBlock::getName).toList());
+                    System.out.println("Predecessors: " + block.getPredecessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
+                    System.out.println("Successors: " + block.getSuccessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
 
                     // Print PHI instructions first
                     for (PhiInstruction phi : block.getPhiInstructions()) {
@@ -66,7 +66,8 @@ public class DebugBBMethod {
                     IRInstruction term = block.getTerminator();
                     if (term != null) {
                         System.out.println("  [TERM] " + term);
-                        if (term instanceof BranchInstruction branch) {
+                        if (term instanceof BranchInstruction) {
+                            BranchInstruction branch = (BranchInstruction) term;
                             System.out.println("    trueTarget: " + branch.getTrueTarget().getName());
                             System.out.println("    falseTarget: " + branch.getFalseTarget().getName());
                         }

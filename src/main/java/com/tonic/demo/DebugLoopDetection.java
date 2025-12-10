@@ -37,11 +37,11 @@ public class DebugLoopDetection {
                 loopAnalysis.compute();
 
                 System.out.println("\n=== Loops ===");
-                for (var loop : loopAnalysis.getLoops()) {
+                for (com.tonic.analysis.ssa.analysis.LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
                     IRBlock header = loop.getHeader();
                     System.out.println("Loop header: " + header.getName());
-                    System.out.println("  Blocks: " + loop.getBlocks().stream().map(IRBlock::getName).toList());
-                    System.out.println("  Header predecessors: " + header.getPredecessors().stream().map(IRBlock::getName).toList());
+                    System.out.println("  Blocks: " + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
+                    System.out.println("  Header predecessors: " + header.getPredecessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                     
                     // Check isDoWhilePattern logic
                     boolean hasExternalPred = false;

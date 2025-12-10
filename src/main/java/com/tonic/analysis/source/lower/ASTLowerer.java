@@ -22,6 +22,11 @@ public class ASTLowerer {
 
     private final ConstPool constPool;
 
+    /**
+     * Creates a new AST lowerer.
+     *
+     * @param constPool the constant pool for references
+     */
     public ASTLowerer(ConstPool constPool) {
         this.constPool = constPool;
     }
@@ -41,28 +46,22 @@ public class ASTLowerer {
                           boolean isStatic, List<SourceType> parameters,
                           SourceType returnType) {
 
-        // Create IR method
         String descriptor = buildDescriptor(parameters, returnType);
         IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
 
-        // Create context
         LoweringContext ctx = new LoweringContext(irMethod, constPool);
 
-        // Create entry block
         IRBlock entryBlock = ctx.createBlock();
         irMethod.setEntryBlock(entryBlock);
         ctx.setCurrentBlock(entryBlock);
 
-        // Register parameters
         if (!isStatic) {
-            // 'this' is first parameter for instance methods
             IRType thisType = new com.tonic.analysis.ssa.type.ReferenceType(ownerClass);
             SSAValue thisVal = ctx.newValue(thisType);
             irMethod.addParameter(thisVal);
             ctx.setVariable("this", thisVal);
         }
 
-        // Register explicit parameters
         for (int i = 0; i < parameters.size(); i++) {
             IRType paramType = parameters.get(i).toIRType();
             SSAValue paramVal = ctx.newValue(paramType);
@@ -70,14 +69,11 @@ public class ASTLowerer {
             ctx.setVariable("arg" + i, paramVal);
         }
 
-        // Create lowerers
         ExpressionLowerer exprLowerer = new ExpressionLowerer(ctx);
         StatementLowerer stmtLowerer = new StatementLowerer(ctx, exprLowerer);
 
-        // Lower body
         stmtLowerer.lower(body);
 
-        // Ensure method has a return
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
         }
@@ -93,18 +89,14 @@ public class ASTLowerer {
      * @param method the source MethodEntry for parameter info
      */
     public void lower(BlockStmt body, IRMethod irMethod, MethodEntry method) {
-        // Clear existing blocks
         irMethod.getBlocks().clear();
 
-        // Create context
         LoweringContext ctx = new LoweringContext(irMethod, constPool);
 
-        // Create entry block
         IRBlock entryBlock = ctx.createBlock();
         irMethod.setEntryBlock(entryBlock);
         ctx.setCurrentBlock(entryBlock);
 
-        // Register parameters from existing IRMethod
         boolean isStatic = irMethod.isStatic();
         List<SSAValue> params = irMethod.getParameters();
 
@@ -117,14 +109,11 @@ public class ASTLowerer {
             ctx.setVariable("arg" + (i - paramOffset), params.get(i));
         }
 
-        // Create lowerers
         ExpressionLowerer exprLowerer = new ExpressionLowerer(ctx);
         StatementLowerer stmtLowerer = new StatementLowerer(ctx, exprLowerer);
 
-        // Lower body
         stmtLowerer.lower(body);
 
-        // Ensure method has a return
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
         }
@@ -137,18 +126,14 @@ public class ASTLowerer {
      * @param irMethod the existing IRMethod
      */
     public void replaceBody(BlockStmt body, IRMethod irMethod) {
-        // Create context
         LoweringContext ctx = new LoweringContext(irMethod, constPool);
 
-        // Clear and recreate blocks
         irMethod.getBlocks().clear();
 
-        // Create entry block
         IRBlock entryBlock = ctx.createBlock();
         irMethod.setEntryBlock(entryBlock);
         ctx.setCurrentBlock(entryBlock);
 
-        // Re-register existing parameters
         boolean isStatic = irMethod.isStatic();
         List<SSAValue> params = irMethod.getParameters();
 
@@ -161,12 +146,10 @@ public class ASTLowerer {
             ctx.setVariable("arg" + (i - paramOffset), params.get(i));
         }
 
-        // Lower the new body
         ExpressionLowerer exprLowerer = new ExpressionLowerer(ctx);
         StatementLowerer stmtLowerer = new StatementLowerer(ctx, exprLowerer);
         stmtLowerer.lower(body);
 
-        // Ensure return
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
         }

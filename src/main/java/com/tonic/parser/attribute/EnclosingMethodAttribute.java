@@ -42,7 +42,7 @@ public class EnclosingMethodAttribute extends Attribute {
 
     @Override
     public void updateLength() {
-        this.length = 4; // class_index (u2) + method_index (u2)
+        this.length = 4;
     }
 
     @Override

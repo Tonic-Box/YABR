@@ -40,12 +40,21 @@ public class PutFieldInstruction extends IRInstruction {
         this.isStatic = true;
         this.objectRef = null;
         this.value = value;
-        if (value instanceof SSAValue ssa) ssa.addUse(this);
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
+            ssa.addUse(this);
+        }
     }
 
     private void registerUses() {
-        if (objectRef instanceof SSAValue ssa) ssa.addUse(this);
-        if (value instanceof SSAValue ssa) ssa.addUse(this);
+        if (objectRef instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) objectRef;
+            ssa.addUse(this);
+        }
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
+            ssa.addUse(this);
+        }
     }
 
     @Override
@@ -59,14 +68,26 @@ public class PutFieldInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (objectRef != null && objectRef.equals(oldValue)) {
-            if (objectRef instanceof SSAValue ssa) ssa.removeUse(this);
+            if (objectRef instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) objectRef;
+                ssa.removeUse(this);
+            }
             objectRef = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
         if (value.equals(oldValue)) {
-            if (value instanceof SSAValue ssa) ssa.removeUse(this);
+            if (value instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) value;
+                ssa.removeUse(this);
+            }
             value = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

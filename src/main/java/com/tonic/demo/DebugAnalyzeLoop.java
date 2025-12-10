@@ -39,13 +39,14 @@ public class DebugAnalyzeLoop {
                 loopAnalysis.compute();
 
                 System.out.println("\n=== Analyzing loops ===");
-                for (var loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
                     IRBlock header = loop.getHeader();
                     System.out.println("\n--- Loop header: " + header.getName() + " ---");
-                    System.out.println("Loop blocks: " + loop.getBlocks().stream().map(IRBlock::getName).toList());
+                    System.out.println("Loop blocks: " + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
 
                     IRInstruction terminator = header.getTerminator();
-                    if (terminator instanceof BranchInstruction branch) {
+                    if (terminator instanceof BranchInstruction) {
+                        BranchInstruction branch = (BranchInstruction) terminator;
                         IRBlock trueTarget = branch.getTrueTarget();
                         IRBlock falseTarget = branch.getFalseTarget();
 
@@ -101,8 +102,9 @@ public class DebugAnalyzeLoop {
                                     System.out.println("isForLoopPattern: " + block.getName() + " has back-edge to header");
                                     // Check for increment
                                     for (IRInstruction instr : block.getInstructions()) {
-                                        if (instr instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp) {
-                                            var op = binOp.getOp();
+                                        if (instr instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction) {
+                                            com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp = (com.tonic.analysis.ssa.ir.BinaryOpInstruction) instr;
+                                            com.tonic.analysis.ssa.ir.BinaryOp op = binOp.getOp();
                                             if (op == com.tonic.analysis.ssa.ir.BinaryOp.ADD || op == com.tonic.analysis.ssa.ir.BinaryOp.SUB) {
                                                 System.out.println("  Found increment: " + op);
                                                 isForLoop = true;

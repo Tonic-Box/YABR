@@ -6,11 +6,11 @@ package com.tonic.analysis.ssa.transform;
  */
 public class ValueRange {
 
-    private final long min;  // Inclusive lower bound
-    private final long max;  // Inclusive upper bound
+    private final long min;
+    private final long max;
 
     public static final ValueRange FULL_INT = new ValueRange(Integer.MIN_VALUE, Integer.MAX_VALUE);
-    public static final ValueRange EMPTY = new ValueRange(1, 0);  // min > max = empty
+    public static final ValueRange EMPTY = new ValueRange(1, 0);
 
     public ValueRange(long min, long max) {
         this.min = min;
@@ -52,8 +52,6 @@ public class ValueRange {
         return new ValueRange(newMin, newMax);
     }
 
-    // Factory methods for constraints
-
     /** Range for x < val: [MIN, val-1] */
     public static ValueRange lessThan(long val) {
         if (val <= Integer.MIN_VALUE) return EMPTY;
@@ -93,7 +91,8 @@ public class ValueRange {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof ValueRange other)) return false;
+        if (!(o instanceof ValueRange)) return false;
+        ValueRange other = (ValueRange) o;
         return min == other.min && max == other.max;
     }
 

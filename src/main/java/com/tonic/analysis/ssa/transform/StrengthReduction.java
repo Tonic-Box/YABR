@@ -35,7 +35,8 @@ public class StrengthReduction implements IRTransform {
             for (int i = 0; i < instructions.size(); i++) {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof BinaryOpInstruction binOp) {
+                if (instr instanceof BinaryOpInstruction) {
+                    BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                     IRInstruction replacement = tryReduce(binOp);
                     if (replacement != null) {
                         replacement.setBlock(block);
@@ -57,21 +58,16 @@ public class StrengthReduction implements IRTransform {
         Value right = instr.getRight();
         SSAValue result = instr.getResult();
 
-        // Get constant value if right operand is constant
         Integer rightConst = getIntConstant(right);
         Integer leftConst = getIntConstant(left);
 
         switch (op) {
             case MUL:
-                // x * 0 -> 0 (handled by AlgebraicSimplification, but we check for shift)
-                // x * 1 -> x (handled by AlgebraicSimplification)
-                // x * 2^n -> x << n
                 if (rightConst != null && isPowerOfTwo(rightConst)) {
                     int shift = Integer.numberOfTrailingZeros(rightConst);
                     return new BinaryOpInstruction(result, BinaryOp.SHL, left,
                             IntConstant.of(shift));
                 }
-                // 2^n * x -> x << n (commutative)
                 if (leftConst != null && isPowerOfTwo(leftConst)) {
                     int shift = Integer.numberOfTrailingZeros(leftConst);
                     return new BinaryOpInstruction(result, BinaryOp.SHL, right,
@@ -80,19 +76,14 @@ public class StrengthReduction implements IRTransform {
                 break;
 
             case DIV:
-                // x / 2^n -> x >> n (for positive values - we apply conservatively)
-                // Note: This is only safe for non-negative dividends
-                // For full correctness, would need sign analysis
                 if (rightConst != null && rightConst > 0 && isPowerOfTwo(rightConst)) {
                     int shift = Integer.numberOfTrailingZeros(rightConst);
-                    // Use arithmetic right shift
                     return new BinaryOpInstruction(result, BinaryOp.SHR, left,
                             IntConstant.of(shift));
                 }
                 break;
 
             case REM:
-                // x % 2^n -> x & (2^n - 1) (for positive values)
                 if (rightConst != null && rightConst > 0 && isPowerOfTwo(rightConst)) {
                     int mask = rightConst - 1;
                     return new BinaryOpInstruction(result, BinaryOp.AND, left,
@@ -108,14 +99,18 @@ public class StrengthReduction implements IRTransform {
     }
 
     private Integer getIntConstant(Value value) {
-        if (value instanceof IntConstant ic) {
+        if (value instanceof IntConstant) {
+            IntConstant ic = (IntConstant) value;
             return ic.getValue();
         }
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction ci) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant ic) {
+                if (c instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) c;
                     return ic.getValue();
                 }
             }

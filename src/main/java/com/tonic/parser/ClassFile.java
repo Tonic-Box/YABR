@@ -292,7 +292,8 @@ public class ClassFile extends AbstractParser {
         String newDescriptor = "L" + internalName + ";";
 
         for (Item<?> item : constPool.getItems()) {
-            if (item instanceof Utf8Item u) {
+            if (item instanceof Utf8Item) {
+                Utf8Item u = (Utf8Item) item;
                 String value = u.getValue();
                 if (value.contains(oldDescriptor)) {
                     u.setValue(value.replace(oldDescriptor, newDescriptor));
@@ -324,7 +325,8 @@ public class ClassFile extends AbstractParser {
         List<Item<?>> cpItems = constPool.getItems();
         for (int i = 1; i < cpItems.size(); i++) {
             Item<?> item = cpItems.get(i);
-            if (item instanceof ClassRefItem classRef) {
+            if (item instanceof ClassRefItem) {
+                ClassRefItem classRef = (ClassRefItem) item;
                 Utf8Item nameUtf8 = (Utf8Item) constPool.getItem(classRef.getValue());
                 if (nameUtf8 != null && nameUtf8.getValue().equals(internalName)) {
                     existingIndex = i;
@@ -479,7 +481,6 @@ public class ClassFile extends AbstractParser {
      * @throws IOException If an error occurs while generating the setter.
      */
     public MethodEntry generateSetter(FieldEntry entry, boolean isStatic) throws IOException {
-        // Generate method name
         String name = "set" + entry.getName().substring(0, 1).toUpperCase() + entry.getName().substring(1);
         return generateSetter(entry, name, isStatic);
     }
@@ -493,28 +494,25 @@ public class ClassFile extends AbstractParser {
      * @throws IOException If an error occurs while generating the setter.
      */
     public MethodEntry generateSetter(FieldEntry entry, String name, boolean isStatic) throws IOException {
-        // Determine method access flags
         int access = isStatic
                 ? new AccessBuilder().setPublic().setStatic().build()
                 : new AccessBuilder().setPublic().build();
 
-        // Create the method
         MethodEntry method = createNewMethod(access, name, "V", entry.getDesc());
 
-        // Create and populate bytecode
         Bytecode bytecode = new Bytecode(method);
         int fieldRefIndex = constPool.getIndexOf(bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc()));
 
         if (!isStatic) {
-            bytecode.addALoad(0); // Load 'this'
-            bytecode.addLoad(1, entry.getDesc()); // Load parameter
-            bytecode.addPutField(fieldRefIndex); // Put field
+            bytecode.addALoad(0);
+            bytecode.addLoad(1, entry.getDesc());
+            bytecode.addPutField(fieldRefIndex);
         } else {
-            bytecode.addLoad(0, entry.getDesc()); // Load parameter
-            bytecode.addPutStatic(fieldRefIndex); // Put static field
+            bytecode.addLoad(0, entry.getDesc());
+            bytecode.addPutStatic(fieldRefIndex);
         }
 
-        bytecode.addReturn(ReturnType.RETURN); // Add return statement
+        bytecode.addReturn(ReturnType.RETURN);
         bytecode.finalizeBytecode();
 
         return method;
@@ -528,7 +526,6 @@ public class ClassFile extends AbstractParser {
      * @throws IOException If an error occurs while generating the getter.
      */
     public MethodEntry generateGetter(FieldEntry entry, boolean isStatic) throws IOException {
-        // Generate method name
         String name = "get" + entry.getName().substring(0, 1).toUpperCase() + entry.getName().substring(1);
         return generateGetter(entry, name, isStatic);
     }
@@ -542,26 +539,23 @@ public class ClassFile extends AbstractParser {
      * @throws IOException If an error occurs while generating the getter.
      */
     public MethodEntry generateGetter(FieldEntry entry, String name, boolean isStatic) throws IOException {
-        // Determine method access flags
         int access = isStatic
                 ? new AccessBuilder().setPublic().setStatic().build()
                 : new AccessBuilder().setPublic().build();
 
-        // Create the method
         MethodEntry method = createNewMethod(access, name, entry.getDesc());
 
-        // Create and populate bytecode
         Bytecode bytecode = new Bytecode(method);
         int fieldRefIndex = constPool.getIndexOf(bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc()));
 
         if (!isStatic) {
-            bytecode.addALoad(0); // Load 'this'
-            bytecode.addGetField(fieldRefIndex); // Get field
+            bytecode.addALoad(0);
+            bytecode.addGetField(fieldRefIndex);
         } else {
-            bytecode.addGetStatic(fieldRefIndex); // Get static field
+            bytecode.addGetStatic(fieldRefIndex);
         }
 
-        bytecode.addReturn(ReturnType.fromDescriptor(entry.getDesc())); // Add return statement
+        bytecode.addReturn(ReturnType.fromDescriptor(entry.getDesc()));
         bytecode.finalizeBytecode();
         return method;
     }
@@ -664,18 +658,14 @@ public class ClassFile extends AbstractParser {
         StringBuilder sb = new StringBuilder();
         sb.append("ClassFile {\n");
 
-        // Version
         sb.append("  Version: ").append(majorVersion).append(".").append(minorVersion).append("\n");
 
-        // Access Flags
         sb.append("  Access Flags: 0x").append(Integer.toHexString(access)).append(" (")
                 .append(getAccessFlagsDescription(access)).append(")").append("\n");
 
-        // Class / Superclass
         sb.append("  This Class: ").append(getClassName()).append("\n");
         sb.append("  Super Class: ").append(getSuperClassName()).append("\n");
 
-        // Interfaces
         if (!interfaces.isEmpty()) {
             sb.append("  Interfaces:\n");
             for (int ifaceIndex : interfaces) {
@@ -685,10 +675,8 @@ public class ClassFile extends AbstractParser {
             sb.append("  Interfaces: None\n");
         }
 
-        // Constant Pool
         sb.append("\n").append(constPool.toString()).append("\n");
 
-        // Fields
         if (!fields.isEmpty()) {
             sb.append("  Fields:\n");
             for (FieldEntry field : fields) {
@@ -698,7 +686,6 @@ public class ClassFile extends AbstractParser {
             sb.append("  Fields: None\n");
         }
 
-        // Methods
         if (!methods.isEmpty()) {
             sb.append("\n  Methods:\n");
             for (MethodEntry method : methods) {
@@ -817,28 +804,34 @@ public class ClassFile extends AbstractParser {
 
         String returnType = methodDescriptor.split("\\)")[1];
         switch (returnType) {
-            case "V" -> bytecode.addReturn(0xB1);
-            case "I", "S", "B", "C", "Z" -> {
+            case "V":
+                bytecode.addReturn(0xB1);
+                break;
+            case "I":
+            case "S":
+            case "B":
+            case "C":
+            case "Z":
                 bytecode.addILoad(0);
                 bytecode.addIConst(0);
                 bytecode.addReturn(0xAC);
-            }
-            case "J" -> {
+                break;
+            case "J":
                 bytecode.addLLoad(0);
                 bytecode.addReturn(0xAD);
-            }
-            case "F" -> {
+                break;
+            case "F":
                 bytecode.addFLoad(0);
                 bytecode.addReturn(0xAE);
-            }
-            case "D" -> {
+                break;
+            case "D":
                 bytecode.addDLoad(0);
                 bytecode.addReturn(0xAF);
-            }
-            default -> {
+                break;
+            default:
                 bytecode.addAConstNull();
                 bytecode.addReturn(0xB0);
-            }
+                break;
         }
 
         try {
@@ -953,10 +946,6 @@ public class ClassFile extends AbstractParser {
             method.accept(visitor);
         }
     }
-
-    // -------------------------------------------------------------------------
-    //  Frame Calculation
-    // -------------------------------------------------------------------------
 
     /**
      * Computes StackMapTable frames for all methods in this class.

@@ -60,10 +60,12 @@ public class InvokeVirtualInstruction extends Instruction {
     public int getStackChange() {
         Item<?> item = constPool.getItem(methodIndex);
         int params, returnSlots;
-        if (item instanceof MethodRefItem method) {
+        if (item instanceof MethodRefItem) {
+            MethodRefItem method = (MethodRefItem) item;
             params = method.getParameterCount();
             returnSlots = method.getReturnTypeSlots();
-        } else if (item instanceof InterfaceRefItem iface) {
+        } else if (item instanceof InterfaceRefItem) {
+            InterfaceRefItem iface = (InterfaceRefItem) item;
             params = iface.getParameterCount();
             returnSlots = iface.getReturnTypeSlots();
         } else {
@@ -109,9 +111,11 @@ public class InvokeVirtualInstruction extends Instruction {
      */
     public String getMethodName() {
         Item<?> item = constPool.getItem(methodIndex);
-        if (item instanceof MethodRefItem method) {
+        if (item instanceof MethodRefItem) {
+            MethodRefItem method = (MethodRefItem) item;
             return method.getName();
-        } else if (item instanceof InterfaceRefItem iface) {
+        } else if (item instanceof InterfaceRefItem) {
+            InterfaceRefItem iface = (InterfaceRefItem) item;
             return iface.getName();
         }
         throw new IllegalStateException("Unexpected ref type: " + item.getClass());
@@ -124,9 +128,11 @@ public class InvokeVirtualInstruction extends Instruction {
      */
     public String getMethodDescriptor() {
         Item<?> item = constPool.getItem(methodIndex);
-        if (item instanceof MethodRefItem method) {
+        if (item instanceof MethodRefItem) {
+            MethodRefItem method = (MethodRefItem) item;
             return method.getDescriptor();
-        } else if (item instanceof InterfaceRefItem iface) {
+        } else if (item instanceof InterfaceRefItem) {
+            InterfaceRefItem iface = (InterfaceRefItem) item;
             return iface.getDescriptor();
         }
         throw new IllegalStateException("Unexpected ref type: " + item.getClass());

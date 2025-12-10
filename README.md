@@ -128,7 +128,7 @@ java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fq
 
 ## Requirements
 
-- Java 17+
+- Java 11+
 
 ## Acknowledgements
 

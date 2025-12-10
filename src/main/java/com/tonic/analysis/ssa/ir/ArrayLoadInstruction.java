@@ -24,8 +24,14 @@ public class ArrayLoadInstruction extends IRInstruction {
     }
 
     private void registerUses() {
-        if (array instanceof SSAValue ssa) ssa.addUse(this);
-        if (index instanceof SSAValue ssa) ssa.addUse(this);
+        if (array instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) array;
+            ssa.addUse(this);
+        }
+        if (index instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) index;
+            ssa.addUse(this);
+        }
     }
 
     @Override
@@ -36,14 +42,26 @@ public class ArrayLoadInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (array.equals(oldValue)) {
-            if (array instanceof SSAValue ssa) ssa.removeUse(this);
+            if (array instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) array;
+                ssa.removeUse(this);
+            }
             array = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
         if (index.equals(oldValue)) {
-            if (index instanceof SSAValue ssa) ssa.removeUse(this);
+            if (index instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) index;
+                ssa.removeUse(this);
+            }
             index = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

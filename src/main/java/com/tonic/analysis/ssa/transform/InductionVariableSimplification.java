@@ -34,7 +34,6 @@ public class InductionVariableSimplification implements IRTransform {
             return false;
         }
 
-        // Compute dominator tree and loop analysis
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
 
@@ -55,7 +54,6 @@ public class InductionVariableSimplification implements IRTransform {
     }
 
     private boolean processLoop(Loop loop, IRMethod method) {
-        // Find basic induction variables
         List<BasicIV> basicIVs = findBasicInductionVariables(loop);
 
         if (basicIVs.isEmpty()) {
@@ -64,7 +62,6 @@ public class InductionVariableSimplification implements IRTransform {
 
         boolean changed = false;
 
-        // Find and simplify derived induction variables
         for (BasicIV biv : basicIVs) {
             changed |= simplifyDerivedIVs(biv, loop);
         }
@@ -85,15 +82,13 @@ public class InductionVariableSimplification implements IRTransform {
             SSAValue phiResult = phi.getResult();
             if (phiResult == null) continue;
 
-            // Look for an increment instruction in the loop
             for (IRBlock block : loop.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction binOp) {
+                    if (instr instanceof BinaryOpInstruction) {
+                        BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                         if (binOp.getOp() == BinaryOp.ADD) {
-                            // Check if this is i + c or c + i where i is the phi result
                             Integer stride = getStrideIfBasicIV(binOp, phiResult);
                             if (stride != null) {
-                                // Verify that this result feeds back to the phi
                                 if (isPhiBackedge(phi, binOp.getResult(), loop)) {
                                     basicIVs.add(new BasicIV(phi, binOp, stride));
                                 }
@@ -111,27 +106,30 @@ public class InductionVariableSimplification implements IRTransform {
         Value left = binOp.getLeft();
         Value right = binOp.getRight();
 
-        // Check i + c
-        if (left instanceof SSAValue ssaLeft && ssaLeft.getId() == inductionVar.getId()) {
-            return getIntConstant(right);
+        if (left instanceof SSAValue) {
+            SSAValue ssaLeft = (SSAValue) left;
+            if (ssaLeft.getId() == inductionVar.getId()) {
+                return getIntConstant(right);
+            }
         }
 
-        // Check c + i
-        if (right instanceof SSAValue ssaRight && ssaRight.getId() == inductionVar.getId()) {
-            return getIntConstant(left);
+        if (right instanceof SSAValue) {
+            SSAValue ssaRight = (SSAValue) right;
+            if (ssaRight.getId() == inductionVar.getId()) {
+                return getIntConstant(left);
+            }
         }
 
         return null;
     }
 
     private boolean isPhiBackedge(PhiInstruction phi, SSAValue incrementResult, Loop loop) {
-        // Check if the increment result is one of the phi's incoming values
-        // from a block inside the loop (back edge)
         for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
             IRBlock fromBlock = entry.getKey();
             Value value = entry.getValue();
 
-            if (loop.contains(fromBlock) && value instanceof SSAValue ssaValue) {
+            if (loop.contains(fromBlock) && value instanceof SSAValue) {
+                SSAValue ssaValue = (SSAValue) value;
                 if (ssaValue.getId() == incrementResult.getId()) {
                     return true;
                 }
@@ -149,28 +147,16 @@ public class InductionVariableSimplification implements IRTransform {
         boolean changed = false;
         SSAValue inductionVar = biv.phi.getResult();
 
-        // Look for multiplications of the induction variable by a constant
         for (IRBlock block : loop.getBlocks()) {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
             for (IRInstruction instr : instructions) {
-                if (instr instanceof BinaryOpInstruction binOp) {
+                if (instr instanceof BinaryOpInstruction) {
+                    BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                     if (binOp.getOp() == BinaryOp.MUL && binOp != biv.increment) {
                         Integer multiplier = getMultiplierIfDerivedIV(binOp, inductionVar);
                         if (multiplier != null && multiplier != 0) {
-                            // This is a derived IV: j = i * multiplier
-                            // The derived stride is: biv.stride * multiplier
                             int derivedStride = biv.stride * multiplier;
-
-                            // Replace multiplication with strength-reduced addition
-                            // For simplicity, we just fold the constant multiplication
-                            // A full implementation would create a new accumulator
-                            // Here we'll mark it for future optimization by other passes
-
-                            // If multiplier is a power of 2, StrengthReduction already handles it
-                            // For other cases, we note the optimization opportunity
-                            // This is a simplified version that just tracks the pattern
-
                             changed = true;
                         }
                     }
@@ -185,28 +171,36 @@ public class InductionVariableSimplification implements IRTransform {
         Value left = binOp.getLeft();
         Value right = binOp.getRight();
 
-        // Check i * c
-        if (left instanceof SSAValue ssaLeft && ssaLeft.getId() == inductionVar.getId()) {
-            return getIntConstant(right);
+        if (left instanceof SSAValue) {
+            SSAValue ssaLeft = (SSAValue) left;
+            if (ssaLeft.getId() == inductionVar.getId()) {
+                return getIntConstant(right);
+            }
         }
 
-        // Check c * i
-        if (right instanceof SSAValue ssaRight && ssaRight.getId() == inductionVar.getId()) {
-            return getIntConstant(left);
+        if (right instanceof SSAValue) {
+            SSAValue ssaRight = (SSAValue) right;
+            if (ssaRight.getId() == inductionVar.getId()) {
+                return getIntConstant(left);
+            }
         }
 
         return null;
     }
 
     private Integer getIntConstant(Value value) {
-        if (value instanceof IntConstant ic) {
+        if (value instanceof IntConstant) {
+            IntConstant ic = (IntConstant) value;
             return ic.getValue();
         }
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction ci) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant ic) {
+                if (c instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) c;
                     return ic.getValue();
                 }
             }

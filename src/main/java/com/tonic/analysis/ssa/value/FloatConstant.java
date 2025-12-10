@@ -56,7 +56,8 @@ public final class FloatConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof FloatConstant that)) return false;
+        if (!(o instanceof FloatConstant)) return false;
+        FloatConstant that = (FloatConstant) o;
         return Float.compare(value, that.value) == 0;
     }
 

@@ -153,7 +153,8 @@ public class IRMethodCloner {
      * Constants are returned as-is since they're immutable.
      */
     private Value mapValue(Value value) {
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             if (valueMapping.containsKey(ssa)) {
                 return valueMapping.get(ssa);
             }
@@ -188,21 +189,24 @@ public class IRMethodCloner {
      */
     private IRInstruction cloneInstruction(IRInstruction instr) {
         // Handle each instruction type
-        if (instr instanceof ConstantInstruction ci) {
+        if (instr instanceof ConstantInstruction) {
+            ConstantInstruction ci = (ConstantInstruction) instr;
             return new ConstantInstruction(
                     cloneValue(ci.getResult()),
                     ci.getConstant()
             );
         }
 
-        if (instr instanceof CopyInstruction ci) {
+        if (instr instanceof CopyInstruction) {
+            CopyInstruction ci = (CopyInstruction) instr;
             return new CopyInstruction(
                     cloneValue(ci.getResult()),
                     mapValue(ci.getSource())
             );
         }
 
-        if (instr instanceof BinaryOpInstruction bi) {
+        if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction bi = (BinaryOpInstruction) instr;
             return new BinaryOpInstruction(
                     cloneValue(bi.getResult()),
                     bi.getOp(),
@@ -211,7 +215,8 @@ public class IRMethodCloner {
             );
         }
 
-        if (instr instanceof UnaryOpInstruction ui) {
+        if (instr instanceof UnaryOpInstruction) {
+            UnaryOpInstruction ui = (UnaryOpInstruction) instr;
             return new UnaryOpInstruction(
                     cloneValue(ui.getResult()),
                     ui.getOp(),
@@ -219,19 +224,22 @@ public class IRMethodCloner {
             );
         }
 
-        if (instr instanceof ReturnInstruction ri) {
+        if (instr instanceof ReturnInstruction) {
+            ReturnInstruction ri = (ReturnInstruction) instr;
             if (ri.isVoidReturn()) {
                 return new ReturnInstruction();
             }
             return new ReturnInstruction(mapValue(ri.getReturnValue()));
         }
 
-        if (instr instanceof GotoInstruction gi) {
+        if (instr instanceof GotoInstruction) {
+            GotoInstruction gi = (GotoInstruction) instr;
             IRBlock target = blockMapping.get(gi.getTarget());
             return new GotoInstruction(target);
         }
 
-        if (instr instanceof BranchInstruction bi) {
+        if (instr instanceof BranchInstruction) {
+            BranchInstruction bi = (BranchInstruction) instr;
             return new BranchInstruction(
                     bi.getCondition(),
                     mapValue(bi.getLeft()),
@@ -241,7 +249,8 @@ public class IRMethodCloner {
             );
         }
 
-        if (instr instanceof SwitchInstruction si) {
+        if (instr instanceof SwitchInstruction) {
+            SwitchInstruction si = (SwitchInstruction) instr;
             SwitchInstruction cloned = new SwitchInstruction(
                     mapValue(si.getKey()),
                     blockMapping.get(si.getDefaultTarget())
@@ -252,7 +261,8 @@ public class IRMethodCloner {
             return cloned;
         }
 
-        if (instr instanceof InvokeInstruction ii) {
+        if (instr instanceof InvokeInstruction) {
+            InvokeInstruction ii = (InvokeInstruction) instr;
             List<Value> args = mapValues(ii.getArguments());
             if (ii.getResult() != null) {
                 return new InvokeInstruction(
@@ -276,14 +286,16 @@ public class IRMethodCloner {
             }
         }
 
-        if (instr instanceof NewInstruction ni) {
+        if (instr instanceof NewInstruction) {
+            NewInstruction ni = (NewInstruction) instr;
             return new NewInstruction(
                     cloneValue(ni.getResult()),
                     ni.getClassName()
             );
         }
 
-        if (instr instanceof NewArrayInstruction nai) {
+        if (instr instanceof NewArrayInstruction) {
+            NewArrayInstruction nai = (NewArrayInstruction) instr;
             List<Value> dims = mapValues(nai.getDimensions());
             if (dims.size() == 1) {
                 return new NewArrayInstruction(
@@ -300,7 +312,8 @@ public class IRMethodCloner {
             }
         }
 
-        if (instr instanceof ArrayLoadInstruction ali) {
+        if (instr instanceof ArrayLoadInstruction) {
+            ArrayLoadInstruction ali = (ArrayLoadInstruction) instr;
             return new ArrayLoadInstruction(
                     cloneValue(ali.getResult()),
                     mapValue(ali.getArray()),
@@ -308,7 +321,8 @@ public class IRMethodCloner {
             );
         }
 
-        if (instr instanceof ArrayStoreInstruction asi) {
+        if (instr instanceof ArrayStoreInstruction) {
+            ArrayStoreInstruction asi = (ArrayStoreInstruction) instr;
             return new ArrayStoreInstruction(
                     mapValue(asi.getArray()),
                     mapValue(asi.getIndex()),
@@ -316,14 +330,16 @@ public class IRMethodCloner {
             );
         }
 
-        if (instr instanceof ArrayLengthInstruction ali) {
+        if (instr instanceof ArrayLengthInstruction) {
+            ArrayLengthInstruction ali = (ArrayLengthInstruction) instr;
             return new ArrayLengthInstruction(
                     cloneValue(ali.getResult()),
                     mapValue(ali.getArray())
             );
         }
 
-        if (instr instanceof GetFieldInstruction gfi) {
+        if (instr instanceof GetFieldInstruction) {
+            GetFieldInstruction gfi = (GetFieldInstruction) instr;
             if (gfi.isStatic()) {
                 return new GetFieldInstruction(
                         cloneValue(gfi.getResult()),
@@ -342,7 +358,8 @@ public class IRMethodCloner {
             }
         }
 
-        if (instr instanceof PutFieldInstruction pfi) {
+        if (instr instanceof PutFieldInstruction) {
+            PutFieldInstruction pfi = (PutFieldInstruction) instr;
             if (pfi.isStatic()) {
                 return new PutFieldInstruction(
                         pfi.getOwner(),
@@ -361,7 +378,8 @@ public class IRMethodCloner {
             }
         }
 
-        if (instr instanceof CastInstruction ci) {
+        if (instr instanceof CastInstruction) {
+            CastInstruction ci = (CastInstruction) instr;
             return new CastInstruction(
                     cloneValue(ci.getResult()),
                     mapValue(ci.getObjectRef()),
@@ -369,7 +387,8 @@ public class IRMethodCloner {
             );
         }
 
-        if (instr instanceof InstanceOfInstruction ioi) {
+        if (instr instanceof InstanceOfInstruction) {
+            InstanceOfInstruction ioi = (InstanceOfInstruction) instr;
             return new InstanceOfInstruction(
                     cloneValue(ioi.getResult()),
                     mapValue(ioi.getObjectRef()),
@@ -377,26 +396,31 @@ public class IRMethodCloner {
             );
         }
 
-        if (instr instanceof ThrowInstruction ti) {
+        if (instr instanceof ThrowInstruction) {
+            ThrowInstruction ti = (ThrowInstruction) instr;
             return new ThrowInstruction(mapValue(ti.getException()));
         }
 
-        if (instr instanceof MonitorEnterInstruction mei) {
+        if (instr instanceof MonitorEnterInstruction) {
+            MonitorEnterInstruction mei = (MonitorEnterInstruction) instr;
             return new MonitorEnterInstruction(mapValue(mei.getObjectRef()));
         }
 
-        if (instr instanceof MonitorExitInstruction mxi) {
+        if (instr instanceof MonitorExitInstruction) {
+            MonitorExitInstruction mxi = (MonitorExitInstruction) instr;
             return new MonitorExitInstruction(mapValue(mxi.getObjectRef()));
         }
 
-        if (instr instanceof LoadLocalInstruction lli) {
+        if (instr instanceof LoadLocalInstruction) {
+            LoadLocalInstruction lli = (LoadLocalInstruction) instr;
             return new LoadLocalInstruction(
                     cloneValue(lli.getResult()),
                     lli.getLocalIndex()
             );
         }
 
-        if (instr instanceof StoreLocalInstruction sli) {
+        if (instr instanceof StoreLocalInstruction) {
+            StoreLocalInstruction sli = (StoreLocalInstruction) instr;
             return new StoreLocalInstruction(
                     sli.getLocalIndex(),
                     mapValue(sli.getValue())

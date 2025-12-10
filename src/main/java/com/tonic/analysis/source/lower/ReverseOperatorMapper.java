@@ -31,7 +31,6 @@ public final class ReverseOperatorMapper {
         if (op == BinaryOperator.SHL || op == BinaryOperator.SHL_ASSIGN) return BinaryOp.SHL;
         if (op == BinaryOperator.SHR || op == BinaryOperator.SHR_ASSIGN) return BinaryOp.SHR;
         if (op == BinaryOperator.USHR || op == BinaryOperator.USHR_ASSIGN) return BinaryOp.USHR;
-        // Comparison and logical operators don't map directly to BinaryOp
         return null;
     }
 
@@ -66,9 +65,6 @@ public final class ReverseOperatorMapper {
      */
     public static UnaryOp toIRUnaryOp(UnaryOperator op) {
         if (op == UnaryOperator.NEG) return UnaryOp.NEG;
-        // POS has no IR equivalent (no-op)
-        // BNOT, NOT require special handling
-        // INC/DEC are decomposed into ADD/SUB
         return null;
     }
 
@@ -77,13 +73,12 @@ public final class ReverseOperatorMapper {
      */
     public static UnaryOp getCastOp(SourceType from, SourceType to) {
         if (!(from instanceof PrimitiveSourceType) || !(to instanceof PrimitiveSourceType)) {
-            return null; // Reference casts use CastInstruction
+            return null;
         }
 
         PrimitiveSourceType fromPrim = (PrimitiveSourceType) from;
         PrimitiveSourceType toPrim = (PrimitiveSourceType) to;
 
-        // INT -> others
         if (fromPrim == PrimitiveSourceType.INT) {
             if (toPrim == PrimitiveSourceType.LONG) return UnaryOp.I2L;
             if (toPrim == PrimitiveSourceType.FLOAT) return UnaryOp.I2F;
@@ -93,21 +88,18 @@ public final class ReverseOperatorMapper {
             if (toPrim == PrimitiveSourceType.SHORT) return UnaryOp.I2S;
         }
 
-        // LONG -> others
         if (fromPrim == PrimitiveSourceType.LONG) {
             if (toPrim == PrimitiveSourceType.INT) return UnaryOp.L2I;
             if (toPrim == PrimitiveSourceType.FLOAT) return UnaryOp.L2F;
             if (toPrim == PrimitiveSourceType.DOUBLE) return UnaryOp.L2D;
         }
 
-        // FLOAT -> others
         if (fromPrim == PrimitiveSourceType.FLOAT) {
             if (toPrim == PrimitiveSourceType.INT) return UnaryOp.F2I;
             if (toPrim == PrimitiveSourceType.LONG) return UnaryOp.F2L;
             if (toPrim == PrimitiveSourceType.DOUBLE) return UnaryOp.F2D;
         }
 
-        // DOUBLE -> others
         if (fromPrim == PrimitiveSourceType.DOUBLE) {
             if (toPrim == PrimitiveSourceType.INT) return UnaryOp.D2I;
             if (toPrim == PrimitiveSourceType.LONG) return UnaryOp.D2L;

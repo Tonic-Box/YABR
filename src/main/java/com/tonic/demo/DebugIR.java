@@ -58,7 +58,8 @@ public class DebugIR {
                 }
                 for (IRInstruction instr : block.getInstructions()) {
                     System.out.println("  " + instr);
-                    if (instr instanceof InvokeInstruction inv) {
+                    if (instr instanceof InvokeInstruction) {
+                        InvokeInstruction inv = (InvokeInstruction) instr;
                         SSAValue result = inv.getResult();
                         if (result != null) {
                             System.out.println("    ^ invoke result=" + result + ", uses=" + result.getUses());

@@ -8,11 +8,7 @@ import com.tonic.analysis.ssa.type.*;
  * Sealed interface representing source-level types.
  * Provides bidirectional conversion with the IR type system.
  */
-public sealed interface SourceType extends ASTNode permits
-        PrimitiveSourceType,
-        ReferenceSourceType,
-        ArraySourceType,
-        VoidSourceType {
+public interface SourceType extends ASTNode {
 
     /**
      * Converts this source type to Java source code representation.
@@ -39,11 +35,14 @@ public sealed interface SourceType extends ASTNode permits
             return VoidSourceType.INSTANCE;
         }
 
-        if (irType instanceof PrimitiveType p) {
+        if (irType instanceof PrimitiveType) {
+            PrimitiveType p = (PrimitiveType) irType;
             return PrimitiveSourceType.fromPrimitive(p);
-        } else if (irType instanceof ReferenceType r) {
+        } else if (irType instanceof ReferenceType) {
+            ReferenceType r = (ReferenceType) irType;
             return new ReferenceSourceType(r.getInternalName());
-        } else if (irType instanceof ArrayType a) {
+        } else if (irType instanceof ArrayType) {
+            ArrayType a = (ArrayType) irType;
             return new ArraySourceType(fromIRType(a.getElementType()), a.getDimensions());
         } else if (irType instanceof VoidType) {
             return VoidSourceType.INSTANCE;
@@ -79,7 +78,6 @@ public sealed interface SourceType extends ASTNode permits
         return this instanceof VoidSourceType;
     }
 
-    // Default ASTNode methods - types typically don't have parents in expressions
     @Override
     default ASTNode getParent() {
         return null;
@@ -87,7 +85,6 @@ public sealed interface SourceType extends ASTNode permits
 
     @Override
     default void setParent(ASTNode parent) {
-        // Types are typically value objects without parent tracking
     }
 
     @Override

@@ -33,13 +33,12 @@ public class ExpressionRecoverer {
      * Recovers an operand with optional type hint for boolean detection.
      */
     public Expression recoverOperand(Value value, SourceType typeHint) {
-        if (value instanceof Constant c) {
+        if (value instanceof Constant) {
+            Constant c = (Constant) value;
             return recoverConstant(c, typeHint);
         }
         SSAValue ssa = (SSAValue) value;
 
-        // If this value has been materialized into a variable, return a variable reference
-        // This prevents inlining the same expression multiple times
         if (context.isMaterialized(ssa)) {
             String name = context.getVariableName(ssa);
             if (name != null) {
@@ -51,22 +50,17 @@ public class ExpressionRecoverer {
             }
         }
 
-        // For values without cached expressions, check if they should be inlined
         IRInstruction def = ssa.getDefinition();
         if (def != null && shouldInlineExpression(def)) {
-            // Special handling for constants - don't use cache since type hint matters
-            // The same int value 0 could be boolean false in one context, int 0 in another
-            if (def instanceof ConstantInstruction constInstr) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction constInstr = (ConstantInstruction) def;
                 return recoverConstant(constInstr.getConstant(), typeHint);
             }
 
-            // LoadLocal should ALWAYS be freshly recovered - don't use cache
-            // This ensures slot 0 always returns 'this' in instance methods
             if (def instanceof LoadLocalInstruction) {
                 return recover(def);
             }
 
-            // For non-constants, check cache
             if (context.isRecovered(ssa)) {
                 return context.getCachedExpression(ssa);
             }
@@ -75,16 +69,13 @@ public class ExpressionRecoverer {
             return expr;
         }
 
-        // Check cache for non-inlined values
         if (context.isRecovered(ssa)) {
             return context.getCachedExpression(ssa);
         }
 
-        // Fall back to variable reference
         String name = context.getVariableName(ssa);
         if (name == null) name = "v" + ssa.getId();
         SourceType type = typeRecoverer.recoverType(ssa);
-        // Return ThisExpr for 'this' references
         if ("this".equals(name)) {
             return new ThisExpr(type);
         }
@@ -96,35 +87,26 @@ public class ExpressionRecoverer {
      * rather than assigned to an intermediate variable.
      */
     private boolean shouldInlineExpression(IRInstruction instr) {
-        // Constants should always be inlined
         if (instr instanceof ConstantInstruction) {
             return true;
         }
 
-        // LoadLocal should always be inlined - it just returns the local variable or 'this'
         if (instr instanceof LoadLocalInstruction) {
             return true;
         }
 
-        // PHI instructions should NEVER be inlined - they represent merged values
-        // and should always reference the declared variable
         if (instr instanceof PhiInstruction) {
             return false;
         }
 
-        // Check for single-use values - these can be safely inlined
         SSAValue result = instr.getResult();
         if (result != null) {
             int useCount = result.getUses().size();
             if (useCount <= 1) {
-                // Single-use values can be inlined for most instruction types
-                // This includes: BinaryOp, UnaryOp, ArrayLoad, GetField, Invoke, Cast, etc.
                 return true;
             }
         }
 
-        // For multi-use method calls and field accesses, don't inline (use variable)
-        // Other multi-use instructions should also not be inlined
         return false;
     }
 
@@ -136,10 +118,12 @@ public class ExpressionRecoverer {
      * Recovers a constant with optional type hint for boolean detection.
      */
     public Expression recoverConstant(Constant c, SourceType typeHint) {
-        if (c instanceof IntConstant i) {
+        if (c instanceof IntConstant) {
+            IntConstant i = (IntConstant) c;
             int val = i.getValue();
-            // Check if this is a boolean or char context based on type hint
-            if (typeHint instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType pst) {
+            if (typeHint instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType) {
+                com.tonic.analysis.source.ast.type.PrimitiveSourceType pst =
+                    (com.tonic.analysis.source.ast.type.PrimitiveSourceType) typeHint;
                 if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
                     return LiteralExpr.ofBoolean(val != 0);
                 }
@@ -148,21 +132,23 @@ public class ExpressionRecoverer {
                 }
             }
             return LiteralExpr.ofInt(val);
-        } else if (c instanceof LongConstant l) {
+        } else if (c instanceof LongConstant) {
+            LongConstant l = (LongConstant) c;
             return LiteralExpr.ofLong(l.getValue());
-        } else if (c instanceof FloatConstant f) {
+        } else if (c instanceof FloatConstant) {
+            FloatConstant f = (FloatConstant) c;
             return LiteralExpr.ofFloat(f.getValue());
-        } else if (c instanceof DoubleConstant d) {
+        } else if (c instanceof DoubleConstant) {
+            DoubleConstant d = (DoubleConstant) c;
             return LiteralExpr.ofDouble(d.getValue());
-        } else if (c instanceof StringConstant s) {
+        } else if (c instanceof StringConstant) {
+            StringConstant s = (StringConstant) c;
             return LiteralExpr.ofString(s.getValue());
         } else if (c instanceof NullConstant) {
             return LiteralExpr.ofNull();
-        } else if (c instanceof ClassConstant cc) {
-            // Handle class literals like MyClass.class
+        } else if (c instanceof ClassConstant) {
+            ClassConstant cc = (ClassConstant) c;
             String className = cc.getClassName();
-            // className is in internal format (e.g., "java/lang/String" or "bm")
-            // Create ReferenceSourceType directly from internal name
             SourceType classType = new ReferenceSourceType(className, java.util.Collections.emptyList());
             return new ClassExpr(classType);
         }
@@ -190,7 +176,6 @@ public class ExpressionRecoverer {
                     break;
                 }
             } else if (c == '[') {
-                // Array type - need to capture the whole array descriptor
                 StringBuilder arrayDesc = new StringBuilder();
                 while (idx < desc.length() && desc.charAt(idx) == '[') {
                     arrayDesc.append('[');
@@ -223,18 +208,17 @@ public class ExpressionRecoverer {
      * Pattern: new StringBuilder().append(a).append(b).toString() → a + b
      */
     private Expression tryCollapseStringBuilder(MethodCallExpr call) {
-        // Only handle toString() calls
         if (!"toString".equals(call.getMethodName())) return null;
         if (!isStringBuilderExpr(call.getReceiver())) return null;
 
-        // Collect append chain arguments
         java.util.List<Expression> parts = new java.util.ArrayList<>();
         Expression current = call.getReceiver();
 
-        while (current instanceof MethodCallExpr mc) {
+        while (current instanceof MethodCallExpr) {
+            MethodCallExpr mc = (MethodCallExpr) current;
             if ("append".equals(mc.getMethodName()) && isStringBuilderExpr(mc)) {
                 if (!mc.getArguments().isEmpty()) {
-                    parts.add(0, mc.getArguments().get(0)); // prepend to maintain order
+                    parts.add(0, mc.getArguments().get(0));
                 }
                 current = mc.getReceiver();
             } else {
@@ -242,13 +226,14 @@ public class ExpressionRecoverer {
             }
         }
 
-        // Check if base is new StringBuilder() or new StringBuilder(initialCapacity)
-        if (!(current instanceof NewExpr ne) ||
-            !ne.getClassName().contains("StringBuilder")) {
+        if (!(current instanceof NewExpr)) {
+            return null;
+        }
+        NewExpr ne = (NewExpr) current;
+        if (!ne.getClassName().contains("StringBuilder")) {
             return null;
         }
 
-        // Build concat expression: part0 + part1 + part2...
         if (parts.isEmpty()) {
             return LiteralExpr.ofString("");
         }
@@ -265,10 +250,12 @@ public class ExpressionRecoverer {
      * Checks if an expression is a StringBuilder (method call on StringBuilder or new StringBuilder).
      */
     private boolean isStringBuilderExpr(Expression expr) {
-        if (expr instanceof MethodCallExpr mc) {
+        if (expr instanceof MethodCallExpr) {
+            MethodCallExpr mc = (MethodCallExpr) expr;
             return mc.getOwnerClass().contains("StringBuilder");
         }
-        if (expr instanceof NewExpr ne) {
+        if (expr instanceof NewExpr) {
+            NewExpr ne = (NewExpr) expr;
             return ne.getClassName().contains("StringBuilder");
         }
         return false;
@@ -282,10 +269,6 @@ public class ExpressionRecoverer {
             BinaryOperator op = OperatorMapper.mapBinaryOp(instr.getOp());
             SourceType type = typeRecoverer.recoverType(instr.getResult());
 
-            // For bitwise AND/OR/XOR, if at least one operand is boolean, result is boolean
-            // JVM uses IAND/IOR/IXOR for boolean operations, but result should be typed as boolean
-            // This also handles cases where one operand is boolean and the other is a boolean PHI
-            // (which may be typed as int because it comes from 0/1 constants)
             if ((op == BinaryOperator.BAND || op == BinaryOperator.BOR || op == BinaryOperator.BXOR) &&
                 (isBooleanType(left.getType()) || isBooleanType(right.getType()))) {
                 type = com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN;
@@ -318,12 +301,10 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitInvoke(InvokeInstruction instr) {
-            // Handle <init> constructor calls
             if ("<init>".equals(instr.getName())) {
                 return handleConstructorCall(instr);
             }
 
-            // Handle invokedynamic (lambda expressions)
             if (instr.isDynamic()) {
                 return handleInvokeDynamic(instr);
             }
@@ -331,8 +312,8 @@ public class ExpressionRecoverer {
             Expression receiver = null;
             if (instr.getInvokeType() != InvokeType.STATIC && !instr.getArguments().isEmpty()) {
                 Value receiverValue = instr.getArguments().get(0);
-                // Skip 'this' receiver for method calls in same class
-                if (receiverValue instanceof SSAValue ssaReceiver) {
+                if (receiverValue instanceof SSAValue) {
+                    SSAValue ssaReceiver = (SSAValue) receiverValue;
                     String name = context.getVariableName(ssaReceiver);
                     if (!"this".equals(name)) {
                         receiver = recoverOperand(receiverValue);
@@ -344,7 +325,6 @@ public class ExpressionRecoverer {
             java.util.List<Expression> args = new java.util.ArrayList<>();
             int start = (instr.getInvokeType() == InvokeType.STATIC) ? 0 : 1;
 
-            // Parse parameter types from descriptor to provide type hints for boolean detection
             java.util.List<String> paramTypes = parseParameterTypes(instr.getDescriptor());
 
             for (int i = start; i < instr.getArguments().size(); i++) {
@@ -359,19 +339,16 @@ public class ExpressionRecoverer {
             boolean isStatic = instr.getInvokeType() == InvokeType.STATIC;
             MethodCallExpr call = new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType);
 
-            // Try to collapse StringBuilder chains into string concatenation
             Expression collapsed = tryCollapseStringBuilder(call);
             return collapsed != null ? collapsed : call;
         }
 
         private Expression handleConstructorCall(InvokeInstruction instr) {
             java.util.List<Expression> args = new java.util.ArrayList<>();
-            // Constructor args start at index 1 (index 0 is the uninitialized object)
-            // Parse parameter types for boolean detection
             java.util.List<String> paramTypes = parseParameterTypes(instr.getDescriptor());
 
             for (int i = 1; i < instr.getArguments().size(); i++) {
-                int paramIndex = i - 1; // Offset by 1 since index 0 is the receiver
+                int paramIndex = i - 1;
                 SourceType typeHint = null;
                 if (paramIndex < paramTypes.size()) {
                     typeHint = typeRecoverer.recoverType(paramTypes.get(paramIndex));
@@ -379,39 +356,33 @@ public class ExpressionRecoverer {
                 args.add(recoverOperand(instr.getArguments().get(i), typeHint));
             }
 
-            // Check if this is super() or this() call
             if (!instr.getArguments().isEmpty()) {
                 Value receiver = instr.getArguments().get(0);
-                if (receiver instanceof SSAValue ssaReceiver) {
+                if (receiver instanceof SSAValue) {
+                    SSAValue ssaReceiver = (SSAValue) receiver;
                     String name = context.getVariableName(ssaReceiver);
                     if ("this".equals(name)) {
-                        // this.<init>() is either super() or this()
                         String ownerClass = instr.getOwner();
                         String methodClass = context.getIrMethod().getOwnerClass();
                         if (ownerClass != null && methodClass != null && !ownerClass.equals(methodClass)) {
-                            // Calling parent constructor
                             return new MethodCallExpr(null, "super", ownerClass, args, false, null);
                         } else {
-                            // Calling this() - delegating constructor
                             return new MethodCallExpr(null, "this", ownerClass, args, false, null);
                         }
                     }
 
-                    // Check if receiver is a pending new instruction
                     if (context.isPendingNew(ssaReceiver)) {
                         String className = context.consumePendingNew(ssaReceiver);
                         NewExpr newExpr = new NewExpr(className);
                         for (Expression arg : args) {
                             newExpr.addArgument(arg);
                         }
-                        // Cache this combined expression for later use
                         context.cacheExpression(ssaReceiver, newExpr);
                         return newExpr;
                     }
                 }
             }
 
-            // Fallback: create NewExpr with the owner class
             NewExpr newExpr = new NewExpr(instr.getOwner());
             for (Expression arg : args) {
                 newExpr.addArgument(arg);
@@ -424,10 +395,8 @@ public class ExpressionRecoverer {
          * Attempts to generate proper method references or lambda expressions with correct bodies.
          */
         private Expression handleInvokeDynamic(InvokeInstruction instr) {
-            // Get the return type - this is the functional interface type
             SourceType returnType = typeRecoverer.recoverType(instr.getResult());
 
-            // Try to look up bootstrap info from the ClassFile
             BootstrapMethodInfo bsInfo = lookupBootstrapInfo(instr);
 
             if (bsInfo != null) {
@@ -439,7 +408,6 @@ public class ExpressionRecoverer {
                 }
             }
 
-            // Fallback: generate lambda with method call body
             return generateFallbackLambda(instr, returnType);
         }
 
@@ -447,7 +415,6 @@ public class ExpressionRecoverer {
          * Looks up bootstrap method info for an invokedynamic instruction from the ClassFile.
          */
         private BootstrapMethodInfo lookupBootstrapInfo(InvokeInstruction instr) {
-            // First check if it's already available
             if (instr.hasBootstrapInfo()) {
                 return instr.getBootstrapInfo();
             }
@@ -456,21 +423,19 @@ public class ExpressionRecoverer {
                 com.tonic.parser.ClassFile classFile = context.getSourceMethod().getClassFile();
                 if (classFile == null) return null;
 
-                // Get the InvokeDynamic constant pool item
                 int cpIndex = instr.getOriginalCpIndex();
                 if (cpIndex <= 0) return null;
 
                 com.tonic.parser.constpool.Item<?> item = classFile.getConstPool().getItem(cpIndex);
-                if (!(item instanceof com.tonic.parser.constpool.InvokeDynamicItem indyItem)) return null;
+                if (!(item instanceof com.tonic.parser.constpool.InvokeDynamicItem)) return null;
+                com.tonic.parser.constpool.InvokeDynamicItem indyItem = (com.tonic.parser.constpool.InvokeDynamicItem) item;
 
-                // Get bootstrap method index
                 int bsmIndex = indyItem.getValue().getBootstrapMethodAttrIndex();
 
-                // Find BootstrapMethods attribute
                 com.tonic.parser.attribute.BootstrapMethodsAttribute bsmAttr = null;
                 for (com.tonic.parser.attribute.Attribute attr : classFile.getClassAttributes()) {
-                    if (attr instanceof com.tonic.parser.attribute.BootstrapMethodsAttribute bma) {
-                        bsmAttr = bma;
+                    if (attr instanceof com.tonic.parser.attribute.BootstrapMethodsAttribute) {
+                        bsmAttr = (com.tonic.parser.attribute.BootstrapMethodsAttribute) attr;
                         break;
                     }
                 }
@@ -481,19 +446,16 @@ public class ExpressionRecoverer {
 
                 com.tonic.parser.attribute.table.BootstrapMethod bsm = bootstrapMethods.get(bsmIndex);
 
-                // Get the bootstrap method handle
                 com.tonic.parser.constpool.MethodHandleItem bsmHandleItem =
                     (com.tonic.parser.constpool.MethodHandleItem) classFile.getConstPool().getItem(bsm.getBootstrapMethodRef());
                 com.tonic.parser.constpool.structure.MethodHandle bsmHandle = bsmHandleItem.getValue();
 
-                // Create MethodHandleConstant for the bootstrap method
                 String bsmOwner = resolveMethodHandleOwner(classFile.getConstPool(), bsmHandle);
                 String bsmName = resolveMethodHandleName(classFile.getConstPool(), bsmHandle);
                 String bsmDesc = resolveMethodHandleDesc(classFile.getConstPool(), bsmHandle);
                 com.tonic.analysis.ssa.value.MethodHandleConstant bsmConst =
                     new com.tonic.analysis.ssa.value.MethodHandleConstant(bsmHandle.getReferenceKind(), bsmOwner, bsmName, bsmDesc);
 
-                // Convert bootstrap arguments to Constants
                 java.util.List<com.tonic.analysis.ssa.value.Constant> bsArgs = new java.util.ArrayList<>();
                 for (int argIndex : bsm.getBootstrapArguments()) {
                     com.tonic.analysis.ssa.value.Constant argConst = convertCPItemToConstant(classFile.getConstPool(), argIndex);
@@ -511,11 +473,14 @@ public class ExpressionRecoverer {
 
         private String resolveMethodHandleOwner(com.tonic.parser.ConstPool cp, com.tonic.parser.constpool.structure.MethodHandle handle) {
             com.tonic.parser.constpool.Item<?> refItem = cp.getItem(handle.getReferenceIndex());
-            if (refItem instanceof com.tonic.parser.constpool.MethodRefItem methodRef) {
+            if (refItem instanceof com.tonic.parser.constpool.MethodRefItem) {
+                com.tonic.parser.constpool.MethodRefItem methodRef = (com.tonic.parser.constpool.MethodRefItem) refItem;
                 return methodRef.getOwner();
-            } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem ifaceRef) {
+            } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+                com.tonic.parser.constpool.InterfaceRefItem ifaceRef = (com.tonic.parser.constpool.InterfaceRefItem) refItem;
                 return ifaceRef.getOwner();
-            } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem fieldRef) {
+            } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem) {
+                com.tonic.parser.constpool.FieldRefItem fieldRef = (com.tonic.parser.constpool.FieldRefItem) refItem;
                 return fieldRef.getOwner();
             }
             return "";
@@ -523,11 +488,14 @@ public class ExpressionRecoverer {
 
         private String resolveMethodHandleName(com.tonic.parser.ConstPool cp, com.tonic.parser.constpool.structure.MethodHandle handle) {
             com.tonic.parser.constpool.Item<?> refItem = cp.getItem(handle.getReferenceIndex());
-            if (refItem instanceof com.tonic.parser.constpool.MethodRefItem methodRef) {
+            if (refItem instanceof com.tonic.parser.constpool.MethodRefItem) {
+                com.tonic.parser.constpool.MethodRefItem methodRef = (com.tonic.parser.constpool.MethodRefItem) refItem;
                 return methodRef.getName();
-            } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem ifaceRef) {
+            } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+                com.tonic.parser.constpool.InterfaceRefItem ifaceRef = (com.tonic.parser.constpool.InterfaceRefItem) refItem;
                 return ifaceRef.getName();
-            } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem fieldRef) {
+            } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem) {
+                com.tonic.parser.constpool.FieldRefItem fieldRef = (com.tonic.parser.constpool.FieldRefItem) refItem;
                 return fieldRef.getName();
             }
             return "";
@@ -535,11 +503,14 @@ public class ExpressionRecoverer {
 
         private String resolveMethodHandleDesc(com.tonic.parser.ConstPool cp, com.tonic.parser.constpool.structure.MethodHandle handle) {
             com.tonic.parser.constpool.Item<?> refItem = cp.getItem(handle.getReferenceIndex());
-            if (refItem instanceof com.tonic.parser.constpool.MethodRefItem methodRef) {
+            if (refItem instanceof com.tonic.parser.constpool.MethodRefItem) {
+                com.tonic.parser.constpool.MethodRefItem methodRef = (com.tonic.parser.constpool.MethodRefItem) refItem;
                 return methodRef.getDescriptor();
-            } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem ifaceRef) {
+            } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+                com.tonic.parser.constpool.InterfaceRefItem ifaceRef = (com.tonic.parser.constpool.InterfaceRefItem) refItem;
                 return ifaceRef.getDescriptor();
-            } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem fieldRef) {
+            } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem) {
+                com.tonic.parser.constpool.FieldRefItem fieldRef = (com.tonic.parser.constpool.FieldRefItem) refItem;
                 return fieldRef.getDescriptor();
             }
             return "";
@@ -548,30 +519,35 @@ public class ExpressionRecoverer {
         private com.tonic.analysis.ssa.value.Constant convertCPItemToConstant(com.tonic.parser.ConstPool cp, int index) {
             com.tonic.parser.constpool.Item<?> item = cp.getItem(index);
 
-            if (item instanceof com.tonic.parser.constpool.MethodTypeItem mtItem) {
-                // MethodType constant - getValue() returns the descriptor index
+            if (item instanceof com.tonic.parser.constpool.MethodTypeItem) {
+                com.tonic.parser.constpool.MethodTypeItem mtItem = (com.tonic.parser.constpool.MethodTypeItem) item;
                 String desc = ((com.tonic.parser.constpool.Utf8Item) cp.getItem(mtItem.getValue())).getValue();
                 return new com.tonic.analysis.ssa.value.MethodTypeConstant(desc);
-            } else if (item instanceof com.tonic.parser.constpool.MethodHandleItem mhItem) {
-                // MethodHandle constant
+            } else if (item instanceof com.tonic.parser.constpool.MethodHandleItem) {
+                com.tonic.parser.constpool.MethodHandleItem mhItem = (com.tonic.parser.constpool.MethodHandleItem) item;
                 com.tonic.parser.constpool.structure.MethodHandle handle = mhItem.getValue();
                 String owner = resolveMethodHandleOwner(cp, handle);
                 String name = resolveMethodHandleName(cp, handle);
                 String desc = resolveMethodHandleDesc(cp, handle);
                 return new com.tonic.analysis.ssa.value.MethodHandleConstant(handle.getReferenceKind(), owner, name, desc);
-            } else if (item instanceof com.tonic.parser.constpool.IntegerItem intItem) {
+            } else if (item instanceof com.tonic.parser.constpool.IntegerItem) {
+                com.tonic.parser.constpool.IntegerItem intItem = (com.tonic.parser.constpool.IntegerItem) item;
                 return new IntConstant(intItem.getValue());
-            } else if (item instanceof com.tonic.parser.constpool.LongItem longItem) {
+            } else if (item instanceof com.tonic.parser.constpool.LongItem) {
+                com.tonic.parser.constpool.LongItem longItem = (com.tonic.parser.constpool.LongItem) item;
                 return new LongConstant(longItem.getValue());
-            } else if (item instanceof com.tonic.parser.constpool.FloatItem floatItem) {
+            } else if (item instanceof com.tonic.parser.constpool.FloatItem) {
+                com.tonic.parser.constpool.FloatItem floatItem = (com.tonic.parser.constpool.FloatItem) item;
                 return new FloatConstant(floatItem.getValue());
-            } else if (item instanceof com.tonic.parser.constpool.DoubleItem doubleItem) {
+            } else if (item instanceof com.tonic.parser.constpool.DoubleItem) {
+                com.tonic.parser.constpool.DoubleItem doubleItem = (com.tonic.parser.constpool.DoubleItem) item;
                 return new DoubleConstant(doubleItem.getValue());
-            } else if (item instanceof com.tonic.parser.constpool.StringRefItem strItem) {
+            } else if (item instanceof com.tonic.parser.constpool.StringRefItem) {
+                com.tonic.parser.constpool.StringRefItem strItem = (com.tonic.parser.constpool.StringRefItem) item;
                 String value = ((com.tonic.parser.constpool.Utf8Item) cp.getItem(strItem.getValue())).getValue();
                 return new StringConstant(value);
-            } else if (item instanceof com.tonic.parser.constpool.ConstantDynamicItem cdItem) {
-                // Nested ConstantDynamic - return as DynamicConstant for later resolution
+            } else if (item instanceof com.tonic.parser.constpool.ConstantDynamicItem) {
+                com.tonic.parser.constpool.ConstantDynamicItem cdItem = (com.tonic.parser.constpool.ConstantDynamicItem) item;
                 return new DynamicConstant(
                     cdItem.getName(),
                     cdItem.getDescriptor(),
@@ -590,44 +566,39 @@ public class ExpressionRecoverer {
             java.util.List<Constant> bsArgs = bsInfo.getBootstrapArguments();
             java.util.List<Value> stackArgs = instr.getArguments();
 
-            // First bootstrap arg is the recipe string
             String recipe = "";
-            if (!bsArgs.isEmpty() && bsArgs.get(0) instanceof StringConstant sc) {
+            if (!bsArgs.isEmpty() && bsArgs.get(0) instanceof StringConstant) {
+                StringConstant sc = (StringConstant) bsArgs.get(0);
                 recipe = sc.getValue();
             }
 
-            // Build list of all parts to concatenate
             java.util.List<Expression> parts = new java.util.ArrayList<>();
             int stackIdx = 0;
-            int constantIdx = 1; // Start after recipe
+            int constantIdx = 1;
 
             for (int i = 0; i < recipe.length(); i++) {
                 char c = recipe.charAt(i);
                 if (c == '\u0001') {
-                    // Stack argument
                     if (stackIdx < stackArgs.size()) {
                         parts.add(recoverOperand(stackArgs.get(stackIdx++)));
                     }
                 } else if (c == '\u0002') {
-                    // Bootstrap constant argument (may be CONDY)
                     if (constantIdx < bsArgs.size()) {
                         Constant arg = bsArgs.get(constantIdx++);
                         parts.add(recoverConstantAsExpression(arg));
                     }
                 } else {
-                    // Literal character - accumulate into string
                     StringBuilder sb = new StringBuilder();
                     while (i < recipe.length() && recipe.charAt(i) != '\u0001' && recipe.charAt(i) != '\u0002') {
                         sb.append(recipe.charAt(i++));
                     }
-                    i--; // Back up for loop increment
+                    i--;
                     if (sb.length() > 0) {
                         parts.add(LiteralExpr.ofString(sb.toString()));
                     }
                 }
             }
 
-            // Build binary expression chain: part0 + part1 + part2...
             if (parts.isEmpty()) {
                 return LiteralExpr.ofString("");
             }
@@ -642,7 +613,8 @@ public class ExpressionRecoverer {
          * Converts a Constant to an Expression, handling DynamicConstant specially.
          */
         private Expression recoverConstantAsExpression(Constant c) {
-            if (c instanceof DynamicConstant dc) {
+            if (c instanceof DynamicConstant) {
+                DynamicConstant dc = (DynamicConstant) c;
                 return resolveDynamicConstantExpression(dc);
             }
             return recoverConstant(c, null);
@@ -656,10 +628,10 @@ public class ExpressionRecoverer {
                 com.tonic.parser.ClassFile classFile = context.getSourceMethod().getClassFile();
                 if (classFile == null) return LiteralExpr.ofNull();
 
-                // Get bootstrap method for this CONDY
                 com.tonic.parser.attribute.BootstrapMethodsAttribute bsmAttr = null;
                 for (com.tonic.parser.attribute.Attribute attr : classFile.getClassAttributes()) {
-                    if (attr instanceof com.tonic.parser.attribute.BootstrapMethodsAttribute bma) {
+                    if (attr instanceof com.tonic.parser.attribute.BootstrapMethodsAttribute) {
+                        com.tonic.parser.attribute.BootstrapMethodsAttribute bma = (com.tonic.parser.attribute.BootstrapMethodsAttribute) attr;
                         bsmAttr = bma;
                         break;
                     }
@@ -679,12 +651,10 @@ public class ExpressionRecoverer {
                 String bsmOwner = resolveMethodHandleOwner(classFile.getConstPool(), bsmHandle);
                 String bsmName = resolveMethodHandleName(classFile.getConstPool(), bsmHandle);
 
-                // Check for ConstantBootstraps.invoke - this wraps a method call
                 if ("java/lang/invoke/ConstantBootstraps".equals(bsmOwner) && "invoke".equals(bsmName)) {
                     return resolveConstantBootstrapsInvoke(classFile, bsm);
                 }
 
-                // Fallback: return as unknown dynamic constant
                 return LiteralExpr.ofNull();
             } catch (Exception e) {
                 return LiteralExpr.ofNull();
@@ -697,20 +667,19 @@ public class ExpressionRecoverer {
         private Expression resolveConstantBootstrapsInvoke(com.tonic.parser.ClassFile classFile,
                                                            com.tonic.parser.attribute.table.BootstrapMethod bsm) {
             java.util.List<Integer> args = bsm.getBootstrapArguments();
-            // Args: [0] = MethodHandle to invoke, [1..n] = arguments
             if (args.isEmpty()) return LiteralExpr.ofNull();
 
             com.tonic.parser.constpool.Item<?> mhItem = classFile.getConstPool().getItem(args.get(0));
-            if (!(mhItem instanceof com.tonic.parser.constpool.MethodHandleItem handleItem)) {
+            if (!(mhItem instanceof com.tonic.parser.constpool.MethodHandleItem)) {
                 return LiteralExpr.ofNull();
             }
+            com.tonic.parser.constpool.MethodHandleItem handleItem = (com.tonic.parser.constpool.MethodHandleItem) mhItem;
 
             com.tonic.parser.constpool.structure.MethodHandle handle = handleItem.getValue();
             String owner = resolveMethodHandleOwner(classFile.getConstPool(), handle);
             String name = resolveMethodHandleName(classFile.getConstPool(), handle);
             String desc = resolveMethodHandleDesc(classFile.getConstPool(), handle);
 
-            // Build argument list
             java.util.List<Expression> callArgs = new java.util.ArrayList<>();
             for (int i = 1; i < args.size(); i++) {
                 Constant argConst = convertCPItemToConstant(classFile.getConstPool(), args.get(i));
@@ -719,11 +688,9 @@ public class ExpressionRecoverer {
                 }
             }
 
-            // Determine return type from descriptor
             String retDesc = desc.substring(desc.indexOf(')') + 1);
             SourceType retType = SourceType.fromIRType(com.tonic.analysis.ssa.type.IRType.fromDescriptor(retDesc));
 
-            // Create static method call
             return MethodCallExpr.staticCall(owner, name, callArgs, retType);
         }
 
@@ -733,44 +700,33 @@ public class ExpressionRecoverer {
         private Expression handleLambdaMetafactory(InvokeInstruction instr, BootstrapMethodInfo bsInfo, SourceType returnType) {
             java.util.List<com.tonic.analysis.ssa.value.Constant> args = bsInfo.getBootstrapArguments();
 
-            // Bootstrap arguments for LambdaMetafactory.metafactory:
-            // 0: MethodType - SAM method type (what the functional interface expects)
-            // 1: MethodHandle - the implementation method
-            // 2: MethodType - instantiated method type (may differ for generics)
-
-            if (args.size() >= 2 && args.get(1) instanceof com.tonic.analysis.ssa.value.MethodHandleConstant implHandle) {
+            if (args.size() >= 2 && args.get(1) instanceof com.tonic.analysis.ssa.value.MethodHandleConstant) {
+                com.tonic.analysis.ssa.value.MethodHandleConstant implHandle = (com.tonic.analysis.ssa.value.MethodHandleConstant) args.get(1);
                 String implOwner = implHandle.getOwner();
                 String implName = implHandle.getName();
                 String implDesc = implHandle.getDescriptor();
                 int refKind = implHandle.getReferenceKind();
 
-                // Get the SAM method type to determine parameter count
                 String samDescriptor = null;
-                if (args.size() >= 1 && args.get(0) instanceof com.tonic.analysis.ssa.value.MethodTypeConstant samType) {
+                if (args.size() >= 1 && args.get(0) instanceof com.tonic.analysis.ssa.value.MethodTypeConstant) {
+                    com.tonic.analysis.ssa.value.MethodTypeConstant samType = (com.tonic.analysis.ssa.value.MethodTypeConstant) args.get(0);
                     samDescriptor = samType.getDescriptor();
                 }
 
-                // Try to inline the lambda body if the implementation is in the same class
-                // This produces cleaner output like CFR does, especially for obfuscated code
-                // where synthetic lambdas may not have the standard "lambda$" naming
                 String currentClassName = context.getSourceMethod().getClassFile() != null
                     ? context.getSourceMethod().getClassFile().getClassName() : null;
                 boolean isInSameClass = currentClassName != null &&
                     implOwner.replace('/', '.').equals(currentClassName.replace('/', '.'));
 
-                // First, try to inline the lambda body if it's in the same class
                 if (isInSameClass) {
                     java.util.List<LambdaParameter> params = generateLambdaParameters(samDescriptor, instr.getName());
                     com.tonic.analysis.source.ast.ASTNode body = generateLambdaBody(implHandle, instr, params, samDescriptor);
 
-                    // Only use the inlined body if it's not an empty fallback
                     if (body != null && !isEmptyBody(body)) {
                         return new LambdaExpr(params, body, returnType);
                     }
                 }
 
-                // Fallback to method reference if we couldn't inline or it's from a different class
-                // Standard synthetic lambdas (lambda$...) that we couldn't inline should still be lambdas
                 boolean isSyntheticLambda = implName.startsWith("lambda$");
                 if (isSyntheticLambda) {
                     java.util.List<LambdaParameter> params = generateLambdaParameters(samDescriptor, instr.getName());
@@ -778,11 +734,9 @@ public class ExpressionRecoverer {
                     return new LambdaExpr(params, body, returnType);
                 }
 
-                // Use method reference for external methods
                 return createMethodReference(implHandle, instr, returnType);
             }
 
-            // Fallback if bootstrap args are not what we expect
             return generateFallbackLambda(instr, returnType);
         }
 
@@ -795,12 +749,10 @@ public class ExpressionRecoverer {
             String name = handle.getName();
             int refKind = handle.getReferenceKind();
 
-            // Handle constructor references
             if ("<init>".equals(name) || refKind == com.tonic.analysis.ssa.value.MethodHandleConstant.REF_newInvokeSpecial) {
                 return MethodRefExpr.constructorRef(owner, returnType);
             }
 
-            // Handle different reference kinds
             MethodRefKind kind;
             Expression receiver = null;
 
@@ -809,13 +761,10 @@ public class ExpressionRecoverer {
             } else if (refKind == com.tonic.analysis.ssa.value.MethodHandleConstant.REF_invokeSpecial ||
                        refKind == com.tonic.analysis.ssa.value.MethodHandleConstant.REF_invokeVirtual ||
                        refKind == com.tonic.analysis.ssa.value.MethodHandleConstant.REF_invokeInterface) {
-                // Check if there's a bound receiver in the invokedynamic arguments
                 if (!instr.getArguments().isEmpty()) {
-                    // Bound method reference - expr::method
                     receiver = recoverOperand(instr.getArguments().get(0));
                     kind = MethodRefKind.BOUND;
                 } else {
-                    // Unbound instance method reference - Type::method
                     kind = MethodRefKind.INSTANCE;
                 }
             } else {
@@ -831,21 +780,18 @@ public class ExpressionRecoverer {
         private java.util.List<LambdaParameter> generateLambdaParameters(String samDescriptor, String samMethodName) {
             java.util.List<LambdaParameter> params = new java.util.ArrayList<>();
 
-            // Parse SAM descriptor to count parameters
             int paramCount = 0;
             if (samDescriptor != null && samDescriptor.startsWith("(")) {
                 java.util.List<String> paramTypes = parseParameterTypes(samDescriptor);
                 paramCount = paramTypes.size();
             }
 
-            // Use appropriate parameter names based on method name and count
             if ("uncaughtException".equals(samMethodName)) {
                 params.add(new LambdaParameter("t", null, true));
                 params.add(new LambdaParameter("e", null, true));
             } else if ("hierarchyChanged".equals(samMethodName)) {
                 params.add(new LambdaParameter("event", null, true));
             } else if ("run".equals(samMethodName) && paramCount == 0) {
-                // Runnable - no params
             } else if ("accept".equals(samMethodName)) {
                 params.add(new LambdaParameter("t", null, true));
             } else if ("apply".equals(samMethodName)) {
@@ -853,9 +799,7 @@ public class ExpressionRecoverer {
             } else if ("test".equals(samMethodName)) {
                 params.add(new LambdaParameter("t", null, true));
             } else if ("get".equals(samMethodName) && paramCount == 0) {
-                // Supplier - no params
             } else {
-                // Generic parameter names
                 for (int i = 0; i < paramCount; i++) {
                     String name = paramCount == 1 ? "arg" : "arg" + i;
                     params.add(new LambdaParameter(name, null, true));
@@ -878,11 +822,9 @@ public class ExpressionRecoverer {
             String implName = handle.getName();
             String implOwner = handle.getOwner();
 
-            // Try to decompile the synthetic lambda method
             try {
                 com.tonic.parser.ClassFile classFile = context.getSourceMethod().getClassFile();
                 if (classFile != null) {
-                    // Find the synthetic lambda method
                     com.tonic.parser.MethodEntry lambdaMethod = null;
                     for (com.tonic.parser.MethodEntry method : classFile.getMethods()) {
                         if (method.getName().equals(implName)) {
@@ -896,10 +838,8 @@ public class ExpressionRecoverer {
                     }
                 }
             } catch (Exception e) {
-                // Fall through to fallback
             }
 
-            // Fallback: generate empty block or null
             boolean isVoidReturn = samDescriptor != null && samDescriptor.endsWith(")V");
             if (isVoidReturn) {
                 return new com.tonic.analysis.source.ast.stmt.BlockStmt(java.util.Collections.emptyList());
@@ -912,10 +852,12 @@ public class ExpressionRecoverer {
          * Checks if a lambda body is empty (fallback case).
          */
         private boolean isEmptyBody(com.tonic.analysis.source.ast.ASTNode body) {
-            if (body instanceof com.tonic.analysis.source.ast.stmt.BlockStmt block) {
+            if (body instanceof com.tonic.analysis.source.ast.stmt.BlockStmt) {
+                com.tonic.analysis.source.ast.stmt.BlockStmt block = (com.tonic.analysis.source.ast.stmt.BlockStmt) body;
                 return block.getStatements().isEmpty();
             }
-            if (body instanceof LiteralExpr lit) {
+            if (body instanceof LiteralExpr) {
+                LiteralExpr lit = (LiteralExpr) body;
                 return lit.getValue() == null; // null literal
             }
             return false;
@@ -932,43 +874,34 @@ public class ExpressionRecoverer {
                 String samDescriptor) {
 
             try {
-                // Lift the lambda method to IR
                 com.tonic.parser.ClassFile classFile = context.getSourceMethod().getClassFile();
                 com.tonic.analysis.ssa.SSA ssa = new com.tonic.analysis.ssa.SSA(classFile.getConstPool());
                 IRMethod lambdaIR = ssa.lift(lambdaMethod);
 
-                // Create a minimal recovery context for the lambda
                 com.tonic.analysis.ssa.analysis.DefUseChains defUseChains =
                     new com.tonic.analysis.ssa.analysis.DefUseChains(lambdaIR);
                 defUseChains.compute();
 
                 RecoveryContext lambdaContext = new RecoveryContext(lambdaIR, lambdaMethod, defUseChains);
 
-                // Map lambda parameters - the lambda method receives:
-                // 1. Captured variables (from invokedynamic arguments) as first parameters
-                // 2. SAM parameters as remaining parameters
                 int capturedCount = instr.getArguments().size();
                 boolean isInstanceMethod = !lambdaMethod.getDesc().startsWith("()") &&
                     (handle.getReferenceKind() != com.tonic.analysis.ssa.value.MethodHandleConstant.REF_invokeStatic);
 
-                // Map captured variables to their expressions
                 java.util.Map<Integer, Expression> capturedMapping = new java.util.HashMap<>();
-                int slot = isInstanceMethod ? 1 : 0; // Start after 'this' if instance method
+                int slot = isInstanceMethod ? 1 : 0;
 
                 for (int i = 0; i < capturedCount; i++) {
                     Expression capturedExpr = recoverOperand(instr.getArguments().get(i));
                     capturedMapping.put(slot, capturedExpr);
-                    // Advance slot (assume single-slot for simplicity)
                     slot++;
                 }
 
-                // Map SAM parameters to lambda parameter names
                 java.util.Map<Integer, String> paramMapping = new java.util.HashMap<>();
                 for (int i = 0; i < params.size(); i++) {
                     paramMapping.put(slot + i, params.get(i).name());
                 }
 
-                // Set up variable names in lambda context
                 if (isInstanceMethod) {
                     lambdaContext.setVariableName(findSSAForSlot(lambdaIR, 0), "this");
                 }
@@ -979,21 +912,17 @@ public class ExpressionRecoverer {
                     }
                 }
 
-                // Create expression recoverer for lambda with mapping
                 LambdaExpressionRecoverer lambdaExprRecoverer =
                     new LambdaExpressionRecoverer(lambdaContext, capturedMapping, paramMapping);
 
-                // Try to extract a simple expression body
                 com.tonic.analysis.source.ast.ASTNode body = lambdaExprRecoverer.extractLambdaBody(lambdaIR);
                 if (body != null) {
                     return body;
                 }
 
             } catch (Exception e) {
-                // Lambda decompilation failed - fall through to fallback
             }
 
-            // Fallback
             boolean isVoidReturn = samDescriptor != null && samDescriptor.endsWith(")V");
             if (isVoidReturn) {
                 return new com.tonic.analysis.source.ast.stmt.BlockStmt(java.util.Collections.emptyList());
@@ -1008,8 +937,11 @@ public class ExpressionRecoverer {
         private com.tonic.analysis.ssa.value.SSAValue findSSAForSlot(IRMethod method, int slot) {
             for (com.tonic.analysis.ssa.cfg.IRBlock block : method.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof LoadLocalInstruction load && load.getLocalIndex() == slot) {
-                        return load.getResult();
+                    if (instr instanceof LoadLocalInstruction) {
+                        LoadLocalInstruction load = (LoadLocalInstruction) instr;
+                        if (load.getLocalIndex() == slot) {
+                            return load.getResult();
+                        }
                     }
                 }
             }
@@ -1038,29 +970,21 @@ public class ExpressionRecoverer {
              * For complex lambdas, returns a block statement.
              */
             com.tonic.analysis.source.ast.ASTNode extractLambdaBody(IRMethod lambdaIR) {
-                // For simple lambdas, the body is often just:
-                // - A single return statement with an expression
-                // - A single void method call
-
                 com.tonic.analysis.ssa.cfg.IRBlock entryBlock = lambdaIR.getEntryBlock();
                 if (entryBlock == null) return null;
 
                 java.util.List<IRInstruction> instructions = entryBlock.getInstructions();
                 IRInstruction terminator = entryBlock.getTerminator();
 
-                // Simple case: single block with return terminator
-                if (terminator instanceof ReturnInstruction ret) {
+                if (terminator instanceof ReturnInstruction) {
+                    ReturnInstruction ret = (ReturnInstruction) terminator;
                     Value returnValue = ret.getReturnValue();
                     if (returnValue != null) {
-                        // Expression lambda with return value
                         Expression expr = recoverLambdaOperand(returnValue, lambdaIR);
                         return expr;
                     } else {
-                        // Void lambda - find the last meaningful statement (usually an invoke)
-                        // Skip load instructions as they're just setting up the call
                         for (int i = instructions.size() - 1; i >= 0; i--) {
                             IRInstruction instr = instructions.get(i);
-                            // Invoke is the main action
                             if (instr instanceof InvokeInstruction) {
                                 Expression expr = recoverLambdaInstruction(instr, lambdaIR);
                                 if (expr != null) {
@@ -1068,72 +992,64 @@ public class ExpressionRecoverer {
                                 }
                             }
                         }
-                        // No invoke found - empty body
                         return new com.tonic.analysis.source.ast.stmt.BlockStmt(java.util.Collections.emptyList());
                     }
                 }
 
-                // More complex: multiple blocks - need full statement recovery
-                // For now, return null to trigger method reference fallback
                 return null;
             }
 
             private Expression recoverLambdaOperand(Value value, IRMethod lambdaIR) {
-                if (value instanceof com.tonic.analysis.ssa.value.SSAValue ssa) {
+                if (value instanceof com.tonic.analysis.ssa.value.SSAValue) {
+                    com.tonic.analysis.ssa.value.SSAValue ssa = (com.tonic.analysis.ssa.value.SSAValue) value;
                     IRInstruction def = ssa.getDefinition();
 
-                    // Handle parameter SSA values (they have names like "p0", "p1" and no definition)
                     String ssaName = ssa.getName();
                     if (def == null && ssaName != null && ssaName.startsWith("p")) {
                         try {
                             int paramIndex = Integer.parseInt(ssaName.substring(1));
-                            // Map parameter index to slot considering static vs instance
-                            int slot = lambdaIR.isStatic() ? paramIndex : paramIndex; // p0=arg0, p1=arg1, etc.
+                            int slot = lambdaIR.isStatic() ? paramIndex : paramIndex;
                             if (paramMapping.containsKey(slot)) {
                                 String paramName = paramMapping.get(slot);
                                 SourceType type = typeRecoverer.recoverType(ssa);
                                 return new VarRefExpr(paramName, type != null ? type : com.tonic.analysis.source.ast.type.ReferenceSourceType.OBJECT, null);
                             }
-                            // Check captured
                             if (capturedMapping.containsKey(slot)) {
                                 return capturedMapping.get(slot);
                             }
                         } catch (NumberFormatException e) {
-                            // Fall through
                         }
                     }
 
-                    if (def instanceof LoadLocalInstruction load) {
+                    if (def instanceof LoadLocalInstruction) {
+                        LoadLocalInstruction load = (LoadLocalInstruction) def;
                         int slot = load.getLocalIndex();
-                        // Check if it's a captured variable
                         if (capturedMapping.containsKey(slot)) {
                             return capturedMapping.get(slot);
                         }
-                        // Check if it's a lambda parameter
                         if (paramMapping.containsKey(slot)) {
                             String paramName = paramMapping.get(slot);
                             SourceType type = typeRecoverer.recoverType(ssa);
                             return new VarRefExpr(paramName, type != null ? type : com.tonic.analysis.source.ast.type.ReferenceSourceType.OBJECT, null);
                         }
-                        // Check if slot 0 is 'this'
                         if (slot == 0 && !lambdaIR.isStatic()) {
                             return new ThisExpr(null);
                         }
                     }
-                    // Recursively recover
                     if (def != null) {
                         return recoverLambdaInstruction(def, lambdaIR);
                     }
                 }
-                // Handle constants and other values
-                if (value instanceof com.tonic.analysis.ssa.value.Constant constant) {
+                if (value instanceof com.tonic.analysis.ssa.value.Constant) {
+                    com.tonic.analysis.ssa.value.Constant constant = (com.tonic.analysis.ssa.value.Constant) value;
                     return recoverConstant(constant, null);
                 }
-                // Fall back to standard recovery only if we have a valid instruction
-                if (value instanceof com.tonic.analysis.ssa.value.SSAValue ssaVal && ssaVal.getDefinition() != null) {
-                    return recover(ssaVal.getDefinition());
+                if (value instanceof com.tonic.analysis.ssa.value.SSAValue) {
+                    com.tonic.analysis.ssa.value.SSAValue ssaVal = (com.tonic.analysis.ssa.value.SSAValue) value;
+                    if (ssaVal.getDefinition() != null) {
+                        return recover(ssaVal.getDefinition());
+                    }
                 }
-                // Last resort: generate a placeholder variable reference
                 return new VarRefExpr("v" + System.identityHashCode(value),
                     com.tonic.analysis.source.ast.type.ReferenceSourceType.OBJECT, null);
             }
@@ -1141,15 +1057,14 @@ public class ExpressionRecoverer {
             private Expression recoverLambdaInstruction(IRInstruction instr, IRMethod lambdaIR) {
                 if (instr == null) return null;
 
-                if (instr instanceof InvokeInstruction invoke) {
-                    // Recover method call with mapped arguments
+                if (instr instanceof InvokeInstruction) {
+                    InvokeInstruction invoke = (InvokeInstruction) instr;
                     java.util.List<Expression> args = new java.util.ArrayList<>();
                     int start = invoke.getInvokeType() == InvokeType.STATIC ? 0 : 1;
 
                     Expression receiver = null;
                     if (invoke.getInvokeType() != InvokeType.STATIC && !invoke.getArguments().isEmpty()) {
                         receiver = recoverLambdaOperand(invoke.getArguments().get(0), lambdaIR);
-                        // Don't show 'this' receiver
                         if (receiver instanceof ThisExpr) {
                             receiver = null;
                         }
@@ -1164,7 +1079,8 @@ public class ExpressionRecoverer {
                         invoke.getInvokeType() == InvokeType.STATIC, retType);
                 }
 
-                if (instr instanceof GetFieldInstruction getField) {
+                if (instr instanceof GetFieldInstruction) {
+                    GetFieldInstruction getField = (GetFieldInstruction) instr;
                     Expression obj = getField.isStatic() ? null :
                         recoverLambdaOperand(getField.getObjectRef(), lambdaIR);
                     if (obj instanceof ThisExpr) obj = null;
@@ -1172,7 +1088,8 @@ public class ExpressionRecoverer {
                     return new FieldAccessExpr(obj, getField.getName(), getField.getOwner(), getField.isStatic(), type);
                 }
 
-                if (instr instanceof BinaryOpInstruction binOp) {
+                if (instr instanceof BinaryOpInstruction) {
+                    BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                     Expression left = recoverLambdaOperand(binOp.getLeft(), lambdaIR);
                     Expression right = recoverLambdaOperand(binOp.getRight(), lambdaIR);
                     BinaryOperator op = OperatorMapper.mapBinaryOp(binOp.getOp());
@@ -1180,11 +1097,11 @@ public class ExpressionRecoverer {
                     return new BinaryExpr(op, left, right, type);
                 }
 
-                if (instr instanceof ConstantInstruction constInstr) {
+                if (instr instanceof ConstantInstruction) {
+                    ConstantInstruction constInstr = (ConstantInstruction) instr;
                     return recoverConstant(constInstr.getConstant(), null);
                 }
 
-                // For other instructions, try standard recovery
                 return recover(instr);
             }
         }
@@ -1196,20 +1113,16 @@ public class ExpressionRecoverer {
             String methodName = instr.getName();
             java.util.List<LambdaParameter> params = generateLambdaParameters(null, methodName);
 
-            // For fallback, generate empty block for void or null for non-void
-            // Check if likely void based on method name
             boolean likelyVoid = "uncaughtException".equals(methodName) ||
                                  "hierarchyChanged".equals(methodName) ||
                                  "run".equals(methodName) ||
                                  "accept".equals(methodName);
 
             if (likelyVoid) {
-                // Generate an empty block statement
                 com.tonic.analysis.source.ast.stmt.BlockStmt emptyBlock =
                     new com.tonic.analysis.source.ast.stmt.BlockStmt(java.util.Collections.emptyList());
                 return new LambdaExpr(params, emptyBlock, returnType);
             } else {
-                // For non-void, use null
                 return new LambdaExpr(params, LiteralExpr.ofNull(), returnType);
             }
         }
@@ -1242,7 +1155,6 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitNew(NewInstruction instr) {
-            // Register this as a pending new instruction - will be combined with <init> call
             if (instr.getResult() != null) {
                 context.registerPendingNew(instr.getResult(), instr.getClassName());
             }
@@ -1266,21 +1178,15 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitLoadLocal(LoadLocalInstruction instr) {
-            // LoadLocal should return a reference to the source local slot
             int localIndex = instr.getLocalIndex();
-            // For instance methods, slot 0 is 'this'
             IRMethod method = instr.getBlock() != null ? instr.getBlock().getMethod() : null;
             boolean isStatic = method == null || method.isStatic();
 
             if (!isStatic && localIndex == 0) {
-                // Return 'this' reference
                 SourceType type = typeRecoverer.recoverType(instr.getResult());
                 return new ThisExpr(type);
             }
 
-            // For other locals, return a variable reference
-            // First check if a variable name has been set for this SSA value
-            // (e.g., by registerExceptionVariables for catch parameters)
             String name = context.getVariableName(instr.getResult());
             if (name == null) {
                 name = "local" + localIndex;
@@ -1291,16 +1197,13 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitCast(CastInstruction instr) {
-            // Recover the operand being cast
             Expression operand = recoverOperand(instr.getObjectRef());
-            // Get the target type from the instruction
             SourceType targetType = SourceType.fromIRType(instr.getTargetType());
             return new CastExpr(targetType, operand);
         }
 
         @Override
         public Expression visitNewArray(NewArrayInstruction instr) {
-            // Recover the element type and dimensions
             SourceType elementType = SourceType.fromIRType(instr.getElementType());
             java.util.List<Expression> dims = new java.util.ArrayList<>();
             for (com.tonic.analysis.ssa.value.Value dimValue : instr.getDimensions()) {
@@ -1311,7 +1214,6 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitArrayLength(ArrayLengthInstruction instr) {
-            // array.length - use "[]" as pseudo owner for arrays
             Expression array = recoverOperand(instr.getArray());
             SourceType type = com.tonic.analysis.source.ast.type.PrimitiveSourceType.INT;
             return new FieldAccessExpr(array, "length", "[]", false, type);
@@ -1319,7 +1221,6 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitInstanceOf(InstanceOfInstruction instr) {
-            // expr instanceof Type
             Expression operand = recoverOperand(instr.getObjectRef());
             SourceType targetType = SourceType.fromIRType(instr.getCheckType());
             return new InstanceOfExpr(operand, targetType);

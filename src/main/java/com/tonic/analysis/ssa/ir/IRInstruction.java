@@ -112,7 +112,7 @@ public abstract class IRInstruction {
      * @return a copy of this instruction, or null if copying not supported
      */
     public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
-        return null; // Default: copying not supported
+        return null;
     }
 
     /**
@@ -123,6 +123,5 @@ public abstract class IRInstruction {
      * @param newTarget the replacement block
      */
     public void replaceTarget(IRBlock oldTarget, IRBlock newTarget) {
-        // Default: no-op for non-terminator instructions
     }
 }

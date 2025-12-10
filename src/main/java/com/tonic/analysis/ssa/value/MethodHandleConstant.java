@@ -35,10 +35,10 @@ public final class MethodHandleConstant extends Constant {
     public static final int REF_newInvokeSpecial = 8;
     public static final int REF_invokeInterface = 9;
 
-    private final int referenceKind;  // 1-9 per JVM spec
-    private final String owner;        // Class containing the member
-    private final String name;         // Member name
-    private final String descriptor;   // Member descriptor
+    private final int referenceKind;
+    private final String owner;
+    private final String name;
+    private final String descriptor;
 
     /**
      * Creates a MethodHandle constant.
@@ -86,18 +86,28 @@ public final class MethodHandleConstant extends Constant {
      * Returns a human-readable name for the reference kind.
      */
     public String getReferenceKindName() {
-        return switch (referenceKind) {
-            case REF_getField -> "REF_getField";
-            case REF_getStatic -> "REF_getStatic";
-            case REF_putField -> "REF_putField";
-            case REF_putStatic -> "REF_putStatic";
-            case REF_invokeVirtual -> "REF_invokeVirtual";
-            case REF_invokeStatic -> "REF_invokeStatic";
-            case REF_invokeSpecial -> "REF_invokeSpecial";
-            case REF_newInvokeSpecial -> "REF_newInvokeSpecial";
-            case REF_invokeInterface -> "REF_invokeInterface";
-            default -> "UNKNOWN(" + referenceKind + ")";
-        };
+        switch (referenceKind) {
+            case REF_getField:
+                return "REF_getField";
+            case REF_getStatic:
+                return "REF_getStatic";
+            case REF_putField:
+                return "REF_putField";
+            case REF_putStatic:
+                return "REF_putStatic";
+            case REF_invokeVirtual:
+                return "REF_invokeVirtual";
+            case REF_invokeStatic:
+                return "REF_invokeStatic";
+            case REF_invokeSpecial:
+                return "REF_invokeSpecial";
+            case REF_newInvokeSpecial:
+                return "REF_newInvokeSpecial";
+            case REF_invokeInterface:
+                return "REF_invokeInterface";
+            default:
+                return "UNKNOWN(" + referenceKind + ")";
+        }
     }
 
     @Override
@@ -108,7 +118,8 @@ public final class MethodHandleConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof MethodHandleConstant that)) return false;
+        if (!(o instanceof MethodHandleConstant)) return false;
+        MethodHandleConstant that = (MethodHandleConstant) o;
         return referenceKind == that.referenceKind &&
                 Objects.equals(owner, that.owner) &&
                 Objects.equals(name, that.name) &&

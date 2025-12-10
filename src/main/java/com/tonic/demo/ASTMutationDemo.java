@@ -155,30 +155,37 @@ public class ASTMutationDemo {
     }
 
     private static void mutateStatement(Statement stmt) {
-        if (stmt instanceof ReturnStmt returnStmt) {
+        if (stmt instanceof ReturnStmt) {
+            ReturnStmt returnStmt = (ReturnStmt) stmt;
             if (returnStmt.getValue() != null) {
                 mutateExpression(returnStmt.getValue());
             }
-        } else if (stmt instanceof VarDeclStmt varDecl) {
+        } else if (stmt instanceof VarDeclStmt) {
+            VarDeclStmt varDecl = (VarDeclStmt) stmt;
             if (varDecl.getInitializer() != null) {
                 mutateExpression(varDecl.getInitializer());
             }
-        } else if (stmt instanceof ExprStmt exprStmt) {
+        } else if (stmt instanceof ExprStmt) {
+            ExprStmt exprStmt = (ExprStmt) stmt;
             mutateExpression(exprStmt.getExpression());
-        } else if (stmt instanceof BlockStmt block) {
+        } else if (stmt instanceof BlockStmt) {
+            BlockStmt block = (BlockStmt) stmt;
             for (Statement s : block.getStatements()) {
                 mutateStatement(s);
             }
-        } else if (stmt instanceof IfStmt ifStmt) {
+        } else if (stmt instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) stmt;
             mutateExpression(ifStmt.getCondition());
             mutateStatement(ifStmt.getThenBranch());
             if (ifStmt.getElseBranch() != null) {
                 mutateStatement(ifStmt.getElseBranch());
             }
-        } else if (stmt instanceof WhileStmt whileStmt) {
+        } else if (stmt instanceof WhileStmt) {
+            WhileStmt whileStmt = (WhileStmt) stmt;
             mutateExpression(whileStmt.getCondition());
             mutateStatement(whileStmt.getBody());
-        } else if (stmt instanceof ForStmt forStmt) {
+        } else if (stmt instanceof ForStmt) {
+            ForStmt forStmt = (ForStmt) stmt;
             for (Statement init : forStmt.getInit()) {
                 mutateStatement(init);
             }
@@ -193,29 +200,39 @@ public class ASTMutationDemo {
     }
 
     private static void mutateExpression(Expression expr) {
-        if (expr instanceof LiteralExpr literal) {
+        if (expr instanceof LiteralExpr) {
+            LiteralExpr literal = (LiteralExpr) expr;
             Object value = literal.getValue();
-            if (value instanceof Integer intVal && intVal == 10) {
-                // Mutate: change 10 to 100
-                System.out.println("  Mutation: literal 10 -> 100");
-                literal.setValue(100);
+            if (value instanceof Integer) {
+                Integer intVal = (Integer) value;
+                if (intVal == 10) {
+                    // Mutate: change 10 to 100
+                    System.out.println("  Mutation: literal 10 -> 100");
+                    literal.setValue(100);
+                }
             }
-        } else if (expr instanceof BinaryExpr binary) {
+        } else if (expr instanceof BinaryExpr) {
+            BinaryExpr binary = (BinaryExpr) expr;
             mutateExpression(binary.getLeft());
             mutateExpression(binary.getRight());
-        } else if (expr instanceof UnaryExpr unary) {
+        } else if (expr instanceof UnaryExpr) {
+            UnaryExpr unary = (UnaryExpr) expr;
             mutateExpression(unary.getOperand());
-        } else if (expr instanceof CastExpr cast) {
+        } else if (expr instanceof CastExpr) {
+            CastExpr cast = (CastExpr) expr;
             mutateExpression(cast.getExpression());
-        } else if (expr instanceof TernaryExpr ternary) {
+        } else if (expr instanceof TernaryExpr) {
+            TernaryExpr ternary = (TernaryExpr) expr;
             mutateExpression(ternary.getCondition());
             mutateExpression(ternary.getThenExpr());
             mutateExpression(ternary.getElseExpr());
-        } else if (expr instanceof MethodCallExpr call) {
+        } else if (expr instanceof MethodCallExpr) {
+            MethodCallExpr call = (MethodCallExpr) expr;
             for (Expression arg : call.getArguments()) {
                 mutateExpression(arg);
             }
-        } else if (expr instanceof ArrayAccessExpr arrayAccess) {
+        } else if (expr instanceof ArrayAccessExpr) {
+            ArrayAccessExpr arrayAccess = (ArrayAccessExpr) expr;
             mutateExpression(arrayAccess.getArray());
             mutateExpression(arrayAccess.getIndex());
         }
@@ -241,7 +258,8 @@ public class ASTMutationDemo {
             System.out.println("  Result of constantFolding(): " + result);
 
             // Verify the mutation worked
-            if (result instanceof Integer intResult) {
+            if (result instanceof Integer) {
+                Integer intResult = (Integer) result;
                 // Original: (10 + 20) * 2 - 10 = 50
                 // After mutation (10->100): (100 + 20) * 2 - 100 = 140
                 System.out.println();

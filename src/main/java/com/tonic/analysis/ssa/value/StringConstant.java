@@ -41,12 +41,24 @@ public final class StringConstant extends Constant {
         StringBuilder sb = new StringBuilder();
         for (char c : s.toCharArray()) {
             switch (c) {
-                case '\n' -> sb.append("\\n");
-                case '\r' -> sb.append("\\r");
-                case '\t' -> sb.append("\\t");
-                case '"' -> sb.append("\\\"");
-                case '\\' -> sb.append("\\\\");
-                default -> sb.append(c);
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                case '\r':
+                    sb.append("\\r");
+                    break;
+                case '\t':
+                    sb.append("\\t");
+                    break;
+                case '"':
+                    sb.append("\\\"");
+                    break;
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                default:
+                    sb.append(c);
+                    break;
             }
         }
         return sb.toString();
@@ -55,7 +67,8 @@ public final class StringConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof StringConstant that)) return false;
+        if (!(o instanceof StringConstant)) return false;
+        StringConstant that = (StringConstant) o;
         return value != null ? value.equals(that.value) : that.value == null;
     }
 

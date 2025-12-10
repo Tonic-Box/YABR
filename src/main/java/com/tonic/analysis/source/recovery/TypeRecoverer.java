@@ -22,7 +22,6 @@ public class TypeRecoverer {
         if (value == null || value.getType() == null) {
             return VoidSourceType.INSTANCE;
         }
-        // Use instruction context to get proper semantic types (e.g., boolean for instanceof)
         return recoverTypeWithInstructionContext(value);
     }
 
@@ -33,10 +32,12 @@ public class TypeRecoverer {
         if (value == null) {
             return VoidSourceType.INSTANCE;
         }
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             return recoverTypeWithInstructionContext(ssa);
         }
-        if (value instanceof Constant c) {
+        if (value instanceof Constant) {
+            Constant c = (Constant) value;
             IRType type = c.getType();
             if (type == null) {
                 return VoidSourceType.INSTANCE;
@@ -55,18 +56,15 @@ public class TypeRecoverer {
             return VoidSourceType.INSTANCE;
         }
 
-        // Check if this value is defined by an instruction that should be boolean
         com.tonic.analysis.ssa.ir.IRInstruction def = ssa.getDefinition();
 
-        // instanceof always returns boolean (JVM uses int 0/1, but semantically it's boolean)
         if (def instanceof com.tonic.analysis.ssa.ir.InstanceOfInstruction) {
             return PrimitiveSourceType.BOOLEAN;
         }
 
-        // For IAND/IOR/IXOR binary ops, check if either operand is boolean
-        if (def instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp) {
+        if (def instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction) {
+            com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp = (com.tonic.analysis.ssa.ir.BinaryOpInstruction) def;
             com.tonic.analysis.ssa.ir.BinaryOp op = binOp.getOp();
-            // For IAND/IOR/IXOR, check if either operand is boolean
             if (op == com.tonic.analysis.ssa.ir.BinaryOp.AND ||
                 op == com.tonic.analysis.ssa.ir.BinaryOp.OR ||
                 op == com.tonic.analysis.ssa.ir.BinaryOp.XOR) {
@@ -85,10 +83,12 @@ public class TypeRecoverer {
      * Recovers type from a Value operand of a binary operation.
      */
     private SourceType recoverTypeWithInstructionContext(com.tonic.analysis.ssa.value.Value value) {
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             return recoverTypeWithInstructionContext(ssa);
         }
-        if (value instanceof Constant c) {
+        if (value instanceof Constant) {
+            Constant c = (Constant) value;
             IRType type = c.getType();
             if (type == null) {
                 return VoidSourceType.INSTANCE;
@@ -112,7 +112,6 @@ public class TypeRecoverer {
             return VoidSourceType.INSTANCE;
         }
 
-        // Filter out void/null types and collect unique types
         Set<SourceType> uniqueTypes = new HashSet<>();
         for (SourceType type : types) {
             if (type != null && !type.isVoid()) {
@@ -128,32 +127,27 @@ public class TypeRecoverer {
             return uniqueTypes.iterator().next();
         }
 
-        // Check if all types are the same
         SourceType first = uniqueTypes.iterator().next();
         boolean allSame = uniqueTypes.stream().allMatch(t -> t.equals(first));
         if (allSame) {
             return first;
         }
 
-        // Check if all are primitives - use widening conversion
         boolean allPrimitives = uniqueTypes.stream().allMatch(SourceType::isPrimitive);
         if (allPrimitives) {
             return computeWidestPrimitive(uniqueTypes);
         }
 
-        // Check if all are arrays with same dimensions
         boolean allArrays = uniqueTypes.stream().allMatch(SourceType::isArray);
         if (allArrays) {
             return computeCommonArrayType(uniqueTypes);
         }
 
-        // Check if all are reference types - find common supertype
         boolean allReferences = uniqueTypes.stream().allMatch(SourceType::isReference);
         if (allReferences) {
             return computeCommonReferenceType(uniqueTypes);
         }
 
-        // Mixed types (primitive + reference, etc.) - use Object
         return ReferenceSourceType.OBJECT;
     }
 
@@ -161,15 +155,12 @@ public class TypeRecoverer {
      * Computes the widest primitive type using Java numeric promotion rules.
      */
     private SourceType computeWidestPrimitive(Set<SourceType> types) {
-        // Hierarchy: boolean < byte < short < char < int < long < float < double
-        // But boolean is not compatible with numeric types
         boolean hasBoolean = types.stream()
                 .anyMatch(t -> t == PrimitiveSourceType.BOOLEAN);
         boolean hasNumeric = types.stream()
                 .anyMatch(t -> t != PrimitiveSourceType.BOOLEAN);
 
         if (hasBoolean && hasNumeric) {
-            // Incompatible - fallback to Object (boxed)
             return ReferenceSourceType.OBJECT;
         }
 
@@ -177,7 +168,6 @@ public class TypeRecoverer {
             return PrimitiveSourceType.BOOLEAN;
         }
 
-        // Find widest numeric type
         int maxRank = 0;
         for (SourceType type : types) {
             maxRank = Math.max(maxRank, getPrimitiveRank((PrimitiveSourceType) type));
@@ -193,7 +183,7 @@ public class TypeRecoverer {
         if (type == PrimitiveSourceType.LONG) return 5;
         if (type == PrimitiveSourceType.FLOAT) return 6;
         if (type == PrimitiveSourceType.DOUBLE) return 7;
-        return 0; // BOOLEAN
+        return 0;
     }
 
     private PrimitiveSourceType getPrimitiveByRank(int rank) {
@@ -212,16 +202,15 @@ public class TypeRecoverer {
      * Returns Object[] if element types are incompatible.
      */
     private SourceType computeCommonArrayType(Set<SourceType> types) {
-        // Extract element types and recursively compute common type
         Set<SourceType> elementTypes = new HashSet<>();
         int dimensions = -1;
 
         for (SourceType type : types) {
-            if (type instanceof ArraySourceType arr) {
+            if (type instanceof ArraySourceType) {
+                ArraySourceType arr = (ArraySourceType) type;
                 if (dimensions == -1) {
                     dimensions = arr.getDimensions();
                 } else if (dimensions != arr.getDimensions()) {
-                    // Different dimensions - return Object
                     return ReferenceSourceType.OBJECT;
                 }
                 elementTypes.add(arr.getElementType());
@@ -237,21 +226,18 @@ public class TypeRecoverer {
      * Without full class hierarchy, returns Object for incompatible types.
      */
     private SourceType computeCommonReferenceType(Set<SourceType> types) {
-        // Check if all reference types are the same class
         Set<String> classNames = new HashSet<>();
         for (SourceType type : types) {
-            if (type instanceof ReferenceSourceType ref) {
+            if (type instanceof ReferenceSourceType) {
+                ReferenceSourceType ref = (ReferenceSourceType) type;
                 classNames.add(ref.getInternalName());
             }
         }
 
         if (classNames.size() == 1) {
-            // All same class
             return types.iterator().next();
         }
 
-        // Different classes - without class hierarchy info, fall back to Object
-        // In a more sophisticated implementation, we'd compute LCA in class hierarchy
         return ReferenceSourceType.OBJECT;
     }
 
@@ -270,28 +256,36 @@ public class TypeRecoverer {
             return VoidSourceType.INSTANCE;
         }
 
-        return switch (descriptor.charAt(0)) {
-            case 'V' -> VoidSourceType.INSTANCE;
-            case 'Z' -> PrimitiveSourceType.BOOLEAN;
-            case 'B' -> PrimitiveSourceType.BYTE;
-            case 'C' -> PrimitiveSourceType.CHAR;
-            case 'S' -> PrimitiveSourceType.SHORT;
-            case 'I' -> PrimitiveSourceType.INT;
-            case 'J' -> PrimitiveSourceType.LONG;
-            case 'F' -> PrimitiveSourceType.FLOAT;
-            case 'D' -> PrimitiveSourceType.DOUBLE;
-            case 'L' -> {
-                // Reference type: Ljava/lang/String;
+        switch (descriptor.charAt(0)) {
+            case 'V':
+                return VoidSourceType.INSTANCE;
+            case 'Z':
+                return PrimitiveSourceType.BOOLEAN;
+            case 'B':
+                return PrimitiveSourceType.BYTE;
+            case 'C':
+                return PrimitiveSourceType.CHAR;
+            case 'S':
+                return PrimitiveSourceType.SHORT;
+            case 'I':
+                return PrimitiveSourceType.INT;
+            case 'J':
+                return PrimitiveSourceType.LONG;
+            case 'F':
+                return PrimitiveSourceType.FLOAT;
+            case 'D':
+                return PrimitiveSourceType.DOUBLE;
+            case 'L': {
                 int end = descriptor.indexOf(';');
                 String internalName = end > 0 ? descriptor.substring(1, end) : descriptor.substring(1);
-                yield new ReferenceSourceType(internalName, java.util.Collections.emptyList());
+                return new ReferenceSourceType(internalName, java.util.Collections.emptyList());
             }
-            case '[' -> {
-                // Array type
+            case '[': {
                 SourceType component = recoverType(descriptor.substring(1));
-                yield new ArraySourceType(component);
+                return new ArraySourceType(component);
             }
-            default -> VoidSourceType.INSTANCE;
-        };
+            default:
+                return VoidSourceType.INSTANCE;
+        }
     }
 }

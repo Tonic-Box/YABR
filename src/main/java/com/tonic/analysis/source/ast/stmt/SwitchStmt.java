@@ -30,7 +30,6 @@ public final class SwitchStmt implements Statement {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
         selector.setParent(this);
-        // Note: SwitchCase is a record, not an ASTNode, so no parent setting
     }
 
     public SwitchStmt(Expression selector, List<SwitchCase> cases) {

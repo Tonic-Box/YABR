@@ -39,7 +39,7 @@ public class DebugForLoop {
                 LoopAnalysis loopAnalysis = new LoopAnalysis(irMethod, domTree);
                 loopAnalysis.compute();
 
-                for (var loop : loopAnalysis.getLoops()) {
+                for (com.tonic.analysis.ssa.analysis.LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
                     IRBlock header = loop.getHeader();
                     System.out.println("\nLoop header: " + header.getName());
                     
@@ -47,7 +47,7 @@ public class DebugForLoop {
                     for (IRBlock block : loop.getBlocks()) {
                         if (block == header) continue;
                         System.out.println("  Checking block " + block.getName());
-                        System.out.println("    Successors: " + block.getSuccessors().stream().map(IRBlock::getName).toList());
+                        System.out.println("    Successors: " + block.getSuccessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                         
                         for (IRBlock succ : block.getSuccessors()) {
                             if (succ == header) {
@@ -55,7 +55,8 @@ public class DebugForLoop {
                                 // Check for increment
                                 boolean hasIncrement = false;
                                 for (IRInstruction instr : block.getInstructions()) {
-                                    if (instr instanceof BinaryOpInstruction binOp) {
+                                    if (instr instanceof BinaryOpInstruction) {
+                                        BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                                         BinaryOp op = binOp.getOp();
                                         System.out.println("      Found BinaryOp: " + op);
                                         if (op == BinaryOp.ADD || op == BinaryOp.SUB) {

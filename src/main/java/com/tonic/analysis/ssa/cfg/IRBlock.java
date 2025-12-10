@@ -290,7 +290,8 @@ public class IRBlock {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof IRBlock irBlock)) return false;
+        if (!(o instanceof IRBlock)) return false;
+        IRBlock irBlock = (IRBlock) o;
         return id == irBlock.id;
     }
 

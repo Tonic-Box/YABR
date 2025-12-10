@@ -87,35 +87,47 @@ public class DuplicateBlockMerging implements IRTransform {
     }
 
     private String getInstructionSignature(IRInstruction instr) {
-        if (instr instanceof BinaryOpInstruction bin) {
+        if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction bin = (BinaryOpInstruction) instr;
             return "BIN:" + bin.getOp();
-        } else if (instr instanceof UnaryOpInstruction un) {
+        } else if (instr instanceof UnaryOpInstruction) {
+            UnaryOpInstruction un = (UnaryOpInstruction) instr;
             return "UN:" + un.getOp();
-        } else if (instr instanceof LoadLocalInstruction ld) {
+        } else if (instr instanceof LoadLocalInstruction) {
+            LoadLocalInstruction ld = (LoadLocalInstruction) instr;
             return "LD:" + ld.getLocalIndex();
-        } else if (instr instanceof StoreLocalInstruction st) {
+        } else if (instr instanceof StoreLocalInstruction) {
+            StoreLocalInstruction st = (StoreLocalInstruction) instr;
             return "ST:" + st.getLocalIndex();
-        } else if (instr instanceof GetFieldInstruction fl) {
+        } else if (instr instanceof GetFieldInstruction) {
+            GetFieldInstruction fl = (GetFieldInstruction) instr;
             return "FLD:" + fl.getOwner() + "." + fl.getName();
-        } else if (instr instanceof PutFieldInstruction fs) {
+        } else if (instr instanceof PutFieldInstruction) {
+            PutFieldInstruction fs = (PutFieldInstruction) instr;
             return "FST:" + fs.getOwner() + "." + fs.getName();
         } else if (instr instanceof ArrayLoadInstruction) {
             return "ALD";
         } else if (instr instanceof ArrayStoreInstruction) {
             return "AST";
-        } else if (instr instanceof InvokeInstruction inv) {
+        } else if (instr instanceof InvokeInstruction) {
+            InvokeInstruction inv = (InvokeInstruction) instr;
             return "INV:" + inv.getOwner() + "." + inv.getName() + inv.getDescriptor();
-        } else if (instr instanceof NewInstruction nw) {
+        } else if (instr instanceof NewInstruction) {
+            NewInstruction nw = (NewInstruction) instr;
             return "NEW:" + nw.getClassName();
-        } else if (instr instanceof NewArrayInstruction na) {
+        } else if (instr instanceof NewArrayInstruction) {
+            NewArrayInstruction na = (NewArrayInstruction) instr;
             return "NEWA:" + na.getElementType();
-        } else if (instr instanceof CastInstruction cast) {
+        } else if (instr instanceof CastInstruction) {
+            CastInstruction cast = (CastInstruction) instr;
             return "CAST:" + cast.getTargetType();
-        } else if (instr instanceof InstanceOfInstruction iof) {
+        } else if (instr instanceof InstanceOfInstruction) {
+            InstanceOfInstruction iof = (InstanceOfInstruction) instr;
             return "IOF:" + iof.getCheckType();
         } else if (instr instanceof PhiInstruction) {
             return "PHI";
-        } else if (instr instanceof ConstantInstruction c) {
+        } else if (instr instanceof ConstantInstruction) {
+            ConstantInstruction c = (ConstantInstruction) instr;
             return "CONST:" + c.getConstant();
         }
         return instr.getClass().getSimpleName();
@@ -124,11 +136,14 @@ public class DuplicateBlockMerging implements IRTransform {
     private String getTerminatorSignature(IRInstruction term) {
         if (term instanceof GotoInstruction) {
             return "GOTO";
-        } else if (term instanceof BranchInstruction br) {
+        } else if (term instanceof BranchInstruction) {
+            BranchInstruction br = (BranchInstruction) term;
             return "BR:" + br.getCondition();
-        } else if (term instanceof SwitchInstruction sw) {
+        } else if (term instanceof SwitchInstruction) {
+            SwitchInstruction sw = (SwitchInstruction) term;
             return "SW:" + sw.getCases().size();
-        } else if (term instanceof ReturnInstruction ret) {
+        } else if (term instanceof ReturnInstruction) {
+            ReturnInstruction ret = (ReturnInstruction) term;
             return "RET:" + (ret.isVoidReturn() ? "V" : "R");
         } else if (term instanceof ThrowInstruction) {
             return "THROW";
@@ -143,7 +158,6 @@ public class DuplicateBlockMerging implements IRTransform {
         allPreds.addAll(preds1);
         allPreds.addAll(preds2);
 
-        // Conservative: one predecessor dominates all others
         for (IRBlock pred : allPreds) {
             boolean dominatesAll = true;
             for (IRBlock other : allPreds) {
@@ -157,7 +171,6 @@ public class DuplicateBlockMerging implements IRTransform {
 
         if (!aggressive) return false;
 
-        // Aggressive: check no loop entry conflict
         LoopAnalysis.Loop loop1 = loops.getLoop(b1);
         LoopAnalysis.Loop loop2 = loops.getLoop(b2);
 
@@ -166,7 +179,6 @@ public class DuplicateBlockMerging implements IRTransform {
         for (IRBlock pred : allPreds) {
             LoopAnalysis.Loop predLoop = loops.getLoop(pred);
             if (predLoop != loop1) {
-                // Entry from different loop - potential irreducibility
                 int entriesFromOutside = 0;
                 for (IRBlock p : allPreds) {
                     if (loops.getLoop(p) != loop1) entriesFromOutside++;
@@ -178,10 +190,8 @@ public class DuplicateBlockMerging implements IRTransform {
     }
 
     private void mergeBlocks(IRBlock survivor, IRBlock duplicate, IRMethod method) {
-        // Build value mapping: duplicate values -> survivor values
         Map<Value, Value> valueMap = buildValueMapping(survivor, duplicate);
 
-        // Redirect predecessors of duplicate to survivor
         for (IRBlock pred : new ArrayList<>(duplicate.getPredecessors())) {
             IRInstruction term = pred.getTerminator();
             if (term != null) {
@@ -197,10 +207,8 @@ public class DuplicateBlockMerging implements IRTransform {
             }
         }
 
-        // Update phi instructions in survivor to include new predecessors
         updatePhisForMerge(survivor, duplicate, valueMap);
 
-        // Replace uses of duplicate's values in successors
         for (IRBlock succ : duplicate.getSuccessors()) {
             for (IRInstruction instr : succ.getInstructions()) {
                 for (Value oldVal : valueMap.keySet()) {
@@ -218,7 +226,6 @@ public class DuplicateBlockMerging implements IRTransform {
             }
         }
 
-        // Remove duplicate block
         method.getBlocks().remove(duplicate);
     }
 
@@ -238,13 +245,12 @@ public class DuplicateBlockMerging implements IRTransform {
     }
 
     private void updatePhisForMerge(IRBlock survivor, IRBlock duplicate, Map<Value, Value> valueMap) {
-        // For each phi in survivor's successors, update incoming values
         for (IRBlock succ : survivor.getSuccessors()) {
             for (IRInstruction instr : succ.getInstructions()) {
-                if (instr instanceof PhiInstruction phi) {
+                if (instr instanceof PhiInstruction) {
+                    PhiInstruction phi = (PhiInstruction) instr;
                     Value dupValue = phi.getIncoming(duplicate);
                     if (dupValue != null) {
-                        // Map the value and associate with merged predecessors
                         Value mappedValue = valueMap.getOrDefault(dupValue, dupValue);
                         for (IRBlock pred : duplicate.getPredecessors()) {
                             phi.addIncoming(mappedValue, pred);

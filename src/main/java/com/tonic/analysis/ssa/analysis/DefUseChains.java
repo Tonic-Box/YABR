@@ -53,7 +53,8 @@ public class DefUseChains {
 
         Set<SSAValue> instrUseSet = new HashSet<>();
         for (Value operand : instr.getOperands()) {
-            if (operand instanceof SSAValue ssa) {
+            if (operand instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) operand;
                 uses.computeIfAbsent(ssa, k -> new HashSet<>()).add(instr);
                 instrUseSet.add(ssa);
             }

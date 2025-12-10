@@ -75,12 +75,20 @@ public class WideInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
-        return switch (modifiedOpcode) {
-            case ILOAD, FLOAD, ALOAD -> 1;
-            case ISTORE, FSTORE, ASTORE -> -1;
-            case IINC -> 0;
-            default -> 0;
-        };
+        switch (modifiedOpcode) {
+            case ILOAD:
+            case FLOAD:
+            case ALOAD:
+                return 1;
+            case ISTORE:
+            case FSTORE:
+            case ASTORE:
+                return -1;
+            case IINC:
+                return 0;
+            default:
+                return 0;
+        }
     }
 
     /**

@@ -54,7 +54,8 @@ public final class LongConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof LongConstant that)) return false;
+        if (!(o instanceof LongConstant)) return false;
+        LongConstant that = (LongConstant) o;
         return value == that.value;
     }
 

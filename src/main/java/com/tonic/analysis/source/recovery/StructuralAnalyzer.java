@@ -36,7 +36,6 @@ public class StructuralAnalyzer {
      * Analyzes the method and identifies structured regions.
      */
     public void analyze() {
-        // Compute post-dominator tree for accurate merge point detection
         postDominatorTree = new PostDominatorTree(method);
         postDominatorTree.compute();
 
@@ -52,9 +51,11 @@ public class StructuralAnalyzer {
             return;
         }
 
-        if (terminator instanceof BranchInstruction branch) {
+        if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) terminator;
             analyzeBranch(block, branch);
-        } else if (terminator instanceof SwitchInstruction sw) {
+        } else if (terminator instanceof SwitchInstruction) {
+            SwitchInstruction sw = (SwitchInstruction) terminator;
             analyzeSwitch(block, sw);
         } else if (terminator instanceof GotoInstruction) {
             analyzeGoto(block);
@@ -67,9 +68,7 @@ public class StructuralAnalyzer {
         IRBlock trueTarget = branch.getTrueTarget();
         IRBlock falseTarget = branch.getFalseTarget();
 
-        // Check if this is a loop header
         if (loopAnalysis.isLoopHeader(block)) {
-            // Find the loop whose header IS this block (not just any loop containing this block)
             LoopAnalysis.Loop loop = findLoopWithHeader(block);
             if (loop != null) {
                 RegionInfo info = analyzeLoop(block, loop, branch);
@@ -78,7 +77,6 @@ public class StructuralAnalyzer {
             }
         }
 
-        // Check if this is an if-then or if-then-else
         RegionInfo info = analyzeConditional(block, trueTarget, falseTarget);
         regionInfos.put(block, info);
     }
@@ -87,35 +85,26 @@ public class StructuralAnalyzer {
         IRBlock trueTarget = branch.getTrueTarget();
         IRBlock falseTarget = branch.getFalseTarget();
 
-        // Determine which target is the loop body and which is the exit
         IRBlock bodyBlock;
         IRBlock exitBlock;
         boolean conditionNegated;
 
         if (loop.contains(trueTarget) && !loop.contains(falseTarget)) {
-            // True branch continues the loop: while (condition) { body }
             bodyBlock = trueTarget;
             exitBlock = falseTarget;
             conditionNegated = false;
         } else if (loop.contains(falseTarget) && !loop.contains(trueTarget)) {
-            // False branch continues the loop: while (!condition) { body }
-            // We need to negate the condition to get: while (negated_condition) { body }
             bodyBlock = falseTarget;
             exitBlock = trueTarget;
             conditionNegated = true;
         } else if (loop.contains(trueTarget) && loop.contains(falseTarget)) {
-            // Both branches stay inside the loop - this is a conditional inside a loop
-            // Treat as an infinite loop with internal conditional
-            // Pick true target as body, loop exit will be determined by break/return inside
             bodyBlock = trueTarget;
-            exitBlock = null; // No clear exit from header
+            exitBlock = null;
             conditionNegated = false;
         } else {
-            // Both outside - shouldn't happen for a loop header, mark as irreducible
             return new RegionInfo(StructuredRegion.IRREDUCIBLE, header);
         }
 
-        // Check for do-while pattern (body precedes condition check)
         if (isDoWhilePattern(header, loop)) {
             RegionInfo info = new RegionInfo(StructuredRegion.DO_WHILE_LOOP, header);
             info.setLoopBody(bodyBlock);
@@ -125,7 +114,6 @@ public class StructuralAnalyzer {
             return info;
         }
 
-        // Check for for-loop pattern (has init, condition, update structure)
         if (isForLoopPattern(header, loop)) {
             RegionInfo info = new RegionInfo(StructuredRegion.FOR_LOOP, header);
             info.setLoopBody(bodyBlock);
@@ -135,7 +123,6 @@ public class StructuralAnalyzer {
             return info;
         }
 
-        // Default to while loop
         RegionInfo info = new RegionInfo(StructuredRegion.WHILE_LOOP, header);
         info.setLoopBody(bodyBlock);
         info.setLoopExit(exitBlock);
@@ -145,12 +132,8 @@ public class StructuralAnalyzer {
     }
 
     private boolean isDoWhilePattern(IRBlock header, LoopAnalysis.Loop loop) {
-        // Do-while: the loop header is reached from a back-edge, not from entry
-        // Check if header has a predecessor outside the loop
         for (IRBlock pred : header.getPredecessors()) {
             if (!loop.contains(pred)) {
-                // Has entry from outside - could be while
-                // Check if the first execution goes into the body unconditionally
                 return false;
             }
         }
@@ -158,8 +141,6 @@ public class StructuralAnalyzer {
     }
 
     private boolean isForLoopPattern(IRBlock header, LoopAnalysis.Loop loop) {
-        // For-loop heuristic: has a clear init, condition, and update pattern
-        // Look for increment/decrement in loop body near back-edge
         Set<IRBlock> loopBlocks = loop.getBlocks();
 
         for (IRBlock block : loopBlocks) {
@@ -167,8 +148,6 @@ public class StructuralAnalyzer {
 
             for (IRBlock succ : block.getSuccessors()) {
                 if (succ == header) {
-                    // This block has a back-edge to header
-                    // Check if it has an increment operation
                     if (hasIncrementPattern(block)) {
                         return true;
                     }
@@ -180,7 +159,8 @@ public class StructuralAnalyzer {
 
     private boolean hasIncrementPattern(IRBlock block) {
         for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof BinaryOpInstruction binOp) {
+            if (instr instanceof BinaryOpInstruction) {
+                BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                 BinaryOp op = binOp.getOp();
                 if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
                     return true;
@@ -191,20 +171,15 @@ public class StructuralAnalyzer {
     }
 
     private RegionInfo analyzeConditional(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
-        // Find the merge point using post-dominator (the first block all paths must pass through)
         IRBlock mergePoint = findMergePoint(block);
 
         if (mergePoint == null || mergePoint == block) {
-            // No merge - possibly returns or throws in both branches
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
             info.setThenBlock(trueTarget);
             info.setElseBlock(falseTarget);
             return info;
         }
 
-        // If the merge point is an exit block (return/throw), it's not a real "merge" point
-        // where code continues - it's just where paths terminate. Look for a better merge
-        // point that's a common destination reachable from both branches.
         if (isExitBlock(mergePoint)) {
             IRBlock altMerge = findAlternativeMergePoint(trueTarget, falseTarget, mergePoint);
             if (altMerge != null && altMerge != mergePoint) {
@@ -212,36 +187,23 @@ public class StructuralAnalyzer {
             }
         }
 
-        // Check for early exit pattern: if one branch is an early exit (return/throw),
-        // treat it as the then-body, not the merge point
-        // Pattern: if (cond) { return; } continuation...
         if (isEarlyExitBlock(falseTarget) && !isEarlyExitBlock(trueTarget)) {
-            // falseTarget is early exit - it should be the then-body, not merge
-            // The condition needs to be NEGATED because bytecode condition leads to trueTarget
-            // Original: if (bytecode_cond) goto trueTarget else falseTarget
-            // We want: if (!bytecode_cond) { early_exit } continuation...
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
-            info.setThenBlock(falseTarget);  // Early exit is the then-body
-            info.setMergeBlock(trueTarget);  // Continuation is where we merge (go after if)
-            info.setConditionNegated(true);  // Negate: we enter then when bytecode condition is FALSE
+            info.setThenBlock(falseTarget);
+            info.setMergeBlock(trueTarget);
+            info.setConditionNegated(true);
             return info;
         }
 
         if (isEarlyExitBlock(trueTarget) && !isEarlyExitBlock(falseTarget)) {
-            // trueTarget is early exit - it should be the then-body
-            // Original: if (bytecode_cond) goto trueTarget else falseTarget
-            // We want: if (bytecode_cond) { early_exit } continuation...
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
-            info.setThenBlock(trueTarget);   // Early exit is the then-body
-            info.setMergeBlock(falseTarget); // Continuation is where we merge
-            info.setConditionNegated(false); // No negate: we enter then when bytecode condition is TRUE
+            info.setThenBlock(trueTarget);
+            info.setMergeBlock(falseTarget);
+            info.setConditionNegated(false);
             return info;
         }
 
-        // Check if it's if-then (one branch goes directly to merge)
         if (trueTarget == mergePoint) {
-            // The "then" body is the false branch, so condition must be negated
-            // if (cond) goto merge; body; -> if (!cond) { body }
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(falseTarget);
             info.setMergeBlock(mergePoint);
@@ -250,8 +212,6 @@ public class StructuralAnalyzer {
         }
 
         if (falseTarget == mergePoint) {
-            // The "then" body is the true branch, condition is as-is
-            // if (!cond) goto merge; body; -> if (cond) { body }
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(trueTarget);
             info.setMergeBlock(mergePoint);
@@ -259,7 +219,6 @@ public class StructuralAnalyzer {
             return info;
         }
 
-        // Full if-then-else
         RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
         info.setThenBlock(trueTarget);
         info.setElseBlock(falseTarget);
@@ -279,24 +238,15 @@ public class StructuralAnalyzer {
     private boolean isEarlyExitBlock(IRBlock block) {
         if (block == null) return false;
 
-        // Check if this block has a single exit terminator (return or throw)
-        // and no successors (doesn't continue to other code)
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return false;
 
-        // Must be a return or throw instruction
         boolean isExit = terminator instanceof ReturnInstruction ||
                          terminator instanceof ThrowInstruction;
         if (!isExit) return false;
 
-        // An early exit block should have no successors (no continuation)
         if (!block.getSuccessors().isEmpty()) return false;
 
-        // CRITICAL: An early exit block should NOT be a merge point (multiple predecessors).
-        // If multiple paths lead to this block, it's a common exit point, not an early exit.
-        // Examples:
-        // - Early exit: if (error) { return; } // Only reached from one path
-        // - NOT early exit: if (cond) { work(); } cleanup(); return; // Merge point
         if (block.getPredecessors().size() > 1) {
             return false;
         }
@@ -325,12 +275,9 @@ public class StructuralAnalyzer {
      * Post-dominator might be the inner return, but F is the real merge for paths that don't return.
      */
     private IRBlock findAlternativeMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock exitMerge) {
-        // Find blocks reachable from true branch
         Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
-        // Find blocks reachable from false branch
         Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
 
-        // Find common reachable blocks (excluding the exit merge itself)
         Set<IRBlock> common = new HashSet<>(reachableFromTrue);
         common.retainAll(reachableFromFalse);
         common.remove(exitMerge);
@@ -339,20 +286,14 @@ public class StructuralAnalyzer {
             return null;
         }
 
-        // Look for a block with multiple predecessors (true merge point)
-        // Prefer the one with the most predecessors (strongest convergence)
         IRBlock bestMerge = null;
         int maxPreds = 1;
 
         for (IRBlock candidate : common) {
             int predCount = candidate.getPredecessors().size();
 
-            // Skip single-predecessor exit blocks (true early exits)
-            // But keep multi-predecessor exit blocks (merge points that happen to end with return)
             if (isExitBlock(candidate) && predCount <= 1) continue;
 
-            // Skip blocks that have non-trivial code - these are "shared action" blocks,
-            // not true merge points. A true merge point typically has only control flow.
             if (hasNonTrivialInstructions(candidate) && !isExitBlock(candidate)) continue;
 
             if (predCount > maxPreds) {
@@ -370,11 +311,9 @@ public class StructuralAnalyzer {
      */
     private boolean hasNonTrivialInstructions(IRBlock block) {
         for (IRInstruction instr : block.getInstructions()) {
-            // Skip trivial instructions
             if (instr.isTerminator()) continue;
             if (instr instanceof GotoInstruction) continue;
 
-            // Any other instruction is non-trivial
             return true;
         }
         return false;
@@ -390,7 +329,6 @@ public class StructuralAnalyzer {
      */
     private IRBlock findMergePoint(IRBlock branchBlock) {
         if (postDominatorTree == null) {
-            // Fallback to old algorithm if post-dominator not available
             return findMergePointFallback(branchBlock);
         }
         return postDominatorTree.getImmediatePostDominator(branchBlock);
@@ -409,7 +347,6 @@ public class StructuralAnalyzer {
         IRBlock branch1 = it.next();
         IRBlock branch2 = it.next();
 
-        // Find the first block that both branches can reach
         Set<IRBlock> reachable1 = getReachableBlocks(branch1);
         Set<IRBlock> reachable2 = getReachableBlocks(branch2);
 
@@ -419,7 +356,6 @@ public class StructuralAnalyzer {
             return null;
         }
 
-        // Find the earliest (by dominance) common reachable block
         IRBlock earliest = null;
         for (IRBlock candidate : reachable1) {
             if (earliest == null || dominatorTree.strictlyDominates(candidate, earliest)) {
@@ -456,14 +392,12 @@ public class StructuralAnalyzer {
     }
 
     private void analyzeGoto(IRBlock block) {
-        // Check if this is part of a loop back-edge
         if (loopAnalysis.isInLoop(block)) {
             LoopAnalysis.Loop loop = loopAnalysis.getLoop(block);
             IRBlock header = loop.getHeader();
 
             for (IRBlock succ : block.getSuccessors()) {
                 if (succ == header) {
-                    // This is a continue or loop latch
                     RegionInfo info = new RegionInfo(StructuredRegion.SEQUENCE, block);
                     info.setContinueTarget(header);
                     regionInfos.put(block, info);
@@ -503,19 +437,16 @@ public class StructuralAnalyzer {
         private final StructuredRegion type;
         private final IRBlock header;
 
-        // For conditionals
         private IRBlock thenBlock;
         private IRBlock elseBlock;
         private IRBlock mergeBlock;
-        private boolean conditionNegated; // true if condition should be negated for source
+        private boolean conditionNegated;
 
-        // For loops
         private IRBlock loopBody;
         private IRBlock loopExit;
         private LoopAnalysis.Loop loop;
         private IRBlock continueTarget;
 
-        // For switch
         private Map<Integer, IRBlock> switchCases;
         private IRBlock defaultTarget;
 

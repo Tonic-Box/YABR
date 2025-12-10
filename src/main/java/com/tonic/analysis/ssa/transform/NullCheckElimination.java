@@ -32,14 +32,11 @@ public class NullCheckElimination implements IRTransform {
             return false;
         }
 
-        // Compute dominator tree
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
 
-        // Track values known to be non-null
         Set<Integer> nonNullValues = new HashSet<>();
 
-        // Mark 'this' as non-null for instance methods
         if (!method.isStatic() && !method.getParameters().isEmpty()) {
             SSAValue thisRef = method.getParameters().get(0);
             nonNullValues.add(thisRef.getId());
@@ -47,7 +44,6 @@ public class NullCheckElimination implements IRTransform {
 
         boolean changed = false;
 
-        // Process blocks in dominator tree order (BFS from entry)
         for (IRBlock block : method.getBlocksInOrder()) {
             changed |= processBlock(block, nonNullValues, domTree);
         }
@@ -58,16 +54,13 @@ public class NullCheckElimination implements IRTransform {
     private boolean processBlock(IRBlock block, Set<Integer> nonNullValues, DominatorTree domTree) {
         boolean changed = false;
 
-        // Create a local copy of non-null values for this block
         Set<Integer> localNonNull = new HashSet<>(nonNullValues);
 
-        // Propagate non-null info from dominating blocks
         IRBlock idom = domTree.getImmediateDominator(block);
-        // Non-null values from dominated blocks are already in nonNullValues
 
-        // Scan instructions for NEW instructions (results are non-null)
         for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof NewInstruction newInstr) {
+            if (instr instanceof NewInstruction) {
+                NewInstruction newInstr = (NewInstruction) instr;
                 SSAValue result = newInstr.getResult();
                 if (result != null) {
                     localNonNull.add(result.getId());
@@ -76,40 +69,35 @@ public class NullCheckElimination implements IRTransform {
             }
         }
 
-        // Check terminator for null check branches
         IRInstruction terminator = block.getTerminator();
-        if (terminator instanceof BranchInstruction branch) {
+        if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) terminator;
             CompareOp cond = branch.getCondition();
 
             if (cond == CompareOp.IFNULL || cond == CompareOp.IFNONNULL) {
                 Value operand = branch.getLeft();
 
-                if (operand instanceof SSAValue ssaOperand) {
+                if (operand instanceof SSAValue) {
+                    SSAValue ssaOperand = (SSAValue) operand;
                     int valueId = ssaOperand.getId();
                     boolean isKnownNonNull = localNonNull.contains(valueId);
 
                     if (isKnownNonNull) {
-                        // Value is known non-null
                         IRBlock targetBlock;
                         if (cond == CompareOp.IFNULL) {
-                            // IFNULL will never be taken - goto false target
                             targetBlock = branch.getFalseTarget();
                         } else {
-                            // IFNONNULL will always be taken - goto true target
                             targetBlock = branch.getTrueTarget();
                         }
 
-                        // Replace branch with goto
                         GotoInstruction gotoInstr = new GotoInstruction(targetBlock);
                         gotoInstr.setBlock(block);
 
-                        // Remove old branch and add goto
                         List<IRInstruction> instructions = block.getInstructions();
                         int idx = instructions.indexOf(branch);
                         block.removeInstruction(branch);
                         block.insertInstruction(idx, gotoInstr);
 
-                        // Update successors
                         IRBlock removedTarget = (cond == CompareOp.IFNULL)
                             ? branch.getTrueTarget()
                             : branch.getFalseTarget();
@@ -118,12 +106,7 @@ public class NullCheckElimination implements IRTransform {
 
                         changed = true;
                     } else {
-                        // After IFNONNULL true branch, value is known non-null
                         if (cond == CompareOp.IFNONNULL) {
-                            // The true target can assume the value is non-null
-                            // Add to global non-null set (will apply to dominated blocks)
-                            // Note: This is a simplified version; full implementation
-                            // would track per-path information
                             nonNullValues.add(valueId);
                         }
                     }

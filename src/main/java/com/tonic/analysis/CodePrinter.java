@@ -226,7 +226,25 @@ public class CodePrinter {
                             .append(" (").append(resolveConstantPoolReference(ldcIndex, constPool)).append(")");
                     break;
 
-                case SIPUSH, IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE, IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL, IFNONNULL:
+                case SIPUSH:
+                case IFEQ:
+                case IFNE:
+                case IFLT:
+                case IFGE:
+                case IFGT:
+                case IFLE:
+                case IF_ICMPEQ:
+                case IF_ICMPNE:
+                case IF_ICMPLT:
+                case IF_ICMPGE:
+                case IF_ICMPGT:
+                case IF_ICMPLE:
+                case IF_ACMPEQ:
+                case IF_ACMPNE:
+                case GOTO:
+                case JSR:
+                case IFNULL:
+                case IFNONNULL:
                     if (pc + 1 >= code.length) {
                         sb.append(" <invalid>");
                         break;
@@ -468,19 +486,23 @@ public class CodePrinter {
      */
     private static String resolveConstantPoolReference(int index, ConstPool constPool) {
         Logger.info("DEBUG: resolveConstantPoolReference(" + index + ")");
-        if (constPool.getItem(index) instanceof MethodRefItem methodRef) {
+        if (constPool.getItem(index) instanceof MethodRefItem) {
+            MethodRefItem methodRef = (MethodRefItem) constPool.getItem(index);
             String className = methodRef.getClassName().replace('/', '.');
             String methodName = methodRef.getName();
             String methodDesc = methodRef.getDescriptor();
             return className + "." + methodName + methodDesc;
-        } else if (constPool.getItem(index) instanceof FieldRefItem fieldRef) {
+        } else if (constPool.getItem(index) instanceof FieldRefItem) {
+            FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(index);
             String className = fieldRef.getClassName().replace('/', '.');
             String fieldName = fieldRef.getName();
             String fieldDesc = fieldRef.getDescriptor();
             return className + "." + fieldName + " " + fieldDesc;
-        } else if (constPool.getItem(index) instanceof StringRefItem stringItem) {
+        } else if (constPool.getItem(index) instanceof StringRefItem) {
+            StringRefItem stringItem = (StringRefItem) constPool.getItem(index);
             return "\"" + stringItem.getValue() + "\"";
-        } else if (constPool.getItem(index) instanceof ClassRefItem classRef) {
+        } else if (constPool.getItem(index) instanceof ClassRefItem) {
+            ClassRefItem classRef = (ClassRefItem) constPool.getItem(index);
             return classRef.getClassName().replace('/', '.');
         } else {
             return "UnknownReference";
@@ -494,16 +516,25 @@ public class CodePrinter {
      * @return A human-readable type description.
      */
     private static String atypeDescription(int atype) {
-        return switch (atype) {
-            case 4 -> "boolean";
-            case 5 -> "char";
-            case 6 -> "float";
-            case 7 -> "double";
-            case 8 -> "byte";
-            case 9 -> "short";
-            case 10 -> "int";
-            case 11 -> "long";
-            default -> "unknown_atype_" + atype;
-        };
+        switch (atype) {
+            case 4:
+                return "boolean";
+            case 5:
+                return "char";
+            case 6:
+                return "float";
+            case 7:
+                return "double";
+            case 8:
+                return "byte";
+            case 9:
+                return "short";
+            case 10:
+                return "int";
+            case 11:
+                return "long";
+            default:
+                return "unknown_atype_" + atype;
+        }
     }
 }

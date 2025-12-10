@@ -88,9 +88,9 @@ public class TestBlocks {
         public void visitBlock(IRBlock block) {
             System.out.println("\tBlock: " + block.getName());
             System.out.println("\t  Predecessors: " + block.getPredecessors().stream()
-                    .map(IRBlock::getName).toList());
+                    .map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
             System.out.println("\t  Successors: " + block.getSuccessors().stream()
-                    .map(IRBlock::getName).toList());
+                    .map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
 
             super.visitBlock(block);
         }

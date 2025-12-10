@@ -106,78 +106,116 @@ public abstract class Attribute {
 
     private static Attribute getClassAttribute(String name, int nameIndex, int length, ClassFile classFile)
     {
-        return switch (name) {
-            case "ConstantValue" -> new ConstantValueAttribute(name, classFile, nameIndex, length);
-            case "StackMapTable" -> new StackMapTableAttribute(name, classFile, nameIndex, length);
-            case "Code" -> new CodeAttribute(name, classFile, nameIndex, length);
-            case "Exceptions" -> new ExceptionsAttribute(name, classFile, nameIndex, length);
-            case "InnerClasses" -> new InnerClassesAttribute(name, classFile, nameIndex, length);
-            case "EnclosingMethod" -> new EnclosingMethodAttribute(name, classFile, nameIndex, length);
-            case "Synthetic" -> new SyntheticAttribute(name, classFile, nameIndex, length);
-            case "Signature" -> new SignatureAttribute(name, classFile, nameIndex, length);
-            case "SourceFile" -> new SourceFileAttribute(classFile, name, null, nameIndex, length);
-            case "SourceDebugExtension" -> new SourceDebugExtensionAttribute(name, classFile, nameIndex, length);
-            case "LineNumberTable" -> new LineNumberTableAttribute(name, classFile, nameIndex, length);
-            case "LocalVariableTable" -> new LocalVariableTableAttribute(name, classFile, nameIndex, length);
-            case "LocalVariableTypeTable" -> new LocalVariableTypeTableAttribute(name, classFile, nameIndex, length);
-            case "Deprecated" -> new DeprecatedAttribute(name, classFile, nameIndex, length);
-            case "RuntimeVisibleAnnotations" ->
-                    new RuntimeVisibleAnnotationsAttribute(name, classFile, true, nameIndex, length);
-            case "RuntimeInvisibleAnnotations" ->
-                    new RuntimeVisibleAnnotationsAttribute(name, classFile, false, nameIndex, length);
-            case "RuntimeVisibleParameterAnnotations" ->
-                    new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, true, nameIndex, length);
-            case "RuntimeInvisibleParameterAnnotations" ->
-                    new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, false, nameIndex, length);
-            case "AnnotationDefault" -> new AnnotationDefaultAttribute(name, classFile, nameIndex, length);
-            case "MethodParameters" -> new MethodParametersAttribute(name, classFile, nameIndex, length);
-            case "BootstrapMethods" -> new BootstrapMethodsAttribute(name, classFile, nameIndex, length);
-            case "Module" -> new ModuleAttribute(name, classFile, nameIndex, length);
-            case "NestHost" -> new NestHostAttribute(name, classFile, nameIndex, length);
-            case "NestMembers" -> new NestMembersAttribute(name, classFile, nameIndex, length);
-            default -> {
+        switch (name) {
+            case "ConstantValue":
+                return new ConstantValueAttribute(name, classFile, nameIndex, length);
+            case "StackMapTable":
+                return new StackMapTableAttribute(name, classFile, nameIndex, length);
+            case "Code":
+                return new CodeAttribute(name, classFile, nameIndex, length);
+            case "Exceptions":
+                return new ExceptionsAttribute(name, classFile, nameIndex, length);
+            case "InnerClasses":
+                return new InnerClassesAttribute(name, classFile, nameIndex, length);
+            case "EnclosingMethod":
+                return new EnclosingMethodAttribute(name, classFile, nameIndex, length);
+            case "Synthetic":
+                return new SyntheticAttribute(name, classFile, nameIndex, length);
+            case "Signature":
+                return new SignatureAttribute(name, classFile, nameIndex, length);
+            case "SourceFile":
+                return new SourceFileAttribute(classFile, name, null, nameIndex, length);
+            case "SourceDebugExtension":
+                return new SourceDebugExtensionAttribute(name, classFile, nameIndex, length);
+            case "LineNumberTable":
+                return new LineNumberTableAttribute(name, classFile, nameIndex, length);
+            case "LocalVariableTable":
+                return new LocalVariableTableAttribute(name, classFile, nameIndex, length);
+            case "LocalVariableTypeTable":
+                return new LocalVariableTypeTableAttribute(name, classFile, nameIndex, length);
+            case "Deprecated":
+                return new DeprecatedAttribute(name, classFile, nameIndex, length);
+            case "RuntimeVisibleAnnotations":
+                return new RuntimeVisibleAnnotationsAttribute(name, classFile, true, nameIndex, length);
+            case "RuntimeInvisibleAnnotations":
+                return new RuntimeVisibleAnnotationsAttribute(name, classFile, false, nameIndex, length);
+            case "RuntimeVisibleParameterAnnotations":
+                return new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, true, nameIndex, length);
+            case "RuntimeInvisibleParameterAnnotations":
+                return new RuntimeVisibleParameterAnnotationsAttribute(name, classFile, false, nameIndex, length);
+            case "AnnotationDefault":
+                return new AnnotationDefaultAttribute(name, classFile, nameIndex, length);
+            case "MethodParameters":
+                return new MethodParametersAttribute(name, classFile, nameIndex, length);
+            case "BootstrapMethods":
+                return new BootstrapMethodsAttribute(name, classFile, nameIndex, length);
+            case "Module":
+                return new ModuleAttribute(name, classFile, nameIndex, length);
+            case "NestHost":
+                return new NestHostAttribute(name, classFile, nameIndex, length);
+            case "NestMembers":
+                return new NestMembersAttribute(name, classFile, nameIndex, length);
+            default:
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
-                yield new GenericAttribute(name, classFile, nameIndex, length);
-            }
-        };
+                return new GenericAttribute(name, classFile, nameIndex, length);
+        }
     }
 
     private static Attribute getMethodAttribute(String name, int nameIndex, int length,ClassFile classFile, MemberEntry parent)
     {
-        return switch (name) {
-            case "ConstantValue" -> new ConstantValueAttribute(name, parent, nameIndex, length);
-            case "StackMapTable" -> new StackMapTableAttribute(name, parent, nameIndex, length);
-            case "Code" -> new CodeAttribute(name, parent, nameIndex, length);
-            case "Exceptions" -> new ExceptionsAttribute(name, parent, nameIndex, length);
-            case "InnerClasses" -> new InnerClassesAttribute(name, parent, nameIndex, length);
-            case "EnclosingMethod" -> new EnclosingMethodAttribute(name, parent, nameIndex, length);
-            case "Synthetic" -> new SyntheticAttribute(name, parent, nameIndex, length);
-            case "Signature" -> new SignatureAttribute(name, parent, nameIndex, length);
-            case "SourceFile" -> new SourceFileAttribute(classFile, name, parent, nameIndex, length);
-            case "SourceDebugExtension" -> new SourceDebugExtensionAttribute(name, parent, nameIndex, length);
-            case "LineNumberTable" -> new LineNumberTableAttribute(name, parent, nameIndex, length);
-            case "LocalVariableTable" -> new LocalVariableTableAttribute(name, parent, nameIndex, length);
-            case "LocalVariableTypeTable" -> new LocalVariableTypeTableAttribute(name, parent, nameIndex, length);
-            case "Deprecated" -> new DeprecatedAttribute(name, parent, nameIndex, length);
-            case "RuntimeVisibleAnnotations" ->
-                    new RuntimeVisibleAnnotationsAttribute(name, parent, true, nameIndex, length);
-            case "RuntimeInvisibleAnnotations" ->
-                    new RuntimeVisibleAnnotationsAttribute(name, parent, false, nameIndex, length);
-            case "RuntimeVisibleParameterAnnotations" ->
-                    new RuntimeVisibleParameterAnnotationsAttribute(name, parent, true, nameIndex, length);
-            case "RuntimeInvisibleParameterAnnotations" ->
-                    new RuntimeVisibleParameterAnnotationsAttribute(name, parent, false, nameIndex, length);
-            case "AnnotationDefault" -> new AnnotationDefaultAttribute(name, parent, nameIndex, length);
-            case "MethodParameters" -> new MethodParametersAttribute(name, parent, nameIndex, length);
-            case "BootstrapMethods" -> new BootstrapMethodsAttribute(name, parent, nameIndex, length);
-            case "Module" -> new ModuleAttribute(name, parent, nameIndex, length);
-            case "NestHost" -> new NestHostAttribute(name, parent, nameIndex, length);
-            case "NestMembers" -> new NestMembersAttribute(name, parent, nameIndex, length);
-            default -> {
+        switch (name) {
+            case "ConstantValue":
+                return new ConstantValueAttribute(name, parent, nameIndex, length);
+            case "StackMapTable":
+                return new StackMapTableAttribute(name, parent, nameIndex, length);
+            case "Code":
+                return new CodeAttribute(name, parent, nameIndex, length);
+            case "Exceptions":
+                return new ExceptionsAttribute(name, parent, nameIndex, length);
+            case "InnerClasses":
+                return new InnerClassesAttribute(name, parent, nameIndex, length);
+            case "EnclosingMethod":
+                return new EnclosingMethodAttribute(name, parent, nameIndex, length);
+            case "Synthetic":
+                return new SyntheticAttribute(name, parent, nameIndex, length);
+            case "Signature":
+                return new SignatureAttribute(name, parent, nameIndex, length);
+            case "SourceFile":
+                return new SourceFileAttribute(classFile, name, parent, nameIndex, length);
+            case "SourceDebugExtension":
+                return new SourceDebugExtensionAttribute(name, parent, nameIndex, length);
+            case "LineNumberTable":
+                return new LineNumberTableAttribute(name, parent, nameIndex, length);
+            case "LocalVariableTable":
+                return new LocalVariableTableAttribute(name, parent, nameIndex, length);
+            case "LocalVariableTypeTable":
+                return new LocalVariableTypeTableAttribute(name, parent, nameIndex, length);
+            case "Deprecated":
+                return new DeprecatedAttribute(name, parent, nameIndex, length);
+            case "RuntimeVisibleAnnotations":
+                return new RuntimeVisibleAnnotationsAttribute(name, parent, true, nameIndex, length);
+            case "RuntimeInvisibleAnnotations":
+                return new RuntimeVisibleAnnotationsAttribute(name, parent, false, nameIndex, length);
+            case "RuntimeVisibleParameterAnnotations":
+                return new RuntimeVisibleParameterAnnotationsAttribute(name, parent, true, nameIndex, length);
+            case "RuntimeInvisibleParameterAnnotations":
+                return new RuntimeVisibleParameterAnnotationsAttribute(name, parent, false, nameIndex, length);
+            case "AnnotationDefault":
+                return new AnnotationDefaultAttribute(name, parent, nameIndex, length);
+            case "MethodParameters":
+                return new MethodParametersAttribute(name, parent, nameIndex, length);
+            case "BootstrapMethods":
+                return new BootstrapMethodsAttribute(name, parent, nameIndex, length);
+            case "Module":
+                return new ModuleAttribute(name, parent, nameIndex, length);
+            case "NestHost":
+                return new NestHostAttribute(name, parent, nameIndex, length);
+            case "NestMembers":
+                return new NestMembersAttribute(name, parent, nameIndex, length);
+            default:
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
-                yield new GenericAttribute(name, parent, nameIndex, length);
-            }
-        };
+                return new GenericAttribute(name, parent, nameIndex, length);
+        }
     }
 
     /**

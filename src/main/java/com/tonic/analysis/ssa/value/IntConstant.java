@@ -32,12 +32,16 @@ public final class IntConstant extends Constant {
      * @return an IntConstant instance
      */
     public static IntConstant of(int value) {
-        return switch (value) {
-            case 0 -> ZERO;
-            case 1 -> ONE;
-            case -1 -> MINUS_ONE;
-            default -> new IntConstant(value);
-        };
+        switch (value) {
+            case 0:
+                return ZERO;
+            case 1:
+                return ONE;
+            case -1:
+                return MINUS_ONE;
+            default:
+                return new IntConstant(value);
+        }
     }
 
     @Override
@@ -58,7 +62,8 @@ public final class IntConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof IntConstant that)) return false;
+        if (!(o instanceof IntConstant)) return false;
+        IntConstant that = (IntConstant) o;
         return value == that.value;
     }
 

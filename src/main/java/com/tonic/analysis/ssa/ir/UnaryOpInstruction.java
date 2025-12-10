@@ -20,7 +20,10 @@ public class UnaryOpInstruction extends IRInstruction {
         super(result);
         this.op = op;
         this.operand = operand;
-        if (operand instanceof SSAValue ssa) ssa.addUse(this);
+        if (operand instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) operand;
+            ssa.addUse(this);
+        }
     }
 
     @Override
@@ -31,9 +34,15 @@ public class UnaryOpInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (operand.equals(oldValue)) {
-            if (operand instanceof SSAValue ssa) ssa.removeUse(this);
+            if (operand instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) operand;
+                ssa.removeUse(this);
+            }
             operand = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

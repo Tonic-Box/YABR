@@ -27,7 +27,6 @@ public class BlockMerging implements IRTransform {
     public boolean run(IRMethod method) {
         boolean changed = false;
 
-        // Keep merging until no more merges are possible
         boolean merged;
         do {
             merged = false;
@@ -50,7 +49,6 @@ public class BlockMerging implements IRTransform {
      * Checks if a block can be merged with its successor.
      */
     private boolean canMergeWithSuccessor(IRBlock block) {
-        // Must have exactly one successor
         List<IRBlock> successors = block.getSuccessors();
         if (successors.size() != 1) {
             return false;
@@ -58,28 +56,24 @@ public class BlockMerging implements IRTransform {
 
         IRBlock successor = successors.get(0);
 
-        // Cannot merge with self (loop)
         if (successor == block) {
             return false;
         }
 
-        // Successor must have exactly one predecessor (this block)
         if (successor.getPredecessors().size() != 1) {
             return false;
         }
 
-        // Successor must have no phi instructions
         if (!successor.getPhiInstructions().isEmpty()) {
             return false;
         }
 
-        // Block must end with an unconditional goto to successor
         IRInstruction term = block.getTerminator();
-        if (!(term instanceof GotoInstruction gotoInstr)) {
+        if (!(term instanceof GotoInstruction)) {
             return false;
         }
+        GotoInstruction gotoInstr = (GotoInstruction) term;
 
-        // The goto must target the successor
         return gotoInstr.getTarget() == successor;
     }
 
@@ -97,30 +91,25 @@ public class BlockMerging implements IRTransform {
      * A takes over B's successors.
      */
     private void mergeBlocks(IRMethod method, IRBlock a, IRBlock b) {
-        // Remove the goto from A
         IRInstruction gotoInstr = a.getTerminator();
         if (gotoInstr != null) {
             a.removeInstruction(gotoInstr);
         }
 
-        // Add all of B's instructions to A
         for (IRInstruction instr : new ArrayList<>(b.getInstructions())) {
             b.removeInstruction(instr);
             a.addInstruction(instr);
         }
 
-        // Update A's successors: remove B, add B's successors
         a.removeSuccessor(b);
         for (IRBlock bSucc : new ArrayList<>(b.getSuccessors())) {
             a.addSuccessor(bSucc);
 
-            // Update the successor's predecessor list: replace B with A
             bSucc.getPredecessors().remove(b);
             if (!bSucc.getPredecessors().contains(a)) {
                 bSucc.getPredecessors().add(a);
             }
 
-            // Update phi instructions in B's successors to reference A instead of B
             for (PhiInstruction phi : bSucc.getPhiInstructions()) {
                 com.tonic.analysis.ssa.value.Value incoming = phi.getIncoming(b);
                 if (incoming != null) {
@@ -130,13 +119,11 @@ public class BlockMerging implements IRTransform {
             }
         }
 
-        // Update any terminators in A that might reference B
         IRInstruction newTerm = a.getTerminator();
         if (newTerm != null) {
             updateTerminatorTargets(newTerm, b, a);
         }
 
-        // Remove B from the method
         method.removeBlock(b);
     }
 
@@ -144,20 +131,21 @@ public class BlockMerging implements IRTransform {
      * Updates terminator instruction targets to handle merged blocks.
      */
     private void updateTerminatorTargets(IRInstruction term, IRBlock oldTarget, IRBlock newTarget) {
-        // This method is a safety check - normally not needed since B's instructions
-        // shouldn't reference B itself, but included for robustness
-        if (term instanceof GotoInstruction gotoInstr) {
+        if (term instanceof GotoInstruction) {
+            GotoInstruction gotoInstr = (GotoInstruction) term;
             if (gotoInstr.getTarget() == oldTarget) {
                 gotoInstr.setTarget(newTarget);
             }
-        } else if (term instanceof BranchInstruction branch) {
+        } else if (term instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) term;
             if (branch.getTrueTarget() == oldTarget) {
                 branch.setTrueTarget(newTarget);
             }
             if (branch.getFalseTarget() == oldTarget) {
                 branch.setFalseTarget(newTarget);
             }
-        } else if (term instanceof SwitchInstruction switchInstr) {
+        } else if (term instanceof SwitchInstruction) {
+            SwitchInstruction switchInstr = (SwitchInstruction) term;
             if (switchInstr.getDefaultTarget() == oldTarget) {
                 switchInstr.setDefaultTarget(newTarget);
             }

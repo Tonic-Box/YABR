@@ -43,7 +43,8 @@ public class CopyPropagation implements IRTransform {
             }
 
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof CopyInstruction copy) {
+                if (instr instanceof CopyInstruction) {
+                    CopyInstruction copy = (CopyInstruction) instr;
                     Value source = copy.getSource();
                     while (copies.containsKey(source)) {
                         source = copies.get(source);
@@ -91,7 +92,8 @@ public class CopyPropagation implements IRTransform {
 
     private Value findReplacement(Value value, Map<SSAValue, Value> copies) {
         Value current = value;
-        while (current instanceof SSAValue ssa && copies.containsKey(ssa)) {
+        while (current instanceof SSAValue && copies.containsKey((SSAValue) current)) {
+            SSAValue ssa = (SSAValue) current;
             Value next = copies.get(ssa);
             if (next == current) break;
             current = next;

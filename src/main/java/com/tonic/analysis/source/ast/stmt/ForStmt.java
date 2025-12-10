@@ -31,7 +31,6 @@ public final class ForStmt implements Statement {
 
     public ForStmt(List<Statement> init, Expression condition, List<Expression> update,
                    Statement body, String label, SourceLocation location) {
-        // Filter out null statements and expressions
         this.init = new ArrayList<>();
         if (init != null) {
             for (Statement s : init) {
@@ -40,7 +39,7 @@ public final class ForStmt implements Statement {
                 }
             }
         }
-        this.condition = condition; // Can be null for infinite loop
+        this.condition = condition;
         this.update = new ArrayList<>();
         if (update != null) {
             for (Expression e : update) {
@@ -53,7 +52,6 @@ public final class ForStmt implements Statement {
         this.label = label;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
-        // Set parent references
         for (Statement s : this.init) {
             s.setParent(this);
         }

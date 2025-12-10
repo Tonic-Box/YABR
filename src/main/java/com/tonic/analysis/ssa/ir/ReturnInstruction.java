@@ -23,7 +23,10 @@ public class ReturnInstruction extends IRInstruction {
     public ReturnInstruction(Value returnValue) {
         super();
         this.returnValue = returnValue;
-        if (returnValue instanceof SSAValue ssa) ssa.addUse(this);
+        if (returnValue instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) returnValue;
+            ssa.addUse(this);
+        }
     }
 
     /**
@@ -43,9 +46,15 @@ public class ReturnInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (returnValue != null && returnValue.equals(oldValue)) {
-            if (returnValue instanceof SSAValue ssa) ssa.removeUse(this);
+            if (returnValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) returnValue;
+                ssa.removeUse(this);
+            }
             returnValue = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

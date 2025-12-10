@@ -30,7 +30,8 @@ public class PhiInstruction extends IRInstruction {
      */
     public void addIncoming(Value value, IRBlock fromBlock) {
         incomingValues.put(fromBlock, value);
-        if (value instanceof SSAValue ssaValue) {
+        if (value instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) value;
             ssaValue.addUse(this);
         }
     }
@@ -42,7 +43,8 @@ public class PhiInstruction extends IRInstruction {
      */
     public void removeIncoming(IRBlock fromBlock) {
         Value removed = incomingValues.remove(fromBlock);
-        if (removed instanceof SSAValue ssaValue) {
+        if (removed instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) removed;
             ssaValue.removeUse(this);
         }
     }
@@ -76,10 +78,12 @@ public class PhiInstruction extends IRInstruction {
         for (Map.Entry<IRBlock, Value> entry : incomingValues.entrySet()) {
             if (entry.getValue().equals(oldValue)) {
                 entry.setValue(newValue);
-                if (oldValue instanceof SSAValue ssaOld) {
+                if (oldValue instanceof SSAValue) {
+                    SSAValue ssaOld = (SSAValue) oldValue;
                     ssaOld.removeUse(this);
                 }
-                if (newValue instanceof SSAValue ssaNew) {
+                if (newValue instanceof SSAValue) {
+                    SSAValue ssaNew = (SSAValue) newValue;
                     ssaNew.addUse(this);
                 }
             }

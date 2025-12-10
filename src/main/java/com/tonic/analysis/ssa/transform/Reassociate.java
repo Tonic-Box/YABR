@@ -33,15 +33,14 @@ public class Reassociate implements IRTransform {
     public boolean run(IRMethod method) {
         boolean changed = false;
 
-        // Compute ranks for all values
         computeRanks(method);
 
-        // Process each block
         for (IRBlock block : method.getBlocks()) {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
             for (IRInstruction instr : instructions) {
-                if (instr instanceof BinaryOpInstruction binOp) {
+                if (instr instanceof BinaryOpInstruction) {
+                    BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                     if (isCommutative(binOp.getOp())) {
                         if (canonicalize(binOp)) {
                             changed = true;
@@ -57,12 +56,10 @@ public class Reassociate implements IRTransform {
     private void computeRanks(IRMethod method) {
         rankMap = new HashMap<>();
 
-        // Parameters get rank 1
         for (SSAValue param : method.getParameters()) {
             rankMap.put(param, 1);
         }
 
-        // Instructions get rank based on block order
         int blockRank = 2;
         for (IRBlock block : method.getBlocksInOrder()) {
             for (IRInstruction instr : block.getInstructions()) {
@@ -76,7 +73,7 @@ public class Reassociate implements IRTransform {
 
     private int getRank(Value v) {
         if (v instanceof Constant) {
-            return 0; // Constants have lowest rank
+            return 0;
         }
         return rankMap.getOrDefault(v, 1);
     }
@@ -97,9 +94,7 @@ public class Reassociate implements IRTransform {
         int leftRank = getRank(left);
         int rightRank = getRank(right);
 
-        // If left has lower rank than right, swap them
         if (leftRank < rightRank) {
-            // Need to swap - create new instruction to replace
             SSAValue result = binOp.getResult();
             IRBlock block = binOp.getBlock();
 

@@ -15,7 +15,7 @@ public class IndentingWriter {
     private boolean atLineStart;
 
     public IndentingWriter(Writer writer) {
-        this(writer, "    "); // 4 spaces default
+        this(writer, "    ");
     }
 
     public IndentingWriter(Writer writer, String indentString) {

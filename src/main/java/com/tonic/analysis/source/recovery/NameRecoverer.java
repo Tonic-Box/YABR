@@ -67,11 +67,11 @@ public class NameRecoverer {
     private String resolveUtf8(int index) {
         try {
             var item = constPool.getItem(index);
-            if (item instanceof Utf8Item utf8) {
-                return utf8.getValue();
+            if (item instanceof Utf8Item) {
+                Utf8Item utf8Item = (Utf8Item) item;
+                return utf8Item.getValue();
             }
         } catch (Exception e) {
-            // Ignore
         }
         return null;
     }
@@ -84,13 +84,11 @@ public class NameRecoverer {
             return generateSyntheticName(value);
         }
 
-        // Try debug info first
         String debugName = lookupFromDebugInfo(localSlot, bytecodeOffset);
         if (debugName != null && strategy == NameRecoveryStrategy.PREFER_DEBUG_INFO) {
             return debugName;
         }
 
-        // Check if it's a parameter
         if (isParameter(localSlot)) {
             if (debugName != null) return debugName;
             return generateParameterName(localSlot);
@@ -120,7 +118,8 @@ public class NameRecoverer {
         int paramSlots = irMethod.isStatic() ? 0 : 1;
         for (SSAValue param : irMethod.getParameters()) {
             paramSlots++;
-            if (param.getType() instanceof PrimitiveType p) {
+            if (param.getType() instanceof PrimitiveType) {
+                PrimitiveType p = (PrimitiveType) param.getType();
                 if (p == PrimitiveType.LONG || p == PrimitiveType.DOUBLE) {
                     paramSlots++;
                 }
@@ -147,17 +146,29 @@ public class NameRecoverer {
     }
 
     private String getTypePrefix(IRType type) {
-        if (type instanceof PrimitiveType p) {
-            return switch (p) {
-                case INT, SHORT, BYTE -> "i";
-                case LONG -> "l";
-                case FLOAT -> "f";
-                case DOUBLE -> "d";
-                case BOOLEAN -> "flag";
-                case CHAR -> "c";
-            };
+        if (type instanceof PrimitiveType) {
+            PrimitiveType p = (PrimitiveType) type;
+            switch (p) {
+                case INT:
+                case SHORT:
+                case BYTE:
+                    return "i";
+                case LONG:
+                    return "l";
+                case FLOAT:
+                    return "f";
+                case DOUBLE:
+                    return "d";
+                case BOOLEAN:
+                    return "flag";
+                case CHAR:
+                    return "c";
+                default:
+                    return "v";
+            }
         }
-        if (type instanceof ReferenceType r) {
+        if (type instanceof ReferenceType) {
+            ReferenceType r = (ReferenceType) type;
             String name = r.getInternalName();
             int lastSlash = name.lastIndexOf('/');
             String simple = lastSlash >= 0 ? name.substring(lastSlash + 1) : name;

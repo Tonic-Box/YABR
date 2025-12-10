@@ -84,10 +84,11 @@ public class GetFieldInstruction extends Instruction {
     @Override
     public int getStackChange() {
         FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
-        return switch (field.getDescriptor()) {
-            case "J", "D" -> 2;
-            default -> 1;
-        };
+        String desc = field.getDescriptor();
+        if ("J".equals(desc) || "D".equals(desc)) {
+            return 2;
+        }
+        return 1;
     }
 
     /**

@@ -52,114 +52,114 @@ public class InstructionTranslator {
         int opcode = instr.getOpcode();
 
         switch (opcode) {
-            case 0x00 -> {}
-            case 0x01 -> translateAConstNull(state, block);
-            case 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 -> translateIConst(opcode - 0x03, state, block);
-            case 0x09, 0x0A -> translateLConst(opcode - 0x09, state, block);
-            case 0x0B, 0x0C, 0x0D -> translateFConst(opcode - 0x0B, state, block);
-            case 0x0E, 0x0F -> translateDConst(opcode - 0x0E, state, block);
-            case 0x10 -> translateBipush((BipushInstruction) instr, state, block);
-            case 0x11 -> translateSipush((SipushInstruction) instr, state, block);
-            case 0x12 -> translateLdc((LdcInstruction) instr, state, block);
-            case 0x13 -> translateLdcW((LdcWInstruction) instr, state, block);
-            case 0x14 -> translateLdc2W((Ldc2WInstruction) instr, state, block);
-            case 0x15 -> translateILoad(((ILoadInstruction) instr).getVarIndex(), state, block);
-            case 0x16 -> translateLLoad(((LLoadInstruction) instr).getVarIndex(), state, block);
-            case 0x17 -> translateFLoad(((FLoadInstruction) instr).getVarIndex(), state, block);
-            case 0x18 -> translateDLoad(((DLoadInstruction) instr).getVarIndex(), state, block);
-            case 0x19 -> translateALoad(((ALoadInstruction) instr).getVarIndex(), state, block);
-            case 0x1A, 0x1B, 0x1C, 0x1D -> translateILoad(opcode - 0x1A, state, block);
-            case 0x1E, 0x1F, 0x20, 0x21 -> translateLLoad(opcode - 0x1E, state, block);
-            case 0x22, 0x23, 0x24, 0x25 -> translateFLoad(opcode - 0x22, state, block);
-            case 0x26, 0x27, 0x28, 0x29 -> translateDLoad(opcode - 0x26, state, block);
-            case 0x2A, 0x2B, 0x2C, 0x2D -> translateALoad(opcode - 0x2A, state, block);
-            case 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35 -> translateArrayLoad(opcode, state, block);
-            case 0x36 -> translateIStore(((IStoreInstruction) instr).getVarIndex(), state, block);
-            case 0x37 -> translateLStore(((LStoreInstruction) instr).getVarIndex(), state, block);
-            case 0x38 -> translateFStore(((FStoreInstruction) instr).getVarIndex(), state, block);
-            case 0x39 -> translateDStore(((DStoreInstruction) instr).getVarIndex(), state, block);
-            case 0x3A -> translateAStore(((AStoreInstruction) instr).getVarIndex(), state, block);
-            case 0x3B, 0x3C, 0x3D, 0x3E -> translateIStore(opcode - 0x3B, state, block);
-            case 0x3F, 0x40, 0x41, 0x42 -> translateLStore(opcode - 0x3F, state, block);
-            case 0x43, 0x44, 0x45, 0x46 -> translateFStore(opcode - 0x43, state, block);
-            case 0x47, 0x48, 0x49, 0x4A -> translateDStore(opcode - 0x47, state, block);
-            case 0x4B, 0x4C, 0x4D, 0x4E -> translateAStore(opcode - 0x4B, state, block);
-            case 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56 -> translateArrayStore(opcode, state, block);
-            case 0x57 -> state.pop();
-            case 0x58 -> translatePop2(state);
-            case 0x59 -> translateDup(state);
-            case 0x5A -> translateDupX1(state);
-            case 0x5B -> translateDupX2(state);
-            case 0x5C -> translateDup2(state);
-            case 0x5D -> translateDup2X1(state);
-            case 0x5E -> translateDup2X2(state);
-            case 0x5F -> translateSwap(state);
-            case 0x60, 0x61, 0x62, 0x63 -> translateBinaryOp(BinaryOp.ADD, opcode, state, block);
-            case 0x64, 0x65, 0x66, 0x67 -> translateBinaryOp(BinaryOp.SUB, opcode, state, block);
-            case 0x68, 0x69, 0x6A, 0x6B -> translateBinaryOp(BinaryOp.MUL, opcode, state, block);
-            case 0x6C, 0x6D, 0x6E, 0x6F -> translateBinaryOp(BinaryOp.DIV, opcode, state, block);
-            case 0x70, 0x71, 0x72, 0x73 -> translateBinaryOp(BinaryOp.REM, opcode, state, block);
-            case 0x74, 0x75, 0x76, 0x77 -> translateNeg(opcode, state, block);
-            case 0x78, 0x79 -> translateBinaryOp(BinaryOp.SHL, opcode, state, block);
-            case 0x7A, 0x7B -> translateBinaryOp(BinaryOp.SHR, opcode, state, block);
-            case 0x7C, 0x7D -> translateBinaryOp(BinaryOp.USHR, opcode, state, block);
-            case 0x7E, 0x7F -> translateBinaryOp(BinaryOp.AND, opcode, state, block);
-            case 0x80, 0x81 -> translateBinaryOp(BinaryOp.OR, opcode, state, block);
-            case 0x82, 0x83 -> translateBinaryOp(BinaryOp.XOR, opcode, state, block);
-            case 0x84 -> translateIinc((IIncInstruction) instr, state, block);
-            case 0x85 -> translateConvert(UnaryOp.I2L, state, block, PrimitiveType.LONG);
-            case 0x86 -> translateConvert(UnaryOp.I2F, state, block, PrimitiveType.FLOAT);
-            case 0x87 -> translateConvert(UnaryOp.I2D, state, block, PrimitiveType.DOUBLE);
-            case 0x88 -> translateConvert(UnaryOp.L2I, state, block, PrimitiveType.INT);
-            case 0x89 -> translateConvert(UnaryOp.L2F, state, block, PrimitiveType.FLOAT);
-            case 0x8A -> translateConvert(UnaryOp.L2D, state, block, PrimitiveType.DOUBLE);
-            case 0x8B -> translateConvert(UnaryOp.F2I, state, block, PrimitiveType.INT);
-            case 0x8C -> translateConvert(UnaryOp.F2L, state, block, PrimitiveType.LONG);
-            case 0x8D -> translateConvert(UnaryOp.F2D, state, block, PrimitiveType.DOUBLE);
-            case 0x8E -> translateConvert(UnaryOp.D2I, state, block, PrimitiveType.INT);
-            case 0x8F -> translateConvert(UnaryOp.D2L, state, block, PrimitiveType.LONG);
-            case 0x90 -> translateConvert(UnaryOp.D2F, state, block, PrimitiveType.FLOAT);
-            case 0x91 -> translateConvert(UnaryOp.I2B, state, block, PrimitiveType.BYTE);
-            case 0x92 -> translateConvert(UnaryOp.I2C, state, block, PrimitiveType.CHAR);
-            case 0x93 -> translateConvert(UnaryOp.I2S, state, block, PrimitiveType.SHORT);
-            case 0x94 -> translateCmp(BinaryOp.LCMP, state, block);
-            case 0x95 -> translateCmp(BinaryOp.FCMPL, state, block);
-            case 0x96 -> translateCmp(BinaryOp.FCMPG, state, block);
-            case 0x97 -> translateCmp(BinaryOp.DCMPL, state, block);
-            case 0x98 -> translateCmp(BinaryOp.DCMPG, state, block);
-            case 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E -> translateIfZero((ConditionalBranchInstruction) instr, opcode, state, block);
-            case 0x9F, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4 -> translateIfICmp((ConditionalBranchInstruction) instr, opcode, state, block);
-            case 0xA5, 0xA6 -> translateIfACmp((ConditionalBranchInstruction) instr, opcode, state, block);
-            case 0xA7, 0xC8 -> translateGoto((com.tonic.analysis.instruction.GotoInstruction) instr, state, block);
-            case 0xA8, 0xC9 -> translateJsr((JsrInstruction) instr, state, block);
-            case 0xA9 -> translateRet((RetInstruction) instr, state, block);
-            case 0xAA -> translateTableSwitch((TableSwitchInstruction) instr, state, block);
-            case 0xAB -> translateLookupSwitch((LookupSwitchInstruction) instr, state, block);
-            case 0xAC, 0xAD, 0xAE, 0xAF, 0xB0 -> translateReturn(state, block);
-            case 0xB1 -> translateVoidReturn(block);
-            case 0xB2 -> translateGetStatic((com.tonic.analysis.instruction.GetFieldInstruction) instr, state, block);
-            case 0xB3 -> translatePutStatic((com.tonic.analysis.instruction.PutFieldInstruction) instr, state, block);
-            case 0xB4 -> translateGetField((com.tonic.analysis.instruction.GetFieldInstruction) instr, state, block);
-            case 0xB5 -> translatePutField((com.tonic.analysis.instruction.PutFieldInstruction) instr, state, block);
-            case 0xB6 -> translateInvokeVirtual((InvokeVirtualInstruction) instr, state, block);
-            case 0xB7 -> translateInvokeSpecial((InvokeSpecialInstruction) instr, state, block);
-            case 0xB8 -> translateInvokeStatic((InvokeStaticInstruction) instr, state, block);
-            case 0xB9 -> translateInvokeInterface((InvokeInterfaceInstruction) instr, state, block);
-            case 0xBA -> translateInvokeDynamic((InvokeDynamicInstruction) instr, state, block);
-            case 0xBB -> translateNew((com.tonic.analysis.instruction.NewInstruction) instr, state, block);
-            case 0xBC -> translateNewArray((com.tonic.analysis.instruction.NewArrayInstruction) instr, state, block);
-            case 0xBD -> translateANewArray((ANewArrayInstruction) instr, state, block);
-            case 0xBE -> translateArrayLength(state, block);
-            case 0xBF -> translateAThrow(state, block);
-            case 0xC0 -> translateCheckCast((CheckCastInstruction) instr, state, block);
-            case 0xC1 -> translateInstanceOf((com.tonic.analysis.instruction.InstanceOfInstruction) instr, state, block);
-            case 0xC2 -> translateMonitorEnter(state, block);
-            case 0xC3 -> translateMonitorExit(state, block);
-            case 0xC4 -> translateWide(instr, state, block);
-            case 0xC5 -> translateMultiANewArray((MultiANewArrayInstruction) instr, state, block);
-            case 0xC6 -> translateIfNull((ConditionalBranchInstruction) instr, state, block);
-            case 0xC7 -> translateIfNonNull((ConditionalBranchInstruction) instr, state, block);
-            default -> throw new UnsupportedOperationException("Unsupported opcode: 0x" + Integer.toHexString(opcode));
+            case 0x00: break;
+            case 0x01: translateAConstNull(state, block); break;
+            case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: case 0x08: translateIConst(opcode - 0x03, state, block); break;
+            case 0x09: case 0x0A: translateLConst(opcode - 0x09, state, block); break;
+            case 0x0B: case 0x0C: case 0x0D: translateFConst(opcode - 0x0B, state, block); break;
+            case 0x0E: case 0x0F: translateDConst(opcode - 0x0E, state, block); break;
+            case 0x10: translateBipush((BipushInstruction) instr, state, block); break;
+            case 0x11: translateSipush((SipushInstruction) instr, state, block); break;
+            case 0x12: translateLdc((LdcInstruction) instr, state, block); break;
+            case 0x13: translateLdcW((LdcWInstruction) instr, state, block); break;
+            case 0x14: translateLdc2W((Ldc2WInstruction) instr, state, block); break;
+            case 0x15: translateILoad(((ILoadInstruction) instr).getVarIndex(), state, block); break;
+            case 0x16: translateLLoad(((LLoadInstruction) instr).getVarIndex(), state, block); break;
+            case 0x17: translateFLoad(((FLoadInstruction) instr).getVarIndex(), state, block); break;
+            case 0x18: translateDLoad(((DLoadInstruction) instr).getVarIndex(), state, block); break;
+            case 0x19: translateALoad(((ALoadInstruction) instr).getVarIndex(), state, block); break;
+            case 0x1A: case 0x1B: case 0x1C: case 0x1D: translateILoad(opcode - 0x1A, state, block); break;
+            case 0x1E: case 0x1F: case 0x20: case 0x21: translateLLoad(opcode - 0x1E, state, block); break;
+            case 0x22: case 0x23: case 0x24: case 0x25: translateFLoad(opcode - 0x22, state, block); break;
+            case 0x26: case 0x27: case 0x28: case 0x29: translateDLoad(opcode - 0x26, state, block); break;
+            case 0x2A: case 0x2B: case 0x2C: case 0x2D: translateALoad(opcode - 0x2A, state, block); break;
+            case 0x2E: case 0x2F: case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: translateArrayLoad(opcode, state, block); break;
+            case 0x36: translateIStore(((IStoreInstruction) instr).getVarIndex(), state, block); break;
+            case 0x37: translateLStore(((LStoreInstruction) instr).getVarIndex(), state, block); break;
+            case 0x38: translateFStore(((FStoreInstruction) instr).getVarIndex(), state, block); break;
+            case 0x39: translateDStore(((DStoreInstruction) instr).getVarIndex(), state, block); break;
+            case 0x3A: translateAStore(((AStoreInstruction) instr).getVarIndex(), state, block); break;
+            case 0x3B: case 0x3C: case 0x3D: case 0x3E: translateIStore(opcode - 0x3B, state, block); break;
+            case 0x3F: case 0x40: case 0x41: case 0x42: translateLStore(opcode - 0x3F, state, block); break;
+            case 0x43: case 0x44: case 0x45: case 0x46: translateFStore(opcode - 0x43, state, block); break;
+            case 0x47: case 0x48: case 0x49: case 0x4A: translateDStore(opcode - 0x47, state, block); break;
+            case 0x4B: case 0x4C: case 0x4D: case 0x4E: translateAStore(opcode - 0x4B, state, block); break;
+            case 0x4F: case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56: translateArrayStore(opcode, state, block); break;
+            case 0x57: state.pop(); break;
+            case 0x58: translatePop2(state); break;
+            case 0x59: translateDup(state); break;
+            case 0x5A: translateDupX1(state); break;
+            case 0x5B: translateDupX2(state); break;
+            case 0x5C: translateDup2(state); break;
+            case 0x5D: translateDup2X1(state); break;
+            case 0x5E: translateDup2X2(state); break;
+            case 0x5F: translateSwap(state); break;
+            case 0x60: case 0x61: case 0x62: case 0x63: translateBinaryOp(BinaryOp.ADD, opcode, state, block); break;
+            case 0x64: case 0x65: case 0x66: case 0x67: translateBinaryOp(BinaryOp.SUB, opcode, state, block); break;
+            case 0x68: case 0x69: case 0x6A: case 0x6B: translateBinaryOp(BinaryOp.MUL, opcode, state, block); break;
+            case 0x6C: case 0x6D: case 0x6E: case 0x6F: translateBinaryOp(BinaryOp.DIV, opcode, state, block); break;
+            case 0x70: case 0x71: case 0x72: case 0x73: translateBinaryOp(BinaryOp.REM, opcode, state, block); break;
+            case 0x74: case 0x75: case 0x76: case 0x77: translateNeg(opcode, state, block); break;
+            case 0x78: case 0x79: translateBinaryOp(BinaryOp.SHL, opcode, state, block); break;
+            case 0x7A: case 0x7B: translateBinaryOp(BinaryOp.SHR, opcode, state, block); break;
+            case 0x7C: case 0x7D: translateBinaryOp(BinaryOp.USHR, opcode, state, block); break;
+            case 0x7E: case 0x7F: translateBinaryOp(BinaryOp.AND, opcode, state, block); break;
+            case 0x80: case 0x81: translateBinaryOp(BinaryOp.OR, opcode, state, block); break;
+            case 0x82: case 0x83: translateBinaryOp(BinaryOp.XOR, opcode, state, block); break;
+            case 0x84: translateIinc((IIncInstruction) instr, state, block); break;
+            case 0x85: translateConvert(UnaryOp.I2L, state, block, PrimitiveType.LONG); break;
+            case 0x86: translateConvert(UnaryOp.I2F, state, block, PrimitiveType.FLOAT); break;
+            case 0x87: translateConvert(UnaryOp.I2D, state, block, PrimitiveType.DOUBLE); break;
+            case 0x88: translateConvert(UnaryOp.L2I, state, block, PrimitiveType.INT); break;
+            case 0x89: translateConvert(UnaryOp.L2F, state, block, PrimitiveType.FLOAT); break;
+            case 0x8A: translateConvert(UnaryOp.L2D, state, block, PrimitiveType.DOUBLE); break;
+            case 0x8B: translateConvert(UnaryOp.F2I, state, block, PrimitiveType.INT); break;
+            case 0x8C: translateConvert(UnaryOp.F2L, state, block, PrimitiveType.LONG); break;
+            case 0x8D: translateConvert(UnaryOp.F2D, state, block, PrimitiveType.DOUBLE); break;
+            case 0x8E: translateConvert(UnaryOp.D2I, state, block, PrimitiveType.INT); break;
+            case 0x8F: translateConvert(UnaryOp.D2L, state, block, PrimitiveType.LONG); break;
+            case 0x90: translateConvert(UnaryOp.D2F, state, block, PrimitiveType.FLOAT); break;
+            case 0x91: translateConvert(UnaryOp.I2B, state, block, PrimitiveType.BYTE); break;
+            case 0x92: translateConvert(UnaryOp.I2C, state, block, PrimitiveType.CHAR); break;
+            case 0x93: translateConvert(UnaryOp.I2S, state, block, PrimitiveType.SHORT); break;
+            case 0x94: translateCmp(BinaryOp.LCMP, state, block); break;
+            case 0x95: translateCmp(BinaryOp.FCMPL, state, block); break;
+            case 0x96: translateCmp(BinaryOp.FCMPG, state, block); break;
+            case 0x97: translateCmp(BinaryOp.DCMPL, state, block); break;
+            case 0x98: translateCmp(BinaryOp.DCMPG, state, block); break;
+            case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: translateIfZero((ConditionalBranchInstruction) instr, opcode, state, block); break;
+            case 0x9F: case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: translateIfICmp((ConditionalBranchInstruction) instr, opcode, state, block); break;
+            case 0xA5: case 0xA6: translateIfACmp((ConditionalBranchInstruction) instr, opcode, state, block); break;
+            case 0xA7: case 0xC8: translateGoto((com.tonic.analysis.instruction.GotoInstruction) instr, state, block); break;
+            case 0xA8: case 0xC9: translateJsr((JsrInstruction) instr, state, block); break;
+            case 0xA9: translateRet((RetInstruction) instr, state, block); break;
+            case 0xAA: translateTableSwitch((TableSwitchInstruction) instr, state, block); break;
+            case 0xAB: translateLookupSwitch((LookupSwitchInstruction) instr, state, block); break;
+            case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: translateReturn(state, block); break;
+            case 0xB1: translateVoidReturn(block); break;
+            case 0xB2: translateGetStatic((com.tonic.analysis.instruction.GetFieldInstruction) instr, state, block); break;
+            case 0xB3: translatePutStatic((com.tonic.analysis.instruction.PutFieldInstruction) instr, state, block); break;
+            case 0xB4: translateGetField((com.tonic.analysis.instruction.GetFieldInstruction) instr, state, block); break;
+            case 0xB5: translatePutField((com.tonic.analysis.instruction.PutFieldInstruction) instr, state, block); break;
+            case 0xB6: translateInvokeVirtual((InvokeVirtualInstruction) instr, state, block); break;
+            case 0xB7: translateInvokeSpecial((InvokeSpecialInstruction) instr, state, block); break;
+            case 0xB8: translateInvokeStatic((InvokeStaticInstruction) instr, state, block); break;
+            case 0xB9: translateInvokeInterface((InvokeInterfaceInstruction) instr, state, block); break;
+            case 0xBA: translateInvokeDynamic((InvokeDynamicInstruction) instr, state, block); break;
+            case 0xBB: translateNew((com.tonic.analysis.instruction.NewInstruction) instr, state, block); break;
+            case 0xBC: translateNewArray((com.tonic.analysis.instruction.NewArrayInstruction) instr, state, block); break;
+            case 0xBD: translateANewArray((ANewArrayInstruction) instr, state, block); break;
+            case 0xBE: translateArrayLength(state, block); break;
+            case 0xBF: translateAThrow(state, block); break;
+            case 0xC0: translateCheckCast((CheckCastInstruction) instr, state, block); break;
+            case 0xC1: translateInstanceOf((com.tonic.analysis.instruction.InstanceOfInstruction) instr, state, block); break;
+            case 0xC2: translateMonitorEnter(state, block); break;
+            case 0xC3: translateMonitorExit(state, block); break;
+            case 0xC4: translateWide(instr, state, block); break;
+            case 0xC5: translateMultiANewArray((MultiANewArrayInstruction) instr, state, block); break;
+            case 0xC6: translateIfNull((ConditionalBranchInstruction) instr, state, block); break;
+            case 0xC7: translateIfNonNull((ConditionalBranchInstruction) instr, state, block); break;
+            default: throw new UnsupportedOperationException("Unsupported opcode: 0x" + Integer.toHexString(opcode));
         }
     }
 
@@ -237,26 +237,35 @@ public class InstructionTranslator {
     }
 
     private Constant itemToConstant(Item<?> item, int cpIndex) {
-        if (item instanceof IntegerItem intItem) {
+        if (item instanceof IntegerItem) {
+            IntegerItem intItem = (IntegerItem) item;
             return IntConstant.of(intItem.getValue());
-        } else if (item instanceof LongItem longItem) {
+        } else if (item instanceof LongItem) {
+            LongItem longItem = (LongItem) item;
             return LongConstant.of(longItem.getValue());
-        } else if (item instanceof FloatItem floatItem) {
+        } else if (item instanceof FloatItem) {
+            FloatItem floatItem = (FloatItem) item;
             return FloatConstant.of(floatItem.getValue());
-        } else if (item instanceof DoubleItem doubleItem) {
+        } else if (item instanceof DoubleItem) {
+            DoubleItem doubleItem = (DoubleItem) item;
             return DoubleConstant.of(doubleItem.getValue());
-        } else if (item instanceof StringRefItem stringItem) {
+        } else if (item instanceof StringRefItem) {
+            StringRefItem stringItem = (StringRefItem) item;
             Utf8Item utf8 = (Utf8Item) constPool.getItem(stringItem.getValue());
             return new StringConstant(utf8.getValue());
-        } else if (item instanceof ClassRefItem classItem) {
+        } else if (item instanceof ClassRefItem) {
+            ClassRefItem classItem = (ClassRefItem) item;
             return new ClassConstant(classItem.getClassName());
-        } else if (item instanceof MethodHandleItem mhItem) {
+        } else if (item instanceof MethodHandleItem) {
+            MethodHandleItem mhItem = (MethodHandleItem) item;
             return resolveMethodHandle(mhItem);
-        } else if (item instanceof MethodTypeItem mtItem) {
+        } else if (item instanceof MethodTypeItem) {
+            MethodTypeItem mtItem = (MethodTypeItem) item;
             int descIndex = mtItem.getValue();
             Utf8Item utf8 = (Utf8Item) constPool.getItem(descIndex);
             return new MethodTypeConstant(utf8.getValue());
-        } else if (item instanceof ConstantDynamicItem cdItem) {
+        } else if (item instanceof ConstantDynamicItem) {
+            ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
             return resolveDynamicConstant(cdItem, cpIndex);
         }
         throw new UnsupportedOperationException("Unsupported constant type: " + item.getClass());
@@ -276,15 +285,18 @@ public class InstructionTranslator {
         String desc;
 
         // The reference index points to different item types based on reference kind
-        if (refItem instanceof FieldRefItem fieldRef) {
+        if (refItem instanceof FieldRefItem) {
+            FieldRefItem fieldRef = (FieldRefItem) refItem;
             owner = fieldRef.getOwner();
             name = fieldRef.getName();
             desc = fieldRef.getDescriptor();
-        } else if (refItem instanceof MethodRefItem methodRef) {
+        } else if (refItem instanceof MethodRefItem) {
+            MethodRefItem methodRef = (MethodRefItem) refItem;
             owner = methodRef.getOwner();
             name = methodRef.getName();
             desc = methodRef.getDescriptor();
-        } else if (refItem instanceof InterfaceRefItem interfaceRef) {
+        } else if (refItem instanceof InterfaceRefItem) {
+            InterfaceRefItem interfaceRef = (InterfaceRefItem) refItem;
             owner = interfaceRef.getOwner();
             name = interfaceRef.getName();
             desc = interfaceRef.getDescriptor();
@@ -596,15 +608,16 @@ public class InstructionTranslator {
         int target = instr.getOffset() + instr.getBranchOffset();
         int fallthrough = instr.getOffset() + instr.getLength();
 
-        CompareOp cmpOp = switch (opcode) {
-            case 0x99 -> CompareOp.IFEQ;
-            case 0x9A -> CompareOp.IFNE;
-            case 0x9B -> CompareOp.IFLT;
-            case 0x9C -> CompareOp.IFGE;
-            case 0x9D -> CompareOp.IFGT;
-            case 0x9E -> CompareOp.IFLE;
-            default -> throw new IllegalStateException();
-        };
+        CompareOp cmpOp;
+        switch (opcode) {
+            case 0x99: cmpOp = CompareOp.IFEQ; break;
+            case 0x9A: cmpOp = CompareOp.IFNE; break;
+            case 0x9B: cmpOp = CompareOp.IFLT; break;
+            case 0x9C: cmpOp = CompareOp.IFGE; break;
+            case 0x9D: cmpOp = CompareOp.IFGT; break;
+            case 0x9E: cmpOp = CompareOp.IFLE; break;
+            default: throw new IllegalStateException();
+        }
 
         IRBlock trueBlock = offsetToBlock.get(target);
         IRBlock falseBlock = offsetToBlock.get(fallthrough);
@@ -618,15 +631,16 @@ public class InstructionTranslator {
         int target = instr.getOffset() + instr.getBranchOffset();
         int fallthrough = instr.getOffset() + instr.getLength();
 
-        CompareOp cmpOp = switch (opcode) {
-            case 0x9F -> CompareOp.EQ;
-            case 0xA0 -> CompareOp.NE;
-            case 0xA1 -> CompareOp.LT;
-            case 0xA2 -> CompareOp.GE;
-            case 0xA3 -> CompareOp.GT;
-            case 0xA4 -> CompareOp.LE;
-            default -> throw new IllegalStateException();
-        };
+        CompareOp cmpOp;
+        switch (opcode) {
+            case 0x9F: cmpOp = CompareOp.EQ; break;
+            case 0xA0: cmpOp = CompareOp.NE; break;
+            case 0xA1: cmpOp = CompareOp.LT; break;
+            case 0xA2: cmpOp = CompareOp.GE; break;
+            case 0xA3: cmpOp = CompareOp.GT; break;
+            case 0xA4: cmpOp = CompareOp.LE; break;
+            default: throw new IllegalStateException();
+        }
 
         IRBlock trueBlock = offsetToBlock.get(target);
         IRBlock falseBlock = offsetToBlock.get(fallthrough);
@@ -850,9 +864,11 @@ public class InstructionTranslator {
      */
     private String[] getMethodRefInfo(int cpIndex, String opcode) {
         Item<?> refItem = constPool.getItem(cpIndex);
-        if (refItem instanceof MethodRefItem methodRef) {
+        if (refItem instanceof MethodRefItem) {
+            MethodRefItem methodRef = (MethodRefItem) refItem;
             return new String[] { methodRef.getOwner(), methodRef.getName(), methodRef.getDescriptor() };
-        } else if (refItem instanceof InterfaceRefItem ifaceRef) {
+        } else if (refItem instanceof InterfaceRefItem) {
+            InterfaceRefItem ifaceRef = (InterfaceRefItem) refItem;
             return new String[] { ifaceRef.getOwner(), ifaceRef.getName(), ifaceRef.getDescriptor() };
         }
         throw new IllegalStateException("Unexpected ref type for " + opcode + ": " + refItem.getClass());
@@ -985,17 +1001,17 @@ public class InstructionTranslator {
     }
 
     private IRType getArrayElementType(int opcode) {
-        return switch (opcode) {
-            case 0x2E -> PrimitiveType.INT;
-            case 0x2F -> PrimitiveType.LONG;
-            case 0x30 -> PrimitiveType.FLOAT;
-            case 0x31 -> PrimitiveType.DOUBLE;
-            case 0x32 -> ReferenceType.OBJECT;
-            case 0x33 -> PrimitiveType.BYTE;
-            case 0x34 -> PrimitiveType.CHAR;
-            case 0x35 -> PrimitiveType.SHORT;
-            default -> PrimitiveType.INT;
-        };
+        switch (opcode) {
+            case 0x2E: return PrimitiveType.INT;
+            case 0x2F: return PrimitiveType.LONG;
+            case 0x30: return PrimitiveType.FLOAT;
+            case 0x31: return PrimitiveType.DOUBLE;
+            case 0x32: return ReferenceType.OBJECT;
+            case 0x33: return PrimitiveType.BYTE;
+            case 0x34: return PrimitiveType.CHAR;
+            case 0x35: return PrimitiveType.SHORT;
+            default: return PrimitiveType.INT;
+        }
     }
 
     private IRType getBinaryOpResultType(int opcode) {
@@ -1006,37 +1022,37 @@ public class InstructionTranslator {
         }
         // Arithmetic operations (0x60-0x73) have all 4 variants
         int typeVariant = (opcode - 0x60) % 4;
-        return switch (typeVariant) {
-            case 0 -> PrimitiveType.INT;
-            case 1 -> PrimitiveType.LONG;
-            case 2 -> PrimitiveType.FLOAT;
-            case 3 -> PrimitiveType.DOUBLE;
-            default -> PrimitiveType.INT;
-        };
+        switch (typeVariant) {
+            case 0: return PrimitiveType.INT;
+            case 1: return PrimitiveType.LONG;
+            case 2: return PrimitiveType.FLOAT;
+            case 3: return PrimitiveType.DOUBLE;
+            default: return PrimitiveType.INT;
+        }
     }
 
     private IRType getNegResultType(int opcode) {
-        return switch (opcode) {
-            case 0x74 -> PrimitiveType.INT;
-            case 0x75 -> PrimitiveType.LONG;
-            case 0x76 -> PrimitiveType.FLOAT;
-            case 0x77 -> PrimitiveType.DOUBLE;
-            default -> PrimitiveType.INT;
-        };
+        switch (opcode) {
+            case 0x74: return PrimitiveType.INT;
+            case 0x75: return PrimitiveType.LONG;
+            case 0x76: return PrimitiveType.FLOAT;
+            case 0x77: return PrimitiveType.DOUBLE;
+            default: return PrimitiveType.INT;
+        }
     }
 
     private IRType getNewArrayElementType(int atype) {
-        return switch (atype) {
-            case 4 -> PrimitiveType.BOOLEAN;
-            case 5 -> PrimitiveType.CHAR;
-            case 6 -> PrimitiveType.FLOAT;
-            case 7 -> PrimitiveType.DOUBLE;
-            case 8 -> PrimitiveType.BYTE;
-            case 9 -> PrimitiveType.SHORT;
-            case 10 -> PrimitiveType.INT;
-            case 11 -> PrimitiveType.LONG;
-            default -> throw new IllegalArgumentException("Unknown array type: " + atype);
-        };
+        switch (atype) {
+            case 4: return PrimitiveType.BOOLEAN;
+            case 5: return PrimitiveType.CHAR;
+            case 6: return PrimitiveType.FLOAT;
+            case 7: return PrimitiveType.DOUBLE;
+            case 8: return PrimitiveType.BYTE;
+            case 9: return PrimitiveType.SHORT;
+            case 10: return PrimitiveType.INT;
+            case 11: return PrimitiveType.LONG;
+            default: throw new IllegalArgumentException("Unknown array type: " + atype);
+        }
     }
 
     private int countMethodArgs(String descriptor) {
@@ -1059,28 +1075,30 @@ public class InstructionTranslator {
 
     private void translateWide(Instruction instr, AbstractState state, IRBlock block) {
         // Handle WideIIncInstruction (wide iinc) separately from WideInstruction
-        if (instr instanceof WideIIncInstruction wideIInc) {
+        if (instr instanceof WideIIncInstruction) {
+            WideIIncInstruction wideIInc = (WideIIncInstruction) instr;
             translateWideIInc(wideIInc, state, block);
             return;
         }
 
-        if (!(instr instanceof WideInstruction wide)) {
+        if (!(instr instanceof WideInstruction)) {
             throw new UnsupportedOperationException("Expected WideInstruction or WideIIncInstruction, got: " + instr.getClass().getName());
         }
+        WideInstruction wide = (WideInstruction) instr;
 
         int varIndex = wide.getVarIndex();
         switch (wide.getModifiedOpcode()) {
-            case ILOAD -> translateILoad(varIndex, state, block);
-            case LLOAD -> translateLLoad(varIndex, state, block);
-            case FLOAD -> translateFLoad(varIndex, state, block);
-            case DLOAD -> translateDLoad(varIndex, state, block);
-            case ALOAD -> translateALoad(varIndex, state, block);
-            case ISTORE -> translateIStore(varIndex, state, block);
-            case LSTORE -> translateLStore(varIndex, state, block);
-            case FSTORE -> translateFStore(varIndex, state, block);
-            case DSTORE -> translateDStore(varIndex, state, block);
-            case ASTORE -> translateAStore(varIndex, state, block);
-            case IINC -> {
+            case ILOAD: translateILoad(varIndex, state, block); break;
+            case LLOAD: translateLLoad(varIndex, state, block); break;
+            case FLOAD: translateFLoad(varIndex, state, block); break;
+            case DLOAD: translateDLoad(varIndex, state, block); break;
+            case ALOAD: translateALoad(varIndex, state, block); break;
+            case ISTORE: translateIStore(varIndex, state, block); break;
+            case LSTORE: translateLStore(varIndex, state, block); break;
+            case FSTORE: translateFStore(varIndex, state, block); break;
+            case DSTORE: translateDStore(varIndex, state, block); break;
+            case ASTORE: translateAStore(varIndex, state, block); break;
+            case IINC: {
                 int increment = wide.getConstValue();
                 SSAValue loaded = new SSAValue(PrimitiveType.INT);
                 block.addInstruction(new LoadLocalInstruction(loaded, varIndex));
@@ -1090,8 +1108,9 @@ public class InstructionTranslator {
                 block.addInstruction(new BinaryOpInstruction(result, BinaryOp.ADD, loaded, incConst));
                 state.setLocal(varIndex, result);
                 block.addInstruction(new StoreLocalInstruction(varIndex, result));
+                break;
             }
-            default -> throw new UnsupportedOperationException("Unsupported WIDE opcode: " + wide.getModifiedOpcode());
+            default: throw new UnsupportedOperationException("Unsupported WIDE opcode: " + wide.getModifiedOpcode());
         }
     }
 

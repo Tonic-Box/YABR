@@ -39,7 +39,8 @@ public class DeadCodeElimination implements IRTransform {
         while (!worklist.isEmpty()) {
             IRInstruction instr = worklist.poll();
             for (com.tonic.analysis.ssa.value.Value operand : instr.getOperands()) {
-                if (operand instanceof SSAValue ssa) {
+                if (operand instanceof SSAValue) {
+                    SSAValue ssa = (SSAValue) operand;
                     IRInstruction def = ssa.getDefinition();
                     if (def != null && !live.contains(def)) {
                         live.add(def);

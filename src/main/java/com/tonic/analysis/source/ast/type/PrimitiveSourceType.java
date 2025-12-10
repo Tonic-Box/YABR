@@ -40,7 +40,6 @@ public final class PrimitiveSourceType implements SourceType {
         }
     }
 
-    // Cached instances for each primitive type
     public static final PrimitiveSourceType BOOLEAN = new PrimitiveSourceType(PrimitiveKind.BOOLEAN);
     public static final PrimitiveSourceType BYTE = new PrimitiveSourceType(PrimitiveKind.BYTE);
     public static final PrimitiveSourceType CHAR = new PrimitiveSourceType(PrimitiveKind.CHAR);
@@ -58,16 +57,26 @@ public final class PrimitiveSourceType implements SourceType {
      * Gets the PrimitiveSourceType for the given IR primitive type.
      */
     public static PrimitiveSourceType fromPrimitive(PrimitiveType irType) {
-        return switch (irType) {
-            case BOOLEAN -> BOOLEAN;
-            case BYTE -> BYTE;
-            case CHAR -> CHAR;
-            case SHORT -> SHORT;
-            case INT -> INT;
-            case LONG -> LONG;
-            case FLOAT -> FLOAT;
-            case DOUBLE -> DOUBLE;
-        };
+        switch (irType) {
+            case BOOLEAN:
+                return BOOLEAN;
+            case BYTE:
+                return BYTE;
+            case CHAR:
+                return CHAR;
+            case SHORT:
+                return SHORT;
+            case INT:
+                return INT;
+            case LONG:
+                return LONG;
+            case FLOAT:
+                return FLOAT;
+            case DOUBLE:
+                return DOUBLE;
+            default:
+                throw new IllegalArgumentException("Unknown primitive type: " + irType);
+        }
     }
 
     @Override
@@ -93,7 +102,8 @@ public final class PrimitiveSourceType implements SourceType {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (!(obj instanceof PrimitiveSourceType other)) return false;
+        if (!(obj instanceof PrimitiveSourceType)) return false;
+        PrimitiveSourceType other = (PrimitiveSourceType) obj;
         return kind == other.kind;
     }
 

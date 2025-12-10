@@ -84,25 +84,29 @@ public final class TypeState {
         while (i < descriptor.length() && descriptor.charAt(i) != ')') {
             char c = descriptor.charAt(i);
             switch (c) {
-                case 'B', 'C', 'I', 'S', 'Z' -> {
+                case 'B':
+                case 'C':
+                case 'I':
+                case 'S':
+                case 'Z':
                     locals.add(VerificationType.INTEGER);
                     i++;
-                }
-                case 'F' -> {
+                    break;
+                case 'F':
                     locals.add(VerificationType.FLOAT);
                     i++;
-                }
-                case 'D' -> {
+                    break;
+                case 'D':
                     locals.add(VerificationType.DOUBLE);
                     locals.add(VerificationType.TOP);
                     i++;
-                }
-                case 'J' -> {
+                    break;
+                case 'J':
                     locals.add(VerificationType.LONG);
                     locals.add(VerificationType.TOP);
                     i++;
-                }
-                case 'L' -> {
+                    break;
+                case 'L':
                     int endIndex = descriptor.indexOf(';', i);
                     if (endIndex == -1) {
                         throw new IllegalArgumentException("Invalid object type in descriptor: " + descriptor);
@@ -111,8 +115,8 @@ public final class TypeState {
                     int classIndex = constPool.findOrAddClass(className).getIndex(constPool);
                     locals.add(VerificationType.object(classIndex));
                     i = endIndex + 1;
-                }
-                case '[' -> {
+                    break;
+                case '[':
                     int arrayStart = i;
                     while (i < descriptor.length() && descriptor.charAt(i) == '[') {
                         i++;
@@ -122,22 +126,23 @@ public final class TypeState {
                     }
                     char elementType = descriptor.charAt(i);
                     if (elementType == 'L') {
-                        int endIndex = descriptor.indexOf(';', i);
-                        if (endIndex == -1) {
+                        int endIndex2 = descriptor.indexOf(';', i);
+                        if (endIndex2 == -1) {
                             throw new IllegalArgumentException("Invalid array element type: " + descriptor);
                         }
-                        String arrayDescriptor = descriptor.substring(arrayStart, endIndex + 1);
-                        int classIndex = constPool.findOrAddClass(arrayDescriptor).getIndex(constPool);
-                        locals.add(VerificationType.object(classIndex));
-                        i = endIndex + 1;
+                        String arrayDescriptor = descriptor.substring(arrayStart, endIndex2 + 1);
+                        int classIndex2 = constPool.findOrAddClass(arrayDescriptor).getIndex(constPool);
+                        locals.add(VerificationType.object(classIndex2));
+                        i = endIndex2 + 1;
                     } else {
                         String arrayDescriptor = descriptor.substring(arrayStart, i + 1);
-                        int classIndex = constPool.findOrAddClass(arrayDescriptor).getIndex(constPool);
-                        locals.add(VerificationType.object(classIndex));
+                        int classIndex3 = constPool.findOrAddClass(arrayDescriptor).getIndex(constPool);
+                        locals.add(VerificationType.object(classIndex3));
                         i++;
                     }
-                }
-                default -> throw new IllegalArgumentException("Unknown type in descriptor: " + c + " at " + i);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown type in descriptor: " + c + " at " + i);
             }
         }
     }
@@ -161,23 +166,30 @@ public final class TypeState {
         }
 
         char c = returnDesc.charAt(0);
-        return switch (c) {
-            case 'B', 'C', 'I', 'S', 'Z' -> VerificationType.INTEGER;
-            case 'F' -> VerificationType.FLOAT;
-            case 'D' -> VerificationType.DOUBLE;
-            case 'J' -> VerificationType.LONG;
-            case 'L' -> {
+        switch (c) {
+            case 'B':
+            case 'C':
+            case 'I':
+            case 'S':
+            case 'Z':
+                return VerificationType.INTEGER;
+            case 'F':
+                return VerificationType.FLOAT;
+            case 'D':
+                return VerificationType.DOUBLE;
+            case 'J':
+                return VerificationType.LONG;
+            case 'L':
                 int endIndex = returnDesc.indexOf(';');
                 String className = returnDesc.substring(1, endIndex);
                 int classIndex = constPool.findOrAddClass(className).getIndex(constPool);
-                yield VerificationType.object(classIndex);
-            }
-            case '[' -> {
-                int classIndex = constPool.findOrAddClass(returnDesc).getIndex(constPool);
-                yield VerificationType.object(classIndex);
-            }
-            default -> throw new IllegalArgumentException("Unknown return type: " + returnDesc);
-        };
+                return VerificationType.object(classIndex);
+            case '[':
+                int classIndex2 = constPool.findOrAddClass(returnDesc).getIndex(constPool);
+                return VerificationType.object(classIndex2);
+            default:
+                throw new IllegalArgumentException("Unknown return type: " + returnDesc);
+        }
     }
 
     /**
@@ -331,7 +343,7 @@ public final class TypeState {
     public List<VerificationTypeInfo> localsToVerificationTypeInfo() {
         return locals.stream()
                 .map(VerificationType::toVerificationTypeInfo)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -342,7 +354,7 @@ public final class TypeState {
     public List<VerificationTypeInfo> stackToVerificationTypeInfo() {
         return stack.stream()
                 .map(VerificationType::toVerificationTypeInfo)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -372,7 +384,6 @@ public final class TypeState {
      * @return merged state valid for both paths
      */
     public TypeState merge(TypeState other) {
-        // Use MAX to preserve all locals from both paths
         int maxLocals = Math.max(locals.size(), other.locals.size());
         List<VerificationType> mergedLocals = new ArrayList<>(maxLocals);
 
@@ -402,7 +413,8 @@ public final class TypeState {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof TypeState that)) return false;
+        if (!(o instanceof TypeState)) return false;
+        TypeState that = (TypeState) o;
         return Objects.equals(locals, that.locals) && Objects.equals(stack, that.stack);
     }
 

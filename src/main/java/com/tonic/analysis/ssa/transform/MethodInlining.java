@@ -24,8 +24,8 @@ import java.util.*;
  */
 public class MethodInlining implements ClassTransform {
 
-    private static final int MAX_INLINE_SIZE = 35; // Maximum bytecode size to inline
-    private static final int MAX_INLINE_DEPTH = 5; // Maximum nesting depth
+    private static final int MAX_INLINE_SIZE = 35;
+    private static final int MAX_INLINE_DEPTH = 5;
 
     private int inlineCount;
     private int currentDepth;
@@ -42,17 +42,15 @@ public class MethodInlining implements ClassTransform {
 
         String className = classFile.getClassName();
 
-        // Build method lookup map
         Map<String, MethodEntry> methodMap = new HashMap<>();
         for (MethodEntry method : classFile.getMethods()) {
             String key = method.getName() + method.getDesc();
             methodMap.put(key, method);
         }
 
-        // Process each method
         for (MethodEntry method : classFile.getMethods()) {
             if (method.getCodeAttribute() == null) continue;
-            if (method.getName().startsWith("<")) continue; // Skip init methods
+            if (method.getName().startsWith("<")) continue;
 
             currentDepth = 0;
             if (inlineMethodCalls(classFile, ssa, method, methodMap, className)) {
@@ -71,34 +69,28 @@ public class MethodInlining implements ClassTransform {
         boolean changed = false;
         boolean madeProgress;
 
-        // Iterate until no more inlining opportunities
         do {
             madeProgress = false;
 
-            // Lift caller to IR
             IRMethod callerIR = ssa.lift(caller);
 
-            // Find all invoke instructions that can be inlined
             List<InlineCandidate> candidates = findInlineCandidates(
                     callerIR, methodMap, className, caller.getName());
 
             if (candidates.isEmpty()) {
-                // No candidates, lower back to bytecode
                 ssa.lower(callerIR, caller);
                 break;
             }
 
-            // Inline each candidate (process one at a time to maintain CFG consistency)
             for (InlineCandidate candidate : candidates) {
                 if (inlineCall(ssa, callerIR, candidate, methodMap)) {
                     madeProgress = true;
                     changed = true;
                     inlineCount++;
-                    break; // Re-lift after each inline to maintain consistency
+                    break;
                 }
             }
 
-            // Lower back to bytecode
             ssa.lower(callerIR, caller);
 
         } while (madeProgress && currentDepth < MAX_INLINE_DEPTH);
@@ -117,8 +109,8 @@ public class MethodInlining implements ClassTransform {
 
         for (IRBlock block : callerIR.getBlocks()) {
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof InvokeInstruction invoke) {
-                    // Check if this call can be inlined
+                if (instr instanceof InvokeInstruction) {
+                    InvokeInstruction invoke = (InvokeInstruction) instr;
                     String calleeKey = invoke.getName() + invoke.getDescriptor();
                     MethodEntry callee = methodMap.get(calleeKey);
 
@@ -140,33 +132,27 @@ public class MethodInlining implements ClassTransform {
         if (callee == null) return false;
         if (callee.getCodeAttribute() == null) return false;
 
-        // Must be same class
         String owner = invoke.getOwner();
         if (!owner.equals(className)) return false;
 
-        // Must not be recursive (direct recursion)
         if (invoke.getName().equals(callerName) &&
                 invoke.getDescriptor().equals(callee.getDesc())) {
             return false;
         }
 
-        // Check invoke type - only inline non-virtual calls
         InvokeType type = invoke.getInvokeType();
         if (type == InvokeType.VIRTUAL || type == InvokeType.INTERFACE) {
-            // Can only inline virtual calls if the method is final
             int access = callee.getAccess();
             if (!Modifier.isFinal(access)) {
                 return false;
             }
         }
 
-        // Check callee access flags
         int access = callee.getAccess();
         if (Modifier.isNative(access)) return false;
         if (Modifier.isSynchronized(access)) return false;
         if (Modifier.isAbstract(access)) return false;
 
-        // Must be private, final, or static (no virtual dispatch)
         boolean isPrivate = Modifier.isPrivate(access);
         boolean isFinal = Modifier.isFinal(access);
         boolean isStatic = Modifier.isStatic(access);
@@ -175,18 +161,15 @@ public class MethodInlining implements ClassTransform {
             return false;
         }
 
-        // Size check
         CodeAttribute code = callee.getCodeAttribute();
         if (code.getCode().length > MAX_INLINE_SIZE) {
             return false;
         }
 
-        // No exception handlers (for MVP)
         if (code.getExceptionTable().size() > 0) {
             return false;
         }
 
-        // Depth check
         if (currentDepth >= MAX_INLINE_DEPTH) {
             return false;
         }
@@ -206,43 +189,33 @@ public class MethodInlining implements ClassTransform {
             MethodEntry callee = candidate.callee;
             IRBlock callBlock = candidate.block;
 
-            // Lift callee to IR
             IRMethod calleeIR = ssa.lift(callee);
             if (calleeIR.getEntryBlock() == null) {
                 return false;
             }
 
-
-            // Clone callee IR with fresh values and blocks
             IRMethodCloner cloner = new IRMethodCloner("inline_" + inlineCount + "_");
             IRMethod clonedCallee = cloner.clone(calleeIR);
 
-            // Map callee parameters to call arguments
             mapParametersToArguments(clonedCallee, invoke, cloner);
 
-            // Find the position of the invoke in the block
             int invokeIndex = callBlock.getInstructions().indexOf(invoke);
             if (invokeIndex < 0) {
                 return false;
             }
 
-            // Split the call block at the invoke point
             IRBlock continuationBlock = splitBlockAtInvoke(callerIR, callBlock, invokeIndex, invoke);
 
-            // Handle returns in the inlined code
             SSAValue resultValue = invoke.getResult();
             handleReturns(clonedCallee, resultValue, continuationBlock);
 
-            // Add cloned blocks to caller
             for (IRBlock block : clonedCallee.getBlocks()) {
                 callerIR.addBlock(block);
             }
 
-            // Connect call block to inlined entry block
             IRBlock inlinedEntry = clonedCallee.getEntryBlock();
             callBlock.addSuccessor(inlinedEntry);
 
-            // Replace invoke with goto to inlined entry
             callBlock.removeInstruction(invoke);
             callBlock.addInstruction(new GotoInstruction(inlinedEntry));
 
@@ -262,10 +235,8 @@ public class MethodInlining implements ClassTransform {
         List<SSAValue> parameters = clonedCallee.getParameters();
         Map<SSAValue, SSAValue> valueMapping = cloner.getValueMapping();
 
-        // Track cloned parameters that get replaced (for dead instruction removal)
         Set<SSAValue> replacedParams = new HashSet<>();
 
-        // Create copy instructions at the start of the entry block
         IRBlock entryBlock = clonedCallee.getEntryBlock();
         List<IRInstruction> copies = new ArrayList<>();
 
@@ -273,31 +244,25 @@ public class MethodInlining implements ClassTransform {
             SSAValue param = parameters.get(i);
             Value arg = arguments.get(i);
 
-            // Find the cloned parameter value
             SSAValue clonedParam = valueMapping.get(param);
             if (clonedParam == null) {
-                clonedParam = param; // Already cloned
+                clonedParam = param;
             }
 
-            // Replace all uses of the parameter with the argument
-            if (arg instanceof SSAValue argSSA) {
-                // Direct replacement
+            if (arg instanceof SSAValue) {
+                SSAValue argSSA = (SSAValue) arg;
                 clonedParam.replaceAllUsesWith(argSSA);
                 replacedParams.add(clonedParam);
             } else {
-                // Create a copy for constants
                 CopyInstruction copy = new CopyInstruction(clonedParam, arg);
                 copies.add(copy);
             }
         }
 
-        // Insert copy instructions at the beginning
         for (int i = copies.size() - 1; i >= 0; i--) {
             entryBlock.insertInstruction(0, copies.get(i));
         }
 
-        // Remove dead LoadLocalInstruction and StoreLocalInstruction from the cloned callee
-        // These become dead after replaceAllUsesWith since their results are no longer used
         removeDeadLocalInstructions(clonedCallee, replacedParams);
     }
 
@@ -318,14 +283,9 @@ public class MethodInlining implements ClassTransform {
             List<IRInstruction> toRemove = new ArrayList<>();
 
             for (IRInstruction instr : block.getInstructions()) {
-                // Remove ALL LoadLocalInstruction - they're artifacts of lifting
-                // After SSA renaming, their results have been replaced by actual SSA values
                 if (instr instanceof LoadLocalInstruction) {
                     toRemove.add(instr);
-                }
-                // Remove ALL StoreLocalInstruction - same reason
-                // In SSA form, values flow through SSAValue references, not local stores
-                else if (instr instanceof StoreLocalInstruction) {
+                } else if (instr instanceof StoreLocalInstruction) {
                     toRemove.add(instr);
                 }
             }
@@ -341,11 +301,9 @@ public class MethodInlining implements ClassTransform {
      */
     private IRBlock splitBlockAtInvoke(IRMethod callerIR, IRBlock callBlock,
                                         int invokeIndex, InvokeInstruction invoke) {
-        // Create continuation block for instructions after the invoke
         IRBlock continuationBlock = new IRBlock("continue_" + inlineCount);
         callerIR.addBlock(continuationBlock);
 
-        // Move instructions after invoke to continuation block
         List<IRInstruction> instructions = callBlock.getInstructions();
         List<IRInstruction> toMove = new ArrayList<>();
 
@@ -358,12 +316,10 @@ public class MethodInlining implements ClassTransform {
             continuationBlock.addInstruction(instr);
         }
 
-        // Transfer successors from call block to continuation block
         for (IRBlock succ : new ArrayList<>(callBlock.getSuccessors())) {
             continuationBlock.addSuccessor(succ);
             callBlock.removeSuccessor(succ);
 
-            // Update phi instructions in successors
             for (PhiInstruction phi : succ.getPhiInstructions()) {
                 Value incoming = phi.getIncoming(callBlock);
                 if (incoming != null) {
@@ -385,10 +341,10 @@ public class MethodInlining implements ClassTransform {
         List<ReturnInstruction> returns = new ArrayList<>();
         List<IRBlock> returnBlocks = new ArrayList<>();
 
-        // Find all return instructions
         for (IRBlock block : clonedCallee.getBlocks()) {
             IRInstruction term = block.getTerminator();
-            if (term instanceof ReturnInstruction ret) {
+            if (term instanceof ReturnInstruction) {
+                ReturnInstruction ret = (ReturnInstruction) term;
                 returns.add(ret);
                 returnBlocks.add(block);
             }
@@ -398,12 +354,10 @@ public class MethodInlining implements ClassTransform {
             return;
         }
 
-        // Handle single return (MVP case)
         if (returns.size() == 1) {
             ReturnInstruction ret = returns.get(0);
             IRBlock retBlock = returnBlocks.get(0);
 
-            // If there's a return value, create a copy to the result
             if (resultValue != null && ret.getReturnValue() != null) {
                 CopyInstruction copy = new CopyInstruction(resultValue, ret.getReturnValue());
                 retBlock.removeInstruction(ret);
@@ -412,12 +366,10 @@ public class MethodInlining implements ClassTransform {
                 retBlock.removeInstruction(ret);
             }
 
-            // Add goto to continuation
             retBlock.addInstruction(new GotoInstruction(continuationBlock));
             retBlock.addSuccessor(continuationBlock);
 
         } else {
-            // Multiple returns - need phi in continuation block
             PhiInstruction phi = null;
             if (resultValue != null) {
                 phi = new PhiInstruction(resultValue);
@@ -428,12 +380,10 @@ public class MethodInlining implements ClassTransform {
                 ReturnInstruction ret = returns.get(i);
                 IRBlock retBlock = returnBlocks.get(i);
 
-                // Add to phi if needed
                 if (phi != null && ret.getReturnValue() != null) {
                     phi.addIncoming(ret.getReturnValue(), retBlock);
                 }
 
-                // Replace return with goto
                 retBlock.removeInstruction(ret);
                 retBlock.addInstruction(new GotoInstruction(continuationBlock));
                 retBlock.addSuccessor(continuationBlock);

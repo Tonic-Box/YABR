@@ -46,7 +46,8 @@ public final class ClassConstant extends Constant {
      * @return the internal class name
      */
     public String getClassName() {
-        if (classType instanceof ReferenceType ref) {
+        if (classType instanceof ReferenceType) {
+            ReferenceType ref = (ReferenceType) classType;
             return ref.getInternalName();
         }
         return classType.getDescriptor();
@@ -60,7 +61,8 @@ public final class ClassConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof ClassConstant that)) return false;
+        if (!(o instanceof ClassConstant)) return false;
+        ClassConstant that = (ClassConstant) o;
         return classType.equals(that.classType);
     }
 

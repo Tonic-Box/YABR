@@ -27,7 +27,10 @@ public class SwitchInstruction extends IRInstruction {
         this.key = key;
         this.defaultTarget = defaultTarget;
         this.cases = new LinkedHashMap<>();
-        if (key instanceof SSAValue ssa) ssa.addUse(this);
+        if (key instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) key;
+            ssa.addUse(this);
+        }
     }
 
     /**
@@ -58,9 +61,15 @@ public class SwitchInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (key.equals(oldValue)) {
-            if (key instanceof SSAValue ssa) ssa.removeUse(this);
+            if (key instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) key;
+                ssa.removeUse(this);
+            }
             key = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

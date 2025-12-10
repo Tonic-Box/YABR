@@ -35,26 +35,62 @@ public class ConstPool {
 
         for (int i = 1; i < constantPoolCount; i++) {
             byte tag = (byte) classFile.readUnsignedByte();
-            Item<?> item = switch (tag) {
-                case Item.ITEM_UTF_8 -> new Utf8Item();
-                case Item.ITEM_INTEGER -> new IntegerItem();
-                case Item.ITEM_FLOAT -> new FloatItem();
-                case Item.ITEM_LONG -> new LongItem();
-                case Item.ITEM_DOUBLE -> new DoubleItem();
-                case Item.ITEM_CLASS_REF -> new ClassRefItem();
-                case Item.ITEM_STRING_REF -> new StringRefItem();
-                case Item.ITEM_FIELD_REF -> new FieldRefItem();
-                case Item.ITEM_METHOD_REF -> new MethodRefItem();
-                case Item.ITEM_INTERFACE_REF -> new InterfaceRefItem();
-                case Item.ITEM_NAME_TYPE_REF -> new NameAndTypeRefItem();
-                case Item.ITEM_METHOD_HANDLE -> new MethodHandleItem();
-                case Item.ITEM_METHOD_TYPE -> new MethodTypeItem();
-                case Item.ITEM_DYNAMIC -> new ConstantDynamicItem();
-                case Item.ITEM_INVOKEDYNAMIC -> new InvokeDynamicItem();
-                case Item.ITEM_PACKAGE -> new PackageItem();
-                case Item.ITEM_MODULE -> new ModuleItem();
-                default -> throw new IllegalArgumentException("Unknown constant pool tag: " + tag + " at index " + i);
-            };
+            Item<?> item;
+            switch (tag) {
+                case Item.ITEM_UTF_8:
+                    item = new Utf8Item();
+                    break;
+                case Item.ITEM_INTEGER:
+                    item = new IntegerItem();
+                    break;
+                case Item.ITEM_FLOAT:
+                    item = new FloatItem();
+                    break;
+                case Item.ITEM_LONG:
+                    item = new LongItem();
+                    break;
+                case Item.ITEM_DOUBLE:
+                    item = new DoubleItem();
+                    break;
+                case Item.ITEM_CLASS_REF:
+                    item = new ClassRefItem();
+                    break;
+                case Item.ITEM_STRING_REF:
+                    item = new StringRefItem();
+                    break;
+                case Item.ITEM_FIELD_REF:
+                    item = new FieldRefItem();
+                    break;
+                case Item.ITEM_METHOD_REF:
+                    item = new MethodRefItem();
+                    break;
+                case Item.ITEM_INTERFACE_REF:
+                    item = new InterfaceRefItem();
+                    break;
+                case Item.ITEM_NAME_TYPE_REF:
+                    item = new NameAndTypeRefItem();
+                    break;
+                case Item.ITEM_METHOD_HANDLE:
+                    item = new MethodHandleItem();
+                    break;
+                case Item.ITEM_METHOD_TYPE:
+                    item = new MethodTypeItem();
+                    break;
+                case Item.ITEM_DYNAMIC:
+                    item = new ConstantDynamicItem();
+                    break;
+                case Item.ITEM_INVOKEDYNAMIC:
+                    item = new InvokeDynamicItem();
+                    break;
+                case Item.ITEM_PACKAGE:
+                    item = new PackageItem();
+                    break;
+                case Item.ITEM_MODULE:
+                    item = new ModuleItem();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown constant pool tag: " + tag + " at index " + i);
+            }
 
             item.read(classFile);
             item.setClassFile(classFile);
@@ -155,7 +191,8 @@ public class ConstPool {
     public ClassRefItem findOrAddClassRef(int nameIndex) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof ClassRefItem classRef) {
+            if (item instanceof ClassRefItem) {
+                ClassRefItem classRef = (ClassRefItem) item;
                 if (classRef.getNameIndex() == nameIndex) {
                     return classRef;
                 }
@@ -177,7 +214,8 @@ public class ConstPool {
     public MethodRefItem findOrAddMethodRef(int classIndex, int nameAndTypeIndex) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof MethodRefItem methodRef) {
+            if (item instanceof MethodRefItem) {
+                MethodRefItem methodRef = (MethodRefItem) item;
                 if (methodRef.getValue().getClassIndex() == classIndex && methodRef.getValue().getNameAndTypeIndex() == nameAndTypeIndex) {
                     return methodRef;
                 }
@@ -199,7 +237,8 @@ public class ConstPool {
     public Utf8Item findOrAddUtf8(String value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof Utf8Item utf8) {
+            if (item instanceof Utf8Item) {
+                Utf8Item utf8 = (Utf8Item) item;
                 if (utf8.getValue().equals(value)) {
                     return utf8;
                 }
@@ -221,7 +260,8 @@ public class ConstPool {
     public NameAndTypeRefItem findOrAddNameAndType(int nameIndex, int descIndex) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof NameAndTypeRefItem nt) {
+            if (item instanceof NameAndTypeRefItem) {
+                NameAndTypeRefItem nt = (NameAndTypeRefItem) item;
                 if (nt.getValue().getNameIndex() == nameIndex && nt.getValue().getDescriptorIndex() == descIndex) {
                     nt.setConstPool(this);
                     return nt;
@@ -259,7 +299,8 @@ public class ConstPool {
     public DoubleItem findOrAddDouble(double value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof DoubleItem doubleItem) {
+            if (item instanceof DoubleItem) {
+                DoubleItem doubleItem = (DoubleItem) item;
                 if (Double.compare(doubleItem.getValue(), value) == 0) {
                     return doubleItem;
                 }
@@ -280,7 +321,8 @@ public class ConstPool {
     public FloatItem findOrAddFloat(float value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof FloatItem floatItem) {
+            if (item instanceof FloatItem) {
+                FloatItem floatItem = (FloatItem) item;
                 if (Float.compare(floatItem.getValue(), value) == 0) {
                     return floatItem;
                 }
@@ -301,7 +343,8 @@ public class ConstPool {
     public LongItem findOrAddLong(long value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof LongItem longItem) {
+            if (item instanceof LongItem) {
+                LongItem longItem = (LongItem) item;
                 if (longItem.getValue() == value) {
                     return longItem;
                 }
@@ -322,7 +365,8 @@ public class ConstPool {
     public IntegerItem findOrAddInteger(int value) {
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof IntegerItem intItem) {
+            if (item instanceof IntegerItem) {
+                IntegerItem intItem = (IntegerItem) item;
                 if (intItem.getValue() == value) {
                     return intItem;
                 }
@@ -344,21 +388,18 @@ public class ConstPool {
      * @return The index of the FieldRefItem in the constant pool.
      */
     public FieldRefItem findOrAddField(String className, String fieldName, String fieldType) {
-        // Find or add Utf8 entries for className, fieldName, and fieldType
         Utf8Item classNameUtf8 = findOrAddUtf8(className);
         Utf8Item fieldNameUtf8 = findOrAddUtf8(fieldName);
         Utf8Item fieldTypeUtf8 = findOrAddUtf8(fieldType);
 
-        // Find or add ClassRefItem for className
         ClassRefItem classRef = findOrAddClassRef(getIndexOf(classNameUtf8));
 
-        // Find or add NameAndTypeRefItem for fieldName and fieldType
         NameAndTypeRefItem nameAndType = findOrAddNameAndType(getIndexOf(fieldNameUtf8), getIndexOf(fieldTypeUtf8));
 
-        // Search for an existing FieldRefItem with the same classRef and nameAndType
         for (int i = 1; i < items.size(); i++) {
             Item<?> item = items.get(i);
-            if (item instanceof FieldRefItem fieldRef) {
+            if (item instanceof FieldRefItem) {
+                FieldRefItem fieldRef = (FieldRefItem) item;
                 if (fieldRef.getValue().getClassIndex() == getIndexOf(classRef) &&
                         fieldRef.getValue().getNameAndTypeIndex() == getIndexOf(nameAndType)) {
                     return fieldRef;
@@ -366,7 +407,6 @@ public class ConstPool {
             }
         }
 
-        // If not found, create and add a new FieldRefItem
         FieldRefItem newFieldRef = new FieldRefItem();
         newFieldRef.setClassFile(classFile);
         newFieldRef.setValue(new FieldRef(getIndexOf(classRef), getIndexOf(nameAndType)));
@@ -381,8 +421,9 @@ public class ConstPool {
         for (int i = 1; i < items.size(); i++)
         {
             Item<?> item = items.get(i);
-            if (item instanceof StringRefItem stringRef)
+            if (item instanceof StringRefItem)
             {
+                StringRefItem stringRef = (StringRefItem) item;
                 if (stringRef.getValue() == getIndexOf(utf8))
                 {
                     return stringRef;
@@ -401,8 +442,9 @@ public class ConstPool {
         for (int i = 1; i < items.size(); i++)
         {
             Item<?> item = items.get(i);
-            if (item instanceof ClassRefItem classRef)
+            if (item instanceof ClassRefItem)
             {
+                ClassRefItem classRef = (ClassRefItem) item;
                 if (classRef.getNameIndex() == getIndexOf(utf8))
                 {
                     return classRef;
@@ -458,14 +500,14 @@ public class ConstPool {
      */
     public InterfaceRefItem findOrAddInterfaceRef(int classIndex, int nameAndTypeIndex) {
         for (Item<?> item : items) {
-            if (item instanceof InterfaceRefItem iface) {
+            if (item instanceof InterfaceRefItem) {
+                InterfaceRefItem iface = (InterfaceRefItem) item;
                 if (iface.getValue().getClassIndex() == classIndex &&
                     iface.getValue().getNameAndTypeIndex() == nameAndTypeIndex) {
                     return iface;
                 }
             }
         }
-        // Create new InterfaceRefItem
         InterfaceRefItem newItem = new InterfaceRefItem();
         newItem.setValue(new com.tonic.parser.constpool.structure.InterfaceRef(classIndex, nameAndTypeIndex));
         newItem.setConstPool(this);
@@ -501,7 +543,8 @@ public class ConstPool {
     public String getClassName(int classIndex) {
         if (classIndex == 0) return null;
         Item<?> item = getItem(classIndex);
-        if (item instanceof ClassRefItem classRef) {
+        if (item instanceof ClassRefItem) {
+            ClassRefItem classRef = (ClassRefItem) item;
             Utf8Item utf8 = (Utf8Item) getItem(classRef.getNameIndex());
             return utf8.getValue();
         }
@@ -518,25 +561,21 @@ public class ConstPool {
      * @return The MethodHandleItem.
      */
     public MethodHandleItem findOrAddMethodHandle(int refKind, String owner, String name, String desc) {
-        // First, find or create the referenced member
         int refIndex;
         if (refKind >= 1 && refKind <= 4) {
-            // Field reference (getField, getStatic, putField, putStatic)
             FieldRefItem fieldRef = findOrAddFieldRef(owner, name, desc);
             refIndex = getIndexOf(fieldRef);
         } else if (refKind == 9) {
-            // Interface method reference
             InterfaceRefItem interfaceRef = findOrAddInterfaceRef(owner, name, desc);
             refIndex = getIndexOf(interfaceRef);
         } else {
-            // Method reference (invokeVirtual, invokeStatic, invokeSpecial, newInvokeSpecial)
             MethodRefItem methodRef = findOrAddMethodRef(owner, name, desc);
             refIndex = getIndexOf(methodRef);
         }
 
-        // Search for existing MethodHandle with same ref kind and ref index
         for (Item<?> item : items) {
-            if (item instanceof MethodHandleItem mhItem) {
+            if (item instanceof MethodHandleItem) {
+                MethodHandleItem mhItem = (MethodHandleItem) item;
                 MethodHandle mh = mhItem.getValue();
                 if (mh.getReferenceKind() == refKind && mh.getReferenceIndex() == refIndex) {
                     return mhItem;
@@ -544,7 +583,6 @@ public class ConstPool {
             }
         }
 
-        // Create new MethodHandle
         MethodHandle mh = new MethodHandle(refKind, refIndex);
         MethodHandleItem newItem = new MethodHandleItem();
         newItem.setMethodHandle(mh);
@@ -562,16 +600,15 @@ public class ConstPool {
         Utf8Item descUtf8 = findOrAddUtf8(descriptor);
         int descIndex = getIndexOf(descUtf8);
 
-        // Search for existing MethodType
         for (Item<?> item : items) {
-            if (item instanceof MethodTypeItem mtItem) {
+            if (item instanceof MethodTypeItem) {
+                MethodTypeItem mtItem = (MethodTypeItem) item;
                 if (mtItem.getValue() == descIndex) {
                     return mtItem;
                 }
             }
         }
 
-        // Create new MethodType
         MethodTypeItem newItem = new MethodTypeItem();
         newItem.setDescriptorIndex(descIndex);
         items.add(newItem);

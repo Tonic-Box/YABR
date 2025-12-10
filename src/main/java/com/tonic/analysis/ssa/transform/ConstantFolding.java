@@ -56,9 +56,11 @@ public class ConstantFolding implements IRTransform {
     }
 
     private Constant tryFold(IRInstruction instr) {
-        if (instr instanceof BinaryOpInstruction binOp) {
+        if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
             return foldBinary(binOp);
-        } else if (instr instanceof UnaryOpInstruction unaryOp) {
+        } else if (instr instanceof UnaryOpInstruction) {
+            UnaryOpInstruction unaryOp = (UnaryOpInstruction) instr;
             return foldUnary(unaryOp);
         }
         return null;
@@ -72,13 +74,21 @@ public class ConstantFolding implements IRTransform {
             return null;
         }
 
-        if (left instanceof IntConstant l && right instanceof IntConstant r) {
+        if (left instanceof IntConstant && right instanceof IntConstant) {
+            IntConstant l = (IntConstant) left;
+            IntConstant r = (IntConstant) right;
             return foldIntBinary(instr.getOp(), l.getValue(), r.getValue());
-        } else if (left instanceof LongConstant l && right instanceof LongConstant r) {
+        } else if (left instanceof LongConstant && right instanceof LongConstant) {
+            LongConstant l = (LongConstant) left;
+            LongConstant r = (LongConstant) right;
             return foldLongBinary(instr.getOp(), l.getValue(), r.getValue());
-        } else if (left instanceof FloatConstant l && right instanceof FloatConstant r) {
+        } else if (left instanceof FloatConstant && right instanceof FloatConstant) {
+            FloatConstant l = (FloatConstant) left;
+            FloatConstant r = (FloatConstant) right;
             return foldFloatBinary(instr.getOp(), l.getValue(), r.getValue());
-        } else if (left instanceof DoubleConstant l && right instanceof DoubleConstant r) {
+        } else if (left instanceof DoubleConstant && right instanceof DoubleConstant) {
+            DoubleConstant l = (DoubleConstant) left;
+            DoubleConstant r = (DoubleConstant) right;
             return foldDoubleBinary(instr.getOp(), l.getValue(), r.getValue());
         }
 
@@ -86,12 +96,14 @@ public class ConstantFolding implements IRTransform {
     }
 
     private Constant resolveConstant(Value value) {
-        if (value instanceof Constant c) {
-            return c;
+        if (value instanceof Constant) {
+            return (Constant) value;
         }
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction ci) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) def;
                 return ci.getConstant();
             }
         }
@@ -100,20 +112,20 @@ public class ConstantFolding implements IRTransform {
 
     private Constant foldIntBinary(BinaryOp op, int left, int right) {
         try {
-            return switch (op) {
-                case ADD -> IntConstant.of(left + right);
-                case SUB -> IntConstant.of(left - right);
-                case MUL -> IntConstant.of(left * right);
-                case DIV -> right != 0 ? IntConstant.of(left / right) : null;
-                case REM -> right != 0 ? IntConstant.of(left % right) : null;
-                case SHL -> IntConstant.of(left << right);
-                case SHR -> IntConstant.of(left >> right);
-                case USHR -> IntConstant.of(left >>> right);
-                case AND -> IntConstant.of(left & right);
-                case OR -> IntConstant.of(left | right);
-                case XOR -> IntConstant.of(left ^ right);
-                default -> null;
-            };
+            switch (op) {
+                case ADD: return IntConstant.of(left + right);
+                case SUB: return IntConstant.of(left - right);
+                case MUL: return IntConstant.of(left * right);
+                case DIV: return right != 0 ? IntConstant.of(left / right) : null;
+                case REM: return right != 0 ? IntConstant.of(left % right) : null;
+                case SHL: return IntConstant.of(left << right);
+                case SHR: return IntConstant.of(left >> right);
+                case USHR: return IntConstant.of(left >>> right);
+                case AND: return IntConstant.of(left & right);
+                case OR: return IntConstant.of(left | right);
+                case XOR: return IntConstant.of(left ^ right);
+                default: return null;
+            }
         } catch (ArithmeticException e) {
             return null;
         }
@@ -121,48 +133,50 @@ public class ConstantFolding implements IRTransform {
 
     private Constant foldLongBinary(BinaryOp op, long left, long right) {
         try {
-            return switch (op) {
-                case ADD -> LongConstant.of(left + right);
-                case SUB -> LongConstant.of(left - right);
-                case MUL -> LongConstant.of(left * right);
-                case DIV -> right != 0 ? LongConstant.of(left / right) : null;
-                case REM -> right != 0 ? LongConstant.of(left % right) : null;
-                case SHL -> LongConstant.of(left << right);
-                case SHR -> LongConstant.of(left >> right);
-                case USHR -> LongConstant.of(left >>> right);
-                case AND -> LongConstant.of(left & right);
-                case OR -> LongConstant.of(left | right);
-                case XOR -> LongConstant.of(left ^ right);
-                case LCMP -> IntConstant.of(Long.compare(left, right));
-                default -> null;
-            };
+            switch (op) {
+                case ADD: return LongConstant.of(left + right);
+                case SUB: return LongConstant.of(left - right);
+                case MUL: return LongConstant.of(left * right);
+                case DIV: return right != 0 ? LongConstant.of(left / right) : null;
+                case REM: return right != 0 ? LongConstant.of(left % right) : null;
+                case SHL: return LongConstant.of(left << right);
+                case SHR: return LongConstant.of(left >> right);
+                case USHR: return LongConstant.of(left >>> right);
+                case AND: return LongConstant.of(left & right);
+                case OR: return LongConstant.of(left | right);
+                case XOR: return LongConstant.of(left ^ right);
+                case LCMP: return IntConstant.of(Long.compare(left, right));
+                default: return null;
+            }
         } catch (ArithmeticException e) {
             return null;
         }
     }
 
     private Constant foldFloatBinary(BinaryOp op, float left, float right) {
-        return switch (op) {
-            case ADD -> FloatConstant.of(left + right);
-            case SUB -> FloatConstant.of(left - right);
-            case MUL -> FloatConstant.of(left * right);
-            case DIV -> FloatConstant.of(left / right);
-            case REM -> FloatConstant.of(left % right);
-            case FCMPL, FCMPG -> IntConstant.of(Float.compare(left, right));
-            default -> null;
-        };
+        switch (op) {
+            case ADD: return FloatConstant.of(left + right);
+            case SUB: return FloatConstant.of(left - right);
+            case MUL: return FloatConstant.of(left * right);
+            case DIV: return FloatConstant.of(left / right);
+            case REM: return FloatConstant.of(left % right);
+            case FCMPL:
+            case FCMPG: return IntConstant.of(Float.compare(left, right));
+            default: return null;
+        }
     }
 
     private Constant foldDoubleBinary(BinaryOp op, double left, double right) {
-        return switch (op) {
-            case ADD -> DoubleConstant.of(left + right);
-            case SUB -> DoubleConstant.of(left - right);
-            case MUL -> DoubleConstant.of(left * right);
-            case DIV -> DoubleConstant.of(left / right);
-            case REM -> DoubleConstant.of(left % right);
-            case DCMPL, DCMPG -> IntConstant.of(Double.compare(left, right));
-            default -> null;
-        };
+        switch (op) {
+            case ADD: return DoubleConstant.of(left + right);
+            case SUB: return DoubleConstant.of(left - right);
+            case MUL: return DoubleConstant.of(left * right);
+            case DIV: return DoubleConstant.of(left / right);
+            case REM: return DoubleConstant.of(left % right);
+            case DCMPL:
+            case DCMPG: return IntConstant.of(Double.compare(left, right));
+            default: return null;
+        }
     }
 
     private Constant foldUnary(UnaryOpInstruction instr) {
@@ -173,45 +187,49 @@ public class ConstantFolding implements IRTransform {
 
         UnaryOp op = instr.getOp();
 
-        if (operand instanceof IntConstant i) {
+        if (operand instanceof IntConstant) {
+            IntConstant i = (IntConstant) operand;
             int val = i.getValue();
-            return switch (op) {
-                case NEG -> IntConstant.of(-val);
-                case I2L -> LongConstant.of(val);
-                case I2F -> FloatConstant.of(val);
-                case I2D -> DoubleConstant.of(val);
-                case I2B -> IntConstant.of((byte) val);
-                case I2C -> IntConstant.of((char) val);
-                case I2S -> IntConstant.of((short) val);
-                default -> null;
-            };
-        } else if (operand instanceof LongConstant l) {
+            switch (op) {
+                case NEG: return IntConstant.of(-val);
+                case I2L: return LongConstant.of(val);
+                case I2F: return FloatConstant.of(val);
+                case I2D: return DoubleConstant.of(val);
+                case I2B: return IntConstant.of((byte) val);
+                case I2C: return IntConstant.of((char) val);
+                case I2S: return IntConstant.of((short) val);
+                default: return null;
+            }
+        } else if (operand instanceof LongConstant) {
+            LongConstant l = (LongConstant) operand;
             long val = l.getValue();
-            return switch (op) {
-                case NEG -> LongConstant.of(-val);
-                case L2I -> IntConstant.of((int) val);
-                case L2F -> FloatConstant.of(val);
-                case L2D -> DoubleConstant.of(val);
-                default -> null;
-            };
-        } else if (operand instanceof FloatConstant f) {
+            switch (op) {
+                case NEG: return LongConstant.of(-val);
+                case L2I: return IntConstant.of((int) val);
+                case L2F: return FloatConstant.of(val);
+                case L2D: return DoubleConstant.of(val);
+                default: return null;
+            }
+        } else if (operand instanceof FloatConstant) {
+            FloatConstant f = (FloatConstant) operand;
             float val = f.getValue();
-            return switch (op) {
-                case NEG -> FloatConstant.of(-val);
-                case F2I -> IntConstant.of((int) val);
-                case F2L -> LongConstant.of((long) val);
-                case F2D -> DoubleConstant.of(val);
-                default -> null;
-            };
-        } else if (operand instanceof DoubleConstant d) {
+            switch (op) {
+                case NEG: return FloatConstant.of(-val);
+                case F2I: return IntConstant.of((int) val);
+                case F2L: return LongConstant.of((long) val);
+                case F2D: return DoubleConstant.of(val);
+                default: return null;
+            }
+        } else if (operand instanceof DoubleConstant) {
+            DoubleConstant d = (DoubleConstant) operand;
             double val = d.getValue();
-            return switch (op) {
-                case NEG -> DoubleConstant.of(-val);
-                case D2I -> IntConstant.of((int) val);
-                case D2L -> LongConstant.of((long) val);
-                case D2F -> FloatConstant.of((float) val);
-                default -> null;
-            };
+            switch (op) {
+                case NEG: return DoubleConstant.of(-val);
+                case D2I: return IntConstant.of((int) val);
+                case D2L: return LongConstant.of((long) val);
+                case D2F: return FloatConstant.of((float) val);
+                default: return null;
+            }
         }
 
         return null;

@@ -27,13 +27,10 @@ public class RedundantCopyElimination implements IRTransform {
     public boolean run(IRMethod method) {
         boolean changed = false;
 
-        // Pass 1: Remove identity copies (x = x)
         changed |= removeIdentityCopies(method);
 
-        // Pass 2: Remove redundant load-store sequences
         changed |= removeRedundantLoadStore(method);
 
-        // Pass 3: Propagate and eliminate copy chains
         changed |= eliminateCopyChains(method);
 
         return changed;
@@ -50,18 +47,18 @@ public class RedundantCopyElimination implements IRTransform {
             List<IRInstruction> toRemove = new ArrayList<>();
 
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof CopyInstruction copy) {
+                if (instr instanceof CopyInstruction) {
+                    CopyInstruction copy = (CopyInstruction) instr;
                     Value source = copy.getSource();
                     SSAValue result = copy.getResult();
 
-                    // Identity copy: result = result (e.g., exc = exc)
                     if (source.equals(result)) {
                         toRemove.add(instr);
-                    }
-                    // Also check for SSAValue identity by name for exception markers
-                    else if (source instanceof SSAValue srcSSA &&
-                             srcSSA.getName().equals(result.getName())) {
-                        toRemove.add(instr);
+                    } else if (source instanceof SSAValue) {
+                        SSAValue srcSSA = (SSAValue) source;
+                        if (srcSSA.getName().equals(result.getName())) {
+                            toRemove.add(instr);
+                        }
                     }
                 }
             }
@@ -85,47 +82,40 @@ public class RedundantCopyElimination implements IRTransform {
         boolean changed = false;
 
         for (IRBlock block : method.getBlocks()) {
-            // Track most recent store to each local within this block
             Map<Integer, Value> localValues = new HashMap<>();
             List<IRInstruction> toRemove = new ArrayList<>();
             Map<IRInstruction, Value> replacements = new HashMap<>();
 
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof StoreLocalInstruction store) {
+                if (instr instanceof StoreLocalInstruction) {
+                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
                     localValues.put(store.getLocalIndex(), store.getValue());
-                } else if (instr instanceof LoadLocalInstruction load) {
+                } else if (instr instanceof LoadLocalInstruction) {
+                    LoadLocalInstruction load = (LoadLocalInstruction) instr;
                     Integer localIdx = load.getLocalIndex();
                     if (localValues.containsKey(localIdx)) {
-                        // This load can be replaced with the stored value
                         Value storedValue = localValues.get(localIdx);
                         SSAValue loadResult = load.getResult();
 
-                        // Replace all uses of load result with stored value
                         if (loadResult != null && storedValue != null) {
                             replacements.put(instr, storedValue);
                             toRemove.add(instr);
                         }
                     }
                 } else if (hasSideEffects(instr)) {
-                    // Conservative: clear local tracking on side-effecting instructions
-                    // that might modify locals indirectly (method calls, etc.)
-                    // For now, we only clear on invoke since locals are method-scoped
                 }
             }
 
-            // Apply replacements
             for (Map.Entry<IRInstruction, Value> entry : replacements.entrySet()) {
                 IRInstruction loadInstr = entry.getKey();
                 Value replacement = entry.getValue();
                 SSAValue loadResult = loadInstr.getResult();
 
                 if (loadResult != null) {
-                    // Replace all uses of loadResult with replacement
                     replaceAllUses(method, loadResult, replacement);
                 }
             }
 
-            // Remove redundant loads
             for (IRInstruction instr : toRemove) {
                 block.removeInstruction(instr);
                 changed = true;
@@ -143,18 +133,21 @@ public class RedundantCopyElimination implements IRTransform {
     private boolean eliminateCopyChains(IRMethod method) {
         boolean changed = false;
 
-        // Build a map from copy targets to their ultimate sources
         Map<SSAValue, Value> copyChains = new HashMap<>();
 
         for (IRBlock block : method.getBlocks()) {
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof CopyInstruction copy) {
+                if (instr instanceof CopyInstruction) {
+                    CopyInstruction copy = (CopyInstruction) instr;
                     Value source = copy.getSource();
                     SSAValue result = copy.getResult();
 
-                    // Follow chain to find ultimate source
                     Value ultimateSource = source;
-                    while (ultimateSource instanceof SSAValue ssa && copyChains.containsKey(ssa)) {
+                    while (ultimateSource instanceof SSAValue) {
+                        SSAValue ssa = (SSAValue) ultimateSource;
+                        if (!copyChains.containsKey(ssa)) {
+                            break;
+                        }
                         ultimateSource = copyChains.get(ssa);
                     }
 
@@ -165,28 +158,31 @@ public class RedundantCopyElimination implements IRTransform {
             }
         }
 
-        // Now replace all uses of copy targets with their ultimate sources
         for (IRBlock block : method.getBlocks()) {
-            // Replace in phi instructions
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks())) {
                     Value incoming = phi.getIncoming(pred);
-                    if (incoming instanceof SSAValue ssa && copyChains.containsKey(ssa)) {
-                        Value replacement = copyChains.get(ssa);
-                        phi.removeIncoming(pred);
-                        phi.addIncoming(replacement, pred);
-                        changed = true;
+                    if (incoming instanceof SSAValue) {
+                        SSAValue ssa = (SSAValue) incoming;
+                        if (copyChains.containsKey(ssa)) {
+                            Value replacement = copyChains.get(ssa);
+                            phi.removeIncoming(pred);
+                            phi.addIncoming(replacement, pred);
+                            changed = true;
+                        }
                     }
                 }
             }
 
-            // Replace in regular instructions
             for (IRInstruction instr : block.getInstructions()) {
                 for (Value operand : new ArrayList<>(instr.getOperands())) {
-                    if (operand instanceof SSAValue ssa && copyChains.containsKey(ssa)) {
-                        Value replacement = copyChains.get(ssa);
-                        instr.replaceOperand(operand, replacement);
-                        changed = true;
+                    if (operand instanceof SSAValue) {
+                        SSAValue ssa = (SSAValue) operand;
+                        if (copyChains.containsKey(ssa)) {
+                            Value replacement = copyChains.get(ssa);
+                            instr.replaceOperand(operand, replacement);
+                            changed = true;
+                        }
                     }
                 }
             }

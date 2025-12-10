@@ -21,7 +21,6 @@ public final class BlockStmt implements Statement {
     private ASTNode parent;
 
     public BlockStmt(List<Statement> statements, SourceLocation location) {
-        // Filter out null statements to prevent NPE
         this.statements = new ArrayList<>();
         for (Statement stmt : statements) {
             if (stmt != null) {
@@ -29,7 +28,6 @@ public final class BlockStmt implements Statement {
             }
         }
         this.location = location != null ? location : SourceLocation.UNKNOWN;
-        // Set parent references
         for (Statement stmt : this.statements) {
             stmt.setParent(this);
         }

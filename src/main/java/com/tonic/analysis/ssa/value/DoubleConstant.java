@@ -54,7 +54,8 @@ public final class DoubleConstant extends Constant {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DoubleConstant that)) return false;
+        if (!(o instanceof DoubleConstant)) return false;
+        DoubleConstant that = (DoubleConstant) o;
         return Double.compare(value, that.value) == 0;
     }
 

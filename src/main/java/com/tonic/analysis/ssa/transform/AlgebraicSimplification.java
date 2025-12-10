@@ -45,7 +45,8 @@ public class AlgebraicSimplification implements IRTransform {
             for (int i = 0; i < instructions.size(); i++) {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof BinaryOpInstruction binOp) {
+                if (instr instanceof BinaryOpInstruction) {
+                    BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                     IRInstruction replacement = trySimplify(binOp);
                     if (replacement != null) {
                         replacement.setBlock(block);
@@ -70,123 +71,97 @@ public class AlgebraicSimplification implements IRTransform {
         Integer leftConst = getIntConstant(left);
         Integer rightConst = getIntConstant(right);
 
-        // Check if operands are the same SSA value (x op x patterns)
         boolean sameOperand = areSameValue(left, right);
 
         switch (op) {
             case ADD:
-                // x + 0 -> x
                 if (rightConst != null && rightConst == 0) {
                     return new CopyInstruction(result, left);
                 }
-                // 0 + x -> x
                 if (leftConst != null && leftConst == 0) {
                     return new CopyInstruction(result, right);
                 }
                 break;
 
             case SUB:
-                // x - 0 -> x
                 if (rightConst != null && rightConst == 0) {
                     return new CopyInstruction(result, left);
                 }
-                // x - x -> 0
                 if (sameOperand) {
                     return new ConstantInstruction(result, IntConstant.of(0));
                 }
                 break;
 
             case MUL:
-                // x * 0 -> 0
                 if (rightConst != null && rightConst == 0) {
                     return new ConstantInstruction(result, IntConstant.of(0));
                 }
-                // 0 * x -> 0
                 if (leftConst != null && leftConst == 0) {
                     return new ConstantInstruction(result, IntConstant.of(0));
                 }
-                // x * 1 -> x
                 if (rightConst != null && rightConst == 1) {
                     return new CopyInstruction(result, left);
                 }
-                // 1 * x -> x
                 if (leftConst != null && leftConst == 1) {
                     return new CopyInstruction(result, right);
                 }
                 break;
 
             case DIV:
-                // x / 1 -> x
                 if (rightConst != null && rightConst == 1) {
                     return new CopyInstruction(result, left);
                 }
-                // x / x -> 1 (careful: x must not be 0)
-                // We skip this as we can't guarantee x != 0
                 break;
 
             case REM:
-                // x % 1 -> 0
                 if (rightConst != null && rightConst == 1) {
                     return new ConstantInstruction(result, IntConstant.of(0));
                 }
                 break;
 
             case AND:
-                // x & 0 -> 0
                 if (rightConst != null && rightConst == 0) {
                     return new ConstantInstruction(result, IntConstant.of(0));
                 }
-                // 0 & x -> 0
                 if (leftConst != null && leftConst == 0) {
                     return new ConstantInstruction(result, IntConstant.of(0));
                 }
-                // x & -1 -> x (all bits set)
                 if (rightConst != null && rightConst == -1) {
                     return new CopyInstruction(result, left);
                 }
-                // -1 & x -> x
                 if (leftConst != null && leftConst == -1) {
                     return new CopyInstruction(result, right);
                 }
-                // x & x -> x
                 if (sameOperand) {
                     return new CopyInstruction(result, left);
                 }
                 break;
 
             case OR:
-                // x | 0 -> x
                 if (rightConst != null && rightConst == 0) {
                     return new CopyInstruction(result, left);
                 }
-                // 0 | x -> x
                 if (leftConst != null && leftConst == 0) {
                     return new CopyInstruction(result, right);
                 }
-                // x | -1 -> -1
                 if (rightConst != null && rightConst == -1) {
                     return new ConstantInstruction(result, IntConstant.of(-1));
                 }
-                // -1 | x -> -1
                 if (leftConst != null && leftConst == -1) {
                     return new ConstantInstruction(result, IntConstant.of(-1));
                 }
-                // x | x -> x
                 if (sameOperand) {
                     return new CopyInstruction(result, left);
                 }
                 break;
 
             case XOR:
-                // x ^ 0 -> x
                 if (rightConst != null && rightConst == 0) {
                     return new CopyInstruction(result, left);
                 }
-                // 0 ^ x -> x
                 if (leftConst != null && leftConst == 0) {
                     return new CopyInstruction(result, right);
                 }
-                // x ^ x -> 0
                 if (sameOperand) {
                     return new ConstantInstruction(result, IntConstant.of(0));
                 }
@@ -195,7 +170,6 @@ public class AlgebraicSimplification implements IRTransform {
             case SHL:
             case SHR:
             case USHR:
-                // x << 0 -> x, x >> 0 -> x, x >>> 0 -> x
                 if (rightConst != null && rightConst == 0) {
                     return new CopyInstruction(result, left);
                 }
@@ -209,14 +183,18 @@ public class AlgebraicSimplification implements IRTransform {
     }
 
     private Integer getIntConstant(Value value) {
-        if (value instanceof IntConstant ic) {
+        if (value instanceof IntConstant) {
+            IntConstant ic = (IntConstant) value;
             return ic.getValue();
         }
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction ci) {
+            if (def instanceof ConstantInstruction) {
+                ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant ic) {
+                if (c instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) c;
                     return ic.getValue();
                 }
             }
@@ -225,12 +203,14 @@ public class AlgebraicSimplification implements IRTransform {
     }
 
     private boolean areSameValue(Value a, Value b) {
-        // Check if both are the same SSA value
-        if (a instanceof SSAValue ssaA && b instanceof SSAValue ssaB) {
+        if (a instanceof SSAValue && b instanceof SSAValue) {
+            SSAValue ssaA = (SSAValue) a;
+            SSAValue ssaB = (SSAValue) b;
             return ssaA.getId() == ssaB.getId();
         }
-        // Check if both are the same constant
-        if (a instanceof IntConstant icA && b instanceof IntConstant icB) {
+        if (a instanceof IntConstant && b instanceof IntConstant) {
+            IntConstant icA = (IntConstant) a;
+            IntConstant icB = (IntConstant) b;
             return icA.getValue() == icB.getValue();
         }
         return false;

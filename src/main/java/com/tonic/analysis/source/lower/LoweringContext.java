@@ -129,7 +129,6 @@ public class LoweringContext {
      */
     public void popLoop() {
         LoopTargets targets = loopStack.pop();
-        // Remove from label map if present
         labelMap.values().removeIf(t -> t == targets);
     }
 
@@ -206,5 +205,43 @@ public class LoweringContext {
     /**
      * Loop target information for break/continue.
      */
-    public record LoopTargets(IRBlock continueTarget, IRBlock breakTarget) {}
+    public static final class LoopTargets {
+        private final IRBlock continueTarget;
+        private final IRBlock breakTarget;
+
+        public LoopTargets(IRBlock continueTarget, IRBlock breakTarget) {
+            this.continueTarget = continueTarget;
+            this.breakTarget = breakTarget;
+        }
+
+        public IRBlock continueTarget() {
+            return continueTarget;
+        }
+
+        public IRBlock breakTarget() {
+            return breakTarget;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            LoopTargets that = (LoopTargets) obj;
+            return Objects.equals(continueTarget, that.continueTarget) &&
+                   Objects.equals(breakTarget, that.breakTarget);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(continueTarget, breakTarget);
+        }
+
+        @Override
+        public String toString() {
+            return "LoopTargets{" +
+                   "continueTarget=" + continueTarget +
+                   ", breakTarget=" + breakTarget +
+                   '}';
+        }
+    }
 }

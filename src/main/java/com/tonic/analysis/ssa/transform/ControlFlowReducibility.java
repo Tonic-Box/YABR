@@ -25,7 +25,7 @@ public class ControlFlowReducibility implements IRTransform {
     public boolean run(IRMethod method) {
         boolean changed = false;
         int iterations = 0;
-        int maxIterations = 5; // Prevent infinite loops
+        int maxIterations = 5;
 
         while (iterations < maxIterations) {
             DominatorTree domTree = new DominatorTree(method);
@@ -39,12 +39,11 @@ public class ControlFlowReducibility implements IRTransform {
                 break;
             }
 
-            // Split one block at a time and recompute
             IRBlock toSplit = multiEntryBlocks.iterator().next();
             if (splitBlock(method, toSplit, domTree, loops)) {
                 changed = true;
             } else {
-                break; // Can't split - avoid infinite loop
+                break;
             }
             iterations++;
         }
@@ -59,13 +58,11 @@ public class ControlFlowReducibility implements IRTransform {
             if (block == method.getEntryBlock()) continue;
             if (block.getPredecessors().size() < 2) continue;
 
-            // Check for loop-based irreducibility
             if (hasMultipleLoopEntries(block, loops)) {
                 result.add(block);
                 continue;
             }
 
-            // Check for general irreducibility: multiple preds where none dominates the others
             if (hasIrreduciblePredecessors(block, domTree)) {
                 result.add(block);
             }
@@ -97,7 +94,6 @@ public class ControlFlowReducibility implements IRTransform {
         List<IRBlock> preds = block.getPredecessors();
         if (preds.size() < 2) return false;
 
-        // Check if any predecessor dominates all others (reducible merge point)
         for (IRBlock pred : preds) {
             boolean dominatesAll = true;
             for (IRBlock other : preds) {
@@ -106,15 +102,11 @@ public class ControlFlowReducibility implements IRTransform {
                     break;
                 }
             }
-            if (dominatesAll) return false; // This is a reducible merge
+            if (dominatesAll) return false;
         }
 
-        // No single predecessor dominates all - could be irreducible
-        // but we need to be careful not to split normal merge points
-        // Check if there's a back edge involved
         for (IRBlock pred : preds) {
             if (domTree.dominates(block, pred)) {
-                // Back edge exists - this might be irreducible
                 return true;
             }
         }
@@ -129,7 +121,6 @@ public class ControlFlowReducibility implements IRTransform {
         List<IRBlock> group2 = new ArrayList<>();
 
         if (loop != null) {
-            // Split based on loop membership
             for (IRBlock pred : block.getPredecessors()) {
                 if (loop.contains(pred)) {
                     group1.add(pred);
@@ -138,12 +129,11 @@ public class ControlFlowReducibility implements IRTransform {
                 }
             }
         } else {
-            // Split based on back edges
             for (IRBlock pred : block.getPredecessors()) {
                 if (domTree.dominates(block, pred)) {
-                    group1.add(pred); // Back edge
+                    group1.add(pred);
                 } else {
-                    group2.add(pred); // Forward edge
+                    group2.add(pred);
                 }
             }
         }
@@ -152,18 +142,15 @@ public class ControlFlowReducibility implements IRTransform {
             return false;
         }
 
-        // Create duplicate block for group2 predecessors
         IRBlock duplicate = duplicateBlock(block, method);
         if (duplicate == null) {
             return false;
         }
 
-        // Redirect group2 predecessors to duplicate
         for (IRBlock pred : group2) {
             redirectEdge(pred, block, duplicate);
         }
 
-        // Update phi instructions in successors
         for (IRBlock succ : new ArrayList<>(block.getSuccessors())) {
             updatePhisForSplit(succ, block, duplicate, group2);
         }
@@ -177,7 +164,6 @@ public class ControlFlowReducibility implements IRTransform {
 
         Map<SSAValue, SSAValue> valueMap = new HashMap<>();
 
-        // Duplicate phi instructions
         for (PhiInstruction phi : original.getPhiInstructions()) {
             SSAValue newResult = new SSAValue(phi.getResult().getType());
             valueMap.put(phi.getResult(), newResult);
@@ -189,7 +175,6 @@ public class ControlFlowReducibility implements IRTransform {
             duplicate.addPhiInstruction(newPhi);
         }
 
-        // Duplicate regular instructions
         for (IRInstruction instr : original.getInstructions()) {
             IRInstruction copy = copyInstruction(instr, valueMap);
             if (copy != null) {
@@ -197,7 +182,6 @@ public class ControlFlowReducibility implements IRTransform {
             }
         }
 
-        // Copy terminator and successors
         IRInstruction term = original.getTerminator();
         if (term != null) {
             IRInstruction termCopy = copyInstruction(term, valueMap);
@@ -206,7 +190,6 @@ public class ControlFlowReducibility implements IRTransform {
             }
         }
 
-        // Copy successor edges
         for (IRBlock succ : original.getSuccessors()) {
             duplicate.addSuccessor(succ);
             succ.addPredecessor(duplicate);
@@ -216,17 +199,16 @@ public class ControlFlowReducibility implements IRTransform {
     }
 
     private IRInstruction copyInstruction(IRInstruction instr, Map<SSAValue, SSAValue> valueMap) {
-        // Create new result if instruction has one
         SSAValue newResult = null;
         if (instr.getResult() != null) {
             newResult = new SSAValue(instr.getResult().getType());
             valueMap.put(instr.getResult(), newResult);
         }
 
-        // Map operands
         List<Value> newOperands = new ArrayList<>();
         for (Value op : instr.getOperands()) {
-            if (op instanceof SSAValue ssa && valueMap.containsKey(ssa)) {
+            if (op instanceof SSAValue && valueMap.containsKey((SSAValue) op)) {
+                SSAValue ssa = (SSAValue) op;
                 newOperands.add(valueMap.get(ssa));
             } else {
                 newOperands.add(op);
@@ -243,7 +225,6 @@ public class ControlFlowReducibility implements IRTransform {
         pred.addSuccessor(newTarget);
         newTarget.addPredecessor(pred);
 
-        // Update terminator
         IRInstruction term = pred.getTerminator();
         if (term != null) {
             term.replaceTarget(oldTarget, newTarget);

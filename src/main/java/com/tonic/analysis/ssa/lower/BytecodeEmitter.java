@@ -137,11 +137,13 @@ public class BytecodeEmitter {
      */
     private IRBlock getFallThroughSuccessor(IRBlock block) {
         IRInstruction term = block.getTerminator();
-        if (term instanceof BranchInstruction branch) {
+        if (term instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) term;
             // Prefer false branch as fall-through (allows skipping the goto)
             return branch.getFalseTarget();
         }
-        if (term instanceof GotoInstruction gotoInstr) {
+        if (term instanceof GotoInstruction) {
+            GotoInstruction gotoInstr = (GotoInstruction) term;
             // Goto's target is the only successor - prefer it as fall-through
             return gotoInstr.getTarget();
         }
@@ -158,7 +160,8 @@ public class BytecodeEmitter {
         for (IRBlock block : method.getBlocksInOrder()) {
             for (IRInstruction instr : block.getInstructions()) {
                 for (Value operand : instr.getOperands()) {
-                    if (operand instanceof SSAValue ssa) {
+                    if (operand instanceof SSAValue) {
+                        SSAValue ssa = (SSAValue) operand;
                         useCounts.merge(ssa, 1, Integer::sum);
                     }
                 }
@@ -196,7 +199,8 @@ public class BytecodeEmitter {
 
     private boolean isSimpleOperand(Value operand) {
         if (operand instanceof Constant) return true;
-        if (operand instanceof SSAValue ssa) {
+        if (operand instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) operand;
             String name = ssa.getName();
             return name.startsWith("p") || name.equals("this");
         }
@@ -214,50 +218,68 @@ public class BytecodeEmitter {
     private void emitInstruction(IRInstruction instr) throws IOException {
         emitOperandLoads(instr);
 
-        if (instr instanceof ConstantInstruction constInstr) {
+        if (instr instanceof ConstantInstruction) {
+            ConstantInstruction constInstr = (ConstantInstruction) instr;
             emitConstant(constInstr);
-        } else if (instr instanceof LoadLocalInstruction load) {
+        } else if (instr instanceof LoadLocalInstruction) {
+            LoadLocalInstruction load = (LoadLocalInstruction) instr;
             emitLoad(load);
         } else if (instr instanceof StoreLocalInstruction) {
-        } else if (instr instanceof BinaryOpInstruction binOp) {
+        } else if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
             emitBinaryOp(binOp);
-        } else if (instr instanceof UnaryOpInstruction unaryOp) {
+        } else if (instr instanceof UnaryOpInstruction) {
+            UnaryOpInstruction unaryOp = (UnaryOpInstruction) instr;
             emitUnaryOp(unaryOp);
-        } else if (instr instanceof GotoInstruction gotoInstr) {
+        } else if (instr instanceof GotoInstruction) {
+            GotoInstruction gotoInstr = (GotoInstruction) instr;
             emitGoto(gotoInstr);
-        } else if (instr instanceof BranchInstruction branch) {
+        } else if (instr instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) instr;
             emitBranch(branch);
-        } else if (instr instanceof ReturnInstruction ret) {
+        } else if (instr instanceof ReturnInstruction) {
+            ReturnInstruction ret = (ReturnInstruction) instr;
             emitReturn(ret);
-        } else if (instr instanceof InvokeInstruction invoke) {
+        } else if (instr instanceof InvokeInstruction) {
+            InvokeInstruction invoke = (InvokeInstruction) instr;
             emitInvoke(invoke);
-        } else if (instr instanceof GetFieldInstruction getField) {
+        } else if (instr instanceof GetFieldInstruction) {
+            GetFieldInstruction getField = (GetFieldInstruction) instr;
             emitGetField(getField);
-        } else if (instr instanceof PutFieldInstruction putField) {
+        } else if (instr instanceof PutFieldInstruction) {
+            PutFieldInstruction putField = (PutFieldInstruction) instr;
             emitPutField(putField);
-        } else if (instr instanceof NewInstruction newInstr) {
+        } else if (instr instanceof NewInstruction) {
+            NewInstruction newInstr = (NewInstruction) instr;
             emitNew(newInstr);
-        } else if (instr instanceof NewArrayInstruction newArray) {
+        } else if (instr instanceof NewArrayInstruction) {
+            NewArrayInstruction newArray = (NewArrayInstruction) instr;
             emitNewArray(newArray);
-        } else if (instr instanceof ArrayLoadInstruction arrayLoad) {
+        } else if (instr instanceof ArrayLoadInstruction) {
+            ArrayLoadInstruction arrayLoad = (ArrayLoadInstruction) instr;
             emitArrayLoad(arrayLoad);
-        } else if (instr instanceof ArrayStoreInstruction arrayStore) {
+        } else if (instr instanceof ArrayStoreInstruction) {
+            ArrayStoreInstruction arrayStore = (ArrayStoreInstruction) instr;
             emitArrayStore(arrayStore);
         } else if (instr instanceof ArrayLengthInstruction) {
             emit(0xBE);
         } else if (instr instanceof ThrowInstruction) {
             emit(0xBF);
-        } else if (instr instanceof CastInstruction cast) {
+        } else if (instr instanceof CastInstruction) {
+            CastInstruction cast = (CastInstruction) instr;
             emitCast(cast);
-        } else if (instr instanceof InstanceOfInstruction instanceOf) {
+        } else if (instr instanceof InstanceOfInstruction) {
+            InstanceOfInstruction instanceOf = (InstanceOfInstruction) instr;
             emitInstanceOf(instanceOf);
         } else if (instr instanceof MonitorEnterInstruction) {
             emit(0xC2);
         } else if (instr instanceof MonitorExitInstruction) {
             emit(0xC3);
-        } else if (instr instanceof SwitchInstruction switchInstr) {
+        } else if (instr instanceof SwitchInstruction) {
+            SwitchInstruction switchInstr = (SwitchInstruction) instr;
             emitSwitch(switchInstr);
-        } else if (instr instanceof CopyInstruction copy) {
+        } else if (instr instanceof CopyInstruction) {
+            CopyInstruction copy = (CopyInstruction) instr;
             emitCopy(copy);
         }
 
@@ -274,7 +296,8 @@ public class BytecodeEmitter {
         }
 
         for (Value operand : instr.getOperands()) {
-            if (operand instanceof SSAValue ssa) {
+            if (operand instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) operand;
                 if (stackResidentValues.contains(ssa)) {
                     continue;
                 }
@@ -292,12 +315,25 @@ public class BytecodeEmitter {
         }
         IRType type = value.getType();
 
-        if (type instanceof PrimitiveType prim) {
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
             switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> emitVarInsn(0x15, 0x1A, reg);
-                case LONG -> emitVarInsn(0x16, 0x1E, reg);
-                case FLOAT -> emitVarInsn(0x17, 0x22, reg);
-                case DOUBLE -> emitVarInsn(0x18, 0x26, reg);
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    emitVarInsn(0x15, 0x1A, reg);
+                    break;
+                case LONG:
+                    emitVarInsn(0x16, 0x1E, reg);
+                    break;
+                case FLOAT:
+                    emitVarInsn(0x17, 0x22, reg);
+                    break;
+                case DOUBLE:
+                    emitVarInsn(0x18, 0x26, reg);
+                    break;
             }
         } else {
             emitVarInsn(0x19, 0x2A, reg);
@@ -305,7 +341,8 @@ public class BytecodeEmitter {
     }
 
     private void emitConstantValue(Constant constant) throws IOException {
-        if (constant instanceof IntConstant intConst) {
+        if (constant instanceof IntConstant) {
+            IntConstant intConst = (IntConstant) constant;
             int value = intConst.getValue();
             if (value >= -1 && value <= 5) {
                 emit(0x03 + value);
@@ -319,7 +356,8 @@ public class BytecodeEmitter {
                 int index = constPool.findOrAddInteger(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof LongConstant longConst) {
+        } else if (constant instanceof LongConstant) {
+            LongConstant longConst = (LongConstant) constant;
             long value = longConst.getValue();
             if (value == 0L) emit(0x09);
             else if (value == 1L) emit(0x0A);
@@ -328,7 +366,8 @@ public class BytecodeEmitter {
                 emit(0x14);
                 emitShort((short) index);
             }
-        } else if (constant instanceof FloatConstant floatConst) {
+        } else if (constant instanceof FloatConstant) {
+            FloatConstant floatConst = (FloatConstant) constant;
             float value = floatConst.getValue();
             if (value == 0.0f) emit(0x0B);
             else if (value == 1.0f) emit(0x0C);
@@ -337,7 +376,8 @@ public class BytecodeEmitter {
                 int index = constPool.findOrAddFloat(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof DoubleConstant doubleConst) {
+        } else if (constant instanceof DoubleConstant) {
+            DoubleConstant doubleConst = (DoubleConstant) constant;
             double value = doubleConst.getValue();
             if (value == 0.0) emit(0x0E);
             else if (value == 1.0) emit(0x0F);
@@ -346,12 +386,14 @@ public class BytecodeEmitter {
                 emit(0x14);
                 emitShort((short) index);
             }
-        } else if (constant instanceof StringConstant stringConst) {
+        } else if (constant instanceof StringConstant) {
+            StringConstant stringConst = (StringConstant) constant;
             int index = constPool.findOrAddString(stringConst.getValue()).getIndex(constPool);
             emitLdc(index);
         } else if (constant instanceof NullConstant) {
             emit(0x01);
-        } else if (constant instanceof ClassConstant classConst) {
+        } else if (constant instanceof ClassConstant) {
+            ClassConstant classConst = (ClassConstant) constant;
             int index = constPool.findOrAddClass(classConst.getClassName()).getIndex(constPool);
             emitLdc(index);
         }
@@ -375,12 +417,25 @@ public class BytecodeEmitter {
         int reg = regAlloc.getRegister(result);
         IRType type = result.getType();
 
-        if (type instanceof PrimitiveType prim) {
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
             switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> emitVarInsn(0x36, 0x3B, reg);
-                case LONG -> emitVarInsn(0x37, 0x3F, reg);
-                case FLOAT -> emitVarInsn(0x38, 0x43, reg);
-                case DOUBLE -> emitVarInsn(0x39, 0x47, reg);
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    emitVarInsn(0x36, 0x3B, reg);
+                    break;
+                case LONG:
+                    emitVarInsn(0x37, 0x3F, reg);
+                    break;
+                case FLOAT:
+                    emitVarInsn(0x38, 0x43, reg);
+                    break;
+                case DOUBLE:
+                    emitVarInsn(0x39, 0x47, reg);
+                    break;
             }
         } else {
             emitVarInsn(0x3A, 0x4B, reg);
@@ -390,7 +445,8 @@ public class BytecodeEmitter {
     private void emitConstant(ConstantInstruction instr) throws IOException {
         Constant constant = instr.getConstant();
 
-        if (constant instanceof IntConstant intConst) {
+        if (constant instanceof IntConstant) {
+            IntConstant intConst = (IntConstant) constant;
             int value = intConst.getValue();
             if (value >= -1 && value <= 5) {
                 emit(0x03 + value);
@@ -404,7 +460,8 @@ public class BytecodeEmitter {
                 int index = constPool.findOrAddInteger(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof LongConstant longConst) {
+        } else if (constant instanceof LongConstant) {
+            LongConstant longConst = (LongConstant) constant;
             long value = longConst.getValue();
             if (value == 0L) {
                 emit(0x09);
@@ -415,7 +472,8 @@ public class BytecodeEmitter {
                 emit(0x14);
                 emitShort((short) index);
             }
-        } else if (constant instanceof FloatConstant floatConst) {
+        } else if (constant instanceof FloatConstant) {
+            FloatConstant floatConst = (FloatConstant) constant;
             float value = floatConst.getValue();
             if (value == 0.0f) {
                 emit(0x0B);
@@ -427,7 +485,8 @@ public class BytecodeEmitter {
                 int index = constPool.findOrAddFloat(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof DoubleConstant doubleConst) {
+        } else if (constant instanceof DoubleConstant) {
+            DoubleConstant doubleConst = (DoubleConstant) constant;
             double value = doubleConst.getValue();
             if (value == 0.0) {
                 emit(0x0E);
@@ -438,15 +497,18 @@ public class BytecodeEmitter {
                 emit(0x14);
                 emitShort((short) index);
             }
-        } else if (constant instanceof StringConstant stringConst) {
+        } else if (constant instanceof StringConstant) {
+            StringConstant stringConst = (StringConstant) constant;
             int index = constPool.findOrAddString(stringConst.getValue()).getIndex(constPool);
             emitLdc(index);
         } else if (constant instanceof NullConstant) {
             emit(0x01);
-        } else if (constant instanceof ClassConstant classConst) {
+        } else if (constant instanceof ClassConstant) {
+            ClassConstant classConst = (ClassConstant) constant;
             int index = constPool.findOrAddClass(classConst.getClassName()).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof MethodHandleConstant mhConst) {
+        } else if (constant instanceof MethodHandleConstant) {
+            MethodHandleConstant mhConst = (MethodHandleConstant) constant;
             int index = constPool.findOrAddMethodHandle(
                     mhConst.getReferenceKind(),
                     mhConst.getOwner(),
@@ -454,10 +516,12 @@ public class BytecodeEmitter {
                     mhConst.getDescriptor()
             ).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof MethodTypeConstant mtConst) {
+        } else if (constant instanceof MethodTypeConstant) {
+            MethodTypeConstant mtConst = (MethodTypeConstant) constant;
             int index = constPool.findOrAddMethodType(mtConst.getDescriptor()).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof DynamicConstant dynConst) {
+        } else if (constant instanceof DynamicConstant) {
+            DynamicConstant dynConst = (DynamicConstant) constant;
             // For condy, use original CP index if available (roundtrip preservation)
             int cpIndex = dynConst.getOriginalCpIndex();
             if (cpIndex > 0) {
@@ -498,12 +562,25 @@ public class BytecodeEmitter {
         }
         IRType type = result.getType();
 
-        if (type instanceof PrimitiveType prim) {
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
             switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> emitVarInsn(0x15, 0x1A, index);
-                case LONG -> emitVarInsn(0x16, 0x1E, index);
-                case FLOAT -> emitVarInsn(0x17, 0x22, index);
-                case DOUBLE -> emitVarInsn(0x18, 0x26, index);
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    emitVarInsn(0x15, 0x1A, index);
+                    break;
+                case LONG:
+                    emitVarInsn(0x16, 0x1E, index);
+                    break;
+                case FLOAT:
+                    emitVarInsn(0x17, 0x22, index);
+                    break;
+                case DOUBLE:
+                    emitVarInsn(0x18, 0x26, index);
+                    break;
             }
         } else {
             emitVarInsn(0x19, 0x2A, index);
@@ -516,7 +593,8 @@ public class BytecodeEmitter {
         // Try to use the allocator's slot for the value being stored.
         Value value = instr.getValue();
         int index = instr.getLocalIndex();
-        if (value instanceof SSAValue ssa) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
             int allocIndex = regAlloc.getRegister(ssa);
             if (allocIndex >= 0) {
                 index = allocIndex;
@@ -524,12 +602,25 @@ public class BytecodeEmitter {
         }
         IRType type = value.getType();
 
-        if (type instanceof PrimitiveType prim) {
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
             switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> emitVarInsn(0x36, 0x3B, index);
-                case LONG -> emitVarInsn(0x37, 0x3F, index);
-                case FLOAT -> emitVarInsn(0x38, 0x43, index);
-                case DOUBLE -> emitVarInsn(0x39, 0x47, index);
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    emitVarInsn(0x36, 0x3B, index);
+                    break;
+                case LONG:
+                    emitVarInsn(0x37, 0x3F, index);
+                    break;
+                case FLOAT:
+                    emitVarInsn(0x38, 0x43, index);
+                    break;
+                case DOUBLE:
+                    emitVarInsn(0x39, 0x47, index);
+                    break;
             }
         } else {
             emitVarInsn(0x3A, 0x4B, index);
@@ -557,24 +648,42 @@ public class BytecodeEmitter {
 
     private int getBinaryOpcode(BinaryOp op, IRType type) {
         int typeOffset = getTypeOffset(type);
-        return switch (op) {
-            case ADD -> 0x60 + typeOffset;
-            case SUB -> 0x64 + typeOffset;
-            case MUL -> 0x68 + typeOffset;
-            case DIV -> 0x6C + typeOffset;
-            case REM -> 0x70 + typeOffset;
-            case SHL -> type == PrimitiveType.LONG ? 0x79 : 0x78;
-            case SHR -> type == PrimitiveType.LONG ? 0x7B : 0x7A;
-            case USHR -> type == PrimitiveType.LONG ? 0x7D : 0x7C;
-            case AND -> type == PrimitiveType.LONG ? 0x7F : 0x7E;
-            case OR -> type == PrimitiveType.LONG ? 0x81 : 0x80;
-            case XOR -> type == PrimitiveType.LONG ? 0x83 : 0x82;
-            case LCMP -> 0x94;
-            case FCMPL -> 0x95;
-            case FCMPG -> 0x96;
-            case DCMPL -> 0x97;
-            case DCMPG -> 0x98;
-        };
+        switch (op) {
+            case ADD:
+                return 0x60 + typeOffset;
+            case SUB:
+                return 0x64 + typeOffset;
+            case MUL:
+                return 0x68 + typeOffset;
+            case DIV:
+                return 0x6C + typeOffset;
+            case REM:
+                return 0x70 + typeOffset;
+            case SHL:
+                return type == PrimitiveType.LONG ? 0x79 : 0x78;
+            case SHR:
+                return type == PrimitiveType.LONG ? 0x7B : 0x7A;
+            case USHR:
+                return type == PrimitiveType.LONG ? 0x7D : 0x7C;
+            case AND:
+                return type == PrimitiveType.LONG ? 0x7F : 0x7E;
+            case OR:
+                return type == PrimitiveType.LONG ? 0x81 : 0x80;
+            case XOR:
+                return type == PrimitiveType.LONG ? 0x83 : 0x82;
+            case LCMP:
+                return 0x94;
+            case FCMPL:
+                return 0x95;
+            case FCMPG:
+                return 0x96;
+            case DCMPL:
+                return 0x97;
+            case DCMPG:
+                return 0x98;
+            default:
+                throw new IllegalArgumentException("Unknown binary op: " + op);
+        }
     }
 
     private int getTypeOffset(IRType type) {
@@ -586,27 +695,61 @@ public class BytecodeEmitter {
     }
 
     private void emitUnaryOp(UnaryOpInstruction instr) throws IOException {
-        int opcode = switch (instr.getOp()) {
-            case NEG -> {
+        int opcode;
+        switch (instr.getOp()) {
+            case NEG: {
                 IRType type = instr.getOperand().getType();
-                yield 0x74 + getTypeOffset(type);
+                opcode = 0x74 + getTypeOffset(type);
+                break;
             }
-            case I2L -> 0x85;
-            case I2F -> 0x86;
-            case I2D -> 0x87;
-            case L2I -> 0x88;
-            case L2F -> 0x89;
-            case L2D -> 0x8A;
-            case F2I -> 0x8B;
-            case F2L -> 0x8C;
-            case F2D -> 0x8D;
-            case D2I -> 0x8E;
-            case D2L -> 0x8F;
-            case D2F -> 0x90;
-            case I2B -> 0x91;
-            case I2C -> 0x92;
-            case I2S -> 0x93;
-        };
+            case I2L:
+                opcode = 0x85;
+                break;
+            case I2F:
+                opcode = 0x86;
+                break;
+            case I2D:
+                opcode = 0x87;
+                break;
+            case L2I:
+                opcode = 0x88;
+                break;
+            case L2F:
+                opcode = 0x89;
+                break;
+            case L2D:
+                opcode = 0x8A;
+                break;
+            case F2I:
+                opcode = 0x8B;
+                break;
+            case F2L:
+                opcode = 0x8C;
+                break;
+            case F2D:
+                opcode = 0x8D;
+                break;
+            case D2I:
+                opcode = 0x8E;
+                break;
+            case D2L:
+                opcode = 0x8F;
+                break;
+            case D2F:
+                opcode = 0x90;
+                break;
+            case I2B:
+                opcode = 0x91;
+                break;
+            case I2C:
+                opcode = 0x92;
+                break;
+            case I2S:
+                opcode = 0x93;
+                break;
+            default:
+                throw new IllegalStateException("Unknown unary op: " + instr.getOp());
+        }
         emit(opcode);
     }
 
@@ -621,24 +764,59 @@ public class BytecodeEmitter {
     }
 
     private void emitBranch(BranchInstruction instr) throws IOException {
-        int opcode = switch (instr.getCondition()) {
-            case IFEQ -> 0x99;
-            case IFNE -> 0x9A;
-            case IFLT -> 0x9B;
-            case IFGE -> 0x9C;
-            case IFGT -> 0x9D;
-            case IFLE -> 0x9E;
-            case EQ -> 0x9F;
-            case NE -> 0xA0;
-            case LT -> 0xA1;
-            case GE -> 0xA2;
-            case GT -> 0xA3;
-            case LE -> 0xA4;
-            case ACMPEQ -> 0xA5;
-            case ACMPNE -> 0xA6;
-            case IFNULL -> 0xC6;
-            case IFNONNULL -> 0xC7;
-        };
+        int opcode;
+        switch (instr.getCondition()) {
+            case IFEQ:
+                opcode = 0x99;
+                break;
+            case IFNE:
+                opcode = 0x9A;
+                break;
+            case IFLT:
+                opcode = 0x9B;
+                break;
+            case IFGE:
+                opcode = 0x9C;
+                break;
+            case IFGT:
+                opcode = 0x9D;
+                break;
+            case IFLE:
+                opcode = 0x9E;
+                break;
+            case EQ:
+                opcode = 0x9F;
+                break;
+            case NE:
+                opcode = 0xA0;
+                break;
+            case LT:
+                opcode = 0xA1;
+                break;
+            case GE:
+                opcode = 0xA2;
+                break;
+            case GT:
+                opcode = 0xA3;
+                break;
+            case LE:
+                opcode = 0xA4;
+                break;
+            case ACMPEQ:
+                opcode = 0xA5;
+                break;
+            case ACMPNE:
+                opcode = 0xA6;
+                break;
+            case IFNULL:
+                opcode = 0xC6;
+                break;
+            case IFNONNULL:
+                opcode = 0xC7;
+                break;
+            default:
+                throw new IllegalStateException("Unknown condition: " + instr.getCondition());
+        }
 
         emit(opcode);
         pendingJumps.add(new PendingJump(currentOffset, instr.getTrueTarget(), false));
@@ -657,13 +835,29 @@ public class BytecodeEmitter {
             emit(0xB1);
         } else {
             IRType type = instr.getReturnValue().getType();
-            if (type instanceof PrimitiveType prim) {
-                int opcode = switch (prim) {
-                    case INT, BOOLEAN, BYTE, CHAR, SHORT -> 0xAC;
-                    case LONG -> 0xAD;
-                    case FLOAT -> 0xAE;
-                    case DOUBLE -> 0xAF;
-                };
+            if (type instanceof PrimitiveType) {
+                PrimitiveType prim = (PrimitiveType) type;
+                int opcode;
+                switch (prim) {
+                    case INT:
+                    case BOOLEAN:
+                    case BYTE:
+                    case CHAR:
+                    case SHORT:
+                        opcode = 0xAC;
+                        break;
+                    case LONG:
+                        opcode = 0xAD;
+                        break;
+                    case FLOAT:
+                        opcode = 0xAE;
+                        break;
+                    case DOUBLE:
+                        opcode = 0xAF;
+                        break;
+                    default:
+                        throw new IllegalStateException("Unknown primitive type: " + prim);
+                }
                 emit(opcode);
             } else {
                 emit(0xB0);
@@ -672,13 +866,26 @@ public class BytecodeEmitter {
     }
 
     private void emitInvoke(InvokeInstruction instr) throws IOException {
-        int opcode = switch (instr.getInvokeType()) {
-            case VIRTUAL -> 0xB6;
-            case SPECIAL -> 0xB7;
-            case STATIC -> 0xB8;
-            case INTERFACE -> 0xB9;
-            case DYNAMIC -> 0xBA;
-        };
+        int opcode;
+        switch (instr.getInvokeType()) {
+            case VIRTUAL:
+                opcode = 0xB6;
+                break;
+            case SPECIAL:
+                opcode = 0xB7;
+                break;
+            case STATIC:
+                opcode = 0xB8;
+                break;
+            case INTERFACE:
+                opcode = 0xB9;
+                break;
+            case DYNAMIC:
+                opcode = 0xBA;
+                break;
+            default:
+                throw new IllegalStateException("Unknown invoke type: " + instr.getInvokeType());
+        }
 
         if (instr.getInvokeType() == InvokeType.DYNAMIC) {
             int cpIndex = instr.getOriginalCpIndex();
@@ -741,18 +948,38 @@ public class BytecodeEmitter {
     private void emitNewArray(NewArrayInstruction instr) throws IOException {
         IRType elemType = instr.getElementType();
 
-        if (elemType instanceof PrimitiveType prim) {
+        if (elemType instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) elemType;
             emit(0xBC);
-            int atype = switch (prim) {
-                case BOOLEAN -> 4;
-                case CHAR -> 5;
-                case FLOAT -> 6;
-                case DOUBLE -> 7;
-                case BYTE -> 8;
-                case SHORT -> 9;
-                case INT -> 10;
-                case LONG -> 11;
-            };
+            int atype;
+            switch (prim) {
+                case BOOLEAN:
+                    atype = 4;
+                    break;
+                case CHAR:
+                    atype = 5;
+                    break;
+                case FLOAT:
+                    atype = 6;
+                    break;
+                case DOUBLE:
+                    atype = 7;
+                    break;
+                case BYTE:
+                    atype = 8;
+                    break;
+                case SHORT:
+                    atype = 9;
+                    break;
+                case INT:
+                    atype = 10;
+                    break;
+                case LONG:
+                    atype = 11;
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown primitive type: " + prim);
+            }
             emit((byte) atype);
         } else if (instr.isMultiDimensional()) {
             String desc = instr.getResult().getType().getDescriptor();
@@ -774,16 +1001,34 @@ public class BytecodeEmitter {
     private void emitArrayLoad(ArrayLoadInstruction instr) throws IOException {
         IRType elemType = instr.getResult().getType();
         int opcode;
-        if (elemType instanceof PrimitiveType prim) {
-            opcode = switch (prim) {
-                case INT -> 0x2E;
-                case LONG -> 0x2F;
-                case FLOAT -> 0x30;
-                case DOUBLE -> 0x31;
-                case BYTE, BOOLEAN -> 0x33;
-                case CHAR -> 0x34;
-                case SHORT -> 0x35;
-            };
+        if (elemType instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) elemType;
+            switch (prim) {
+                case INT:
+                    opcode = 0x2E;
+                    break;
+                case LONG:
+                    opcode = 0x2F;
+                    break;
+                case FLOAT:
+                    opcode = 0x30;
+                    break;
+                case DOUBLE:
+                    opcode = 0x31;
+                    break;
+                case BYTE:
+                case BOOLEAN:
+                    opcode = 0x33;
+                    break;
+                case CHAR:
+                    opcode = 0x34;
+                    break;
+                case SHORT:
+                    opcode = 0x35;
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown primitive type: " + prim);
+            }
         } else {
             opcode = 0x32;
         }
@@ -793,16 +1038,34 @@ public class BytecodeEmitter {
     private void emitArrayStore(ArrayStoreInstruction instr) throws IOException {
         IRType elemType = instr.getValue().getType();
         int opcode;
-        if (elemType instanceof PrimitiveType prim) {
-            opcode = switch (prim) {
-                case INT -> 0x4F;
-                case LONG -> 0x50;
-                case FLOAT -> 0x51;
-                case DOUBLE -> 0x52;
-                case BYTE, BOOLEAN -> 0x54;
-                case CHAR -> 0x55;
-                case SHORT -> 0x56;
-            };
+        if (elemType instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) elemType;
+            switch (prim) {
+                case INT:
+                    opcode = 0x4F;
+                    break;
+                case LONG:
+                    opcode = 0x50;
+                    break;
+                case FLOAT:
+                    opcode = 0x51;
+                    break;
+                case DOUBLE:
+                    opcode = 0x52;
+                    break;
+                case BYTE:
+                case BOOLEAN:
+                    opcode = 0x54;
+                    break;
+                case CHAR:
+                    opcode = 0x55;
+                    break;
+                case SHORT:
+                    opcode = 0x56;
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown primitive type: " + prim);
+            }
         } else {
             opcode = 0x53;
         }
@@ -905,15 +1168,29 @@ public class BytecodeEmitter {
             dstReg = regAlloc.getRegister(instr.getResult());
         }
 
-        if (source instanceof SSAValue ssa) {
+        if (source instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) source;
             if (stackResidentValues.contains(ssa)) {
                 IRType type = ssa.getType();
-                if (type instanceof PrimitiveType prim) {
+                if (type instanceof PrimitiveType) {
+                    PrimitiveType prim = (PrimitiveType) type;
                     switch (prim) {
-                        case INT, BOOLEAN, BYTE, CHAR, SHORT -> emitVarInsn(0x36, 0x3B, dstReg);
-                        case LONG -> emitVarInsn(0x37, 0x3F, dstReg);
-                        case FLOAT -> emitVarInsn(0x38, 0x43, dstReg);
-                        case DOUBLE -> emitVarInsn(0x39, 0x47, dstReg);
+                        case INT:
+                        case BOOLEAN:
+                        case BYTE:
+                        case CHAR:
+                        case SHORT:
+                            emitVarInsn(0x36, 0x3B, dstReg);
+                            break;
+                        case LONG:
+                            emitVarInsn(0x37, 0x3F, dstReg);
+                            break;
+                        case FLOAT:
+                            emitVarInsn(0x38, 0x43, dstReg);
+                            break;
+                        case DOUBLE:
+                            emitVarInsn(0x39, 0x47, dstReg);
+                            break;
                     }
                 } else {
                     emitVarInsn(0x3A, 0x4B, dstReg);
@@ -926,15 +1203,29 @@ public class BytecodeEmitter {
                     emitVarInsn(getStoreOpcode(type), getStoreShortBase(type), dstReg);
                 }
             }
-        } else if (source instanceof Constant constant) {
+        } else if (source instanceof Constant) {
+            Constant constant = (Constant) source;
             emitConstantValue(constant);
             IRType type = constant.getType();
-            if (type instanceof PrimitiveType prim) {
+            if (type instanceof PrimitiveType) {
+                PrimitiveType prim = (PrimitiveType) type;
                 switch (prim) {
-                    case INT, BOOLEAN, BYTE, CHAR, SHORT -> emitVarInsn(0x36, 0x3B, dstReg);
-                    case LONG -> emitVarInsn(0x37, 0x3F, dstReg);
-                    case FLOAT -> emitVarInsn(0x38, 0x43, dstReg);
-                    case DOUBLE -> emitVarInsn(0x39, 0x47, dstReg);
+                    case INT:
+                    case BOOLEAN:
+                    case BYTE:
+                    case CHAR:
+                    case SHORT:
+                        emitVarInsn(0x36, 0x3B, dstReg);
+                        break;
+                    case LONG:
+                        emitVarInsn(0x37, 0x3F, dstReg);
+                        break;
+                    case FLOAT:
+                        emitVarInsn(0x38, 0x43, dstReg);
+                        break;
+                    case DOUBLE:
+                        emitVarInsn(0x39, 0x47, dstReg);
+                        break;
                 }
             } else {
                 emitVarInsn(0x3A, 0x4B, dstReg);
@@ -943,49 +1234,85 @@ public class BytecodeEmitter {
     }
 
     private int getLoadOpcode(IRType type) {
-        if (type instanceof PrimitiveType prim) {
-            return switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> 0x15;
-                case LONG -> 0x16;
-                case FLOAT -> 0x17;
-                case DOUBLE -> 0x18;
-            };
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
+            switch (prim) {
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    return 0x15;
+                case LONG:
+                    return 0x16;
+                case FLOAT:
+                    return 0x17;
+                case DOUBLE:
+                    return 0x18;
+            }
         }
         return 0x19;
     }
 
     private int getLoadShortBase(IRType type) {
-        if (type instanceof PrimitiveType prim) {
-            return switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> 0x1A;
-                case LONG -> 0x1E;
-                case FLOAT -> 0x22;
-                case DOUBLE -> 0x26;
-            };
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
+            switch (prim) {
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    return 0x1A;
+                case LONG:
+                    return 0x1E;
+                case FLOAT:
+                    return 0x22;
+                case DOUBLE:
+                    return 0x26;
+            }
         }
         return 0x2A;
     }
 
     private int getStoreOpcode(IRType type) {
-        if (type instanceof PrimitiveType prim) {
-            return switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> 0x36;
-                case LONG -> 0x37;
-                case FLOAT -> 0x38;
-                case DOUBLE -> 0x39;
-            };
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
+            switch (prim) {
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    return 0x36;
+                case LONG:
+                    return 0x37;
+                case FLOAT:
+                    return 0x38;
+                case DOUBLE:
+                    return 0x39;
+            }
         }
         return 0x3A;
     }
 
     private int getStoreShortBase(IRType type) {
-        if (type instanceof PrimitiveType prim) {
-            return switch (prim) {
-                case INT, BOOLEAN, BYTE, CHAR, SHORT -> 0x3B;
-                case LONG -> 0x3F;
-                case FLOAT -> 0x43;
-                case DOUBLE -> 0x47;
-            };
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
+            switch (prim) {
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    return 0x3B;
+                case LONG:
+                    return 0x3F;
+                case FLOAT:
+                    return 0x43;
+                case DOUBLE:
+                    return 0x47;
+            }
         }
         return 0x4B;
     }
@@ -993,15 +1320,15 @@ public class BytecodeEmitter {
     private void fixupJumps() {
         byte[] code = bytecode.toByteArray();
         for (PendingJump jump : pendingJumps) {
-            int targetOffset = blockOffsets.getOrDefault(jump.target, 0);
-            int opcodeOffset = jump.offset - 1;
+            int targetOffset = blockOffsets.getOrDefault(jump.target(), 0);
+            int opcodeOffset = jump.offset() - 1;
             int relativeOffset = targetOffset - opcodeOffset;
 
-            if (jump.isWide) {
-                code[jump.offset] = (byte) (relativeOffset >> 24);
-                code[jump.offset + 1] = (byte) (relativeOffset >> 16);
-                code[jump.offset + 2] = (byte) (relativeOffset >> 8);
-                code[jump.offset + 3] = (byte) relativeOffset;
+            if (jump.isWide()) {
+                code[jump.offset()] = (byte) (relativeOffset >> 24);
+                code[jump.offset() + 1] = (byte) (relativeOffset >> 16);
+                code[jump.offset() + 2] = (byte) (relativeOffset >> 8);
+                code[jump.offset() + 3] = (byte) relativeOffset;
             } else {
                 // Check for overflow - offset must fit in signed 16-bit
                 if (relativeOffset < Short.MIN_VALUE || relativeOffset > Short.MAX_VALUE) {
@@ -1009,8 +1336,8 @@ public class BytecodeEmitter {
                         "Branch offset " + relativeOffset + " exceeds 16-bit range. " +
                         "Method is too large and requires wide branch instructions (goto_w).");
                 }
-                code[jump.offset] = (byte) (relativeOffset >> 8);
-                code[jump.offset + 1] = (byte) relativeOffset;
+                code[jump.offset()] = (byte) (relativeOffset >> 8);
+                code[jump.offset() + 1] = (byte) relativeOffset;
             }
         }
         bytecode = new ByteArrayOutputStream();
@@ -1036,5 +1363,51 @@ public class BytecodeEmitter {
         currentOffset += 4;
     }
 
-    private record PendingJump(int offset, IRBlock target, boolean isWide) {}
+    private static final class PendingJump {
+        private final int offset;
+        private final IRBlock target;
+        private final boolean isWide;
+
+        public PendingJump(int offset, IRBlock target, boolean isWide) {
+            this.offset = offset;
+            this.target = target;
+            this.isWide = isWide;
+        }
+
+        public int offset() {
+            return offset;
+        }
+
+        public IRBlock target() {
+            return target;
+        }
+
+        public boolean isWide() {
+            return isWide;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            PendingJump that = (PendingJump) obj;
+            return offset == that.offset &&
+                   isWide == that.isWide &&
+                   Objects.equals(target, that.target);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(offset, target, isWide);
+        }
+
+        @Override
+        public String toString() {
+            return "PendingJump{" +
+                   "offset=" + offset +
+                   ", target=" + target +
+                   ", isWide=" + isWide +
+                   '}';
+        }
+    }
 }

@@ -18,7 +18,10 @@ public class CopyInstruction extends IRInstruction {
     public CopyInstruction(SSAValue result, Value source) {
         super(result);
         this.source = source;
-        if (source instanceof SSAValue ssa) ssa.addUse(this);
+        if (source instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) source;
+            ssa.addUse(this);
+        }
     }
 
     @Override
@@ -29,9 +32,15 @@ public class CopyInstruction extends IRInstruction {
     @Override
     public void replaceOperand(Value oldValue, Value newValue) {
         if (source.equals(oldValue)) {
-            if (source instanceof SSAValue ssa) ssa.removeUse(this);
+            if (source instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) source;
+                ssa.removeUse(this);
+            }
             source = newValue;
-            if (newValue instanceof SSAValue ssa) ssa.addUse(this);
+            if (newValue instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) newValue;
+                ssa.addUse(this);
+            }
         }
     }
 

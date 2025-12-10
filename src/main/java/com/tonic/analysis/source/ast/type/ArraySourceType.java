@@ -40,7 +40,8 @@ public final class ArraySourceType implements SourceType {
      * For int[][], this returns int.
      */
     public SourceType getElementType() {
-        if (componentType instanceof ArraySourceType arr) {
+        if (componentType instanceof ArraySourceType) {
+            ArraySourceType arr = (ArraySourceType) componentType;
             return arr.getElementType();
         }
         return componentType;
@@ -67,7 +68,8 @@ public final class ArraySourceType implements SourceType {
      * Gets the total number of dimensions for multi-dimensional arrays.
      */
     public int getTotalDimensions() {
-        if (componentType instanceof ArraySourceType arr) {
+        if (componentType instanceof ArraySourceType) {
+            ArraySourceType arr = (ArraySourceType) componentType;
             return dimensions + arr.getTotalDimensions();
         }
         return dimensions;
@@ -91,7 +93,8 @@ public final class ArraySourceType implements SourceType {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (!(obj instanceof ArraySourceType other)) return false;
+        if (!(obj instanceof ArraySourceType)) return false;
+        ArraySourceType other = (ArraySourceType) obj;
         return dimensions == other.dimensions &&
                componentType.equals(other.componentType);
     }

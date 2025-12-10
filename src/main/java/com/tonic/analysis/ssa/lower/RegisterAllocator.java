@@ -244,7 +244,8 @@ public class RegisterAllocator {
                     updateInterval(intervals, instr.getResult(), pos);
                 }
                 for (com.tonic.analysis.ssa.value.Value operand : instr.getOperands()) {
-                    if (operand instanceof SSAValue ssa) {
+                    if (operand instanceof SSAValue) {
+                        SSAValue ssa = (SSAValue) operand;
                         updateInterval(intervals, ssa, pos);
                     }
                 }

@@ -51,16 +51,13 @@ public class FrameGenerator {
             return Collections.emptyList();
         }
 
-        // Find all branch targets and exception handler entry points
         Set<Integer> frameTargets = findFrameTargets(method);
         if (frameTargets.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // Compute type states at each offset
         Map<Integer, TypeState> states = computeTypeStates(method, frameTargets);
 
-        // Generate frames for each target
         List<StackMapFrame> frames = new ArrayList<>();
         List<Integer> sortedTargets = new ArrayList<>(frameTargets);
         Collections.sort(sortedTargets);
@@ -73,9 +70,6 @@ public class FrameGenerator {
                 continue;
             }
 
-            // Calculate offset_delta
-            // First frame: offset_delta = actual_offset
-            // Subsequent frames: offset_delta = current_offset - previous_offset - 1
             int offsetDelta;
             if (previousOffset == -1) {
                 offsetDelta = target;
@@ -396,7 +390,6 @@ public class FrameGenerator {
             return;
         }
 
-        // Find or create StackMapTableAttribute
         StackMapTableAttribute stackMapTable = null;
         for (Attribute attr : codeAttr.getAttributes()) {
             if (attr instanceof StackMapTableAttribute) {
@@ -406,7 +399,6 @@ public class FrameGenerator {
         }
 
         if (frames.isEmpty()) {
-            // Remove StackMapTable if no frames needed
             if (stackMapTable != null) {
                 codeAttr.getAttributes().remove(stackMapTable);
             }
@@ -414,17 +406,14 @@ public class FrameGenerator {
         }
 
         if (stackMapTable == null) {
-            // Create new StackMapTableAttribute
             int nameIndex = constPool.findOrAddUtf8("StackMapTable").getIndex(constPool);
             stackMapTable = new StackMapTableAttribute("StackMapTable", method, nameIndex, 0);
             codeAttr.getAttributes().add(stackMapTable);
         }
 
-        // Update frames
         stackMapTable.setFrames(frames);
         stackMapTable.updateLength();
 
-        // Update CodeAttribute length
         codeAttr.updateLength();
     }
 }

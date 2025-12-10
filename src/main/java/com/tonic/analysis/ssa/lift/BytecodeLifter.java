@@ -110,19 +110,22 @@ public class BytecodeLifter {
             int offset = instr.getOffset();
             int opcode = instr.getOpcode();
 
-            if (instr instanceof ConditionalBranchInstruction branch) {
+            if (instr instanceof ConditionalBranchInstruction) {
+                ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
                 int target = offset + branch.getBranchOffset();
                 int fallthrough = offset + branch.getLength();
                 blockStarts.add(target);
                 blockStarts.add(fallthrough);
-            } else if (instr instanceof com.tonic.analysis.instruction.GotoInstruction gotoInstr) {
+            } else if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
+                com.tonic.analysis.instruction.GotoInstruction gotoInstr = (com.tonic.analysis.instruction.GotoInstruction) instr;
                 int target = offset + gotoInstr.getBranchOffset();
                 blockStarts.add(target);
                 int fallthrough = offset + gotoInstr.getLength();
                 if (fallthrough < getTotalCodeLength(instructions)) {
                     blockStarts.add(fallthrough);
                 }
-            } else if (instr instanceof JsrInstruction jsrInstr) {
+            } else if (instr instanceof JsrInstruction) {
+                JsrInstruction jsrInstr = (JsrInstruction) instr;
                 // JSR jumps to subroutine and eventually returns to continuation
                 int subroutineTarget = offset + jsrInstr.getBranchOffset();
                 int continuationOffset = offset + jsrInstr.getLength();
@@ -134,7 +137,8 @@ public class BytecodeLifter {
                 if (fallthrough < getTotalCodeLength(instructions)) {
                     blockStarts.add(fallthrough);
                 }
-            } else if (instr instanceof TableSwitchInstruction tableSwitch) {
+            } else if (instr instanceof TableSwitchInstruction) {
+                TableSwitchInstruction tableSwitch = (TableSwitchInstruction) instr;
                 blockStarts.add(offset + tableSwitch.getDefaultOffset());
                 for (int jumpOffset : tableSwitch.getJumpOffsets().values()) {
                     blockStarts.add(offset + jumpOffset);
@@ -143,7 +147,8 @@ public class BytecodeLifter {
                 if (fallthrough < getTotalCodeLength(instructions)) {
                     blockStarts.add(fallthrough);
                 }
-            } else if (instr instanceof LookupSwitchInstruction lookupSwitch) {
+            } else if (instr instanceof LookupSwitchInstruction) {
+                LookupSwitchInstruction lookupSwitch = (LookupSwitchInstruction) instr;
                 blockStarts.add(offset + lookupSwitch.getDefaultOffset());
                 for (int jumpOffset : lookupSwitch.getMatchOffsets().values()) {
                     blockStarts.add(offset + jumpOffset);
@@ -353,12 +358,15 @@ public class BytecodeLifter {
         if (terminator == null) return;
 
         List<IRBlock> successors = new ArrayList<>();
-        if (terminator instanceof com.tonic.analysis.ssa.ir.GotoInstruction gotoInstr) {
+        if (terminator instanceof com.tonic.analysis.ssa.ir.GotoInstruction) {
+            com.tonic.analysis.ssa.ir.GotoInstruction gotoInstr = (com.tonic.analysis.ssa.ir.GotoInstruction) terminator;
             successors.add(gotoInstr.getTarget());
-        } else if (terminator instanceof BranchInstruction branch) {
+        } else if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) terminator;
             successors.add(branch.getTrueTarget());
             successors.add(branch.getFalseTarget());
-        } else if (terminator instanceof SwitchInstruction switchInstr) {
+        } else if (terminator instanceof SwitchInstruction) {
+            SwitchInstruction switchInstr = (SwitchInstruction) terminator;
             successors.add(switchInstr.getDefaultTarget());
             successors.addAll(switchInstr.getCases().values());
         }
@@ -414,9 +422,16 @@ public class BytecodeLifter {
                 existingPhi.addIncoming(incomingVal, incomingBlock);
             } else {
                 // Create a new PHI for this stack slot
-                IRType type = incomingVal instanceof SSAValue ssaVal ? ssaVal.getType() :
-                              existingVal instanceof SSAValue ssaVal2 ? ssaVal2.getType() :
-                              PrimitiveType.INT;
+                IRType type;
+                if (incomingVal instanceof SSAValue) {
+                    SSAValue ssaVal = (SSAValue) incomingVal;
+                    type = ssaVal.getType();
+                } else if (existingVal instanceof SSAValue) {
+                    SSAValue ssaVal2 = (SSAValue) existingVal;
+                    type = ssaVal2.getType();
+                } else {
+                    type = PrimitiveType.INT;
+                }
                 SSAValue phiResult = new SSAValue(type, "stack_phi_" + i);
                 PhiInstruction phi = new PhiInstruction(phiResult);
                 // Use tracked first source block for the existing value
@@ -478,19 +493,22 @@ public class BytecodeLifter {
             IRInstruction terminator = block.getTerminator();
             if (terminator == null) continue;
 
-            if (terminator instanceof com.tonic.analysis.ssa.ir.GotoInstruction gotoInstr) {
+            if (terminator instanceof com.tonic.analysis.ssa.ir.GotoInstruction) {
+                com.tonic.analysis.ssa.ir.GotoInstruction gotoInstr = (com.tonic.analysis.ssa.ir.GotoInstruction) terminator;
                 IRBlock target = gotoInstr.getTarget();
                 if (target != null) {
                     block.addSuccessor(target);
                 }
-            } else if (terminator instanceof BranchInstruction branch) {
+            } else if (terminator instanceof BranchInstruction) {
+                BranchInstruction branch = (BranchInstruction) terminator;
                 if (branch.getTrueTarget() != null) {
                     block.addSuccessor(branch.getTrueTarget());
                 }
                 if (branch.getFalseTarget() != null) {
                     block.addSuccessor(branch.getFalseTarget());
                 }
-            } else if (terminator instanceof SwitchInstruction switchInstr) {
+            } else if (terminator instanceof SwitchInstruction) {
+                SwitchInstruction switchInstr = (SwitchInstruction) terminator;
                 if (switchInstr.getDefaultTarget() != null) {
                     block.addSuccessor(switchInstr.getDefaultTarget());
                 }
