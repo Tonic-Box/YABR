@@ -219,6 +219,28 @@ public class StructuralAnalyzer {
             return info;
         }
 
+        // Check if one branch target is reachable from the other - this means
+        // that target is actually a merge point, not a separate branch
+        Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
+        if (reachableFromFalse.contains(trueTarget) && trueTarget.getPredecessors().size() > 1) {
+            // trueTarget is reached from both branches - it's the merge point
+            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+            info.setThenBlock(falseTarget);
+            info.setMergeBlock(trueTarget);
+            info.setConditionNegated(true);
+            return info;
+        }
+
+        Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
+        if (reachableFromTrue.contains(falseTarget) && falseTarget.getPredecessors().size() > 1) {
+            // falseTarget is reached from both branches - it's the merge point
+            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+            info.setThenBlock(trueTarget);
+            info.setMergeBlock(falseTarget);
+            info.setConditionNegated(false);
+            return info;
+        }
+
         RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
         info.setThenBlock(trueTarget);
         info.setElseBlock(falseTarget);
