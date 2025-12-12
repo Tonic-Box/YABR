@@ -3,16 +3,24 @@ package com.tonic.analysis.source.ast.transform;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.SourceType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
- * Simplifies control flow in AST to reduce nesting depth.
+ * Simplifies control flow in AST to reduce nesting depth and improve readability.
  *
  * Transformations:
  * 1. Empty if-block inversion: if(x){} else{body} -> if(!x){body}
- * 2. Guard clause conversion: if(x){long} else{return} -> if(!x)return; long
+ * 2. AND-chain merging: if(a){if(b){body}} -> if(a && b){body}
+ * 3. Guard clause conversion: if(x){long} else{return} -> if(!x)return; long
+ * 4. If-else to ternary: if(c){x=0}else{x=1} -> x=c?0:1
+ * 5. Sequential guard merging: if(a)ret; if(b)ret; -> if(a||b)ret;
+ * 6. Boolean flag inlining: bool f=x; if(!f)... -> if(!x)...
+ * 7. Nested negated guard flattening: if(!a){if(!b){body}} ret; -> if(a||b){ret} body
  */
 public class ControlFlowSimplifier implements ASTTransform {
 
@@ -39,6 +47,18 @@ public class ControlFlowSimplifier implements ASTTransform {
             passChanged |= moveDeclarationsToFirstUse(stmts);
             changed |= passChanged;
         } while (passChanged);
+
+        // NEW: Inline single-use boolean variables (Phase 3)
+        // This must run before guard merging so conditions are inlined
+        changed |= inlineSingleUseBooleans(stmts);
+
+        // NEW: Merge sequential guards (Phase 1)
+        // Pattern: if(a)ret; if(b)ret; -> if(a||b)ret;
+        changed |= mergeSequentialGuards(stmts);
+
+        // NEW: Flatten nested negated guards (Phase 4)
+        // Pattern: if(!a){if(!b){body}} ret; -> if(a||b){ret} body
+        changed |= flattenNestedNegatedGuards(stmts);
 
         // Transform control flow (if-else, guards, etc.)
         for (int i = 0; i < stmts.size(); i++) {
@@ -640,6 +660,460 @@ public class ControlFlowSimplifier implements ASTTransform {
             for (Expression arg : ne.getArguments()) {
                 if (readsVariableExpr(arg, varName, false)) return true;
             }
+        }
+        return false;
+    }
+
+    // ========== Sequential Guard Merging (Phase 1) ==========
+
+    /**
+     * Merges sequential guard clauses with identical early-exit bodies.
+     * Pattern: if(a) { return X; } if(b) { return X; } -> if(a || b) { return X; }
+     */
+    private boolean mergeSequentialGuards(List<Statement> stmts) {
+        boolean changed = false;
+
+        for (int i = 0; i < stmts.size(); i++) {
+            if (!(stmts.get(i) instanceof IfStmt)) continue;
+            IfStmt firstIf = (IfStmt) stmts.get(i);
+
+            // Must be guard clause (no else, body is early exit)
+            if (firstIf.hasElse()) continue;
+            if (!isEarlyExit(firstIf.getThenBranch())) continue;
+
+            // Collect consecutive guards with identical early-exit bodies
+            List<IfStmt> guards = new ArrayList<>();
+            guards.add(firstIf);
+
+            int j = i + 1;
+            while (j < stmts.size() && stmts.get(j) instanceof IfStmt) {
+                IfStmt nextIf = (IfStmt) stmts.get(j);
+                if (nextIf.hasElse()) break;
+                if (!isEarlyExit(nextIf.getThenBranch())) break;
+                if (!earlyExitsEqual(firstIf.getThenBranch(), nextIf.getThenBranch())) break;
+                guards.add(nextIf);
+                j++;
+            }
+
+            // Need at least 2 guards to merge
+            if (guards.size() < 2) continue;
+
+            // Build combined OR condition
+            Expression combined = guards.get(0).getCondition();
+            for (int k = 1; k < guards.size(); k++) {
+                combined = new BinaryExpr(
+                    BinaryOperator.OR,
+                    combined,
+                    guards.get(k).getCondition(),
+                    PrimitiveSourceType.BOOLEAN
+                );
+            }
+
+            // Replace with merged if statement
+            IfStmt mergedIf = new IfStmt(combined, firstIf.getThenBranch());
+            stmts.set(i, mergedIf);
+
+            // Remove the other guards
+            for (int k = 1; k < guards.size(); k++) {
+                stmts.remove(i + 1);
+            }
+
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    /**
+     * Compares two early-exit statements for semantic equality.
+     */
+    private boolean earlyExitsEqual(Statement a, Statement b) {
+        Statement ua = unwrapSingleStatement(a);
+        Statement ub = unwrapSingleStatement(b);
+
+        if (ua.getClass() != ub.getClass()) return false;
+
+        if (ua instanceof ReturnStmt) {
+            ReturnStmt ra = (ReturnStmt) ua;
+            ReturnStmt rb = (ReturnStmt) ub;
+            return expressionsEqual(ra.getValue(), rb.getValue());
+        }
+
+        if (ua instanceof ThrowStmt) {
+            ThrowStmt ta = (ThrowStmt) ua;
+            ThrowStmt tb = (ThrowStmt) ub;
+            return expressionsEqual(ta.getException(), tb.getException());
+        }
+
+        // Fall back to string comparison for other types
+        return ua.toString().equals(ub.toString());
+    }
+
+    /**
+     * Compares two expressions for semantic equality.
+     */
+    private boolean expressionsEqual(Expression a, Expression b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (a.getClass() != b.getClass()) return false;
+
+        if (a instanceof LiteralExpr) {
+            Object va = ((LiteralExpr) a).getValue();
+            Object vb = ((LiteralExpr) b).getValue();
+            return Objects.equals(va, vb);
+        }
+
+        if (a instanceof VarRefExpr) {
+            return ((VarRefExpr) a).getName().equals(((VarRefExpr) b).getName());
+        }
+
+        if (a instanceof MethodCallExpr) {
+            MethodCallExpr ma = (MethodCallExpr) a;
+            MethodCallExpr mb = (MethodCallExpr) b;
+            if (!ma.getMethodName().equals(mb.getMethodName())) return false;
+            if (!ma.getOwnerClass().equals(mb.getOwnerClass())) return false;
+            if (ma.getArguments().size() != mb.getArguments().size()) return false;
+            for (int i = 0; i < ma.getArguments().size(); i++) {
+                if (!expressionsEqual(ma.getArguments().get(i), mb.getArguments().get(i))) {
+                    return false;
+                }
+            }
+            return expressionsEqual(ma.getReceiver(), mb.getReceiver());
+        }
+
+        if (a instanceof BinaryExpr) {
+            BinaryExpr ba = (BinaryExpr) a;
+            BinaryExpr bb = (BinaryExpr) b;
+            return ba.getOperator() == bb.getOperator() &&
+                   expressionsEqual(ba.getLeft(), bb.getLeft()) &&
+                   expressionsEqual(ba.getRight(), bb.getRight());
+        }
+
+        if (a instanceof UnaryExpr) {
+            UnaryExpr ua = (UnaryExpr) a;
+            UnaryExpr ub = (UnaryExpr) b;
+            return ua.getOperator() == ub.getOperator() &&
+                   expressionsEqual(ua.getOperand(), ub.getOperand());
+        }
+
+        // Fall back to string comparison
+        return a.toString().equals(b.toString());
+    }
+
+    // ========== Boolean Flag Inlining (Phase 3) ==========
+
+    /**
+     * Inlines single-use boolean variables into their condition usage.
+     * Pattern: boolean flag = expr; if (!flag) { ... } -> if (!expr) { ... }
+     */
+    private boolean inlineSingleUseBooleans(List<Statement> stmts) {
+        boolean changed = false;
+
+        for (int i = 0; i < stmts.size() - 1; i++) {
+            Statement stmt = stmts.get(i);
+
+            // Look for: Type varName = expr;
+            if (!(stmt instanceof VarDeclStmt)) continue;
+            VarDeclStmt decl = (VarDeclStmt) stmt;
+
+            // Must be boolean type with initializer
+            if (!isBooleanType(decl.getType())) continue;
+            if (decl.getInitializer() == null) continue;
+
+            String varName = decl.getName();
+            Expression initExpr = decl.getInitializer();
+
+            // Check next statement uses this variable exactly once in condition
+            Statement next = stmts.get(i + 1);
+            if (next instanceof IfStmt) {
+                IfStmt ifStmt = (IfStmt) next;
+                Expression cond = ifStmt.getCondition();
+
+                int useCount = countVariableUses(cond, varName);
+                if (useCount == 1 && !isVariableUsedAfter(stmts, i + 1, varName, ifStmt)) {
+                    // Inline: replace varRef with initExpr
+                    Expression newCond = substituteVariable(cond, varName, initExpr);
+                    ifStmt.setCondition(newCond);
+                    stmts.remove(i);  // Remove the declaration
+                    changed = true;
+                    i--;  // Reprocess this index
+                }
+            } else if (next instanceof WhileStmt) {
+                WhileStmt whileStmt = (WhileStmt) next;
+                Expression cond = whileStmt.getCondition();
+
+                int useCount = countVariableUses(cond, varName);
+                if (useCount == 1 && !isVariableUsedAfter(stmts, i + 1, varName, whileStmt)) {
+                    Expression newCond = substituteVariable(cond, varName, initExpr);
+                    whileStmt.setCondition(newCond);
+                    stmts.remove(i);
+                    changed = true;
+                    i--;
+                }
+            }
+        }
+
+        return changed;
+    }
+
+    private boolean isBooleanType(SourceType type) {
+        if (type == null) return false;
+        String typeName = type.toJavaSource();
+        return "boolean".equals(typeName) || "Boolean".equals(typeName) ||
+               "java.lang.Boolean".equals(typeName);
+    }
+
+    private int countVariableUses(Expression expr, String varName) {
+        int[] count = {0};
+        visitExpressions(expr, e -> {
+            if (e instanceof VarRefExpr && ((VarRefExpr) e).getName().equals(varName)) {
+                count[0]++;
+            }
+        });
+        return count[0];
+    }
+
+    private void visitExpressions(Expression expr, Consumer<Expression> visitor) {
+        if (expr == null) return;
+        visitor.accept(expr);
+
+        if (expr instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) expr;
+            visitExpressions(b.getLeft(), visitor);
+            visitExpressions(b.getRight(), visitor);
+        } else if (expr instanceof UnaryExpr) {
+            visitExpressions(((UnaryExpr) expr).getOperand(), visitor);
+        } else if (expr instanceof MethodCallExpr) {
+            MethodCallExpr mc = (MethodCallExpr) expr;
+            visitExpressions(mc.getReceiver(), visitor);
+            for (Expression arg : mc.getArguments()) {
+                visitExpressions(arg, visitor);
+            }
+        } else if (expr instanceof TernaryExpr) {
+            TernaryExpr t = (TernaryExpr) expr;
+            visitExpressions(t.getCondition(), visitor);
+            visitExpressions(t.getThenExpr(), visitor);
+            visitExpressions(t.getElseExpr(), visitor);
+        } else if (expr instanceof ArrayAccessExpr) {
+            ArrayAccessExpr aa = (ArrayAccessExpr) expr;
+            visitExpressions(aa.getArray(), visitor);
+            visitExpressions(aa.getIndex(), visitor);
+        } else if (expr instanceof FieldAccessExpr) {
+            visitExpressions(((FieldAccessExpr) expr).getReceiver(), visitor);
+        } else if (expr instanceof CastExpr) {
+            visitExpressions(((CastExpr) expr).getExpression(), visitor);
+        } else if (expr instanceof NewExpr) {
+            for (Expression arg : ((NewExpr) expr).getArguments()) {
+                visitExpressions(arg, visitor);
+            }
+        }
+    }
+
+    private boolean isVariableUsedAfter(List<Statement> stmts, int startIdx, String varName, Statement excluding) {
+        for (int i = startIdx; i < stmts.size(); i++) {
+            Statement s = stmts.get(i);
+            if (s == excluding) continue;
+            if (usesVariable(s, varName)) return true;
+        }
+        return false;
+    }
+
+    private Expression substituteVariable(Expression expr, String varName, Expression replacement) {
+        if (expr == null) return null;
+
+        if (expr instanceof VarRefExpr) {
+            VarRefExpr ref = (VarRefExpr) expr;
+            if (ref.getName().equals(varName)) {
+                return replacement;
+            }
+            return expr;
+        }
+
+        if (expr instanceof UnaryExpr) {
+            UnaryExpr unary = (UnaryExpr) expr;
+            Expression newOperand = substituteVariable(unary.getOperand(), varName, replacement);
+            if (newOperand != unary.getOperand()) {
+                return new UnaryExpr(unary.getOperator(), newOperand, unary.getType());
+            }
+            return expr;
+        }
+
+        if (expr instanceof BinaryExpr) {
+            BinaryExpr binary = (BinaryExpr) expr;
+            Expression newLeft = substituteVariable(binary.getLeft(), varName, replacement);
+            Expression newRight = substituteVariable(binary.getRight(), varName, replacement);
+            if (newLeft != binary.getLeft() || newRight != binary.getRight()) {
+                return new BinaryExpr(binary.getOperator(), newLeft, newRight, binary.getType());
+            }
+            return expr;
+        }
+
+        if (expr instanceof MethodCallExpr) {
+            MethodCallExpr mc = (MethodCallExpr) expr;
+            Expression newReceiver = substituteVariable(mc.getReceiver(), varName, replacement);
+            List<Expression> newArgs = new ArrayList<>();
+            boolean argsChanged = false;
+            for (Expression arg : mc.getArguments()) {
+                Expression newArg = substituteVariable(arg, varName, replacement);
+                newArgs.add(newArg);
+                if (newArg != arg) argsChanged = true;
+            }
+            if (newReceiver != mc.getReceiver() || argsChanged) {
+                return new MethodCallExpr(newReceiver, mc.getMethodName(), mc.getOwnerClass(),
+                    newArgs, mc.isStatic(), mc.getType());
+            }
+            return expr;
+        }
+
+        // For other expression types, return as-is
+        return expr;
+    }
+
+    // ========== Nested Negated Guard Flattening (Phase 4) ==========
+
+    /**
+     * Flattens nested negated guard patterns into OR conditions.
+     * Pattern: if(!a) { if(!b) { if(!c) { body } } } earlyExit; -> if(a || b || c) { earlyExit; } body
+     */
+    private boolean flattenNestedNegatedGuards(List<Statement> stmts) {
+        boolean changed = false;
+
+        for (int i = 0; i < stmts.size(); i++) {
+            if (!(stmts.get(i) instanceof IfStmt)) continue;
+            IfStmt outerIf = (IfStmt) stmts.get(i);
+
+            // Must not have else
+            if (outerIf.hasElse()) continue;
+
+            // Collect chain of nested negated-condition ifs
+            List<Expression> positiveConditions = new ArrayList<>();
+            Statement innermostBody = collectNestedNegatedConditions(outerIf, positiveConditions);
+
+            // Need at least 2 negated conditions to transform
+            if (positiveConditions.size() < 2) continue;
+
+            // Check if there's an early exit after the chain
+            if (i + 1 >= stmts.size()) continue;
+            Statement afterIf = stmts.get(i + 1);
+            if (!isEarlyExit(afterIf)) continue;
+
+            // Build OR condition from all the positive conditions
+            Expression orCondition = positiveConditions.get(0);
+            for (int k = 1; k < positiveConditions.size(); k++) {
+                orCondition = new BinaryExpr(
+                    BinaryOperator.OR,
+                    orCondition,
+                    positiveConditions.get(k),
+                    PrimitiveSourceType.BOOLEAN
+                );
+            }
+
+            // Create new if with OR condition containing the early exit
+            IfStmt newIf = new IfStmt(orCondition, afterIf);
+
+            // Replace the nested if with the new OR'd if
+            stmts.set(i, newIf);
+
+            // Replace the early exit with the innermost body
+            if (innermostBody != null) {
+                // Unwrap if it's a block with statements
+                List<Statement> bodyStmts = getStatements(innermostBody);
+                stmts.remove(i + 1);  // Remove old early exit
+                for (int k = 0; k < bodyStmts.size(); k++) {
+                    stmts.add(i + 1 + k, bodyStmts.get(k));
+                }
+            } else {
+                stmts.remove(i + 1);  // Just remove the early exit
+            }
+
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    /**
+     * Collects positive conditions from nested negated if statements.
+     * Returns the innermost body statement.
+     */
+    private Statement collectNestedNegatedConditions(IfStmt ifStmt, List<Expression> positiveConditions) {
+        Expression cond = ifStmt.getCondition();
+
+        // Check if condition is negated
+        Expression positiveCond = getPositiveCondition(cond);
+        if (positiveCond == null) {
+            // Not a negation - stop here
+            return null;
+        }
+
+        positiveConditions.add(positiveCond);
+
+        // Check the then branch
+        Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
+
+        if (inner instanceof IfStmt) {
+            IfStmt innerIf = (IfStmt) inner;
+            if (!innerIf.hasElse()) {
+                // Recursively collect from nested if
+                return collectNestedNegatedConditions(innerIf, positiveConditions);
+            }
+        }
+
+        // This is the innermost body
+        return ifStmt.getThenBranch();
+    }
+
+    /**
+     * Extracts the positive form of a negated condition.
+     * Returns null if the condition is not a negation.
+     */
+    private Expression getPositiveCondition(Expression expr) {
+        // Direct NOT: !x -> x
+        if (expr instanceof UnaryExpr) {
+            UnaryExpr unary = (UnaryExpr) expr;
+            if (unary.getOperator() == UnaryOperator.NOT) {
+                return unary.getOperand();
+            }
+        }
+
+        // Negated comparison: x == false -> x, x != true -> x
+        if (expr instanceof BinaryExpr) {
+            BinaryExpr binary = (BinaryExpr) expr;
+            if (binary.getOperator() == BinaryOperator.EQ) {
+                // x == false -> x (positive is x being true)
+                if (isFalseLiteral(binary.getRight())) {
+                    return binary.getLeft();
+                }
+                if (isFalseLiteral(binary.getLeft())) {
+                    return binary.getRight();
+                }
+            }
+            if (binary.getOperator() == BinaryOperator.NE) {
+                // x != true -> x (positive is x being true)
+                if (isTrueLiteral(binary.getRight())) {
+                    return binary.getLeft();
+                }
+                if (isTrueLiteral(binary.getLeft())) {
+                    return binary.getRight();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isFalseLiteral(Expression expr) {
+        if (expr instanceof LiteralExpr) {
+            Object val = ((LiteralExpr) expr).getValue();
+            return Boolean.FALSE.equals(val) || Integer.valueOf(0).equals(val);
+        }
+        return false;
+    }
+
+    private boolean isTrueLiteral(Expression expr) {
+        if (expr instanceof LiteralExpr) {
+            Object val = ((LiteralExpr) expr).getValue();
+            return Boolean.TRUE.equals(val) || Integer.valueOf(1).equals(val);
         }
         return false;
     }
