@@ -6,7 +6,7 @@ Get up and running with YABR in 5 minutes.
 
 ## Prerequisites
 
-- Java 17 or higher
+- Java 11 or higher
 - Gradle (or use the included wrapper)
 
 ## Setup
