@@ -18,6 +18,12 @@ import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.ConstantValueAttribute;
+import com.tonic.parser.attribute.RuntimeVisibleAnnotationsAttribute;
+import com.tonic.parser.attribute.RuntimeInvisibleAnnotationsAttribute;
+import com.tonic.parser.attribute.anotation.Annotation;
+import com.tonic.parser.attribute.anotation.ElementValue;
+import com.tonic.parser.attribute.anotation.ElementValuePair;
+import com.tonic.parser.attribute.anotation.EnumConst;
 import com.tonic.parser.constpool.*;
 import com.tonic.utill.Modifiers;
 
@@ -149,6 +155,9 @@ public class ClassDecompiler {
             emitImports(writer, className);
         }
 
+        // Class annotations
+        emitClassAnnotations(writer);
+
         // Class declaration
         emitClassDeclaration(writer);
         writer.writeLine(" {");
@@ -250,6 +259,9 @@ public class ClassDecompiler {
     }
 
     private void emitField(IndentingWriter writer, FieldEntry field) {
+        // Field annotations
+        emitFieldAnnotations(writer, field);
+
         int access = field.getAccess();
         StringBuilder sb = new StringBuilder();
 
@@ -419,6 +431,9 @@ public class ClassDecompiler {
     }
 
     private void emitConstructor(IndentingWriter writer, MethodEntry ctor) {
+        // Constructor annotations
+        emitMethodAnnotations(writer, ctor);
+
         int access = ctor.getAccess();
 
         // Modifiers
@@ -466,6 +481,9 @@ public class ClassDecompiler {
     }
 
     private void emitMethod(IndentingWriter writer, MethodEntry method) {
+        // Method annotations
+        emitMethodAnnotations(writer, method);
+
         int access = method.getAccess();
 
         // Modifiers
@@ -680,5 +698,359 @@ public class ClassDecompiler {
      */
     public static String decompile(ClassFile classFile, SourceEmitterConfig config) {
         return new ClassDecompiler(classFile, config).decompile();
+    }
+
+    // ========== Annotation Support ==========
+
+    /**
+     * Emits annotations for a class from its attributes.
+     */
+    private void emitClassAnnotations(IndentingWriter writer) {
+        emitAnnotationsFromAttributes(writer, classFile.getClassAttributes());
+    }
+
+    /**
+     * Emits annotations for a field.
+     */
+    private void emitFieldAnnotations(IndentingWriter writer, FieldEntry field) {
+        if (field.getAttributes() != null) {
+            emitAnnotationsFromAttributes(writer, field.getAttributes());
+        }
+    }
+
+    /**
+     * Emits annotations for a method or constructor.
+     */
+    private void emitMethodAnnotations(IndentingWriter writer, MethodEntry method) {
+        if (method.getAttributes() != null) {
+            emitAnnotationsFromAttributes(writer, method.getAttributes());
+        }
+    }
+
+    /**
+     * Emits annotations from a list of attributes.
+     */
+    private void emitAnnotationsFromAttributes(IndentingWriter writer, List<Attribute> attributes) {
+        if (attributes == null) return;
+
+        for (Attribute attr : attributes) {
+            if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
+                RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
+                for (Annotation ann : annAttr.getAnnotations()) {
+                    emitAnnotation(writer, ann);
+                }
+            } else if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
+                RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
+                for (Annotation ann : annAttr.getAnnotations()) {
+                    emitAnnotation(writer, ann);
+                }
+            }
+        }
+    }
+
+    /**
+     * Emits a single annotation.
+     */
+    private void emitAnnotation(IndentingWriter writer, Annotation ann) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("@");
+
+        // Get annotation type name
+        String typeName = resolveAnnotationType(ann.getTypeIndex());
+        sb.append(formatAnnotationTypeName(typeName));
+
+        // Emit element-value pairs if present
+        List<ElementValuePair> pairs = ann.getElementValuePairs();
+        if (pairs != null && !pairs.isEmpty()) {
+            sb.append("(");
+            if (pairs.size() == 1 && "value".equals(pairs.get(0).getElementName())) {
+                // Single "value" element - use shorthand
+                sb.append(formatElementValue(pairs.get(0).getValue()));
+            } else {
+                // Multiple elements or named element
+                for (int i = 0; i < pairs.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    ElementValuePair pair = pairs.get(i);
+                    sb.append(pair.getElementName());
+                    sb.append(" = ");
+                    sb.append(formatElementValue(pair.getValue()));
+                }
+            }
+            sb.append(")");
+        }
+
+        writer.writeLine(sb.toString());
+    }
+
+    /**
+     * Resolves an annotation type name from a constant pool index.
+     */
+    private String resolveAnnotationType(int typeIndex) {
+        Item<?> item = classFile.getConstPool().getItem(typeIndex);
+        if (item instanceof Utf8Item) {
+            return ((Utf8Item) item).getValue();
+        }
+        return "Unknown";
+    }
+
+    /**
+     * Formats an annotation type name for output.
+     * Converts descriptor format (Ljava/lang/Override;) to simple name (Override).
+     */
+    private String formatAnnotationTypeName(String typeName) {
+        // Remove leading 'L' and trailing ';' if present (descriptor format)
+        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+            typeName = typeName.substring(1, typeName.length() - 1);
+        }
+
+        // Convert slashes to dots
+        typeName = typeName.replace('/', '.');
+
+        // Use simple name if not using fully qualified names
+        if (!emitterConfig.isUseFullyQualifiedNames()) {
+            int lastDot = typeName.lastIndexOf('.');
+            if (lastDot >= 0) {
+                typeName = typeName.substring(lastDot + 1);
+            }
+        }
+
+        return typeName;
+    }
+
+    /**
+     * Formats an element value for annotation output.
+     */
+    private String formatElementValue(ElementValue ev) {
+        int tag = ev.getTag();
+        Object value = ev.getValue();
+
+        switch (tag) {
+            case 'B': // byte
+            case 'S': // short
+            case 'I': // int
+                return formatConstantValue((Integer) value);
+
+            case 'J': // long
+                return formatConstantValue((Integer) value) + "L";
+
+            case 'F': // float
+                return formatConstantValue((Integer) value) + "f";
+
+            case 'D': // double
+                return formatConstantValue((Integer) value);
+
+            case 'C': // char
+                return formatCharConstant((Integer) value);
+
+            case 'Z': // boolean
+                return formatBooleanConstant((Integer) value);
+
+            case 's': // String
+                return formatStringConstant((Integer) value);
+
+            case 'e': // enum
+                EnumConst enumConst = (EnumConst) value;
+                return formatEnumConstant(enumConst);
+
+            case 'c': // class
+                return formatClassConstant((Integer) value);
+
+            case '@': // annotation
+                return formatNestedAnnotation((Annotation) value);
+
+            case '[': // array
+                return formatArrayValue((List<ElementValue>) value);
+
+            default:
+                return "/* unknown element value tag: " + (char) tag + " */";
+        }
+    }
+
+    /**
+     * Formats a constant pool value.
+     */
+    private String formatConstantValue(int cpIndex) {
+        Item<?> item = classFile.getConstPool().getItem(cpIndex);
+
+        if (item instanceof IntegerItem) {
+            return String.valueOf(((IntegerItem) item).getValue());
+        } else if (item instanceof LongItem) {
+            return String.valueOf(((LongItem) item).getValue());
+        } else if (item instanceof FloatItem) {
+            float f = ((FloatItem) item).getValue();
+            if (Float.isNaN(f)) return "Float.NaN";
+            if (f == Float.POSITIVE_INFINITY) return "Float.POSITIVE_INFINITY";
+            if (f == Float.NEGATIVE_INFINITY) return "Float.NEGATIVE_INFINITY";
+            return String.valueOf(f);
+        } else if (item instanceof DoubleItem) {
+            double d = ((DoubleItem) item).getValue();
+            if (Double.isNaN(d)) return "Double.NaN";
+            if (d == Double.POSITIVE_INFINITY) return "Double.POSITIVE_INFINITY";
+            if (d == Double.NEGATIVE_INFINITY) return "Double.NEGATIVE_INFINITY";
+            return String.valueOf(d);
+        }
+
+        return String.valueOf(cpIndex);
+    }
+
+    /**
+     * Formats a char constant from constant pool index.
+     */
+    private String formatCharConstant(int cpIndex) {
+        Item<?> item = classFile.getConstPool().getItem(cpIndex);
+        if (item instanceof IntegerItem) {
+            char c = (char) ((IntegerItem) item).getValue().intValue();
+            if (c >= 32 && c < 127 && c != '\'' && c != '\\') {
+                return "'" + c + "'";
+            }
+            return "'" + String.format("\\u%04x", (int) c) + "'";
+        }
+        return "'?'";
+    }
+
+    /**
+     * Formats a boolean constant from constant pool index.
+     */
+    private String formatBooleanConstant(int cpIndex) {
+        Item<?> item = classFile.getConstPool().getItem(cpIndex);
+        if (item instanceof IntegerItem) {
+            return ((IntegerItem) item).getValue() != 0 ? "true" : "false";
+        }
+        return "false";
+    }
+
+    /**
+     * Formats a String constant from constant pool index.
+     */
+    private String formatStringConstant(int cpIndex) {
+        Item<?> item = classFile.getConstPool().getItem(cpIndex);
+        if (item instanceof Utf8Item) {
+            return "\"" + escapeString(((Utf8Item) item).getValue()) + "\"";
+        } else if (item instanceof StringRefItem) {
+            StringRefItem strItem = (StringRefItem) item;
+            Utf8Item utf8 = (Utf8Item) classFile.getConstPool().getItem(strItem.getValue());
+            if (utf8 != null) {
+                return "\"" + escapeString(utf8.getValue()) + "\"";
+            }
+        }
+        return "\"\"";
+    }
+
+    /**
+     * Formats an enum constant.
+     */
+    private String formatEnumConstant(EnumConst enumConst) {
+        String typeName = resolveUtf8(enumConst.getTypeNameIndex());
+        String constName = resolveUtf8(enumConst.getConstNameIndex());
+
+        // Format type name (remove descriptor format)
+        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+            typeName = typeName.substring(1, typeName.length() - 1);
+        }
+        typeName = typeName.replace('/', '.');
+
+        if (!emitterConfig.isUseFullyQualifiedNames()) {
+            int lastDot = typeName.lastIndexOf('.');
+            if (lastDot >= 0) {
+                typeName = typeName.substring(lastDot + 1);
+            }
+        }
+
+        return typeName + "." + constName;
+    }
+
+    /**
+     * Formats a class constant (e.g., String.class).
+     */
+    private String formatClassConstant(int cpIndex) {
+        String className = resolveUtf8(cpIndex);
+
+        // Handle descriptor format
+        if (className.startsWith("L") && className.endsWith(";")) {
+            className = className.substring(1, className.length() - 1);
+        }
+
+        // Handle primitive type descriptors
+        switch (className) {
+            case "Z": return "boolean.class";
+            case "B": return "byte.class";
+            case "C": return "char.class";
+            case "S": return "short.class";
+            case "I": return "int.class";
+            case "J": return "long.class";
+            case "F": return "float.class";
+            case "D": return "double.class";
+            case "V": return "void.class";
+        }
+
+        // Handle array types
+        if (className.startsWith("[")) {
+            return typeRecoverer.recoverType(className).toJavaSource() + ".class";
+        }
+
+        className = className.replace('/', '.');
+        if (!emitterConfig.isUseFullyQualifiedNames()) {
+            int lastDot = className.lastIndexOf('.');
+            if (lastDot >= 0) {
+                className = className.substring(lastDot + 1);
+            }
+        }
+
+        return className + ".class";
+    }
+
+    /**
+     * Formats a nested annotation.
+     */
+    private String formatNestedAnnotation(Annotation ann) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("@");
+
+        String typeName = resolveAnnotationType(ann.getTypeIndex());
+        sb.append(formatAnnotationTypeName(typeName));
+
+        List<ElementValuePair> pairs = ann.getElementValuePairs();
+        if (pairs != null && !pairs.isEmpty()) {
+            sb.append("(");
+            if (pairs.size() == 1 && "value".equals(pairs.get(0).getElementName())) {
+                sb.append(formatElementValue(pairs.get(0).getValue()));
+            } else {
+                for (int i = 0; i < pairs.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    ElementValuePair pair = pairs.get(i);
+                    sb.append(pair.getElementName());
+                    sb.append(" = ");
+                    sb.append(formatElementValue(pair.getValue()));
+                }
+            }
+            sb.append(")");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Formats an array value.
+     */
+    private String formatArrayValue(List<ElementValue> values) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(formatElementValue(values.get(i)));
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
+    /**
+     * Resolves a UTF-8 string from constant pool index.
+     */
+    private String resolveUtf8(int index) {
+        Item<?> item = classFile.getConstPool().getItem(index);
+        if (item instanceof Utf8Item) {
+            return ((Utf8Item) item).getValue();
+        }
+        return "Unknown";
     }
 }
