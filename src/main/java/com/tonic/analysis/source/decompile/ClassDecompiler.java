@@ -238,20 +238,35 @@ public class ClassDecompiler {
         String simpleName = lastSlash >= 0 ? fullName.substring(lastSlash + 1) : fullName;
         sb.append(simpleName);
 
-        // Superclass
+        // Superclass - skip for interfaces, annotations, and enums (implicit)
         String superName = classFile.getSuperClassName();
-        if (superName != null && !superName.equals("java/lang/Object") && !Modifiers.isInterface(access)) {
+        boolean isEnum = Modifiers.isEnum(access);
+        boolean isAnnotation = Modifiers.isAnnotation(access);
+        if (superName != null && !superName.equals("java/lang/Object")
+                && !superName.equals("java/lang/Enum")
+                && !Modifiers.isInterface(access) && !isAnnotation) {
             sb.append(" extends ").append(formatClassName(superName));
         }
 
-        // Interfaces
+        // Interfaces - skip implicit interfaces (Annotation for @interface, Enum-related for enum)
         List<Integer> interfaces = classFile.getInterfaces();
         if (interfaces != null && !interfaces.isEmpty()) {
-            sb.append(Modifiers.isInterface(access) ? " extends " : " implements ");
-            for (int i = 0; i < interfaces.size(); i++) {
-                if (i > 0) sb.append(", ");
-                String ifaceName = resolveClassName(interfaces.get(i));
-                sb.append(formatClassName(ifaceName));
+            List<String> filteredInterfaces = new ArrayList<>();
+            for (int idx : interfaces) {
+                String ifaceName = resolveClassName(idx);
+                // Skip implicit interfaces
+                if (isAnnotation && "java/lang/annotation/Annotation".equals(ifaceName)) {
+                    continue;
+                }
+                filteredInterfaces.add(ifaceName);
+            }
+
+            if (!filteredInterfaces.isEmpty()) {
+                sb.append(Modifiers.isInterface(access) ? " extends " : " implements ");
+                for (int i = 0; i < filteredInterfaces.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(formatClassName(filteredInterfaces.get(i)));
+                }
             }
         }
 
@@ -485,15 +500,17 @@ public class ClassDecompiler {
         emitMethodAnnotations(writer, method);
 
         int access = method.getAccess();
+        int classAccess = classFile.getAccess();
+        boolean isAnnotationType = Modifiers.isAnnotation(classAccess);
 
-        // Modifiers
+        // Modifiers - skip public/abstract for annotation type methods (they're implicit)
         StringBuilder sb = new StringBuilder();
-        if (Modifiers.isPublic(access)) sb.append("public ");
+        if (!isAnnotationType && Modifiers.isPublic(access)) sb.append("public ");
         if (Modifiers.isPrivate(access)) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
         if (Modifiers.isStatic(access)) sb.append("static ");
         if (Modifiers.isFinal(access)) sb.append("final ");
-        if (Modifiers.isAbstract(access)) sb.append("abstract ");
+        if (!isAnnotationType && Modifiers.isAbstract(access)) sb.append("abstract ");
         if (Modifiers.isSynchronized(access)) sb.append("synchronized ");
         if (Modifiers.isNative(access)) sb.append("native ");
 
@@ -647,11 +664,12 @@ public class ClassDecompiler {
     }
 
     /**
-     * Collects all referenced class types from the constant pool.
+     * Collects all referenced class types from the constant pool and annotations.
      */
     private Set<String> collectReferencedTypes() {
         Set<String> types = new TreeSet<>();
 
+        // Collect from constant pool
         for (Item<?> item : classFile.getConstPool().getItems()) {
             if (item instanceof ClassRefItem) {
                 ClassRefItem classRef = (ClassRefItem) item;
@@ -662,7 +680,107 @@ public class ClassDecompiler {
             }
         }
 
+        // Collect from class annotations
+        collectAnnotationTypes(classFile.getClassAttributes(), types);
+
+        // Collect from field annotations
+        for (FieldEntry field : classFile.getFields()) {
+            if (field.getAttributes() != null) {
+                collectAnnotationTypes(field.getAttributes(), types);
+            }
+        }
+
+        // Collect from method annotations
+        for (MethodEntry method : classFile.getMethods()) {
+            if (method.getAttributes() != null) {
+                collectAnnotationTypes(method.getAttributes(), types);
+            }
+        }
+
         return types;
+    }
+
+    /**
+     * Collects annotation type references from attributes.
+     */
+    private void collectAnnotationTypes(List<Attribute> attributes, Set<String> types) {
+        if (attributes == null) return;
+
+        for (Attribute attr : attributes) {
+            if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
+                RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
+                for (Annotation ann : annAttr.getAnnotations()) {
+                    collectAnnotationTypeRefs(ann, types);
+                }
+            } else if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
+                RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
+                for (Annotation ann : annAttr.getAnnotations()) {
+                    collectAnnotationTypeRefs(ann, types);
+                }
+            }
+        }
+    }
+
+    /**
+     * Recursively collects type references from an annotation and its element values.
+     */
+    private void collectAnnotationTypeRefs(Annotation ann, Set<String> types) {
+        // Add the annotation type itself
+        String typeName = resolveAnnotationType(ann.getTypeIndex());
+        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+            typeName = typeName.substring(1, typeName.length() - 1);
+        }
+        if (!typeName.startsWith("[")) {
+            types.add(typeName);
+        }
+
+        // Check element values for class references and nested annotations
+        if (ann.getElementValuePairs() != null) {
+            for (ElementValuePair pair : ann.getElementValuePairs()) {
+                collectElementValueTypes(pair.getValue(), types);
+            }
+        }
+    }
+
+    /**
+     * Collects type references from an element value.
+     */
+    private void collectElementValueTypes(ElementValue ev, Set<String> types) {
+        int tag = ev.getTag();
+        Object value = ev.getValue();
+
+        switch (tag) {
+            case 'e': // enum - add enum type
+                EnumConst enumConst = (EnumConst) value;
+                String enumType = resolveUtf8(enumConst.getTypeNameIndex());
+                if (enumType.startsWith("L") && enumType.endsWith(";")) {
+                    enumType = enumType.substring(1, enumType.length() - 1);
+                }
+                types.add(enumType);
+                break;
+
+            case 'c': // class literal
+                String className = resolveUtf8((Integer) value);
+                if (className.startsWith("L") && className.endsWith(";")) {
+                    className = className.substring(1, className.length() - 1);
+                }
+                if (!className.startsWith("[") && className.length() > 1) {
+                    types.add(className);
+                }
+                break;
+
+            case '@': // nested annotation
+                collectAnnotationTypeRefs((Annotation) value, types);
+                break;
+
+            case '[': // array
+                @SuppressWarnings("unchecked")
+                List<ElementValue> values = (List<ElementValue>) value;
+                for (ElementValue elemVal : values) {
+                    collectElementValueTypes(elemVal, types);
+                }
+                break;
+        }
     }
 
     /**

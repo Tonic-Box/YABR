@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="more intelligent condition combining in control-flow guards" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="annotation support in decompiler output" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -559,7 +559,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765565111582</updated>
     </task>
-    <option name="localTasksCounter" value="47" />
+    <task id="LOCAL-00047" summary="annotation support in decompiler output">
+      <option name="closed" value="true" />
+      <created>1765565534422</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1765565534422</updated>
+    </task>
+    <option name="localTasksCounter" value="48" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -574,7 +582,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="AST and Decompiler improvements" />
     <MESSAGE value="TypeState.merge() fix" />
     <MESSAGE value="gitignore update" />
     <MESSAGE value="Boolean expression recovery fix" />
@@ -599,7 +606,8 @@
     <MESSAGE value="Better flow recovery" />
     <MESSAGE value="Clean-up" />
     <MESSAGE value="more intelligent condition combining in control-flow guards" />
-    <option name="LAST_COMMIT_MESSAGE" value="more intelligent condition combining in control-flow guards" />
+    <MESSAGE value="annotation support in decompiler output" />
+    <option name="LAST_COMMIT_MESSAGE" value="annotation support in decompiler output" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
