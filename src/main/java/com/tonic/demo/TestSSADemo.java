@@ -115,6 +115,7 @@ public class TestSSADemo {
             classFile.computeFrames();
             classFile.rebuild();
 
+            //C:\test\new\SSAShowcase_out.class
             ClassFileUtil.saveClassFile(classFile.write(), "C:\\test\\new", "SSAShowcase_out");
             System.out.println("Output: SSAShowcase_out.class");
         }

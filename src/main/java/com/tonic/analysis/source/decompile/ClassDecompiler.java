@@ -1,8 +1,11 @@
 package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.transform.ASTTransform;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
+import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
 import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
@@ -47,6 +50,7 @@ public class ClassDecompiler {
     private final ControlFlowReducibility reducibility;
     private final DuplicateBlockMerging duplicateMerging;
     private final ControlFlowSimplifier astSimplifier;
+    private final DeadVariableEliminator deadVarEliminator;
 
     public ClassDecompiler(ClassFile classFile) {
         this(classFile, DecompilerConfig.defaults());
@@ -65,6 +69,7 @@ public class ClassDecompiler {
         this.reducibility = new ControlFlowReducibility();
         this.duplicateMerging = new DuplicateBlockMerging();
         this.astSimplifier = new ControlFlowSimplifier();
+        this.deadVarEliminator = new DeadVariableEliminator();
     }
 
     /**
@@ -436,6 +441,8 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
             astSimplifier.transform(body);
+            deadVarEliminator.transform(body);
+            removeTrailingReturn(body); // Static initializers cannot have return statements
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile static initializer: " + e.getMessage());
@@ -443,6 +450,20 @@ public class ClassDecompiler {
 
         writer.dedent();
         writer.writeLine("}");
+    }
+
+    /**
+     * Removes a trailing void return statement from a block.
+     * Used for static initializers where return statements are invalid in Java source.
+     */
+    private void removeTrailingReturn(BlockStmt body) {
+        List<Statement> stmts = body.getStatements();
+        if (!stmts.isEmpty()) {
+            Statement last = stmts.get(stmts.size() - 1);
+            if (last instanceof ReturnStmt && ((ReturnStmt) last).getValue() == null) {
+                stmts.remove(stmts.size() - 1);
+            }
+        }
     }
 
     private void emitConstructor(IndentingWriter writer, MethodEntry ctor) {
@@ -486,6 +507,7 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
             astSimplifier.transform(body);
+            deadVarEliminator.transform(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile constructor: " + e.getMessage());
@@ -546,6 +568,7 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             astSimplifier.transform(body);
+            deadVarEliminator.transform(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile: " + e.getMessage());
@@ -651,7 +674,7 @@ public class ClassDecompiler {
                 .filter(name -> !isJavaLangClass(name))
                 .filter(name -> !getPackageName(name).equals(thisPackage))
                 .filter(name -> !name.equals(thisClassName)) // Skip self
-                .map(name -> name.replace('/', '.'))
+                .map(name -> name.replace('/', '.').replace('$', '.'))
                 .sorted()
                 .collect(java.util.stream.Collectors.toList());
 

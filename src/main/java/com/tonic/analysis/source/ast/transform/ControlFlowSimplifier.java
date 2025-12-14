@@ -4,6 +4,9 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.ssa.ir.ConstantInstruction;
+import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.value.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +50,9 @@ public class ControlFlowSimplifier implements ASTTransform {
             passChanged |= moveDeclarationsToFirstUse(stmts);
             changed |= passChanged;
         } while (passChanged);
+
+        // Simplify expressions (ternary with equal branches, etc.)
+        changed |= simplifyExpressions(stmts);
 
         // NEW: Inline single-use boolean variables (Phase 3)
         // This must run before guard merging so conditions are inlined
@@ -132,6 +138,143 @@ public class ControlFlowSimplifier implements ASTTransform {
         }
 
         return changed;
+    }
+
+    /**
+     * Simplifies expressions within statements.
+     * - Ternary with equal branches: cond ? x : x -> x
+     */
+    private boolean simplifyExpressions(List<Statement> stmts) {
+        boolean changed = false;
+        for (int i = 0; i < stmts.size(); i++) {
+            Statement stmt = stmts.get(i);
+            Statement simplified = simplifyExpressionsInStatement(stmt);
+            if (simplified != stmt) {
+                stmts.set(i, simplified);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private Statement simplifyExpressionsInStatement(Statement stmt) {
+        if (stmt instanceof ReturnStmt) {
+            ReturnStmt ret = (ReturnStmt) stmt;
+            if (ret.getValue() != null) {
+                Expression simplified = simplifyExpression(ret.getValue());
+                if (simplified != ret.getValue()) {
+                    return new ReturnStmt(simplified);
+                }
+            }
+        } else if (stmt instanceof ExprStmt) {
+            ExprStmt exprStmt = (ExprStmt) stmt;
+            Expression simplified = simplifyExpression(exprStmt.getExpression());
+            if (simplified != exprStmt.getExpression()) {
+                return new ExprStmt(simplified);
+            }
+        } else if (stmt instanceof VarDeclStmt) {
+            VarDeclStmt decl = (VarDeclStmt) stmt;
+            if (decl.getInitializer() != null) {
+                Expression simplified = simplifyExpression(decl.getInitializer());
+                if (simplified != decl.getInitializer()) {
+                    return new VarDeclStmt(decl.getType(), decl.getName(), simplified);
+                }
+            }
+        }
+        return stmt;
+    }
+
+    private Expression simplifyExpression(Expression expr) {
+        // Try to inline VarRefExpr with constant SSA definitions
+        if (expr instanceof VarRefExpr) {
+            VarRefExpr varRef = (VarRefExpr) expr;
+            Expression inlined = tryInlineConstantVarRef(varRef);
+            if (inlined != null) {
+                return inlined;
+            }
+        }
+
+        if (expr instanceof TernaryExpr) {
+            TernaryExpr ternary = (TernaryExpr) expr;
+            Expression thenExpr = simplifyExpression(ternary.getThenExpr());
+            Expression elseExpr = simplifyExpression(ternary.getElseExpr());
+
+            // If both branches are equal, just return one of them
+            if (expressionsEqual(thenExpr, elseExpr)) {
+                return thenExpr;
+            }
+
+            // If branches changed, create new ternary
+            if (thenExpr != ternary.getThenExpr() || elseExpr != ternary.getElseExpr()) {
+                return new TernaryExpr(
+                    simplifyExpression(ternary.getCondition()),
+                    thenExpr,
+                    elseExpr,
+                    ternary.getType()
+                );
+            }
+        } else if (expr instanceof BinaryExpr) {
+            BinaryExpr binary = (BinaryExpr) expr;
+            Expression left = simplifyExpression(binary.getLeft());
+            Expression right = simplifyExpression(binary.getRight());
+            if (left != binary.getLeft() || right != binary.getRight()) {
+                return new BinaryExpr(binary.getOperator(), left, right, binary.getType());
+            }
+        } else if (expr instanceof UnaryExpr) {
+            UnaryExpr unary = (UnaryExpr) expr;
+            Expression operand = simplifyExpression(unary.getOperand());
+            if (operand != unary.getOperand()) {
+                return new UnaryExpr(unary.getOperator(), operand, unary.getType());
+            }
+        } else if (expr instanceof CastExpr) {
+            CastExpr cast = (CastExpr) expr;
+            Expression inner = simplifyExpression(cast.getExpression());
+            if (inner != cast.getExpression()) {
+                return new CastExpr(cast.getTargetType(), inner);
+            }
+        }
+        return expr;
+    }
+
+    /**
+     * Tries to inline a VarRefExpr that has an SSA value with a constant definition.
+     * This handles cases where phi constant propagation left a reference to a variable
+     * that was never declared because the ternary was simplified away.
+     */
+    private Expression tryInlineConstantVarRef(VarRefExpr varRef) {
+        SSAValue ssaValue = varRef.getSsaValue();
+        if (ssaValue == null) {
+            return null;
+        }
+
+        IRInstruction def = ssaValue.getDefinition();
+        if (def instanceof ConstantInstruction) {
+            ConstantInstruction constInstr = (ConstantInstruction) def;
+            Constant constant = constInstr.getConstant();
+            return constantToLiteral(constant, varRef.getType());
+        }
+
+        return null;
+    }
+
+    /**
+     * Converts an SSA constant to a literal expression.
+     */
+    private Expression constantToLiteral(Constant constant, SourceType type) {
+        if (constant instanceof IntConstant) {
+            return LiteralExpr.ofInt(((IntConstant) constant).getValue());
+        } else if (constant instanceof LongConstant) {
+            return LiteralExpr.ofLong(((LongConstant) constant).getValue());
+        } else if (constant instanceof FloatConstant) {
+            return LiteralExpr.ofFloat(((FloatConstant) constant).getValue());
+        } else if (constant instanceof DoubleConstant) {
+            return LiteralExpr.ofDouble(((DoubleConstant) constant).getValue());
+        } else if (constant instanceof StringConstant) {
+            return LiteralExpr.ofString(((StringConstant) constant).getValue());
+        } else if (constant instanceof NullConstant) {
+            return LiteralExpr.ofNull();
+        }
+        return null;
     }
 
     private boolean recurseInto(Statement stmt) {

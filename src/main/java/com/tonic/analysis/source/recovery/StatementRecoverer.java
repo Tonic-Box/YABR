@@ -34,6 +34,36 @@ public class StatementRecoverer {
         this.analyzer = analyzer;
         this.exprRecoverer = exprRecoverer;
         this.typeRecoverer = new TypeRecoverer();
+
+        // Pre-declare parameters so stores to them become assignments, not declarations
+        preDeclareParameters();
+    }
+
+    /**
+     * Pre-declares parameter names so that stores to parameter slots
+     * generate assignment statements instead of variable declarations.
+     */
+    private void preDeclareParameters() {
+        IRMethod method = context.getIrMethod();
+        String descriptor = method.getDescriptor();
+        if (descriptor == null) {
+            return;
+        }
+
+        List<String> paramTypes = parseParameterTypes(descriptor);
+        int slot = method.isStatic() ? 0 : 1; // Skip 'this' for instance methods
+
+        for (int i = 0; i < paramTypes.size(); i++) {
+            String paramName = "arg" + i;
+            context.getExpressionContext().markDeclared(paramName);
+
+            String paramType = paramTypes.get(i);
+            slot++;
+            // Long and double take 2 slots
+            if ("J".equals(paramType) || "D".equals(paramType)) {
+                slot++;
+            }
+        }
     }
 
     private final Set<SSAValue> ternaryPhiValues = new HashSet<>();
@@ -1633,8 +1663,8 @@ public class StatementRecoverer {
         Expression value = exprRecoverer.recoverOperand(store.getValue());
         int localIndex = store.getLocalIndex();
 
-        boolean isStatic = context.getIrMethod().isStatic();
-        String name = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
+        // Use proper name for parameter slots vs local variable slots
+        String name = getNameForLocalSlot(localIndex);
 
         SourceType type = getLocalSlotUnifiedType(name);
         if (type == null) {
@@ -2883,5 +2913,51 @@ public class StatementRecoverer {
             context.getExpressionContext().cacheExpression(phiResult, ternaryExpr);
             context.getExpressionContext().unmarkMaterialized(phiResult);
         }
+    }
+
+    /**
+     * Gets the appropriate variable name for a local slot index.
+     * Returns "this" for slot 0 in instance methods, "argN" for parameter slots,
+     * and "localN" for true local variables.
+     */
+    private String getNameForLocalSlot(int localIndex) {
+        boolean isStatic = context.getIrMethod().isStatic();
+        if (!isStatic && localIndex == 0) {
+            return "this";
+        }
+
+        // Check if this is a parameter slot
+        int paramSlots = computeParameterSlots();
+        if (localIndex < paramSlots) {
+            int argIndex = isStatic ? localIndex : localIndex - 1;
+            return "arg" + argIndex;
+        }
+
+        return "local" + localIndex;
+    }
+
+    /**
+     * Computes the number of local variable slots used by parameters.
+     * Note: for instance methods, slot 0 is 'this', so parameters start at slot 1.
+     * Long and double types take 2 slots.
+     */
+    private int computeParameterSlots() {
+        IRMethod method = context.getIrMethod();
+        int slots = method.isStatic() ? 0 : 1; // 'this' takes slot 0 for instance methods
+
+        String descriptor = method.getDescriptor();
+        if (descriptor == null) {
+            return slots;
+        }
+
+        List<String> paramTypes = parseParameterTypes(descriptor);
+        for (String paramType : paramTypes) {
+            slots++;
+            // Long and double take 2 slots
+            if ("J".equals(paramType) || "D".equals(paramType)) {
+                slots++;
+            }
+        }
+        return slots;
     }
 }
