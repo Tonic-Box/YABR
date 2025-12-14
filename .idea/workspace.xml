@@ -4,12 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="annotation support in decompiler output">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Improvements to recovery in source emission.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestSSADemo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/TestSSADemo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugIR.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugIR.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ast/Decompile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ast/Decompile.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -77,9 +77,22 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
   }
 }</component>
-  <component name="RunManager" selected="Application.Decompile">
+  <component name="RunManager" selected="Application.DebugDoAction">
     <configuration name="ASTMutationDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ASTMutationDemo" />
+      <module name="YABR.main" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tonic.demo.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
       <module name="YABR.main" />
       <extension name="coverage">
         <pattern>
@@ -94,7 +107,7 @@
     <configuration name="Decompile" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ast.Decompile" />
       <module name="YABR.main" />
-      <option name="PROGRAM_PARAMETERS" value="C:\test\new\SSAShowcase_out.class" />
+      <option name="PROGRAM_PARAMETERS" value="C:\test\dumper\do.class" />
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.tonic.demo.ast.*" />
@@ -111,19 +124,6 @@
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.tonic.demo.ast.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="TestBlocks" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.TestBlocks" />
-      <module name="YABR.main" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.tonic.demo.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -172,19 +172,19 @@
     </configuration>
     <list>
       <item itemvalue="Application.Decompile" />
+      <item itemvalue="Application.DebugDoAction" />
       <item itemvalue="Application.Trainer" />
       <item itemvalue="Application.ASTMutationDemo" />
       <item itemvalue="Application.SourceASTDemo" />
-      <item itemvalue="Application.TestBlocks" />
       <item itemvalue="Application.TestSSADemo" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.DebugDoAction" />
         <item itemvalue="Application.Trainer" />
         <item itemvalue="Application.ASTMutationDemo" />
         <item itemvalue="Application.TestSSADemo" />
         <item itemvalue="Application.SourceASTDemo" />
-        <item itemvalue="Application.TestBlocks" />
       </list>
     </recent_temporary>
   </component>
@@ -573,7 +573,23 @@
       <option name="project" value="LOCAL" />
       <updated>1765565534422</updated>
     </task>
-    <option name="localTasksCounter" value="48" />
+    <task id="LOCAL-00048" summary="Improvements to recovery in source emission.">
+      <option name="closed" value="true" />
+      <created>1765671507447</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1765671507447</updated>
+    </task>
+    <task id="LOCAL-00049" summary="Improvements to recovery in source emission.">
+      <option name="closed" value="true" />
+      <created>1765672556509</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1765672556509</updated>
+    </task>
+    <option name="localTasksCounter" value="50" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -588,7 +604,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="TypeState.merge() fix" />
     <MESSAGE value="gitignore update" />
     <MESSAGE value="Boolean expression recovery fix" />
     <MESSAGE value="remove debug" />
@@ -613,7 +628,8 @@
     <MESSAGE value="Clean-up" />
     <MESSAGE value="more intelligent condition combining in control-flow guards" />
     <MESSAGE value="annotation support in decompiler output" />
-    <option name="LAST_COMMIT_MESSAGE" value="annotation support in decompiler output" />
+    <MESSAGE value="Improvements to recovery in source emission." />
+    <option name="LAST_COMMIT_MESSAGE" value="Improvements to recovery in source emission." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

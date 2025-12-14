@@ -1023,13 +1023,13 @@ public class StatementRecoverer {
                     LoadLocalInstruction loadLocal = (LoadLocalInstruction) instr;
                     if (loadLocal.getResult() != null) {
                         int localIndex = loadLocal.getLocalIndex();
-                        String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
+                        String localName = getNameForLocalSlot(localIndex);
                         context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                     }
                 } else if (instr instanceof StoreLocalInstruction) {
                     StoreLocalInstruction storeLocal = (StoreLocalInstruction) instr;
                     int localIndex = storeLocal.getLocalIndex();
-                    String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
+                    String localName = getNameForLocalSlot(localIndex);
 
                     Value storedValue = storeLocal.getValue();
                     SourceType storedType = typeRecoverer.recoverType(storedValue);
@@ -1037,13 +1037,9 @@ public class StatementRecoverer {
                         localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
                     }
 
-                    if (storeLocal.getValue() instanceof SSAValue) {
-                        SSAValue ssaValue = (SSAValue) storeLocal.getValue();
-                        boolean isParameter = ssaValue.getDefinition() == null && method.getParameters().contains(ssaValue);
-                        if (!isParameter) {
-                            context.getExpressionContext().setVariableName(ssaValue, localName);
-                        }
-                    }
+                    // Note: We intentionally do NOT change the name of the source SSA value here.
+                    // The source value already has its correct name (e.g., "arg0" for a parameter phi).
+                    // Changing it to the destination slot name would corrupt expressions.
                 }
             }
         }
@@ -1586,8 +1582,7 @@ public class StatementRecoverer {
                 String existingName = context.getExpressionContext().getVariableName(loadLocal.getResult());
                 if (existingName == null) {
                     int localIndex = loadLocal.getLocalIndex();
-                    boolean isStatic = context.getIrMethod().isStatic();
-                    String localName = (!isStatic && localIndex == 0) ? "this" : "local" + localIndex;
+                    String localName = getNameForLocalSlot(localIndex);
                     context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                 }
                 Expression value = exprRecoverer.recover(loadLocal);
@@ -1674,15 +1669,10 @@ public class StatementRecoverer {
             type = com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
         }
 
-        if (store.getValue() instanceof SSAValue) {
-            SSAValue ssaValue = (SSAValue) store.getValue();
-            boolean isParameter = ssaValue.getDefinition() == null &&
-                                  context.getIrMethod().getParameters().contains(ssaValue);
-            if (!isParameter) {
-                context.getExpressionContext().markMaterialized(ssaValue);
-                context.getExpressionContext().setVariableName(ssaValue, name);
-            }
-        }
+        // Note: We intentionally do NOT change the name of the source SSA value here.
+        // The source value already has its correct name (e.g., "arg0" for a parameter phi).
+        // Changing it to the destination slot name would corrupt expressions like
+        // "local15 = arg0" into "local15 = local15" (self-reference).
 
         if (context.getExpressionContext().isDeclared(name)) {
             VarRefExpr target = new VarRefExpr(name, type, null);

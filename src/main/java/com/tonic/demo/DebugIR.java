@@ -15,7 +15,7 @@ import com.tonic.parser.MethodEntry;
 import java.io.FileInputStream;
 
 /**
- * Debug utility to check for duplicate StoreLocal instructions.
+ * Debug utility to inspect SSA IR for a method.
  */
 public class DebugIR {
 

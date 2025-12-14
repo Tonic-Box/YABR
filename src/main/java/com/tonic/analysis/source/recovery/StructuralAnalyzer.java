@@ -6,6 +6,9 @@ import com.tonic.analysis.ssa.analysis.PostDominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.value.Constant;
+import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
 import lombok.Getter;
 
@@ -180,6 +183,13 @@ public class StructuralAnalyzer {
             return info;
         }
 
+        // Try to find an immediate merge point - a block that both branches reach quickly
+        // This handles cases where the post-dominator is far away but there's a closer merge
+        IRBlock immediateMerge = findImmediateMergePoint(trueTarget, falseTarget, mergePoint);
+        if (immediateMerge != null && immediateMerge != mergePoint) {
+            mergePoint = immediateMerge;
+        }
+
         if (isExitBlock(mergePoint)) {
             IRBlock altMerge = findAlternativeMergePoint(trueTarget, falseTarget, mergePoint);
             if (altMerge != null && altMerge != mergePoint) {
@@ -241,6 +251,17 @@ public class StructuralAnalyzer {
             return info;
         }
 
+        // Check for flat if-chain pattern (dispatch table pattern)
+        // This is where sequential if-statements check the same variable against different constants,
+        // and the false branch is the NEXT check, not a nested else.
+        if (isFlatIfChainPattern(block, trueTarget, falseTarget)) {
+            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+            info.setThenBlock(trueTarget);
+            info.setMergeBlock(falseTarget);  // The next if-check becomes the merge point
+            info.setConditionNegated(false);
+            return info;
+        }
+
         RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
         info.setThenBlock(trueTarget);
         info.setElseBlock(falseTarget);
@@ -256,24 +277,46 @@ public class StructuralAnalyzer {
      * IMPORTANT: An early exit block must NOT be a merge point (multiple predecessors),
      * because a merge point represents a common destination that should be visited
      * after either branch, not skipped as an "early" exit.
+     *
+     * Also handles blocks that GOTO to a shared exit block (common in obfuscated code
+     * where all returns go through a single block).
      */
     private boolean isEarlyExitBlock(IRBlock block) {
         if (block == null) return false;
 
-        IRInstruction terminator = block.getTerminator();
-        if (terminator == null) return false;
-
-        boolean isExit = terminator instanceof ReturnInstruction ||
-                         terminator instanceof ThrowInstruction;
-        if (!isExit) return false;
-
-        if (!block.getSuccessors().isEmpty()) return false;
-
+        // Must have exactly one predecessor (not a merge point)
         if (block.getPredecessors().size() > 1) {
             return false;
         }
 
-        return true;
+        IRInstruction terminator = block.getTerminator();
+        if (terminator == null) return false;
+
+        // Direct return or throw
+        boolean isExit = terminator instanceof ReturnInstruction ||
+                         terminator instanceof ThrowInstruction;
+        if (isExit && block.getSuccessors().isEmpty()) {
+            return true;
+        }
+
+        // Block has a GOTO to a shared exit block
+        if (terminator instanceof GotoInstruction) {
+            List<IRBlock> successors = block.getSuccessors();
+            if (successors.size() == 1) {
+                IRBlock target = successors.get(0);
+                // Target must be an exit block (return/throw with no successors)
+                if (isExitBlock(target)) {
+                    // The goto target can have multiple predecessors (shared exit)
+                    // but this block itself must have only one predecessor
+                    // Also, this block should have no non-trivial instructions
+                    if (!hasNonTrivialInstructions(block)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -357,6 +400,123 @@ public class StructuralAnalyzer {
     }
 
     /**
+     * Finds the immediate merge point for an if-then-else by looking at where both branches
+     * actually converge, rather than relying solely on post-dominator analysis.
+     *
+     * This handles cases where:
+     * - True branch: A → B → C
+     * - False branch: D → E → C
+     * Both reach C, so C is the immediate merge point.
+     *
+     * The post-dominator might find a block much further downstream if there are
+     * multiple exit paths (e.g., shared return blocks).
+     *
+     * @param trueTarget the true branch target
+     * @param falseTarget the false branch target
+     * @param postDomMerge the merge point from post-dominator analysis (for reference)
+     * @return the immediate merge point, or null if not found
+     */
+    private IRBlock findImmediateMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock postDomMerge) {
+        // Use BFS from both branches simultaneously to find the first common block
+        Set<IRBlock> reachableFromTrue = new HashSet<>();
+        Set<IRBlock> reachableFromFalse = new HashSet<>();
+        Queue<IRBlock> trueQueue = new LinkedList<>();
+        Queue<IRBlock> falseQueue = new LinkedList<>();
+
+        trueQueue.add(trueTarget);
+        falseQueue.add(falseTarget);
+
+        // Limit search depth to avoid excessive computation
+        int maxDepth = 20;
+        int depth = 0;
+
+        while (depth < maxDepth && (!trueQueue.isEmpty() || !falseQueue.isEmpty())) {
+            // Expand true branch frontier
+            int trueSize = trueQueue.size();
+            for (int i = 0; i < trueSize; i++) {
+                IRBlock block = trueQueue.poll();
+                if (block == null || reachableFromTrue.contains(block)) continue;
+                reachableFromTrue.add(block);
+
+                // Check if this block is reachable from false branch
+                if (reachableFromFalse.contains(block)) {
+                    // Found a common block - verify it's a good merge point
+                    if (isValidMergePoint(block, trueTarget, falseTarget)) {
+                        return block;
+                    }
+                }
+
+                for (IRBlock succ : block.getSuccessors()) {
+                    if (!reachableFromTrue.contains(succ)) {
+                        trueQueue.add(succ);
+                    }
+                }
+            }
+
+            // Expand false branch frontier
+            int falseSize = falseQueue.size();
+            for (int i = 0; i < falseSize; i++) {
+                IRBlock block = falseQueue.poll();
+                if (block == null || reachableFromFalse.contains(block)) continue;
+                reachableFromFalse.add(block);
+
+                // Check if this block is reachable from true branch
+                if (reachableFromTrue.contains(block)) {
+                    // Found a common block - verify it's a good merge point
+                    if (isValidMergePoint(block, trueTarget, falseTarget)) {
+                        return block;
+                    }
+                }
+
+                for (IRBlock succ : block.getSuccessors()) {
+                    if (!reachableFromFalse.contains(succ)) {
+                        falseQueue.add(succ);
+                    }
+                }
+            }
+
+            depth++;
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks if a block is a valid merge point for an if-then-else.
+     * A valid merge point should be reached by both branches and not be:
+     * - A shared exit block with only one meaningful predecessor path
+     * - A block that's part of a loop back-edge
+     */
+    private boolean isValidMergePoint(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+        // Must have at least 2 predecessors (one from each branch, possibly indirectly)
+        if (block.getPredecessors().size() < 2) {
+            return false;
+        }
+
+        // If it's just a goto to return, it's probably not the real merge point
+        if (block.getInstructions().size() == 1) {
+            IRInstruction instr = block.getInstructions().get(0);
+            if (instr instanceof GotoInstruction) {
+                List<IRBlock> succs = block.getSuccessors();
+                if (succs.size() == 1 && isExitBlock(succs.get(0))) {
+                    return false;
+                }
+            }
+        }
+
+        // Check that this block is dominated by the branch header, not by either target
+        // (If it's dominated by trueTarget, it's in the true branch, not a merge point)
+        if (dominatorTree.dominates(trueTarget, block) && trueTarget != block) {
+            return false;
+        }
+        if (dominatorTree.dominates(falseTarget, block) && falseTarget != block) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Fallback merge point finder using forward reachability.
      * Less accurate than post-dominator but works when post-dominator unavailable.
      */
@@ -404,6 +564,165 @@ public class StructuralAnalyzer {
             }
         }
         return reachable;
+    }
+
+    /**
+     * Detects a flat if-chain pattern where sequential if-statements check the same variable
+     * against different constants. In bytecode, this appears as:
+     *
+     *   if (var != const1) goto L2
+     *   ... action for const1 ...
+     *   goto merge
+     * L2:
+     *   if (var != const2) goto L3
+     *   ... action for const2 ...
+     *   goto merge
+     * L3:
+     *   ...
+     *
+     * The key insight is that the false target (L2) is the NEXT sequential check,
+     * not an else branch. The true branch doesn't fall through to L2.
+     *
+     * @param block the current conditional block
+     * @param trueTarget the true branch target
+     * @param falseTarget the false branch target
+     * @return true if this is a flat if-chain pattern
+     */
+    private boolean isFlatIfChainPattern(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+        // Get the branch instruction from this block
+        IRInstruction terminator = block.getTerminator();
+        if (!(terminator instanceof BranchInstruction)) {
+            return false;
+        }
+        BranchInstruction branch = (BranchInstruction) terminator;
+
+        // Extract the comparison variable from this block's branch
+        SSAValue conditionVar = extractComparisonVariable(branch);
+        if (conditionVar == null) {
+            return false;
+        }
+
+        // Check if false target is also a conditional block
+        IRInstruction falseTerm = falseTarget.getTerminator();
+        if (!(falseTerm instanceof BranchInstruction)) {
+            return false;
+        }
+        BranchInstruction falseBranch = (BranchInstruction) falseTerm;
+
+        // Check if the false target's condition uses the same variable
+        SSAValue falseCondVar = extractComparisonVariable(falseBranch);
+        if (falseCondVar == null) {
+            return false;
+        }
+
+        // The variables must be the same (same SSA value or same definition)
+        if (!isSameVariable(conditionVar, falseCondVar)) {
+            return false;
+        }
+
+        // The true branch should NOT directly reach the false target
+        // (i.e., it should go elsewhere - to a merge point or return)
+        Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
+        if (reachableFromTrue.contains(falseTarget)) {
+            // If true branch can reach false target, it might be a fall-through pattern,
+            // not a flat if-chain
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Extracts the variable being compared in a branch instruction.
+     * For comparisons like (var == const) or (const == var), returns the variable.
+     * Returns null if neither operand is a constant, or if both are constants.
+     */
+    private SSAValue extractComparisonVariable(BranchInstruction branch) {
+        CompareOp op = branch.getCondition();
+
+        // Must be an equality or inequality comparison
+        if (op != CompareOp.EQ && op != CompareOp.NE) {
+            return null;
+        }
+
+        Value left = branch.getLeft();
+        Value right = branch.getRight();
+
+        if (right == null) {
+            // Unary comparison (e.g., IFEQ/IFNE) - left is the variable
+            if (left instanceof SSAValue) {
+                return (SSAValue) left;
+            }
+            return null;
+        }
+
+        // Binary comparison - one side should be constant, other should be variable
+        boolean leftIsConst = left instanceof Constant;
+        boolean rightIsConst = right instanceof Constant;
+
+        if (leftIsConst && !rightIsConst && right instanceof SSAValue) {
+            return (SSAValue) right;
+        }
+        if (!leftIsConst && rightIsConst && left instanceof SSAValue) {
+            return (SSAValue) left;
+        }
+
+        // Both are constants or both are variables - not a simple dispatch pattern
+        return null;
+    }
+
+    /**
+     * Checks if two SSA values represent the same variable.
+     * This handles cases where the same local variable has different SSA versions.
+     */
+    private boolean isSameVariable(SSAValue v1, SSAValue v2) {
+        if (v1 == v2) {
+            return true;
+        }
+
+        // Check if both come from the same local variable slot
+        int local1 = getLocalIndex(v1);
+        int local2 = getLocalIndex(v2);
+        if (local1 >= 0 && local1 == local2) {
+            return true;
+        }
+
+        // Check if they have the same name (e.g., both are "local17")
+        String name1 = v1.getName();
+        String name2 = v2.getName();
+        if (name1 != null && name1.equals(name2)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets the local variable index for an SSA value, if it was loaded from a local.
+     */
+    private int getLocalIndex(SSAValue value) {
+        IRInstruction def = value.getDefinition();
+        if (def instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) def).getLocalIndex();
+        }
+        // Also check phi instructions - they might all come from same local
+        if (def instanceof PhiInstruction) {
+            PhiInstruction phi = (PhiInstruction) def;
+            int commonIndex = -1;
+            for (Value incoming : phi.getIncomingValues().values()) {
+                if (incoming instanceof SSAValue) {
+                    int idx = getLocalIndex((SSAValue) incoming);
+                    if (idx < 0) return -1;
+                    if (commonIndex < 0) {
+                        commonIndex = idx;
+                    } else if (commonIndex != idx) {
+                        return -1;
+                    }
+                }
+            }
+            return commonIndex;
+        }
+        return -1;
     }
 
     private void analyzeSwitch(IRBlock block, SwitchInstruction sw) {

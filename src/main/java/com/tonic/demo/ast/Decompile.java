@@ -67,33 +67,33 @@ public class Decompile {
         // Load the class file
         ClassFile cf = ClassPool.getDefault().loadClass(new FileInputStream(classPath));
 
-//        for (MethodEntry method : cf.getMethods()) {
-//            if (method.getCodeAttribute() == null) continue;
-//
-//            SSA ssa = new SSA(cf.getConstPool());
-//            IRMethod irMethod = ssa.lift(method);
-//            if (irMethod == null) continue;
-//
-//            boolean has1000L = irMethod.getBlocks().stream()
-//                    .flatMap(b -> b.getInstructions().stream())
-//                    .anyMatch(insn -> {
-//                        if (insn instanceof ConstantInstruction) {
-//                            ConstantInstruction ci = (ConstantInstruction) insn;
-//                            if (ci.getConstant() instanceof LongConstant) {
-//                                LongConstant lc = (LongConstant) ci.getConstant();
-//                                return lc.getValue().equals(1000L);
-//                            }
-//                        }
-//                        return false;
-//                    });
-//
-//            if (has1000L) {
-//                System.out.println("# Found: " + method.getName() + method.getDesc());
-//                BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, method);
-//                System.out.println(SourceEmitter.emit(ast));
-//                System.out.println("\n\n");
-//            }
-//        }
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getCodeAttribute() == null) continue;
+
+            SSA ssa = new SSA(cf.getConstPool());
+            IRMethod irMethod = ssa.lift(method);
+            if (irMethod == null) continue;
+
+            boolean has1000L = irMethod.getBlocks().stream()
+                    .flatMap(b -> b.getInstructions().stream())
+                    .anyMatch(insn -> {
+                        if (insn instanceof ConstantInstruction) {
+                            ConstantInstruction ci = (ConstantInstruction) insn;
+                            if (ci.getConstant() instanceof LongConstant) {
+                                LongConstant lc = (LongConstant) ci.getConstant();
+                                return lc.getValue().equals(1000L);
+                            }
+                        }
+                        return false;
+                    });
+
+            if (has1000L) {
+                System.out.println("# Found: " + method.getName() + method.getDesc());
+                BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, method);
+                System.out.println(SourceEmitter.emit(ast));
+                System.out.println("\n\n");
+            }
+        }
 
         // Configure the emitter
         SourceEmitterConfig emitterConfig = SourceEmitterConfig.builder()
@@ -111,7 +111,7 @@ public class Decompile {
         // Decompile and print
         System.out.println("Decompiling class: " + cf.getClassName());
         String source = new ClassDecompiler(cf, decompilerConfig).decompile();
-        Files.writeString(Path.of("output.java"), source);
+        Files.writeString(Path.of(cf.getClassName().replace("/", ".") + ".java"), source);
 
         System.out.println("Decompiled with preset: " + preset);
         System.out.println("Output written to: output.java");
