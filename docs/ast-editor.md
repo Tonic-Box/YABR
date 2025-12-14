@@ -2,29 +2,17 @@
 
 # AST Editor API
 
-The AST Editor API provides a Javassist ExprEditor-inspired interface for traversing and transforming AST nodes. It enables targeted interception and replacement of specific expressions and statements during AST traversal.
+The AST Editor API provides a handler-based interface for traversing and transforming AST nodes. It enables targeted interception and replacement of specific expressions and statements during AST traversal.
 
 ## What is the AST Editor?
 
-The AST Editor operates at the source AST level (unlike Javassist's bytecode-level ExprEditor) and provides:
+The AST Editor operates at the source AST level and provides:
 
 - **Handler-based interception** - Register handlers for specific expression/statement types
-- **Type-safe replacements** - Replace nodes with new AST nodes (not strings)
+- **Type-safe replacements** - Replace nodes with new AST nodes
 - **Context awareness** - Access method info, nesting depth, and factory methods
 - **Matcher-based filtering** - Use predicates for flexible node matching
 - **Rich expression support** - 9 expression types + 6 statement types with handlers
-
-## Comparison: Javassist vs YABR ASTEditor
-
-| Feature | Javassist ExprEditor | YABR ASTEditor |
-|---------|---------------------|----------------|
-| Level | Bytecode | Source AST |
-| Expression Types | 8 | 9+ (with handlers) |
-| Statement Support | Limited | Full (6 types with handlers) |
-| Replacement | String-based (`$_`, `$proceed`) | Type-safe AST nodes |
-| Context | Minimal | Full (method, location, nesting) |
-| Matchers | None | Predicate-based filtering |
-| Factory | None | Fluent AST building |
 
 ## Quick Start
 
