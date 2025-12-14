@@ -1,9 +1,11 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.value.*;
@@ -11,7 +13,8 @@ import com.tonic.analysis.ssa.value.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Simplifies control flow in AST to reduce nesting depth and improve readability.
@@ -643,59 +646,31 @@ public class ControlFlowSimplifier implements ASTTransform {
         return candidate;
     }
 
+    /**
+     * Checks if a statement uses (reads or declares) the given variable.
+     * Uses visitor pattern for complete traversal.
+     */
     private boolean usesVariable(Statement stmt, String varName) {
         if (stmt == null) return false;
-        if (stmt instanceof BlockStmt) {
-            for (Statement s : ((BlockStmt) stmt).getStatements()) {
-                if (usesVariable(s, varName)) return true;
+        AtomicBoolean found = new AtomicBoolean(false);
+        stmt.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitVarRef(VarRefExpr expr) {
+                if (expr.getName().equals(varName)) {
+                    found.set(true);
+                }
+                return super.visitVarRef(expr);
             }
-            return false;
-        }
-        if (stmt instanceof ExprStmt) {
-            return readsVariableExpr(((ExprStmt) stmt).getExpression(), varName, false);
-        }
-        if (stmt instanceof VarDeclStmt) {
-            VarDeclStmt vd = (VarDeclStmt) stmt;
-            if (vd.getName().equals(varName)) return true;
-            return vd.getInitializer() != null && readsVariableExpr(vd.getInitializer(), varName, false);
-        }
-        if (stmt instanceof IfStmt) {
-            IfStmt is = (IfStmt) stmt;
-            return readsVariableExpr(is.getCondition(), varName, false) ||
-                   usesVariable(is.getThenBranch(), varName) ||
-                   (is.hasElse() && usesVariable(is.getElseBranch(), varName));
-        }
-        if (stmt instanceof WhileStmt) {
-            WhileStmt ws = (WhileStmt) stmt;
-            return readsVariableExpr(ws.getCondition(), varName, false) || usesVariable(ws.getBody(), varName);
-        }
-        if (stmt instanceof ForStmt) {
-            ForStmt fs = (ForStmt) stmt;
-            for (Statement init : fs.getInit()) {
-                if (usesVariable(init, varName)) return true;
+
+            @Override
+            public Void visitVarDecl(VarDeclStmt stmt) {
+                if (stmt.getName().equals(varName)) {
+                    found.set(true);
+                }
+                return super.visitVarDecl(stmt);
             }
-            if (fs.getCondition() != null && readsVariableExpr(fs.getCondition(), varName, false)) return true;
-            for (Expression upd : fs.getUpdate()) {
-                if (readsVariableExpr(upd, varName, false)) return true;
-            }
-            return usesVariable(fs.getBody(), varName);
-        }
-        if (stmt instanceof ReturnStmt) {
-            ReturnStmt rs = (ReturnStmt) stmt;
-            return rs.getValue() != null && readsVariableExpr(rs.getValue(), varName, false);
-        }
-        if (stmt instanceof ThrowStmt) {
-            return readsVariableExpr(((ThrowStmt) stmt).getException(), varName, false);
-        }
-        if (stmt instanceof TryCatchStmt) {
-            TryCatchStmt tc = (TryCatchStmt) stmt;
-            if (usesVariable(tc.getTryBlock(), varName)) return true;
-            for (CatchClause cc : tc.getCatches()) {
-                if (usesVariable(cc.body(), varName)) return true;
-            }
-            return tc.getFinallyBlock() != null && usesVariable(tc.getFinallyBlock(), varName);
-        }
-        return false;
+        });
+        return found.get();
     }
 
     private boolean isDefaultValue(Expression expr) {
@@ -760,51 +735,33 @@ public class ControlFlowSimplifier implements ASTTransform {
         return true; // Conservative for unknown statements
     }
 
+    /**
+     * Checks if an expression reads the given variable.
+     * Uses visitor pattern with special handling for assignment LHS.
+     */
     private boolean readsVariableExpr(Expression expr, String varName, boolean skipAssignLeft) {
-        if (expr instanceof VarRefExpr) {
-            return ((VarRefExpr) expr).getName().equals(varName);
-        }
-        if (expr instanceof BinaryExpr) {
-            BinaryExpr b = (BinaryExpr) expr;
-            boolean checkLeft = !skipAssignLeft || b.getOperator() != BinaryOperator.ASSIGN;
-            if (checkLeft && readsVariableExpr(b.getLeft(), varName, false)) return true;
-            return readsVariableExpr(b.getRight(), varName, false);
-        }
-        if (expr instanceof UnaryExpr) {
-            return readsVariableExpr(((UnaryExpr) expr).getOperand(), varName, false);
-        }
-        if (expr instanceof MethodCallExpr) {
-            MethodCallExpr mc = (MethodCallExpr) expr;
-            if (mc.getReceiver() != null && readsVariableExpr(mc.getReceiver(), varName, false)) return true;
-            for (Expression arg : mc.getArguments()) {
-                if (readsVariableExpr(arg, varName, false)) return true;
+        if (expr == null) return false;
+        AtomicBoolean found = new AtomicBoolean(false);
+        expr.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitVarRef(VarRefExpr e) {
+                if (e.getName().equals(varName)) {
+                    found.set(true);
+                }
+                return null;
             }
-        }
-        if (expr instanceof TernaryExpr) {
-            TernaryExpr t = (TernaryExpr) expr;
-            return readsVariableExpr(t.getCondition(), varName, false) ||
-                   readsVariableExpr(t.getThenExpr(), varName, false) ||
-                   readsVariableExpr(t.getElseExpr(), varName, false);
-        }
-        if (expr instanceof ArrayAccessExpr) {
-            ArrayAccessExpr aa = (ArrayAccessExpr) expr;
-            return readsVariableExpr(aa.getArray(), varName, false) ||
-                   readsVariableExpr(aa.getIndex(), varName, false);
-        }
-        if (expr instanceof FieldAccessExpr) {
-            FieldAccessExpr fa = (FieldAccessExpr) expr;
-            return fa.getReceiver() != null && readsVariableExpr(fa.getReceiver(), varName, false);
-        }
-        if (expr instanceof CastExpr) {
-            return readsVariableExpr(((CastExpr) expr).getExpression(), varName, false);
-        }
-        if (expr instanceof NewExpr) {
-            NewExpr ne = (NewExpr) expr;
-            for (Expression arg : ne.getArguments()) {
-                if (readsVariableExpr(arg, varName, false)) return true;
+
+            @Override
+            public Void visitBinary(BinaryExpr e) {
+                if (skipAssignLeft && e.getOperator() == BinaryOperator.ASSIGN) {
+                    // Skip left side of assignment
+                    e.getRight().accept(this);
+                    return null;
+                }
+                return super.visitBinary(e);
             }
-        }
-        return false;
+        });
+        return found.get();
     }
 
     // ========== Sequential Guard Merging (Phase 1) ==========
@@ -1006,50 +963,22 @@ public class ControlFlowSimplifier implements ASTTransform {
                "java.lang.Boolean".equals(typeName);
     }
 
+    /**
+     * Counts how many times a variable is referenced in an expression.
+     * Uses visitor pattern for complete traversal.
+     */
     private int countVariableUses(Expression expr, String varName) {
-        int[] count = {0};
-        visitExpressions(expr, e -> {
-            if (e instanceof VarRefExpr && ((VarRefExpr) e).getName().equals(varName)) {
-                count[0]++;
+        AtomicInteger count = new AtomicInteger(0);
+        expr.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitVarRef(VarRefExpr e) {
+                if (e.getName().equals(varName)) {
+                    count.incrementAndGet();
+                }
+                return super.visitVarRef(e);
             }
         });
-        return count[0];
-    }
-
-    private void visitExpressions(Expression expr, Consumer<Expression> visitor) {
-        if (expr == null) return;
-        visitor.accept(expr);
-
-        if (expr instanceof BinaryExpr) {
-            BinaryExpr b = (BinaryExpr) expr;
-            visitExpressions(b.getLeft(), visitor);
-            visitExpressions(b.getRight(), visitor);
-        } else if (expr instanceof UnaryExpr) {
-            visitExpressions(((UnaryExpr) expr).getOperand(), visitor);
-        } else if (expr instanceof MethodCallExpr) {
-            MethodCallExpr mc = (MethodCallExpr) expr;
-            visitExpressions(mc.getReceiver(), visitor);
-            for (Expression arg : mc.getArguments()) {
-                visitExpressions(arg, visitor);
-            }
-        } else if (expr instanceof TernaryExpr) {
-            TernaryExpr t = (TernaryExpr) expr;
-            visitExpressions(t.getCondition(), visitor);
-            visitExpressions(t.getThenExpr(), visitor);
-            visitExpressions(t.getElseExpr(), visitor);
-        } else if (expr instanceof ArrayAccessExpr) {
-            ArrayAccessExpr aa = (ArrayAccessExpr) expr;
-            visitExpressions(aa.getArray(), visitor);
-            visitExpressions(aa.getIndex(), visitor);
-        } else if (expr instanceof FieldAccessExpr) {
-            visitExpressions(((FieldAccessExpr) expr).getReceiver(), visitor);
-        } else if (expr instanceof CastExpr) {
-            visitExpressions(((CastExpr) expr).getExpression(), visitor);
-        } else if (expr instanceof NewExpr) {
-            for (Expression arg : ((NewExpr) expr).getArguments()) {
-                visitExpressions(arg, visitor);
-            }
-        }
+        return count.get();
     }
 
     private boolean isVariableUsedAfter(List<Statement> stmts, int startIdx, String varName, Statement excluding) {

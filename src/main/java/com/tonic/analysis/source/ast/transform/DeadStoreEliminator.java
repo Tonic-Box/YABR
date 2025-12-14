@@ -1,9 +1,12 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
+import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Eliminates dead stores where a variable's initial value is never read.
@@ -219,6 +222,7 @@ public class DeadStoreEliminator implements ASTTransform {
 
     /**
      * Checks if a statement reads the given variable.
+     * Uses visitor pattern for expression traversal.
      */
     private boolean readsVariable(Statement stmt, String varName) {
         if (stmt instanceof VarDeclStmt) {
@@ -226,6 +230,7 @@ public class DeadStoreEliminator implements ASTTransform {
             if (decl.getInitializer() != null) {
                 return readsVariable(decl.getInitializer(), varName);
             }
+            return false;
         } else if (stmt instanceof ExprStmt) {
             return readsVariable(((ExprStmt) stmt).getExpression(), varName);
         } else if (stmt instanceof ReturnStmt) {
@@ -233,144 +238,149 @@ public class DeadStoreEliminator implements ASTTransform {
             if (ret.getValue() != null) {
                 return readsVariable(ret.getValue(), varName);
             }
+            return false;
         }
         // For other statements, be conservative and assume they might read
-        return !(stmt instanceof VarDeclStmt || stmt instanceof ExprStmt || stmt instanceof ReturnStmt);
+        return true;
     }
 
     /**
      * Checks if an expression reads the given variable.
+     * Uses visitor pattern to traverse all VarRefExpr nodes.
      */
     private boolean readsVariable(Expression expr, String varName) {
-        if (expr instanceof VarRefExpr) {
-            return ((VarRefExpr) expr).getName().equals(varName);
-        } else if (expr instanceof BinaryExpr) {
-            BinaryExpr binary = (BinaryExpr) expr;
-            // For simple assignment, LHS is a write not a read
-            if (binary.getOperator() == BinaryOperator.ASSIGN && binary.getLeft() instanceof VarRefExpr) {
-                // Only check RHS
-                return readsVariable(binary.getRight(), varName);
-            }
-            return readsVariable(binary.getLeft(), varName) || readsVariable(binary.getRight(), varName);
-        } else if (expr instanceof UnaryExpr) {
-            return readsVariable(((UnaryExpr) expr).getOperand(), varName);
-        } else if (expr instanceof TernaryExpr) {
-            TernaryExpr ternary = (TernaryExpr) expr;
-            return readsVariable(ternary.getCondition(), varName) ||
-                   readsVariable(ternary.getThenExpr(), varName) ||
-                   readsVariable(ternary.getElseExpr(), varName);
-        } else if (expr instanceof MethodCallExpr) {
-            MethodCallExpr call = (MethodCallExpr) expr;
-            if (call.getReceiver() != null && readsVariable(call.getReceiver(), varName)) {
-                return true;
-            }
-            for (Expression arg : call.getArguments()) {
-                if (readsVariable(arg, varName)) {
-                    return true;
-                }
-            }
-        } else if (expr instanceof FieldAccessExpr) {
-            FieldAccessExpr field = (FieldAccessExpr) expr;
-            if (field.getReceiver() != null) {
-                return readsVariable(field.getReceiver(), varName);
-            }
-        } else if (expr instanceof ArrayAccessExpr) {
-            ArrayAccessExpr array = (ArrayAccessExpr) expr;
-            return readsVariable(array.getArray(), varName) || readsVariable(array.getIndex(), varName);
-        } else if (expr instanceof CastExpr) {
-            return readsVariable(((CastExpr) expr).getExpression(), varName);
-        } else if (expr instanceof InstanceOfExpr) {
-            return readsVariable(((InstanceOfExpr) expr).getExpression(), varName);
-        } else if (expr instanceof NewExpr) {
-            NewExpr newExpr = (NewExpr) expr;
-            if (newExpr.getArguments() != null) {
-                for (Expression arg : newExpr.getArguments()) {
-                    if (readsVariable(arg, varName)) {
-                        return true;
-                    }
-                }
-            }
-        } else if (expr instanceof NewArrayExpr) {
-            NewArrayExpr newArray = (NewArrayExpr) expr;
-            for (Expression dim : newArray.getDimensions()) {
-                if (readsVariable(dim, varName)) {
-                    return true;
-                }
-            }
-        } else if (expr instanceof ArrayInitExpr) {
-            ArrayInitExpr init = (ArrayInitExpr) expr;
-            for (Expression elem : init.getElements()) {
-                if (readsVariable(elem, varName)) {
-                    return true;
-                }
-            }
+        AtomicBoolean found = new AtomicBoolean(false);
+        expr.accept(new VariableReadChecker(varName, found));
+        return found.get();
+    }
+
+    /**
+     * Visitor that checks if a specific variable is read in an expression.
+     * Handles the special case where assignment LHS is a write, not a read.
+     */
+    private static class VariableReadChecker extends AbstractSourceVisitor<Void> {
+        private final String varName;
+        private final AtomicBoolean found;
+
+        VariableReadChecker(String varName, AtomicBoolean found) {
+            this.varName = varName;
+            this.found = found;
         }
-        return false;
+
+        @Override
+        public Void visitVarRef(VarRefExpr expr) {
+            if (expr.getName().equals(varName)) {
+                found.set(true);
+            }
+            return null;
+        }
+
+        @Override
+        public Void visitBinary(BinaryExpr expr) {
+            if (found.get()) return null;  // Short-circuit if already found
+
+            // For simple assignment, LHS is a write not a read
+            if (expr.getOperator() == BinaryOperator.ASSIGN && expr.getLeft() instanceof VarRefExpr) {
+                // Only check RHS
+                expr.getRight().accept(this);
+                return null;
+            }
+            return super.visitBinary(expr);
+        }
     }
 
     /**
      * Determines if an expression has side effects that must be preserved.
+     * Uses visitor pattern for consistent implementation.
      */
     private boolean hasSideEffects(Expression expr) {
-        if (expr instanceof LiteralExpr) {
-            return false;
-        } else if (expr instanceof VarRefExpr) {
-            return false;
-        } else if (expr instanceof ThisExpr || expr instanceof SuperExpr) {
-            return false;
-        } else if (expr instanceof ClassExpr) {
-            return false;
-        } else if (expr instanceof BinaryExpr) {
-            BinaryExpr binary = (BinaryExpr) expr;
-            if (binary.getOperator().isAssignment()) {
-                return true;
-            }
-            return hasSideEffects(binary.getLeft()) || hasSideEffects(binary.getRight());
-        } else if (expr instanceof UnaryExpr) {
-            UnaryExpr unary = (UnaryExpr) expr;
-            UnaryOperator op = unary.getOperator();
+        return expr.accept(SideEffectDetector.INSTANCE);
+    }
+
+    /**
+     * Visitor that detects side effects in expressions.
+     */
+    private static class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
+        static final SideEffectDetector INSTANCE = new SideEffectDetector();
+
+        @Override
+        protected Boolean defaultValue() { return true; }
+
+        @Override
+        public Boolean visitLiteral(LiteralExpr expr) { return false; }
+
+        @Override
+        public Boolean visitVarRef(VarRefExpr expr) { return false; }
+
+        @Override
+        public Boolean visitThis(ThisExpr expr) { return false; }
+
+        @Override
+        public Boolean visitSuper(SuperExpr expr) { return false; }
+
+        @Override
+        public Boolean visitClass(ClassExpr expr) { return false; }
+
+        @Override
+        public Boolean visitLambda(LambdaExpr expr) { return false; }
+
+        @Override
+        public Boolean visitMethodRef(MethodRefExpr expr) { return false; }
+
+        @Override
+        public Boolean visitBinary(BinaryExpr expr) {
+            if (expr.getOperator().isAssignment()) return true;
+            return expr.getLeft().accept(this) || expr.getRight().accept(this);
+        }
+
+        @Override
+        public Boolean visitUnary(UnaryExpr expr) {
+            UnaryOperator op = expr.getOperator();
             if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC ||
                 op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC) {
                 return true;
             }
-            return hasSideEffects(unary.getOperand());
-        } else if (expr instanceof TernaryExpr) {
-            TernaryExpr ternary = (TernaryExpr) expr;
-            return hasSideEffects(ternary.getCondition()) ||
-                   hasSideEffects(ternary.getThenExpr()) ||
-                   hasSideEffects(ternary.getElseExpr());
-        } else if (expr instanceof CastExpr) {
-            return hasSideEffects(((CastExpr) expr).getExpression());
-        } else if (expr instanceof InstanceOfExpr) {
-            return hasSideEffects(((InstanceOfExpr) expr).getExpression());
-        } else if (expr instanceof MethodCallExpr) {
-            return true;
-        } else if (expr instanceof NewExpr) {
-            return true;
-        } else if (expr instanceof FieldAccessExpr) {
-            FieldAccessExpr field = (FieldAccessExpr) expr;
-            if (field.getReceiver() != null) {
-                return hasSideEffects(field.getReceiver());
+            return expr.getOperand().accept(this);
+        }
+
+        @Override
+        public Boolean visitTernary(TernaryExpr expr) {
+            return expr.getCondition().accept(this) ||
+                   expr.getThenExpr().accept(this) ||
+                   expr.getElseExpr().accept(this);
+        }
+
+        @Override
+        public Boolean visitCast(CastExpr expr) { return expr.getExpression().accept(this); }
+
+        @Override
+        public Boolean visitInstanceOf(InstanceOfExpr expr) { return expr.getExpression().accept(this); }
+
+        @Override
+        public Boolean visitMethodCall(MethodCallExpr expr) { return true; }
+
+        @Override
+        public Boolean visitNew(NewExpr expr) { return true; }
+
+        @Override
+        public Boolean visitNewArray(NewArrayExpr expr) { return true; }
+
+        @Override
+        public Boolean visitFieldAccess(FieldAccessExpr expr) {
+            return expr.getReceiver() != null && expr.getReceiver().accept(this);
+        }
+
+        @Override
+        public Boolean visitArrayAccess(ArrayAccessExpr expr) {
+            return expr.getArray().accept(this) || expr.getIndex().accept(this);
+        }
+
+        @Override
+        public Boolean visitArrayInit(ArrayInitExpr expr) {
+            for (Expression elem : expr.getElements()) {
+                if (elem.accept(this)) return true;
             }
-            return false;
-        } else if (expr instanceof ArrayAccessExpr) {
-            ArrayAccessExpr array = (ArrayAccessExpr) expr;
-            return hasSideEffects(array.getArray()) || hasSideEffects(array.getIndex());
-        } else if (expr instanceof NewArrayExpr) {
-            return true;
-        } else if (expr instanceof ArrayInitExpr) {
-            ArrayInitExpr init = (ArrayInitExpr) expr;
-            for (Expression elem : init.getElements()) {
-                if (hasSideEffects(elem)) {
-                    return true;
-                }
-            }
-            return false;
-        } else if (expr instanceof LambdaExpr) {
-            return false;
-        } else if (expr instanceof MethodRefExpr) {
             return false;
         }
-        return true;
     }
 }

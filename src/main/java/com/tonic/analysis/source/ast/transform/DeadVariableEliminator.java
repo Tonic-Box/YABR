@@ -1,7 +1,9 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
+import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 
 import java.util.HashSet;
 import java.util.List;
@@ -55,258 +57,62 @@ public class DeadVariableEliminator implements ASTTransform {
 
     /**
      * Collects all variable names that are READ (not just written to).
-     * A variable is "read" if it appears in a VarRefExpr that is NOT the
-     * left-hand side of an assignment.
+     * Uses visitor pattern to traverse all expressions in the AST.
      */
     private Set<String> collectReadVariables(BlockStmt block) {
         Set<String> read = new HashSet<>();
-        collectReadVariablesFromStatements(block.getStatements(), read);
+        block.accept(new ReadVariableCollector(read));
         return read;
     }
 
     /**
      * Collects all variable names that have assignment statements (not declarations).
-     * Used to determine if a declaration is needed even if the variable isn't read
-     * (because we can't have assignment without declaration).
+     * Uses visitor pattern to find assignment expressions.
      */
     private Set<String> collectAssignedVariables(BlockStmt block) {
         Set<String> assigned = new HashSet<>();
-        collectAssignedVariablesFromStatements(block.getStatements(), assigned);
-        return assigned;
-    }
-
-    private void collectReadVariablesFromStatements(List<Statement> stmts, Set<String> read) {
-        for (Statement stmt : stmts) {
-            collectReadVariablesFromStatement(stmt, read);
-        }
-    }
-
-    private void collectAssignedVariablesFromStatements(List<Statement> stmts, Set<String> assigned) {
-        for (Statement stmt : stmts) {
-            collectAssignedVariablesFromStatement(stmt, assigned);
-        }
-    }
-
-    private void collectReadVariablesFromStatement(Statement stmt, Set<String> read) {
-        if (stmt instanceof VarDeclStmt) {
-            VarDeclStmt decl = (VarDeclStmt) stmt;
-            // The initializer may read variables
-            if (decl.getInitializer() != null) {
-                collectReadVariablesFromExpression(decl.getInitializer(), read);
-            }
-            // Note: We don't add decl.getName() here - that's a WRITE, not a READ
-        } else if (stmt instanceof ExprStmt) {
-            collectReadVariablesFromExpression(((ExprStmt) stmt).getExpression(), read);
-        } else if (stmt instanceof ReturnStmt) {
-            ReturnStmt ret = (ReturnStmt) stmt;
-            if (ret.getValue() != null) {
-                collectReadVariablesFromExpression(ret.getValue(), read);
-            }
-        } else if (stmt instanceof IfStmt) {
-            IfStmt ifStmt = (IfStmt) stmt;
-            collectReadVariablesFromExpression(ifStmt.getCondition(), read);
-            collectReadVariablesFromStatement(ifStmt.getThenBranch(), read);
-            if (ifStmt.hasElse()) {
-                collectReadVariablesFromStatement(ifStmt.getElseBranch(), read);
-            }
-        } else if (stmt instanceof WhileStmt) {
-            WhileStmt whileStmt = (WhileStmt) stmt;
-            collectReadVariablesFromExpression(whileStmt.getCondition(), read);
-            collectReadVariablesFromStatement(whileStmt.getBody(), read);
-        } else if (stmt instanceof DoWhileStmt) {
-            DoWhileStmt doWhile = (DoWhileStmt) stmt;
-            collectReadVariablesFromStatement(doWhile.getBody(), read);
-            collectReadVariablesFromExpression(doWhile.getCondition(), read);
-        } else if (stmt instanceof ForStmt) {
-            ForStmt forStmt = (ForStmt) stmt;
-            if (forStmt.getInit() != null) {
-                collectReadVariablesFromStatements(forStmt.getInit(), read);
-            }
-            if (forStmt.getCondition() != null) {
-                collectReadVariablesFromExpression(forStmt.getCondition(), read);
-            }
-            if (forStmt.getUpdate() != null) {
-                for (Expression updateExpr : forStmt.getUpdate()) {
-                    collectReadVariablesFromExpression(updateExpr, read);
-                }
-            }
-            collectReadVariablesFromStatement(forStmt.getBody(), read);
-        } else if (stmt instanceof ForEachStmt) {
-            ForEachStmt forEach = (ForEachStmt) stmt;
-            collectReadVariablesFromExpression(forEach.getIterable(), read);
-            collectReadVariablesFromStatement(forEach.getBody(), read);
-        } else if (stmt instanceof BlockStmt) {
-            collectReadVariablesFromStatements(((BlockStmt) stmt).getStatements(), read);
-        } else if (stmt instanceof ThrowStmt) {
-            collectReadVariablesFromExpression(((ThrowStmt) stmt).getException(), read);
-        } else if (stmt instanceof SwitchStmt) {
-            SwitchStmt switchStmt = (SwitchStmt) stmt;
-            collectReadVariablesFromExpression(switchStmt.getSelector(), read);
-            for (SwitchCase caseStmt : switchStmt.getCases()) {
-                // labels() returns List<Integer>, no expressions to collect
-                collectReadVariablesFromStatements(caseStmt.statements(), read);
-            }
-        } else if (stmt instanceof TryCatchStmt) {
-            TryCatchStmt tryCatch = (TryCatchStmt) stmt;
-            collectReadVariablesFromStatement(tryCatch.getTryBlock(), read);
-            for (CatchClause catchClause : tryCatch.getCatches()) {
-                collectReadVariablesFromStatement(catchClause.body(), read);
-            }
-            if (tryCatch.getFinallyBlock() != null) {
-                collectReadVariablesFromStatement(tryCatch.getFinallyBlock(), read);
-            }
-        } else if (stmt instanceof SynchronizedStmt) {
-            SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;
-            collectReadVariablesFromExpression(syncStmt.getLock(), read);
-            collectReadVariablesFromStatement(syncStmt.getBody(), read);
-        } else if (stmt instanceof LabeledStmt) {
-            collectReadVariablesFromStatement(((LabeledStmt) stmt).getStatement(), read);
-        }
-        // BreakStmt, ContinueStmt have no expressions to collect
-    }
-
-    private void collectAssignedVariablesFromStatement(Statement stmt, Set<String> assigned) {
-        if (stmt instanceof ExprStmt) {
-            collectAssignedVariablesFromExpression(((ExprStmt) stmt).getExpression(), assigned);
-        } else if (stmt instanceof IfStmt) {
-            IfStmt ifStmt = (IfStmt) stmt;
-            collectAssignedVariablesFromStatement(ifStmt.getThenBranch(), assigned);
-            if (ifStmt.hasElse()) {
-                collectAssignedVariablesFromStatement(ifStmt.getElseBranch(), assigned);
-            }
-        } else if (stmt instanceof WhileStmt) {
-            collectAssignedVariablesFromStatement(((WhileStmt) stmt).getBody(), assigned);
-        } else if (stmt instanceof DoWhileStmt) {
-            collectAssignedVariablesFromStatement(((DoWhileStmt) stmt).getBody(), assigned);
-        } else if (stmt instanceof ForStmt) {
-            ForStmt forStmt = (ForStmt) stmt;
-            if (forStmt.getInit() != null) {
-                collectAssignedVariablesFromStatements(forStmt.getInit(), assigned);
-            }
-            if (forStmt.getUpdate() != null) {
-                for (Expression updateExpr : forStmt.getUpdate()) {
-                    collectAssignedVariablesFromExpression(updateExpr, assigned);
-                }
-            }
-            collectAssignedVariablesFromStatement(forStmt.getBody(), assigned);
-        } else if (stmt instanceof ForEachStmt) {
-            collectAssignedVariablesFromStatement(((ForEachStmt) stmt).getBody(), assigned);
-        } else if (stmt instanceof BlockStmt) {
-            collectAssignedVariablesFromStatements(((BlockStmt) stmt).getStatements(), assigned);
-        } else if (stmt instanceof SwitchStmt) {
-            SwitchStmt switchStmt = (SwitchStmt) stmt;
-            for (SwitchCase caseStmt : switchStmt.getCases()) {
-                collectAssignedVariablesFromStatements(caseStmt.statements(), assigned);
-            }
-        } else if (stmt instanceof TryCatchStmt) {
-            TryCatchStmt tryCatch = (TryCatchStmt) stmt;
-            collectAssignedVariablesFromStatement(tryCatch.getTryBlock(), assigned);
-            for (CatchClause catchClause : tryCatch.getCatches()) {
-                collectAssignedVariablesFromStatement(catchClause.body(), assigned);
-            }
-            if (tryCatch.getFinallyBlock() != null) {
-                collectAssignedVariablesFromStatement(tryCatch.getFinallyBlock(), assigned);
-            }
-        } else if (stmt instanceof SynchronizedStmt) {
-            collectAssignedVariablesFromStatement(((SynchronizedStmt) stmt).getBody(), assigned);
-        } else if (stmt instanceof LabeledStmt) {
-            collectAssignedVariablesFromStatement(((LabeledStmt) stmt).getStatement(), assigned);
-        }
-        // VarDeclStmt doesn't count as assignment - it's a declaration
-    }
-
-    private void collectAssignedVariablesFromExpression(Expression expr, Set<String> assigned) {
-        if (expr instanceof BinaryExpr) {
-            BinaryExpr binary = (BinaryExpr) expr;
-            if (binary.getOperator().isAssignment()) {
-                // Extract variable name from left side of assignment
-                if (binary.getLeft() instanceof VarRefExpr) {
+        ASTUtils.forEachExpression(block, expr -> {
+            if (expr instanceof BinaryExpr) {
+                BinaryExpr binary = (BinaryExpr) expr;
+                if (binary.getOperator().isAssignment() && binary.getLeft() instanceof VarRefExpr) {
                     assigned.add(((VarRefExpr) binary.getLeft()).getName());
                 }
             }
-        }
-        // Recursively check nested expressions (e.g., in ternary, method calls)
-        if (expr instanceof TernaryExpr) {
-            TernaryExpr ternary = (TernaryExpr) expr;
-            collectAssignedVariablesFromExpression(ternary.getThenExpr(), assigned);
-            collectAssignedVariablesFromExpression(ternary.getElseExpr(), assigned);
-        }
+        });
+        return assigned;
     }
 
-    private void collectReadVariablesFromExpression(Expression expr, Set<String> read) {
-        if (expr instanceof VarRefExpr) {
-            // This is a READ of the variable
-            read.add(((VarRefExpr) expr).getName());
-        } else if (expr instanceof BinaryExpr) {
-            BinaryExpr binary = (BinaryExpr) expr;
-            if (binary.getOperator().isAssignment()) {
-                // For assignments, the LEFT side is a WRITE, not a READ
-                // Only collect reads from the RIGHT side
-                // Note: compound assignments like += do read the left side
-                if (binary.getOperator() != BinaryOperator.ASSIGN) {
-                    // Compound assignment (+=, -=, etc.) reads the variable too
-                    collectReadVariablesFromExpression(binary.getLeft(), read);
-                }
-                // The right side is always a read
-                collectReadVariablesFromExpression(binary.getRight(), read);
-            } else {
-                collectReadVariablesFromExpression(binary.getLeft(), read);
-                collectReadVariablesFromExpression(binary.getRight(), read);
-            }
-        } else if (expr instanceof UnaryExpr) {
-            collectReadVariablesFromExpression(((UnaryExpr) expr).getOperand(), read);
-        } else if (expr instanceof TernaryExpr) {
-            TernaryExpr ternary = (TernaryExpr) expr;
-            collectReadVariablesFromExpression(ternary.getCondition(), read);
-            collectReadVariablesFromExpression(ternary.getThenExpr(), read);
-            collectReadVariablesFromExpression(ternary.getElseExpr(), read);
-        } else if (expr instanceof MethodCallExpr) {
-            MethodCallExpr call = (MethodCallExpr) expr;
-            if (call.getReceiver() != null) {
-                collectReadVariablesFromExpression(call.getReceiver(), read);
-            }
-            for (Expression arg : call.getArguments()) {
-                collectReadVariablesFromExpression(arg, read);
-            }
-        } else if (expr instanceof FieldAccessExpr) {
-            FieldAccessExpr field = (FieldAccessExpr) expr;
-            if (field.getReceiver() != null) {
-                collectReadVariablesFromExpression(field.getReceiver(), read);
-            }
-        } else if (expr instanceof ArrayAccessExpr) {
-            ArrayAccessExpr array = (ArrayAccessExpr) expr;
-            collectReadVariablesFromExpression(array.getArray(), read);
-            collectReadVariablesFromExpression(array.getIndex(), read);
-        } else if (expr instanceof CastExpr) {
-            collectReadVariablesFromExpression(((CastExpr) expr).getExpression(), read);
-        } else if (expr instanceof InstanceOfExpr) {
-            collectReadVariablesFromExpression(((InstanceOfExpr) expr).getExpression(), read);
-        } else if (expr instanceof NewExpr) {
-            NewExpr newExpr = (NewExpr) expr;
-            if (newExpr.getArguments() != null) {
-                for (Expression arg : newExpr.getArguments()) {
-                    collectReadVariablesFromExpression(arg, read);
-                }
-            }
-        } else if (expr instanceof NewArrayExpr) {
-            NewArrayExpr newArray = (NewArrayExpr) expr;
-            for (Expression dim : newArray.getDimensions()) {
-                collectReadVariablesFromExpression(dim, read);
-            }
-        } else if (expr instanceof ArrayInitExpr) {
-            ArrayInitExpr init = (ArrayInitExpr) expr;
-            for (Expression elem : init.getElements()) {
-                collectReadVariablesFromExpression(elem, read);
-            }
-        } else if (expr instanceof LambdaExpr) {
-            LambdaExpr lambda = (LambdaExpr) expr;
-            if (lambda.isBlockBody()) {
-                collectReadVariablesFromStatement(lambda.getBlockBody(), read);
-            } else if (lambda.isExpressionBody()) {
-                collectReadVariablesFromExpression(lambda.getExpressionBody(), read);
-            }
+    /**
+     * Visitor that collects all READ variable references.
+     * Handles the special case where assignment LHS is a WRITE, not a READ.
+     */
+    private static class ReadVariableCollector extends AbstractSourceVisitor<Void> {
+        private final Set<String> read;
+
+        ReadVariableCollector(Set<String> read) {
+            this.read = read;
         }
-        // LiteralExpr, ThisExpr, SuperExpr, ClassExpr, MethodRefExpr have no variable refs
+
+        @Override
+        public Void visitVarRef(VarRefExpr expr) {
+            read.add(expr.getName());
+            return super.visitVarRef(expr);
+        }
+
+        @Override
+        public Void visitBinary(BinaryExpr expr) {
+            if (expr.getOperator().isAssignment()) {
+                // For simple assignment (=), the LHS is a WRITE, not a READ
+                // For compound assignment (+=, -=, etc.), the LHS is both read and written
+                if (expr.getOperator() != BinaryOperator.ASSIGN) {
+                    expr.getLeft().accept(this);
+                }
+                // RHS is always read
+                expr.getRight().accept(this);
+                return null;
+            }
+            return super.visitBinary(expr);
+        }
     }
 
     /**
@@ -462,80 +268,104 @@ public class DeadVariableEliminator implements ASTTransform {
 
     /**
      * Determines if an expression has side effects that must be preserved.
-     * Conservative: assumes unknown expressions have side effects.
+     * Uses visitor pattern - returns true if any sub-expression has side effects.
      */
     private boolean hasSideEffects(Expression expr) {
-        if (expr instanceof LiteralExpr) {
-            return false;
-        } else if (expr instanceof VarRefExpr) {
-            return false;
-        } else if (expr instanceof ThisExpr || expr instanceof SuperExpr) {
-            return false;
-        } else if (expr instanceof ClassExpr) {
-            return false;
-        } else if (expr instanceof BinaryExpr) {
-            BinaryExpr binary = (BinaryExpr) expr;
-            // Assignment operators have side effects
-            if (binary.getOperator().isAssignment()) {
-                return true;
-            }
-            // Non-assignment operators: check operands
-            return hasSideEffects(binary.getLeft()) || hasSideEffects(binary.getRight());
-        } else if (expr instanceof UnaryExpr) {
-            UnaryExpr unary = (UnaryExpr) expr;
-            // Pre/post increment/decrement have side effects
-            UnaryOperator op = unary.getOperator();
+        return expr.accept(SideEffectDetector.INSTANCE);
+    }
+
+    /**
+     * Visitor that detects side effects in expressions.
+     * Returns true if the expression (or any sub-expression) has side effects.
+     */
+    private static class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
+        static final SideEffectDetector INSTANCE = new SideEffectDetector();
+
+        @Override
+        protected Boolean defaultValue() {
+            // Default: assume side effects for unknown expression types
+            return true;
+        }
+
+        @Override
+        public Boolean visitLiteral(LiteralExpr expr) { return false; }
+
+        @Override
+        public Boolean visitVarRef(VarRefExpr expr) { return false; }
+
+        @Override
+        public Boolean visitThis(ThisExpr expr) { return false; }
+
+        @Override
+        public Boolean visitSuper(SuperExpr expr) { return false; }
+
+        @Override
+        public Boolean visitClass(ClassExpr expr) { return false; }
+
+        @Override
+        public Boolean visitLambda(LambdaExpr expr) { return false; }
+
+        @Override
+        public Boolean visitMethodRef(MethodRefExpr expr) { return false; }
+
+        @Override
+        public Boolean visitBinary(BinaryExpr expr) {
+            if (expr.getOperator().isAssignment()) return true;
+            return expr.getLeft().accept(this) || expr.getRight().accept(this);
+        }
+
+        @Override
+        public Boolean visitUnary(UnaryExpr expr) {
+            UnaryOperator op = expr.getOperator();
             if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC ||
                 op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC) {
                 return true;
             }
-            return hasSideEffects(unary.getOperand());
-        } else if (expr instanceof TernaryExpr) {
-            TernaryExpr ternary = (TernaryExpr) expr;
-            return hasSideEffects(ternary.getCondition()) ||
-                   hasSideEffects(ternary.getThenExpr()) ||
-                   hasSideEffects(ternary.getElseExpr());
-        } else if (expr instanceof CastExpr) {
-            return hasSideEffects(((CastExpr) expr).getExpression());
-        } else if (expr instanceof InstanceOfExpr) {
-            return hasSideEffects(((InstanceOfExpr) expr).getExpression());
-        } else if (expr instanceof MethodCallExpr) {
-            // Method calls always have potential side effects
-            return true;
-        } else if (expr instanceof NewExpr) {
-            // Constructor calls always have potential side effects
-            return true;
-        } else if (expr instanceof FieldAccessExpr) {
-            // Field reads could potentially have side effects (static init)
-            // Conservative: treat as side-effect-free for pure reads
-            FieldAccessExpr field = (FieldAccessExpr) expr;
-            if (field.getReceiver() != null) {
-                return hasSideEffects(field.getReceiver());
-            }
-            return false;
-        } else if (expr instanceof ArrayAccessExpr) {
-            ArrayAccessExpr array = (ArrayAccessExpr) expr;
-            return hasSideEffects(array.getArray()) || hasSideEffects(array.getIndex());
-        } else if (expr instanceof NewArrayExpr) {
-            // Array creation has side effects (allocation)
-            return true;
-        } else if (expr instanceof ArrayInitExpr) {
-            ArrayInitExpr init = (ArrayInitExpr) expr;
-            for (Expression elem : init.getElements()) {
-                if (hasSideEffects(elem)) {
-                    return true;
-                }
-            }
-            return false;
-        } else if (expr instanceof LambdaExpr) {
-            // Lambda creation itself doesn't have side effects
-            return false;
-        } else if (expr instanceof MethodRefExpr) {
-            // Method reference creation doesn't have side effects
-            return false;
+            return expr.getOperand().accept(this);
         }
 
-        // Default: assume side effects for unknown expression types
-        return true;
+        @Override
+        public Boolean visitTernary(TernaryExpr expr) {
+            return expr.getCondition().accept(this) ||
+                   expr.getThenExpr().accept(this) ||
+                   expr.getElseExpr().accept(this);
+        }
+
+        @Override
+        public Boolean visitCast(CastExpr expr) {
+            return expr.getExpression().accept(this);
+        }
+
+        @Override
+        public Boolean visitInstanceOf(InstanceOfExpr expr) {
+            return expr.getExpression().accept(this);
+        }
+
+        @Override
+        public Boolean visitMethodCall(MethodCallExpr expr) { return true; }
+
+        @Override
+        public Boolean visitNew(NewExpr expr) { return true; }
+
+        @Override
+        public Boolean visitNewArray(NewArrayExpr expr) { return true; }
+
+        @Override
+        public Boolean visitFieldAccess(FieldAccessExpr expr) {
+            return expr.getReceiver() != null && expr.getReceiver().accept(this);
+        }
+
+        @Override
+        public Boolean visitArrayAccess(ArrayAccessExpr expr) {
+            return expr.getArray().accept(this) || expr.getIndex().accept(this);
+        }
+
+        @Override
+        public Boolean visitArrayInit(ArrayInitExpr expr) {
+            for (Expression elem : expr.getElements()) {
+                if (elem.accept(this)) return true;
+            }
+            return false;
+        }
     }
 }

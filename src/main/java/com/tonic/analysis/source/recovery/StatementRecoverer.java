@@ -1669,10 +1669,21 @@ public class StatementRecoverer {
             type = com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
         }
 
-        // Note: We intentionally do NOT change the name of the source SSA value here.
-        // The source value already has its correct name (e.g., "arg0" for a parameter phi).
-        // Changing it to the destination slot name would corrupt expressions like
-        // "local15 = arg0" into "local15 = local15" (self-reference).
+        // If the source value is an SSA value, mark it as materialized with the local's name.
+        // This ensures that if the SSA value is used directly elsewhere (without going through
+        // a load_local), it will resolve to the local variable instead of being re-evaluated.
+        // For example: v3 = newarray; store_local 2, v3; v3[0] = 1; return v3
+        // Without this, v3 would be inlined as "new int[...]" everywhere, which is incorrect.
+        if (store.getValue() instanceof SSAValue) {
+            SSAValue sourceValue = (SSAValue) store.getValue();
+            // Only do this if the source value doesn't already have a different name
+            // (e.g., it's not a parameter like "arg0" being stored to a different local)
+            String existingName = context.getExpressionContext().getVariableName(sourceValue);
+            if (existingName == null || existingName.startsWith("v")) {
+                context.getExpressionContext().setVariableName(sourceValue, name);
+                context.getExpressionContext().markMaterialized(sourceValue);
+            }
+        }
 
         if (context.getExpressionContext().isDeclared(name)) {
             VarRefExpr target = new VarRefExpr(name, type, null);

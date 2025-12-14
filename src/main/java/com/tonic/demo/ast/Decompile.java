@@ -111,9 +111,10 @@ public class Decompile {
         // Decompile and print
         System.out.println("Decompiling class: " + cf.getClassName());
         String source = new ClassDecompiler(cf, decompilerConfig).decompile();
-        Files.writeString(Path.of(cf.getClassName().replace("/", ".") + ".java"), source);
+        String name = cf.getClassName().replace("/", ".") + ".java";
+        Files.writeString(Path.of(name), source);
 
         System.out.println("Decompiled with preset: " + preset);
-        System.out.println("Output written to: output.java");
+        System.out.println("Output written to: " + name);
     }
 }
