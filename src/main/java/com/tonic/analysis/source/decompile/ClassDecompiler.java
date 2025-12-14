@@ -5,6 +5,7 @@ import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.transform.ASTTransform;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
+import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
 import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
@@ -51,6 +52,7 @@ public class ClassDecompiler {
     private final DuplicateBlockMerging duplicateMerging;
     private final ControlFlowSimplifier astSimplifier;
     private final DeadVariableEliminator deadVarEliminator;
+    private final DeadStoreEliminator deadStoreEliminator;
 
     public ClassDecompiler(ClassFile classFile) {
         this(classFile, DecompilerConfig.defaults());
@@ -70,6 +72,7 @@ public class ClassDecompiler {
         this.duplicateMerging = new DuplicateBlockMerging();
         this.astSimplifier = new ControlFlowSimplifier();
         this.deadVarEliminator = new DeadVariableEliminator();
+        this.deadStoreEliminator = new DeadStoreEliminator();
     }
 
     /**
@@ -441,6 +444,7 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
             astSimplifier.transform(body);
+            deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             removeTrailingReturn(body); // Static initializers cannot have return statements
             emitBlockContents(writer, body);
@@ -507,6 +511,7 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
             astSimplifier.transform(body);
+            deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -568,6 +573,7 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             astSimplifier.transform(body);
+            deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {

@@ -17,6 +17,7 @@ import java.util.Set;
  * Handles:
  * - VarDeclStmt with side-effect-free initializers that are never read
  * - Phi-generated declarations that are never used
+ * - Write-only variables (variables that are written but never read)
  * - Cascading dead variables (iterates until fixed point)
  */
 public class DeadVariableEliminator implements ASTTransform {
@@ -36,11 +37,14 @@ public class DeadVariableEliminator implements ASTTransform {
         do {
             madeProgress = false;
 
-            // Collect all variable reads (not writes)
-            Set<String> usedVariables = collectUsedVariables(block);
+            // Collect variables that are actually READ (not just written to)
+            Set<String> readVariables = collectReadVariables(block);
 
-            // Remove unused declarations
-            if (removeUnusedDeclarations(block.getStatements(), usedVariables)) {
+            // Collect variables that have assignment statements (not just declarations)
+            Set<String> assignedVariables = collectAssignedVariables(block);
+
+            // Remove unused declarations and write-only assignments
+            if (removeUnusedCode(block.getStatements(), readVariables, assignedVariables)) {
                 madeProgress = true;
                 changed = true;
             }
@@ -51,176 +55,273 @@ public class DeadVariableEliminator implements ASTTransform {
 
     /**
      * Collects all variable names that are READ (not just written to).
-     * A variable is "used" if it appears in a VarRefExpr that is NOT the
+     * A variable is "read" if it appears in a VarRefExpr that is NOT the
      * left-hand side of an assignment.
      */
-    private Set<String> collectUsedVariables(BlockStmt block) {
-        Set<String> used = new HashSet<>();
-        collectUsedVariablesFromStatements(block.getStatements(), used);
-        return used;
+    private Set<String> collectReadVariables(BlockStmt block) {
+        Set<String> read = new HashSet<>();
+        collectReadVariablesFromStatements(block.getStatements(), read);
+        return read;
     }
 
-    private void collectUsedVariablesFromStatements(List<Statement> stmts, Set<String> used) {
+    /**
+     * Collects all variable names that have assignment statements (not declarations).
+     * Used to determine if a declaration is needed even if the variable isn't read
+     * (because we can't have assignment without declaration).
+     */
+    private Set<String> collectAssignedVariables(BlockStmt block) {
+        Set<String> assigned = new HashSet<>();
+        collectAssignedVariablesFromStatements(block.getStatements(), assigned);
+        return assigned;
+    }
+
+    private void collectReadVariablesFromStatements(List<Statement> stmts, Set<String> read) {
         for (Statement stmt : stmts) {
-            collectUsedVariablesFromStatement(stmt, used);
+            collectReadVariablesFromStatement(stmt, read);
         }
     }
 
-    private void collectUsedVariablesFromStatement(Statement stmt, Set<String> used) {
+    private void collectAssignedVariablesFromStatements(List<Statement> stmts, Set<String> assigned) {
+        for (Statement stmt : stmts) {
+            collectAssignedVariablesFromStatement(stmt, assigned);
+        }
+    }
+
+    private void collectReadVariablesFromStatement(Statement stmt, Set<String> read) {
         if (stmt instanceof VarDeclStmt) {
             VarDeclStmt decl = (VarDeclStmt) stmt;
             // The initializer may read variables
             if (decl.getInitializer() != null) {
-                collectUsedVariablesFromExpression(decl.getInitializer(), used);
+                collectReadVariablesFromExpression(decl.getInitializer(), read);
             }
             // Note: We don't add decl.getName() here - that's a WRITE, not a READ
         } else if (stmt instanceof ExprStmt) {
-            collectUsedVariablesFromExpression(((ExprStmt) stmt).getExpression(), used);
+            collectReadVariablesFromExpression(((ExprStmt) stmt).getExpression(), read);
         } else if (stmt instanceof ReturnStmt) {
             ReturnStmt ret = (ReturnStmt) stmt;
             if (ret.getValue() != null) {
-                collectUsedVariablesFromExpression(ret.getValue(), used);
+                collectReadVariablesFromExpression(ret.getValue(), read);
             }
         } else if (stmt instanceof IfStmt) {
             IfStmt ifStmt = (IfStmt) stmt;
-            collectUsedVariablesFromExpression(ifStmt.getCondition(), used);
-            collectUsedVariablesFromStatement(ifStmt.getThenBranch(), used);
+            collectReadVariablesFromExpression(ifStmt.getCondition(), read);
+            collectReadVariablesFromStatement(ifStmt.getThenBranch(), read);
             if (ifStmt.hasElse()) {
-                collectUsedVariablesFromStatement(ifStmt.getElseBranch(), used);
+                collectReadVariablesFromStatement(ifStmt.getElseBranch(), read);
             }
         } else if (stmt instanceof WhileStmt) {
             WhileStmt whileStmt = (WhileStmt) stmt;
-            collectUsedVariablesFromExpression(whileStmt.getCondition(), used);
-            collectUsedVariablesFromStatement(whileStmt.getBody(), used);
+            collectReadVariablesFromExpression(whileStmt.getCondition(), read);
+            collectReadVariablesFromStatement(whileStmt.getBody(), read);
         } else if (stmt instanceof DoWhileStmt) {
             DoWhileStmt doWhile = (DoWhileStmt) stmt;
-            collectUsedVariablesFromStatement(doWhile.getBody(), used);
-            collectUsedVariablesFromExpression(doWhile.getCondition(), used);
+            collectReadVariablesFromStatement(doWhile.getBody(), read);
+            collectReadVariablesFromExpression(doWhile.getCondition(), read);
         } else if (stmt instanceof ForStmt) {
             ForStmt forStmt = (ForStmt) stmt;
             if (forStmt.getInit() != null) {
-                collectUsedVariablesFromStatements(forStmt.getInit(), used);
+                collectReadVariablesFromStatements(forStmt.getInit(), read);
             }
             if (forStmt.getCondition() != null) {
-                collectUsedVariablesFromExpression(forStmt.getCondition(), used);
+                collectReadVariablesFromExpression(forStmt.getCondition(), read);
             }
             if (forStmt.getUpdate() != null) {
                 for (Expression updateExpr : forStmt.getUpdate()) {
-                    collectUsedVariablesFromExpression(updateExpr, used);
+                    collectReadVariablesFromExpression(updateExpr, read);
                 }
             }
-            collectUsedVariablesFromStatement(forStmt.getBody(), used);
+            collectReadVariablesFromStatement(forStmt.getBody(), read);
         } else if (stmt instanceof ForEachStmt) {
             ForEachStmt forEach = (ForEachStmt) stmt;
-            collectUsedVariablesFromExpression(forEach.getIterable(), used);
-            collectUsedVariablesFromStatement(forEach.getBody(), used);
+            collectReadVariablesFromExpression(forEach.getIterable(), read);
+            collectReadVariablesFromStatement(forEach.getBody(), read);
         } else if (stmt instanceof BlockStmt) {
-            collectUsedVariablesFromStatements(((BlockStmt) stmt).getStatements(), used);
+            collectReadVariablesFromStatements(((BlockStmt) stmt).getStatements(), read);
         } else if (stmt instanceof ThrowStmt) {
-            collectUsedVariablesFromExpression(((ThrowStmt) stmt).getException(), used);
+            collectReadVariablesFromExpression(((ThrowStmt) stmt).getException(), read);
         } else if (stmt instanceof SwitchStmt) {
             SwitchStmt switchStmt = (SwitchStmt) stmt;
-            collectUsedVariablesFromExpression(switchStmt.getSelector(), used);
+            collectReadVariablesFromExpression(switchStmt.getSelector(), read);
             for (SwitchCase caseStmt : switchStmt.getCases()) {
                 // labels() returns List<Integer>, no expressions to collect
-                collectUsedVariablesFromStatements(caseStmt.statements(), used);
+                collectReadVariablesFromStatements(caseStmt.statements(), read);
             }
         } else if (stmt instanceof TryCatchStmt) {
             TryCatchStmt tryCatch = (TryCatchStmt) stmt;
-            collectUsedVariablesFromStatement(tryCatch.getTryBlock(), used);
+            collectReadVariablesFromStatement(tryCatch.getTryBlock(), read);
             for (CatchClause catchClause : tryCatch.getCatches()) {
-                collectUsedVariablesFromStatement(catchClause.body(), used);
+                collectReadVariablesFromStatement(catchClause.body(), read);
             }
             if (tryCatch.getFinallyBlock() != null) {
-                collectUsedVariablesFromStatement(tryCatch.getFinallyBlock(), used);
+                collectReadVariablesFromStatement(tryCatch.getFinallyBlock(), read);
             }
         } else if (stmt instanceof SynchronizedStmt) {
             SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;
-            collectUsedVariablesFromExpression(syncStmt.getLock(), used);
-            collectUsedVariablesFromStatement(syncStmt.getBody(), used);
+            collectReadVariablesFromExpression(syncStmt.getLock(), read);
+            collectReadVariablesFromStatement(syncStmt.getBody(), read);
         } else if (stmt instanceof LabeledStmt) {
-            collectUsedVariablesFromStatement(((LabeledStmt) stmt).getStatement(), used);
+            collectReadVariablesFromStatement(((LabeledStmt) stmt).getStatement(), read);
         }
         // BreakStmt, ContinueStmt have no expressions to collect
     }
 
-    private void collectUsedVariablesFromExpression(Expression expr, Set<String> used) {
+    private void collectAssignedVariablesFromStatement(Statement stmt, Set<String> assigned) {
+        if (stmt instanceof ExprStmt) {
+            collectAssignedVariablesFromExpression(((ExprStmt) stmt).getExpression(), assigned);
+        } else if (stmt instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) stmt;
+            collectAssignedVariablesFromStatement(ifStmt.getThenBranch(), assigned);
+            if (ifStmt.hasElse()) {
+                collectAssignedVariablesFromStatement(ifStmt.getElseBranch(), assigned);
+            }
+        } else if (stmt instanceof WhileStmt) {
+            collectAssignedVariablesFromStatement(((WhileStmt) stmt).getBody(), assigned);
+        } else if (stmt instanceof DoWhileStmt) {
+            collectAssignedVariablesFromStatement(((DoWhileStmt) stmt).getBody(), assigned);
+        } else if (stmt instanceof ForStmt) {
+            ForStmt forStmt = (ForStmt) stmt;
+            if (forStmt.getInit() != null) {
+                collectAssignedVariablesFromStatements(forStmt.getInit(), assigned);
+            }
+            if (forStmt.getUpdate() != null) {
+                for (Expression updateExpr : forStmt.getUpdate()) {
+                    collectAssignedVariablesFromExpression(updateExpr, assigned);
+                }
+            }
+            collectAssignedVariablesFromStatement(forStmt.getBody(), assigned);
+        } else if (stmt instanceof ForEachStmt) {
+            collectAssignedVariablesFromStatement(((ForEachStmt) stmt).getBody(), assigned);
+        } else if (stmt instanceof BlockStmt) {
+            collectAssignedVariablesFromStatements(((BlockStmt) stmt).getStatements(), assigned);
+        } else if (stmt instanceof SwitchStmt) {
+            SwitchStmt switchStmt = (SwitchStmt) stmt;
+            for (SwitchCase caseStmt : switchStmt.getCases()) {
+                collectAssignedVariablesFromStatements(caseStmt.statements(), assigned);
+            }
+        } else if (stmt instanceof TryCatchStmt) {
+            TryCatchStmt tryCatch = (TryCatchStmt) stmt;
+            collectAssignedVariablesFromStatement(tryCatch.getTryBlock(), assigned);
+            for (CatchClause catchClause : tryCatch.getCatches()) {
+                collectAssignedVariablesFromStatement(catchClause.body(), assigned);
+            }
+            if (tryCatch.getFinallyBlock() != null) {
+                collectAssignedVariablesFromStatement(tryCatch.getFinallyBlock(), assigned);
+            }
+        } else if (stmt instanceof SynchronizedStmt) {
+            collectAssignedVariablesFromStatement(((SynchronizedStmt) stmt).getBody(), assigned);
+        } else if (stmt instanceof LabeledStmt) {
+            collectAssignedVariablesFromStatement(((LabeledStmt) stmt).getStatement(), assigned);
+        }
+        // VarDeclStmt doesn't count as assignment - it's a declaration
+    }
+
+    private void collectAssignedVariablesFromExpression(Expression expr, Set<String> assigned) {
+        if (expr instanceof BinaryExpr) {
+            BinaryExpr binary = (BinaryExpr) expr;
+            if (binary.getOperator().isAssignment()) {
+                // Extract variable name from left side of assignment
+                if (binary.getLeft() instanceof VarRefExpr) {
+                    assigned.add(((VarRefExpr) binary.getLeft()).getName());
+                }
+            }
+        }
+        // Recursively check nested expressions (e.g., in ternary, method calls)
+        if (expr instanceof TernaryExpr) {
+            TernaryExpr ternary = (TernaryExpr) expr;
+            collectAssignedVariablesFromExpression(ternary.getThenExpr(), assigned);
+            collectAssignedVariablesFromExpression(ternary.getElseExpr(), assigned);
+        }
+    }
+
+    private void collectReadVariablesFromExpression(Expression expr, Set<String> read) {
         if (expr instanceof VarRefExpr) {
             // This is a READ of the variable
-            used.add(((VarRefExpr) expr).getName());
+            read.add(((VarRefExpr) expr).getName());
         } else if (expr instanceof BinaryExpr) {
             BinaryExpr binary = (BinaryExpr) expr;
-            // For assignments, we need to mark the variable as "used" to keep its declaration
             if (binary.getOperator().isAssignment()) {
-                // The left side of an assignment makes the variable "used" - we need its declaration
-                // Otherwise we'd remove "int x = 0;" but leave "x = 5;" which is invalid
-                collectUsedVariablesFromExpression(binary.getLeft(), used);
-                collectUsedVariablesFromExpression(binary.getRight(), used);
+                // For assignments, the LEFT side is a WRITE, not a READ
+                // Only collect reads from the RIGHT side
+                // Note: compound assignments like += do read the left side
+                if (binary.getOperator() != BinaryOperator.ASSIGN) {
+                    // Compound assignment (+=, -=, etc.) reads the variable too
+                    collectReadVariablesFromExpression(binary.getLeft(), read);
+                }
+                // The right side is always a read
+                collectReadVariablesFromExpression(binary.getRight(), read);
             } else {
-                collectUsedVariablesFromExpression(binary.getLeft(), used);
-                collectUsedVariablesFromExpression(binary.getRight(), used);
+                collectReadVariablesFromExpression(binary.getLeft(), read);
+                collectReadVariablesFromExpression(binary.getRight(), read);
             }
         } else if (expr instanceof UnaryExpr) {
-            collectUsedVariablesFromExpression(((UnaryExpr) expr).getOperand(), used);
+            collectReadVariablesFromExpression(((UnaryExpr) expr).getOperand(), read);
         } else if (expr instanceof TernaryExpr) {
             TernaryExpr ternary = (TernaryExpr) expr;
-            collectUsedVariablesFromExpression(ternary.getCondition(), used);
-            collectUsedVariablesFromExpression(ternary.getThenExpr(), used);
-            collectUsedVariablesFromExpression(ternary.getElseExpr(), used);
+            collectReadVariablesFromExpression(ternary.getCondition(), read);
+            collectReadVariablesFromExpression(ternary.getThenExpr(), read);
+            collectReadVariablesFromExpression(ternary.getElseExpr(), read);
         } else if (expr instanceof MethodCallExpr) {
             MethodCallExpr call = (MethodCallExpr) expr;
             if (call.getReceiver() != null) {
-                collectUsedVariablesFromExpression(call.getReceiver(), used);
+                collectReadVariablesFromExpression(call.getReceiver(), read);
             }
             for (Expression arg : call.getArguments()) {
-                collectUsedVariablesFromExpression(arg, used);
+                collectReadVariablesFromExpression(arg, read);
             }
         } else if (expr instanceof FieldAccessExpr) {
             FieldAccessExpr field = (FieldAccessExpr) expr;
             if (field.getReceiver() != null) {
-                collectUsedVariablesFromExpression(field.getReceiver(), used);
+                collectReadVariablesFromExpression(field.getReceiver(), read);
             }
         } else if (expr instanceof ArrayAccessExpr) {
             ArrayAccessExpr array = (ArrayAccessExpr) expr;
-            collectUsedVariablesFromExpression(array.getArray(), used);
-            collectUsedVariablesFromExpression(array.getIndex(), used);
+            collectReadVariablesFromExpression(array.getArray(), read);
+            collectReadVariablesFromExpression(array.getIndex(), read);
         } else if (expr instanceof CastExpr) {
-            collectUsedVariablesFromExpression(((CastExpr) expr).getExpression(), used);
+            collectReadVariablesFromExpression(((CastExpr) expr).getExpression(), read);
         } else if (expr instanceof InstanceOfExpr) {
-            collectUsedVariablesFromExpression(((InstanceOfExpr) expr).getExpression(), used);
+            collectReadVariablesFromExpression(((InstanceOfExpr) expr).getExpression(), read);
         } else if (expr instanceof NewExpr) {
             NewExpr newExpr = (NewExpr) expr;
             if (newExpr.getArguments() != null) {
                 for (Expression arg : newExpr.getArguments()) {
-                    collectUsedVariablesFromExpression(arg, used);
+                    collectReadVariablesFromExpression(arg, read);
                 }
             }
         } else if (expr instanceof NewArrayExpr) {
             NewArrayExpr newArray = (NewArrayExpr) expr;
             for (Expression dim : newArray.getDimensions()) {
-                collectUsedVariablesFromExpression(dim, used);
+                collectReadVariablesFromExpression(dim, read);
             }
         } else if (expr instanceof ArrayInitExpr) {
             ArrayInitExpr init = (ArrayInitExpr) expr;
             for (Expression elem : init.getElements()) {
-                collectUsedVariablesFromExpression(elem, used);
+                collectReadVariablesFromExpression(elem, read);
             }
         } else if (expr instanceof LambdaExpr) {
             LambdaExpr lambda = (LambdaExpr) expr;
             if (lambda.isBlockBody()) {
-                collectUsedVariablesFromStatement(lambda.getBlockBody(), used);
+                collectReadVariablesFromStatement(lambda.getBlockBody(), read);
             } else if (lambda.isExpressionBody()) {
-                collectUsedVariablesFromExpression(lambda.getExpressionBody(), used);
+                collectReadVariablesFromExpression(lambda.getExpressionBody(), read);
             }
         }
         // LiteralExpr, ThisExpr, SuperExpr, ClassExpr, MethodRefExpr have no variable refs
     }
 
     /**
-     * Removes declarations of unused variables from the statement list.
-     * For side-effect initializers, converts to expression statements.
+     * Removes unused declarations and write-only assignments from the statement list.
+     *
+     * A variable is "unused" if it's never READ (not just written to).
+     * For unused variables:
+     * - Remove the declaration if initializer has no side effects
+     * - Convert to expression statement if initializer has side effects
+     * - Also remove any assignment statements to the variable
+     *
+     * For declarations of variables that ARE assigned later but never read,
+     * we need to keep the declaration but can remove the assignments.
      */
-    private boolean removeUnusedDeclarations(List<Statement> stmts, Set<String> usedVariables) {
+    private boolean removeUnusedCode(List<Statement> stmts, Set<String> readVariables, Set<String> assignedVariables) {
         boolean changed = false;
 
         for (int i = stmts.size() - 1; i >= 0; i--) {
@@ -230,8 +331,10 @@ public class DeadVariableEliminator implements ASTTransform {
                 VarDeclStmt decl = (VarDeclStmt) stmt;
                 String varName = decl.getName();
 
-                // Check if the variable is used
-                if (!usedVariables.contains(varName)) {
+                // Check if the variable is ever READ
+                if (!readVariables.contains(varName)) {
+                    // Variable is never read - it's dead code
+                    // Even if there are assignments, we'll remove those too
                     Expression init = decl.getInitializer();
 
                     if (init == null || !hasSideEffects(init)) {
@@ -244,67 +347,90 @@ public class DeadVariableEliminator implements ASTTransform {
                         changed = true;
                     }
                 }
+            } else if (stmt instanceof ExprStmt) {
+                // Check if this is an assignment to a write-only variable
+                Expression expr = ((ExprStmt) stmt).getExpression();
+                if (expr instanceof BinaryExpr) {
+                    BinaryExpr binary = (BinaryExpr) expr;
+                    if (binary.getOperator().isAssignment() && binary.getLeft() instanceof VarRefExpr) {
+                        String varName = ((VarRefExpr) binary.getLeft()).getName();
+
+                        // If the variable is never read, this assignment is dead code
+                        if (!readVariables.contains(varName)) {
+                            Expression rhs = binary.getRight();
+                            if (!hasSideEffects(rhs)) {
+                                // Safe to remove the entire assignment statement
+                                stmts.remove(i);
+                                changed = true;
+                            } else {
+                                // RHS has side effects - keep just the RHS as expression statement
+                                stmts.set(i, new ExprStmt(rhs));
+                                changed = true;
+                            }
+                        }
+                    }
+                }
             } else if (stmt instanceof BlockStmt) {
                 // Recurse into nested blocks
-                if (removeUnusedDeclarations(((BlockStmt) stmt).getStatements(), usedVariables)) {
+                if (removeUnusedCode(((BlockStmt) stmt).getStatements(), readVariables, assignedVariables)) {
                     changed = true;
                 }
             } else if (stmt instanceof IfStmt) {
                 IfStmt ifStmt = (IfStmt) stmt;
                 if (ifStmt.getThenBranch() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) ifStmt.getThenBranch()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) ifStmt.getThenBranch()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
                 if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) ifStmt.getElseBranch()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) ifStmt.getElseBranch()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof WhileStmt) {
                 WhileStmt whileStmt = (WhileStmt) stmt;
                 if (whileStmt.getBody() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) whileStmt.getBody()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) whileStmt.getBody()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof DoWhileStmt) {
                 DoWhileStmt doWhile = (DoWhileStmt) stmt;
                 if (doWhile.getBody() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) doWhile.getBody()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) doWhile.getBody()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof ForStmt) {
                 ForStmt forStmt = (ForStmt) stmt;
                 if (forStmt.getBody() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) forStmt.getBody()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) forStmt.getBody()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof ForEachStmt) {
                 ForEachStmt forEach = (ForEachStmt) stmt;
                 if (forEach.getBody() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) forEach.getBody()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) forEach.getBody()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof TryCatchStmt) {
                 TryCatchStmt tryCatch = (TryCatchStmt) stmt;
                 if (tryCatch.getTryBlock() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) tryCatch.getTryBlock()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) tryCatch.getTryBlock()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
                 for (CatchClause catchClause : tryCatch.getCatches()) {
                     if (catchClause.body() instanceof BlockStmt) {
-                        if (removeUnusedDeclarations(((BlockStmt) catchClause.body()).getStatements(), usedVariables)) {
+                        if (removeUnusedCode(((BlockStmt) catchClause.body()).getStatements(), readVariables, assignedVariables)) {
                             changed = true;
                         }
                     }
                 }
                 if (tryCatch.getFinallyBlock() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) tryCatch.getFinallyBlock()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) tryCatch.getFinallyBlock()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
@@ -317,14 +443,14 @@ public class DeadVariableEliminator implements ASTTransform {
             } else if (stmt instanceof SynchronizedStmt) {
                 SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;
                 if (syncStmt.getBody() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) syncStmt.getBody()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) syncStmt.getBody()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof LabeledStmt) {
                 LabeledStmt labeled = (LabeledStmt) stmt;
                 if (labeled.getStatement() instanceof BlockStmt) {
-                    if (removeUnusedDeclarations(((BlockStmt) labeled.getStatement()).getStatements(), usedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) labeled.getStatement()).getStatements(), readVariables, assignedVariables)) {
                         changed = true;
                     }
                 }
