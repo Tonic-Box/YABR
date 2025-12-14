@@ -6,11 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Improvements to structural analysis">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ast/Decompile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ast/Decompile.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -197,14 +192,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00002" summary="incorrect length fix for ILoadInstruction">
-      <option name="closed" value="true" />
-      <created>1737456841058</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1737456841058</updated>
     </task>
     <task id="LOCAL-00003" summary="AccessBuilder">
       <option name="closed" value="true" />
@@ -590,7 +577,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765697482886</updated>
     </task>
-    <option name="localTasksCounter" value="51" />
+    <task id="LOCAL-00051" summary="Improvements to structural analysis">
+      <option name="closed" value="true" />
+      <created>1765699356933</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1765699356933</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
