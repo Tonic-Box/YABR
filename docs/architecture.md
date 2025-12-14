@@ -50,6 +50,8 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.source.emit` | Java source code generation |
 | `com.tonic.analysis.frame` | StackMapTable frame computation |
 | `com.tonic.analysis.source.decompile` | Full class decompilation |
+| `com.tonic.analysis.source.editor` | AST expression/statement editing |
+| `com.tonic.renamer` | Class/method/field renaming |
 | `com.tonic.utill` | Utilities (AccessBuilder, Logger, etc.) |
 | `com.tonic.demo` | Example programs |
 
@@ -203,6 +205,43 @@ The AST system enables:
 - Decompilation to readable Java
 - Round-trip bytecode modification
 
+### AST Editor
+
+**ASTEditor** - ExprEditor-style API for targeted AST transformations:
+```java
+ASTEditor editor = new ASTEditor(methodBody, "methodName", "()V", "com/example/Class");
+editor.onMethodCall((ctx, call) -> {
+    if (call.getMethodName().equals("deprecated")) {
+        return Replacement.with(ctx.factory().methodCall("newMethod").build());
+    }
+    return Replacement.keep();
+});
+editor.apply();
+```
+
+The editor system provides:
+- Handler-based interception of expressions and statements
+- Type-safe replacement with AST nodes
+- Predicate-based matchers for flexible filtering
+- Factory for building new AST nodes
+
+### Renamer
+
+**Renamer** - High-level API for renaming classes, methods, and fields:
+```java
+Renamer renamer = new Renamer(classPool);
+renamer.mapClass("com/old/MyClass", "com/new/RenamedClass")
+       .mapMethodInHierarchy("com/old/Service", "process", "(I)V", "handle")
+       .mapField("com/old/Model", "data", "Ljava/lang/String;", "content")
+       .apply();
+```
+
+The renamer handles:
+- Constant pool reference updates across all classes
+- Hierarchy-aware method renaming
+- Descriptor and signature remapping
+- Pre-application validation
+
 ## Key Design Decisions
 
 1. **Lazy Loading** - ClassPool loads built-in classes on demand from JRT (Java 9+) or rt.jar (Java 8)
@@ -222,6 +261,8 @@ The AST system enables:
 - [Visitors](visitors.md) - Traversal and transformation patterns
 - [SSA Guide](ssa-guide.md) - SSA IR system in depth
 - [AST Guide](ast-guide.md) - Source-level AST recovery, mutation, and emission
+- [AST Editor](ast-editor.md) - ExprEditor-style AST transformations
+- [Renamer API](renamer-api.md) - Class, method, and field renaming
 - [Frame Computation](frame-computation.md) - StackMapTable generation
 
 ---

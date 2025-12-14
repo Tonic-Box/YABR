@@ -850,6 +850,8 @@ On obfuscated code, the ControlFlowSimplifier achieves:
 
 ## Related Documentation
 
+- [AST Editor](ast-editor.md) - ExprEditor-style AST transformations
+- [Renamer API](renamer-api.md) - Class, method, and field renaming
 - [SSA Guide](ssa-guide.md) - SSA intermediate representation
 - [SSA Transforms](ssa-transforms.md) - Optimizations and analysis
 - [Architecture](architecture.md) - System overview

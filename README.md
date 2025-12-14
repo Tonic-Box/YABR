@@ -45,6 +45,8 @@ byte[] bytes = newClass.write();
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
+| [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
+| [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |
 | [Frame Computation](docs/frame-computation.md) | StackMapTable generation |
 
 ## Examples
