@@ -4,11 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Renamer API:&#10;- Fluent API: Chain multiple renames easily&#10;- Class renames: Updates all references including descriptors and signatures&#10;- Method renames: Single class or full hierarchy propagation (overrides)&#10;- Field renames: Updates all access sites&#10;- Validation: Checks for conflicts, invalid names, and missing references&#10;- InvokeDynamic support: Updates bootstrap method arguments (lambdas)&#10;- MethodHandle support: Updates method/field handle references&#10;- Generic signature support: Remaps class references in generics">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="updated docs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/architecture.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ssa-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ssa-guide.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ssa-transforms.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ssa-transforms.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -195,22 +196,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00004" summary="Moved demos to demo package. Implimented Byttecode class and other QoL builder classes.">
-      <option name="closed" value="true" />
-      <created>1737523964757</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1737523964757</updated>
-    </task>
-    <task id="LOCAL-00005" summary="Moved demos to demo package. Implimented Byttecode class and other QoL builder classes.">
-      <option name="closed" value="true" />
-      <created>1737524002371</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1737524002371</updated>
     </task>
     <task id="LOCAL-00006" summary="Cleanup">
       <option name="closed" value="true" />
@@ -588,7 +573,23 @@
       <option name="project" value="LOCAL" />
       <updated>1765701556098</updated>
     </task>
-    <option name="localTasksCounter" value="53" />
+    <task id="LOCAL-00053" summary="Renamer API, ExprEditor, updated docs">
+      <option name="closed" value="true" />
+      <created>1765745321055</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1765745321055</updated>
+    </task>
+    <task id="LOCAL-00054" summary="updated docs">
+      <option name="closed" value="true" />
+      <created>1765745445131</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1765745445131</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -603,8 +604,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="remove debug" />
-    <MESSAGE value="Exception block lifting fix" />
     <MESSAGE value="JumpThreading fix&#10;- When JumpThreading bypassed an intermediate block, it didn't update the phi nodes at the target to reflect the new predecessor" />
     <MESSAGE value="Added missing visitors to ExpressionRecoverer" />
     <MESSAGE value="Changes made to StatementRecoverer.java:&#10;  1. Added ternaryPhiValues field to track PHIs that will become ternary expressions&#10;  2. Added collectTernaryPhis() method called early in recoverMethod() to identify these PHIs&#10;  3. Added findTernaryPhiPatternForPrepass() helper method to detect ternary PHI patterns&#10;  4. Modified emitPhiDeclaration() to skip PHIs in the ternaryPhiValues set" />
@@ -628,7 +627,9 @@
     <MESSAGE value="Improvements to recovery in source emission." />
     <MESSAGE value="Improvements to structural analysis" />
     <MESSAGE value="Renamer API:&#10;- Fluent API: Chain multiple renames easily&#10;- Class renames: Updates all references including descriptors and signatures&#10;- Method renames: Single class or full hierarchy propagation (overrides)&#10;- Field renames: Updates all access sites&#10;- Validation: Checks for conflicts, invalid names, and missing references&#10;- InvokeDynamic support: Updates bootstrap method arguments (lambdas)&#10;- MethodHandle support: Updates method/field handle references&#10;- Generic signature support: Remaps class references in generics" />
-    <option name="LAST_COMMIT_MESSAGE" value="Renamer API:&#10;- Fluent API: Chain multiple renames easily&#10;- Class renames: Updates all references including descriptors and signatures&#10;- Method renames: Single class or full hierarchy propagation (overrides)&#10;- Field renames: Updates all access sites&#10;- Validation: Checks for conflicts, invalid names, and missing references&#10;- InvokeDynamic support: Updates bootstrap method arguments (lambdas)&#10;- MethodHandle support: Updates method/field handle references&#10;- Generic signature support: Remaps class references in generics" />
+    <MESSAGE value="Renamer API, ExprEditor, updated docs" />
+    <MESSAGE value="updated docs" />
+    <option name="LAST_COMMIT_MESSAGE" value="updated docs" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -9,6 +9,7 @@ A Java bytecode manipulation library with SSA-form intermediate representation f
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
 - **Class decompilation** - Full class decompilation with imports, fields, and methods
+- **Analysis APIs** - Call graph, dependency analysis, type inference, pattern search
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+
 
@@ -44,6 +45,7 @@ byte[] bytes = newClass.write();
 | [Visitors](docs/visitors.md) | Traversal patterns |
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
+| [Analysis APIs](docs/analysis-apis.md) | Call graph, dependencies, type inference, pattern search |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
 | [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |
@@ -60,6 +62,10 @@ Runnable examples are in [`src/main/java/com/tonic/demo/`](src/main/java/com/ton
 - `ASTMutationDemo.java` - AST recovery, mutation, and recompilation
 - `SourceASTDemo.java` - AST node construction and source emission
 - `ast/Decompile.java` - Command-line class decompiler
+- `CallGraphDemo.java` - Build and query method call graph
+- `DependencyDemo.java` - Analyze class dependencies
+- `TypeInferenceDemo.java` - Type and nullability inference
+- `PatternSearchDemo.java` - Search for code patterns
 
 ## SSA Pipeline
 
@@ -121,6 +127,37 @@ Command-line usage:
 java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
 java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn
 ```
+
+## Analysis APIs
+
+YABR provides high-level APIs for code analysis:
+
+```java
+// Call Graph - find method callers/callees
+CallGraph cg = CallGraph.build(classPool);
+Set<MethodReference> callers = cg.getCallers(methodRef);
+
+// Dependency Analysis - track class dependencies
+DependencyAnalyzer deps = new DependencyAnalyzer(classPool);
+Set<String> dependencies = deps.getDependencies("com/example/MyClass");
+List<List<String>> cycles = deps.findCircularDependencies();
+
+// Type Inference - nullability analysis
+TypeInferenceAnalyzer types = new TypeInferenceAnalyzer(irMethod);
+types.analyze();
+Nullability nullState = types.getNullability(ssaValue);
+
+// Pattern Search - find code patterns
+PatternSearch search = new PatternSearch(classPool)
+    .inAllMethodsOf(classFile)
+    .withCallGraph();
+
+List<SearchResult> results = search.findMethodCalls("java/io/PrintStream", "println");
+List<SearchResult> allocs = search.findAllocations("java/lang/StringBuilder");
+List<SearchResult> nullDerefs = search.findPotentialNullDereferences();
+```
+
+See [Analysis APIs](docs/analysis-apis.md) for complete documentation.
 
 ## Building
 

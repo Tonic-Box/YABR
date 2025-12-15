@@ -366,4 +366,11 @@ analyzer.printStats();
 
 ---
 
+## Next Steps
+
+- [SSA Transforms](ssa-transforms.md) - Optimization passes
+- [Analysis APIs](analysis-apis.md) - Call graph, dependency analysis, type inference, pattern search
+
+---
+
 [<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md)

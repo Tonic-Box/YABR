@@ -751,6 +751,52 @@ public class ClassFile extends AbstractParser {
     }
 
     /**
+     * Creates a new method with a complete method descriptor.
+     * Use this when you have a pre-built descriptor like "(Lcom/test/ClassB;)V".
+     *
+     * @param accessFlags the access flags for the method
+     * @param methodName the name of the method
+     * @param methodDescriptor the complete method descriptor (e.g., "(Ljava/lang/String;I)V")
+     * @return the created MethodEntry
+     */
+    public MethodEntry createNewMethodWithDescriptor(int accessFlags, String methodName, String methodDescriptor) {
+        Logger.info("Creating method: " + methodName + " with descriptor: " + methodDescriptor);
+        // Count parameters from descriptor for maxLocals calculation
+        int paramCount = countParametersFromDescriptor(methodDescriptor);
+        return createNewMethod(false, accessFlags, methodName, methodDescriptor, new Object[paramCount]);
+    }
+
+    /**
+     * Counts the number of parameters in a method descriptor.
+     */
+    private int countParametersFromDescriptor(String descriptor) {
+        if (descriptor == null || !descriptor.startsWith("(")) return 0;
+        int count = 0;
+        int i = 1; // skip opening (
+        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+            char c = descriptor.charAt(i);
+            if (c == 'L') {
+                // Object type - skip to ;
+                int end = descriptor.indexOf(';', i);
+                if (end > i) {
+                    i = end + 1;
+                } else {
+                    i++;
+                }
+                count++;
+            } else if (c == '[') {
+                // Array - skip to element type
+                i++;
+            } else {
+                // Primitive or end of array
+                if (c != '[') count++;
+                i++;
+            }
+        }
+        return count;
+    }
+
+    /**
      * Creates a new method with optional default body generation.
      *
      * @param addDefaultBody whether to add a default body to the method
