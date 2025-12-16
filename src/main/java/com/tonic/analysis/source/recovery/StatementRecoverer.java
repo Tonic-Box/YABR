@@ -2016,6 +2016,11 @@ public class StatementRecoverer {
         SwitchInstruction sw = (SwitchInstruction) terminator;
 
         Expression selector = exprRecoverer.recoverOperand(sw.getKey());
+
+        // Detect and simplify enum switch map pattern:
+        // SwitchMapClass.$SwitchMap$pkg$EnumName[enumVar.ordinal()] -> enumVar
+        selector = simplifyEnumSwitchSelector(selector);
+
         List<SwitchCase> cases = new ArrayList<>();
 
         IRBlock mergeBlock = findSwitchMerge(info);
@@ -2043,6 +2048,58 @@ public class StatementRecoverer {
         }
 
         return new SwitchStmt(selector, cases);
+    }
+
+    /**
+     * Detects and simplifies the enum switch map pattern.
+     * Java compilers compile enum switches as:
+     *   switch (SyntheticClass.$SwitchMap$pkg$EnumName[enumVar.ordinal()])
+     *
+     * This method detects the pattern and simplifies to just: enumVar
+     *
+     * @param selector the switch selector expression
+     * @return the simplified enum variable if pattern matches, otherwise the original selector
+     */
+    private Expression simplifyEnumSwitchSelector(Expression selector) {
+        // Pattern: ArrayAccess[FieldAccess($SwitchMap$*)][MethodCall(ordinal)]
+        if (!(selector instanceof ArrayAccessExpr)) {
+            return selector;
+        }
+
+        ArrayAccessExpr arrayAccess = (ArrayAccessExpr) selector;
+        Expression array = arrayAccess.getArray();
+        Expression index = arrayAccess.getIndex();
+
+        // Check if array is a static field access with $SwitchMap$ in the name
+        if (!(array instanceof FieldAccessExpr)) {
+            return selector;
+        }
+
+        FieldAccessExpr fieldAccess = (FieldAccessExpr) array;
+        String fieldName = fieldAccess.getFieldName();
+
+        if (!fieldName.startsWith("$SwitchMap$")) {
+            return selector;
+        }
+
+        // Check if index is a call to ordinal()
+        if (!(index instanceof MethodCallExpr)) {
+            return selector;
+        }
+
+        MethodCallExpr methodCall = (MethodCallExpr) index;
+        if (!"ordinal".equals(methodCall.getMethodName())) {
+            return selector;
+        }
+
+        // The receiver of ordinal() is the enum variable we want
+        Expression enumVar = methodCall.getReceiver();
+        if (enumVar == null) {
+            return selector;
+        }
+
+        // Successfully detected enum switch pattern, return the enum variable
+        return enumVar;
     }
 
     private Statement recoverIrreducible(IRBlock header, RegionInfo info) {

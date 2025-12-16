@@ -4,10 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="unit tests">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- jitpack">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -96,7 +94,7 @@
     <configuration name="Decompile" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ast.Decompile" />
       <module name="YABR.main" />
-      <option name="PROGRAM_PARAMETERS" value="C:\test\dumper\SidePanel.class" />
+      <option name="PROGRAM_PARAMETERS" value="C:\test\dumper\WinterOverlay.class" />
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.tonic.demo.ast.*" />
@@ -216,14 +214,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00012" summary="Visitors implemented and VisitorTest demo class written">
-      <option name="closed" value="true" />
-      <created>1737595682163</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1737595682163</updated>
     </task>
     <task id="LOCAL-00013" summary="Super basic implementation of Expression/Statement block parsing/abstractions. Added a Demo to show them off @ TestBlocks.java&#10;&#10;Very basic so far and a bit lack luster, will take more work.">
       <option name="closed" value="true" />
@@ -609,7 +599,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765876152423</updated>
     </task>
-    <option name="localTasksCounter" value="61" />
+    <task id="LOCAL-00061" summary="- jitpack">
+      <option name="closed" value="true" />
+      <created>1765909975498</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1765909975498</updated>
+    </task>
+    <option name="localTasksCounter" value="62" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -624,7 +622,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="LoopPrediction optimization transformer" />
     <MESSAGE value="BDCE optimization transformer" />
     <MESSAGE value="CVE optimization transformer" />
     <MESSAGE value="better source emition for string concatenation" />
@@ -649,7 +646,8 @@
     <MESSAGE value="xref apis, CFG improvements" />
     <MESSAGE value="updated docs, clean-up" />
     <MESSAGE value="unit tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="unit tests" />
+    <MESSAGE value="- jitpack" />
+    <option name="LAST_COMMIT_MESSAGE" value="- jitpack" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
