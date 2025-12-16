@@ -284,7 +284,6 @@ public class StructuralAnalyzer {
     private boolean isEarlyExitBlock(IRBlock block) {
         if (block == null) return false;
 
-        // Must have exactly one predecessor (not a merge point)
         if (block.getPredecessors().size() > 1) {
             return false;
         }
@@ -292,23 +291,17 @@ public class StructuralAnalyzer {
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return false;
 
-        // Direct return or throw
         boolean isExit = terminator instanceof ReturnInstruction ||
                          terminator instanceof ThrowInstruction;
         if (isExit && block.getSuccessors().isEmpty()) {
             return true;
         }
 
-        // Block has a GOTO to a shared exit block
         if (terminator instanceof GotoInstruction) {
             List<IRBlock> successors = block.getSuccessors();
             if (successors.size() == 1) {
                 IRBlock target = successors.get(0);
-                // Target must be an exit block (return/throw with no successors)
                 if (isExitBlock(target)) {
-                    // The goto target can have multiple predecessors (shared exit)
-                    // but this block itself must have only one predecessor
-                    // Also, this block should have no non-trivial instructions
                     if (!hasNonTrivialInstructions(block)) {
                         return true;
                     }
@@ -417,7 +410,6 @@ public class StructuralAnalyzer {
      * @return the immediate merge point, or null if not found
      */
     private IRBlock findImmediateMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock postDomMerge) {
-        // Use BFS from both branches simultaneously to find the first common block
         Set<IRBlock> reachableFromTrue = new HashSet<>();
         Set<IRBlock> reachableFromFalse = new HashSet<>();
         Queue<IRBlock> trueQueue = new LinkedList<>();
@@ -426,21 +418,17 @@ public class StructuralAnalyzer {
         trueQueue.add(trueTarget);
         falseQueue.add(falseTarget);
 
-        // Limit search depth to avoid excessive computation
         int maxDepth = 20;
         int depth = 0;
 
         while (depth < maxDepth && (!trueQueue.isEmpty() || !falseQueue.isEmpty())) {
-            // Expand true branch frontier
             int trueSize = trueQueue.size();
             for (int i = 0; i < trueSize; i++) {
                 IRBlock block = trueQueue.poll();
                 if (block == null || reachableFromTrue.contains(block)) continue;
                 reachableFromTrue.add(block);
 
-                // Check if this block is reachable from false branch
                 if (reachableFromFalse.contains(block)) {
-                    // Found a common block - verify it's a good merge point
                     if (isValidMergePoint(block, trueTarget, falseTarget)) {
                         return block;
                     }
@@ -453,16 +441,13 @@ public class StructuralAnalyzer {
                 }
             }
 
-            // Expand false branch frontier
             int falseSize = falseQueue.size();
             for (int i = 0; i < falseSize; i++) {
                 IRBlock block = falseQueue.poll();
                 if (block == null || reachableFromFalse.contains(block)) continue;
                 reachableFromFalse.add(block);
 
-                // Check if this block is reachable from true branch
                 if (reachableFromTrue.contains(block)) {
-                    // Found a common block - verify it's a good merge point
                     if (isValidMergePoint(block, trueTarget, falseTarget)) {
                         return block;
                     }
@@ -488,12 +473,10 @@ public class StructuralAnalyzer {
      * - A block that's part of a loop back-edge
      */
     private boolean isValidMergePoint(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
-        // Must have at least 2 predecessors (one from each branch, possibly indirectly)
         if (block.getPredecessors().size() < 2) {
             return false;
         }
 
-        // If it's just a goto to return, it's probably not the real merge point
         if (block.getInstructions().size() == 1) {
             IRInstruction instr = block.getInstructions().get(0);
             if (instr instanceof GotoInstruction) {
@@ -504,8 +487,6 @@ public class StructuralAnalyzer {
             }
         }
 
-        // Check that this block is dominated by the branch header, not by either target
-        // (If it's dominated by trueTarget, it's in the true branch, not a merge point)
         if (dominatorTree.dominates(trueTarget, block) && trueTarget != block) {
             return false;
         }

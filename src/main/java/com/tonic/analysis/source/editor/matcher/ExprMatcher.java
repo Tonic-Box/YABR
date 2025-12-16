@@ -26,8 +26,6 @@ public class ExprMatcher {
         return expr != null && predicate.test(expr);
     }
 
-    // ==================== Method Call Matchers ====================
-
     /**
      * Matches method calls by method name only.
      */
@@ -56,8 +54,7 @@ public class ExprMatcher {
     }
 
     /**
-     * Matches method calls by owner class, method name, and descriptor.
-     * Note: This is a simplified match since AST doesn't always have full descriptor info.
+     * Matches method calls by owner class, method name, and argument count.
      */
     public static ExprMatcher methodCall(String ownerClass, String methodName, int argCount) {
         String normalizedOwner = ownerClass.replace('.', '/');
@@ -72,8 +69,6 @@ public class ExprMatcher {
             "methodCall(" + ownerClass + "." + methodName + "/" + argCount + ")"
         );
     }
-
-    // ==================== Field Access Matchers ====================
 
     /**
      * Matches field accesses by field name only.
@@ -102,8 +97,6 @@ public class ExprMatcher {
         );
     }
 
-    // ==================== Object Creation Matchers ====================
-
     /**
      * Matches new expressions by class name.
      */
@@ -125,8 +118,6 @@ public class ExprMatcher {
             "newArray()"
         );
     }
-
-    // ==================== Type Check Matchers ====================
 
     /**
      * Matches cast expressions to a specific type.
@@ -177,8 +168,6 @@ public class ExprMatcher {
             "anyInstanceOf()"
         );
     }
-
-    // ==================== Type-Based Matchers ====================
 
     /**
      * Matches any expression of a specific type.
@@ -232,8 +221,6 @@ public class ExprMatcher {
         return ofType(ArrayAccessExpr.class);
     }
 
-    // ==================== Operator Matchers ====================
-
     /**
      * Matches binary expressions with a specific operator.
      */
@@ -278,8 +265,6 @@ public class ExprMatcher {
         );
     }
 
-    // ==================== Custom Matchers ====================
-
     /**
      * Creates a matcher from a custom predicate.
      */
@@ -307,8 +292,6 @@ public class ExprMatcher {
     public static ExprMatcher none() {
         return new ExprMatcher(expr -> false, "none()");
     }
-
-    // ==================== Combinators ====================
 
     /**
      * Combines this matcher with another using AND logic.

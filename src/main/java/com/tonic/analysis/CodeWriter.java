@@ -69,18 +69,18 @@ public class CodeWriter {
                 LdcWInstruction ldc = (LdcWInstruction) instr;
                 if (ldc.getCpIndex() <= 0) {
                     debugMode = true;
-                    System.err.println("DEBUG: Invalid LDC_W at offset " + offset + " with cpIndex=" + ldc.getCpIndex());
-                    System.err.println("DEBUG: Bytecode bytes at offset: " +
+                    System.err.println("Invalid LDC_W at offset " + offset + " with cpIndex=" + ldc.getCpIndex());
+                    System.err.println("Bytecode bytes at offset: " +
                         String.format("%02X %02X %02X", bytecode[offset],
                             offset+1 < bytecode.length ? bytecode[offset+1] : 0,
                             offset+2 < bytecode.length ? bytecode[offset+2] : 0));
-                    System.err.println("DEBUG: First 30 bytes of method bytecode:");
+                    System.err.println("First 30 bytes of method bytecode:");
                     StringBuilder sb = new StringBuilder();
                     for (int i = 0; i < Math.min(30, bytecode.length); i++) {
                         sb.append(String.format("%02X ", bytecode[i]));
                     }
                     System.err.println(sb.toString());
-                    System.err.println("DEBUG: Previously parsed instructions:");
+                    System.err.println("Previously parsed instructions:");
                     for (var entry : instructions.entrySet()) {
                         System.err.println("  offset " + entry.getKey() + ": " + entry.getValue().getClass().getSimpleName() + " length=" + entry.getValue().getLength());
                     }
@@ -101,6 +101,11 @@ public class CodeWriter {
         return instructions.values();
     }
 
+    /**
+     * Returns the total number of instructions in this method.
+     *
+     * @return instruction count
+     */
     public int getInstructionCount()
     {
         return instructions.size();
@@ -284,11 +289,21 @@ public class CodeWriter {
         Logger.info("StackMapTable computation complete");
     }
 
+    /**
+     * Returns the size of the bytecode array in bytes.
+     *
+     * @return bytecode size
+     */
     public int getBytecodeSize()
     {
         return bytecode.length;
     }
 
+    /**
+     * Checks if the bytecode ends with a return instruction.
+     *
+     * @return true if ends with return, false otherwise
+     */
     public boolean endsWithReturn()
     {
         if (bytecode.length < 1)

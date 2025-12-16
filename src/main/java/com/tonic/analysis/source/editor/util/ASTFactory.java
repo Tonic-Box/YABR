@@ -14,8 +14,6 @@ import java.util.List;
  */
 public class ASTFactory {
 
-    // ==================== Literal Expressions ====================
-
     /**
      * Creates an integer literal.
      */
@@ -72,8 +70,6 @@ public class ASTFactory {
         return LiteralExpr.ofNull();
     }
 
-    // ==================== Variable Expressions ====================
-
     /**
      * Creates a variable reference.
      */
@@ -109,8 +105,6 @@ public class ASTFactory {
         return new ArrayAccessExpr(array, index, componentType);
     }
 
-    // ==================== Method Calls ====================
-
     /**
      * Creates a method call builder.
      */
@@ -132,8 +126,6 @@ public class ASTFactory {
                                         SourceType returnType, Expression... args) {
         return MethodCallExpr.instanceCall(receiver, methodName, ownerClass, Arrays.asList(args), returnType);
     }
-
-    // ==================== Object Creation ====================
 
     /**
      * Creates a new object expression builder.
@@ -162,8 +154,6 @@ public class ASTFactory {
     public NewArrayExpr newArray(String typeName, Expression size) {
         return NewArrayExpr.withSize(parseType(typeName), size);
     }
-
-    // ==================== Operators ====================
 
     /**
      * Creates a binary expression.
@@ -319,8 +309,6 @@ public class ASTFactory {
         return new TernaryExpr(condition, thenExpr, elseExpr, type);
     }
 
-    // ==================== Statements ====================
-
     /**
      * Creates an expression statement.
      */
@@ -398,17 +386,16 @@ public class ASTFactory {
         return new VarDeclStmt(type, name);
     }
 
-    // ==================== Type Parsing ====================
-
     /**
      * Parses a type from a string representation.
+     * @param typeName the type name to parse
+     * @return the parsed source type
      */
     public SourceType parseType(String typeName) {
         if (typeName == null || typeName.isEmpty()) {
             return ReferenceSourceType.OBJECT;
         }
 
-        // Handle primitive types
         switch (typeName) {
             case "void":
                 return VoidSourceType.INSTANCE;
@@ -430,17 +417,13 @@ public class ASTFactory {
                 return PrimitiveSourceType.SHORT;
         }
 
-        // Handle array types
         if (typeName.endsWith("[]")) {
             String componentTypeName = typeName.substring(0, typeName.length() - 2);
             return new ArraySourceType(parseType(componentTypeName));
         }
 
-        // Handle reference types
         return new ReferenceSourceType(typeName.replace('.', '/'));
     }
-
-    // ==================== Builder Classes ====================
 
     /**
      * Builder for method call expressions.

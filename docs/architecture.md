@@ -51,6 +51,14 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.frame` | StackMapTable frame computation |
 | `com.tonic.analysis.source.decompile` | Full class decompilation |
 | `com.tonic.analysis.source.editor` | AST expression/statement editing |
+| `com.tonic.analysis.xref` | Cross-reference tracking (who calls what) |
+| `com.tonic.analysis.dataflow` | Data flow graphs and taint analysis |
+| `com.tonic.analysis.similarity` | Method similarity and duplicate detection |
+| `com.tonic.analysis.callgraph` | Call graph construction and queries |
+| `com.tonic.analysis.dependency` | Class dependency analysis |
+| `com.tonic.analysis.typeinference` | Type and nullability inference |
+| `com.tonic.analysis.pattern` | Code pattern search |
+| `com.tonic.analysis.instrumentation` | Bytecode instrumentation hooks |
 | `com.tonic.renamer` | Class/method/field renaming |
 | `com.tonic.utill` | Utilities (AccessBuilder, Logger, etc.) |
 | `com.tonic.demo` | Example programs |
@@ -262,6 +270,7 @@ The renamer handles:
 - [SSA Guide](ssa-guide.md) - SSA IR system in depth
 - [AST Guide](ast-guide.md) - Source-level AST recovery, mutation, and emission
 - [AST Editor](ast-editor.md) - ExprEditor-style AST transformations
+- [Analysis APIs](analysis-apis.md) - Call graph, xrefs, data flow, similarity, and more
 - [Renamer API](renamer-api.md) - Class, method, and field renaming
 - [Frame Computation](frame-computation.md) - StackMapTable generation
 

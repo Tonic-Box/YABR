@@ -43,8 +43,6 @@ public class StatementEditor {
         this.delegate = new ASTEditor(methodBody, methodName, methodDescriptor, ownerClass);
     }
 
-    // ==================== Statement Handlers ====================
-
     /**
      * Registers a handler for return statements.
      */
@@ -109,8 +107,6 @@ public class StatementEditor {
         return this;
     }
 
-    // ==================== Convenience Methods ====================
-
     /**
      * Inserts statements before all returns.
      */
@@ -150,9 +146,7 @@ public class StatementEditor {
     }
 
     /**
-     * Adds statements after all throw statements.
-     * Note: This is rarely useful since throw terminates execution,
-     * but can be used for logging or cleanup in certain patterns.
+     * Adds statements before all throw statements.
      */
     public StatementEditor insertBeforeThrows(Statement... stmts) {
         return onThrow((ctx, throwStmt) -> Replacement.insertBefore(stmts));
@@ -171,8 +165,6 @@ public class StatementEditor {
     public StatementEditor removeStmts(StmtMatcher matcher) {
         return onStmt(matcher, (ctx, stmt) -> Replacement.remove());
     }
-
-    // ==================== Query Methods ====================
 
     /**
      * Finds all statements matching the given matcher.
@@ -250,8 +242,6 @@ public class StatementEditor {
     public List<Statement> findVarDecls() {
         return delegate.findStatements(StmtMatcher.varDeclStmt());
     }
-
-    // ==================== Execution ====================
 
     /**
      * Applies all registered handlers and modifies the AST in place.

@@ -20,13 +20,11 @@ public class EditorContext {
     private final String ownerClass;
     private final ASTFactory factory;
 
-    // Current traversal state
     private Statement currentStatement;
     private BlockStmt enclosingBlock;
     private int statementIndex;
     private final Set<String> checkedVariables;
 
-    // Nesting tracking
     private int tryDepth;
     private int loopDepth;
     private int conditionalDepth;
@@ -42,8 +40,6 @@ public class EditorContext {
         this.loopDepth = 0;
         this.conditionalDepth = 0;
     }
-
-    // ==================== Method Information ====================
 
     /**
      * Gets the method body being edited.
@@ -72,8 +68,6 @@ public class EditorContext {
     public String getOwnerClass() {
         return ownerClass;
     }
-
-    // ==================== Current Location ====================
 
     /**
      * Gets the current statement being visited.
@@ -116,8 +110,6 @@ public class EditorContext {
     public void setStatementIndex(int index) {
         this.statementIndex = index;
     }
-
-    // ==================== Nesting Tracking ====================
 
     /**
      * Checks if the current location is inside a try block.
@@ -182,13 +174,9 @@ public class EditorContext {
         conditionalDepth = Math.max(0, conditionalDepth - 1);
     }
 
-    // ==================== Variable Tracking ====================
-
     /**
      * Gets all variables that are visible at the current location.
-     * Note: This is a simplified implementation that returns variables
-     * marked as null-checked. A complete implementation would track
-     * all declared variables.
+     * Simplified implementation returning null-checked variables.
      */
     public Set<String> getVisibleVariables() {
         return new HashSet<>(checkedVariables);
@@ -219,16 +207,12 @@ public class EditorContext {
         checkedVariables.clear();
     }
 
-    // ==================== Factory ====================
-
     /**
      * Gets the AST factory for creating new nodes.
      */
     public ASTFactory factory() {
         return factory;
     }
-
-    // ==================== Utility Methods ====================
 
     /**
      * Creates a replacement that inserts statements before the current statement.
@@ -246,31 +230,26 @@ public class EditorContext {
 
     /**
      * Wraps an expression with a null check.
-     * Returns a replacement that adds a null check before any usage.
-     *
      * @param expr the expression to check
      * @return a replacement with null check
      */
     public Replacement wrapWithNullCheck(Expression expr) {
-        // Create: if (expr != null) { original }
-        // This is a simplified implementation - the actual wrapping depends on context
         String varName = extractVariableName(expr);
         if (varName != null) {
             markNullChecked(varName);
         }
-        // For now, just return keep - actual null check wrapping
-        // requires more sophisticated statement manipulation
         return Replacement.keep();
     }
 
     /**
      * Extracts a variable name from an expression if possible.
+     * @param expr the expression to extract from
+     * @return the variable name or null
      */
     private String extractVariableName(Expression expr) {
         if (expr == null) {
             return null;
         }
-        // VarRefExpr stores the variable name
         if (expr instanceof com.tonic.analysis.source.ast.expr.VarRefExpr) {
             return ((com.tonic.analysis.source.ast.expr.VarRefExpr) expr).getName();
         }

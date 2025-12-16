@@ -17,13 +17,20 @@ public abstract class Replacement {
      * The type of replacement action.
      */
     public enum Type {
-        KEEP,           // No change
-        REPLACE_EXPR,   // Replace with new expression
-        REPLACE_STMT,   // Replace with new statement
-        REPLACE_BLOCK,  // Replace with multiple statements
-        REMOVE,         // Remove entirely
-        INSERT_BEFORE,  // Insert statements before current
-        INSERT_AFTER    // Insert statements after current
+        /** No change. */
+        KEEP,
+        /** Replace with new expression. */
+        REPLACE_EXPR,
+        /** Replace with new statement. */
+        REPLACE_STMT,
+        /** Replace with multiple statements. */
+        REPLACE_BLOCK,
+        /** Remove entirely. */
+        REMOVE,
+        /** Insert statements before current. */
+        INSERT_BEFORE,
+        /** Insert statements after current. */
+        INSERT_AFTER
     }
 
     private final Type type;
@@ -51,8 +58,6 @@ public abstract class Replacement {
     public boolean isInsert() {
         return type == Type.INSERT_BEFORE || type == Type.INSERT_AFTER;
     }
-
-    // ==================== Factory Methods ====================
 
     private static final Replacement KEEP_INSTANCE = new KeepReplacement();
     private static final Replacement REMOVE_INSTANCE = new RemoveReplacement();
@@ -151,8 +156,6 @@ public abstract class Replacement {
         return new InsertAfterReplacement(stmts);
     }
 
-    // ==================== Accessors for subclasses ====================
-
     /**
      * Gets the replacement expression (for REPLACE_EXPR type).
      */
@@ -173,8 +176,6 @@ public abstract class Replacement {
     public List<Statement> getStatements() {
         return Collections.emptyList();
     }
-
-    // ==================== Inner Classes ====================
 
     private static final class KeepReplacement extends Replacement {
         KeepReplacement() {

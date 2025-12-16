@@ -17,6 +17,10 @@ public final class ReferenceType implements IRType {
 
     private final String internalName;
 
+    /**
+     * Creates a reference type with the given internal name.
+     * @param internalName the internal class name
+     */
     public ReferenceType(String internalName) {
         this.internalName = internalName.replace('.', '/');
     }
@@ -56,6 +60,10 @@ public final class ReferenceType implements IRType {
         return false;
     }
 
+    /**
+     * Gets the simple class name without package.
+     * @return the simple name
+     */
     public String getSimpleName() {
         int lastSlash = internalName.lastIndexOf('/');
         return lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;

@@ -46,10 +46,18 @@ public enum PrimitiveType implements IRType {
         return this == LONG || this == DOUBLE;
     }
 
+    /**
+     * Checks if this is an integral type.
+     * @return true if boolean, byte, char, short, or int
+     */
     public boolean isIntegral() {
         return this == BOOLEAN || this == BYTE || this == CHAR || this == SHORT || this == INT;
     }
 
+    /**
+     * Checks if this is a floating-point type.
+     * @return true if float or double
+     */
     public boolean isFloatingPoint() {
         return this == FLOAT || this == DOUBLE;
     }

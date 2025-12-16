@@ -13,6 +13,11 @@ public final class ArrayType implements IRType {
     private final IRType elementType;
     private final int dimensions;
 
+    /**
+     * Creates an array type with specified element type and dimensions.
+     * @param elementType the element type
+     * @param dimensions the number of dimensions
+     */
     public ArrayType(IRType elementType, int dimensions) {
         if (dimensions < 1) {
             throw new IllegalArgumentException("Array must have at least 1 dimension");
@@ -21,10 +26,19 @@ public final class ArrayType implements IRType {
         this.dimensions = dimensions;
     }
 
+    /**
+     * Creates a single-dimensional array type.
+     * @param elementType the element type
+     */
     public ArrayType(IRType elementType) {
         this(elementType, 1);
     }
 
+    /**
+     * Creates an array type from a descriptor string.
+     * @param descriptor the array descriptor
+     * @return the array type
+     */
     public static ArrayType fromDescriptor(String descriptor) {
         int dims = 0;
         while (dims < descriptor.length() && descriptor.charAt(dims) == '[') {
@@ -74,6 +88,10 @@ public final class ArrayType implements IRType {
         return false;
     }
 
+    /**
+     * Gets the base element type for multi-dimensional arrays.
+     * @return the innermost element type
+     */
     public IRType getBaseElementType() {
         if (elementType instanceof ArrayType) {
             ArrayType arr = (ArrayType) elementType;

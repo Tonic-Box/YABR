@@ -30,7 +30,6 @@ public class ASTEditor {
     private final BlockStmt methodBody;
     private final EditorContext context;
 
-    // Handler lists
     private final List<HandlerEntry<MethodCallHandler, MethodCallExpr>> methodCallHandlers = new ArrayList<>();
     private final List<HandlerEntry<FieldAccessHandler, FieldAccessExpr>> fieldAccessHandlers = new ArrayList<>();
     private final List<HandlerEntry<NewExprHandler, NewExpr>> newExprHandlers = new ArrayList<>();
@@ -48,7 +47,6 @@ public class ASTEditor {
     private final List<HandlerEntry<TryCatchHandler, TryCatchStmt>> tryCatchHandlers = new ArrayList<>();
     private final List<HandlerEntry<AssignmentHandler, BinaryExpr>> assignmentHandlers = new ArrayList<>();
 
-    // Generic matcher-based handlers
     private final List<MatcherExprHandler> exprMatcherHandlers = new ArrayList<>();
     private final List<MatcherStmtHandler> stmtMatcherHandlers = new ArrayList<>();
 
@@ -66,8 +64,6 @@ public class ASTEditor {
     public ASTEditor(BlockStmt methodBody) {
         this(methodBody, null, null, null);
     }
-
-    // ==================== Expression Handlers ====================
 
     /**
      * Registers a handler for method call expressions.
@@ -160,8 +156,6 @@ public class ASTEditor {
         return this;
     }
 
-    // ==================== Statement Handlers ====================
-
     /**
      * Registers a handler for return statements.
      */
@@ -210,8 +204,6 @@ public class ASTEditor {
         return this;
     }
 
-    // ==================== Matcher-Based Handlers ====================
-
     /**
      * Registers a handler for expressions matching the given matcher.
      */
@@ -228,8 +220,6 @@ public class ASTEditor {
         return this;
     }
 
-    // ==================== Execution ====================
-
     /**
      * Applies all registered handlers and modifies the AST in place.
      */
@@ -244,8 +234,6 @@ public class ASTEditor {
         apply();
         return methodBody;
     }
-
-    // ==================== Query Methods ====================
 
     /**
      * Finds all expressions matching the given matcher.
@@ -265,23 +253,18 @@ public class ASTEditor {
         return results;
     }
 
-    // ==================== Processing ====================
-
     private void processBlock(BlockStmt block) {
         context.setEnclosingBlock(block);
         List<Statement> statements = block.getStatements();
 
-        // Process statements (may be modified during iteration)
         for (int i = 0; i < statements.size(); i++) {
             context.setStatementIndex(i);
             Statement stmt = statements.get(i);
             context.setCurrentStatement(stmt);
 
-            // Process the statement and get replacement
             StatementResult result = processStatement(stmt);
 
             if (result.replacement != null && !result.replacement.isKeep()) {
-                // Apply statement-level replacement
                 i = applyStatementReplacement(statements, i, result.replacement);
             }
         }
@@ -334,7 +317,6 @@ public class ASTEditor {
             processLabeledStmt((LabeledStmt) stmt);
         }
 
-        // Check matcher-based handlers
         for (MatcherStmtHandler msh : stmtMatcherHandlers) {
             if (msh.matcher.matches(stmt)) {
                 Replacement r = msh.handler.handle(context, stmt);
@@ -348,10 +330,8 @@ public class ASTEditor {
     }
 
     private Replacement processIfStmt(IfStmt stmt) {
-        // Process condition expression
         processExpression(stmt.getCondition());
 
-        // Process branches
         if (stmt.getThenBranch() instanceof BlockStmt) {
             processBlock((BlockStmt) stmt.getThenBranch());
         } else {
@@ -445,7 +425,6 @@ public class ASTEditor {
     }
 
     private Replacement processTryCatchStmt(TryCatchStmt stmt) {
-        // Process try block - may be Statement or BlockStmt
         Statement tryBlock = stmt.getTryBlock();
         if (tryBlock instanceof BlockStmt) {
             processBlock((BlockStmt) tryBlock);
@@ -453,7 +432,6 @@ public class ASTEditor {
             processStatement(tryBlock);
         }
 
-        // Process catch clauses
         for (CatchClause clause : stmt.getCatches()) {
             Statement catchBody = clause.body();
             if (catchBody instanceof BlockStmt) {
@@ -463,7 +441,6 @@ public class ASTEditor {
             }
         }
 
-        // Process finally block if present
         Statement finallyBlock = stmt.getFinallyBlock();
         if (finallyBlock != null) {
             if (finallyBlock instanceof BlockStmt) {
@@ -515,7 +492,6 @@ public class ASTEditor {
         Expression expr = stmt.getExpression();
         ExpressionResult result = processExpression(expr);
 
-        // If the expression was replaced, update the statement
         if (result.replacement != null && !result.replacement.isKeep()) {
             if (result.replacement.getType() == Replacement.Type.REPLACE_EXPR) {
                 stmt.setExpression(result.replacement.getExpression());
@@ -554,8 +530,6 @@ public class ASTEditor {
         processStatement(stmt.getStatement());
     }
 
-    // ==================== Expression Processing ====================
-
     private ExpressionResult processExpression(Expression expr) {
         if (expr == null) {
             return new ExpressionResult(Replacement.keep());
@@ -563,7 +537,6 @@ public class ASTEditor {
 
         Replacement replacement = Replacement.keep();
 
-        // Process specific expression types
         if (expr instanceof MethodCallExpr) {
             replacement = processMethodCall((MethodCallExpr) expr);
         } else if (expr instanceof FieldAccessExpr) {
@@ -588,7 +561,6 @@ public class ASTEditor {
             processLambdaExpr((LambdaExpr) expr);
         }
 
-        // Check matcher-based handlers
         for (MatcherExprHandler meh : exprMatcherHandlers) {
             if (meh.matcher.matches(expr)) {
                 Replacement r = meh.handler.handle(context, expr);
@@ -602,11 +574,9 @@ public class ASTEditor {
     }
 
     private Replacement processMethodCall(MethodCallExpr expr) {
-        // Process receiver
         if (expr.getReceiver() != null) {
             processExpression(expr.getReceiver());
         }
-        // Process arguments
         for (Expression arg : expr.getArguments()) {
             processExpression(arg);
         }
@@ -698,7 +668,6 @@ public class ASTEditor {
 
         Replacement replacement = Replacement.keep();
 
-        // Check for assignment handlers
         if (expr.isAssignment()) {
             for (HandlerEntry<AssignmentHandler, BinaryExpr> entry : assignmentHandlers) {
                 Replacement r = entry.handler.handle(context, expr);
@@ -708,7 +677,6 @@ public class ASTEditor {
             }
         }
 
-        // Check general binary handlers
         for (HandlerEntry<BinaryExprHandler, BinaryExpr> entry : binaryExprHandlers) {
             Replacement r = entry.handler.handle(context, expr);
             if (!r.isKeep()) {
@@ -741,12 +709,10 @@ public class ASTEditor {
         processExpression(expr.getArray());
         processExpression(expr.getIndex());
 
-        // Determine access type by checking parent context
         ArrayAccessHandler.ArrayAccessType accessType = determineArrayAccessType(expr);
 
         Replacement replacement = Replacement.keep();
         for (ArrayAccessHandlerEntry entry : arrayAccessHandlers) {
-            // Skip if handler is filtered to a specific access type
             if (entry.filterType != null && entry.filterType != accessType) {
                 continue;
             }
@@ -760,20 +726,19 @@ public class ASTEditor {
 
     /**
      * Determines whether an array access is a read, store, or compound assignment.
+     * @param expr the array access expression
+     * @return the type of array access
      */
     private ArrayAccessHandler.ArrayAccessType determineArrayAccessType(ArrayAccessExpr expr) {
-        // Check if this array access is the left side of an assignment
         if (expr.getParent() instanceof BinaryExpr) {
             BinaryExpr parent = (BinaryExpr) expr.getParent();
             if (parent.isAssignment() && parent.getLeft() == expr) {
-                // Check if it's a compound assignment (+=, -=, etc.)
                 if (parent.getOperator() != BinaryOperator.ASSIGN) {
                     return ArrayAccessHandler.ArrayAccessType.COMPOUND_ASSIGN;
                 }
                 return ArrayAccessHandler.ArrayAccessType.STORE;
             }
         }
-        // Default to read
         return ArrayAccessHandler.ArrayAccessType.READ;
     }
 
@@ -784,8 +749,6 @@ public class ASTEditor {
             processExpression((Expression) expr.getBody());
         }
     }
-
-    // ==================== Replacement Application ====================
 
     private int applyStatementReplacement(List<Statement> statements, int index, Replacement replacement) {
         switch (replacement.getType()) {
@@ -824,8 +787,6 @@ public class ASTEditor {
         }
     }
 
-    // ==================== Collection Helpers ====================
-
     private void collectExpressions(Statement stmt, ExprMatcher matcher, List<Expression> results) {
         if (stmt instanceof BlockStmt) {
             for (Statement s : ((BlockStmt) stmt).getStatements()) {
@@ -841,7 +802,6 @@ public class ASTEditor {
                 collectExpressions(ifStmt.getElseBranch(), matcher, results);
             }
         }
-        // Add more statement types as needed
     }
 
     private void collectExpressionsFromExpr(Expression expr, ExprMatcher matcher, List<Expression> results) {
@@ -851,7 +811,6 @@ public class ASTEditor {
             results.add(expr);
         }
 
-        // Recursively collect from sub-expressions
         if (expr instanceof MethodCallExpr) {
             MethodCallExpr call = (MethodCallExpr) expr;
             if (call.getReceiver() != null) {
@@ -867,7 +826,6 @@ public class ASTEditor {
         } else if (expr instanceof UnaryExpr) {
             collectExpressionsFromExpr(((UnaryExpr) expr).getOperand(), matcher, results);
         }
-        // Add more expression types as needed
     }
 
     private void collectStatements(Statement stmt, StmtMatcher matcher, List<Statement> results) {
@@ -886,10 +844,7 @@ public class ASTEditor {
                 collectStatements(ifStmt.getElseBranch(), matcher, results);
             }
         }
-        // Add more statement types as needed
     }
-
-    // ==================== Helper Classes ====================
 
     private static class HandlerEntry<H, N> {
         final H handler;
@@ -943,7 +898,7 @@ public class ASTEditor {
 
         ArrayAccessHandlerEntry(ArrayAccessHandler handler) {
             this.handler = handler;
-            this.filterType = null; // No filter, handle all access types
+            this.filterType = null;
         }
 
         ArrayAccessHandlerEntry(ArrayAccessHandler handler, ArrayAccessHandler.ArrayAccessType filterType) {

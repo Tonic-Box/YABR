@@ -4,14 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Instrumentation API">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="xref apis, CFG improvements">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/architecture.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -210,14 +207,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00008" summary="Cleanup">
-      <option name="closed" value="true" />
-      <created>1737529372078</created>
-      <option name="number" value="00008" />
-      <option name="presentableId" value="LOCAL-00008" />
-      <option name="project" value="LOCAL" />
-      <updated>1737529372078</updated>
     </task>
     <task id="LOCAL-00009" summary="Cleanup">
       <option name="closed" value="true" />
@@ -603,7 +592,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765782159197</updated>
     </task>
-    <option name="localTasksCounter" value="57" />
+    <task id="LOCAL-00057" summary="xref apis, CFG improvements">
+      <option name="closed" value="true" />
+      <created>1765850707920</created>
+      <option name="number" value="00057" />
+      <option name="presentableId" value="LOCAL-00057" />
+      <option name="project" value="LOCAL" />
+      <updated>1765850707920</updated>
+    </task>
+    <option name="localTasksCounter" value="58" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -618,7 +615,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Changes made to StatementRecoverer.java:&#10;  1. Added ternaryPhiValues field to track PHIs that will become ternary expressions&#10;  2. Added collectTernaryPhis() method called early in recoverMethod() to identify these PHIs&#10;  3. Added findTernaryPhiPatternForPrepass() helper method to detect ternary PHI patterns&#10;  4. Modified emitPhiDeclaration() to skip PHIs in the ternaryPhiValues set" />
     <MESSAGE value="Readme docs update" />
     <MESSAGE value="Reassociate optimization transformer" />
     <MESSAGE value="LoopPrediction optimization transformer" />
@@ -643,7 +639,8 @@
     <MESSAGE value="updated docs" />
     <MESSAGE value="- Call Graph API - Building graphs, querying callers/callees, reachability analysis, virtual call resolution&#10;- Dependency Analysis API - Class dependencies, circular dependency detection, dependency types&#10;- Type Inference API - Nullability states, type states, polymorphic types&#10;- Pattern Search API - Finding method calls, field accesses, allocations, type operations, custom patterns" />
     <MESSAGE value="Instrumentation API" />
-    <option name="LAST_COMMIT_MESSAGE" value="Instrumentation API" />
+    <MESSAGE value="xref apis, CFG improvements" />
+    <option name="LAST_COMMIT_MESSAGE" value="xref apis, CFG improvements" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

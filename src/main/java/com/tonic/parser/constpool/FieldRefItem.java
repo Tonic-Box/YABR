@@ -41,9 +41,9 @@ public class FieldRefItem extends Item<FieldRef> {
     }
 
     /**
-     * Retrieves the class name from the constant pool.
+     * Gets the class name from constant pool.
      *
-     * @return The class name.
+     * @return class name or null if unavailable
      */
     public String getClassName() {
         if(classFile == null)
@@ -55,9 +55,9 @@ public class FieldRefItem extends Item<FieldRef> {
     }
 
     /**
-     * Retrieves the field name from the constant pool.
+     * Gets the field name from constant pool.
      *
-     * @return The field name.
+     * @return field name or null if unavailable
      */
     public String getName() {
         if(classFile == null)
@@ -69,9 +69,9 @@ public class FieldRefItem extends Item<FieldRef> {
     }
 
     /**
-     * Retrieves the field descriptor from the constant pool.
+     * Gets the field descriptor from constant pool.
      *
-     * @return The field descriptor.
+     * @return field descriptor or null if unavailable
      */
     public String getDescriptor() {
         if(classFile == null)
@@ -83,9 +83,9 @@ public class FieldRefItem extends Item<FieldRef> {
     }
 
     /**
-     * Retrieves the owner class internal name from the constant pool.
+     * Gets owner class internal name from constant pool.
      *
-     * @return The owner class internal name.
+     * @return owner class internal name or null if unavailable
      */
     public String getOwner() {
         if (classFile == null)

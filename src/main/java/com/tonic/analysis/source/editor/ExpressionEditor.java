@@ -46,8 +46,6 @@ public class ExpressionEditor {
         this.delegate = new ASTEditor(methodBody, methodName, methodDescriptor, ownerClass);
     }
 
-    // ==================== Expression Handlers ====================
-
     /**
      * Registers a handler for method call expressions.
      */
@@ -153,14 +151,12 @@ public class ExpressionEditor {
         return this;
     }
 
-    // ==================== Convenience Methods ====================
-
     /**
      * Replaces all method calls matching the criteria.
-     *
      * @param ownerClass the owner class to match
      * @param methodName the method name to match
-     * @param replacer   function to create replacement expression
+     * @param replacer function to create replacement expression
+     * @return this editor for chaining
      */
     public ExpressionEditor replaceMethodCall(String ownerClass, String methodName,
                                                MethodCallReplacer replacer) {
@@ -179,6 +175,9 @@ public class ExpressionEditor {
 
     /**
      * Removes all method calls matching the criteria.
+     * @param ownerClass the owner class to match
+     * @param methodName the method name to match
+     * @return this editor for chaining
      */
     public ExpressionEditor removeMethodCall(String ownerClass, String methodName) {
         String normalizedOwner = ownerClass.replace('.', '/');
@@ -193,6 +192,10 @@ public class ExpressionEditor {
 
     /**
      * Replaces all field accesses matching the criteria.
+     * @param ownerClass the owner class to match
+     * @param fieldName the field name to match
+     * @param replacer function to create replacement expression
+     * @return this editor for chaining
      */
     public ExpressionEditor replaceFieldAccess(String ownerClass, String fieldName,
                                                 FieldAccessReplacer replacer) {
@@ -211,6 +214,9 @@ public class ExpressionEditor {
 
     /**
      * Replaces all new expressions of a specific class.
+     * @param className the class name to match
+     * @param replacer function to create replacement expression
+     * @return this editor for chaining
      */
     public ExpressionEditor replaceNewExpr(String className, NewExprReplacer replacer) {
         String normalizedClass = className.replace('.', '/');
@@ -224,8 +230,6 @@ public class ExpressionEditor {
             return Replacement.keep();
         });
     }
-
-    // ==================== Query Methods ====================
 
     /**
      * Finds all expressions matching the given matcher.
@@ -276,8 +280,6 @@ public class ExpressionEditor {
         return delegate.findExpressions(ExprMatcher.anyArrayAccess());
     }
 
-    // ==================== Execution ====================
-
     /**
      * Applies all registered handlers and modifies the AST in place.
      */
@@ -291,8 +293,6 @@ public class ExpressionEditor {
     public ASTEditor getDelegate() {
         return delegate;
     }
-
-    // ==================== Functional Interfaces ====================
 
     /**
      * Functional interface for method call replacement.

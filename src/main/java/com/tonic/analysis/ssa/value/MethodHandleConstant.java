@@ -69,21 +69,24 @@ public final class MethodHandleConstant extends Constant {
     }
 
     /**
-     * Returns whether this method handle references a field.
+     * Checks if this method handle references a field.
+     * @return true if this is a field reference
      */
     public boolean isFieldReference() {
         return referenceKind >= REF_getField && referenceKind <= REF_putStatic;
     }
 
     /**
-     * Returns whether this method handle references a method.
+     * Checks if this method handle references a method.
+     * @return true if this is a method reference
      */
     public boolean isMethodReference() {
         return referenceKind >= REF_invokeVirtual && referenceKind <= REF_invokeInterface;
     }
 
     /**
-     * Returns a human-readable name for the reference kind.
+     * Gets a human-readable name for the reference kind.
+     * @return the reference kind name
      */
     public String getReferenceKindName() {
         switch (referenceKind) {

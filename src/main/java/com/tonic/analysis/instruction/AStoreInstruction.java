@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -31,22 +30,10 @@ public class AStoreInstruction extends Instruction {
         visitor.visit(this);
     }
 
-    /**
-     * Determines if the opcode is a short-form ASTORE instruction.
-     *
-     * @param opcode The opcode to check.
-     * @return True if the opcode is ASTORE_0-3, false otherwise.
-     */
     private static boolean isShortForm(int opcode) {
         return opcode >= 0x4B && opcode <= 0x4E;
     }
 
-    /**
-     * Writes the ASTORE opcode and its operand (if any) to the DataOutputStream.
-     *
-     * @param dos The DataOutputStream to write to.
-     * @throws IOException If an I/O error occurs.
-     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
@@ -55,31 +42,16 @@ public class AStoreInstruction extends Instruction {
         }
     }
 
-    /**
-     * Returns the change in stack size caused by this instruction.
-     *
-     * @return The stack size change (pops a reference).
-     */
     @Override
     public int getStackChange() {
         return -1;
     }
 
-    /**
-     * Returns the change in local variables caused by this instruction.
-     *
-     * @return The local variables size change (none).
-     */
     @Override
     public int getLocalChange() {
         return 0;
     }
 
-    /**
-     * Returns a string representation of the instruction.
-     *
-     * @return The mnemonic and variable index of the instruction.
-     */
     @Override
     public String toString() {
         String mnemonic;

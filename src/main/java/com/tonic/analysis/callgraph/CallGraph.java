@@ -177,11 +177,9 @@ public class CallGraph {
             if (!node.isInPool()) continue;
             MethodReference ref = node.getReference();
 
-            // Main methods
             if ("main".equals(ref.getName()) && "([Ljava/lang/String;)V".equals(ref.getDescriptor())) {
                 entryPoints.add(ref);
             }
-            // Static initializers
             if ("<clinit>".equals(ref.getName())) {
                 entryPoints.add(ref);
             }
@@ -223,10 +221,8 @@ public class CallGraph {
 
             MethodReference ref = node.getReference();
 
-            // Skip constructors and static initializers
             if (ref.isConstructor() || ref.isStaticInitializer()) continue;
 
-            // Skip main methods
             if ("main".equals(ref.getName()) && "([Ljava/lang/String;)V".equals(ref.getDescriptor())) {
                 continue;
             }
@@ -276,12 +272,10 @@ public class CallGraph {
         Set<MethodReference> targets = new LinkedHashSet<>();
 
         if (hierarchy == null) {
-            // Without hierarchy, just return the declared target
             targets.add(new MethodReference(owner, name, descriptor));
             return targets;
         }
 
-        // Find all classes in the hierarchy that might implement this method
         Set<ClassNode> methodClasses = hierarchy.findMethodHierarchy(owner, name, descriptor);
         for (ClassNode classNode : methodClasses) {
             if (classNode.isInPool()) {
@@ -292,7 +286,6 @@ public class CallGraph {
             }
         }
 
-        // If no implementations found, add the declared target
         if (targets.isEmpty()) {
             targets.add(new MethodReference(owner, name, descriptor));
         }

@@ -9,7 +9,7 @@ A Java bytecode manipulation library with SSA-form intermediate representation f
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
 - **Class decompilation** - Full class decompilation with imports, fields, and methods
-- **Analysis APIs** - Call graph, dependency analysis, type inference, pattern search
+- **Analysis APIs** - Call graph, dependency, type inference, pattern search, xrefs, data flow, similarity
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+
 
@@ -45,7 +45,7 @@ byte[] bytes = newClass.write();
 | [Visitors](docs/visitors.md) | Traversal patterns |
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
-| [Analysis APIs](docs/analysis-apis.md) | Call graph, dependencies, type inference, pattern search |
+| [Analysis APIs](docs/analysis-apis.md) | Call graph, dependencies, type inference, pattern search, xrefs, data flow, similarity |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
 | [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |
@@ -151,10 +151,23 @@ Nullability nullState = types.getNullability(ssaValue);
 PatternSearch search = new PatternSearch(classPool)
     .inAllMethodsOf(classFile)
     .withCallGraph();
-
 List<SearchResult> results = search.findMethodCalls("java/io/PrintStream", "println");
-List<SearchResult> allocs = search.findAllocations("java/lang/StringBuilder");
-List<SearchResult> nullDerefs = search.findPotentialNullDereferences();
+
+// Cross-References - track all references to/from symbols
+XrefDatabase xrefs = new XrefBuilder(classPool).build();
+Set<Xref> callers = xrefs.getRefsToMethod(methodRef);  // Who calls this?
+Set<Xref> outgoing = xrefs.getRefsFromClass(className); // What does this reference?
+
+// Data Flow - build flow graphs for taint analysis
+DataFlowGraph dfg = new DataFlowGraph(irMethod);
+dfg.build();
+Set<DataFlowNode> reachable = dfg.getReachableNodes(paramNode);
+
+// Method Similarity - find duplicates and similar methods
+MethodSimilarityAnalyzer similarity = new MethodSimilarityAnalyzer(classPool);
+similarity.buildIndex();
+List<SimilarityResult> duplicates = similarity.findDuplicates();
+List<SimilarityResult> renamed = similarity.findRenamedCopies();  // Obfuscation detection
 ```
 
 See [Analysis APIs](docs/analysis-apis.md) for complete documentation.

@@ -27,17 +27,14 @@ public class CallGraphBuilder {
      * @return the built CallGraph
      */
     public static CallGraph build(ClassPool classPool) {
-        // Build class hierarchy for virtual dispatch resolution
         ClassHierarchy hierarchy = ClassHierarchyBuilder.build(classPool);
         CallGraph graph = new CallGraph(classPool, hierarchy);
 
-        // Get all classes from the pool
         List<ClassFile> classes = classPool.getClasses();
         if (classes == null || classes.isEmpty()) {
             return graph;
         }
 
-        // First pass: create nodes for all methods
         for (ClassFile cf : classes) {
             for (MethodEntry method : cf.getMethods()) {
                 MethodReference ref = new MethodReference(
@@ -49,7 +46,6 @@ public class CallGraphBuilder {
             }
         }
 
-        // Second pass: scan each method for invocations
         for (ClassFile cf : classes) {
             for (MethodEntry method : cf.getMethods()) {
                 if (method.getCodeAttribute() == null) continue;
@@ -73,7 +69,6 @@ public class CallGraphBuilder {
     private static void scanMethodForCalls(CallGraph graph, MethodReference callerRef,
                                            MethodEntry method, ClassFile cf) {
         try {
-            // Use SSA lifter to get IR representation
             SSA ssa = new SSA(cf.getConstPool());
             IRMethod irMethod = ssa.lift(method);
 
@@ -83,7 +78,6 @@ public class CallGraphBuilder {
 
             CallGraphNode callerNode = graph.getOrCreateNode(callerRef, method);
 
-            // Scan all blocks for invoke instructions
             for (IRBlock block : irMethod.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
                     if (instr instanceof InvokeInstruction) {
@@ -92,7 +86,6 @@ public class CallGraphBuilder {
                 }
             }
         } catch (Exception e) {
-            // Silently skip methods that fail to lift
         }
     }
 
@@ -106,15 +99,12 @@ public class CallGraphBuilder {
         String targetName = invoke.getName();
         String targetDesc = invoke.getDescriptor();
 
-        // Handle different invoke types
         if (invokeType == InvokeType.VIRTUAL || invokeType == InvokeType.INTERFACE) {
-            // For virtual/interface calls, resolve all possible targets
             Set<MethodReference> targets = graph.resolveVirtualTargets(targetOwner, targetName, targetDesc);
             for (MethodReference target : targets) {
                 addCallEdge(graph, callerNode, callerRef, target, invokeType);
             }
         } else if (invokeType == InvokeType.DYNAMIC) {
-            // For invokedynamic, create a synthetic reference
             MethodReference target = new MethodReference(
                     "[dynamic]",
                     targetName,
@@ -122,7 +112,6 @@ public class CallGraphBuilder {
             );
             addCallEdge(graph, callerNode, callerRef, target, invokeType);
         } else {
-            // STATIC and SPECIAL calls have a single target
             MethodReference target = new MethodReference(targetOwner, targetName, targetDesc);
             addCallEdge(graph, callerNode, callerRef, target, invokeType);
         }
@@ -134,13 +123,8 @@ public class CallGraphBuilder {
     private static void addCallEdge(CallGraph graph, CallGraphNode callerNode,
                                     MethodReference callerRef, MethodReference targetRef,
                                     InvokeType invokeType) {
-        // Get or create target node
         CallGraphNode targetNode = graph.getOrCreateNode(targetRef, null);
-
-        // Create call site
         CallSite site = new CallSite(callerRef, targetRef, invokeType);
-
-        // Add edges
         callerNode.addOutgoingCall(site);
         targetNode.addIncomingCall(site);
     }

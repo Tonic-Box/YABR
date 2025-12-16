@@ -39,6 +39,11 @@ public class RenamerContext {
         this.signatureRemapper = new SignatureRemapper(classMapper);
     }
 
+    /**
+     * Returns the ClassPool being used for rename operations.
+     *
+     * @return the ClassPool
+     */
     public ClassPool getClassPool() {
         return classPool;
     }
@@ -59,23 +64,46 @@ public class RenamerContext {
 
     /**
      * Gets a class from the ClassPool by name.
+     *
+     * @param internalName the internal class name
+     * @return the ClassFile, or null if not found
      */
     public ClassFile getClass(String internalName) {
         return classPool.get(internalName);
     }
 
+    /**
+     * Returns the MappingStore containing all rename mappings.
+     *
+     * @return the MappingStore
+     */
     public MappingStore getMappings() {
         return mappings;
     }
 
+    /**
+     * Returns the class hierarchy for the pool.
+     *
+     * @return the ClassHierarchy
+     */
     public ClassHierarchy getHierarchy() {
         return hierarchy;
     }
 
+    /**
+     * Returns the descriptor remapper for updating type descriptors.
+     *
+     * @return the DescriptorRemapper
+     */
     public DescriptorRemapper getDescriptorRemapper() {
         return descriptorRemapper;
     }
 
+    /**
+     * Returns the signature remapper for updating generic signatures.
+     *
+     * @return the SignatureRemapper
+     */
     public SignatureRemapper getSignatureRemapper() {
         return signatureRemapper;
     }

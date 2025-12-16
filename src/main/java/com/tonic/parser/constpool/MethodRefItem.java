@@ -44,9 +44,9 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     /**
-     * Retrieves the class name from the constant pool.
+     * Gets the class name from constant pool.
      *
-     * @return The class name.
+     * @return class name or null if unavailable
      */
     public String getClassName() {
         if(classFile == null)
@@ -58,9 +58,9 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     /**
-     * Retrieves the method name from the constant pool.
+     * Gets the method name from constant pool.
      *
-     * @return The method name.
+     * @return method name or null if unavailable
      */
     public String getName() {
         if(classFile == null)
@@ -72,9 +72,9 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     /**
-     * Retrieves the method descriptor from the constant pool.
+     * Gets the method descriptor from constant pool.
      *
-     * @return The method descriptor.
+     * @return method descriptor or null if unavailable
      */
     public String getDescriptor() {
         if(classFile == null)
@@ -86,9 +86,10 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     /**
-     * Returns the number of parameters for the method.
+     * Gets the number of method parameters.
      *
-     * @return The number of parameters.
+     * @return parameter count
+     * @throws IllegalStateException if classFile not set or invalid index
      */
     public int getParameterCount() {
         if (classFile == null) {
@@ -110,9 +111,10 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     /**
-     * Returns the number of slots for the return type.
+     * Gets the number of slots for the return type.
      *
-     * @return The number of return type slots.
+     * @return return type slot count
+     * @throws IllegalStateException if ConstPool not set or invalid index
      */
     public int getReturnTypeSlots() {
         if (classFile.getConstPool() == null) {
@@ -132,7 +134,7 @@ public class MethodRefItem extends Item<MethodRef> {
     /**
      * Sets the class index.
      *
-     * @param classIndex The class index to set.
+     * @param classIndex class index to set
      */
     public void setClassIndex(int classIndex)
     {
@@ -142,7 +144,7 @@ public class MethodRefItem extends Item<MethodRef> {
     /**
      * Sets the name and type index.
      *
-     * @param nameAndTypeIndex The name and type index to set.
+     * @param nameAndTypeIndex name and type index to set
      */
     public void setNameAndTypeIndex(int nameAndTypeIndex)
     {
@@ -150,9 +152,9 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     /**
-     * Retrieves the owner class internal name from the constant pool.
+     * Gets owner class internal name from constant pool.
      *
-     * @return The owner class internal name.
+     * @return owner class internal name or null if unavailable
      */
     public String getOwner() {
         if (classFile == null)

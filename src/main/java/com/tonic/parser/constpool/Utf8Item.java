@@ -37,7 +37,7 @@ public class Utf8Item extends Item<String> {
     /**
      * Sets the string value.
      *
-     * @param value The string value to set.
+     * @param value string value to set
      */
     public void setValue(String value)
     {

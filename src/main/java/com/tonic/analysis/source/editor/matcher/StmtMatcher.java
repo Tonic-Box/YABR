@@ -26,8 +26,6 @@ public class StmtMatcher {
         return stmt != null && predicate.test(stmt);
     }
 
-    // ==================== Type-Based Matchers ====================
-
     /**
      * Matches any statement of a specific type.
      */
@@ -99,8 +97,6 @@ public class StmtMatcher {
         );
     }
 
-    // ==================== Loop Matchers ====================
-
     /**
      * Matches any loop statement (for, while, do-while, for-each).
      */
@@ -141,8 +137,6 @@ public class StmtMatcher {
     public static StmtMatcher forEachStmt() {
         return ofType(ForEachStmt.class);
     }
-
-    // ==================== Other Matchers ====================
 
     /**
      * Matches try-catch statements.
@@ -217,8 +211,6 @@ public class StmtMatcher {
         );
     }
 
-    // ==================== Expression Statement Matchers ====================
-
     /**
      * Matches expression statements containing a method call.
      */
@@ -244,8 +236,6 @@ public class StmtMatcher {
             "assignmentStmt()"
         );
     }
-
-    // ==================== Custom Matchers ====================
 
     /**
      * Creates a matcher from a custom predicate.
@@ -274,8 +264,6 @@ public class StmtMatcher {
     public static StmtMatcher none() {
         return new StmtMatcher(stmt -> false, "none()");
     }
-
-    // ==================== Combinators ====================
 
     /**
      * Combines this matcher with another using AND logic.

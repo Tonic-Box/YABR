@@ -256,7 +256,6 @@ public class Bytecode {
         } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
             int opcode = 0x10;
             byte operand = (byte) value;
-            Logger.info("BIPUSH: " + value + " -> " + operand);
             instr = new BipushInstruction(opcode, processOffset(), operand);
         } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
             int opcode = 0x11;
@@ -270,7 +269,6 @@ public class Bytecode {
         }
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
-        Logger.info("Appended ICONST/IINC instruction with value " + value + " at offset " + (processOffset() - instr.getLength()));
     }
 
     /**
@@ -405,7 +403,6 @@ public class Bytecode {
         GotoInstruction gotoInstr = new GotoInstruction(0xA7, gotoOffset, relativeOffset);
         codeWriter.appendInstruction(gotoInstr);
         insertBeforeOffset += gotoInstr.getLength();
-        Logger.info("Appended GOTO to label '" + labelName + "' at offset " + targetOffset);
     }
 
     /**
@@ -423,7 +420,6 @@ public class Bytecode {
         GotoInstruction gotoWInstr = new GotoInstruction(0xC8, gotoWOffset, relativeOffset);
         codeWriter.appendInstruction(gotoWInstr);
         insertBeforeOffset += gotoWInstr.getLength();
-        Logger.info("Appended GOTO_W to label '" + labelName + "' at offset " + targetOffset);
     }
 
     /**
@@ -657,7 +653,6 @@ public class Bytecode {
         Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(fieldDescriptor);
 
         ClassRefItem classRef = constPool.findOrAddClass(className);
-        System.out.println("classRef: " + classRef.getClassName());
 
         NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
 

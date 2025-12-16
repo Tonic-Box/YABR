@@ -768,15 +768,17 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Counts the number of parameters in a method descriptor.
+     *
+     * @param descriptor method descriptor string
+     * @return parameter count
      */
     private int countParametersFromDescriptor(String descriptor) {
         if (descriptor == null || !descriptor.startsWith("(")) return 0;
         int count = 0;
-        int i = 1; // skip opening (
+        int i = 1;
         while (i < descriptor.length() && descriptor.charAt(i) != ')') {
             char c = descriptor.charAt(i);
             if (c == 'L') {
-                // Object type - skip to ;
                 int end = descriptor.indexOf(';', i);
                 if (end > i) {
                     i = end + 1;
@@ -785,10 +787,8 @@ public class ClassFile extends AbstractParser {
                 }
                 count++;
             } else if (c == '[') {
-                // Array - skip to element type
                 i++;
             } else {
-                // Primitive or end of array
                 if (c != '[') count++;
                 i++;
             }

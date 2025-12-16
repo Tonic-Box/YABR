@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -68,22 +67,11 @@ public class ArithmeticShiftInstruction extends Instruction {
         visitor.visit(this);
     }
 
-    /**
-     * Writes the shift opcode to the DataOutputStream.
-     *
-     * @param dos The DataOutputStream to write to.
-     * @throws IOException If an I/O error occurs.
-     */
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
     }
 
-    /**
-     * Returns the change in stack size caused by this instruction.
-     *
-     * @return The stack size change (pops two operands and pushes one).
-     */
     @Override
     public int getStackChange() {
         switch (type) {
@@ -100,30 +88,15 @@ public class ArithmeticShiftInstruction extends Instruction {
         }
     }
 
-    /**
-     * Returns the change in local variables caused by this instruction.
-     *
-     * @return The local variables size change (none).
-     */
     @Override
     public int getLocalChange() {
         return 0;
     }
 
-    /**
-     * Returns the type of shift operation.
-     *
-     * @return The ShiftType enum value.
-     */
     public ShiftType getType() {
         return type;
     }
 
-    /**
-     * Returns a string representation of the instruction.
-     *
-     * @return The mnemonic of the shift instruction.
-     */
     @Override
     public String toString() {
         return type.getMnemonic().toUpperCase();

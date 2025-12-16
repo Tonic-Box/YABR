@@ -7,11 +7,17 @@ import lombok.Getter;
  */
 @Getter
 public enum ReturnType {
+    /** Integer return instruction. */
     IRETURN(0xAC, "ireturn"),
+    /** Long return instruction. */
     LRETURN(0xAD, "lreturn"),
+    /** Float return instruction. */
     FRETURN(0xAE, "freturn"),
+    /** Double return instruction. */
     DRETURN(0xAF, "dreturn"),
+    /** Reference return instruction. */
     ARETURN(0xB0, "areturn"),
+    /** Void return instruction. */
     RETURN(0xB1, "return");
 
     private final int opcode;

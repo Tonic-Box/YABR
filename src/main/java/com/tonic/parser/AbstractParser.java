@@ -17,7 +17,7 @@ public abstract class AbstractParser {
     private int index;
 
     /**
-     * Constructs an AbstractParser for parsing an existing class file.
+     * Parses a class file byte array with verification.
      *
      * @param bytes the byte array representing the class file
      * @throws IllegalArgumentException if the byte array is null
@@ -28,7 +28,7 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Constructs an AbstractParser with optional parsing.
+     * Initializes parser with optional processing.
      *
      * @param bytes the byte array to parse or build
      * @param parse whether to parse the byte array
@@ -50,7 +50,7 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Returns the length of the byte array.
+     * Gets the byte array length.
      *
      * @return length of the byte array
      */
@@ -59,24 +59,24 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Processes the byte array.
+     * Processes the parsed byte array.
      */
     protected abstract void process();
 
     /**
-     * Verifies the integrity or format of the byte array.
+     * Verifies byte array format integrity.
      *
-     * @return true if verification succeeds, false otherwise
+     * @return true if valid, false otherwise
      */
     protected boolean verify() {
         return true;
     }
 
     /**
-     * Rebuilds the byte array from the current state.
+     * Rebuilds byte array from current state.
      *
      * @throws IOException if writing fails
-     * @throws IncorrectFormatException if the rebuilt byte array fails verification
+     * @throws IncorrectFormatException if rebuilt array fails verification
      */
     public final void rebuild() throws IOException {
         bytes = write();
@@ -91,7 +91,7 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Writes the current state to a byte array.
+     * Writes current state to byte array.
      *
      * @return the byte array representation
      * @throws IOException if writing fails
@@ -99,10 +99,10 @@ public abstract class AbstractParser {
     protected abstract byte[] write() throws IOException;
 
     /**
-     * Reads a signed byte from the current index.
+     * Reads a signed byte.
      *
-     * @return The signed byte value.
-     * @throws IndexOutOfBoundsException If the index is out of bounds.
+     * @return signed byte value
+     * @throws IndexOutOfBoundsException if out of bounds
      */
     public final byte readByte() {
         validateIndex(index, 1);
@@ -110,10 +110,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads an unsigned byte (0 to 255) from the current index.
+     * Reads an unsigned byte (0 to 255).
      *
-     * @return The unsigned byte value as an int.
-     * @throws IndexOutOfBoundsException If the index is out of bounds.
+     * @return unsigned byte as int
+     * @throws IndexOutOfBoundsException if out of bounds
      */
     public final int readUnsignedByte() {
         validateIndex(index, 1);
@@ -121,11 +121,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads a signed short (−32,768 to 32,767) from the current index.
-     * Assumes big-endian byte order.
+     * Reads a signed short in big-endian order.
      *
-     * @return The signed short value.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read a short.
+     * @return signed short value
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final short readShort() {
         validateIndex(index, 2);
@@ -135,11 +134,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads an unsigned short (0 to 65,535) from the current index.
-     * Assumes big-endian byte order.
+     * Reads an unsigned short (0 to 65,535) in big-endian order.
      *
-     * @return The unsigned short value as an int.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read a short.
+     * @return unsigned short as int
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final int readUnsignedShort() {
         validateIndex(index, 2);
@@ -149,11 +147,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads a signed integer (−2,147,483,648 to 2,147,483,647) from the current index.
-     * Assumes big-endian byte order.
+     * Reads a signed int in big-endian order.
      *
-     * @return The signed integer value.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read an integer.
+     * @return signed int value
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final int readInt() {
         validateIndex(index, 4);
@@ -165,11 +162,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads an unsigned integer (0 to 4,294,967,295) from the current index.
-     * Assumes big-endian byte order.
+     * Reads an unsigned int (0 to 4,294,967,295) in big-endian order.
      *
-     * @return The unsigned integer value as a long.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read an integer.
+     * @return unsigned int as long
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final long readUnsignedInt() {
         validateIndex(index, 4);
@@ -181,11 +177,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads a signed long (−9,223,372,036,854,775,808 to 9,223,372,036,854,775,807) from the current index.
-     * Assumes big-endian byte order.
+     * Reads a signed long in big-endian order.
      *
-     * @return The signed long value.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read a long.
+     * @return signed long value
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final long readLong() {
         validateIndex(index, 8);
@@ -202,25 +197,24 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads an unsigned long (0 to 18,446,744,073,709,551,615) from the current index.
-     * Assumes big-endian byte order.
+     * Reads an unsigned long in big-endian order.
      *
-     * @return The unsigned long value as a BigInteger.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read a long.
+     * @return unsigned long as BigInteger
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final BigInteger readUnsignedLong() {
         validateIndex(index, 8);
         byte[] longBytes = new byte[8];
         System.arraycopy(bytes, index, longBytes, 0, 8);
         index += 8;
-        return new BigInteger(1, longBytes); // 1 for positive number
+        return new BigInteger(1, longBytes);
     }
 
     /**
-     * Reads a double value from the current index.
+     * Reads a double value.
      *
-     * @return The double value.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read a double.
+     * @return double value
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final double readDouble() {
         long bits = readLong();
@@ -228,10 +222,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads a signed float from the current index.
+     * Reads a float value.
      *
-     * @return The float value.
-     * @throws IndexOutOfBoundsException If there are not enough bytes to read a float.
+     * @return float value
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final float readFloat() {
         int bits = readInt();
@@ -239,9 +233,10 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads a UTF-8 encoded string from the current index.
+     * Reads a UTF-8 encoded string.
      *
-     * @return The UTF-8 string.
+     * @return UTF-8 string
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final String readUtf8() {
         int length = readUnsignedShort();
@@ -262,12 +257,12 @@ public abstract class AbstractParser {
     }
 
     /**
-     * Reads multiple bytes into the provided array.
+     * Reads multiple bytes into destination array.
      *
-     * @param code the destination array
-     * @param start the starting position in the destination array
-     * @param length the number of bytes to read
-     * @throws IndexOutOfBoundsException if there are not enough bytes to read
+     * @param code destination array
+     * @param start starting position in destination
+     * @param length number of bytes to read
+     * @throws IndexOutOfBoundsException if insufficient bytes
      */
     public final void readBytes(byte[] code, int start, int length) {
         validateIndex(index, length);

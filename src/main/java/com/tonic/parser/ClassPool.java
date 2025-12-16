@@ -13,7 +13,7 @@ import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 /**
- * A simple class pool that can store and retrieve ClassFile objects by their internal names.
+ * Pool for storing and retrieving ClassFile objects by internal name.
  */
 public class ClassPool {
     @Getter
@@ -36,13 +36,11 @@ public class ClassPool {
     }
 
     /**
-     * Creates an empty class pool without loading any built-in classes.
-     * Use this for custom class pools that only need user-loaded classes.
+     * Creates empty pool without loading built-in classes.
      *
      * @param empty ignored parameter to differentiate from default constructor
      */
     public ClassPool(boolean empty) {
-        // Don't load JRT classes - useful for UI and testing
     }
 
     private void loadAllJavaBuiltInClasses() throws IOException {
@@ -88,17 +86,17 @@ public class ClassPool {
     /**
      * Adds a ClassFile to the pool.
      *
-     * @param classFile the ClassFile object to add
+     * @param classFile ClassFile to add
      */
     public void put(ClassFile classFile) {
         classes.add(classFile);
     }
 
     /**
-     * Retrieves a ClassFile from the pool.
+     * Retrieves ClassFile by internal name.
      *
-     * @param internalName the internal name (e.g., "java/lang/Object")
-     * @return the ClassFile if present, or null if not found
+     * @param internalName internal name (e.g., "java/lang/Object")
+     * @return ClassFile if found, null otherwise
      */
     public ClassFile get(String internalName) {
         return classes.stream()
@@ -108,10 +106,10 @@ public class ClassPool {
     }
 
     /**
-     * Loads a class from a raw byte array into the pool.
+     * Loads class from byte array.
      *
-     * @param classData a byte array containing a complete .class file
-     * @return the loaded ClassFile object
+     * @param classData complete .class file bytes
+     * @return loaded ClassFile
      */
     public ClassFile loadClass(byte[] classData) {
         ClassFile cf = new ClassFile(classData);
@@ -120,10 +118,10 @@ public class ClassPool {
     }
 
     /**
-     * Loads a class from an InputStream into the pool.
+     * Loads class from InputStream.
      *
-     * @param is an InputStream containing a .class file
-     * @return the loaded ClassFile object
+     * @param is InputStream containing .class file
+     * @return loaded ClassFile
      * @throws IOException if reading or parsing fails
      */
     public ClassFile loadClass(InputStream is) throws IOException {
@@ -132,11 +130,11 @@ public class ClassPool {
     }
 
     /**
-     * Loads a class from the system class loader into the pool.
+     * Loads class from system class loader.
      *
-     * @param clazz the internal name of the class (e.g., "java/lang/Object")
-     * @return the loaded ClassFile object
-     * @throws IOException if reading or parsing fails
+     * @param clazz internal class name (e.g., "java/lang/Object")
+     * @return loaded ClassFile
+     * @throws IOException if loading fails
      */
     public ClassFile loadSystemClass(String clazz) throws IOException {
         try (InputStream is = ClassLoader.getSystemResourceAsStream(clazz)) {
@@ -148,11 +146,11 @@ public class ClassPool {
     }
 
     /**
-     * Loads a class from the platform class loader into the pool.
+     * Loads class from platform class loader.
      *
-     * @param clazz the internal name of the class (e.g., "java/lang/Object")
-     * @return the loaded ClassFile object
-     * @throws IOException if reading or parsing fails
+     * @param clazz internal class name (e.g., "java/lang/Object")
+     * @return loaded ClassFile
+     * @throws IOException if loading fails
      */
     public ClassFile loadPlatformClass(String clazz) throws IOException {
         try (InputStream is = ClassLoader.getPlatformClassLoader().getResourceAsStream(clazz)) {
@@ -164,10 +162,10 @@ public class ClassPool {
     }
 
     /**
-     * Loads all .class files from a JarFile into this pool.
+     * Loads all .class files from JAR into pool.
      *
-     * @param jar the JarFile to read
-     * @throws IOException if reading any entry fails
+     * @param jar JarFile to read
+     * @throws IOException if reading fails
      */
     public void loadJar(JarFile jar) throws IOException {
         Enumeration<JarEntry> entries = jar.entries();
@@ -182,13 +180,13 @@ public class ClassPool {
     }
 
     /**
-     * Creates a new empty class with the specified name and access flags.
+     * Creates new empty class with specified name and access flags.
      *
-     * @param className the internal name of the class (e.g., "com/tonic/NewClass")
-     * @param accessFlags the access flags for the class
-     * @return the newly created ClassFile object
-     * @throws IOException if rebuilding the class file fails
-     * @throws IllegalArgumentException if the class name is invalid or already exists
+     * @param className internal class name (e.g., "com/tonic/NewClass")
+     * @param accessFlags access flags for the class
+     * @return newly created ClassFile
+     * @throws IOException if rebuilding fails
+     * @throws IllegalArgumentException if name invalid or class exists
      */
     public ClassFile createNewClass(String className, int accessFlags) throws IOException {
         if (className == null || className.isEmpty()) {
