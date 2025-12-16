@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- jitpack">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -214,14 +213,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00013" summary="Super basic implementation of Expression/Statement block parsing/abstractions. Added a Demo to show them off @ TestBlocks.java&#10;&#10;Very basic so far and a bit lack luster, will take more work.">
-      <option name="closed" value="true" />
-      <created>1737610840862</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1737610840862</updated>
     </task>
     <task id="LOCAL-00014" summary="AST api">
       <option name="closed" value="true" />
@@ -607,7 +598,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765909975498</updated>
     </task>
-    <option name="localTasksCounter" value="62" />
+    <task id="LOCAL-00062" summary="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java">
+      <option name="closed" value="true" />
+      <created>1765911811139</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1765911811139</updated>
+    </task>
+    <option name="localTasksCounter" value="63" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -622,7 +621,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="BDCE optimization transformer" />
     <MESSAGE value="CVE optimization transformer" />
     <MESSAGE value="better source emition for string concatenation" />
     <MESSAGE value="better dynamic family handling in IR/ast/source" />
@@ -647,7 +645,8 @@
     <MESSAGE value="updated docs, clean-up" />
     <MESSAGE value="unit tests" />
     <MESSAGE value="- jitpack" />
-    <option name="LAST_COMMIT_MESSAGE" value="- jitpack" />
+    <MESSAGE value="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
