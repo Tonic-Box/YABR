@@ -4,14 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="updated docs, clean-up">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="unit tests">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/RenamerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/RenamerContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/utill/TypeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/utill/TypeUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/InvokeDynamicItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/InvokeDynamicItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/testutil/BytecodeBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/testutil/BytecodeBuilder.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -219,14 +215,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00010" summary="Cleanup of demo classes. Implimented ClassFile::setFieldInitialValue, ClassFile::generateSetter, and ClassFile::generateGetter">
-      <option name="closed" value="true" />
-      <created>1737544212959</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1737544212959</updated>
     </task>
     <task id="LOCAL-00011" summary="implemented a simple visitor pattern api">
       <option name="closed" value="true" />
@@ -612,7 +600,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765861629465</updated>
     </task>
-    <option name="localTasksCounter" value="59" />
+    <task id="LOCAL-00059" summary="unit tests">
+      <option name="closed" value="true" />
+      <created>1765871910025</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1765871910026</updated>
+    </task>
+    <option name="localTasksCounter" value="60" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -627,7 +623,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Reassociate optimization transformer" />
     <MESSAGE value="LoopPrediction optimization transformer" />
     <MESSAGE value="BDCE optimization transformer" />
     <MESSAGE value="CVE optimization transformer" />
@@ -652,7 +647,8 @@
     <MESSAGE value="Instrumentation API" />
     <MESSAGE value="xref apis, CFG improvements" />
     <MESSAGE value="updated docs, clean-up" />
-    <option name="LAST_COMMIT_MESSAGE" value="updated docs, clean-up" />
+    <MESSAGE value="unit tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="unit tests" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

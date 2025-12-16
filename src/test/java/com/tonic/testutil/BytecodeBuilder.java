@@ -475,6 +475,35 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder arraylength() {
+            ops.add((bc, cw) -> cw.appendInstruction(new ArrayLengthInstruction(0xBE, cw.getBytecodeSize())));
+            return this;
+        }
+
+        // ========== Type Instructions ==========
+
+        public MethodBuilder instanceof_(String type) {
+            ops.add((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                int classRefIndex = constPool.getIndexOf(classRef);
+                cw.appendInstruction(new InstanceOfInstruction(constPool, 0xC1, cw.getBytecodeSize(), classRefIndex));
+            });
+            return this;
+        }
+
+        public MethodBuilder checkcast(String type) {
+            ops.add((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                int classRefIndex = constPool.getIndexOf(classRef);
+                cw.appendInstruction(new CheckCastInstruction(constPool, 0xC0, cw.getBytecodeSize(), classRefIndex));
+            });
+            return this;
+        }
+
+        // ========== Method Invocation ==========
+
         public MethodBuilder invokevirtual(String owner, String name, String desc) {
             ops.add((bc, cw) -> bc.addInvokeVirtual(owner, name, desc));
             return this;

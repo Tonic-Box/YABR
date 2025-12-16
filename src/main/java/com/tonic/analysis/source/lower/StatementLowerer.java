@@ -399,13 +399,13 @@ public class StatementLowerer {
     }
 
     private void lowerBreak(BreakStmt breakStmt) {
-        IRBlock target = ctx.getBreakTarget(breakStmt.getLabel());
+        IRBlock target = ctx.getBreakTarget(breakStmt.getTargetLabel());
         ctx.getCurrentBlock().addInstruction(new GotoInstruction(target));
         ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
     }
 
     private void lowerContinue(ContinueStmt contStmt) {
-        IRBlock target = ctx.getContinueTarget(contStmt.getLabel());
+        IRBlock target = ctx.getContinueTarget(contStmt.getTargetLabel());
         ctx.getCurrentBlock().addInstruction(new GotoInstruction(target));
         ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
     }

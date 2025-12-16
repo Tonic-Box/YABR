@@ -16,6 +16,24 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
     private ConstPool constPool;
     private InvokeDynamic value;
 
+    /**
+     * Default constructor for parsing.
+     */
+    public InvokeDynamicItem() {
+    }
+
+    /**
+     * Constructor for programmatic creation.
+     *
+     * @param constPool               The constant pool this item belongs to.
+     * @param bootstrapMethodAttrIndex The bootstrap method attribute index.
+     * @param nameAndTypeIndex        The name and type index.
+     */
+    public InvokeDynamicItem(ConstPool constPool, int bootstrapMethodAttrIndex, int nameAndTypeIndex) {
+        this.constPool = constPool;
+        this.value = new InvokeDynamic(bootstrapMethodAttrIndex, nameAndTypeIndex);
+    }
+
     @Override
     public void read(ClassFile classFile) {
         this.constPool = classFile.getConstPool();
