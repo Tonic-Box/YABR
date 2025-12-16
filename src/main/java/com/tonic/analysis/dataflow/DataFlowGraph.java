@@ -37,6 +37,14 @@ public class DataFlowGraph {
      * Build the data flow graph from the IR method using def-use chains.
      */
     public void build() {
+        // Clear previous state for idempotent rebuilds
+        nodes.clear();
+        edges.clear();
+        valueToNode.clear();
+        outgoingEdges.clear();
+        incomingEdges.clear();
+        nextNodeId = 0;
+
         // Compute def-use chains
         DefUseChains defUse = new DefUseChains(method);
         defUse.compute();

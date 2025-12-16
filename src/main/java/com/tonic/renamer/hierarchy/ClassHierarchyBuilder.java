@@ -6,7 +6,6 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Utf8Item;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
 /**
@@ -68,17 +67,10 @@ public class ClassHierarchyBuilder {
     }
 
     /**
-     * Gets the list of classes from a ClassPool using reflection.
+     * Gets the list of classes from a ClassPool.
      */
-    @SuppressWarnings("unchecked")
     private static List<ClassFile> getClassList(ClassPool classPool) {
-        try {
-            Field classMapField = ClassPool.class.getDeclaredField("classMap");
-            classMapField.setAccessible(true);
-            return (List<ClassFile>) classMapField.get(classPool);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            return null;
-        }
+        return classPool.getClasses();
     }
 
     /**

@@ -318,8 +318,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitBreak(BreakStmt stmt) {
-        if (stmt.getLabel() != null) {
-            writer.writeLine("break " + stmt.getLabel() + ";");
+        if (stmt.getTargetLabel() != null) {
+            writer.writeLine("break " + stmt.getTargetLabel() + ";");
         } else {
             writer.writeLine("break;");
         }
@@ -328,8 +328,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitContinue(ContinueStmt stmt) {
-        if (stmt.getLabel() != null) {
-            writer.writeLine("continue " + stmt.getLabel() + ";");
+        if (stmt.getTargetLabel() != null) {
+            writer.writeLine("continue " + stmt.getTargetLabel() + ";");
         } else {
             writer.writeLine("continue;");
         }

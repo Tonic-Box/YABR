@@ -10,7 +10,6 @@ import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 import com.tonic.renamer.mapping.MappingStore;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Function;
 
@@ -51,25 +50,29 @@ public class RenamerContext {
     /**
      * Gets all classes from the ClassPool.
      */
-    @SuppressWarnings("unchecked")
     public List<ClassFile> getAllClasses() {
-        try {
-            Field classMapField = ClassPool.class.getDeclaredField("classMap");
-            classMapField.setAccessible(true);
-            return (List<ClassFile>) classMapField.get(classPool);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            return Collections.emptyList();
-        }
+        return classPool.getClasses();
     }
 
     /**
      * Gets a class from the ClassPool by name.
+     * If the class was renamed, also tries looking up by the new name.
      *
-     * @param internalName the internal class name
+     * @param internalName the internal class name (could be old or new name)
      * @return the ClassFile, or null if not found
      */
     public ClassFile getClass(String internalName) {
-        return classPool.get(internalName);
+        // First try direct lookup
+        ClassFile cf = classPool.get(internalName);
+        if (cf != null) {
+            return cf;
+        }
+        // If not found, check if this is an old name that was renamed
+        String newName = mappings.getClassMapping(internalName);
+        if (newName != null) {
+            return classPool.get(newName);
+        }
+        return null;
     }
 
     /**

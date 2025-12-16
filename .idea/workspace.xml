@@ -4,11 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="xref apis, CFG improvements">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="updated docs, clean-up">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/architecture.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/RenamerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/RenamerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/utill/TypeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/utill/TypeUtil.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,7 +82,7 @@
     "settings.editor.selected.configurable": "reference.settingsdialog.project.gradle"
   }
 }]]></component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [publishLocal]">
+  <component name="RunManager" selected="Gradle.YABR-fixed [test]">
     <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
       <module name="YABR.main" />
@@ -100,19 +103,6 @@
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.tonic.demo.ast.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="Trainer" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.tonic.analysis.naming.Trainer" />
-      <module name="YABR.main" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.tonic.analysis.naming.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -168,6 +158,28 @@
       <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
+    <configuration name="YABR-fixed [test]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="test" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <module name="YABR-fixed" />
       <method v="2">
@@ -186,16 +198,16 @@
       <item itemvalue="Application.DebugDoAction" />
       <item itemvalue="Application.YABRApplication" />
       <item itemvalue="Application.YABRStudio" />
-      <item itemvalue="Application.Trainer" />
       <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
+      <item itemvalue="Gradle.YABR-fixed [test]" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.YABR-fixed [test]" />
         <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
         <item itemvalue="Application.YABRStudio" />
         <item itemvalue="Application.YABRApplication" />
         <item itemvalue="Application.DebugDoAction" />
-        <item itemvalue="Application.Trainer" />
       </list>
     </recent_temporary>
   </component>
@@ -207,14 +219,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00009" summary="Cleanup">
-      <option name="closed" value="true" />
-      <created>1737529761726</created>
-      <option name="number" value="00009" />
-      <option name="presentableId" value="LOCAL-00009" />
-      <option name="project" value="LOCAL" />
-      <updated>1737529761726</updated>
     </task>
     <task id="LOCAL-00010" summary="Cleanup of demo classes. Implimented ClassFile::setFieldInitialValue, ClassFile::generateSetter, and ClassFile::generateGetter">
       <option name="closed" value="true" />
@@ -600,7 +604,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765850707920</updated>
     </task>
-    <option name="localTasksCounter" value="58" />
+    <task id="LOCAL-00058" summary="updated docs, clean-up">
+      <option name="closed" value="true" />
+      <created>1765861629465</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1765861629465</updated>
+    </task>
+    <option name="localTasksCounter" value="59" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -615,7 +627,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Readme docs update" />
     <MESSAGE value="Reassociate optimization transformer" />
     <MESSAGE value="LoopPrediction optimization transformer" />
     <MESSAGE value="BDCE optimization transformer" />
@@ -640,7 +651,8 @@
     <MESSAGE value="- Call Graph API - Building graphs, querying callers/callees, reachability analysis, virtual call resolution&#10;- Dependency Analysis API - Class dependencies, circular dependency detection, dependency types&#10;- Type Inference API - Nullability states, type states, polymorphic types&#10;- Pattern Search API - Finding method calls, field accesses, allocations, type operations, custom patterns" />
     <MESSAGE value="Instrumentation API" />
     <MESSAGE value="xref apis, CFG improvements" />
-    <option name="LAST_COMMIT_MESSAGE" value="xref apis, CFG improvements" />
+    <MESSAGE value="updated docs, clean-up" />
+    <option name="LAST_COMMIT_MESSAGE" value="updated docs, clean-up" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

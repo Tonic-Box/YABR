@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("maven-publish")
+    id("jacoco")
 }
 
 group = "com.tonic"
@@ -26,6 +27,19 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    doLast {
+        val reportPath = reports.html.outputLocation.get().asFile.resolve("index.html")
+        println("Coverage report: $reportPath")
+    }
 }
 
 // Maven publishing configuration

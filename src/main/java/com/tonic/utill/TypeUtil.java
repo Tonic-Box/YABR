@@ -12,34 +12,57 @@ public class TypeUtil
      * @return the normalized descriptor
      */
     public static String validateDescriptorFormat(String desc) {
+        if (desc == null || desc.isEmpty()) {
+            return desc;
+        }
+
+        // Handle array descriptors
+        if (desc.startsWith("[")) {
+            // Find the element type by stripping leading '['
+            int arrayDepth = 0;
+            while (arrayDepth < desc.length() && desc.charAt(arrayDepth) == '[') {
+                arrayDepth++;
+            }
+            if (arrayDepth >= desc.length()) {
+                return desc; // Malformed, return as-is
+            }
+            String elementType = desc.substring(arrayDepth);
+            // Recursively validate the element type
+            String validatedElement = validateDescriptorFormat(elementType);
+            // Rebuild the array descriptor
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < arrayDepth; i++) {
+                sb.append('[');
+            }
+            sb.append(validatedElement);
+            return sb.toString();
+        }
+
+        // Handle primitive types
         switch (desc) {
             case "I":
-                return "I";
             case "J":
-                return "J";
             case "F":
-                return "F";
             case "D":
-                return "D";
             case "Z":
-                return "Z";
             case "B":
-                return "B";
             case "C":
-                return "C";
             case "S":
-                return "S";
             case "V":
-                return "V";
+                return desc;
             default:
+                // Handle object types
                 desc = desc.replace(".", "/");
-                if(!desc.endsWith(";")) {
-                    desc = desc + ";";
-                }
-                if (desc.startsWith("L") || desc.startsWith("[")) {
+                if (desc.startsWith("L") && desc.endsWith(";")) {
                     return desc;
                 }
-                return "L" + desc;
+                if (desc.startsWith("L")) {
+                    return desc + ";";
+                }
+                if (desc.endsWith(";")) {
+                    return "L" + desc;
+                }
+                return "L" + desc + ";";
         }
     }
 
