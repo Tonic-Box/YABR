@@ -12,7 +12,6 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Set;
 
@@ -33,8 +32,8 @@ public class CallGraphBuilder {
         CallGraph graph = new CallGraph(classPool, hierarchy);
 
         // Get all classes from the pool
-        List<ClassFile> classes = getClassList(classPool);
-        if (classes == null) {
+        List<ClassFile> classes = classPool.getClasses();
+        if (classes == null || classes.isEmpty()) {
             return graph;
         }
 
@@ -144,19 +143,5 @@ public class CallGraphBuilder {
         // Add edges
         callerNode.addOutgoingCall(site);
         targetNode.addIncomingCall(site);
-    }
-
-    /**
-     * Gets the list of classes from a ClassPool using reflection.
-     */
-    @SuppressWarnings("unchecked")
-    private static List<ClassFile> getClassList(ClassPool classPool) {
-        try {
-            Field classMapField = ClassPool.class.getDeclaredField("classMap");
-            classMapField.setAccessible(true);
-            return (List<ClassFile>) classMapField.get(classPool);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            return null;
-        }
     }
 }

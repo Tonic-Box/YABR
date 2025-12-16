@@ -296,7 +296,21 @@ public class RegisterAllocator {
     }
 
     public int getRegister(SSAValue value) {
-        return allocation.getOrDefault(value, -1);
+        Integer reg = allocation.get(value);
+        if (reg != null) {
+            return reg;
+        }
+
+        // Fallback: allocate a register on-demand for values that were missed
+        // during the main allocation pass (can happen after certain transforms)
+        reg = maxLocals;
+        if (value.getType().isTwoSlot()) {
+            maxLocals += 2;
+        } else {
+            maxLocals++;
+        }
+        allocation.put(value, reg);
+        return reg;
     }
 
     private static class LiveInterval {

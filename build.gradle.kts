@@ -1,9 +1,10 @@
 plugins {
     id("java")
+    id("maven-publish")
 }
 
 group = "com.tonic"
-version = "1.0-SNAPSHOT"
+version = "1.0.0"
 
 java {
     toolchain {
@@ -21,12 +22,36 @@ dependencies {
 
     implementation("org.projectlombok:lombok:1.18.30")
     annotationProcessor("org.projectlombok:lombok:1.18.30")
-
-    // Name inference system dependencies
-    implementation("com.github.javaparser:javaparser-core:3.25.5")
-    implementation("org.xerial:sqlite-jdbc:3.44.1.0")
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// Maven publishing configuration
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+
+            pom {
+                name.set("YABR")
+                description.set("Yet Another Bytecode Reverser - Java bytecode analysis tool")
+            }
+        }
+    }
+}
+
+// Custom task: clean -> build -> publishToMavenLocal
+tasks.register("publishLocal") {
+    group = "publishing"
+    description = "Cleans, builds, and publishes to Maven local repository"
+
+    dependsOn("clean")
+    dependsOn("build")
+    dependsOn("publishToMavenLocal")
+
+    // Ensure proper task ordering
+    tasks.findByName("build")?.mustRunAfter("clean")
+    tasks.findByName("publishToMavenLocal")?.mustRunAfter("build")
 }

@@ -3,7 +3,6 @@ package com.tonic.analysis.dependency;
 import com.tonic.parser.*;
 import com.tonic.parser.constpool.*;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -406,17 +405,10 @@ public class DependencyAnalyzer {
     }
 
     /**
-     * Gets the list of classes from a ClassPool using reflection.
+     * Gets the list of classes from a ClassPool.
      */
-    @SuppressWarnings("unchecked")
     private static List<ClassFile> getClassList(ClassPool classPool) {
-        try {
-            Field classMapField = ClassPool.class.getDeclaredField("classMap");
-            classMapField.setAccessible(true);
-            return (List<ClassFile>) classMapField.get(classPool);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            return null;
-        }
+        return classPool.getClasses();
     }
 
     @Override

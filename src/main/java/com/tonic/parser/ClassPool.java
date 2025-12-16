@@ -28,10 +28,21 @@ public class ClassPool {
         }
     }
 
-    private final List<ClassFile> classMap = new ArrayList<>();
+    @Getter
+    private final List<ClassFile> classes = new ArrayList<>();
 
     public ClassPool() throws IOException {
         loadAllJavaBuiltInClasses();
+    }
+
+    /**
+     * Creates an empty class pool without loading any built-in classes.
+     * Use this for custom class pools that only need user-loaded classes.
+     *
+     * @param empty ignored parameter to differentiate from default constructor
+     */
+    public ClassPool(boolean empty) {
+        // Don't load JRT classes - useful for UI and testing
     }
 
     private void loadAllJavaBuiltInClasses() throws IOException {
@@ -80,7 +91,7 @@ public class ClassPool {
      * @param classFile the ClassFile object to add
      */
     public void put(ClassFile classFile) {
-        classMap.add(classFile);
+        classes.add(classFile);
     }
 
     /**
@@ -90,7 +101,7 @@ public class ClassPool {
      * @return the ClassFile if present, or null if not found
      */
     public ClassFile get(String internalName) {
-        return classMap.stream()
+        return classes.stream()
                 .filter(cf -> cf.getClassName().equals(internalName))
                 .findFirst()
                 .orElse(null);
@@ -104,7 +115,7 @@ public class ClassPool {
      */
     public ClassFile loadClass(byte[] classData) {
         ClassFile cf = new ClassFile(classData);
-        classMap.add(cf);
+        classes.add(cf);
         return cf;
     }
 
