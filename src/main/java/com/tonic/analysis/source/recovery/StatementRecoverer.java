@@ -1025,6 +1025,9 @@ public class StatementRecoverer {
                         int localIndex = loadLocal.getLocalIndex();
                         String localName = getNameForLocalSlot(localIndex);
                         context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
+                        // Mark as materialized so recoverOperand returns a VarRefExpr instead of
+                        // re-recovering the instruction (which would create duplicate new expressions)
+                        context.getExpressionContext().markMaterialized(loadLocal.getResult());
                     }
                 } else if (instr instanceof StoreLocalInstruction) {
                     StoreLocalInstruction storeLocal = (StoreLocalInstruction) instr;
@@ -1037,9 +1040,27 @@ public class StatementRecoverer {
                         localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
                     }
 
-                    // Note: We intentionally do NOT change the name of the source SSA value here.
-                    // The source value already has its correct name (e.g., "arg0" for a parameter phi).
-                    // Changing it to the destination slot name would corrupt expressions.
+                    // Mark the stored value as materialized with the local variable name.
+                    // This is needed because RedundantCopyElimination replaces load_local results
+                    // with the originally stored value. So when putfield uses what was originally
+                    // a load_local result, it now directly references the stored value.
+                    // Example: store_local 1, v14; v15 = load_local 1; putfield v15.fill
+                    // After optimization: store_local 1, v14; putfield v14.fill
+                    // Without this fix, v14 wouldn't have the variable name, causing:
+                    // "new GridBagConstraints().fill = 2" instead of "c.fill = 2"
+                    if (storedValue instanceof SSAValue) {
+                        SSAValue sourceValue = (SSAValue) storedValue;
+                        // Only preserve parameter names like "arg0", "this" - overwrite synthetic names
+                        // like "v14" (default SSA name), "g8" (from NameRecoverer), etc.
+                        String existingName = context.getExpressionContext().getVariableName(sourceValue);
+                        boolean shouldOverwrite = existingName == null
+                                || existingName.startsWith("v")
+                                || existingName.matches("[a-z]\\d+");  // synthetic names like "g8", "f2", etc.
+                        if (shouldOverwrite) {
+                            context.getExpressionContext().setVariableName(sourceValue, localName);
+                            context.getExpressionContext().markMaterialized(sourceValue);
+                        }
+                    }
                 }
             }
         }
@@ -1585,6 +1606,9 @@ public class StatementRecoverer {
                     String localName = getNameForLocalSlot(localIndex);
                     context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                 }
+                // Mark as materialized so recoverOperand returns a VarRefExpr instead of
+                // re-recovering the instruction (which would create duplicate new expressions)
+                context.getExpressionContext().markMaterialized(loadLocal.getResult());
                 Expression value = exprRecoverer.recover(loadLocal);
                 context.getExpressionContext().cacheExpression(loadLocal.getResult(), value);
             }
@@ -1655,7 +1679,27 @@ public class StatementRecoverer {
     }
 
     private Statement recoverStoreLocal(StoreLocalInstruction store) {
-        Expression value = exprRecoverer.recoverOperand(store.getValue());
+        // When recovering the initialization value for a variable declaration,
+        // we need to recover the actual expression (e.g., "new GridBagConstraints()"),
+        // not a variable reference (e.g., "local1"). So we temporarily un-materialize
+        // the value during recovery, then re-materialize it after.
+        Value storeValue = store.getValue();
+        boolean wasMaterialized = false;
+        if (storeValue instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) storeValue;
+            wasMaterialized = context.getExpressionContext().isMaterialized(ssaValue);
+            if (wasMaterialized) {
+                context.getExpressionContext().unmarkMaterialized(ssaValue);
+            }
+        }
+
+        Expression value = exprRecoverer.recoverOperand(storeValue);
+
+        // Re-materialize after recovery
+        if (wasMaterialized && storeValue instanceof SSAValue) {
+            context.getExpressionContext().markMaterialized((SSAValue) storeValue);
+        }
+
         int localIndex = store.getLocalIndex();
 
         // Use proper name for parameter slots vs local variable slots

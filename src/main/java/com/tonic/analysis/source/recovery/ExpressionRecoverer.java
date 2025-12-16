@@ -58,6 +58,24 @@ public class ExpressionRecoverer {
             }
 
             if (def instanceof LoadLocalInstruction) {
+                LoadLocalInstruction load = (LoadLocalInstruction) def;
+                SSAValue loadResult = load.getResult();
+
+                // Check if this load's value has been materialized (assigned to a variable)
+                // If so, return a variable reference instead of re-recovering the instruction
+                if (loadResult != null && context.isMaterialized(loadResult)) {
+                    String name = context.getVariableName(loadResult);
+                    if (name != null) {
+                        SourceType type = typeRecoverer.recoverType(loadResult);
+                        return new VarRefExpr(name, type, loadResult);
+                    }
+                }
+
+                // Check if there's a cached expression for this load result
+                if (loadResult != null && context.isRecovered(loadResult)) {
+                    return context.getCachedExpression(loadResult);
+                }
+
                 return recover(def);
             }
 
@@ -92,6 +110,13 @@ public class ExpressionRecoverer {
         }
 
         if (instr instanceof LoadLocalInstruction) {
+            // Don't inline if the result is materialized (it's a named variable)
+            // This ensures that local variables like 'c' in 'GridBagConstraints c = new GridBagConstraints()'
+            // are properly referenced as 'c.fill' instead of being re-inlined as 'new GridBagConstraints().fill'
+            SSAValue result = instr.getResult();
+            if (result != null && context.isMaterialized(result)) {
+                return false;
+            }
             return true;
         }
 

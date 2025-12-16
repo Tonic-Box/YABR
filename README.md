@@ -172,6 +172,38 @@ List<SimilarityResult> renamed = similarity.findRenamedCopies();  // Obfuscation
 
 See [Analysis APIs](docs/analysis-apis.md) for complete documentation.
 
+## Installation
+
+### Gradle (JitPack)
+
+Add JitPack repository and the dependency to your `build.gradle` or `build.gradle.kts`:
+
+**Kotlin DSL (`build.gradle.kts`):**
+```kotlin
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
+
+dependencies {
+    implementation("com.github.Tonic-Box:YABR:main-SNAPSHOT")
+}
+```
+
+**Groovy DSL (`build.gradle`):**
+```groovy
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'com.github.Tonic-Box:YABR:main-SNAPSHOT'
+}
+```
+
+For specific releases or commit hashes, see [JitPack - YABR](https://jitpack.io/private#Tonic-Box/YABR).
+
 ## Building
 
 ```bash
