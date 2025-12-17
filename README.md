@@ -45,7 +45,7 @@ byte[] bytes = newClass.write();
 | [Visitors](docs/visitors.md) | Traversal patterns |
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
-| [Analysis APIs](docs/analysis-apis.md) | Call graph, dependencies, type inference, pattern search, xrefs, data flow, similarity |
+| [Analysis APIs](docs/analysis-apis.md) | High-level code analysis and semantic queries |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
 | [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |
