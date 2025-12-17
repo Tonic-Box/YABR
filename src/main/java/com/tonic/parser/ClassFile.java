@@ -625,23 +625,13 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Computes the constant pool count for the class file header.
+     * Per JVM spec, Long and Double entries occupy two indices.
+     * The items list already accounts for this with null entries at the second slot.
      *
      * @return the constant pool count value
      */
     private int computeConstantPoolCount() {
-        int realCount = 1;
-        List<Item<?>> cpItems = constPool.getItems();
-
-        for (int i = 1; i < cpItems.size(); i++) {
-            Item<?> itm = cpItems.get(i);
-            if (itm != null) {
-                realCount++;
-                if (itm.getType() == Item.ITEM_LONG || itm.getType() == Item.ITEM_DOUBLE) {
-                    i++;
-                }
-            }
-        }
-        return realCount;
+        return constPool.getItems().size();
     }
 
     private String resolveClassName(int classIndex) {

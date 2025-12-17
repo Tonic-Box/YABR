@@ -334,4 +334,112 @@ class ClassFileTest {
         String str = classFile.toString();
         assertTrue(str.contains("java/lang/Object"));
     }
+
+    // ========== Long/Double Constant Pool Tests ==========
+    // Regression tests for bug where Long/Double entries (which occupy 2 CP slots)
+    // caused incorrect constant_pool_count calculation
+
+    @Test
+    void roundTripWithLongConstantPreservesConstPoolCount() throws IOException {
+        // Add a long constant to the constant pool
+        com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+        longItem.setValue(123456789L);
+        int longIndex = classFile.getConstPool().addItem(longItem);
+
+        int originalCpSize = classFile.getConstPool().getItems().size();
+
+        // Round-trip the class
+        ClassFile reloaded = TestUtils.roundTrip(classFile);
+
+        // The constant pool should have the same size
+        assertEquals(originalCpSize, reloaded.getConstPool().getItems().size(),
+                "Constant pool size should be preserved after round-trip with Long constant");
+    }
+
+    @Test
+    void roundTripWithDoubleConstantPreservesConstPoolCount() throws IOException {
+        // Add a double constant to the constant pool
+        com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+        doubleItem.setValue(3.14159);
+        int doubleIndex = classFile.getConstPool().addItem(doubleItem);
+
+        int originalCpSize = classFile.getConstPool().getItems().size();
+
+        // Round-trip the class
+        ClassFile reloaded = TestUtils.roundTrip(classFile);
+
+        // The constant pool should have the same size
+        assertEquals(originalCpSize, reloaded.getConstPool().getItems().size(),
+                "Constant pool size should be preserved after round-trip with Double constant");
+    }
+
+    @Test
+    void roundTripWithMultipleLongsPreservesConstPoolCount() throws IOException {
+        // Add multiple long constants (this is what triggered the original bug)
+        for (int i = 0; i < 16; i++) {
+            com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+            longItem.setValue(i * 1000000L);
+            classFile.getConstPool().addItem(longItem);
+        }
+
+        int originalCpSize = classFile.getConstPool().getItems().size();
+
+        // Round-trip the class
+        ClassFile reloaded = TestUtils.roundTrip(classFile);
+
+        // The constant pool should have the same size
+        assertEquals(originalCpSize, reloaded.getConstPool().getItems().size(),
+                "Constant pool size should be preserved after round-trip with 16 Long constants");
+    }
+
+    @Test
+    void roundTripWithMixedLongDoublePreservesConstPoolCount() throws IOException {
+        // Add mix of long and double constants
+        for (int i = 0; i < 8; i++) {
+            com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+            longItem.setValue(i * 1000000L);
+            classFile.getConstPool().addItem(longItem);
+
+            com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+            doubleItem.setValue(i * 1.5);
+            classFile.getConstPool().addItem(doubleItem);
+        }
+
+        int originalCpSize = classFile.getConstPool().getItems().size();
+
+        // Round-trip the class
+        ClassFile reloaded = TestUtils.roundTrip(classFile);
+
+        // The constant pool should have the same size
+        assertEquals(originalCpSize, reloaded.getConstPool().getItems().size(),
+                "Constant pool size should be preserved after round-trip with mixed Long/Double constants");
+    }
+
+    @Test
+    void classWithLongConstantLoadsInJVM() throws Exception {
+        // Add a long constant and verify JVM can load it
+        com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+        longItem.setValue(9876543210L);
+        classFile.getConstPool().addItem(longItem);
+
+        byte[] bytes = classFile.write();
+        TestClassLoader loader = new TestClassLoader();
+        Class<?> clazz = loader.defineClass("com.test.TestClass", bytes);
+
+        assertNotNull(clazz, "Class with Long constant should load successfully");
+    }
+
+    @Test
+    void classWithDoubleConstantLoadsInJVM() throws Exception {
+        // Add a double constant and verify JVM can load it
+        com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+        doubleItem.setValue(2.71828);
+        classFile.getConstPool().addItem(doubleItem);
+
+        byte[] bytes = classFile.write();
+        TestClassLoader loader = new TestClassLoader();
+        Class<?> clazz = loader.defineClass("com.test.TestClass", bytes);
+
+        assertNotNull(clazz, "Class with Double constant should load successfully");
+    }
 }
