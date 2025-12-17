@@ -4,32 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- MIT">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraph.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraph.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphNode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallSite.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallSite.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/MethodReference.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pattern/PatternSearch.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pattern/PatternSearch.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/similarity/MethodSignature.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/similarity/MethodSignature.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/FieldAccessExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/FieldAccessExpr.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/MethodCallExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/MethodCallExpr.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/MethodRefExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/MethodRefExpr.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/NewExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/NewExpr.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/type/ReferenceSourceType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/type/ReferenceSourceType.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/NameRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/NameRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/type/ReferenceType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/type/ReferenceType.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/MethodReference.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/Xref.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/Xref.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefDatabase.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/CallGraphDemo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/CallGraphDemo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/structure/InvokeParameterUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/structure/InvokeParameterUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/callgraph/CallGraphTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/callgraph/CallGraphTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/xref/XrefDatabaseTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/xref/XrefDatabaseTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -237,14 +213,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00015" summary="ClassDecompiler">
-      <option name="closed" value="true" />
-      <created>1765221522224</created>
-      <option name="number" value="00015" />
-      <option name="presentableId" value="LOCAL-00015" />
-      <option name="project" value="LOCAL" />
-      <updated>1765221522224</updated>
     </task>
     <task id="LOCAL-00016" summary="AST and Decompiler improvements">
       <option name="closed" value="true" />
@@ -630,7 +598,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765914183337</updated>
     </task>
-    <option name="localTasksCounter" value="64" />
+    <task id="LOCAL-00064" summary="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package">
+      <option name="closed" value="true" />
+      <created>1765950914106</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1765950914106</updated>
+    </task>
+    <option name="localTasksCounter" value="65" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -645,7 +621,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="better source emition for string concatenation" />
     <MESSAGE value="better dynamic family handling in IR/ast/source" />
     <MESSAGE value="java 11 migration" />
     <MESSAGE value="configuration for transforms used in compilation" />
@@ -670,7 +645,8 @@
     <MESSAGE value="- jitpack" />
     <MESSAGE value="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java" />
     <MESSAGE value="- MIT" />
-    <option name="LAST_COMMIT_MESSAGE" value="- MIT" />
+    <MESSAGE value="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package" />
+    <option name="LAST_COMMIT_MESSAGE" value="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

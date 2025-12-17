@@ -1140,4 +1140,4 @@ See [AST Guide - Configurable Transform Pipeline](ast-guide.md#configurable-tran
 
 ---
 
-[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [AST Guide ->](ast-guide.md)
+[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [Analysis APIs](analysis-apis.md) | [AST Guide ->](ast-guide.md)
