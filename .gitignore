@@ -45,3 +45,4 @@ bin/
 /src/main/java/com/tonic/analysis/naming/
 /src/main/resources/com/tonic/analysis/naming/
 /.claude/
+/src/main/java/com/tonic/deob/

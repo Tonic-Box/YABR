@@ -17,15 +17,22 @@ import java.util.stream.Stream;
  */
 public class ClassPool {
     @Getter
-    private static final ClassPool Default;
+    private static ClassPool Default;
 
-    static
-    {
-        try {
-            Default = new ClassPool();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    /**
+     * Gets the default ClassPool with JDK classes loaded.
+     * Lazy-loaded to avoid startup penalty.
+     * @return the default ClassPool
+     */
+    public static synchronized ClassPool getDefault() {
+        if (Default == null) {
+            try {
+                Default = new ClassPool();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
+        return Default;
     }
 
     @Getter
