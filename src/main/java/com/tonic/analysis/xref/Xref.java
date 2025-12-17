@@ -1,5 +1,7 @@
 package com.tonic.analysis.xref;
 
+import com.tonic.analysis.common.MethodReference;
+
 import java.util.Objects;
 
 /**

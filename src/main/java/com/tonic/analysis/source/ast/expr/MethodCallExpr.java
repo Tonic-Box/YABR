@@ -4,6 +4,7 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
+import com.tonic.utill.ClassNameUtil;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -95,8 +96,7 @@ public final class MethodCallExpr implements Expression {
      * Gets the simple class name of the owner.
      */
     public String getOwnerSimpleName() {
-        int lastSlash = ownerClass.lastIndexOf('/');
-        return lastSlash >= 0 ? ownerClass.substring(lastSlash + 1) : ownerClass;
+        return ClassNameUtil.getSimpleNameWithInnerClasses(ownerClass);
     }
 
     @Override

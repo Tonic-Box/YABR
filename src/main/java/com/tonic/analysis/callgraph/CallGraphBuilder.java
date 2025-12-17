@@ -1,5 +1,6 @@
 package com.tonic.analysis.callgraph;
 
+import com.tonic.analysis.common.MethodReference;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;

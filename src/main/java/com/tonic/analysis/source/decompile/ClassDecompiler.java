@@ -29,6 +29,7 @@ import com.tonic.parser.attribute.anotation.ElementValue;
 import com.tonic.parser.attribute.anotation.ElementValuePair;
 import com.tonic.parser.attribute.anotation.EnumConst;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.ClassNameUtil;
 import com.tonic.utill.Modifiers;
 
 import java.io.StringWriter;
@@ -151,9 +152,8 @@ public class ClassDecompiler {
     public void decompile(IndentingWriter writer) {
         // Package declaration
         String className = classFile.getClassName();
-        int lastSlash = className.lastIndexOf('/');
-        if (lastSlash > 0) {
-            String packageName = className.substring(0, lastSlash).replace('/', '.');
+        String packageName = ClassNameUtil.getPackageNameAsSource(className);
+        if (!packageName.isEmpty()) {
             writer.writeLine("package " + packageName + ";");
             writer.newLine();
         }
@@ -242,8 +242,7 @@ public class ClassDecompiler {
 
         // Simple class name
         String fullName = classFile.getClassName();
-        int lastSlash = fullName.lastIndexOf('/');
-        String simpleName = lastSlash >= 0 ? fullName.substring(lastSlash + 1) : fullName;
+        String simpleName = ClassNameUtil.getSimpleNameWithInnerClasses(fullName);
         sb.append(simpleName);
 
         // Superclass - skip for interfaces, annotations, and enums (implicit)
@@ -484,8 +483,7 @@ public class ClassDecompiler {
 
         // Simple class name as constructor name
         String fullName = classFile.getClassName();
-        int lastSlash = fullName.lastIndexOf('/');
-        String simpleName = lastSlash >= 0 ? fullName.substring(lastSlash + 1) : fullName;
+        String simpleName = ClassNameUtil.getSimpleNameWithInnerClasses(fullName);
         sb.append(simpleName);
 
         // Parameters
@@ -604,10 +602,9 @@ public class ClassDecompiler {
     private String formatClassName(String internalName) {
         if (internalName == null) return "";
         if (emitterConfig.isUseFullyQualifiedNames()) {
-            return internalName.replace('/', '.');
+            return ClassNameUtil.toSourceName(internalName);
         }
-        int lastSlash = internalName.lastIndexOf('/');
-        return lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;
+        return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
     }
 
     private String resolveClassName(int classIndex) {
@@ -817,8 +814,7 @@ public class ClassDecompiler {
      */
     private String getPackageName(String internalName) {
         if (internalName == null) return "";
-        int lastSlash = internalName.lastIndexOf('/');
-        return lastSlash >= 0 ? internalName.substring(0, lastSlash) : "";
+        return ClassNameUtil.getPackageName(internalName);
     }
 
     /**

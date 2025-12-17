@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.type;
 
+import com.tonic.utill.ClassNameUtil;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -65,8 +66,7 @@ public final class ReferenceType implements IRType {
      * @return the simple name
      */
     public String getSimpleName() {
-        int lastSlash = internalName.lastIndexOf('/');
-        return lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;
+        return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
     }
 
     @Override

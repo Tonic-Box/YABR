@@ -2,6 +2,7 @@ package com.tonic.analysis.similarity;
 
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.utill.ClassNameUtil;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -346,8 +347,7 @@ public class MethodSignature {
      * Get a display string for this method.
      */
     public String getDisplayName() {
-        String simpleClass = className.contains("/") ?
-            className.substring(className.lastIndexOf('/') + 1) : className;
+        String simpleClass = ClassNameUtil.getSimpleNameWithInnerClasses(className);
         return simpleClass + "." + methodName;
     }
 

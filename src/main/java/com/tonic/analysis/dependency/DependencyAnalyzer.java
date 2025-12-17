@@ -2,6 +2,7 @@ package com.tonic.analysis.dependency;
 
 import com.tonic.parser.*;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.DescriptorUtil;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -120,31 +121,8 @@ public class DependencyAnalyzer {
      * Extracts class names from a type descriptor.
      */
     private Set<String> extractTypesFromDescriptor(String descriptor) {
-        Set<String> types = new LinkedHashSet<>();
-        if (descriptor == null) return types;
-
-        int i = 0;
-        while (i < descriptor.length()) {
-            char c = descriptor.charAt(i);
-            if (c == 'L') {
-                // Object type: L...;
-                int end = descriptor.indexOf(';', i);
-                if (end > i) {
-                    types.add(descriptor.substring(i + 1, end));
-                    i = end + 1;
-                } else {
-                    i++;
-                }
-            } else if (c == '[') {
-                // Array type: skip to element type
-                i++;
-            } else {
-                // Primitive or other
-                i++;
-            }
-        }
-
-        return types;
+        if (descriptor == null) return new LinkedHashSet<>();
+        return DescriptorUtil.extractClassNames(descriptor);
     }
 
     /**

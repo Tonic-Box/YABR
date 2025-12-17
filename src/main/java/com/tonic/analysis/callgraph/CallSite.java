@@ -1,5 +1,6 @@
 package com.tonic.analysis.callgraph;
 
+import com.tonic.analysis.common.MethodReference;
 import com.tonic.analysis.ssa.ir.InvokeType;
 
 import java.util.Objects;

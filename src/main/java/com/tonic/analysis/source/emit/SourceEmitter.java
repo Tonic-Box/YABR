@@ -4,6 +4,7 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.SourceVisitor;
+import com.tonic.utill.ClassNameUtil;
 
 import java.util.List;
 
@@ -695,10 +696,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
     private String formatClassName(String internalName) {
         if (internalName == null) return "";
         if (config.isUseFullyQualifiedNames()) {
-            return internalName.replace('/', '.');
+            return ClassNameUtil.toSourceName(internalName);
         }
-        int lastSlash = internalName.lastIndexOf('/');
-        return lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;
+        return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
     }
 
     private boolean needsParentheses(BinaryExpr expr) {

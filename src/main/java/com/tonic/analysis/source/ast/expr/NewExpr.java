@@ -5,6 +5,7 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
+import com.tonic.utill.ClassNameUtil;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -70,8 +71,7 @@ public final class NewExpr implements Expression {
      * Gets the simple class name.
      */
     public String getSimpleName() {
-        int lastSlash = className.lastIndexOf('/');
-        return lastSlash >= 0 ? className.substring(lastSlash + 1) : className;
+        return ClassNameUtil.getSimpleNameWithInnerClasses(className);
     }
 
     @Override

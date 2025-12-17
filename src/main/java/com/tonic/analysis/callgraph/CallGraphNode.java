@@ -1,5 +1,6 @@
 package com.tonic.analysis.callgraph;
 
+import com.tonic.analysis.common.MethodReference;
 import com.tonic.parser.MethodEntry;
 
 import java.util.*;

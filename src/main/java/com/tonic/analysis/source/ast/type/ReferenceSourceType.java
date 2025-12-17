@@ -3,6 +3,7 @@ package com.tonic.analysis.source.ast.type;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
+import com.tonic.utill.ClassNameUtil;
 import lombok.Getter;
 
 import java.util.Collections;
@@ -53,25 +54,21 @@ public final class ReferenceSourceType implements SourceType {
      * Gets the fully qualified name in Java format (e.g., "java.lang.String").
      */
     public String getFullyQualifiedName() {
-        return internalName.replace('/', '.');
+        return ClassNameUtil.toSourceName(internalName);
     }
 
     /**
      * Gets the simple class name (e.g., "String").
      */
     public String getSimpleName() {
-        int lastSlash = internalName.lastIndexOf('/');
-        int lastDollar = internalName.lastIndexOf('$');
-        int lastSeparator = Math.max(lastSlash, lastDollar);
-        return lastSeparator >= 0 ? internalName.substring(lastSeparator + 1) : internalName;
+        return ClassNameUtil.getSimpleName(internalName);
     }
 
     /**
      * Gets the package name (e.g., "java.lang").
      */
     public String getPackageName() {
-        int lastSlash = internalName.lastIndexOf('/');
-        return lastSlash >= 0 ? internalName.substring(0, lastSlash).replace('/', '.') : "";
+        return ClassNameUtil.getPackageNameAsSource(internalName);
     }
 
     /**

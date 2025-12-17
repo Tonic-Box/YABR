@@ -1,5 +1,6 @@
 package com.tonic.analysis.xref;
 
+import com.tonic.analysis.common.MethodReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

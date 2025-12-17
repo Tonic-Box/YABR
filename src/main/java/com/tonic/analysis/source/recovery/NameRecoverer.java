@@ -12,6 +12,7 @@ import com.tonic.parser.attribute.table.LocalVariableTableEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Utf8Item;
+import com.tonic.utill.ClassNameUtil;
 import lombok.Getter;
 
 import java.util.HashMap;
@@ -169,9 +170,7 @@ public class NameRecoverer {
         }
         if (type instanceof ReferenceType) {
             ReferenceType r = (ReferenceType) type;
-            String name = r.getInternalName();
-            int lastSlash = name.lastIndexOf('/');
-            String simple = lastSlash >= 0 ? name.substring(lastSlash + 1) : name;
+            String simple = ClassNameUtil.getSimpleNameWithInnerClasses(r.getInternalName());
             if (simple.isEmpty()) return "obj";
             return Character.toLowerCase(simple.charAt(0)) + "";
         }

@@ -1,7 +1,7 @@
 package com.tonic.analysis.pattern;
 
 import com.tonic.analysis.callgraph.CallGraph;
-import com.tonic.analysis.callgraph.MethodReference;
+import com.tonic.analysis.common.MethodReference;
 import com.tonic.analysis.dependency.DependencyAnalyzer;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
