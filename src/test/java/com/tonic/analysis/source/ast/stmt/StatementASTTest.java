@@ -213,6 +213,16 @@ class StatementASTTest {
         }
 
         @Override
+        public String visitDynamicConstant(com.tonic.analysis.source.ast.expr.DynamicConstantExpr expr) {
+            return "visitDynamicConstant";
+        }
+
+        @Override
+        public String visitInvokeDynamic(com.tonic.analysis.source.ast.expr.InvokeDynamicExpr expr) {
+            return "visitInvokeDynamic";
+        }
+
+        @Override
         public String visitPrimitiveType(PrimitiveSourceType type) {
             return "visitPrimitiveType";
         }

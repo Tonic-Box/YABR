@@ -702,4 +702,266 @@ class SourceEmitterTest {
         assertNotNull(result);
         assertTrue(result.contains("instanceof"));
     }
+
+    // ========== DynamicConstantExpr Tests ==========
+
+    @Test
+    void emitDynamicConstantExprWithBootstrapInfo() {
+        Expression expr = new DynamicConstantExpr(
+            "myConst",
+            "Ljava/lang/Object;",
+            0,
+            "com/test/Bootstrap",
+            "makeConst",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Object;",
+            ReferenceSourceType.OBJECT
+        );
+
+        String result = SourceEmitter.emit(expr);
+
+        assertNotNull(result);
+        assertTrue(result.contains("condy"));
+        assertTrue(result.contains("myConst"));
+    }
+
+    @Test
+    void emitDynamicConstantExprWithMinimalInfo() {
+        Expression expr = new DynamicConstantExpr(
+            "unnamed",
+            "I",
+            5,
+            PrimitiveSourceType.INT
+        );
+
+        String result = SourceEmitter.emit(expr);
+
+        assertNotNull(result);
+        assertTrue(result.contains("condy"));
+    }
+
+    @Test
+    void emitDynamicConstantExprWithBootstrapResolution() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .resolveBootstrapMethods(true)
+            .build();
+
+        Expression expr = new DynamicConstantExpr(
+            "myConst",
+            "Ljava/lang/Object;",
+            0,
+            "com/test/Bootstrap",
+            "makeConst",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Object;",
+            ReferenceSourceType.OBJECT
+        );
+
+        String result = SourceEmitter.emit(new ExprStmt(expr), config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("Bootstrap"));
+        assertTrue(result.contains("makeConst"));
+        assertTrue(result.contains("/* condy */"));
+    }
+
+    // ========== InvokeDynamicExpr Tests ==========
+
+    @Test
+    void emitInvokeDynamicExprWithBootstrapInfo() {
+        List<Expression> args = new ArrayList<>();
+        args.add(LiteralExpr.ofString("arg1"));
+
+        Expression expr = new InvokeDynamicExpr(
+            "dynamicMethod",
+            "(Ljava/lang/String;)V",
+            args,
+            "com/test/Bootstrap",
+            "bootstrap",
+            VoidSourceType.INSTANCE
+        );
+
+        String result = SourceEmitter.emit(expr);
+
+        assertNotNull(result);
+        assertTrue(result.contains("invokedynamic"));
+        assertTrue(result.contains("dynamicMethod"));
+        assertTrue(result.contains("@bsm"));
+    }
+
+    @Test
+    void emitInvokeDynamicExprWithoutArgs() {
+        Expression expr = new InvokeDynamicExpr(
+            "noArgMethod",
+            "()I",
+            new ArrayList<>(),
+            "com/test/Bootstrap",
+            "bootstrap",
+            PrimitiveSourceType.INT
+        );
+
+        String result = SourceEmitter.emit(expr);
+
+        assertNotNull(result);
+        assertTrue(result.contains("invokedynamic"));
+        assertTrue(result.contains("noArgMethod"));
+    }
+
+    @Test
+    void emitInvokeDynamicExprWithBootstrapResolution() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .resolveBootstrapMethods(true)
+            .build();
+
+        List<Expression> args = new ArrayList<>();
+        args.add(LiteralExpr.ofInt(42));
+
+        Expression expr = new InvokeDynamicExpr(
+            "dynamicCall",
+            "(I)V",
+            args,
+            "com/test/Bootstrap",
+            "invoke",
+            VoidSourceType.INSTANCE
+        );
+
+        String result = SourceEmitter.emit(new ExprStmt(expr), config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("Bootstrap"));
+        assertTrue(result.contains("invoke"));
+        assertTrue(result.contains("42"));
+        assertTrue(result.contains("/* indy */"));
+    }
+
+    @Test
+    void emitInvokeDynamicExprWithUnknownBootstrap() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .resolveBootstrapMethods(true)
+            .build();
+
+        Expression expr = new InvokeDynamicExpr(
+            "unknownMethod",
+            "()V",
+            new ArrayList<>(),
+            VoidSourceType.INSTANCE
+        );
+
+        String result = SourceEmitter.emit(new ExprStmt(expr), config);
+
+        assertNotNull(result);
+        // Should fall back to comment format since bootstrap is "unknown"
+        assertTrue(result.contains("invokedynamic"));
+    }
+
+    // ========== Identifier Mode Tests ==========
+
+    @Test
+    void emitWithUnicodeEscapeMode() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .identifierMode(IdentifierMode.UNICODE_ESCAPE)
+            .build();
+
+        // Variable with invalid start character
+        VarDeclStmt varDecl = new VarDeclStmt(
+            PrimitiveSourceType.INT,
+            "1invalid",
+            LiteralExpr.ofInt(10)
+        );
+
+        String result = SourceEmitter.emit(varDecl, config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("\\u0031")); // '1' escaped
+    }
+
+    @Test
+    void emitWithSemanticRenameMode() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .identifierMode(IdentifierMode.SEMANTIC_RENAME)
+            .build();
+
+        // Method call with invalid name
+        List<Expression> args = new ArrayList<>();
+        Expression expr = new MethodCallExpr(
+            null,
+            "???invalid",
+            "com/test/Class",
+            args,
+            true,
+            VoidSourceType.INSTANCE,
+            null
+        );
+
+        String result = SourceEmitter.emit(expr);
+
+        // With default config (RAW), should keep as-is
+        assertNotNull(result);
+    }
+
+    @Test
+    void emitWithSemanticRenameModeRenamesFields() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .identifierMode(IdentifierMode.SEMANTIC_RENAME)
+            .build();
+
+        Expression expr = new FieldAccessExpr(
+            new VarRefExpr("obj", new ReferenceSourceType("com/test/MyClass")),
+            "???field",
+            "com/test/MyClass",
+            false,
+            PrimitiveSourceType.INT
+        );
+
+        String result = SourceEmitter.emit(new ExprStmt(expr), config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("field_"));
+    }
+
+    // ========== Combined Feature Tests ==========
+
+    @Test
+    void emitDynamicConstantWithUnicodeEscape() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .identifierMode(IdentifierMode.UNICODE_ESCAPE)
+            .resolveBootstrapMethods(false)
+            .build();
+
+        Expression expr = new DynamicConstantExpr(
+            "const?name",
+            "I",
+            0,
+            "x/pkg",
+            "method?name",
+            "",
+            PrimitiveSourceType.INT
+        );
+
+        String result = SourceEmitter.emit(new ExprStmt(expr), config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("\\u003f")); // '?' escaped
+    }
+
+    @Test
+    void emitInvokeDynamicWithSemanticRename() {
+        SourceEmitterConfig config = SourceEmitterConfig.builder()
+            .identifierMode(IdentifierMode.SEMANTIC_RENAME)
+            .resolveBootstrapMethods(true)
+            .build();
+
+        Expression expr = new InvokeDynamicExpr(
+            "???call",
+            "()V",
+            new ArrayList<>(),
+            "com/test/Bootstrap",
+            "???bootstrap",
+            VoidSourceType.INSTANCE
+        );
+
+        String result = SourceEmitter.emit(new ExprStmt(expr), config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("method_")); // Bootstrap method renamed
+        assertTrue(result.contains("/* indy */"));
+    }
 }

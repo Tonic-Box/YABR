@@ -46,3 +46,4 @@ bin/
 /src/main/resources/com/tonic/analysis/naming/
 /.claude/
 /src/main/java/com/tonic/deob/
+/src/main/java/net/runelite/mapping/
