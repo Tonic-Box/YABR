@@ -540,6 +540,10 @@ public class BytecodeEmitter {
     }
 
     private void emitLdc(int index) throws IOException {
+        if (index <= 0) {
+            throw new IllegalStateException("Invalid LDC constant pool index: " + index +
+                " (must be > 0). This indicates a constant pool lookup failure.");
+        }
         if (index <= 255) {
             emit(0x12);
             emit((byte) index);

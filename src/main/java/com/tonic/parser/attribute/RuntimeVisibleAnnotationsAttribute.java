@@ -5,6 +5,7 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.anotation.Annotation;
 import com.tonic.utill.Logger;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -17,6 +18,7 @@ import java.util.List;
  */
 @Getter
 public class RuntimeVisibleAnnotationsAttribute extends Attribute {
+    @Setter
     private List<Annotation> annotations;
     private final boolean visible;
 

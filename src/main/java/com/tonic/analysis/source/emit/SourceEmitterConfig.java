@@ -42,6 +42,14 @@ public class SourceEmitterConfig {
     @Builder.Default
     private boolean useFullyQualifiedNames = false;
 
+    /** How to handle non-standard/obfuscated identifiers */
+    @Builder.Default
+    private IdentifierMode identifierMode = IdentifierMode.RAW;
+
+    /** Whether to resolve bootstrap methods to actual method calls */
+    @Builder.Default
+    private boolean resolveBootstrapMethods = false;
+
     /**
      * Default configuration.
      */

@@ -15,6 +15,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     private final IndentingWriter writer;
     private final SourceEmitterConfig config;
+    private final IdentifierNormalizer normalizer;
 
     public SourceEmitter(IndentingWriter writer) {
         this(writer, SourceEmitterConfig.defaults());
@@ -23,6 +24,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public SourceEmitter(IndentingWriter writer, SourceEmitterConfig config) {
         this.writer = writer;
         this.config = config;
+        this.normalizer = new IdentifierNormalizer(config.getIdentifierMode());
     }
 
     /**
@@ -285,7 +287,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.write(" ");
         }
 
-        writer.write(stmt.getName());
+        writer.write(normalizer.normalize(stmt.getName(), IdentifierNormalizer.IdentifierType.VARIABLE));
 
         if (stmt.getInitializer() != null) {
             writer.write(" = ");
@@ -421,7 +423,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitVarRef(VarRefExpr expr) {
-        writer.write(expr.getName());
+        writer.write(normalizer.normalize(expr.getName(), IdentifierNormalizer.IdentifierType.VARIABLE));
         return null;
     }
 
@@ -433,7 +435,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             expr.getReceiver().accept(this);
         }
         writer.write(".");
-        writer.write(expr.getFieldName());
+        writer.write(normalizer.normalize(expr.getFieldName(), IdentifierNormalizer.IdentifierType.FIELD));
         return null;
     }
 
@@ -456,7 +458,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.write(".");
         }
 
-        writer.write(expr.getMethodName());
+        writer.write(normalizer.normalize(expr.getMethodName(), IdentifierNormalizer.IdentifierType.METHOD));
         writer.write("(");
         emitExpressionList(expr.getArguments());
         writer.write(")");
@@ -611,7 +613,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.write(formatClassName(expr.getOwnerClass()));
         }
         writer.write("::");
-        writer.write(expr.getMethodName());
+        writer.write(normalizer.normalize(expr.getMethodName(), IdentifierNormalizer.IdentifierType.METHOD));
         return null;
     }
 
@@ -631,6 +633,55 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitClass(ClassExpr expr) {
         writer.write(expr.getClassType().toJavaSource());
         writer.write(".class");
+        return null;
+    }
+
+    @Override
+    public Void visitDynamicConstant(DynamicConstantExpr expr) {
+        if (config.isResolveBootstrapMethods() && !"unknown".equals(expr.getBootstrapOwner())) {
+            // Emit as actual static method call: owner.bootstrapName()
+            writer.write(formatClassName(expr.getBootstrapOwner()));
+            writer.write(".");
+            writer.write(normalizer.normalize(expr.getBootstrapName(), IdentifierNormalizer.IdentifierType.METHOD));
+            writer.write("()");
+            writer.write(" /* condy */");
+        } else {
+            // Emit as a comment that shows the condy information
+            writer.write("/* condy:\"");
+            writer.write(normalizer.normalize(expr.getName(), IdentifierNormalizer.IdentifierType.CONSTANT));
+            writer.write("\" ");
+            writer.write(expr.getDescriptor());
+            writer.write(" @bsm ");
+            writer.write(normalizer.normalizeClassName(expr.getFormattedBootstrapMethod()));
+            writer.write(" */");
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitInvokeDynamic(InvokeDynamicExpr expr) {
+        if (config.isResolveBootstrapMethods() && !"unknown".equals(expr.getBootstrapOwner())) {
+            // Emit as actual static method call: owner.bootstrapName(args)
+            writer.write(formatClassName(expr.getBootstrapOwner()));
+            writer.write(".");
+            writer.write(normalizer.normalize(expr.getBootstrapName(), IdentifierNormalizer.IdentifierType.METHOD));
+            writer.write("(");
+            emitExpressionList(expr.getArguments());
+            writer.write(")");
+            writer.write(" /* indy */");
+        } else {
+            // Emit as invokedynamic pseudo-call with comment
+            writer.write("invokedynamic(\"");
+            writer.write(normalizer.normalize(expr.getName(), IdentifierNormalizer.IdentifierType.METHOD));
+            writer.write("\"");
+            if (!expr.getArguments().isEmpty()) {
+                writer.write(", ");
+                emitExpressionList(expr.getArguments());
+            }
+            writer.write(") /* @bsm ");
+            writer.write(normalizer.normalizeClassName(expr.getFormattedBootstrapMethod()));
+            writer.write(" */");
+        }
         return null;
     }
 
@@ -695,10 +746,13 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     private String formatClassName(String internalName) {
         if (internalName == null) return "";
+        String formatted;
         if (config.isUseFullyQualifiedNames()) {
-            return ClassNameUtil.toSourceName(internalName);
+            formatted = ClassNameUtil.toSourceName(internalName);
+        } else {
+            formatted = ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
         }
-        return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
+        return normalizer.normalizeClassName(formatted);
     }
 
     private boolean needsParentheses(BinaryExpr expr) {

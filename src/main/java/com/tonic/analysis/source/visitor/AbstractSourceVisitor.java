@@ -288,6 +288,19 @@ public abstract class AbstractSourceVisitor<T> implements SourceVisitor<T> {
         return defaultValue();
     }
 
+    @Override
+    public T visitDynamicConstant(DynamicConstantExpr expr) {
+        return defaultValue();
+    }
+
+    @Override
+    public T visitInvokeDynamic(InvokeDynamicExpr expr) {
+        for (Expression arg : expr.getArguments()) {
+            arg.accept(this);
+        }
+        return defaultValue();
+    }
+
     // ==================== Types ====================
 
     @Override

@@ -62,15 +62,20 @@ public class MethodRenamer {
      * Renames a single method without hierarchy propagation.
      */
     private void renameMethodSingle(MethodMapping mapping) {
+        // Get the new class name (after class renaming) for the mapping owner
+        String mappedOwner = context.getMappings().getClassMapping(mapping.getOwner());
+        String currentOwner = mappedOwner != null ? mappedOwner : mapping.getOwner();
+
         // Find and rename the declaration
-        ClassFile ownerClass = context.getClass(mapping.getOwner());
+        ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
             renameMethodDeclaration(ownerClass, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
         }
 
         // Update all call sites across all classes
+        // Use the CURRENT class name (after class rename) which matches constant pool
         for (ClassFile cf : context.getAllClasses()) {
-            updateMethodCallSites(cf, mapping.getOwner(), mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+            updateMethodCallSites(cf, currentOwner, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
         }
     }
 
@@ -78,18 +83,24 @@ public class MethodRenamer {
      * Renames a method and all its overrides/implementations in the hierarchy.
      */
     private void renameMethodInHierarchy(MethodMapping mapping) {
+        // Get the new class name (after class renaming) for the mapping owner
+        String mappedOwner = context.getMappings().getClassMapping(mapping.getOwner());
+        String currentOwner = mappedOwner != null ? mappedOwner : mapping.getOwner();
+
         // Find all classes that have this method (declaration or override)
+        // Use the current (possibly renamed) owner name to search hierarchy
         Set<ClassNode> methodClasses = context.getHierarchy().findMethodHierarchy(
-                mapping.getOwner(), mapping.getOldName(), mapping.getDescriptor());
+                currentOwner, mapping.getOldName(), mapping.getDescriptor());
 
         // Collect all owner names that need their method renamed
+        // These are the CURRENT names (after class rename)
         Set<String> ownerNames = new HashSet<>();
         for (ClassNode node : methodClasses) {
             ownerNames.add(node.getName());
         }
 
-        // Also add the original owner
-        ownerNames.add(mapping.getOwner());
+        // Also add the current owner
+        ownerNames.add(currentOwner);
 
         // Rename declarations in all affected classes
         for (String ownerName : ownerNames) {
@@ -100,6 +111,8 @@ public class MethodRenamer {
         }
 
         // Update all call sites across all classes for all owner variants
+        // NOTE: ownerNames contains CURRENT class names (after class rename)
+        // which matches what's in the constant pool
         for (ClassFile cf : context.getAllClasses()) {
             for (String ownerName : ownerNames) {
                 updateMethodCallSites(cf, ownerName, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());

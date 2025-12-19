@@ -4,6 +4,7 @@ import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.decompile.ClassDecompiler;
 import com.tonic.analysis.source.decompile.DecompilerConfig;
 import com.tonic.analysis.source.decompile.TransformPreset;
+import com.tonic.analysis.source.emit.IdentifierMode;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
@@ -36,25 +37,11 @@ public class Decompile {
         }
 
         // Parse options
-        boolean useFqn = false;
         String classPath = null;
         TransformPreset preset = TransformPreset.NONE;
 
         for (String arg : args) {
-            if (arg.equals("--fqn")) {
-                useFqn = true;
-            } else if (arg.equals("--simple")) {
-                useFqn = false;
-            } else if (arg.startsWith("--preset=")) {
-                String presetName = arg.substring("--preset=".length()).toUpperCase();
-                try {
-                    preset = TransformPreset.valueOf(presetName);
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Unknown preset: " + presetName);
-                    System.err.println("Available presets: none, minimal, standard, aggressive");
-                    return;
-                }
-            } else if (!arg.startsWith("--")) {
+            if (!arg.startsWith("--")) {
                 classPath = arg;
             }
         }
@@ -95,11 +82,13 @@ public class Decompile {
             }
         }
 
-        // Configure the emitter
+        // Configure the emitter - always resolve bootstrap methods and use unicode escaping
         SourceEmitterConfig emitterConfig = SourceEmitterConfig.builder()
-                .useFullyQualifiedNames(useFqn)
+                .useFullyQualifiedNames(false)
                 .alwaysUseBraces(true)
                 .useVarKeyword(false)
+                .identifierMode(IdentifierMode.UNICODE_ESCAPE)
+                .resolveBootstrapMethods(true)
                 .build();
 
         // Configure decompiler with preset

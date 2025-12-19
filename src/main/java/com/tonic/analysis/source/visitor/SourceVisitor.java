@@ -52,6 +52,8 @@ public interface SourceVisitor<T> {
     T visitThis(ThisExpr expr);
     T visitSuper(SuperExpr expr);
     T visitClass(ClassExpr expr);
+    T visitDynamicConstant(DynamicConstantExpr expr);
+    T visitInvokeDynamic(InvokeDynamicExpr expr);
 
     // ==================== Types ====================
 

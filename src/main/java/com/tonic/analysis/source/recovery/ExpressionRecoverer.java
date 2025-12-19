@@ -176,8 +176,100 @@ public class ExpressionRecoverer {
             String className = cc.getClassName();
             SourceType classType = new ReferenceSourceType(className, java.util.Collections.emptyList());
             return new ClassExpr(classType);
+        } else if (c instanceof DynamicConstant) {
+            // Handle dynamic constants (condy) - resolve to DynamicConstantExpr with bootstrap info
+            DynamicConstant dc = (DynamicConstant) c;
+            return resolveDynamicConstant(dc);
         }
         return LiteralExpr.ofNull();
+    }
+
+    /**
+     * Resolves a DynamicConstant (CONDY) to a DynamicConstantExpr with bootstrap info.
+     * This is extracted to allow use from both recoverConstant and the inner RecoveryVisitor.
+     */
+    private Expression resolveDynamicConstant(DynamicConstant dc) {
+        SourceType type = SourceType.fromIRType(dc.getType());
+        try {
+            com.tonic.parser.ClassFile classFile = context.getSourceMethod().getClassFile();
+            if (classFile == null) {
+                return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                        dc.getBootstrapMethodIndex(), type);
+            }
+
+            com.tonic.parser.attribute.BootstrapMethodsAttribute bsmAttr = null;
+            for (com.tonic.parser.attribute.Attribute attr : classFile.getClassAttributes()) {
+                if (attr instanceof com.tonic.parser.attribute.BootstrapMethodsAttribute) {
+                    bsmAttr = (com.tonic.parser.attribute.BootstrapMethodsAttribute) attr;
+                    break;
+                }
+            }
+            if (bsmAttr == null) {
+                return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                        dc.getBootstrapMethodIndex(), type);
+            }
+
+            int bsmIndex = dc.getBootstrapMethodIndex();
+            if (bsmIndex < 0 || bsmIndex >= bsmAttr.getBootstrapMethods().size()) {
+                return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                        dc.getBootstrapMethodIndex(), type);
+            }
+
+            com.tonic.parser.attribute.table.BootstrapMethod bsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
+            com.tonic.parser.constpool.MethodHandleItem bsmHandleItem =
+                (com.tonic.parser.constpool.MethodHandleItem) classFile.getConstPool().getItem(bsm.getBootstrapMethodRef());
+            com.tonic.parser.constpool.structure.MethodHandle bsmHandle = bsmHandleItem.getValue();
+
+            String bsmOwner = resolveMethodHandleOwner(classFile.getConstPool(), bsmHandle);
+            String bsmName = resolveMethodHandleName(classFile.getConstPool(), bsmHandle);
+            String bsmDesc = resolveMethodHandleDesc(classFile.getConstPool(), bsmHandle);
+
+            // For unknown bootstrap methods, return DynamicConstantExpr with full info
+            return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                    dc.getBootstrapMethodIndex(), bsmOwner, bsmName, bsmDesc, type);
+        } catch (Exception e) {
+            return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                    dc.getBootstrapMethodIndex(), type);
+        }
+    }
+
+    private String resolveMethodHandleOwner(com.tonic.parser.ConstPool cp,
+                                             com.tonic.parser.constpool.structure.MethodHandle handle) {
+        com.tonic.parser.constpool.Item<?> refItem = cp.getItem(handle.getReferenceIndex());
+        if (refItem instanceof com.tonic.parser.constpool.MethodRefItem) {
+            return ((com.tonic.parser.constpool.MethodRefItem) refItem).getOwner();
+        } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+            return ((com.tonic.parser.constpool.InterfaceRefItem) refItem).getOwner();
+        } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem) {
+            return ((com.tonic.parser.constpool.FieldRefItem) refItem).getOwner();
+        }
+        return "";
+    }
+
+    private String resolveMethodHandleName(com.tonic.parser.ConstPool cp,
+                                            com.tonic.parser.constpool.structure.MethodHandle handle) {
+        com.tonic.parser.constpool.Item<?> refItem = cp.getItem(handle.getReferenceIndex());
+        if (refItem instanceof com.tonic.parser.constpool.MethodRefItem) {
+            return ((com.tonic.parser.constpool.MethodRefItem) refItem).getName();
+        } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+            return ((com.tonic.parser.constpool.InterfaceRefItem) refItem).getName();
+        } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem) {
+            return ((com.tonic.parser.constpool.FieldRefItem) refItem).getName();
+        }
+        return "";
+    }
+
+    private String resolveMethodHandleDesc(com.tonic.parser.ConstPool cp,
+                                            com.tonic.parser.constpool.structure.MethodHandle handle) {
+        com.tonic.parser.constpool.Item<?> refItem = cp.getItem(handle.getReferenceIndex());
+        if (refItem instanceof com.tonic.parser.constpool.MethodRefItem) {
+            return ((com.tonic.parser.constpool.MethodRefItem) refItem).getDescriptor();
+        } else if (refItem instanceof com.tonic.parser.constpool.InterfaceRefItem) {
+            return ((com.tonic.parser.constpool.InterfaceRefItem) refItem).getDescriptor();
+        } else if (refItem instanceof com.tonic.parser.constpool.FieldRefItem) {
+            return ((com.tonic.parser.constpool.FieldRefItem) refItem).getDescriptor();
+        }
+        return "";
     }
 
     /**
@@ -431,9 +523,56 @@ public class ExpressionRecoverer {
                 if (bsInfo.isStringConcatFactory()) {
                     return handleStringConcat(instr, bsInfo);
                 }
+
+                // For other known bootstrap methods, create InvokeDynamicExpr with bootstrap info
+                return createInvokeDynamicExpr(instr, bsInfo, returnType);
             }
 
-            return generateFallbackLambda(instr, returnType);
+            // No bootstrap info available - still create descriptive expression
+            return createInvokeDynamicExprNoBootstrap(instr, returnType);
+        }
+
+        /**
+         * Creates an InvokeDynamicExpr with full bootstrap method information.
+         */
+        private Expression createInvokeDynamicExpr(InvokeInstruction instr, BootstrapMethodInfo bsInfo,
+                                                    SourceType returnType) {
+            MethodHandleConstant bsm = bsInfo.getBootstrapMethod();
+
+            // Recover arguments
+            java.util.List<Expression> args = new java.util.ArrayList<>();
+            for (Value arg : instr.getArguments()) {
+                args.add(recoverOperand(arg));
+            }
+
+            String bsmOwner = bsm != null ? bsm.getOwner() : "unknown";
+            String bsmName = bsm != null ? bsm.getName() : "unknown";
+
+            return new InvokeDynamicExpr(
+                    instr.getName(),
+                    instr.getDescriptor(),
+                    args,
+                    bsmOwner,
+                    bsmName,
+                    returnType
+            );
+        }
+
+        /**
+         * Creates an InvokeDynamicExpr when bootstrap info is unavailable.
+         */
+        private Expression createInvokeDynamicExprNoBootstrap(InvokeInstruction instr, SourceType returnType) {
+            java.util.List<Expression> args = new java.util.ArrayList<>();
+            for (Value arg : instr.getArguments()) {
+                args.add(recoverOperand(arg));
+            }
+
+            return new InvokeDynamicExpr(
+                    instr.getName(),
+                    instr.getDescriptor(),
+                    args,
+                    returnType
+            );
         }
 
         /**
@@ -647,11 +786,17 @@ public class ExpressionRecoverer {
 
         /**
          * Resolves a DynamicConstant (CONDY) to a method call expression.
+         * For unknown bootstrap methods, returns a DynamicConstantExpr with bootstrap info.
          */
         private Expression resolveDynamicConstantExpression(DynamicConstant dc) {
+            SourceType type = SourceType.fromIRType(dc.getType());
             try {
                 com.tonic.parser.ClassFile classFile = context.getSourceMethod().getClassFile();
-                if (classFile == null) return LiteralExpr.ofNull();
+                if (classFile == null) {
+                    // Fallback: return descriptive expression without BSM details
+                    return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                            dc.getBootstrapMethodIndex(), type);
+                }
 
                 com.tonic.parser.attribute.BootstrapMethodsAttribute bsmAttr = null;
                 for (com.tonic.parser.attribute.Attribute attr : classFile.getClassAttributes()) {
@@ -661,11 +806,15 @@ public class ExpressionRecoverer {
                         break;
                     }
                 }
-                if (bsmAttr == null) return LiteralExpr.ofNull();
+                if (bsmAttr == null) {
+                    return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                            dc.getBootstrapMethodIndex(), type);
+                }
 
                 int bsmIndex = dc.getBootstrapMethodIndex();
                 if (bsmIndex < 0 || bsmIndex >= bsmAttr.getBootstrapMethods().size()) {
-                    return LiteralExpr.ofNull();
+                    return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                            dc.getBootstrapMethodIndex(), type);
                 }
 
                 com.tonic.parser.attribute.table.BootstrapMethod bsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
@@ -675,14 +824,20 @@ public class ExpressionRecoverer {
 
                 String bsmOwner = resolveMethodHandleOwner(classFile.getConstPool(), bsmHandle);
                 String bsmName = resolveMethodHandleName(classFile.getConstPool(), bsmHandle);
+                String bsmDesc = resolveMethodHandleDesc(classFile.getConstPool(), bsmHandle);
 
+                // Check for known bootstrap methods that we can fully resolve
                 if ("java/lang/invoke/ConstantBootstraps".equals(bsmOwner) && "invoke".equals(bsmName)) {
                     return resolveConstantBootstrapsInvoke(classFile, bsm);
                 }
 
-                return LiteralExpr.ofNull();
+                // For unknown bootstrap methods, return DynamicConstantExpr with full info
+                return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                        dc.getBootstrapMethodIndex(), bsmOwner, bsmName, bsmDesc, type);
             } catch (Exception e) {
-                return LiteralExpr.ofNull();
+                // Fallback with minimal info on error
+                return new DynamicConstantExpr(dc.getName(), dc.getDescriptor(),
+                        dc.getBootstrapMethodIndex(), type);
             }
         }
 

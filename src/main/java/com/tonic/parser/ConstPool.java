@@ -251,6 +251,21 @@ public class ConstPool {
     }
 
     /**
+     * Always adds a new Utf8Item with the specified value.
+     * Unlike findOrAddUtf8, this never reuses existing entries.
+     * Use this when the value must not be affected by later constant pool modifications.
+     *
+     * @param value The UTF-8 string to add.
+     * @return The newly added Utf8Item.
+     */
+    public Utf8Item addUtf8(String value) {
+        Utf8Item newUtf8 = new Utf8Item();
+        newUtf8.setValue(value);
+        addItem(newUtf8);
+        return newUtf8;
+    }
+
+    /**
      * Finds or adds a NameAndTypeRefItem with the specified name and descriptor indices.
      *
      * @param nameIndex The index of the name Utf8Item.
