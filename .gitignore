@@ -47,3 +47,9 @@ bin/
 /.claude/
 /src/main/java/com/tonic/deob/
 /src/main/java/net/runelite/mapping/
+/test-compile.bat
+/test-constpool.sh
+/verify-test.java
+/verify_exception_handlers.sh
+/VerifyTest.class
+/ConstPoolItemTest-Summary.md
