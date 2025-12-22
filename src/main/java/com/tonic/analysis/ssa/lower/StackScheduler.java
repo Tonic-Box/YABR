@@ -52,7 +52,15 @@ public class StackScheduler {
         }
 
         schedule.add(new ScheduledInstruction(instr, ScheduleType.EXECUTE));
-        maxStack = Math.max(maxStack, stack.size());
+        // Calculate actual stack slots, accounting for two-slot types (long/double)
+        int stackSlots = 0;
+        for (Value v : stack) {
+            stackSlots++;
+            if (v instanceof SSAValue && ((SSAValue) v).getType().isTwoSlot()) {
+                stackSlots++;  // Long/double take 2 slots
+            }
+        }
+        maxStack = Math.max(maxStack, stackSlots);
 
         for (int i = 0; i < operands.size(); i++) {
             if (!stack.isEmpty()) stack.pop();

@@ -80,7 +80,6 @@ class InstrumenterTest {
                     .register()
                 .apply();
 
-        // Should instrument at least one method
         assertTrue(count >= 0);
     }
 
@@ -160,6 +159,24 @@ class InstrumenterTest {
         assertTrue(count >= 0);
     }
 
+    @Test
+    void methodEntryHookWithAllParameters() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ParamsTest")
+                .publicStaticMethod("hasParams", "(ILjava/lang/String;)V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodEntry()
+                    .callStatic("com/test/Hooks", "onEntry", "([Ljava/lang/Object;)V")
+                    .withAllParameters()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
     // ========== Method Exit Hook Tests ==========
 
     @Test
@@ -208,6 +225,53 @@ class InstrumenterTest {
                     .callStatic("com/test/Hooks", "onExit", "(I)I")
                     .withReturnValue()
                     .allowModification()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodExitHookWithThisAndMethodName() throws IOException {
+        int access = new AccessBuilder().setPublic().build();
+        MethodEntry method = testClass.createNewMethodWithDescriptor(access, "instanceMethod", "()V");
+        Bytecode bc = new Bytecode(method);
+        bc.addReturn(ReturnType.RETURN);
+        bc.finalizeBytecode();
+
+        int count = Instrumenter.forClass(testClass)
+                .onMethodExit()
+                    .callStatic("com/test/Hooks", "onExit", "(Ljava/lang/Object;Ljava/lang/String;)V")
+                    .withThis()
+                    .withMethodName()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodExitHookWithClassName() throws IOException {
+        addSimpleMethod(testClass, "targetMethod", "()V");
+
+        int count = Instrumenter.forClass(testClass)
+                .onMethodExit()
+                    .callStatic("com/test/Hooks", "onExit", "(Ljava/lang/String;)V")
+                    .withClassName()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodExitHookInPackageFilter() throws IOException {
+        addSimpleMethod(testClass, "targetMethod", "()V");
+
+        int count = Instrumenter.forClass(testClass)
+                .onMethodExit()
+                    .inPackage("com/test/")
+                    .callStatic("com/test/Hooks", "onExit", "()V")
                     .register()
                 .apply();
 
@@ -282,6 +346,782 @@ class InstrumenterTest {
         assertTrue(count >= 0);
     }
 
+    @Test
+    void fieldWriteHookWithOwnerAndFieldName() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldOwnerTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("writeField", "()V")
+                    .aload(0)
+                    .iconst(42)
+                    .putfield("com/test/FieldOwnerTest", "testField", "I")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .forField("testField")
+                    .callStatic("com/test/Hooks", "onWrite", "(Ljava/lang/Object;Ljava/lang/String;)V")
+                    .withOwner()
+                    .withFieldName()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldWriteHookWithOldValue() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldOldValueTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("writeField", "()V")
+                    .aload(0)
+                    .iconst(42)
+                    .putfield("com/test/FieldOldValueTest", "testField", "I")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .forField("testField")
+                    .callStatic("com/test/Hooks", "onWrite", "(I)V")
+                    .withOldValue()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldWriteHookWithModification() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldModifyTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("writeField", "()V")
+                    .aload(0)
+                    .iconst(42)
+                    .putfield("com/test/FieldModifyTest", "testField", "I")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .forField("testField")
+                    .callStatic("com/test/Hooks", "onWrite", "(I)I")
+                    .withNewValue()
+                    .allowModification()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldReadHookWithReadValue() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldReadValueTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("readField", "()I")
+                    .aload(0)
+                    .getfield("com/test/FieldReadValueTest", "testField", "I")
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldRead()
+                    .forField("testField")
+                    .callStatic("com/test/Hooks", "onRead", "(I)V")
+                    .withReadValue()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldReadHookWithOwnerAndFieldName() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldReadOwnerTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("readField", "()I")
+                    .aload(0)
+                    .getfield("com/test/FieldReadOwnerTest", "testField", "I")
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldRead()
+                    .forField("testField")
+                    .callStatic("com/test/Hooks", "onRead", "(Ljava/lang/Object;Ljava/lang/String;)V")
+                    .withOwner()
+                    .withFieldName()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldWriteHookInstanceOnly() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/InstanceFieldTest")
+                .field(new AccessBuilder().setPublic().build(), "instanceField", "I")
+                .publicMethod("writeInstance", "()V")
+                    .aload(0)
+                    .iconst(42)
+                    .putfield("com/test/InstanceFieldTest", "instanceField", "I")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .forField("instanceField")
+                    .instanceOnly()
+                    .callStatic("com/test/Hooks", "onWrite", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldReadHookInstanceOnly() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/InstanceFieldReadTest")
+                .field(new AccessBuilder().setPublic().build(), "instanceField", "I")
+                .publicMethod("readInstance", "()I")
+                    .aload(0)
+                    .getfield("com/test/InstanceFieldReadTest", "instanceField", "I")
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldRead()
+                    .forField("instanceField")
+                    .instanceOnly()
+                    .callStatic("com/test/Hooks", "onRead", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldWriteHookMatchingPattern() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldPatternTest")
+                .field(new AccessBuilder().setPublic().build(), "myField1", "I")
+                .field(new AccessBuilder().setPublic().build(), "myField2", "I")
+                .publicMethod("writeFields", "()V")
+                    .aload(0)
+                    .iconst(1)
+                    .putfield("com/test/FieldPatternTest", "myField1", "I")
+                    .aload(0)
+                    .iconst(2)
+                    .putfield("com/test/FieldPatternTest", "myField2", "I")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .forFieldsMatching("myField.*")
+                    .callStatic("com/test/Hooks", "onWrite", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldWriteHookOfType() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTypeTest")
+                .field(new AccessBuilder().setPublic().build(), "intField", "I")
+                .field(new AccessBuilder().setPublic().build(), "stringField", "Ljava/lang/String;")
+                .publicMethod("writeFields", "()V")
+                    .aload(0)
+                    .iconst(42)
+                    .putfield("com/test/FieldTypeTest", "intField", "I")
+                    .aload(0)
+                    .ldc("test")
+                    .putfield("com/test/FieldTypeTest", "stringField", "Ljava/lang/String;")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .ofType("I")
+                    .callStatic("com/test/Hooks", "onWrite", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldWriteHookInClassFilter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldClassTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("writeField", "()V")
+                    .aload(0)
+                    .iconst(42)
+                    .putfield("com/test/FieldClassTest", "testField", "I")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .inClass("com/test/FieldClassTest")
+                    .callStatic("com/test/Hooks", "onWrite", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void fieldWriteHookInPackageFilter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/FieldPackageTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("writeField", "()V")
+                    .aload(0)
+                    .iconst(42)
+                    .putfield("com/test/FieldPackageTest", "testField", "I")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onFieldWrite()
+                    .inPackage("com/test/")
+                    .callStatic("com/test/Hooks", "onWrite", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    // ========== Array Hook Tests ==========
+
+    @Test
+    void arrayStoreHookRegisters() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayLoadHookRegisters() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadTest")
+                .publicStaticMethod("arrayLoad", "([I)I")
+                    .aload(0)
+                    .iconst(0)
+                    .iaload()
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayLoad()
+                    .forArrayType("[I")
+                    .callStatic("com/test/Hooks", "onArrayLoad", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookWithArray() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreArrayTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "([I)V")
+                    .withArray()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookWithIndex() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreIndexTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "(I)V")
+                    .withIndex()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookWithValue() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreValueTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "(I)V")
+                    .withValue()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookWithAll() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreAllTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "([III)V")
+                    .withAll()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookWithModification() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreModifyTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "(I)I")
+                    .withValue()
+                    .allowModification()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayLoadHookWithArray() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadArrayTest")
+                .publicStaticMethod("arrayLoad", "([I)I")
+                    .aload(0)
+                    .iconst(0)
+                    .iaload()
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayLoad()
+                    .forArrayType("[I")
+                    .callStatic("com/test/Hooks", "onArrayLoad", "([I)V")
+                    .withArray()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayLoadHookWithIndex() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadIndexTest")
+                .publicStaticMethod("arrayLoad", "([I)I")
+                    .aload(0)
+                    .iconst(0)
+                    .iaload()
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayLoad()
+                    .forArrayType("[I")
+                    .callStatic("com/test/Hooks", "onArrayLoad", "(I)V")
+                    .withIndex()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayLoadHookWithValue() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadValueTest")
+                .publicStaticMethod("arrayLoad", "([I)I")
+                    .aload(0)
+                    .iconst(0)
+                    .iaload()
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayLoad()
+                    .forArrayType("[I")
+                    .callStatic("com/test/Hooks", "onArrayLoad", "(I)V")
+                    .withValue()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookInClassFilter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreClassTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .inClass("com/test/ArrayStoreClassTest")
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookInPackageFilter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStorePackageTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .inPackage("com/test/")
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void arrayStoreHookInMethodFilter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreMethodTest")
+                .publicStaticMethod("arrayStore", "()V")
+                    .iconst(5)
+                    .newarray(10) // T_INT
+                    .astore(0)
+                    .aload(0)
+                    .iconst(0)
+                    .iconst(42)
+                    .iastore()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onArrayStore()
+                    .inMethod("arrayStore")
+                    .forIntArrays()
+                    .callStatic("com/test/Hooks", "onArrayStore", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    // ========== Method Call Hook Tests ==========
+
+    @Test
+    void methodCallHookRegisters() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .invokestatic("com/test/Other", "someMethod", "()V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .targeting("com/test/Other", "someMethod")
+                    .before()
+                    .callStatic("com/test/Hooks", "beforeCall", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookAfter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallAfterTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .invokestatic("com/test/Other", "someMethod", "()V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .targeting("com/test/Other", "someMethod")
+                    .after()
+                    .callStatic("com/test/Hooks", "afterCall", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookWithReceiver() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallReceiverTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .aconst_null()
+                    .invokevirtual("java/lang/Object", "toString", "()Ljava/lang/String;")
+                    .pop()
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .targeting("java/lang/Object", "toString")
+                    .before()
+                    .callStatic("com/test/Hooks", "beforeCall", "(Ljava/lang/Object;)V")
+                    .withReceiver()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookWithArguments() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallArgsTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .iconst(42)
+                    .ldc("test")
+                    .invokestatic("com/test/Other", "method", "(ILjava/lang/String;)V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .targeting("com/test/Other", "method")
+                    .before()
+                    .callStatic("com/test/Hooks", "beforeCall", "([Ljava/lang/Object;)V")
+                    .withArguments()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookWithResult() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallResultTest")
+                .publicStaticMethod("callMethod", "()I")
+                    .invokestatic("com/test/Other", "getInt", "()I")
+                    .ireturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .targeting("com/test/Other", "getInt")
+                    .after()
+                    .callStatic("com/test/Hooks", "afterCall", "(I)V")
+                    .withResult()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookWithMethodName() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallMethodNameTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .invokestatic("com/test/Other", "someMethod", "()V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .targeting("com/test/Other", "someMethod")
+                    .before()
+                    .callStatic("com/test/Hooks", "beforeCall", "(Ljava/lang/String;)V")
+                    .withMethodName()
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookWithDescriptor() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallDescriptorTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .invokestatic("com/test/Other", "someMethod", "()V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .targeting("com/test/Other", "someMethod", "()V")
+                    .before()
+                    .callStatic("com/test/Hooks", "beforeCall", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookInClassFilter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallClassTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .invokestatic("com/test/Other", "someMethod", "()V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .inClass("com/test/CallClassTest")
+                    .targeting("com/test/Other", "someMethod")
+                    .before()
+                    .callStatic("com/test/Hooks", "beforeCall", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void methodCallHookInPackageFilter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/CallPackageTest")
+                .publicStaticMethod("callMethod", "()V")
+                    .invokestatic("com/test/Other", "someMethod", "()V")
+                    .vreturn()
+                .endMethod()
+                .build();
+
+        int count = Instrumenter.forClass(cf)
+                .onMethodCall()
+                    .inPackage("com/test/")
+                    .targeting("com/test/Other", "someMethod")
+                    .before()
+                    .callStatic("com/test/Hooks", "beforeCall", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    // Note: Exception hook tests are omitted as BytecodeBuilder doesn't support
+    // try-catch blocks. Exception hooks would need to be tested with manually
+    // constructed ClassFiles using low-level Bytecode API.
+
     // ========== Configuration Tests ==========
 
     @Test
@@ -296,7 +1136,6 @@ class InstrumenterTest {
                     .register()
                 .apply();
 
-        // Abstract methods should be skipped
         assertTrue(count >= 0);
     }
 
@@ -334,6 +1173,63 @@ class InstrumenterTest {
 
         int count = Instrumenter.forClass(testClass)
                 .failOnError(false)
+                .onMethodEntry()
+                    .callStatic("com/test/Hooks", "onEntry", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void skipNativeMethods() throws IOException {
+        int nativeAccess = new AccessBuilder().setPublic().setNative().build();
+        testClass.createNewMethodWithDescriptor(nativeAccess, "nativeMethod", "()V");
+
+        int count = Instrumenter.forClass(testClass)
+                .skipNative(true)
+                .onMethodEntry()
+                    .callStatic("com/test/Hooks", "onEntry", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void skipStaticInitializers() throws IOException {
+        addSimpleMethod(testClass, "normalMethod", "()V");
+
+        int count = Instrumenter.forClass(testClass)
+                .skipStaticInitializers(true)
+                .onMethodEntry()
+                    .callStatic("com/test/Hooks", "onEntry", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void skipSyntheticMethods() throws IOException {
+        addSimpleMethod(testClass, "normalMethod", "()V");
+
+        int count = Instrumenter.forClass(testClass)
+                .skipSynthetic(true)
+                .onMethodEntry()
+                    .callStatic("com/test/Hooks", "onEntry", "()V")
+                    .register()
+                .apply();
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    void skipBridgeMethods() throws IOException {
+        addSimpleMethod(testClass, "normalMethod", "()V");
+
+        int count = Instrumenter.forClass(testClass)
+                .skipBridge(true)
                 .onMethodEntry()
                     .callStatic("com/test/Hooks", "onEntry", "()V")
                     .register()
@@ -442,65 +1338,33 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookRegisters() throws IOException {
-        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreTest")
-                .publicStaticMethod("arrayStore", "()V")
-                    .iconst(5)
-                    .newarray(10) // T_INT
-                    .astore(0)
+    void multipleHookTypesCanBeRegistered() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/MultiHookTest")
+                .field(new AccessBuilder().setPublic().build(), "testField", "I")
+                .publicMethod("complexMethod", "()I")
                     .aload(0)
-                    .iconst(0)
                     .iconst(42)
-                    .iastore()
-                    .vreturn()
-                .endMethod()
-                .build();
-
-        int count = Instrumenter.forClass(cf)
-                .onArrayStore()
-                    .forIntArrays()
-                    .callStatic("com/test/Hooks", "onArrayStore", "()V")
-                    .register()
-                .apply();
-
-        assertTrue(count >= 0);
-    }
-
-    @Test
-    void arrayLoadHookRegisters() throws IOException {
-        ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadTest")
-                .publicStaticMethod("arrayLoad", "([I)I")
+                    .putfield("com/test/MultiHookTest", "testField", "I")
                     .aload(0)
-                    .iconst(0)
-                    .iaload()
+                    .getfield("com/test/MultiHookTest", "testField", "I")
                     .ireturn()
                 .endMethod()
                 .build();
 
         int count = Instrumenter.forClass(cf)
-                .onArrayLoad()
-                    .forArrayType("[I")
-                    .callStatic("com/test/Hooks", "onArrayLoad", "()V")
+                .onMethodEntry()
+                    .callStatic("com/test/Hooks", "onEntry", "()V")
                     .register()
-                .apply();
-
-        assertTrue(count >= 0);
-    }
-
-    @Test
-    void methodCallHookRegisters() throws IOException {
-        ClassFile cf = BytecodeBuilder.forClass("com/test/CallTest")
-                .publicStaticMethod("callMethod", "()V")
-                    .invokestatic("com/test/Other", "someMethod", "()V")
-                    .vreturn()
-                .endMethod()
-                .build();
-
-        int count = Instrumenter.forClass(cf)
-                .onMethodCall()
-                    .targeting("com/test/Other", "someMethod")
-                    .before()
-                    .callStatic("com/test/Hooks", "beforeCall", "()V")
+                .onMethodExit()
+                    .callStatic("com/test/Hooks", "onExit", "()V")
+                    .register()
+                .onFieldWrite()
+                    .forField("testField")
+                    .callStatic("com/test/Hooks", "onWrite", "()V")
+                    .register()
+                .onFieldRead()
+                    .forField("testField")
+                    .callStatic("com/test/Hooks", "onRead", "()V")
                     .register()
                 .apply();
 

@@ -28,6 +28,29 @@ public class BootstrapMethodsAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    /**
+     * Constructor for programmatic creation of a BootstrapMethods attribute.
+     *
+     * @param constPool The constant pool to use for creating the attribute name.
+     */
+    public BootstrapMethodsAttribute(ConstPool constPool) {
+        super("BootstrapMethods", (ClassFile) null, constPool.findOrAddUtf8("BootstrapMethods").getIndex(constPool), 2);
+        this.bootstrapMethods = new ArrayList<>();
+    }
+
+    /**
+     * Adds a bootstrap method entry.
+     *
+     * @param methodHandleIndex The constant pool index of the method handle.
+     * @param arguments The list of constant pool indices for the bootstrap arguments.
+     */
+    public void addBootstrapMethod(int methodHandleIndex, List<Integer> arguments) {
+        if (bootstrapMethods == null) {
+            bootstrapMethods = new ArrayList<>();
+        }
+        bootstrapMethods.add(new BootstrapMethod(methodHandleIndex, arguments));
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         int startIndex = classFile.getIndex();

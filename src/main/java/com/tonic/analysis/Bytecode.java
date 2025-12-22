@@ -665,4 +665,35 @@ public class Bytecode {
         Instruction instruction = codeWriter.insertGetStatic(insertOffset, fieldRefIndex);
         insertBeforeOffset += instruction.getLength();
     }
+
+    /**
+     * Appends a TABLESWITCH instruction to the bytecode.
+     *
+     * @param low           The lowest key value.
+     * @param high          The highest key value.
+     * @param defaultOffset The default branch offset (relative to this instruction).
+     * @param jumpOffsets   Map of key values to branch offsets (relative to this instruction).
+     */
+    public void addTableSwitch(int low, int high, int defaultOffset, Map<Integer, Integer> jumpOffsets) {
+        int offset = processOffset();
+        int padding = (4 - ((offset + 1) % 4)) % 4;
+        TableSwitchInstruction instr = codeWriter.insertTableSwitch(
+            offset, padding, defaultOffset, low, high, jumpOffsets);
+        insertBeforeOffset += instr.getLength();
+    }
+
+    /**
+     * Appends a LOOKUPSWITCH instruction to the bytecode.
+     *
+     * @param defaultOffset The default branch offset (relative to this instruction).
+     * @param matchOffsets  Map of case values to branch offsets (relative to this instruction).
+     */
+    public void addLookupSwitch(int defaultOffset, Map<Integer, Integer> matchOffsets) {
+        int offset = processOffset();
+        int padding = (4 - ((offset + 1) % 4)) % 4;
+        int npairs = matchOffsets.size();
+        LookupSwitchInstruction instr = codeWriter.insertLookupSwitch(
+            offset, padding, defaultOffset, npairs, matchOffsets);
+        insertBeforeOffset += instr.getLength();
+    }
 }

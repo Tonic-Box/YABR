@@ -601,6 +601,7 @@ public class ConstPool {
         MethodHandle mh = new MethodHandle(refKind, refIndex);
         MethodHandleItem newItem = new MethodHandleItem();
         newItem.setMethodHandle(mh);
+        newItem.setClassFile(classFile);
         items.add(newItem);
         return newItem;
     }
@@ -626,7 +627,75 @@ public class ConstPool {
 
         MethodTypeItem newItem = new MethodTypeItem();
         newItem.setDescriptorIndex(descIndex);
+        newItem.setClassFile(classFile);
         items.add(newItem);
         return newItem;
+    }
+
+    /**
+     * Adds a MethodHandle constant pool entry by reference index.
+     *
+     * @param referenceKind The reference kind (1-9 per JVM spec).
+     * @param referenceIndex The constant pool index of the referenced member.
+     * @return The index of the newly added MethodHandleItem.
+     */
+    public int addMethodHandle(int referenceKind, int referenceIndex) {
+        MethodHandle mh = new MethodHandle(referenceKind, referenceIndex);
+        MethodHandleItem item = new MethodHandleItem();
+        item.setMethodHandle(mh);
+        return addItem(item);
+    }
+
+    /**
+     * Adds a MethodType constant pool entry.
+     *
+     * @param descriptor The method descriptor (e.g., "(II)V").
+     * @return The index of the newly added MethodTypeItem.
+     */
+    public int addMethodType(String descriptor) {
+        Utf8Item descUtf8 = findOrAddUtf8(descriptor);
+        int descIndex = getIndexOf(descUtf8);
+
+        MethodTypeItem item = new MethodTypeItem();
+        item.setDescriptorIndex(descIndex);
+        return addItem(item);
+    }
+
+    /**
+     * Adds an InvokeDynamic constant pool entry.
+     *
+     * @param bootstrapMethodAttrIndex The index into the bootstrap methods table.
+     * @param nameAndTypeIndex The constant pool index of the name and type.
+     * @return The index of the newly added InvokeDynamicItem.
+     */
+    public int addInvokeDynamic(int bootstrapMethodAttrIndex, int nameAndTypeIndex) {
+        InvokeDynamicItem item = new InvokeDynamicItem(this, bootstrapMethodAttrIndex, nameAndTypeIndex);
+        item.setClassFile(classFile);
+        return addItem(item);
+    }
+
+    /**
+     * Adds a MethodRef constant pool entry.
+     *
+     * @param owner The fully qualified class name (e.g., "java/lang/String").
+     * @param name The method name.
+     * @param descriptor The method descriptor (e.g., "(II)I").
+     * @return The index of the newly added MethodRefItem.
+     */
+    public int addMethodRef(String owner, String name, String descriptor) {
+        MethodRefItem item = findOrAddMethodRef(owner, name, descriptor);
+        return getIndexOf(item);
+    }
+
+    /**
+     * Adds a NameAndType constant pool entry.
+     *
+     * @param name The name string.
+     * @param descriptor The descriptor string.
+     * @return The index of the newly added NameAndTypeRefItem.
+     */
+    public int addNameAndType(String name, String descriptor) {
+        NameAndTypeRefItem item = findOrAddNameAndType(name, descriptor);
+        return getIndexOf(item);
     }
 }

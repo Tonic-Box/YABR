@@ -112,6 +112,87 @@ public class CodeWriter {
     }
 
     /**
+     * Gets the sequential instruction index for the instruction at the given bytecode offset.
+     * This maps bytecode offset to sequential instruction number (0, 1, 2, ...).
+     *
+     * @param offset The bytecode offset
+     * @return The sequential instruction index, or -1 if no instruction at that offset
+     */
+    public int getInstructionIndex(int offset) {
+        int index = 0;
+        for (Integer key : instructions.keySet()) {
+            if (key == offset) {
+                return index;
+            }
+            index++;
+        }
+        return -1;
+    }
+
+    /**
+     * Gets the instruction at a specific sequential index (0, 1, 2, ...).
+     *
+     * @param index The sequential instruction index
+     * @return The instruction at that index, or null if out of bounds
+     */
+    public Instruction getInstructionAt(int index) {
+        if (index < 0 || index >= instructions.size()) {
+            return null;
+        }
+        int i = 0;
+        for (Instruction instr : instructions.values()) {
+            if (i == index) {
+                return instr;
+            }
+            i++;
+        }
+        return null;
+    }
+
+    /**
+     * Gets the bytecode offset for the instruction at a specific sequential index.
+     *
+     * @param index The sequential instruction index
+     * @return The bytecode offset, or -1 if out of bounds
+     */
+    public int getOffsetAt(int index) {
+        if (index < 0 || index >= instructions.size()) {
+            return -1;
+        }
+        int i = 0;
+        for (Integer offset : instructions.keySet()) {
+            if (i == index) {
+                return offset;
+            }
+            i++;
+        }
+        return -1;
+    }
+
+    /**
+     * Finds the instruction index that contains or follows the given bytecode offset.
+     * Useful for exception handler matching.
+     *
+     * @param targetOffset The bytecode offset to search for
+     * @return The instruction index, or -1 if not found
+     */
+    public int findInstructionIndexForOffset(int targetOffset) {
+        int index = 0;
+        for (Map.Entry<Integer, Instruction> entry : instructions.entrySet()) {
+            int instrOffset = entry.getKey();
+            Instruction instr = entry.getValue();
+            if (instrOffset == targetOffset) {
+                return index;
+            }
+            if (instrOffset > targetOffset) {
+                return index > 0 ? index - 1 : 0;
+            }
+            index++;
+        }
+        return instructions.size() - 1;
+    }
+
+    /**
      * Inserts an instruction into the bytecode and updates blocks accordingly.
      *
      * @param offset   The bytecode offset to insert the instruction at.
@@ -1488,6 +1569,43 @@ public class CodeWriter {
         LdcWInstruction ldcWInstr = new LdcWInstruction(constPool, opcode, offset, constantPoolIndex);
         insertInstruction(offset, ldcWInstr);
         return ldcWInstr;
+    }
+
+    /**
+     * Inserts a TABLESWITCH instruction at the specified bytecode offset.
+     *
+     * @param offset        The bytecode offset to insert the instruction at.
+     * @param padding       The number of padding bytes (0-3 for 4-byte alignment).
+     * @param defaultOffset The branch target offset if no key matches.
+     * @param low           The lowest key value.
+     * @param high          The highest key value.
+     * @param jumpOffsets   The map of key to branch target offsets.
+     * @return The created TableSwitchInstruction.
+     */
+    public TableSwitchInstruction insertTableSwitch(int offset, int padding,
+                                                     int defaultOffset, int low, int high, Map<Integer, Integer> jumpOffsets) {
+        TableSwitchInstruction instr = new TableSwitchInstruction(
+            0xAA, offset, padding, defaultOffset, low, high, jumpOffsets);
+        insertInstruction(offset, instr);
+        return instr;
+    }
+
+    /**
+     * Inserts a LOOKUPSWITCH instruction at the specified bytecode offset.
+     *
+     * @param offset        The bytecode offset to insert the instruction at.
+     * @param padding       The number of padding bytes (0-3 for 4-byte alignment).
+     * @param defaultOffset The default branch target offset.
+     * @param npairs        The number of key-offset pairs.
+     * @param matchOffsets  The map of keys to branch target offsets.
+     * @return The created LookupSwitchInstruction.
+     */
+    public LookupSwitchInstruction insertLookupSwitch(int offset, int padding,
+                                                       int defaultOffset, int npairs, Map<Integer, Integer> matchOffsets) {
+        LookupSwitchInstruction instr = new LookupSwitchInstruction(
+            0xAB, offset, padding, defaultOffset, npairs, matchOffsets);
+        insertInstruction(offset, instr);
+        return instr;
     }
 
     /**

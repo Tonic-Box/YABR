@@ -46,13 +46,17 @@ public class RegisterAllocator {
         // Reserve parameter slots - these must not be reused for values of different types
         // For instance methods, slot 0 is 'this' (object reference)
         // Reusing parameter slots can cause type conflicts in the verifier
-        reservedSlotCount = method.getParameters().size();
-        maxLocals = reservedSlotCount;
-        for (int i = 0; i < maxLocals; i++) {
-            if (i < method.getParameters().size()) {
-                allocation.put(method.getParameters().get(i), i);
+        // NOTE: long/double parameters take 2 slots each, so we must calculate actual slot count
+        int slotIndex = 0;
+        for (SSAValue param : method.getParameters()) {
+            allocation.put(param, slotIndex);
+            slotIndex++;
+            if (param.getType().isTwoSlot()) {
+                slotIndex++;  // Long/double take 2 slots
             }
         }
+        reservedSlotCount = slotIndex;
+        maxLocals = slotIndex;
 
         // Pre-allocate phi results FIRST so copies can coalesce to them
         // This is necessary because phi results are defined at merge points which
