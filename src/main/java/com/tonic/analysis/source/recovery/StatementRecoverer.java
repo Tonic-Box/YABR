@@ -274,8 +274,10 @@ public class StatementRecoverer {
                 List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
                 List<ExceptionHandler> remainingHandlers = new ArrayList<>();
 
+                TryRegion targetRegion = createTryRegion(innerHandler);
                 for (ExceptionHandler h : innerHandlers) {
-                    if (h.getTryStart() == innerHandler.getTryStart()) {
+                    TryRegion handlerRegion = createTryRegion(h);
+                    if (targetRegion != null && targetRegion.equals(handlerRegion)) {
                         sameRegionHandlers.add(h);
                     } else {
                         remainingHandlers.add(h);
@@ -477,6 +479,13 @@ public class StatementRecoverer {
             grouped.computeIfAbsent(region, k -> new ArrayList<>()).add(handler);
         }
         return grouped;
+    }
+
+    private TryRegion createTryRegion(ExceptionHandler handler) {
+        if (handler == null || handler.getTryStart() == null) {
+            return null;
+        }
+        return new TryRegion(handler.getTryStart(), handler.getTryEnd());
     }
 
     /**
@@ -863,8 +872,10 @@ public class StatementRecoverer {
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
         List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
+        TryRegion mainRegion = createTryRegion(mainHandler);
         for (ExceptionHandler h : handlers) {
-            if (h.getTryStart() == mainHandler.getTryStart()) {
+            TryRegion handlerRegion = createTryRegion(h);
+            if (mainRegion != null && mainRegion.equals(handlerRegion)) {
                 sameRegionHandlers.add(h);
             }
         }
