@@ -6,6 +6,7 @@ import com.tonic.testutil.TestUtils;
 import com.tonic.utill.AccessBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -14,10 +15,6 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for MethodEntry functionality.
- * Covers method access, code attribute, return type checking, and modification.
- */
 class MethodEntryTest {
 
     private ClassPool pool;
@@ -29,8 +26,6 @@ class MethodEntryTest {
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/TestClass", access);
     }
-
-    // ========== Basic Properties Tests ==========
 
     @Test
     void methodHasCorrectName() throws IOException {
@@ -67,8 +62,6 @@ class MethodEntryTest {
         assertEquals(access, method.getAccess());
     }
 
-    // ========== Code Attribute Tests ==========
-
     @Test
     void methodHasCodeAttribute() throws IOException {
         int access = new AccessBuilder().setPublic().build();
@@ -80,12 +73,6 @@ class MethodEntryTest {
     void abstractMethodHasNoCodeAttribute() {
         int access = new AccessBuilder().setPublic().setAbstract().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "abstractMethod", "()V");
-        // Abstract methods should not have a code attribute (or it might be null)
-        // This depends on how createNewMethodWithDescriptor handles abstract methods
-        // Let's check if it exists
-        CodeAttribute code = method.getCodeAttribute();
-        // If this test fails, it means abstract methods are getting code attributes when they shouldn't
-        // For now, we just verify the method was created
         assertNotNull(method);
     }
 
@@ -96,8 +83,6 @@ class MethodEntryTest {
         assertNotNull(method);
         assertTrue((method.getAccess() & 0x0100) != 0, "Method should be native");
     }
-
-    // ========== Return Type Tests ==========
 
     @Test
     void isVoidReturnTrue() throws IOException {
@@ -176,8 +161,6 @@ class MethodEntryTest {
         assertFalse(method.isPrimitiveReturn());
     }
 
-    // ========== Name Modification Tests ==========
-
     @Test
     void setNameChangesMethodName() throws IOException {
         int access = new AccessBuilder().setPublic().build();
@@ -193,8 +176,6 @@ class MethodEntryTest {
         method.setName("renamed");
         assertEquals("renamed()V", method.getKey());
     }
-
-    // ========== Access Modifier Tests ==========
 
     @Test
     void publicMethodHasPublicAccess() throws IOException {
@@ -231,8 +212,6 @@ class MethodEntryTest {
         assertTrue((method.getAccess() & 0x0020) != 0, "Method should be synchronized");
     }
 
-    // ========== toString Tests ==========
-
     @Test
     void toStringContainsMethodName() throws IOException {
         int access = new AccessBuilder().setPublic().build();
@@ -253,8 +232,6 @@ class MethodEntryTest {
         MethodEntry method = classFile.createNewMethod(access, "typed", "I", "Ljava/lang/String;");
         assertTrue(method.toString().contains("(Ljava/lang/String;)I"));
     }
-
-    // ========== Round-Trip Tests ==========
 
     @Test
     void roundTripPreservesMethodName() throws IOException {
@@ -297,18 +274,12 @@ class MethodEntryTest {
         assertEquals(access, method.getAccess());
     }
 
-    // ========== JVM Verification Tests ==========
-
     @Test
     void generatedClassWithMethodsLoadsInJVM() throws Exception {
-        // The generated class should be loadable if it has proper bytecode
-        // Note: createNewMethod may create empty methods which is invalid bytecode
-        // Use the built-in init and clinit methods which have proper bytecode
         byte[] bytes = classFile.write();
         TestClassLoader loader = new TestClassLoader();
         Class<?> clazz = loader.defineClass("com.test.TestClass", bytes);
 
-        // Verify class loaded successfully
         assertNotNull(clazz);
         assertEquals("com.test.TestClass", clazz.getName());
     }
@@ -319,11 +290,8 @@ class MethodEntryTest {
         TestClassLoader loader = new TestClassLoader();
         Class<?> clazz = loader.defineClass("com.test.TestClass", bytes);
 
-        // Default constructor should be accessible
         assertNotNull(clazz.getDeclaredConstructor());
     }
-
-    // ========== Default Methods Tests ==========
 
     @Test
     void newClassHasInitMethod() {
@@ -348,5 +316,236 @@ class MethodEntryTest {
 
         assertNotNull(init);
         assertTrue(init.isVoidReturn());
+    }
+
+    @Nested
+    class ReturnTypeTests {
+        @Test
+        void isReferenceReturnForObjectType() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "objectReturn", "()Ljava/lang/String;");
+
+            assertTrue(method.isReferenceReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForIntArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "intArrayReturn", "()[I");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForByteArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "byteArrayReturn", "()[B");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForCharArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "charArrayReturn", "()[C");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForShortArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "shortArrayReturn", "()[S");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForLongArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "longArrayReturn", "()[J");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForFloatArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "floatArrayReturn", "()[F");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForDoubleArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "doubleArrayReturn", "()[D");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveArrayReturnForBooleanArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "booleanArrayReturn", "()[Z");
+
+            assertTrue(method.isPrimitiveArrayReturn());
+        }
+
+        @Test
+        void isReferenceArrayReturnForObjectArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "objectArrayReturn", "()[Ljava/lang/String;");
+
+            assertTrue(method.isReferenceArrayReturn());
+        }
+
+        @Test
+        void isPrimitiveReturnFalseForObjectType() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "objectReturn", "()Ljava/lang/String;");
+
+            assertFalse(method.isPrimitiveReturn());
+        }
+    }
+
+    @Nested
+    class MethodAccessFlagTests {
+        @Test
+        void createProtectedMethod() throws IOException {
+            int access = new AccessBuilder().setProtected().build();
+            MethodEntry method = classFile.createNewMethod(access, "protectedMethod", "V");
+
+            assertTrue((method.getAccess() & 0x0004) != 0);
+        }
+
+        @Test
+        void createBridgeMethod() {
+            int access = new AccessBuilder().setPublic().setBridge().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "bridgeMethod", "()V");
+
+            assertTrue((method.getAccess() & 0x0040) != 0);
+        }
+
+        @Test
+        void createVarargsMethod() {
+            int access = new AccessBuilder().setPublic().setVarArgs().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "varargsMethod", "([Ljava/lang/String;)V");
+
+            assertTrue((method.getAccess() & 0x0080) != 0);
+        }
+
+        @Test
+        void createSyntheticMethod() {
+            int access = new AccessBuilder().setPublic().setSynthetic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "syntheticMethod", "()V");
+
+            assertTrue((method.getAccess() & 0x1000) != 0);
+        }
+
+        @Test
+        void createStrictfpMethod() throws IOException {
+            int access = new AccessBuilder().setPublic().setStrictfp().build();
+            MethodEntry method = classFile.createNewMethod(access, "strictfpMethod", "D", "D");
+
+            assertTrue((method.getAccess() & 0x0800) != 0);
+        }
+    }
+
+    @Nested
+    class ComplexDescriptorTests {
+        @Test
+        void methodWithNoParameters() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "noParams", "()V");
+
+            assertEquals("noParams()V", method.getKey());
+        }
+
+        @Test
+        void methodWithMultipleObjectParameters() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "multipleParams",
+                    "(Ljava/lang/String;Ljava/lang/Integer;Ljava/util/List;)V");
+
+            assertEquals("multipleParams(Ljava/lang/String;Ljava/lang/Integer;Ljava/util/List;)V", method.getKey());
+        }
+
+        @Test
+        void methodWithMixedParameters() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "mixed",
+                    "(ILjava/lang/String;[IZ)Ljava/lang/Object;");
+
+            assertEquals("mixed(ILjava/lang/String;[IZ)Ljava/lang/Object;", method.getKey());
+        }
+
+        @Test
+        void methodReturningMultiDimensionalArray() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "matrix", "()[[I");
+
+            assertEquals("matrix()[[I", method.getKey());
+        }
+
+        @Test
+        void methodWithGenericErasedTypes() {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "genericMethod",
+                    "(Ljava/util/List;)Ljava/util/Map;");
+
+            assertEquals("genericMethod(Ljava/util/List;)Ljava/util/Map;", method.getKey());
+        }
+    }
+
+    @Nested
+    class ToStringTests {
+        @Test
+        void toStringContainsKey() throws IOException {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethod(access, "myMethod", "I", "Ljava/lang/String;");
+
+            String str = method.toString();
+            assertTrue(str.contains("key='myMethod(Ljava/lang/String;)I'"));
+        }
+
+        @Test
+        void toStringContainsAccessFlags() throws IOException {
+            int access = new AccessBuilder().setPublic().setStatic().build();
+            MethodEntry method = classFile.createNewMethod(access, "staticMethod", "V");
+
+            String str = method.toString();
+            assertTrue(str.contains("access=0x"));
+        }
+
+        @Test
+        void toStringContainsAttributes() throws IOException {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethod(access, "withCode", "V");
+
+            String str = method.toString();
+            assertTrue(str.contains("attributes="));
+        }
+    }
+
+    @Nested
+    class OwnerNameTests {
+        @Test
+        void ownerNameMatchesClassName() throws IOException {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethod(access, "test", "V");
+
+            assertEquals(classFile.getClassName(), method.getOwnerName());
+        }
+
+        @Test
+        void ownerNameUpdatesWhenClassRenamed() throws IOException {
+            int access = new AccessBuilder().setPublic().build();
+            MethodEntry method = classFile.createNewMethod(access, "test", "V");
+
+            classFile.setClassName("com/test/RenamedClass");
+
+            assertEquals("com/test/RenamedClass", method.getOwnerName());
+        }
     }
 }

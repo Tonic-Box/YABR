@@ -140,7 +140,10 @@ public class MethodEntry extends MemberEntry {
     }
 
     public boolean isReferenceReturn() {
-        return desc.endsWith(")L");
+        int parenIndex = desc.lastIndexOf(')');
+        if (parenIndex < 0 || parenIndex >= desc.length() - 1) return false;
+        char returnStart = desc.charAt(parenIndex + 1);
+        return returnStart == 'L' && !desc.substring(parenIndex + 1).startsWith("[");
     }
 
     public boolean isPrimitiveArrayReturn() {
@@ -148,6 +151,9 @@ public class MethodEntry extends MemberEntry {
     }
 
     public boolean isReferenceArrayReturn() {
-        return desc.endsWith(")[L");
+        int parenIndex = desc.lastIndexOf(')');
+        if (parenIndex < 0 || parenIndex >= desc.length() - 1) return false;
+        String returnPart = desc.substring(parenIndex + 1);
+        return returnPart.startsWith("[") && returnPart.contains("L");
     }
 }
