@@ -2,7 +2,7 @@
 
 # Bytecode Generation API
 
-The Generation API (`com.tonic.builder`) provides a fluent builder pattern for creating JVM bytecode from scratch, replacing the need for ASM's ClassWriter/MethodVisitor.
+The Generation API (`com.tonic.builder`) provides a fluent builder pattern for creating JVM bytecode from scratch.
 
 ---
 
