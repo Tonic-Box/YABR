@@ -1,8 +1,12 @@
 package com.tonic.analysis.execution.core;
 
+import com.tonic.analysis.execution.dispatch.ConstantDynamicInfo;
 import com.tonic.analysis.execution.dispatch.DispatchContext;
 import com.tonic.analysis.execution.dispatch.FieldInfo;
+import com.tonic.analysis.execution.dispatch.InvokeDynamicInfo;
+import com.tonic.analysis.execution.dispatch.MethodHandleInfo;
 import com.tonic.analysis.execution.dispatch.MethodInfo;
+import com.tonic.analysis.execution.dispatch.MethodTypeInfo;
 import com.tonic.analysis.execution.dispatch.OpcodeDispatcher;
 import com.tonic.analysis.execution.dispatch.OpcodeDispatcher.DispatchResult;
 import com.tonic.analysis.execution.frame.CallStack;
@@ -207,6 +211,10 @@ public final class BytecodeEngine {
                 handleInvoke(frame, ctx);
                 break;
 
+            case INVOKE_DYNAMIC:
+                handleInvokeDynamic(frame, ctx);
+                break;
+
             case FIELD_GET:
                 handleFieldGet(frame, ctx);
                 break;
@@ -231,9 +239,56 @@ public final class BytecodeEngine {
             case INSTANCEOF:
                 break;
 
+            case CONSTANT_DYNAMIC:
+                handleConstantDynamic(frame, ctx);
+                break;
+
+            case METHOD_HANDLE:
+                handleMethodHandle(frame, ctx);
+                break;
+
+            case METHOD_TYPE:
+                handleMethodType(frame, ctx);
+                break;
+
             default:
                 throw new IllegalStateException("Unhandled dispatch result: " + result);
         }
+    }
+
+    private void handleConstantDynamic(StackFrame frame, EngineDispatchContext ctx) {
+        ConstantDynamicInfo info = ctx.getPendingConstantDynamic();
+        String returnType = info.getDescriptor();
+
+        if ("J".equals(returnType)) {
+            frame.getStack().pushLong(0L);
+        } else if ("D".equals(returnType)) {
+            frame.getStack().pushDouble(0.0);
+        } else if ("F".equals(returnType)) {
+            frame.getStack().pushFloat(0.0f);
+        } else if ("I".equals(returnType) || "Z".equals(returnType) ||
+                   "B".equals(returnType) || "C".equals(returnType) || "S".equals(returnType)) {
+            frame.getStack().pushInt(0);
+        } else {
+            ObjectInstance obj = context.getHeapManager().newObject("java/lang/Object");
+            frame.getStack().pushReference(obj);
+        }
+
+        frame.advancePC(frame.getCurrentInstruction().getLength());
+    }
+
+    private void handleMethodHandle(StackFrame frame, EngineDispatchContext ctx) {
+        MethodHandleInfo info = ctx.getPendingMethodHandle();
+        ObjectInstance mh = context.getHeapManager().newObject("java/lang/invoke/MethodHandle");
+        frame.getStack().pushReference(mh);
+        frame.advancePC(frame.getCurrentInstruction().getLength());
+    }
+
+    private void handleMethodType(StackFrame frame, EngineDispatchContext ctx) {
+        MethodTypeInfo info = ctx.getPendingMethodType();
+        ObjectInstance mt = context.getHeapManager().newObject("java/lang/invoke/MethodType");
+        frame.getStack().pushReference(mt);
+        frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
     private void handleInvoke(StackFrame frame, EngineDispatchContext ctx) {
@@ -244,6 +299,36 @@ public final class BytecodeEngine {
         } else {
             frame.advancePC(frame.getCurrentInstruction().getLength());
         }
+    }
+
+    private void handleInvokeDynamic(StackFrame frame, EngineDispatchContext ctx) {
+        InvokeDynamicInfo info = ctx.getPendingInvokeDynamic();
+        int paramSlots = info.getParameterSlots();
+
+        for (int i = 0; i < paramSlots; i++) {
+            frame.getStack().pop();
+        }
+
+        String returnType = info.getReturnType();
+        if (!"V".equals(returnType)) {
+            if (info.isStringConcat()) {
+                ObjectInstance strResult = context.getHeapManager().internString("<concat>");
+                frame.getStack().pushReference(strResult);
+            } else if (returnType.startsWith("L") || returnType.startsWith("[")) {
+                ObjectInstance lambdaProxy = context.getHeapManager().newObject("java/lang/Object");
+                frame.getStack().pushReference(lambdaProxy);
+            } else if ("J".equals(returnType)) {
+                frame.getStack().pushLong(0L);
+            } else if ("D".equals(returnType)) {
+                frame.getStack().pushDouble(0.0);
+            } else if ("F".equals(returnType)) {
+                frame.getStack().pushFloat(0.0f);
+            } else {
+                frame.getStack().pushInt(0);
+            }
+        }
+
+        frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
     private void handleFieldGet(StackFrame frame, EngineDispatchContext ctx) {
@@ -332,6 +417,10 @@ public final class BytecodeEngine {
         private String pendingNewClass;
         private int[] pendingArrayDimensions;
         private int branchTarget;
+        private InvokeDynamicInfo pendingInvokeDynamic;
+        private MethodHandleInfo pendingMethodHandle;
+        private MethodTypeInfo pendingMethodType;
+        private ConstantDynamicInfo pendingConstantDynamic;
 
         @Override
         public int resolveIntConstant(int index) {
@@ -455,6 +544,46 @@ public final class BytecodeEngine {
         @Override
         public int getBranchTarget() {
             return branchTarget;
+        }
+
+        @Override
+        public void setPendingInvokeDynamic(InvokeDynamicInfo info) {
+            this.pendingInvokeDynamic = info;
+        }
+
+        @Override
+        public InvokeDynamicInfo getPendingInvokeDynamic() {
+            return pendingInvokeDynamic;
+        }
+
+        @Override
+        public void setPendingMethodHandle(MethodHandleInfo info) {
+            this.pendingMethodHandle = info;
+        }
+
+        @Override
+        public MethodHandleInfo getPendingMethodHandle() {
+            return pendingMethodHandle;
+        }
+
+        @Override
+        public void setPendingMethodType(MethodTypeInfo info) {
+            this.pendingMethodType = info;
+        }
+
+        @Override
+        public MethodTypeInfo getPendingMethodType() {
+            return pendingMethodType;
+        }
+
+        @Override
+        public void setPendingConstantDynamic(ConstantDynamicInfo info) {
+            this.pendingConstantDynamic = info;
+        }
+
+        @Override
+        public ConstantDynamicInfo getPendingConstantDynamic() {
+            return pendingConstantDynamic;
         }
     }
 

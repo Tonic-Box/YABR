@@ -7,6 +7,8 @@ import com.tonic.analysis.execution.state.ConcreteLocals;
 import com.tonic.analysis.execution.state.ConcreteStack;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.*;
+import com.tonic.parser.ConstPool;
+import com.tonic.parser.constpool.*;
 
 public final class OpcodeDispatcher {
 
@@ -14,6 +16,10 @@ public final class OpcodeDispatcher {
         CONTINUE,
         BRANCH,
         INVOKE,
+        INVOKE_DYNAMIC,
+        CONSTANT_DYNAMIC,
+        METHOD_HANDLE,
+        METHOD_TYPE,
         RETURN,
         THROW,
         ATHROW,
@@ -307,7 +313,7 @@ public final class OpcodeDispatcher {
                 return dispatchInvokeInterface(frame, stack, context, (InvokeInterfaceInstruction) instruction);
 
             case 0xBA:
-                throw new UnsupportedOperationException("invokedynamic is not supported yet");
+                return dispatchInvokeDynamic(frame, stack, context, (InvokeDynamicInstruction) instruction);
 
             case 0xBB:
                 return dispatchNew(frame, stack, context, (NewInstruction) instruction);
@@ -406,20 +412,37 @@ public final class OpcodeDispatcher {
 
     private DispatchResult dispatchLdc(StackFrame frame, ConcreteStack stack, DispatchContext context, LdcInstruction instruction) {
         int index = instruction.getCpIndex();
-        String constant = instruction.resolveConstant();
+        LdcInstruction.ConstantType type = instruction.getConstantType();
 
-        if (constant.startsWith("\"")) {
-            String value = context.resolveStringConstant(index);
-            stack.push(ConcreteValue.reference(context.resolveClassConstant(index)));
-        } else if (constant.contains(".") && !constant.contains("/")) {
-            float value = context.resolveFloatConstant(index);
-            stack.pushFloat(value);
-        } else if (constant.contains("/")) {
-            ObjectInstance classObj = context.resolveClassConstant(index);
-            stack.pushReference(classObj);
-        } else {
-            int value = context.resolveIntConstant(index);
-            stack.pushInt(value);
+        switch (type) {
+            case INTEGER:
+                stack.pushInt(context.resolveIntConstant(index));
+                break;
+            case FLOAT:
+                stack.pushFloat(context.resolveFloatConstant(index));
+                break;
+            case STRING:
+                context.resolveStringConstant(index);
+                stack.pushReference(context.resolveClassConstant(index));
+                break;
+            case CLASS:
+                stack.pushReference(context.resolveClassConstant(index));
+                break;
+            case METHOD_HANDLE:
+                MethodHandleInfo mhInfo = resolveMethodHandle(instruction.getConstPool(), index);
+                context.setPendingMethodHandle(mhInfo);
+                return DispatchResult.METHOD_HANDLE;
+            case METHOD_TYPE:
+                MethodTypeInfo mtInfo = resolveMethodType(instruction.getConstPool(), index);
+                context.setPendingMethodType(mtInfo);
+                return DispatchResult.METHOD_TYPE;
+            case DYNAMIC:
+                ConstantDynamicInfo cdInfo = resolveConstantDynamic(instruction.getConstPool(), index);
+                context.setPendingConstantDynamic(cdInfo);
+                return DispatchResult.CONSTANT_DYNAMIC;
+            default:
+                stack.pushInt(0);
+                break;
         }
 
         frame.advancePC(instruction.getLength());
@@ -428,20 +451,43 @@ public final class OpcodeDispatcher {
 
     private DispatchResult dispatchLdcW(StackFrame frame, ConcreteStack stack, DispatchContext context, LdcWInstruction instruction) {
         int index = instruction.getCpIndex();
-        String constant = instruction.resolveConstant();
+        LdcInstruction.ConstantType type = instruction.getConstantType();
 
-        if (constant.startsWith("\"")) {
-            String value = context.resolveStringConstant(index);
-            stack.push(ConcreteValue.reference(context.resolveClassConstant(index)));
-        } else if (constant.contains(".") && !constant.contains("/")) {
-            float value = context.resolveFloatConstant(index);
-            stack.pushFloat(value);
-        } else if (constant.contains("/")) {
-            ObjectInstance classObj = context.resolveClassConstant(index);
-            stack.pushReference(classObj);
-        } else {
-            int value = context.resolveIntConstant(index);
-            stack.pushInt(value);
+        switch (type) {
+            case INTEGER:
+                stack.pushInt(context.resolveIntConstant(index));
+                break;
+            case FLOAT:
+                stack.pushFloat(context.resolveFloatConstant(index));
+                break;
+            case LONG:
+                stack.pushLong(context.resolveLongConstant(index));
+                break;
+            case DOUBLE:
+                stack.pushDouble(context.resolveDoubleConstant(index));
+                break;
+            case STRING:
+                context.resolveStringConstant(index);
+                stack.pushReference(context.resolveClassConstant(index));
+                break;
+            case CLASS:
+                stack.pushReference(context.resolveClassConstant(index));
+                break;
+            case METHOD_HANDLE:
+                MethodHandleInfo mhInfo = resolveMethodHandle(instruction.getConstPool(), index);
+                context.setPendingMethodHandle(mhInfo);
+                return DispatchResult.METHOD_HANDLE;
+            case METHOD_TYPE:
+                MethodTypeInfo mtInfo = resolveMethodType(instruction.getConstPool(), index);
+                context.setPendingMethodType(mtInfo);
+                return DispatchResult.METHOD_TYPE;
+            case DYNAMIC:
+                ConstantDynamicInfo cdInfo = resolveConstantDynamic(instruction.getConstPool(), index);
+                context.setPendingConstantDynamic(cdInfo);
+                return DispatchResult.CONSTANT_DYNAMIC;
+            default:
+                stack.pushInt(0);
+                break;
         }
 
         frame.advancePC(instruction.getLength());
@@ -450,14 +496,22 @@ public final class OpcodeDispatcher {
 
     private DispatchResult dispatchLdc2W(StackFrame frame, ConcreteStack stack, DispatchContext context, Ldc2WInstruction instruction) {
         int index = instruction.getCpIndex();
-        String constant = instruction.resolveConstant();
+        LdcInstruction.ConstantType type = instruction.getConstantType();
 
-        if (constant.endsWith("L")) {
-            long value = context.resolveLongConstant(index);
-            stack.pushLong(value);
-        } else {
-            double value = context.resolveDoubleConstant(index);
-            stack.pushDouble(value);
+        switch (type) {
+            case LONG:
+                stack.pushLong(context.resolveLongConstant(index));
+                break;
+            case DOUBLE:
+                stack.pushDouble(context.resolveDoubleConstant(index));
+                break;
+            case DYNAMIC:
+                ConstantDynamicInfo cdInfo = resolveConstantDynamic(instruction.getConstPool(), index);
+                context.setPendingConstantDynamic(cdInfo);
+                return DispatchResult.CONSTANT_DYNAMIC;
+            default:
+                stack.pushLong(0L);
+                break;
         }
 
         frame.advancePC(instruction.getLength());
@@ -1619,5 +1673,88 @@ public final class OpcodeDispatcher {
         context.setPendingArrayDimensions(counts);
         context.setPendingNewClass(instruction.resolveClass());
         return DispatchResult.NEW_ARRAY;
+    }
+
+    private DispatchResult dispatchInvokeDynamic(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeDynamicInstruction instruction) {
+        int bootstrapMethodIndex = instruction.getBootstrapMethodAttrIndex();
+        int nameAndTypeIndex = instruction.getNameAndTypeIndex();
+        int cpIndex = instruction.getCpIndex();
+
+        String methodSignature = instruction.resolveMethod();
+        int slashIndex = methodSignature.indexOf('(');
+        String methodName = slashIndex > 0 ? methodSignature.substring(0, slashIndex) : methodSignature;
+        String descriptor = slashIndex > 0 ? methodSignature.substring(slashIndex) : "()V";
+
+        InvokeDynamicInfo info = new InvokeDynamicInfo(
+            bootstrapMethodIndex,
+            methodName,
+            descriptor,
+            cpIndex
+        );
+        context.setPendingInvokeDynamic(info);
+
+        return DispatchResult.INVOKE_DYNAMIC;
+    }
+
+    private MethodHandleInfo resolveMethodHandle(ConstPool constPool, int cpIndex) {
+        Item<?> item = constPool.getItem(cpIndex);
+        if (!(item instanceof MethodHandleItem)) {
+            return new MethodHandleInfo(0, "Unknown", "unknown", "()V");
+        }
+        MethodHandleItem mhItem = (MethodHandleItem) item;
+        int refKind = mhItem.getValue().getReferenceKind();
+        int refIndex = mhItem.getValue().getReferenceIndex();
+
+        Item<?> refItem = constPool.getItem(refIndex);
+        String owner = "Unknown";
+        String name = "unknown";
+        String descriptor = "()V";
+
+        if (refItem instanceof MethodRefItem) {
+            MethodRefItem methodRef = (MethodRefItem) refItem;
+            owner = methodRef.getClassName();
+            name = methodRef.getName();
+            descriptor = methodRef.getDescriptor();
+        } else if (refItem instanceof InterfaceRefItem) {
+            InterfaceRefItem methodRef = (InterfaceRefItem) refItem;
+            owner = methodRef.getOwner();
+            name = methodRef.getName();
+            descriptor = methodRef.getDescriptor();
+        } else if (refItem instanceof FieldRefItem) {
+            FieldRefItem fieldRef = (FieldRefItem) refItem;
+            owner = fieldRef.getClassName();
+            name = fieldRef.getName();
+            descriptor = fieldRef.getDescriptor();
+        }
+
+        return new MethodHandleInfo(refKind, owner, name, descriptor);
+    }
+
+    private MethodTypeInfo resolveMethodType(ConstPool constPool, int cpIndex) {
+        Item<?> item = constPool.getItem(cpIndex);
+        if (!(item instanceof MethodTypeItem)) {
+            return new MethodTypeInfo("()V");
+        }
+        MethodTypeItem mtItem = (MethodTypeItem) item;
+        int descIndex = mtItem.getValue();
+        Item<?> descItem = constPool.getItem(descIndex);
+        if (descItem instanceof Utf8Item) {
+            return new MethodTypeInfo(((Utf8Item) descItem).getValue());
+        }
+        return new MethodTypeInfo("()V");
+    }
+
+    private ConstantDynamicInfo resolveConstantDynamic(ConstPool constPool, int cpIndex) {
+        Item<?> item = constPool.getItem(cpIndex);
+        if (!(item instanceof ConstantDynamicItem)) {
+            return new ConstantDynamicInfo(0, "unknown", "Ljava/lang/Object;", cpIndex);
+        }
+        ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
+        return new ConstantDynamicInfo(
+            cdItem.getBootstrapMethodAttrIndex(),
+            cdItem.getName(),
+            cdItem.getDescriptor(),
+            cpIndex
+        );
     }
 }

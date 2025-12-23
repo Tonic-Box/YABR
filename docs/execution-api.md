@@ -2,7 +2,7 @@
 
 # Execution API
 
-The Execution API (`com.tonic.analysis.execution`) provides concrete bytecode execution for debugging, REPL environments, and dynamic analysis. Unlike the [Simulation API](simulation-api.md) which performs abstract interpretation over SSA IR, this API executes actual bytecode with mutable state.
+The Execution API (`com.tonic.analysis.execution`) provides concrete bytecode execution for debugging, and dynamic analysis. Unlike the [Simulation API](simulation-api.md) which performs abstract interpretation over SSA IR, this API executes actual bytecode with mutable state.
 
 ## Overview
 
@@ -611,7 +611,8 @@ com.tonic.analysis.execution/
 ├── dispatch/
 │   ├── OpcodeDispatcher.java     - Opcode execution (150+)
 │   ├── DispatchResult.java       - Dispatch outcomes
-│   └── DispatchContext.java      - Dispatch context
+│   ├── DispatchContext.java      - Dispatch context
+│   └── InvokeDynamicInfo.java    - invokedynamic call site info
 ├── invoke/
 │   ├── InvocationHandler.java    - Invocation interface
 │   ├── RecursiveHandler.java     - Internal call handling
@@ -633,6 +634,47 @@ com.tonic.analysis.execution/
     ├── StepMode.java             - Step granularity
     └── InstructionInterceptor.java - Execution interception
 ```
+
+---
+
+## Java 11 Support
+
+The Execution API supports Java 11 bytecode including the `invokedynamic` instruction used for:
+
+- **Lambda expressions**: `Runnable r = () -> doSomething();`
+- **Method references**: `list.forEach(System.out::println);`
+- **String concatenation** (Java 9+): `"Hello " + name + "!"`
+
+### InvokeDynamicInfo
+
+When `invokedynamic` is encountered, the engine creates an `InvokeDynamicInfo` object:
+
+```java
+// After dispatch returns INVOKE_DYNAMIC
+InvokeDynamicInfo info = context.getPendingInvokeDynamic();
+
+String methodName = info.getMethodName();        // e.g., "run", "apply", "makeConcatWithConstants"
+String descriptor = info.getDescriptor();        // e.g., "()Ljava/lang/Runnable;"
+int bsmIndex = info.getBootstrapMethodIndex();   // Bootstrap method index
+
+// Pattern detection
+if (info.isLambdaMetafactory()) {
+    // Lambda or method reference
+} else if (info.isStringConcat()) {
+    // String concatenation (Java 9+)
+}
+```
+
+### Simulated Behavior
+
+Since bootstrap methods cannot be executed in isolation, the engine simulates common patterns:
+
+| Pattern | Simulated Result |
+|---------|------------------|
+| Lambda metafactory | Returns proxy object |
+| String concat | Returns placeholder string |
+| Primitive return | Returns default value (0) |
+| Void return | No stack change |
 
 ---
 

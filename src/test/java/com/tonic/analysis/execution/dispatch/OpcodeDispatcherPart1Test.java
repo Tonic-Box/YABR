@@ -140,6 +140,42 @@ class OpcodeDispatcherPart1Test {
         public int getBranchTarget() {
             return branchTarget;
         }
+
+        @Override
+        public void setPendingInvokeDynamic(InvokeDynamicInfo info) {
+        }
+
+        @Override
+        public InvokeDynamicInfo getPendingInvokeDynamic() {
+            return null;
+        }
+
+        @Override
+        public void setPendingMethodHandle(MethodHandleInfo info) {
+        }
+
+        @Override
+        public MethodHandleInfo getPendingMethodHandle() {
+            return null;
+        }
+
+        @Override
+        public void setPendingMethodType(MethodTypeInfo info) {
+        }
+
+        @Override
+        public MethodTypeInfo getPendingMethodType() {
+            return null;
+        }
+
+        @Override
+        public void setPendingConstantDynamic(ConstantDynamicInfo info) {
+        }
+
+        @Override
+        public ConstantDynamicInfo getPendingConstantDynamic() {
+            return null;
+        }
     }
 
     private static class SimpleInstruction extends Instruction {

@@ -50,4 +50,20 @@ public interface DispatchContext {
     void setBranchTarget(int target);
 
     int getBranchTarget();
+
+    void setPendingInvokeDynamic(InvokeDynamicInfo info);
+
+    InvokeDynamicInfo getPendingInvokeDynamic();
+
+    void setPendingMethodHandle(MethodHandleInfo info);
+
+    MethodHandleInfo getPendingMethodHandle();
+
+    void setPendingMethodType(MethodTypeInfo info);
+
+    MethodTypeInfo getPendingMethodType();
+
+    void setPendingConstantDynamic(ConstantDynamicInfo info);
+
+    ConstantDynamicInfo getPendingConstantDynamic();
 }

@@ -13,6 +13,20 @@ import java.io.IOException;
  * Represents the LDC instruction (0x12).
  */
 public class LdcInstruction extends Instruction {
+
+    public enum ConstantType {
+        INTEGER,
+        FLOAT,
+        LONG,
+        DOUBLE,
+        STRING,
+        CLASS,
+        METHOD_HANDLE,
+        METHOD_TYPE,
+        DYNAMIC,
+        UNKNOWN
+    }
+
     @Getter
     private final int cpIndex;
     private final ConstPool constPool;
@@ -59,7 +73,41 @@ public class LdcInstruction extends Instruction {
         if (item instanceof DoubleItem || item instanceof LongItem) {
             return 2;
         }
+        if (item instanceof ConstantDynamicItem) {
+            String desc = ((ConstantDynamicItem) item).getDescriptor();
+            if ("J".equals(desc) || "D".equals(desc)) {
+                return 2;
+            }
+        }
         return 1;
+    }
+
+    public ConstantType getConstantType() {
+        Item<?> item = constPool.getItem(cpIndex);
+        if (item instanceof IntegerItem) {
+            return ConstantType.INTEGER;
+        } else if (item instanceof FloatItem) {
+            return ConstantType.FLOAT;
+        } else if (item instanceof LongItem) {
+            return ConstantType.LONG;
+        } else if (item instanceof DoubleItem) {
+            return ConstantType.DOUBLE;
+        } else if (item instanceof StringRefItem) {
+            return ConstantType.STRING;
+        } else if (item instanceof ClassRefItem) {
+            return ConstantType.CLASS;
+        } else if (item instanceof MethodHandleItem) {
+            return ConstantType.METHOD_HANDLE;
+        } else if (item instanceof MethodTypeItem) {
+            return ConstantType.METHOD_TYPE;
+        } else if (item instanceof ConstantDynamicItem) {
+            return ConstantType.DYNAMIC;
+        }
+        return ConstantType.UNKNOWN;
+    }
+
+    public ConstPool getConstPool() {
+        return constPool;
     }
 
     /**
@@ -87,6 +135,18 @@ public class LdcInstruction extends Instruction {
             return String.valueOf(((FloatItem) item).getValue());
         } else if (item instanceof ClassRefItem) {
             return ((ClassRefItem) item).getClassName();
+        } else if (item instanceof MethodHandleItem) {
+            return "MethodHandle#" + cpIndex;
+        } else if (item instanceof MethodTypeItem) {
+            MethodTypeItem mtItem = (MethodTypeItem) item;
+            Item<?> descItem = constPool.getItem(mtItem.getValue());
+            if (descItem instanceof Utf8Item) {
+                return "MethodType[" + ((Utf8Item) descItem).getValue() + "]";
+            }
+            return "MethodType#" + cpIndex;
+        } else if (item instanceof ConstantDynamicItem) {
+            ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
+            return "ConstantDynamic[" + cdItem.getName() + ":" + cdItem.getDescriptor() + "]";
         } else {
             return "UnknownConstant";
         }

@@ -4,12 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- added new tests&#10;- added builder api">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bytecode execution (simulation) api">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/architecture.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/simulation-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/simulation-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/execution-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/execution-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/DispatchContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/DispatchContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -217,14 +221,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00028" summary="Changes made to StatementRecoverer.java:&#10;  1. Added ternaryPhiValues field to track PHIs that will become ternary expressions&#10;  2. Added collectTernaryPhis() method called early in recoverMethod() to identify these PHIs&#10;  3. Added findTernaryPhiPatternForPrepass() helper method to detect ternary PHI patterns&#10;  4. Modified emitPhiDeclaration() to skip PHIs in the ternaryPhiValues set">
-      <option name="closed" value="true" />
-      <created>1765313097748</created>
-      <option name="number" value="00028" />
-      <option name="presentableId" value="LOCAL-00028" />
-      <option name="project" value="LOCAL" />
-      <updated>1765313097748</updated>
     </task>
     <task id="LOCAL-00029" summary="Readme docs update">
       <option name="closed" value="true" />
@@ -610,7 +606,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766471417963</updated>
     </task>
-    <option name="localTasksCounter" value="77" />
+    <task id="LOCAL-00077" summary="- bytecode execution (simulation) api">
+      <option name="closed" value="true" />
+      <created>1766502222125</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1766502222125</updated>
+    </task>
+    <option name="localTasksCounter" value="78" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -625,7 +629,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Better flow recovery" />
     <MESSAGE value="Clean-up" />
     <MESSAGE value="more intelligent condition combining in control-flow guards" />
     <MESSAGE value="annotation support in decompiler output" />
@@ -650,7 +653,8 @@
     <MESSAGE value="- better handling for dynamic stuff in decompile" />
     <MESSAGE value="- added new tests" />
     <MESSAGE value="- added new tests&#10;- added builder api" />
-    <option name="LAST_COMMIT_MESSAGE" value="- added new tests&#10;- added builder api" />
+    <MESSAGE value="- bytecode execution (simulation) api" />
+    <option name="LAST_COMMIT_MESSAGE" value="- bytecode execution (simulation) api" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

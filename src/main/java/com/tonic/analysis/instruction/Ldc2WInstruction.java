@@ -3,9 +3,7 @@ package com.tonic.analysis.instruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
-import com.tonic.parser.constpool.DoubleItem;
-import com.tonic.parser.constpool.Item;
-import com.tonic.parser.constpool.LongItem;
+import com.tonic.parser.constpool.*;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -74,15 +72,31 @@ public class Ldc2WInstruction extends Instruction {
         return 0;
     }
 
-    /**
-     * Resolves and returns a string representation of the constant.
-     *
-     * @return The constant as a string.
-     */
+    public LdcInstruction.ConstantType getConstantType() {
+        Item<?> item = constPool.getItem(cpIndex);
+        if (item instanceof LongItem) {
+            return LdcInstruction.ConstantType.LONG;
+        } else if (item instanceof DoubleItem) {
+            return LdcInstruction.ConstantType.DOUBLE;
+        } else if (item instanceof ConstantDynamicItem) {
+            return LdcInstruction.ConstantType.DYNAMIC;
+        }
+        return LdcInstruction.ConstantType.UNKNOWN;
+    }
+
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
     public String resolveConstant() {
         Item<?> item = constPool.getItem(cpIndex);
-        if (item instanceof DoubleItem || item instanceof LongItem) {
-            return String.valueOf(((Number) item.getValue()).doubleValue());
+        if (item instanceof LongItem) {
+            return String.valueOf(((LongItem) item).getValue()) + "L";
+        } else if (item instanceof DoubleItem) {
+            return String.valueOf(((DoubleItem) item).getValue());
+        } else if (item instanceof ConstantDynamicItem) {
+            ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
+            return "ConstantDynamic[" + cdItem.getName() + ":" + cdItem.getDescriptor() + "]";
         }
         return "UnknownConstant";
     }
