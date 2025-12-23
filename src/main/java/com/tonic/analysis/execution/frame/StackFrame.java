@@ -35,7 +35,8 @@ public final class StackFrame {
         }
 
         this.code = new CodeWriter(method);
-        this.stack = new ConcreteStack(codeAttr.getMaxStack());
+        int stackSize = Math.max(codeAttr.getMaxStack(), 8);
+        this.stack = new ConcreteStack(stackSize);
         this.locals = ConcreteLocals.forMethod(method, args);
         this.pc = 0;
         this.completed = false;

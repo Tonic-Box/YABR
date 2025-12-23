@@ -4,16 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bytecode execution (simulation) api">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bytecode execution api">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/execution-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/execution-api.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/DispatchContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/DispatchContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/state/ConcreteStack.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/state/ConcreteStack.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -221,14 +218,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00029" summary="Readme docs update">
-      <option name="closed" value="true" />
-      <created>1765314167195</created>
-      <option name="number" value="00029" />
-      <option name="presentableId" value="LOCAL-00029" />
-      <option name="project" value="LOCAL" />
-      <updated>1765314167195</updated>
     </task>
     <task id="LOCAL-00030" summary="Reassociate optimization transformer">
       <option name="closed" value="true" />
@@ -614,7 +603,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766502222125</updated>
     </task>
-    <option name="localTasksCounter" value="78" />
+    <task id="LOCAL-00078" summary="- bytecode execution api">
+      <option name="closed" value="true" />
+      <created>1766507194567</created>
+      <option name="number" value="00078" />
+      <option name="presentableId" value="LOCAL-00078" />
+      <option name="project" value="LOCAL" />
+      <updated>1766507194567</updated>
+    </task>
+    <option name="localTasksCounter" value="79" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -629,7 +626,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Clean-up" />
     <MESSAGE value="more intelligent condition combining in control-flow guards" />
     <MESSAGE value="annotation support in decompiler output" />
     <MESSAGE value="Improvements to recovery in source emission." />
@@ -654,7 +650,8 @@
     <MESSAGE value="- added new tests" />
     <MESSAGE value="- added new tests&#10;- added builder api" />
     <MESSAGE value="- bytecode execution (simulation) api" />
-    <option name="LAST_COMMIT_MESSAGE" value="- bytecode execution (simulation) api" />
+    <MESSAGE value="- bytecode execution api" />
+    <option name="LAST_COMMIT_MESSAGE" value="- bytecode execution api" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

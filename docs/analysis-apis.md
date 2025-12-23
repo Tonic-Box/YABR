@@ -192,7 +192,7 @@ session.start(method);
 DebugState state = session.stepOver();
 ```
 
-**Key features:** Concrete value execution, mutable heap/stack, object simulation, native method handlers, breakpoints, step debugging, call stack inspection.
+**Key features:** Concrete value execution, mutable heap/stack, object simulation, native method handlers, breakpoints, step debugging, call stack inspection, full Java 11 support (invokedynamic, lambdas, string concatenation, constant dynamic, method handles).
 
 [Full documentation →](execution-api.md)
 

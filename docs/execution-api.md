@@ -612,14 +612,20 @@ com.tonic.analysis.execution/
 │   ├── OpcodeDispatcher.java     - Opcode execution (150+)
 │   ├── DispatchResult.java       - Dispatch outcomes
 │   ├── DispatchContext.java      - Dispatch context
-│   └── InvokeDynamicInfo.java    - invokedynamic call site info
+│   ├── InvokeDynamicInfo.java    - invokedynamic call site info
+│   ├── ConstantDynamicInfo.java  - CONSTANT_Dynamic info
+│   ├── MethodHandleInfo.java     - CONSTANT_MethodHandle info
+│   ├── MethodTypeInfo.java       - CONSTANT_MethodType info
+│   └── FieldInfo.java            - Resolved field info
 ├── invoke/
 │   ├── InvocationHandler.java    - Invocation interface
 │   ├── RecursiveHandler.java     - Internal call handling
 │   ├── DelegatingHandler.java    - External call handling
 │   ├── NativeRegistry.java       - Native method handlers
 │   ├── NativeContext.java        - Native execution context
-│   └── NativeException.java      - Native method errors
+│   ├── NativeException.java      - Native method errors
+│   ├── StringConcatHandler.java  - String concatenation handler
+│   └── LambdaProxyFactory.java   - Lambda proxy creation
 ├── listener/
 │   ├── BytecodeListener.java     - Execution events
 │   ├── TracingListener.java      - Execution tracing
@@ -639,11 +645,18 @@ com.tonic.analysis.execution/
 
 ## Java 11 Support
 
-The Execution API supports Java 11 bytecode including the `invokedynamic` instruction used for:
+The Execution API provides full Java 11 bytecode support including dynamic features:
 
-- **Lambda expressions**: `Runnable r = () -> doSomething();`
-- **Method references**: `list.forEach(System.out::println);`
-- **String concatenation** (Java 9+): `"Hello " + name + "!"`
+### Supported Dynamic Features
+
+| Feature | Bytecode | Description |
+|---------|----------|-------------|
+| Lambda expressions | `invokedynamic` | `Runnable r = () -> doSomething();` |
+| Method references | `invokedynamic` | `list.forEach(System.out::println);` |
+| String concatenation | `invokedynamic` | `"Hello " + name + "!"` (Java 9+) |
+| Constant dynamic | `ldc` | Dynamic constants via bootstrap methods |
+| Method handles | `ldc` | `CONSTANT_MethodHandle` loading |
+| Method types | `ldc` | `CONSTANT_MethodType` loading |
 
 ### InvokeDynamicInfo
 
@@ -665,16 +678,142 @@ if (info.isLambdaMetafactory()) {
 }
 ```
 
+### ConstantDynamicInfo
+
+When `ldc` loads a `CONSTANT_Dynamic` entry, the engine returns `CONSTANT_DYNAMIC`:
+
+```java
+// After dispatch returns CONSTANT_DYNAMIC
+ConstantDynamicInfo info = context.getPendingConstantDynamic();
+
+String name = info.getName();                    // Constant name
+String descriptor = info.getDescriptor();        // Type descriptor (e.g., "I", "J", "Ljava/lang/String;")
+int bsmIndex = info.getBootstrapMethodIndex();   // Bootstrap method index
+
+// Type queries
+boolean isWide = info.isWideType();              // true for J (long) or D (double)
+boolean isPrimitive = info.isPrimitive();        // true for I, J, F, D, Z, B, C, S
+boolean isReference = info.isReference();        // true for L... or [... types
+```
+
+### MethodHandleInfo
+
+When `ldc` loads a `CONSTANT_MethodHandle` entry:
+
+```java
+// After dispatch returns METHOD_HANDLE
+MethodHandleInfo info = context.getPendingMethodHandle();
+
+int kind = info.getReferenceKind();              // 1-9 (REF_getField through REF_invokeInterface)
+String owner = info.getOwner();                  // Owner class
+String name = info.getName();                    // Field/method name
+String desc = info.getDescriptor();              // Field/method descriptor
+
+// Classification
+boolean isField = info.isFieldReference();       // kinds 1-4
+boolean isMethod = info.isMethodReference();     // kinds 5-9
+boolean isGetter = info.isGetter();              // REF_getField or REF_getStatic
+boolean isSetter = info.isSetter();              // REF_putField or REF_putStatic
+boolean isStatic = info.isStatic();              // Static field/method reference
+boolean isCtor = info.isConstructor();           // REF_newInvokeSpecial
+```
+
+Reference kind constants:
+```java
+MethodHandleInfo.REF_getField         // 1
+MethodHandleInfo.REF_getStatic        // 2
+MethodHandleInfo.REF_putField         // 3
+MethodHandleInfo.REF_putStatic        // 4
+MethodHandleInfo.REF_invokeVirtual    // 5
+MethodHandleInfo.REF_invokeStatic     // 6
+MethodHandleInfo.REF_invokeSpecial    // 7
+MethodHandleInfo.REF_newInvokeSpecial // 8
+MethodHandleInfo.REF_invokeInterface  // 9
+```
+
+### MethodTypeInfo
+
+When `ldc` loads a `CONSTANT_MethodType` entry:
+
+```java
+// After dispatch returns METHOD_TYPE
+MethodTypeInfo info = context.getPendingMethodType();
+
+String desc = info.getDescriptor();              // e.g., "(ILjava/lang/String;)V"
+String returnType = info.getReturnType();        // e.g., "V"
+boolean isVoid = info.isVoidReturn();            // true if returns void
+
+// Parameter analysis
+int paramCount = info.getParameterCount();       // Number of parameters
+String[] paramTypes = info.getParameterTypes();  // Individual parameter types
+int slots = info.getParameterSlots();            // Total slots (long/double = 2)
+```
+
+### StringConcatHandler
+
+Handles `StringConcatFactory` bootstrap methods for string concatenation:
+
+```java
+StringConcatHandler handler = new StringConcatHandler();
+
+// Check if invokedynamic is string concatenation
+if (handler.isStringConcat(invokeDynamicInfo)) {
+    // Execute concatenation with recipe
+    String recipe = "\u0001 + \u0001 = \u0001";  // \u0001 = dynamic arg, \u0002 = constant
+    ConcreteValue[] args = { intVal1, intVal2, resultVal };
+    Object[] constants = {};
+
+    String result = handler.executeConcat(info, args, recipe, constants);
+    // Result: "1 + 2 = 3"
+}
+
+// Recipe analysis
+int dynamicArgCount = handler.countDynamicArgs(recipe);
+int constantCount = handler.countConstants(recipe);
+String readable = handler.parseRecipe(recipe);  // "{arg} + {arg} = {arg}"
+```
+
+Recipe format:
+- `\u0001` (TAG_ARG) - Insert dynamic argument from stack
+- `\u0002` (TAG_CONST) - Insert constant from bootstrap arguments
+- Other characters - Literal text
+
+### LambdaProxyFactory
+
+Creates proxy objects for lambda expressions:
+
+```java
+LambdaProxyFactory factory = new LambdaProxyFactory(heapManager);
+
+// Check if invokedynamic is lambda
+if (factory.isLambdaFactory(invokeDynamicInfo)) {
+    // Captured variables from stack
+    ConcreteValue[] captured = { ConcreteValue.intValue(42) };
+
+    // Create proxy object
+    ObjectInstance proxy = factory.createProxy(info, captured);
+    // proxy.getClassName() = "$Lambda$1"
+    // proxy.getField("$Lambda$1", "capture$0", "I") = 42
+}
+
+// Descriptor analysis
+int capturedCount = factory.getCapturedArgCount(descriptor);
+String interfaceType = factory.extractInterfaceType(descriptor);
+```
+
 ### Simulated Behavior
 
 Since bootstrap methods cannot be executed in isolation, the engine simulates common patterns:
 
-| Pattern | Simulated Result |
-|---------|------------------|
-| Lambda metafactory | Returns proxy object |
-| String concat | Returns placeholder string |
-| Primitive return | Returns default value (0) |
-| Void return | No stack change |
+| Pattern | Dispatch Result | Simulated Result |
+|---------|-----------------|------------------|
+| Lambda metafactory | `INVOKE_DYNAMIC` | Proxy object with captured values |
+| String concat | `INVOKE_DYNAMIC` | Concatenated string |
+| Constant dynamic (int) | `CONSTANT_DYNAMIC` | Default value (0) |
+| Constant dynamic (long/double) | `CONSTANT_DYNAMIC` | Default value (0L/0.0) |
+| Constant dynamic (reference) | `CONSTANT_DYNAMIC` | Simulated object |
+| Method handle | `METHOD_HANDLE` | Simulated MethodHandle object |
+| Method type | `METHOD_TYPE` | Simulated MethodType object |
 
 ---
 

@@ -21,7 +21,8 @@ public final class ConcreteStack {
 
     public void push(ConcreteValue value) {
         if (top >= maxStack) {
-            throw new StackOverflowError("Stack overflow: max=" + maxStack);
+            throw new StackOverflowError("Operand stack overflow: " + top + "/" + maxStack +
+                " (method may have incorrect maxStack attribute)");
         }
         stack[top++] = value;
     }

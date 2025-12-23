@@ -243,6 +243,7 @@ public final class DebugSession {
                 }
 
                 StackFrame currentFrame = engine.getCurrentFrame();
+
                 if (currentFrame.isCompleted()) {
                     if (!engine.step()) {
                         result = BytecodeResult.completed(ConcreteValue.nullRef());
@@ -262,21 +263,18 @@ public final class DebugSession {
                     return lastState;
                 }
 
-                if (shouldPause(currentFrame)) {
-                    changeState(DebugSessionState.PAUSED);
-                    lastState = buildCurrentState();
-                    notifyStepComplete(lastState);
-                    return lastState;
-                }
+                boolean stepResult = engine.step();
 
-                if (!engine.step()) {
+                if (!stepResult) {
                     result = BytecodeResult.completed(ConcreteValue.nullRef());
                     changeState(DebugSessionState.STOPPED);
                     notifySessionStop(result);
                     return buildCurrentState();
                 }
 
-                if (currentFrame.getException() != null) {
+                currentFrame = engine.getCurrentFrame();
+
+                if (currentFrame != null && currentFrame.getException() != null) {
                     ObjectInstance exception = currentFrame.getException();
                     List<String> trace = buildStackTrace();
                     result = BytecodeResult.exception(exception, trace);
@@ -284,6 +282,13 @@ public final class DebugSession {
                     notifyException(exception);
                     notifySessionStop(result);
                     return buildCurrentState();
+                }
+
+                if (currentFrame != null && shouldPause(currentFrame)) {
+                    changeState(DebugSessionState.PAUSED);
+                    lastState = buildCurrentState();
+                    notifyStepComplete(lastState);
+                    return lastState;
                 }
             }
         } catch (Exception e) {
