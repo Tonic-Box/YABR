@@ -4,16 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- added new tests">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- added new tests&#10;- added builder api">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MethodEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/MethodEntry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/BytecodeTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/BytecodeTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/CodeWriterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/CodeWriterTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifierTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifierTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/ir/IRInstructionTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/ir/IRInstructionTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/parser/ClassFileTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/parser/ClassFileTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/parser/ClassPoolTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/parser/ClassPoolTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/parser/MethodEntryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/parser/MethodEntryTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/architecture.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/simulation-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/simulation-api.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -221,14 +217,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00027" summary="Added missing visitors to ExpressionRecoverer">
-      <option name="closed" value="true" />
-      <created>1765309927576</created>
-      <option name="number" value="00027" />
-      <option name="presentableId" value="LOCAL-00027" />
-      <option name="project" value="LOCAL" />
-      <updated>1765309927576</updated>
     </task>
     <task id="LOCAL-00028" summary="Changes made to StatementRecoverer.java:&#10;  1. Added ternaryPhiValues field to track PHIs that will become ternary expressions&#10;  2. Added collectTernaryPhis() method called early in recoverMethod() to identify these PHIs&#10;  3. Added findTernaryPhiPatternForPrepass() helper method to detect ternary PHI patterns&#10;  4. Modified emitPhiDeclaration() to skip PHIs in the ternaryPhiValues set">
       <option name="closed" value="true" />
@@ -614,7 +602,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766466544343</updated>
     </task>
-    <option name="localTasksCounter" value="76" />
+    <task id="LOCAL-00076" summary="- added new tests&#10;- added builder api">
+      <option name="closed" value="true" />
+      <created>1766471417963</created>
+      <option name="number" value="00076" />
+      <option name="presentableId" value="LOCAL-00076" />
+      <option name="project" value="LOCAL" />
+      <updated>1766471417963</updated>
+    </task>
+    <option name="localTasksCounter" value="77" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -629,7 +625,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="cleanup" />
     <MESSAGE value="Better flow recovery" />
     <MESSAGE value="Clean-up" />
     <MESSAGE value="more intelligent condition combining in control-flow guards" />
@@ -654,7 +649,8 @@
     <MESSAGE value="- implimented new ClassPool constructor to enable lazy loading of internal java classes optionally" />
     <MESSAGE value="- better handling for dynamic stuff in decompile" />
     <MESSAGE value="- added new tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="- added new tests" />
+    <MESSAGE value="- added new tests&#10;- added builder api" />
+    <option name="LAST_COMMIT_MESSAGE" value="- added new tests&#10;- added builder api" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

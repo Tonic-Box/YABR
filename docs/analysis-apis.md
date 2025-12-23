@@ -2,7 +2,7 @@
 
 # Analysis APIs
 
-YABR provides nine high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
+YABR provides ten high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
 
 ---
 
@@ -18,7 +18,8 @@ YABR provides nine high-level analysis APIs that build on top of the SSA IR syst
 | **Cross-References** | `xref` | Track all references to/from classes, methods, fields | [Details](xref-api.md) |
 | **Data Flow** | `dataflow` | Build data flow graphs for taint analysis | [Details](dataflow-api.md) |
 | **Method Similarity** | `similarity` | Find duplicate and similar methods | [Details](similarity-api.md) |
-| **Simulation** | `simulation` | Bytecode/IR execution simulation with metrics | [Details](simulation-api.md) |
+| **Simulation** | `simulation` | Abstract bytecode/IR simulation with metrics | [Details](simulation-api.md) |
+| **Execution** | `execution` | Concrete bytecode execution and debugging | [Details](execution-api.md) |
 
 ---
 
@@ -155,7 +156,7 @@ List<SimilarityResult> duplicates = analyzer.findDuplicates();
 
 ## Simulation API
 
-Comprehensive bytecode/IR execution simulation with metrics and value tracking.
+Abstract bytecode/IR execution simulation with metrics and value tracking.
 
 ```java
 SimulationEngine engine = new SimulationEngine(ctx)
@@ -167,6 +168,33 @@ SimulationResult result = engine.simulate(irMethod);
 **Key features:** Stack operation tracking, allocation tracking, field access tracking, method call tracking, control flow tracking, value flow queries, inter-procedural simulation.
 
 [Full documentation →](simulation-api.md)
+
+---
+
+## Execution API
+
+Concrete bytecode execution with full heap simulation and debugging support.
+
+```java
+BytecodeContext ctx = new BytecodeContext.Builder()
+    .heapManager(new SimpleHeapManager())
+    .classResolver(new ClassResolver(pool))
+    .maxInstructions(100000)
+    .build();
+
+BytecodeEngine engine = new BytecodeEngine(ctx);
+BytecodeResult result = engine.execute(method, ConcreteValue.intValue(42));
+
+// Or debug interactively
+DebugSession session = new DebugSession(ctx);
+session.addBreakpoint(new Breakpoint("MyClass", "method", "()V", 10));
+session.start(method);
+DebugState state = session.stepOver();
+```
+
+**Key features:** Concrete value execution, mutable heap/stack, object simulation, native method handlers, breakpoints, step debugging, call stack inspection.
+
+[Full documentation →](execution-api.md)
 
 ---
 
@@ -182,6 +210,7 @@ Runnable demos are in `src/main/java/com/tonic/demo/`:
 | `PatternSearchDemo.java` | Search for code patterns |
 | `InstrumentationDemo.java` | Bytecode instrumentation |
 | `SimulationDemo.java` | Bytecode simulation and metrics |
+| `ExecutionDemo.java` | Concrete bytecode execution and debugging |
 
 Run with:
 
@@ -192,6 +221,7 @@ java -cp build/classes/java/main com.tonic.demo.TypeInferenceDemo
 java -cp build/classes/java/main com.tonic.demo.PatternSearchDemo
 java -cp build/classes/java/main com.tonic.demo.InstrumentationDemo
 java -cp build/classes/java/main com.tonic.demo.SimulationDemo
+java -cp build/classes/java/main com.tonic.demo.ExecutionDemo
 ```
 
 ---

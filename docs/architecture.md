@@ -59,6 +59,8 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.typeinference` | Type and nullability inference |
 | `com.tonic.analysis.pattern` | Code pattern search |
 | `com.tonic.analysis.instrumentation` | Bytecode instrumentation hooks |
+| `com.tonic.analysis.simulation` | Abstract bytecode simulation and metrics |
+| `com.tonic.analysis.execution` | Concrete bytecode execution and debugging |
 | `com.tonic.renamer` | Class/method/field renaming |
 | `com.tonic.utill` | Utilities (AccessBuilder, Logger, etc.) |
 | `com.tonic.demo` | Example programs |
@@ -250,6 +252,40 @@ The renamer handles:
 - Descriptor and signature remapping
 - Pre-application validation
 
+### Execution Engine
+
+**BytecodeEngine** - Concrete bytecode execution for debugging and REPL:
+```java
+BytecodeContext ctx = new BytecodeContext.Builder()
+    .heapManager(new SimpleHeapManager())
+    .classResolver(new ClassResolver(pool))
+    .maxInstructions(100000)
+    .build();
+
+BytecodeEngine engine = new BytecodeEngine(ctx);
+BytecodeResult result = engine.execute(method, ConcreteValue.intValue(42));
+```
+
+The execution system provides:
+- Mutable stack/locals with concrete values (not abstract types)
+- Full heap simulation with objects and arrays
+- Native method handlers for JDK core methods
+- Two invocation modes: recursive (internal) and delegated (external callback)
+
+**DebugSession** - Interactive debugging support:
+```java
+DebugSession session = new DebugSession(ctx);
+session.addBreakpoint(new Breakpoint("MyClass", "method", "()V", 10));
+session.start(method);
+DebugState state = session.stepOver();
+```
+
+The debugging system enables:
+- Breakpoints at specific bytecode offsets
+- Step into/over/out execution control
+- Call stack and variable inspection
+- Execution state snapshots for UI display
+
 ## Key Design Decisions
 
 1. **Lazy Loading** - ClassPool loads built-in classes on demand from JRT (Java 9+) or rt.jar (Java 8)
@@ -270,7 +306,8 @@ The renamer handles:
 - [SSA Guide](ssa-guide.md) - SSA IR system in depth
 - [AST Guide](ast-guide.md) - Source-level AST recovery, mutation, and emission
 - [AST Editor](ast-editor.md) - ExprEditor-style AST transformations
-- [Analysis APIs](analysis-apis.md) - Call graph, xrefs, data flow, similarity, and more
+- [Analysis APIs](analysis-apis.md) - Call graph, xrefs, data flow, simulation, execution, and more
+- [Execution API](execution-api.md) - Concrete bytecode execution and debugging
 - [Renamer API](renamer-api.md) - Class, method, and field renaming
 - [Frame Computation](frame-computation.md) - StackMapTable generation
 

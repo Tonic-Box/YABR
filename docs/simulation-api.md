@@ -2,7 +2,7 @@
 
 # Simulation API
 
-The Simulation API (`com.tonic.analysis.simulation`) provides a comprehensive bytecode/IR simulation system that tracks execution state, counts operations, traces value flow, and analyzes control flow paths.
+The Simulation API (`com.tonic.analysis.simulation`) provides abstract bytecode/IR simulation for static analysis, tracking execution metrics, value flow, and control flow paths without actually executing code.
 
 ## Overview
 
@@ -13,6 +13,8 @@ The simulation system is designed around these core principles:
 3. **Event-Driven**: Listener pattern for flexible instrumentation
 4. **Immutable State**: Functional state transitions for safe history/merging
 5. **Query-Oriented**: Rich query API built on simulation results
+
+> **Note**: For concrete bytecode execution with mutable state and debugging support, see the [Execution API](execution-api.md). The Simulation API performs abstract interpretation for metrics; the Execution API performs actual execution for debugging/REPL.
 
 ---
 
