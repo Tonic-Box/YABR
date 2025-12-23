@@ -2,6 +2,8 @@
 
 A Java bytecode manipulation library with SSA-form intermediate representation for analysis and optimization.
 
+A comprehencive alternqative to ASM, Javassist, and other bytecode libraries.
+
 ## Features
 
 - **Class file parsing** - Read and write Java `.class` files
