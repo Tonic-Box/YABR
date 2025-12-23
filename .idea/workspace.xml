@@ -5,8 +5,50 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- added new tests">
+      <change afterPath="$PROJECT_DIR$/docs/generation-api.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/builder/ClassBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/builder/CodeBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/builder/FieldBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/builder/MethodBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/type/AccessFlags.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/type/MethodHandle.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/type/TypeDescriptor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/CodePrinterTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/simulation/core/SimulationEngineTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/simulation/listener/AllocationListenerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/simulation/listener/ControlFlowListenerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/simulation/listener/FieldAccessListenerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/simulation/listener/MethodCallListenerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/simulation/state/CallStackStateTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/ast/expr/ExpressionASTTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminatorTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminatorTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/builder/ClassBuilderIntegrationTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/builder/ClassBuilderTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/builder/CodeBuilderTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/builder/FieldBuilderTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/builder/MethodBuilderTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/parser/attribute/StackMapTableAttributeTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/type/AccessFlagsTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/type/MethodHandleTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/type/TypeDescriptorTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/bytecode-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/bytecode-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/ClassRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/ClassRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/CodeWriterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/CodeWriterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/dependency/DependencyAnalyzerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/dependency/DependencyAnalyzerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/frame/FrameGeneratorTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/frame/FrameGeneratorTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/instrumentation/InstrumenterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/instrumentation/InstrumenterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifierTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifierTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/decompile/ClassDecompilerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/decompile/ClassDecompilerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/StructuralAnalyzerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/StructuralAnalyzerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/SwitchRecoveryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/SwitchRecoveryTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/ir/IRInstructionTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/ir/IRInstructionTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/renamer/RenamerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/renamer/RenamerTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -214,30 +256,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00023" summary="Boolean expression recovery fix">
-      <option name="closed" value="true" />
-      <created>1765301252716</created>
-      <option name="number" value="00023" />
-      <option name="presentableId" value="LOCAL-00023" />
-      <option name="project" value="LOCAL" />
-      <updated>1765301252716</updated>
-    </task>
-    <task id="LOCAL-00024" summary="remove debug">
-      <option name="closed" value="true" />
-      <created>1765302419701</created>
-      <option name="number" value="00024" />
-      <option name="presentableId" value="LOCAL-00024" />
-      <option name="project" value="LOCAL" />
-      <updated>1765302419701</updated>
-    </task>
-    <task id="LOCAL-00025" summary="Exception block lifting fix">
-      <option name="closed" value="true" />
-      <created>1765304739686</created>
-      <option name="number" value="00025" />
-      <option name="presentableId" value="LOCAL-00025" />
-      <option name="project" value="LOCAL" />
-      <updated>1765304739686</updated>
     </task>
     <task id="LOCAL-00026" summary="JumpThreading fix&#10;- When JumpThreading bypassed an intermediate block, it didn't update the phi nodes at the target to reflect the new predecessor">
       <option name="closed" value="true" />
@@ -607,7 +625,31 @@
       <option name="project" value="LOCAL" />
       <updated>1766426952113</updated>
     </task>
-    <option name="localTasksCounter" value="72" />
+    <task id="LOCAL-00072" summary="- added new tests">
+      <option name="closed" value="true" />
+      <created>1766428369225</created>
+      <option name="number" value="00072" />
+      <option name="presentableId" value="LOCAL-00072" />
+      <option name="project" value="LOCAL" />
+      <updated>1766428369225</updated>
+    </task>
+    <task id="LOCAL-00073" summary="- added new tests">
+      <option name="closed" value="true" />
+      <created>1766428386207</created>
+      <option name="number" value="00073" />
+      <option name="presentableId" value="LOCAL-00073" />
+      <option name="project" value="LOCAL" />
+      <updated>1766428386207</updated>
+    </task>
+    <task id="LOCAL-00074" summary="- added new tests">
+      <option name="closed" value="true" />
+      <created>1766428412227</created>
+      <option name="number" value="00074" />
+      <option name="presentableId" value="LOCAL-00074" />
+      <option name="project" value="LOCAL" />
+      <updated>1766428412227</updated>
+    </task>
+    <option name="localTasksCounter" value="75" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

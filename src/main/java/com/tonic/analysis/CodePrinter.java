@@ -5,6 +5,7 @@ import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.FieldRefItem;
 import com.tonic.parser.constpool.MethodRefItem;
 import com.tonic.parser.constpool.StringRefItem;
+import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.utill.Logger;
 import com.tonic.utill.Opcode;
 
@@ -324,7 +325,7 @@ public class CodePrinter {
                         sb.append(" <invalid>");
                         break;
                     }
-                    int atype = code[pc++];
+                    int atype = Byte.toUnsignedInt(code[pc++]);
                     sb.append(atypeDescription(atype));
                     break;
 
@@ -500,7 +501,8 @@ public class CodePrinter {
             return className + "." + fieldName + " " + fieldDesc;
         } else if (constPool.getItem(index) instanceof StringRefItem) {
             StringRefItem stringItem = (StringRefItem) constPool.getItem(index);
-            return "\"" + stringItem.getValue() + "\"";
+            Utf8Item utf8 = (Utf8Item) constPool.getItem(stringItem.getValue());
+            return "\"" + utf8.getValue() + "\"";
         } else if (constPool.getItem(index) instanceof ClassRefItem) {
             ClassRefItem classRef = (ClassRefItem) constPool.getItem(index);
             return classRef.getClassName().replace('/', '.');

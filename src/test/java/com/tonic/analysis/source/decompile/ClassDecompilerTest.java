@@ -393,4 +393,174 @@ class ClassDecompilerTest {
         assertNotNull(result);
         assertFalse(result.isEmpty());
     }
+
+    // ========== Interface Tests ==========
+
+    @Test
+    void decompileInterface() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int access = new AccessBuilder().setPublic().setAbstract().setInterface().build();
+        ClassFile cf = pool.createNewClass("com/test/MyInterface", access);
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("public interface MyInterface"));
+    }
+
+    // ========== Volatile and Transient Fields ==========
+
+    @Test
+    void decompileClassWithVolatileField() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int classAccess = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass("com/test/WithVolatile", classAccess);
+
+        int fieldAccess = new AccessBuilder().setPrivate().setVolatile().build();
+        cf.createNewField(fieldAccess, "flag", "Z", new ArrayList<>());
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("private volatile boolean flag;"));
+    }
+
+    @Test
+    void decompileClassWithTransientField() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int classAccess = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass("com/test/WithTransient", classAccess);
+
+        int fieldAccess = new AccessBuilder().setPrivate().setTransient().build();
+        cf.createNewField(fieldAccess, "cache", "Ljava/lang/Object;", new ArrayList<>());
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("private transient Object cache;"));
+    }
+
+
+    // ========== Multi-dimensional Array Fields ==========
+
+    @Test
+    void decompileClassWith2DArrayField() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int classAccess = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass("com/test/With2DArray", classAccess);
+
+        int fieldAccess = new AccessBuilder().setPrivate().build();
+        cf.createNewField(fieldAccess, "matrix", "[[I", new ArrayList<>());
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("private int[][] matrix;"));
+    }
+
+    // ========== Various Primitive Field Types ==========
+
+    @Test
+    void decompileAllPrimitiveFieldTypes() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int classAccess = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass("com/test/AllPrimitives", classAccess);
+
+        int fieldAccess = new AccessBuilder().setPrivate().build();
+        cf.createNewField(fieldAccess, "byteField", "B", new ArrayList<>());
+        cf.createNewField(fieldAccess, "charField", "C", new ArrayList<>());
+        cf.createNewField(fieldAccess, "shortField", "S", new ArrayList<>());
+        cf.createNewField(fieldAccess, "longField", "J", new ArrayList<>());
+        cf.createNewField(fieldAccess, "floatField", "F", new ArrayList<>());
+        cf.createNewField(fieldAccess, "doubleField", "D", new ArrayList<>());
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("private byte byteField;"));
+        assertTrue(result.contains("private char charField;"));
+        assertTrue(result.contains("private short shortField;"));
+        assertTrue(result.contains("private long longField;"));
+        assertTrue(result.contains("private float floatField;"));
+        assertTrue(result.contains("private double doubleField;"));
+    }
+
+    // ========== Method with Various Parameter Types ==========
+
+    @Test
+    void decompileMethodWithObjectParameter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/WithObjectParam")
+            .publicStaticMethod("process", "(Ljava/lang/String;)V")
+                .vreturn()
+            .build();
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("public static void process(String arg0)"));
+    }
+
+    @Test
+    void decompileMethodWithArrayParameter() throws IOException {
+        ClassFile cf = BytecodeBuilder.forClass("com/test/WithArrayParam")
+            .publicStaticMethod("processArray", "([I)V")
+                .vreturn()
+            .build();
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("public static void processArray(int[] arg0)"));
+    }
+
+
+    // ========== Static with Custom Emitter Config ==========
+
+    @Test
+    void staticDecompileMethodWithConfig() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int access = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass("com/test/ConfigTest", access);
+
+        com.tonic.analysis.source.emit.SourceEmitterConfig config =
+            com.tonic.analysis.source.emit.SourceEmitterConfig.defaults();
+
+        String result = ClassDecompiler.decompile(cf, config);
+
+        assertNotNull(result);
+        assertTrue(result.contains("class ConfigTest"));
+    }
+
+    // ========== Builder with Preset ==========
+
+    @Test
+    void builderWithMinimalPreset() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int access = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass("com/test/PresetTest", access);
+
+        ClassDecompiler decompiler = ClassDecompiler.builder(cf)
+            .preset(TransformPreset.MINIMAL)
+            .build();
+
+        String result = decompiler.decompile();
+        assertTrue(result.contains("class PresetTest"));
+    }
+
+    // ========== Final Static Field ==========
+
+    @Test
+    void decompileFinalStaticField() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int classAccess = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass("com/test/WithConstant", classAccess);
+
+        int fieldAccess = new AccessBuilder().setPublic().setStatic().setFinal().build();
+        cf.createNewField(fieldAccess, "CONSTANT", "I", new ArrayList<>());
+
+        ClassDecompiler decompiler = new ClassDecompiler(cf);
+        String result = decompiler.decompile();
+
+        assertTrue(result.contains("public static final int CONSTANT;"));
+    }
 }

@@ -805,18 +805,23 @@ public class ClassFile extends AbstractParser {
         Utf8Item descUtf8 = constPool.findOrAddUtf8(methodDescriptor);
         int descIndex = constPool.getIndexOf(descUtf8);
 
-        Utf8Item codeUtf8 = constPool.findOrAddUtf8("Code");
-        int codeNameIndex = constPool.getIndexOf(codeUtf8);
-
-        CodeAttribute codeAttr = new CodeAttribute("Code", (MethodEntry)null, codeNameIndex, 0);
-        codeAttr.setMaxStack(10);
-        int maxLocals = Modifiers.isStatic(accessFlags) ? parameterTypes.length : parameterTypes.length + 1;
-        codeAttr.setMaxLocals(maxLocals);
-        codeAttr.setCode(new byte[0]);
-        codeAttr.setAttributes(new ArrayList<>());
-
         List<Attribute> methodAttributes = new ArrayList<>();
-        methodAttributes.add(codeAttr);
+        CodeAttribute codeAttr = null;
+
+        boolean isAbstract = (accessFlags & 0x0400) != 0;
+        boolean isNative = (accessFlags & 0x0100) != 0;
+        if (!isAbstract && !isNative) {
+            Utf8Item codeUtf8 = constPool.findOrAddUtf8("Code");
+            int codeNameIndex = constPool.getIndexOf(codeUtf8);
+
+            codeAttr = new CodeAttribute("Code", (MethodEntry)null, codeNameIndex, 0);
+            codeAttr.setMaxStack(10);
+            int maxLocals = Modifiers.isStatic(accessFlags) ? parameterTypes.length : parameterTypes.length + 1;
+            codeAttr.setMaxLocals(maxLocals);
+            codeAttr.setCode(new byte[0]);
+            codeAttr.setAttributes(new ArrayList<>());
+            methodAttributes.add(codeAttr);
+        }
 
         MethodEntry newMethod = new MethodEntry(this, accessFlags, nameIndex, descIndex, methodAttributes);
         newMethod.setName(methodName);
@@ -824,7 +829,9 @@ public class ClassFile extends AbstractParser {
         newMethod.setOwnerName(getClassName());
         newMethod.setKey(methodName + methodDescriptor);
 
-        codeAttr.setParent(newMethod);
+        if (codeAttr != null) {
+            codeAttr.setParent(newMethod);
+        }
 
         methods.add(newMethod);
         Logger.info("Method " + methodName + " created successfully.");

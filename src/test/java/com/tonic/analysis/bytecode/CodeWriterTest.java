@@ -44,15 +44,12 @@ class CodeWriterTest {
     }
 
     @Test
-    void codeWriterForAbstractMethodHasEmptyBytecode() {
+    void codeWriterForAbstractMethodThrowsException() {
         int access = new AccessBuilder().setPublic().setAbstract().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "abstractMethod", "()V");
 
-        // Library creates CodeAttribute even for abstract methods
-        CodeWriter cw = new CodeWriter(method);
-        assertNotNull(cw);
-        // Empty bytecode - no instructions parsed
-        assertEquals(0, cw.getInstructionCount());
+        assertNull(method.getCodeAttribute());
+        assertThrows(IllegalArgumentException.class, () -> new CodeWriter(method));
     }
 
     // ========== Instruction Parsing Tests ==========

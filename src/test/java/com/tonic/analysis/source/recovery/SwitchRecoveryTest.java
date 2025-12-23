@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Map;
 
+import com.tonic.analysis.source.emit.SourceEmitter;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -924,7 +926,269 @@ class SwitchRecoveryTest {
         }
     }
 
+    // ========== Default Case Content Tests ==========
+
+    @Nested
+    class DefaultCaseContentTests {
+
+        @Test
+        void defaultCaseWithStatementsHasContent() throws IOException {
+            // Regression test: switch (x) { case 0: return 1; default: int y = 10; return y; }
+            BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
+                .publicStaticMethod("defaultWithContent", "(I)I");
+
+            Label case0 = mb.newLabel();
+            Label defaultCase = mb.newLabel();
+
+            mb.iload(0)
+                .tableswitch(0, 0, Map.of(0, case0), defaultCase)
+                .label(case0)
+                .iconst(1)
+                .ireturn()
+                .label(defaultCase)
+                .iconst(10)
+                .istore(1)
+                .iload(1)
+                .ireturn();
+
+            ClassFile cf = mb.build();
+            MethodEntry method = findMethod(cf, "defaultWithContent");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            StatementRecoverer recoverer = createRecoverer(ir, method);
+            BlockStmt body = recoverer.recoverMethod();
+
+            SwitchStmt switchStmt = findSwitch(body);
+            assertNotNull(switchStmt, "Should have a switch statement");
+
+            SwitchCase defaultSwitchCase = switchStmt.getCases().stream()
+                .filter(SwitchCase::isDefault)
+                .findFirst()
+                .orElse(null);
+            assertNotNull(defaultSwitchCase, "Should have a default case");
+
+            assertFalse(defaultSwitchCase.statements().isEmpty(),
+                "Default case should have statements, not be empty");
+        }
+
+        @Test
+        void defaultCaseWithMultipleStatements() throws IOException {
+            // switch (x) { case 0: return 1; default: y = 5; y = y + 1; return y; }
+            BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
+                .publicStaticMethod("defaultMultiStmt", "(I)I");
+
+            Label case0 = mb.newLabel();
+            Label defaultCase = mb.newLabel();
+
+            mb.iload(0)
+                .tableswitch(0, 0, Map.of(0, case0), defaultCase)
+                .label(case0)
+                .iconst(1)
+                .ireturn()
+                .label(defaultCase)
+                .iconst(5)
+                .istore(1)
+                .iload(1)
+                .iconst(1)
+                .iadd()
+                .istore(1)
+                .iload(1)
+                .ireturn();
+
+            ClassFile cf = mb.build();
+            MethodEntry method = findMethod(cf, "defaultMultiStmt");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            StatementRecoverer recoverer = createRecoverer(ir, method);
+            BlockStmt body = recoverer.recoverMethod();
+
+            SwitchStmt switchStmt = findSwitch(body);
+            assertNotNull(switchStmt, "Should have a switch statement");
+
+            SwitchCase defaultSwitchCase = switchStmt.getCases().stream()
+                .filter(SwitchCase::isDefault)
+                .findFirst()
+                .orElse(null);
+            assertNotNull(defaultSwitchCase, "Should have a default case");
+
+            assertTrue(defaultSwitchCase.statements().size() >= 2,
+                "Default case should have multiple statements");
+        }
+
+        @Test
+        void defaultCaseEmittedWithContent() throws IOException {
+            // Test that default case content is properly emitted in source output
+            BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
+                .publicStaticMethod("defaultEmit", "(I)I");
+
+            Label case0 = mb.newLabel();
+            Label defaultCase = mb.newLabel();
+
+            mb.iload(0)
+                .tableswitch(0, 0, Map.of(0, case0), defaultCase)
+                .label(case0)
+                .iconst(1)
+                .ireturn()
+                .label(defaultCase)
+                .iconst(42)
+                .istore(1)
+                .iload(1)
+                .ireturn();
+
+            ClassFile cf = mb.build();
+            MethodEntry method = findMethod(cf, "defaultEmit");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            StatementRecoverer recoverer = createRecoverer(ir, method);
+            BlockStmt body = recoverer.recoverMethod();
+
+            String source = SourceEmitter.emit(body);
+
+            assertTrue(source.contains("default:"), "Source should contain 'default:'");
+            assertTrue(source.contains("42") || source.contains("local1 = "),
+                "Default case should contain assignment or constant 42: " + source);
+        }
+
+        @Test
+        void switchWithMergeBlockDefaultHasContent() throws IOException {
+            // More complex case: switch with merge block after
+            // switch (x) { case 0: y=1; break; case 1: y=2; break; default: y=99; } return y;
+            BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
+                .publicStaticMethod("switchMerge", "(I)I");
+
+            Label case0 = mb.newLabel();
+            Label case1 = mb.newLabel();
+            Label defaultCase = mb.newLabel();
+            Label end = mb.newLabel();
+
+            mb.iload(0)
+                .tableswitch(0, 1, Map.of(0, case0, 1, case1), defaultCase)
+                .label(case0)
+                .iconst(1)
+                .istore(1)
+                .goto_(end)
+                .label(case1)
+                .iconst(2)
+                .istore(1)
+                .goto_(end)
+                .label(defaultCase)
+                .iconst(99)
+                .istore(1)
+                .label(end)
+                .iload(1)
+                .ireturn();
+
+            ClassFile cf = mb.build();
+            MethodEntry method = findMethod(cf, "switchMerge");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            StatementRecoverer recoverer = createRecoverer(ir, method);
+            BlockStmt body = recoverer.recoverMethod();
+
+            SwitchStmt switchStmt = findSwitch(body);
+            assertNotNull(switchStmt, "Should have a switch statement");
+
+            SwitchCase defaultSwitchCase = switchStmt.getCases().stream()
+                .filter(SwitchCase::isDefault)
+                .findFirst()
+                .orElse(null);
+            assertNotNull(defaultSwitchCase, "Should have a default case");
+
+            assertFalse(defaultSwitchCase.statements().isEmpty(),
+                "Default case with merge block should still have assignment statement");
+        }
+
+        @Test
+        void defaultTargetIsMergeBlock() throws IOException {
+            // Edge case: default points to merge block (all cases fall through to default)
+            // switch (x) { case 0: y=1; default: } return y;
+            // Here default has no code - it's just the fall-through point
+            BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
+                .publicStaticMethod("defaultIsMerge", "(I)I");
+
+            Label case0 = mb.newLabel();
+            Label defaultCase = mb.newLabel();
+
+            mb.iload(0)
+                .tableswitch(0, 0, Map.of(0, case0), defaultCase)
+                .label(case0)
+                .iconst(1)
+                .istore(1)
+                .label(defaultCase)
+                .iload(1)
+                .ireturn();
+
+            ClassFile cf = mb.build();
+            MethodEntry method = findMethod(cf, "defaultIsMerge");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            StatementRecoverer recoverer = createRecoverer(ir, method);
+            BlockStmt body = recoverer.recoverMethod();
+
+            SwitchStmt switchStmt = findSwitch(body);
+            assertNotNull(switchStmt, "Should have a switch statement");
+
+            SwitchCase defaultSwitchCase = switchStmt.getCases().stream()
+                .filter(SwitchCase::isDefault)
+                .findFirst()
+                .orElse(null);
+            assertNotNull(defaultSwitchCase, "Should have a default case");
+        }
+
+        @Test
+        void defaultCaseWithBreakToMerge() throws IOException {
+            // switch (x) { case 0: y=1; break; default: y=99; } return y;
+            BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
+                .publicStaticMethod("defaultWithBreak", "(I)I");
+
+            Label case0 = mb.newLabel();
+            Label defaultCase = mb.newLabel();
+            Label end = mb.newLabel();
+
+            mb.iload(0)
+                .tableswitch(0, 0, Map.of(0, case0), defaultCase)
+                .label(case0)
+                .iconst(1)
+                .istore(1)
+                .goto_(end)
+                .label(defaultCase)
+                .iconst(99)
+                .istore(1)
+                .label(end)
+                .iload(1)
+                .ireturn();
+
+            ClassFile cf = mb.build();
+            MethodEntry method = findMethod(cf, "defaultWithBreak");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            StatementRecoverer recoverer = createRecoverer(ir, method);
+            BlockStmt body = recoverer.recoverMethod();
+
+            SwitchStmt switchStmt = findSwitch(body);
+            assertNotNull(switchStmt, "Should have a switch statement");
+
+            SwitchCase defaultSwitchCase = switchStmt.getCases().stream()
+                .filter(SwitchCase::isDefault)
+                .findFirst()
+                .orElse(null);
+            assertNotNull(defaultSwitchCase, "Should have a default case");
+
+            assertFalse(defaultSwitchCase.statements().isEmpty(),
+                "Default case with break should still have assignment statement");
+        }
+    }
+
     // ========== Helper Methods ==========
+
+    private SwitchStmt findSwitch(BlockStmt body) {
+        for (Statement stmt : body.getStatements()) {
+            if (stmt instanceof SwitchStmt) {
+                return (SwitchStmt) stmt;
+            }
+        }
+        return null;
+    }
 
     private MethodEntry findMethod(ClassFile cf, String name) {
         return cf.getMethods().stream()

@@ -13,10 +13,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for ControlFlowSimplifier - AST control flow optimization.
- * Uses lenient assertions focusing on successful transformation rather than exact output.
- */
 class ControlFlowSimplifierTest {
 
     private ControlFlowSimplifier simplifier;
@@ -27,8 +23,6 @@ class ControlFlowSimplifierTest {
         SSAValue.resetIdCounter();
         simplifier = new ControlFlowSimplifier();
     }
-
-    // ========== Basic Transform Tests ==========
 
     @Test
     void getNameReturnsCorrectName() {
@@ -50,8 +44,6 @@ class ControlFlowSimplifierTest {
 
         assertDoesNotThrow(() -> simplifier.transform(block));
     }
-
-    // ========== If Statement Simplification Tests ==========
 
     @Test
     void transformInvertsEmptyIfWithElse() {
@@ -101,13 +93,16 @@ class ControlFlowSimplifierTest {
     }
 
     @Test
-    void transformConvertsGuardClause() {
+    void guardClauseWithLargeElse() {
         Expression condition = new VarRefExpr("valid", PrimitiveSourceType.BOOLEAN);
         Statement earlyReturn = new ReturnStmt();
-        Statement longBody = new BlockStmt(List.of(
-            new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)),
-            new ReturnStmt(new VarRefExpr("x", PrimitiveSourceType.INT))
-        ));
+
+        List<Statement> longBodyStmts = new ArrayList<>();
+        longBodyStmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)));
+        longBodyStmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(2)));
+        longBodyStmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "z", LiteralExpr.ofInt(3)));
+        longBodyStmts.add(new ReturnStmt(new VarRefExpr("x", PrimitiveSourceType.INT)));
+        Statement longBody = new BlockStmt(longBodyStmts);
 
         IfStmt ifStmt = new IfStmt(condition, longBody, earlyReturn);
 
@@ -117,10 +112,97 @@ class ControlFlowSimplifierTest {
 
         boolean changed = simplifier.transform(block);
 
+        assertTrue(changed);
+        assertTrue(block.size() > 1);
+        assertTrue(block.getStatements().get(0) instanceof IfStmt);
+        IfStmt guardClause = (IfStmt) block.getStatements().get(0);
+        assertFalse(guardClause.hasElse());
+    }
+
+    @Test
+    void booleanInliningMultipleUses() {
+        Expression complexExpr = new BinaryExpr(
+            BinaryOperator.AND,
+            new VarRefExpr("a", PrimitiveSourceType.BOOLEAN),
+            new VarRefExpr("b", PrimitiveSourceType.BOOLEAN),
+            PrimitiveSourceType.BOOLEAN
+        );
+
+        VarDeclStmt decl = new VarDeclStmt(
+            PrimitiveSourceType.BOOLEAN,
+            "flag",
+            complexExpr
+        );
+
+        Expression condition = new VarRefExpr("flag", PrimitiveSourceType.BOOLEAN);
+        IfStmt ifStmt = new IfStmt(condition, new ReturnStmt(LiteralExpr.ofInt(1)));
+
+        Expression condition2 = new VarRefExpr("flag", PrimitiveSourceType.BOOLEAN);
+        IfStmt ifStmt2 = new IfStmt(condition2, new ReturnStmt(LiteralExpr.ofInt(2)));
+
+        List<Statement> stmts = new ArrayList<>();
+        stmts.add(decl);
+        stmts.add(ifStmt);
+        stmts.add(ifStmt2);
+        BlockStmt block = new BlockStmt(stmts);
+
+        boolean changed = simplifier.transform(block);
+
         assertNotNull(block);
     }
 
-    // ========== Expression Simplification Tests ==========
+    @Test
+    void booleanInliningSingleUse() {
+        VarDeclStmt decl = new VarDeclStmt(
+            PrimitiveSourceType.BOOLEAN,
+            "flag",
+            LiteralExpr.ofBoolean(true)
+        );
+
+        Expression condition = new UnaryExpr(
+            UnaryOperator.NOT,
+            new VarRefExpr("flag", PrimitiveSourceType.BOOLEAN),
+            PrimitiveSourceType.BOOLEAN
+        );
+
+        IfStmt ifStmt = new IfStmt(condition, new ReturnStmt());
+
+        List<Statement> stmts = new ArrayList<>();
+        stmts.add(decl);
+        stmts.add(ifStmt);
+        BlockStmt block = new BlockStmt(stmts);
+
+        boolean changed = simplifier.transform(block);
+
+        assertTrue(changed);
+        assertEquals(1, block.size());
+    }
+
+    @Test
+    void doubleNegationRemoval() {
+        Expression innerNot = new UnaryExpr(
+            UnaryOperator.NOT,
+            new VarRefExpr("x", PrimitiveSourceType.BOOLEAN),
+            PrimitiveSourceType.BOOLEAN
+        );
+
+        Expression doubleNot = new UnaryExpr(
+            UnaryOperator.NOT,
+            innerNot,
+            PrimitiveSourceType.BOOLEAN
+        );
+
+        IfStmt ifStmt = new IfStmt(doubleNot, new ReturnStmt(LiteralExpr.ofInt(1)));
+
+        List<Statement> stmts = new ArrayList<>();
+        stmts.add(ifStmt);
+        BlockStmt block = new BlockStmt(stmts);
+
+        simplifier.transform(block);
+
+        assertNotNull(block);
+        assertEquals(1, block.size());
+    }
 
     @Test
     void transformSimplifiesTornaryWithEqualBranches() {
@@ -161,36 +243,6 @@ class ControlFlowSimplifierTest {
         assertDoesNotThrow(() -> simplifier.transform(block));
     }
 
-    // ========== Variable Inlining Tests ==========
-
-    @Test
-    void transformInlinesSingleUseBooleans() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.BOOLEAN,
-            "flag",
-            LiteralExpr.ofBoolean(true)
-        );
-
-        Expression condition = new UnaryExpr(
-            UnaryOperator.NOT,
-            new VarRefExpr("flag", PrimitiveSourceType.BOOLEAN),
-            PrimitiveSourceType.BOOLEAN
-        );
-
-        IfStmt ifStmt = new IfStmt(condition, new ReturnStmt());
-
-        List<Statement> stmts = new ArrayList<>();
-        stmts.add(decl);
-        stmts.add(ifStmt);
-        BlockStmt block = new BlockStmt(stmts);
-
-        boolean changed = simplifier.transform(block);
-
-        assertNotNull(block);
-    }
-
-    // ========== Sequential Guard Merging Tests ==========
-
     @Test
     void transformMergesSequentialGuards() {
         Expression cond1 = new VarRefExpr("a", PrimitiveSourceType.BOOLEAN);
@@ -227,8 +279,6 @@ class ControlFlowSimplifierTest {
         assertNotNull(block);
     }
 
-    // ========== Redundant Statement Removal Tests ==========
-
     @Test
     void transformRemovesSelfAssignments() {
         Expression selfAssign = new BinaryExpr(
@@ -258,8 +308,6 @@ class ControlFlowSimplifierTest {
 
         assertNotNull(block);
     }
-
-    // ========== If-Else to Assignment Tests ==========
 
     @Test
     void transformConvertsIfElseToAssignment() {
@@ -294,8 +342,6 @@ class ControlFlowSimplifierTest {
         assertNotNull(block);
     }
 
-    // ========== Declaration Movement Tests ==========
-
     @Test
     void transformMovesDeclarationsToFirstUse() {
         VarDeclStmt decl = new VarDeclStmt(
@@ -320,8 +366,6 @@ class ControlFlowSimplifierTest {
 
         assertNotNull(block);
     }
-
-    // ========== Nested Negated Guard Tests ==========
 
     @Test
     void transformFlattensNestedNegatedGuards() {
@@ -349,8 +393,6 @@ class ControlFlowSimplifierTest {
 
         assertNotNull(block);
     }
-
-    // ========== Complex Transformation Tests ==========
 
     @Test
     void transformHandlesMultipleOptimizations() {
@@ -411,8 +453,6 @@ class ControlFlowSimplifierTest {
         assertNotNull(block.getStatements());
         assertFalse(block.isEmpty());
     }
-
-    // ========== Edge Case Tests ==========
 
     @Test
     void transformHandlesNestedBlocks() {

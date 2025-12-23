@@ -2372,7 +2372,9 @@ public class StatementRecoverer {
         Set<IRBlock> commonSuccessors = null;
         for (IRBlock target : allTargets) {
             Set<IRBlock> reachable = new HashSet<>();
-            collectReachableBlocks(target, reachable, allTargets);
+            Set<IRBlock> otherTargets = new HashSet<>(allTargets);
+            otherTargets.remove(target);
+            collectReachableBlocks(target, reachable, otherTargets);
 
             if (commonSuccessors == null) {
                 commonSuccessors = reachable;

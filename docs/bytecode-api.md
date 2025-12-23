@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [Class Files](class-files.md) | [Visitors ->](visitors.md)
+[<- Back to README](../README.md) | [Class Files](class-files.md) | [Generation API](generation-api.md) | [Visitors ->](visitors.md)
 
 # Bytecode API
 
@@ -315,4 +315,4 @@ classFile.computeFrames("methodName", "(II)I");
 
 ---
 
-[<- Back to README](../README.md) | [Class Files](class-files.md) | [Visitors ->](visitors.md)
+[<- Back to README](../README.md) | [Class Files](class-files.md) | [Generation API](generation-api.md) | [Visitors ->](visitors.md)

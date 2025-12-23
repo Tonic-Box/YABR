@@ -5,6 +5,7 @@ A Java bytecode manipulation library with SSA-form intermediate representation f
 ## Features
 
 - **Class file parsing** - Read and write Java `.class` files
+- **Bytecode generation** - Fluent builder API for creating classes from scratch
 - **Bytecode manipulation** - High-level and low-level APIs for modifying bytecode
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
@@ -42,6 +43,7 @@ byte[] bytes = newClass.write();
 | [Architecture](docs/architecture.md) | System overview and design |
 | [Class Files](docs/class-files.md) | ClassPool, ClassFile, ConstPool |
 | [Bytecode API](docs/bytecode-api.md) | Bytecode manipulation |
+| [Generation API](docs/generation-api.md) | Fluent bytecode generation from scratch |
 | [Visitors](docs/visitors.md) | Traversal patterns |
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
@@ -66,6 +68,28 @@ Runnable examples are in [`src/main/java/com/tonic/demo/`](src/main/java/com/ton
 - `DependencyDemo.java` - Analyze class dependencies
 - `TypeInferenceDemo.java` - Type and nullability inference
 - `PatternSearchDemo.java` - Search for code patterns
+
+### Bytecode Generation
+
+```java
+import com.tonic.builder.ClassBuilder;
+import com.tonic.type.AccessFlags;
+
+byte[] bytes = ClassBuilder.create("com/example/Calculator")
+    .version(AccessFlags.V11, 0)
+    .access(AccessFlags.ACC_PUBLIC)
+
+    .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "add", "(II)I")
+    .code()
+        .iload(0)
+        .iload(1)
+        .iadd()
+        .ireturn()
+    .end()
+    .end()
+
+    .toByteArray();
+```
 
 ## SSA Pipeline
 

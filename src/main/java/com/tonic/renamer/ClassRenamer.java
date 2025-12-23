@@ -61,6 +61,9 @@ public class ClassRenamer {
 
         // Fifth pass: Update generic signatures
         updateSignatures(cf);
+
+        // Sixth pass: Refresh cached descriptor values on member entries
+        refreshMemberDescriptors(cf);
     }
 
     /**
@@ -99,6 +102,35 @@ public class ClassRenamer {
                     if (!remapped.equals(value)) {
                         utf8.setValue(remapped);
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Refreshes the cached descriptor values on all member entries.
+     * After updating Utf8 items in the constant pool, the cached desc fields
+     * on FieldEntry and MethodEntry need to be refreshed.
+     */
+    private void refreshMemberDescriptors(ClassFile cf) {
+        ConstPool cp = cf.getConstPool();
+
+        for (FieldEntry field : cf.getFields()) {
+            int descIndex = field.getDescIndex();
+            if (descIndex > 0 && descIndex < cp.getItems().size()) {
+                Item<?> item = cp.getItem(descIndex);
+                if (item instanceof Utf8Item) {
+                    field.setDesc(((Utf8Item) item).getValue());
+                }
+            }
+        }
+
+        for (MethodEntry method : cf.getMethods()) {
+            int descIndex = method.getDescIndex();
+            if (descIndex > 0 && descIndex < cp.getItems().size()) {
+                Item<?> item = cp.getItem(descIndex);
+                if (item instanceof Utf8Item) {
+                    method.setDesc(((Utf8Item) item).getValue());
                 }
             }
         }

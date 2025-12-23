@@ -9,6 +9,7 @@ import com.tonic.testutil.TestUtils;
 import com.tonic.utill.AccessBuilder;
 import com.tonic.utill.ReturnType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -1388,6 +1389,499 @@ class InstrumenterTest {
                         .register()
                     .apply();
         });
+    }
+
+    // ========== HookParameter Enum Tests ==========
+
+    @Nested
+    class HookParameterTests {
+
+        @Test
+        void thisParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.THIS;
+            assertNotNull(param);
+            assertEquals("THIS", param.name());
+        }
+
+        @Test
+        void methodNameParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.METHOD_NAME;
+            assertNotNull(param);
+            assertEquals("METHOD_NAME", param.name());
+        }
+
+        @Test
+        void methodDescriptorParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.METHOD_DESCRIPTOR;
+            assertNotNull(param);
+            assertEquals("METHOD_DESCRIPTOR", param.name());
+        }
+
+        @Test
+        void classNameParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CLASS_NAME;
+            assertNotNull(param);
+            assertEquals("CLASS_NAME", param.name());
+        }
+
+        @Test
+        void allParametersParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.ALL_PARAMETERS;
+            assertNotNull(param);
+            assertEquals("ALL_PARAMETERS", param.name());
+        }
+
+        @Test
+        void parameterParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.PARAMETER;
+            assertNotNull(param);
+            assertEquals("PARAMETER", param.name());
+        }
+
+        @Test
+        void returnValueParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.RETURN_VALUE;
+            assertNotNull(param);
+            assertEquals("RETURN_VALUE", param.name());
+        }
+
+        @Test
+        void fieldOwnerParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.FIELD_OWNER;
+            assertNotNull(param);
+            assertEquals("FIELD_OWNER", param.name());
+        }
+
+        @Test
+        void fieldNameParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.FIELD_NAME;
+            assertNotNull(param);
+            assertEquals("FIELD_NAME", param.name());
+        }
+
+        @Test
+        void newValueParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.NEW_VALUE;
+            assertNotNull(param);
+            assertEquals("NEW_VALUE", param.name());
+        }
+
+        @Test
+        void readValueParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.READ_VALUE;
+            assertNotNull(param);
+            assertEquals("READ_VALUE", param.name());
+        }
+
+        @Test
+        void arrayRefParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.ARRAY_REF;
+            assertNotNull(param);
+            assertEquals("ARRAY_REF", param.name());
+        }
+
+        @Test
+        void arrayIndexParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.ARRAY_INDEX;
+            assertNotNull(param);
+            assertEquals("ARRAY_INDEX", param.name());
+        }
+
+        @Test
+        void exceptionParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.EXCEPTION;
+            assertNotNull(param);
+            assertEquals("EXCEPTION", param.name());
+        }
+
+        @Test
+        void callReceiverParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CALL_RECEIVER;
+            assertNotNull(param);
+            assertEquals("CALL_RECEIVER", param.name());
+        }
+
+        @Test
+        void callArgumentsParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CALL_ARGUMENTS;
+            assertNotNull(param);
+            assertEquals("CALL_ARGUMENTS", param.name());
+        }
+
+        @Test
+        void callResultParameterExists() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CALL_RESULT;
+            assertNotNull(param);
+            assertEquals("CALL_RESULT", param.name());
+        }
+
+        @Test
+        void allParameterTypesAccessible() {
+            HookDescriptor.HookParameter[] params = HookDescriptor.HookParameter.values();
+            assertEquals(17, params.length);
+        }
+
+        @Test
+        void valueOfReturnsCorrectParameter() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.valueOf("THIS");
+            assertEquals(HookDescriptor.HookParameter.THIS, param);
+        }
+
+        @Test
+        void valueOfThrowsForInvalidName() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    HookDescriptor.HookParameter.valueOf("INVALID_PARAMETER"));
+        }
+
+        @Test
+        void parameterOrdinalIsConsistent() {
+            HookDescriptor.HookParameter[] params = HookDescriptor.HookParameter.values();
+            for (int i = 0; i < params.length; i++) {
+                assertEquals(i, params[i].ordinal());
+            }
+        }
+
+        @Test
+        void parameterEqualsWorks() {
+            HookDescriptor.HookParameter param1 = HookDescriptor.HookParameter.THIS;
+            HookDescriptor.HookParameter param2 = HookDescriptor.HookParameter.THIS;
+            HookDescriptor.HookParameter param3 = HookDescriptor.HookParameter.METHOD_NAME;
+
+            assertEquals(param1, param2);
+            assertNotEquals(param1, param3);
+        }
+
+        @Test
+        void parameterHashCodeIsConsistent() {
+            HookDescriptor.HookParameter param1 = HookDescriptor.HookParameter.RETURN_VALUE;
+            HookDescriptor.HookParameter param2 = HookDescriptor.HookParameter.RETURN_VALUE;
+
+            assertEquals(param1.hashCode(), param2.hashCode());
+        }
+
+        @Test
+        void canSwitchOnParameterType() {
+            HookDescriptor.HookParameter param = HookDescriptor.HookParameter.EXCEPTION;
+            String result;
+            switch (param) {
+                case THIS:
+                    result = "this";
+                    break;
+                case EXCEPTION:
+                    result = "exception";
+                    break;
+                default:
+                    result = "other";
+                    break;
+            }
+            assertEquals("exception", result);
+        }
+    }
+
+    // ========== Exception Hook Tests ==========
+
+    @Nested
+    class ExceptionHookBuilderTests {
+
+        @Test
+        void exceptionHookBuilderCreates() {
+            Instrumenter.ExceptionHookBuilder builder = Instrumenter.forClass(testClass)
+                    .onException();
+
+            assertNotNull(builder);
+        }
+
+        @Test
+        void exceptionHookWithBasicConfiguration() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookForSpecificExceptionType() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .forExceptionType("java/lang/RuntimeException")
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookWithMethodName() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;Ljava/lang/String;)V")
+                        .withException()
+                        .withMethodName()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookWithClassName() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;Ljava/lang/String;)V")
+                        .withException()
+                        .withClassName()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookWithAllMetadata() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;Ljava/lang/String;Ljava/lang/String;)V")
+                        .withException()
+                        .withMethodName()
+                        .withClassName()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookWithSuppression() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)Z")
+                        .withException()
+                        .canSuppress()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookInClassFilter() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .inClass("com/test/Target")
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookInPackageFilter() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .inPackage("com/test/")
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookWithPriority() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .priority(10)
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookForNullPointerException() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .forExceptionType("java/lang/NullPointerException")
+                        .callStatic("com/test/Hooks", "onNPE", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookForIOException() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .forExceptionType("java/io/IOException")
+                        .callStatic("com/test/Hooks", "onIO", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void multipleExceptionHooks() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .forExceptionType("java/lang/RuntimeException")
+                        .callStatic("com/test/Hooks", "onRuntime", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .onException()
+                        .forExceptionType("java/lang/Exception")
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookWithoutPassingException() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "()V")
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookRegistersWithInstrumenter() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            Instrumenter instrumenter = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register();
+
+            assertNotNull(instrumenter);
+            assertSame(testClass, instrumenter.apply() >= 0 ? testClass : testClass);
+        }
+
+        @Test
+        void exceptionHookBuilderChaining() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            Instrumenter.ExceptionHookBuilder builder = Instrumenter.forClass(testClass)
+                    .onException()
+                        .forExceptionType("java/lang/Exception")
+                        .inClass("com/test/Target")
+                        .inPackage("com/test/")
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;Ljava/lang/String;Ljava/lang/String;)V")
+                        .withException()
+                        .withMethodName()
+                        .withClassName()
+                        .canSuppress()
+                        .priority(5);
+
+            assertNotNull(builder);
+            Instrumenter instrumenter = builder.register();
+            assertNotNull(instrumenter);
+        }
+
+        @Test
+        void exceptionHookInMultipleClasses() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+            addSimpleMethod(hookClass, "hookMethod", "()V");
+
+            int count = Instrumenter.forClasses(testClass, hookClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookWithDifferentPriorities() throws IOException {
+            addSimpleMethod(testClass, "targetMethod", "()V");
+
+            int count = Instrumenter.forClass(testClass)
+                    .onException()
+                        .callStatic("com/test/Hooks", "highPriority", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .priority(1)
+                        .register()
+                    .onException()
+                        .callStatic("com/test/Hooks", "lowPriority", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .priority(100)
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        void exceptionHookCombinedWithOtherHooks() throws IOException {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/CombinedTest")
+                    .publicStaticMethod("test", "()V")
+                        .vreturn()
+                    .endMethod()
+                    .build();
+
+            int count = Instrumenter.forClass(cf)
+                    .onMethodEntry()
+                        .callStatic("com/test/Hooks", "onEntry", "()V")
+                        .register()
+                    .onException()
+                        .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
+                        .withException()
+                        .register()
+                    .onMethodExit()
+                        .callStatic("com/test/Hooks", "onExit", "()V")
+                        .register()
+                    .apply();
+
+            assertTrue(count >= 0);
+        }
     }
 
     // ========== Helper Methods ==========
