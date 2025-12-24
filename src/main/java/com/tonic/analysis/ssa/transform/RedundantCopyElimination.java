@@ -31,7 +31,9 @@ public class RedundantCopyElimination implements IRTransform {
 
         changed |= removeRedundantLoadStore(method);
 
-        changed |= eliminateCopyChains(method);
+        // Note: eliminateCopyChains() is intentionally not called here.
+        // CopyPropagation transform handles copy chain elimination.
+        // Calling it here would duplicate that work.
 
         return changed;
     }

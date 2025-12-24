@@ -1504,25 +1504,6 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchReturn(StackFrame frame, ConcreteStack stack, ReturnInstruction instruction) {
-        switch (instruction.getType()) {
-            case IRETURN:
-                stack.popInt();
-                break;
-            case LRETURN:
-                stack.popLong();
-                break;
-            case FRETURN:
-                stack.popFloat();
-                break;
-            case DRETURN:
-                stack.popDouble();
-                break;
-            case ARETURN:
-                stack.popReference();
-                break;
-            case RETURN:
-                break;
-        }
         return DispatchResult.RETURN;
     }
 

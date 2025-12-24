@@ -17,7 +17,15 @@ import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.constpool.DoubleItem;
+import com.tonic.parser.constpool.FloatItem;
+import com.tonic.parser.constpool.IntegerItem;
+import com.tonic.parser.constpool.Item;
+import com.tonic.parser.constpool.LongItem;
+import com.tonic.parser.constpool.Utf8Item;
+import com.tonic.parser.constpool.StringRefItem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +39,7 @@ public final class BytecodeEngine {
 
     private volatile boolean interrupted;
     private long instructionCount;
+    private ConcreteValue lastReturnValue;
 
     public BytecodeEngine(BytecodeContext context) {
         if (context == null) {
@@ -80,7 +89,7 @@ public final class BytecodeEngine {
                 notifyBeforeInstruction(current, instr);
 
                 try {
-                    EngineDispatchContext dispatchContext = new EngineDispatchContext();
+                    EngineDispatchContext dispatchContext = new EngineDispatchContext(current);
                     DispatchResult result = dispatcher.dispatch(current, dispatchContext);
                     instructionCount++;
 
@@ -102,9 +111,8 @@ public final class BytecodeEngine {
                 return BytecodeResult.interrupted().withStatistics(instructionCount, elapsed);
             }
 
-            ConcreteValue result = callStack.isEmpty() ? ConcreteValue.nullRef() : ConcreteValue.nullRef();
             long elapsed = System.nanoTime() - startTime;
-            return BytecodeResult.completed(result).withStatistics(instructionCount, elapsed);
+            return BytecodeResult.completed(lastReturnValue).withStatistics(instructionCount, elapsed);
 
         } catch (StackOverflowError e) {
             List<String> trace = buildStackTrace();
@@ -133,7 +141,7 @@ public final class BytecodeEngine {
 
         notifyBeforeInstruction(current, instr);
 
-        EngineDispatchContext dispatchContext = new EngineDispatchContext();
+        EngineDispatchContext dispatchContext = new EngineDispatchContext(current);
         DispatchResult result = dispatcher.dispatch(current, dispatchContext);
         instructionCount++;
 
@@ -158,6 +166,7 @@ public final class BytecodeEngine {
         callStack.clear();
         instructionCount = 0;
         interrupted = false;
+        lastReturnValue = ConcreteValue.nullRef();
     }
 
     public StackFrame getCurrentFrame() {
@@ -176,6 +185,10 @@ public final class BytecodeEngine {
         StackFrame completed = callStack.pop();
 
         if (callStack.isEmpty()) {
+            lastReturnValue = completed.getReturnValue();
+            if (lastReturnValue == null) {
+                lastReturnValue = ConcreteValue.nullRef();
+            }
             return;
         }
 
@@ -203,7 +216,7 @@ public final class BytecodeEngine {
 
             case RETURN:
                 ConcreteValue returnValue = frame.getStack().isEmpty() ?
-                    ConcreteValue.nullRef() : frame.getStack().peek();
+                    ConcreteValue.nullRef() : frame.getStack().pop();
                 frame.complete(returnValue);
                 break;
 
@@ -519,6 +532,7 @@ public final class BytecodeEngine {
     }
 
     private class EngineDispatchContext implements DispatchContext {
+        private final StackFrame frame;
         private MethodInfo pendingInvoke;
         private FieldInfo pendingFieldAccess;
         private String pendingNewClass;
@@ -529,28 +543,62 @@ public final class BytecodeEngine {
         private MethodTypeInfo pendingMethodType;
         private ConstantDynamicInfo pendingConstantDynamic;
 
+        EngineDispatchContext(StackFrame frame) {
+            this.frame = frame;
+        }
+
+        private ConstPool getConstPool() {
+            return frame.getMethod().getClassFile().getConstPool();
+        }
+
         @Override
         public int resolveIntConstant(int index) {
+            Item<?> item = getConstPool().getItem(index);
+            if (item instanceof IntegerItem) {
+                return ((IntegerItem) item).getValue();
+            }
             return 0;
         }
 
         @Override
         public long resolveLongConstant(int index) {
+            Item<?> item = getConstPool().getItem(index);
+            if (item instanceof LongItem) {
+                return ((LongItem) item).getValue();
+            }
             return 0L;
         }
 
         @Override
         public float resolveFloatConstant(int index) {
+            Item<?> item = getConstPool().getItem(index);
+            if (item instanceof FloatItem) {
+                return ((FloatItem) item).getValue();
+            }
             return 0.0f;
         }
 
         @Override
         public double resolveDoubleConstant(int index) {
+            Item<?> item = getConstPool().getItem(index);
+            if (item instanceof DoubleItem) {
+                return ((DoubleItem) item).getValue();
+            }
             return 0.0;
         }
 
         @Override
         public String resolveStringConstant(int index) {
+            Item<?> item = getConstPool().getItem(index);
+            if (item instanceof StringRefItem) {
+                int stringIndex = ((StringRefItem) item).getValue();
+                Item<?> utf8Item = getConstPool().getItem(stringIndex);
+                if (utf8Item instanceof Utf8Item) {
+                    return ((Utf8Item) utf8Item).getValue();
+                }
+            } else if (item instanceof Utf8Item) {
+                return ((Utf8Item) item).getValue();
+            }
             return "";
         }
 

@@ -256,12 +256,20 @@ public class BytecodeBuilder {
         private final List<SizedOp> sizedOps = new ArrayList<>();
         private final List<ExceptionRegion> exceptionRegions = new ArrayList<>();
         private boolean usesLabels = false;
+        private int maxLocalUsed = -1;
 
         private MethodBuilder(BytecodeBuilder parent, int access, String name, String descriptor) {
             this.parent = parent;
             this.access = access;
             this.name = name;
             this.descriptor = descriptor;
+        }
+
+        private void trackLocal(int index, boolean isWide) {
+            int slots = isWide ? index + 2 : index + 1;
+            if (slots > maxLocalUsed) {
+                maxLocalUsed = slots;
+            }
         }
 
         /**
@@ -535,6 +543,7 @@ public class BytecodeBuilder {
          * Increment local variable by constant.
          */
         public MethodBuilder iinc(int varIndex, int increment) {
+            trackLocal(varIndex, false);
             addOp((bc, cw) -> bc.addIInc(varIndex, increment), 3);
             return this;
         }
@@ -545,26 +554,31 @@ public class BytecodeBuilder {
         // not the 1-byte specialized opcodes (xload_0, xload_1, etc.). So size is always 2.
 
         public MethodBuilder iload(int index) {
+            trackLocal(index, false);
             addOp((bc, cw) -> bc.addILoad(index), 2);
             return this;
         }
 
         public MethodBuilder lload(int index) {
+            trackLocal(index, true);
             addOp((bc, cw) -> bc.addLLoad(index), 2);
             return this;
         }
 
         public MethodBuilder fload(int index) {
+            trackLocal(index, false);
             addOp((bc, cw) -> bc.addFLoad(index), 2);
             return this;
         }
 
         public MethodBuilder dload(int index) {
+            trackLocal(index, true);
             addOp((bc, cw) -> bc.addDLoad(index), 2);
             return this;
         }
 
         public MethodBuilder aload(int index) {
+            trackLocal(index, false);
             addOp((bc, cw) -> bc.addALoad(index), 2);
             return this;
         }
@@ -572,26 +586,31 @@ public class BytecodeBuilder {
         // ========== Store Instructions ==========
 
         public MethodBuilder istore(int index) {
+            trackLocal(index, false);
             addOp((bc, cw) -> bc.addIStore(index), 2);
             return this;
         }
 
         public MethodBuilder lstore(int index) {
+            trackLocal(index, true);
             addOp((bc, cw) -> cw.insertLStore(cw.getBytecodeSize(), index), 2);
             return this;
         }
 
         public MethodBuilder fstore(int index) {
+            trackLocal(index, false);
             addOp((bc, cw) -> cw.insertFStore(cw.getBytecodeSize(), index), 2);
             return this;
         }
 
         public MethodBuilder dstore(int index) {
+            trackLocal(index, true);
             addOp((bc, cw) -> cw.insertDStore(cw.getBytecodeSize(), index), 2);
             return this;
         }
 
         public MethodBuilder astore(int index) {
+            trackLocal(index, false);
             addOp((bc, cw) -> bc.addAStore(index), 2);
             return this;
         }
@@ -876,6 +895,66 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder laload() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.LALoadInstruction(0x2F, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder lastore() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.LAStoreInstruction(0x50, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder faload() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.FALoadInstruction(0x30, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder fastore() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.FAStoreInstruction(0x51, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder daload() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.DALoadInstruction(0x31, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dastore() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.DAStoreInstruction(0x52, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder baload() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.BALOADInstruction(0x33, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder bastore() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.BAStoreInstruction(0x54, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder caload() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.CALoadInstruction(0x34, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder castore() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.CAStoreInstruction(0x55, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder saload() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.SALoadInstruction(0x35, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder sastore() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.SAStoreInstruction(0x56, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
         // ========== Type Instructions ==========
 
         public MethodBuilder instanceof_(String type) {
@@ -1050,6 +1129,13 @@ public class BytecodeBuilder {
                         new com.tonic.parser.attribute.table.ExceptionTableEntry(
                             startPc, endPc, handlerPc, catchType);
                     codeAttr.getExceptionTable().add(entry);
+                }
+            }
+
+            if (maxLocalUsed > 0) {
+                com.tonic.parser.attribute.CodeAttribute codeAttr = method.getCodeAttribute();
+                if (codeAttr != null && codeAttr.getMaxLocals() < maxLocalUsed) {
+                    codeAttr.setMaxLocals(maxLocalUsed);
                 }
             }
 

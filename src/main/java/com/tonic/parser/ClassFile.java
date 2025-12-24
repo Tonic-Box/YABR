@@ -757,10 +757,11 @@ public class ClassFile extends AbstractParser {
     }
 
     /**
-     * Counts the number of parameters in a method descriptor.
+     * Counts the number of local variable slots required for method parameters.
+     * Long (J) and double (D) types require 2 slots each.
      *
      * @param descriptor method descriptor string
-     * @return parameter count
+     * @return slot count for parameters
      */
     private int countParametersFromDescriptor(String descriptor) {
         if (descriptor == null || !descriptor.startsWith("(")) return 0;
@@ -778,8 +779,11 @@ public class ClassFile extends AbstractParser {
                 count++;
             } else if (c == '[') {
                 i++;
+            } else if (c == 'J' || c == 'D') {
+                count += 2;
+                i++;
             } else {
-                if (c != '[') count++;
+                count++;
                 i++;
             }
         }
