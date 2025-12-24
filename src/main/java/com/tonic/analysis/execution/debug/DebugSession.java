@@ -237,7 +237,10 @@ public final class DebugSession {
         try {
             while (true) {
                 if (engine.getCallStack().isEmpty()) {
-                    ConcreteValue returnValue = ConcreteValue.nullRef();
+                    ConcreteValue returnValue = engine.getLastReturnValue();
+                    if (returnValue == null) {
+                        returnValue = ConcreteValue.nullRef();
+                    }
                     result = BytecodeResult.completed(returnValue);
                     changeState(DebugSessionState.STOPPED);
                     notifySessionStop(result);
@@ -248,7 +251,11 @@ public final class DebugSession {
 
                 if (currentFrame.isCompleted()) {
                     if (!engine.step()) {
-                        result = BytecodeResult.completed(ConcreteValue.nullRef());
+                        ConcreteValue returnValue = engine.getLastReturnValue();
+                        if (returnValue == null) {
+                            returnValue = ConcreteValue.nullRef();
+                        }
+                        result = BytecodeResult.completed(returnValue);
                         changeState(DebugSessionState.STOPPED);
                         notifySessionStop(result);
                         return buildCurrentState();
@@ -277,7 +284,11 @@ public final class DebugSession {
                 instructionExecutedThisStep = true;
 
                 if (!stepResult) {
-                    result = BytecodeResult.completed(ConcreteValue.nullRef());
+                    ConcreteValue returnValue = engine.getLastReturnValue();
+                    if (returnValue == null) {
+                        returnValue = ConcreteValue.nullRef();
+                    }
+                    result = BytecodeResult.completed(returnValue);
                     changeState(DebugSessionState.STOPPED);
                     notifySessionStop(result);
                     return buildCurrentState();

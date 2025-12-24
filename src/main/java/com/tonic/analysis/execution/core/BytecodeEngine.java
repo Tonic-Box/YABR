@@ -193,6 +193,10 @@ public final class BytecodeEngine {
         return instructionCount;
     }
 
+    public ConcreteValue getLastReturnValue() {
+        return lastReturnValue;
+    }
+
     private void handleFrameCompletion() {
         StackFrame completed = callStack.pop();
 
