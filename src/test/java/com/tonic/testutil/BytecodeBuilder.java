@@ -324,6 +324,15 @@ public class BytecodeBuilder {
         }
 
         /**
+         * Wide unconditional jump to label (goto_w).
+         */
+        public MethodBuilder goto_w(Label target) {
+            usesLabels = true;
+            sizedOps.add(new BranchOp(0xC8, target, 5));
+            return this;
+        }
+
+        /**
          * Branch if int on stack equals zero.
          */
         public MethodBuilder ifeq(Label target) {
@@ -559,11 +568,21 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder iload_0() { return iload(0); }
+        public MethodBuilder iload_1() { return iload(1); }
+        public MethodBuilder iload_2() { return iload(2); }
+        public MethodBuilder iload_3() { return iload(3); }
+
         public MethodBuilder lload(int index) {
             trackLocal(index, true);
             addOp((bc, cw) -> bc.addLLoad(index), 2);
             return this;
         }
+
+        public MethodBuilder lload_0() { return lload(0); }
+        public MethodBuilder lload_1() { return lload(1); }
+        public MethodBuilder lload_2() { return lload(2); }
+        public MethodBuilder lload_3() { return lload(3); }
 
         public MethodBuilder fload(int index) {
             trackLocal(index, false);
@@ -571,17 +590,32 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder fload_0() { return fload(0); }
+        public MethodBuilder fload_1() { return fload(1); }
+        public MethodBuilder fload_2() { return fload(2); }
+        public MethodBuilder fload_3() { return fload(3); }
+
         public MethodBuilder dload(int index) {
             trackLocal(index, true);
             addOp((bc, cw) -> bc.addDLoad(index), 2);
             return this;
         }
 
+        public MethodBuilder dload_0() { return dload(0); }
+        public MethodBuilder dload_1() { return dload(1); }
+        public MethodBuilder dload_2() { return dload(2); }
+        public MethodBuilder dload_3() { return dload(3); }
+
         public MethodBuilder aload(int index) {
             trackLocal(index, false);
             addOp((bc, cw) -> bc.addALoad(index), 2);
             return this;
         }
+
+        public MethodBuilder aload_0() { return aload(0); }
+        public MethodBuilder aload_1() { return aload(1); }
+        public MethodBuilder aload_2() { return aload(2); }
+        public MethodBuilder aload_3() { return aload(3); }
 
         // ========== Store Instructions ==========
 
@@ -591,11 +625,21 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder istore_0() { return istore(0); }
+        public MethodBuilder istore_1() { return istore(1); }
+        public MethodBuilder istore_2() { return istore(2); }
+        public MethodBuilder istore_3() { return istore(3); }
+
         public MethodBuilder lstore(int index) {
             trackLocal(index, true);
             addOp((bc, cw) -> cw.insertLStore(cw.getBytecodeSize(), index), 2);
             return this;
         }
+
+        public MethodBuilder lstore_0() { return lstore(0); }
+        public MethodBuilder lstore_1() { return lstore(1); }
+        public MethodBuilder lstore_2() { return lstore(2); }
+        public MethodBuilder lstore_3() { return lstore(3); }
 
         public MethodBuilder fstore(int index) {
             trackLocal(index, false);
@@ -603,17 +647,32 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder fstore_0() { return fstore(0); }
+        public MethodBuilder fstore_1() { return fstore(1); }
+        public MethodBuilder fstore_2() { return fstore(2); }
+        public MethodBuilder fstore_3() { return fstore(3); }
+
         public MethodBuilder dstore(int index) {
             trackLocal(index, true);
             addOp((bc, cw) -> cw.insertDStore(cw.getBytecodeSize(), index), 2);
             return this;
         }
 
+        public MethodBuilder dstore_0() { return dstore(0); }
+        public MethodBuilder dstore_1() { return dstore(1); }
+        public MethodBuilder dstore_2() { return dstore(2); }
+        public MethodBuilder dstore_3() { return dstore(3); }
+
         public MethodBuilder astore(int index) {
             trackLocal(index, false);
             addOp((bc, cw) -> bc.addAStore(index), 2);
             return this;
         }
+
+        public MethodBuilder astore_0() { return astore(0); }
+        public MethodBuilder astore_1() { return astore(1); }
+        public MethodBuilder astore_2() { return astore(2); }
+        public MethodBuilder astore_3() { return astore(3); }
 
         // ========== Constant Instructions ==========
 
@@ -658,6 +717,89 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder ldc_int(int value) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                int index = constPool.getIndexOf(constPool.findOrAddInteger(value));
+                cw.appendInstruction(new LdcInstruction(constPool, 0x12, cw.getBytecodeSize(), index));
+            }, 2);
+            return this;
+        }
+
+        public MethodBuilder ldc_float(float value) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                int index = constPool.getIndexOf(constPool.findOrAddFloat(value));
+                cw.appendInstruction(new LdcInstruction(constPool, 0x12, cw.getBytecodeSize(), index));
+            }, 2);
+            return this;
+        }
+
+        public MethodBuilder ldc_class(String className) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(className);
+                int index = constPool.getIndexOf(classRef);
+                cw.appendInstruction(new LdcInstruction(constPool, 0x12, cw.getBytecodeSize(), index));
+            }, 2);
+            return this;
+        }
+
+        public MethodBuilder ldcw_int(int value) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                int index = constPool.getIndexOf(constPool.findOrAddInteger(value));
+                cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), index));
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder ldcw_float(float value) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                int index = constPool.getIndexOf(constPool.findOrAddFloat(value));
+                cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), index));
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder ldcw_string(String value) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                int stringIndex = constPool.getIndexOf(constPool.findOrAddString(value));
+                cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), stringIndex));
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder ldcw_class(String className) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(className);
+                int index = constPool.getIndexOf(classRef);
+                cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), index));
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder ldc2w_long(long value) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                int index = constPool.getIndexOf(constPool.findOrAddLong(value));
+                cw.appendInstruction(new Ldc2WInstruction(constPool, 0x14, cw.getBytecodeSize(), index));
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder ldc2w_double(double value) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                int index = constPool.getIndexOf(constPool.findOrAddDouble(value));
+                cw.appendInstruction(new Ldc2WInstruction(constPool, 0x14, cw.getBytecodeSize(), index));
+            }, 3);
+            return this;
+        }
+
         // ========== Arithmetic Instructions ==========
 
         public MethodBuilder iadd() {
@@ -690,6 +832,21 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder lneg() {
+            addOp((bc, cw) -> cw.appendInstruction(new LNegInstruction(0x75, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder fneg() {
+            addOp((bc, cw) -> cw.appendInstruction(new FNegInstruction(0x76, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dneg() {
+            addOp((bc, cw) -> cw.appendInstruction(new DNegInstruction(0x77, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
         public MethodBuilder ladd() {
             addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.LADD.getOpcode(), cw.getBytecodeSize())), 1);
             return this;
@@ -707,6 +864,61 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldiv() {
             addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.LDIV.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder lrem() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.LREM.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder fadd() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.FADD.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder fsub() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.FSUB.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder fmul() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.FMUL.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder fdiv() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.FDIV.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder frem() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.FREM.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dadd() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.DADD.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dsub() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.DSUB.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dmul() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.DMUL.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder ddiv() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.DDIV.getOpcode(), cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder drem() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticInstruction(ArithmeticType.DREM.getOpcode(), cw.getBytecodeSize())), 1);
             return this;
         }
 
@@ -742,6 +954,36 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder land() {
+            addOp((bc, cw) -> cw.appendInstruction(new LandInstruction(0x7F, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder lor() {
+            addOp((bc, cw) -> cw.appendInstruction(new LorInstruction(0x81, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder lxor() {
+            addOp((bc, cw) -> cw.appendInstruction(new LXorInstruction(0x83, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder lshl() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x79, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder lshr() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x7B, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder lushr() {
+            addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x7D, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
         // ========== Conversion Instructions ==========
 
         public MethodBuilder i2l() {
@@ -764,6 +1006,46 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder l2f() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x89, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder l2d() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8A, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder f2i() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8B, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder f2l() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8C, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder f2d() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8D, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder d2i() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8E, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder d2l() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8F, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder d2f() {
+            addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x90, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
         public MethodBuilder i2b() {
             addOp((bc, cw) -> cw.appendInstruction(new NarrowingConversionInstruction(0x91, cw.getBytecodeSize())), 1);
             return this;
@@ -779,6 +1061,13 @@ public class BytecodeBuilder {
             return this;
         }
 
+        // ========== Miscellaneous Instructions ==========
+
+        public MethodBuilder nop() {
+            addOp((bc, cw) -> cw.appendInstruction(new NopInstruction(0x00, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
         // ========== Stack Instructions ==========
 
         public MethodBuilder dup() {
@@ -786,8 +1075,28 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder dup_x1() {
+            addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5A, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dup_x2() {
+            addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5B, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
         public MethodBuilder dup2() {
             addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5C, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dup2_x1() {
+            addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5D, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder dup2_x2() {
+            addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5E, cw.getBytecodeSize())), 1);
             return this;
         }
 
@@ -842,6 +1151,20 @@ public class BytecodeBuilder {
 
         public MethodBuilder getstatic(String owner, String name, String desc) {
             addOp((bc, cw) -> bc.addGetStatic(owner, name, desc), 3);
+            return this;
+        }
+
+        public MethodBuilder putstatic(String owner, String name, String desc) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(name);
+                com.tonic.parser.constpool.Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(desc);
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(owner);
+                com.tonic.parser.constpool.NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
+                com.tonic.parser.constpool.FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
+                int fieldRefIndex = constPool.getIndexOf(fieldRef);
+                bc.addPutStatic(fieldRefIndex);
+            }, 3);
             return this;
         }
 
@@ -955,6 +1278,56 @@ public class BytecodeBuilder {
             return this;
         }
 
+        public MethodBuilder aaload() {
+            addOp((bc, cw) -> cw.appendInstruction(new AALoadInstruction(0x32, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder aastore() {
+            addOp((bc, cw) -> cw.appendInstruction(new AAStoreInstruction(0x53, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder anewarray(String type) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                int classRefIndex = constPool.getIndexOf(classRef);
+                cw.appendInstruction(new ANewArrayInstruction(constPool, 0xBD, cw.getBytecodeSize(), classRefIndex, 0));
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder new_(String type) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                int classRefIndex = constPool.getIndexOf(classRef);
+                cw.appendInstruction(new NewInstruction(constPool, 0xBB, cw.getBytecodeSize(), classRefIndex));
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder multianewarray(String type, int dimensions) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                int classRefIndex = constPool.getIndexOf(classRef);
+                cw.appendInstruction(new MultiANewArrayInstruction(constPool, 0xC5, cw.getBytecodeSize(), classRefIndex, dimensions));
+            }, 4);
+            return this;
+        }
+
+        public MethodBuilder monitorenter() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.MonitorEnterInstruction(0xC2, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
+        public MethodBuilder monitorexit() {
+            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.MonitorExitInstruction(0xC3, cw.getBytecodeSize())), 1);
+            return this;
+        }
+
         // ========== Type Instructions ==========
 
         public MethodBuilder instanceof_(String type) {
@@ -986,6 +1359,29 @@ public class BytecodeBuilder {
 
         public MethodBuilder invokestatic(String owner, String name, String desc) {
             addOp((bc, cw) -> bc.addInvokeStatic(owner, name, desc), 3);
+            return this;
+        }
+
+        public MethodBuilder invokespecial(String owner, String name, String desc) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(owner);
+                com.tonic.parser.constpool.NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(name, desc);
+                com.tonic.parser.constpool.MethodRefItem methodRef = constPool.findOrAddMethodRef(
+                    constPool.getIndexOf(classRef), constPool.getIndexOf(nameAndType));
+                int methodRefIndex = constPool.getIndexOf(methodRef);
+                bc.addInvokeSpecial(methodRefIndex);
+            }, 3);
+            return this;
+        }
+
+        public MethodBuilder invokeinterface(String owner, String name, String desc, int count) {
+            addOp((bc, cw) -> {
+                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                com.tonic.parser.constpool.InterfaceRefItem interfaceRef = constPool.findOrAddInterfaceRef(owner, name, desc);
+                int interfaceRefIndex = constPool.getIndexOf(interfaceRef);
+                bc.addInvokeInterface(interfaceRefIndex, count);
+            }, 5);
             return this;
         }
 

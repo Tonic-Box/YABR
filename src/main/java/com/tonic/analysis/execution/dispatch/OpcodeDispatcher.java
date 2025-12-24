@@ -9,6 +9,7 @@ import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.*;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.Opcode;
 
 public final class OpcodeDispatcher {
 
@@ -1464,7 +1465,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchGotoW(StackFrame frame, DispatchContext context, GotoInstruction instruction) {
-        int target = instruction.getOffset() + instruction.getBranchOffset();
+        int target = instruction.getOffset() + instruction.getBranchOffsetWide();
         context.setBranchTarget(target);
         return DispatchResult.BRANCH;
     }
@@ -1673,6 +1674,60 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchWide(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, DispatchContext context, WideInstruction instruction) {
+        Opcode op = instruction.getModifiedOpcode();
+        int varIndex = instruction.getVarIndex();
+
+        switch (op) {
+            case ILOAD:
+                stack.pushInt(locals.getInt(varIndex));
+                break;
+            case LLOAD:
+                stack.pushLong(locals.getLong(varIndex));
+                break;
+            case FLOAD:
+                stack.pushFloat(locals.getFloat(varIndex));
+                break;
+            case DLOAD:
+                stack.pushDouble(locals.getDouble(varIndex));
+                break;
+            case ALOAD:
+                ObjectInstance ref = locals.getReference(varIndex);
+                if (ref == null) {
+                    stack.pushNull();
+                } else {
+                    stack.pushReference(ref);
+                }
+                break;
+            case ISTORE:
+                locals.setInt(varIndex, stack.popInt());
+                break;
+            case LSTORE:
+                locals.setLong(varIndex, stack.popLong());
+                break;
+            case FSTORE:
+                locals.setFloat(varIndex, stack.popFloat());
+                break;
+            case DSTORE:
+                locals.setDouble(varIndex, stack.popDouble());
+                break;
+            case ASTORE:
+                ObjectInstance val = stack.popReference();
+                if (val == null) {
+                    locals.setNull(varIndex);
+                } else {
+                    locals.setReference(varIndex, val);
+                }
+                break;
+            case IINC:
+                int current = locals.getInt(varIndex);
+                locals.setInt(varIndex, current + instruction.getConstValue());
+                break;
+            case RET:
+                throw new UnsupportedOperationException("RET instruction is not supported (legacy)");
+            default:
+                throw new IllegalStateException("Invalid wide-modified opcode: " + op);
+        }
+
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }

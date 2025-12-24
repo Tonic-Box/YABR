@@ -80,11 +80,18 @@ public class WideInstruction extends Instruction {
             case FLOAD:
             case ALOAD:
                 return 1;
+            case LLOAD:
+            case DLOAD:
+                return 2;
             case ISTORE:
             case FSTORE:
             case ASTORE:
                 return -1;
+            case LSTORE:
+            case DSTORE:
+                return -2;
             case IINC:
+            case RET:
                 return 0;
             default:
                 return 0;

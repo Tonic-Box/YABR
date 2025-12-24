@@ -10,6 +10,7 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.table.LineNumberTableEntry;
+import com.tonic.utill.Logger;
 
 public final class StackFrame {
 
@@ -52,6 +53,10 @@ public final class StackFrame {
         if (pc < 0) {
             throw new IllegalArgumentException("PC cannot be negative: " + pc);
         }
+        int codeLength = code.getBytecodeSize();
+        if (pc > codeLength) {
+            throw new IllegalArgumentException("PC exceeds bytecode length: " + pc + " > " + codeLength);
+        }
         this.pc = pc;
     }
 
@@ -78,6 +83,8 @@ public final class StackFrame {
                 return instr;
             }
         }
+        Logger.error("No instruction found at offset " + offset + " in method " +
+                     method.getOwnerName() + "." + method.getName() + method.getDesc());
         return null;
     }
 

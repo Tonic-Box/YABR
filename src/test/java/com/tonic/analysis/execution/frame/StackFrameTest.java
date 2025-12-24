@@ -82,11 +82,11 @@ class StackFrameTest {
 
             assertEquals(0, frame.getPC());
 
-            frame.setPC(10);
-            assertEquals(10, frame.getPC());
+            frame.advancePC(1);
+            assertEquals(1, frame.getPC());
 
-            frame.advancePC(5);
-            assertEquals(15, frame.getPC());
+            frame.advancePC(2);
+            assertEquals(3, frame.getPC());
 
             frame.setPC(0);
             assertEquals(0, frame.getPC());
@@ -106,6 +106,14 @@ class StackFrameTest {
         if (methodWithCode != null) {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
             assertThrows(IllegalArgumentException.class, () -> frame.advancePC(-5));
+        }
+    }
+
+    @Test
+    void testSetPCExceedingBytecodeLengthThrows() {
+        if (methodWithCode != null) {
+            StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
+            assertThrows(IllegalArgumentException.class, () -> frame.setPC(100000));
         }
     }
 

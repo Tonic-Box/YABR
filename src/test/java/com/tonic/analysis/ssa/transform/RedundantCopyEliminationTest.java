@@ -68,7 +68,7 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void removesCopyChain() {
+    void doesNotRemoveCopyChain() {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -80,6 +80,7 @@ class RedundantCopyEliminationTest {
         SSAValue v3 = new SSAValue(PrimitiveType.INT);
 
         // Chain of copies: v1 = 42, v2 = v1, v3 = v2
+        // Copy chain elimination is handled by CopyPropagation, not this transform
         entry.addInstruction(new ConstantInstruction(v1, new IntConstant(42)));
         entry.addInstruction(new CopyInstruction(v2, v1));
         entry.addInstruction(new CopyInstruction(v3, v2));
@@ -87,7 +88,7 @@ class RedundantCopyEliminationTest {
 
         boolean changed = transform.run(method);
 
-        assertTrue(changed);
+        assertFalse(changed);
     }
 
     @Test
@@ -160,7 +161,8 @@ class RedundantCopyEliminationTest {
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
 
-        // Copy in first block
+        // Copy in first block - this is NOT an identity copy or load-store pair
+        // so RedundantCopyElimination won't optimize it (CopyPropagation handles this)
         entry.addInstruction(new ConstantInstruction(v1, new IntConstant(50)));
         entry.addInstruction(new CopyInstruction(v2, v1));
         entry.addInstruction(new GotoInstruction(b1));
@@ -171,7 +173,7 @@ class RedundantCopyEliminationTest {
 
         boolean changed = transform.run(method);
 
-        assertTrue(changed);
+        assertFalse(changed);
     }
 
     @Test
