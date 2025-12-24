@@ -3,7 +3,10 @@ package com.tonic.analysis.instruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.FieldRefItem;
+import com.tonic.parser.constpool.NameAndTypeRefItem;
+import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -109,6 +112,54 @@ public class GetFieldInstruction extends Instruction {
     public String resolveField() {
         FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
         return field.toString();
+    }
+
+    /**
+     * Returns the field name.
+     *
+     * @return The field name.
+     */
+    public String getFieldName() {
+        FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
+        int nameAndTypeIndex = field.getValue().getNameAndTypeIndex();
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getNameIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Returns the field descriptor.
+     *
+     * @return The field descriptor.
+     */
+    public String getFieldDescriptor() {
+        FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
+        int nameAndTypeIndex = field.getValue().getNameAndTypeIndex();
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getDescriptorIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Returns the owner class name.
+     *
+     * @return The owner class internal name.
+     */
+    public String getOwnerClass() {
+        FieldRefItem field = (FieldRefItem) constPool.getItem(fieldIndex);
+        int classIndex = field.getValue().getClassIndex();
+        ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(classRef.getValue());
+        return utf8.getValue();
+    }
+
+    /**
+     * Returns whether this is a static field access.
+     *
+     * @return true if GETSTATIC, false if GETFIELD.
+     */
+    public boolean isStatic() {
+        return type == FieldType.GETSTATIC;
     }
 
     /**

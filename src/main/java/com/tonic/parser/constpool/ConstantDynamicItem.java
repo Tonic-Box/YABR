@@ -39,6 +39,15 @@ public class ConstantDynamicItem extends Item<ConstantDynamic> {
         this.value = value;
     }
 
+    /**
+     * Sets the constant pool reference for name/descriptor resolution.
+     *
+     * @param constPool the constant pool
+     */
+    public void setConstPool(ConstPool constPool) {
+        this.constPool = constPool;
+    }
+
     @Override
     public void read(ClassFile classFile) {
         this.constPool = classFile.getConstPool();

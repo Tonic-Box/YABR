@@ -1527,37 +1527,71 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchGetField(StackFrame frame, ConcreteStack stack, DispatchContext context, GetFieldInstruction instruction) {
-        FieldInfo fieldInfo = context.resolveField(instruction.getFieldIndex());
+        FieldInfo fieldInfo = new FieldInfo(
+            instruction.getOwnerClass(),
+            instruction.getFieldName(),
+            instruction.getFieldDescriptor(),
+            instruction.isStatic()
+        );
         context.setPendingFieldAccess(fieldInfo);
         return DispatchResult.FIELD_GET;
     }
 
     private DispatchResult dispatchPutField(StackFrame frame, ConcreteStack stack, DispatchContext context, PutFieldInstruction instruction) {
-        FieldInfo fieldInfo = context.resolveField(instruction.getFieldIndex());
+        FieldInfo fieldInfo = new FieldInfo(
+            instruction.getOwnerClass(),
+            instruction.getFieldName(),
+            instruction.getFieldDescriptor(),
+            instruction.isStatic()
+        );
         context.setPendingFieldAccess(fieldInfo);
         return DispatchResult.FIELD_PUT;
     }
 
     private DispatchResult dispatchInvokeVirtual(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeVirtualInstruction instruction) {
-        MethodInfo methodInfo = context.resolveMethod(instruction.getMethodIndex());
+        MethodInfo methodInfo = new MethodInfo(
+            instruction.getOwnerClass(),
+            instruction.getMethodName(),
+            instruction.getMethodDescriptor(),
+            false,
+            false
+        );
         context.setPendingInvoke(methodInfo);
         return DispatchResult.INVOKE;
     }
 
     private DispatchResult dispatchInvokeSpecial(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeSpecialInstruction instruction) {
-        MethodInfo methodInfo = context.resolveMethod(instruction.getMethodIndex());
+        MethodInfo methodInfo = new MethodInfo(
+            instruction.getOwnerClass(),
+            instruction.getMethodName(),
+            instruction.getMethodDescriptor(),
+            false,
+            false
+        );
         context.setPendingInvoke(methodInfo);
         return DispatchResult.INVOKE;
     }
 
     private DispatchResult dispatchInvokeStatic(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeStaticInstruction instruction) {
-        MethodInfo methodInfo = context.resolveMethod(instruction.getMethodIndex());
+        MethodInfo methodInfo = new MethodInfo(
+            instruction.getOwnerClass(),
+            instruction.getMethodName(),
+            instruction.getMethodDescriptor(),
+            true,
+            false
+        );
         context.setPendingInvoke(methodInfo);
         return DispatchResult.INVOKE;
     }
 
     private DispatchResult dispatchInvokeInterface(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeInterfaceInstruction instruction) {
-        MethodInfo methodInfo = context.resolveMethod(instruction.getMethodIndex());
+        MethodInfo methodInfo = new MethodInfo(
+            instruction.getOwnerClass(),
+            instruction.getMethodName(),
+            instruction.getMethodDescriptor(),
+            false,
+            true
+        );
         context.setPendingInvoke(methodInfo);
         return DispatchResult.INVOKE;
     }

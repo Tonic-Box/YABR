@@ -293,12 +293,34 @@ public final class BytecodeEngine {
 
     private void handleInvoke(StackFrame frame, EngineDispatchContext ctx) {
         MethodInfo methodInfo = ctx.getPendingInvoke();
+        String descriptor = methodInfo.getDescriptor();
 
-        if (context.getMode() == ExecutionMode.DELEGATED) {
-            frame.advancePC(frame.getCurrentInstruction().getLength());
-        } else {
-            frame.advancePC(frame.getCurrentInstruction().getLength());
+        int paramSlots = getParameterSlots(descriptor);
+        for (int i = 0; i < paramSlots; i++) {
+            frame.getStack().pop();
         }
+
+        if (!methodInfo.isStatic()) {
+            frame.getStack().pop();
+        }
+
+        String returnType = getReturnType(descriptor);
+        if (!"V".equals(returnType)) {
+            if (returnType.startsWith("L") || returnType.startsWith("[")) {
+                ObjectInstance result = context.getHeapManager().newObject("java/lang/Object");
+                frame.getStack().pushReference(result);
+            } else if ("J".equals(returnType)) {
+                frame.getStack().pushLong(0L);
+            } else if ("D".equals(returnType)) {
+                frame.getStack().pushDouble(0.0);
+            } else if ("F".equals(returnType)) {
+                frame.getStack().pushFloat(0.0f);
+            } else {
+                frame.getStack().pushInt(0);
+            }
+        }
+
+        frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
     private void handleInvokeDynamic(StackFrame frame, EngineDispatchContext ctx) {
@@ -333,12 +355,43 @@ public final class BytecodeEngine {
 
     private void handleFieldGet(StackFrame frame, EngineDispatchContext ctx) {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
-        frame.getStack().pushInt(0);
+        String descriptor = fieldInfo.getDescriptor();
+
+        if (!fieldInfo.isStatic()) {
+            frame.getStack().pop();
+        }
+
+        if ("J".equals(descriptor)) {
+            frame.getStack().pushLong(0L);
+        } else if ("D".equals(descriptor)) {
+            frame.getStack().pushDouble(0.0);
+        } else if ("F".equals(descriptor)) {
+            frame.getStack().pushFloat(0.0f);
+        } else if (descriptor.startsWith("L") || descriptor.startsWith("[")) {
+            ObjectInstance result = context.getHeapManager().newObject("java/lang/Object");
+            frame.getStack().pushReference(result);
+        } else {
+            frame.getStack().pushInt(0);
+        }
+
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
     private void handleFieldPut(StackFrame frame, EngineDispatchContext ctx) {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
+        String descriptor = fieldInfo.getDescriptor();
+
+        if ("J".equals(descriptor) || "D".equals(descriptor)) {
+            frame.getStack().pop();
+            frame.getStack().pop();
+        } else {
+            frame.getStack().pop();
+        }
+
+        if (!fieldInfo.isStatic()) {
+            frame.getStack().pop();
+        }
+
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
@@ -409,6 +462,60 @@ public final class BytecodeEngine {
         for (BytecodeListener listener : listeners) {
             listener.afterInstruction(frame, instr);
         }
+    }
+
+    private int getParameterSlots(String descriptor) {
+        if (descriptor == null || !descriptor.startsWith("(")) {
+            return 0;
+        }
+
+        int slots = 0;
+        int i = 1;
+        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+            char c = descriptor.charAt(i);
+            switch (c) {
+                case 'J':
+                case 'D':
+                    slots += 2;
+                    i++;
+                    break;
+                case 'L':
+                    slots++;
+                    while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                        i++;
+                    }
+                    i++;
+                    break;
+                case '[':
+                    slots++;
+                    while (i < descriptor.length() && descriptor.charAt(i) == '[') {
+                        i++;
+                    }
+                    if (i < descriptor.length() && descriptor.charAt(i) == 'L') {
+                        while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                            i++;
+                        }
+                    }
+                    i++;
+                    break;
+                default:
+                    slots++;
+                    i++;
+                    break;
+            }
+        }
+        return slots;
+    }
+
+    private String getReturnType(String descriptor) {
+        if (descriptor == null) {
+            return "V";
+        }
+        int parenIndex = descriptor.indexOf(')');
+        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1) {
+            return descriptor.substring(parenIndex + 1);
+        }
+        return "V";
     }
 
     private class EngineDispatchContext implements DispatchContext {

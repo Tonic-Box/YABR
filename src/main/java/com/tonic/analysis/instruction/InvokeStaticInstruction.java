@@ -3,9 +3,12 @@ package com.tonic.analysis.instruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.InterfaceRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodRefItem;
+import com.tonic.parser.constpool.NameAndTypeRefItem;
+import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -94,6 +97,66 @@ public class InvokeStaticInstruction extends Instruction {
     public String resolveMethod() {
         Item<?> item = constPool.getItem(methodIndex);
         return item.toString();
+    }
+
+    /**
+     * Returns the method name.
+     *
+     * @return The method name.
+     */
+    public String getMethodName() {
+        Item<?> item = constPool.getItem(methodIndex);
+        int nameAndTypeIndex;
+        if (item instanceof MethodRefItem) {
+            nameAndTypeIndex = ((MethodRefItem) item).getValue().getNameAndTypeIndex();
+        } else if (item instanceof InterfaceRefItem) {
+            nameAndTypeIndex = ((InterfaceRefItem) item).getValue().getNameAndTypeIndex();
+        } else {
+            throw new IllegalStateException("Unexpected ref type: " + item.getClass());
+        }
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getNameIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Returns the method descriptor.
+     *
+     * @return The method descriptor.
+     */
+    public String getMethodDescriptor() {
+        Item<?> item = constPool.getItem(methodIndex);
+        int nameAndTypeIndex;
+        if (item instanceof MethodRefItem) {
+            nameAndTypeIndex = ((MethodRefItem) item).getValue().getNameAndTypeIndex();
+        } else if (item instanceof InterfaceRefItem) {
+            nameAndTypeIndex = ((InterfaceRefItem) item).getValue().getNameAndTypeIndex();
+        } else {
+            throw new IllegalStateException("Unexpected ref type: " + item.getClass());
+        }
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getDescriptorIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Returns the owner class name.
+     *
+     * @return The owner class internal name.
+     */
+    public String getOwnerClass() {
+        Item<?> item = constPool.getItem(methodIndex);
+        int classIndex;
+        if (item instanceof MethodRefItem) {
+            classIndex = ((MethodRefItem) item).getValue().getClassIndex();
+        } else if (item instanceof InterfaceRefItem) {
+            classIndex = ((InterfaceRefItem) item).getValue().getClassIndex();
+        } else {
+            throw new IllegalStateException("Unexpected ref type: " + item.getClass());
+        }
+        ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(classRef.getValue());
+        return utf8.getValue();
     }
 
     /**

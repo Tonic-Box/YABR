@@ -29,6 +29,7 @@ public final class DebugSession {
     private DebugState lastState;
     private BytecodeResult result;
     private volatile boolean pauseRequested;
+    private boolean instructionExecutedThisStep;
 
     public DebugSession(BytecodeContext context) {
         this(context, new BreakpointManager());
@@ -126,6 +127,7 @@ public final class DebugSession {
 
         this.currentStepMode = StepMode.STEP_OVER;
         this.stepStartDepth = engine.getCallStack().depth();
+        this.instructionExecutedThisStep = false;
         changeState(DebugSessionState.RUNNING);
 
         return executeStep();
@@ -251,6 +253,14 @@ public final class DebugSession {
                         notifySessionStop(result);
                         return buildCurrentState();
                     }
+                    currentFrame = engine.getCurrentFrame();
+                    if (currentFrame == null) {
+                        continue;
+                    }
+                    continue;
+                }
+
+                if (currentFrame == null) {
                     continue;
                 }
 
@@ -264,6 +274,7 @@ public final class DebugSession {
                 }
 
                 boolean stepResult = engine.step();
+                instructionExecutedThisStep = true;
 
                 if (!stepResult) {
                     result = BytecodeResult.completed(ConcreteValue.nullRef());
@@ -320,7 +331,8 @@ public final class DebugSession {
                 return true;
 
             case STEP_OVER:
-                return currentDepth <= stepStartDepth;
+                return currentDepth < stepStartDepth ||
+                       (currentDepth == stepStartDepth && instructionExecutedThisStep);
 
             case STEP_OUT:
                 return currentDepth < stepStartDepth;
@@ -395,8 +407,22 @@ public final class DebugSession {
 
     private ObjectInstance wrapException(Exception e) {
         try {
-            return context.getHeapManager().newObject("java/lang/Exception");
-        } catch (Exception ex) {
+            ObjectInstance wrapped = context.getHeapManager().newObject("java/lang/Exception");
+            if (wrapped != null) {
+                return wrapped;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            ObjectInstance wrapped = context.getHeapManager().newObject("java/lang/Throwable");
+            if (wrapped != null) {
+                return wrapped;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            return context.getHeapManager().newObject("java/lang/Object");
+        } catch (Exception ignored) {
             return null;
         }
     }
@@ -424,6 +450,7 @@ public final class DebugSession {
             try {
                 listener.onSessionStart(this);
             } catch (Exception e) {
+                System.err.println("[YABR] Listener exception in onSessionStart: " + e.getMessage());
             }
         }
     }
@@ -433,6 +460,7 @@ public final class DebugSession {
             try {
                 listener.onSessionStop(this, result);
             } catch (Exception e) {
+                System.err.println("[YABR] Listener exception in onSessionStop: " + e.getMessage());
             }
         }
     }
@@ -442,6 +470,7 @@ public final class DebugSession {
             try {
                 listener.onBreakpointHit(this, breakpoint);
             } catch (Exception e) {
+                System.err.println("[YABR] Listener exception in onBreakpointHit: " + e.getMessage());
             }
         }
     }
@@ -451,6 +480,7 @@ public final class DebugSession {
             try {
                 listener.onStepComplete(this, state);
             } catch (Exception e) {
+                System.err.println("[YABR] Listener exception in onStepComplete: " + e.getMessage());
             }
         }
     }
@@ -460,6 +490,7 @@ public final class DebugSession {
             try {
                 listener.onException(this, exception);
             } catch (Exception e) {
+                System.err.println("[YABR] Listener exception in onException: " + e.getMessage());
             }
         }
     }
@@ -469,6 +500,7 @@ public final class DebugSession {
             try {
                 listener.onStateChange(this, oldState, newState);
             } catch (Exception e) {
+                System.err.println("[YABR] Listener exception in onStateChange: " + e.getMessage());
             }
         }
     }

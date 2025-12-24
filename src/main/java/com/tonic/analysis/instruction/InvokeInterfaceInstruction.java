@@ -3,7 +3,10 @@ package com.tonic.analysis.instruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.InterfaceRefItem;
+import com.tonic.parser.constpool.NameAndTypeRefItem;
+import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
@@ -67,7 +70,7 @@ public class InvokeInterfaceInstruction extends Instruction {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         int params = method.getParameterCount();
         int returnSlots = method.getReturnTypeSlots();
-        return -params + returnSlots;
+        return -(params + 1) + returnSlots;
     }
 
     /**
@@ -88,6 +91,45 @@ public class InvokeInterfaceInstruction extends Instruction {
     public String resolveMethod() {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         return method.toString();
+    }
+
+    /**
+     * Returns the method name.
+     *
+     * @return The method name.
+     */
+    public String getMethodName() {
+        InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
+        int nameAndTypeIndex = method.getValue().getNameAndTypeIndex();
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getNameIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Returns the method descriptor.
+     *
+     * @return The method descriptor.
+     */
+    public String getMethodDescriptor() {
+        InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
+        int nameAndTypeIndex = method.getValue().getNameAndTypeIndex();
+        NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(nameAndType.getValue().getDescriptorIndex());
+        return utf8.getValue();
+    }
+
+    /**
+     * Returns the owner interface name.
+     *
+     * @return The owner interface internal name.
+     */
+    public String getOwnerClass() {
+        InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
+        int classIndex = method.getValue().getClassIndex();
+        ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
+        Utf8Item utf8 = (Utf8Item) constPool.getItem(classRef.getValue());
+        return utf8.getValue();
     }
 
     /**

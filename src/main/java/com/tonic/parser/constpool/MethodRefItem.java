@@ -117,8 +117,8 @@ public class MethodRefItem extends Item<MethodRef> {
      * @throws IllegalStateException if ConstPool not set or invalid index
      */
     public int getReturnTypeSlots() {
-        if (classFile.getConstPool() == null) {
-            throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
+        if (classFile == null || classFile.getConstPool() == null) {
+            throw new IllegalStateException("ClassFile or ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) classFile.getConstPool().getItem(value.getNameAndTypeIndex());
