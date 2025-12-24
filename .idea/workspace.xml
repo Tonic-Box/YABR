@@ -4,14 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bytecode execution api tests">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bytecode execution api tests and bug fixes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/WideInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/WideInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/frame/StackFrameTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/frame/StackFrameTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/RedundantCopyEliminationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/RedundantCopyEliminationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/testutil/BytecodeBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/testutil/BytecodeBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -228,14 +223,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00033" summary="CVE optimization transformer">
-      <option name="closed" value="true" />
-      <created>1765323679511</created>
-      <option name="number" value="00033" />
-      <option name="presentableId" value="LOCAL-00033" />
-      <option name="project" value="LOCAL" />
-      <updated>1765323679511</updated>
     </task>
     <task id="LOCAL-00034" summary="better source emition for string concatenation">
       <option name="closed" value="true" />
@@ -621,7 +608,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766586505071</updated>
     </task>
-    <option name="localTasksCounter" value="82" />
+    <task id="LOCAL-00082" summary="- bytecode execution api tests and bug fixes">
+      <option name="closed" value="true" />
+      <created>1766601534653</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1766601534653</updated>
+    </task>
+    <option name="localTasksCounter" value="83" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -636,7 +631,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="annotation support in decompiler output" />
     <MESSAGE value="Improvements to recovery in source emission." />
     <MESSAGE value="Improvements to structural analysis" />
     <MESSAGE value="Renamer API:&#10;- Fluent API: Chain multiple renames easily&#10;- Class renames: Updates all references including descriptors and signatures&#10;- Method renames: Single class or full hierarchy propagation (overrides)&#10;- Field renames: Updates all access sites&#10;- Validation: Checks for conflicts, invalid names, and missing references&#10;- InvokeDynamic support: Updates bootstrap method arguments (lambdas)&#10;- MethodHandle support: Updates method/field handle references&#10;- Generic signature support: Remaps class references in generics" />
@@ -661,7 +655,8 @@
     <MESSAGE value="- bytecode execution (simulation) api" />
     <MESSAGE value="- bytecode execution api" />
     <MESSAGE value="- bytecode execution api tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="- bytecode execution api tests" />
+    <MESSAGE value="- bytecode execution api tests and bug fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="- bytecode execution api tests and bug fixes" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

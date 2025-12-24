@@ -26,6 +26,11 @@ import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.LongItem;
 import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.parser.constpool.StringRefItem;
+import com.tonic.analysis.execution.invoke.InvocationContext;
+import com.tonic.analysis.execution.invoke.InvocationHandler;
+import com.tonic.analysis.execution.invoke.InvocationResult;
+import com.tonic.analysis.execution.invoke.RecursiveHandler;
+import com.tonic.analysis.execution.resolve.ResolvedMethod;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +41,7 @@ public final class BytecodeEngine {
     private final CallStack callStack;
     private final OpcodeDispatcher dispatcher;
     private final List<BytecodeListener> listeners;
+    private final InvocationHandler invocationHandler;
 
     private volatile boolean interrupted;
     private long instructionCount;
@@ -51,6 +57,12 @@ public final class BytecodeEngine {
         this.listeners = new ArrayList<>();
         this.interrupted = false;
         this.instructionCount = 0;
+
+        if (context.getMode() == ExecutionMode.RECURSIVE) {
+            this.invocationHandler = new RecursiveHandler(context.getClassResolver());
+        } else {
+            this.invocationHandler = null;
+        }
     }
 
     public BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
@@ -201,6 +213,7 @@ public final class BytecodeEngine {
             if (returnValue != null && !returnValue.isNull()) {
                 caller.getStack().push(returnValue);
             }
+            caller.advancePC(caller.getCurrentInstruction().getLength());
         }
     }
 
@@ -308,12 +321,50 @@ public final class BytecodeEngine {
         MethodInfo methodInfo = ctx.getPendingInvoke();
         String descriptor = methodInfo.getDescriptor();
 
+        if (context.getMode() == ExecutionMode.RECURSIVE && invocationHandler != null) {
+            ConcreteValue[] args = extractArguments(frame, descriptor);
+            ObjectInstance receiver = null;
+            if (!methodInfo.isStatic()) {
+                ConcreteValue receiverVal = frame.getStack().pop();
+                if (!receiverVal.isNull()) {
+                    receiver = receiverVal.asReference();
+                }
+            }
+
+            MethodEntry targetMethod = resolveMethod(methodInfo);
+            if (targetMethod == null) {
+                stubInvoke(frame, descriptor, methodInfo.isStatic());
+                return;
+            }
+
+            InvocationResult result = invocationHandler.invoke(
+                targetMethod, receiver, args, createInvocationContext());
+
+            if (result.isPushFrame()) {
+                callStack.push(result.getNewFrame());
+            } else if (result.isNativeHandled()) {
+                ConcreteValue returnVal = result.getReturnValue();
+                if (returnVal != null) {
+                    frame.getStack().push(returnVal);
+                }
+                frame.advancePC(frame.getCurrentInstruction().getLength());
+            } else if (result.isException()) {
+                frame.completeExceptionally(result.getException());
+            } else {
+                frame.advancePC(frame.getCurrentInstruction().getLength());
+            }
+        } else {
+            stubInvoke(frame, descriptor, methodInfo.isStatic());
+        }
+    }
+
+    private void stubInvoke(StackFrame frame, String descriptor, boolean isStatic) {
         int paramSlots = getParameterSlots(descriptor);
         for (int i = 0; i < paramSlots; i++) {
             frame.getStack().pop();
         }
 
-        if (!methodInfo.isStatic()) {
+        if (!isStatic) {
             frame.getStack().pop();
         }
 
@@ -334,6 +385,47 @@ public final class BytecodeEngine {
         }
 
         frame.advancePC(frame.getCurrentInstruction().getLength());
+    }
+
+    private ConcreteValue[] extractArguments(StackFrame frame, String descriptor) {
+        int paramSlots = getParameterSlots(descriptor);
+        ConcreteValue[] args = new ConcreteValue[paramSlots];
+        for (int i = paramSlots - 1; i >= 0; i--) {
+            args[i] = frame.getStack().pop();
+        }
+        return args;
+    }
+
+    private MethodEntry resolveMethod(MethodInfo methodInfo) {
+        try {
+            ResolvedMethod resolved = context.getClassResolver().resolveMethod(
+                methodInfo.getOwnerClass(),
+                methodInfo.getMethodName(),
+                methodInfo.getDescriptor()
+            );
+            return resolved != null ? resolved.getMethod() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private InvocationContext createInvocationContext() {
+        return new InvocationContext() {
+            @Override
+            public CallStack getCallStack() {
+                return callStack;
+            }
+
+            @Override
+            public com.tonic.analysis.execution.heap.HeapManager getHeapManager() {
+                return context.getHeapManager();
+            }
+
+            @Override
+            public ClassResolver getClassResolver() {
+                return context.getClassResolver();
+            }
+        };
     }
 
     private void handleInvokeDynamic(StackFrame frame, EngineDispatchContext ctx) {
