@@ -2,7 +2,7 @@
 
 # Execution API
 
-The Execution API (`com.tonic.analysis.execution`) provides concrete bytecode execution for debugging, and dynamic analysis. Unlike the [Simulation API](simulation-api.md) which performs abstract interpretation over SSA IR, this API executes actual bytecode with mutable state.
+The Execution API (`com.tonic.analysis.execution`) provides concrete bytecode execution for debugging, and dynamic analysis. Unlike the [Simulation API](simulation-api.md) which performs abstract interpretation over the IRs, this API executes actual bytecode with mutable state.
 
 ## Overview
 
