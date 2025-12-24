@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bytecode execution api tests and bug fixes" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bug fixes">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -220,14 +223,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00035" summary="better dynamic family handling in IR/ast/source">
-      <option name="closed" value="true" />
-      <created>1765346924702</created>
-      <option name="number" value="00035" />
-      <option name="presentableId" value="LOCAL-00035" />
-      <option name="project" value="LOCAL" />
-      <updated>1765346924703</updated>
     </task>
     <task id="LOCAL-00036" summary="better dynamic family handling in IR/ast/source">
       <option name="closed" value="true" />
@@ -613,7 +608,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766614789333</updated>
     </task>
-    <option name="localTasksCounter" value="84" />
+    <task id="LOCAL-00084" summary="- bug fixes">
+      <option name="closed" value="true" />
+      <created>1766616637719</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1766616637719</updated>
+    </task>
+    <option name="localTasksCounter" value="85" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -628,7 +631,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Improvements to recovery in source emission." />
     <MESSAGE value="Improvements to structural analysis" />
     <MESSAGE value="Renamer API:&#10;- Fluent API: Chain multiple renames easily&#10;- Class renames: Updates all references including descriptors and signatures&#10;- Method renames: Single class or full hierarchy propagation (overrides)&#10;- Field renames: Updates all access sites&#10;- Validation: Checks for conflicts, invalid names, and missing references&#10;- InvokeDynamic support: Updates bootstrap method arguments (lambdas)&#10;- MethodHandle support: Updates method/field handle references&#10;- Generic signature support: Remaps class references in generics" />
     <MESSAGE value="Renamer API, ExprEditor, updated docs" />
@@ -653,7 +655,8 @@
     <MESSAGE value="- bytecode execution api" />
     <MESSAGE value="- bytecode execution api tests" />
     <MESSAGE value="- bytecode execution api tests and bug fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="- bytecode execution api tests and bug fixes" />
+    <MESSAGE value="- bug fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="- bug fixes" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

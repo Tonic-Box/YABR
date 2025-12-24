@@ -392,12 +392,61 @@ public final class BytecodeEngine {
     }
 
     private ConcreteValue[] extractArguments(StackFrame frame, String descriptor) {
-        int paramSlots = getParameterSlots(descriptor);
-        ConcreteValue[] args = new ConcreteValue[paramSlots];
-        for (int i = paramSlots - 1; i >= 0; i--) {
+        int paramCount = getParameterCount(descriptor);
+        ConcreteValue[] args = new ConcreteValue[paramCount];
+        for (int i = paramCount - 1; i >= 0; i--) {
             args[i] = frame.getStack().pop();
         }
         return args;
+    }
+
+    private int getParameterCount(String descriptor) {
+        if (descriptor == null || !descriptor.startsWith("(")) {
+            return 0;
+        }
+
+        int count = 0;
+        int i = 1;
+        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+            char c = descriptor.charAt(i);
+            switch (c) {
+                case 'J':
+                case 'D':
+                case 'I':
+                case 'F':
+                case 'B':
+                case 'C':
+                case 'S':
+                case 'Z':
+                    count++;
+                    i++;
+                    break;
+                case 'L':
+                    count++;
+                    while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                        i++;
+                    }
+                    i++;
+                    break;
+                case '[':
+                    count++;
+                    while (i < descriptor.length() && descriptor.charAt(i) == '[') {
+                        i++;
+                    }
+                    if (i < descriptor.length() && descriptor.charAt(i) == 'L') {
+                        while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                            i++;
+                        }
+                    }
+                    i++;
+                    break;
+                default:
+                    count++;
+                    i++;
+                    break;
+            }
+        }
+        return count;
     }
 
     private MethodEntry resolveMethod(MethodInfo methodInfo) {
