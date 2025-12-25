@@ -105,6 +105,34 @@ engine.reset();
 | `getCallStack()` | Get full call stack |
 | `getInstructionCount()` | Get executed instruction count |
 | `addListener(listener)` | Add execution listener |
+| `ensureClassInitialized(className)` | Run `<clinit>` if not yet initialized |
+| `isClassInitialized(className)` | Check if class has been initialized |
+| `markClassInitialized(className)` | Mark class as initialized without running `<clinit>` |
+| `resetClassInitialization()` | Clear all class initialization state |
+
+### Class Initialization
+
+The engine tracks which classes have been initialized and automatically runs `<clinit>` on first static field access:
+
+```java
+BytecodeEngine engine = new BytecodeEngine(ctx);
+
+// Manual class initialization
+engine.ensureClassInitialized("com/example/Config");
+
+// Check initialization state
+if (engine.isClassInitialized("com/example/Config")) {
+    // Class has been initialized
+}
+
+// Mark as initialized without running <clinit>
+engine.markClassInitialized("com/example/MockClass");
+
+// Reset all initialization state
+engine.resetClassInitialization();
+```
+
+**Auto-initialization**: When GETSTATIC or PUTSTATIC is executed, the engine automatically calls `ensureClassInitialized()` for the field's owner class. This matches JVM semantics where static field access triggers class initialization.
 
 ### BytecodeResult
 
@@ -262,7 +290,7 @@ ArrayInstance matrix = heapManager.newMultiArray("[[I", new int[]{3, 4});
 
 ### HeapManager
 
-Object allocation and string interning:
+Object allocation, string handling, and static field storage:
 
 ```java
 HeapManager heap = new SimpleHeapManager();
@@ -271,14 +299,37 @@ HeapManager heap = new SimpleHeapManager();
 ObjectInstance obj = heap.newObject("java/lang/Object");
 ArrayInstance arr = heap.newArray("I", 100);
 
-// String interning
+// String interning and extraction
 ObjectInstance str1 = heap.internString("hello");
 ObjectInstance str2 = heap.internString("hello");
 // str1 == str2 (same instance)
 
+// Extract Java String from ObjectInstance (reverse of intern)
+String extracted = heap.extractString(str1);
+// extracted.equals("hello") == true
+
+// Static field storage
+heap.putStaticField("com/example/Config", "DEBUG", "Z", true);
+Object value = heap.getStaticField("com/example/Config", "DEBUG", "Z");
+boolean hasField = heap.hasStaticField("com/example/Config", "DEBUG", "Z");
+heap.clearStaticFields();  // Reset all static fields
+
 // Statistics
 long count = heap.objectCount();
 ```
+
+| Method | Description |
+|--------|-------------|
+| `newObject(className)` | Allocate new object instance |
+| `newArray(type, length)` | Allocate primitive or reference array |
+| `newMultiArray(type, dims)` | Allocate multi-dimensional array |
+| `internString(value)` | Get/create interned String instance |
+| `extractString(instance)` | Extract Java String from ObjectInstance |
+| `putStaticField(owner, name, desc, value)` | Store static field value |
+| `getStaticField(owner, name, desc)` | Retrieve static field value |
+| `hasStaticField(owner, name, desc)` | Check if static field is set |
+| `clearStaticFields()` | Clear all static field storage |
+| `objectCount()` | Get total allocated object count |
 
 ---
 
@@ -322,10 +373,14 @@ if (registry.hasHandler(method)) {
 
 Default handlers include:
 - `java/lang/Object`: `hashCode()`, `equals()`, `getClass()`
-- `java/lang/System`: `currentTimeMillis()`, `arraycopy()`, `identityHashCode()`
-- `java/lang/String`: `length()`, `charAt()`, `intern()`
-- `java/lang/Math`: `abs()`, `max()`, `min()`, `sqrt()`, etc.
+- `java/lang/System`: `currentTimeMillis()`, `nanoTime()`, `arraycopy()`, `identityHashCode()`
+- `java/lang/String`: `length()`, `charAt()`, `intern()`, `getBytes()`, `toCharArray()`, `substring()`, `equals()`, `hashCode()`, `isEmpty()`, `concat()`, `valueOf()`
+- `java/lang/String` constructors: `<init>([B)`, `<init>([B,String)`, `<init>([C)`
+- `java/lang/Math`: `abs()`, `max()`, `min()`, `sqrt()`, `sin()`, `cos()`, `tan()`
 - `java/lang/Float/Double`: bit conversion methods
+- `java/util/Base64`: `getDecoder()`, `getEncoder()`
+- `java/util/Base64$Decoder`: `decode(String)`, `decode(byte[])`
+- `java/util/Base64$Encoder`: `encode(byte[])`, `encodeToString(byte[])`
 
 ### InvocationHandler
 
