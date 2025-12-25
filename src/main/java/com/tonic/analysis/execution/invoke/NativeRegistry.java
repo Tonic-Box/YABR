@@ -69,6 +69,8 @@ public final class NativeRegistry {
         registerFloatHandlers();
         registerDoubleHandlers();
         registerStringHandlers();
+        registerBase64Handlers();
+        registerStringExtendedHandlers();
     }
 
     private void registerObjectHandlers() {
@@ -278,6 +280,320 @@ public final class NativeRegistry {
                         "intern() on null String");
                 }
                 return ConcreteValue.reference(receiver);
+            });
+    }
+
+    private void registerBase64Handlers() {
+        register("java/util/Base64", "getDecoder", "()Ljava/util/Base64$Decoder;",
+            (receiver, args, ctx) -> {
+                ObjectInstance decoder = ctx.getHeapManager().newObject("java/util/Base64$Decoder");
+                return ConcreteValue.reference(decoder);
+            });
+
+        register("java/util/Base64", "getEncoder", "()Ljava/util/Base64$Encoder;",
+            (receiver, args, ctx) -> {
+                ObjectInstance encoder = ctx.getHeapManager().newObject("java/util/Base64$Encoder");
+                return ConcreteValue.reference(encoder);
+            });
+
+        register("java/util/Base64$Decoder", "decode", "(Ljava/lang/String;)[B",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Input string is null");
+                }
+                ObjectInstance strObj = args[0].asReference();
+                String encoded = ctx.getHeapManager().extractString(strObj);
+                if (encoded == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Cannot extract string");
+                }
+                byte[] decoded = java.util.Base64.getDecoder().decode(encoded);
+                ArrayInstance result = ctx.getHeapManager().newArray("B", decoded.length);
+                for (int i = 0; i < decoded.length; i++) {
+                    result.setByte(i, decoded[i]);
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/util/Base64$Decoder", "decode", "([B)[B",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Input array is null");
+                }
+                ArrayInstance inputArray = (ArrayInstance) args[0].asReference();
+                byte[] input = new byte[inputArray.getLength()];
+                for (int i = 0; i < input.length; i++) {
+                    input[i] = inputArray.getByte(i);
+                }
+                byte[] decoded = java.util.Base64.getDecoder().decode(input);
+                ArrayInstance result = ctx.getHeapManager().newArray("B", decoded.length);
+                for (int i = 0; i < decoded.length; i++) {
+                    result.setByte(i, decoded[i]);
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/util/Base64$Encoder", "encode", "([B)[B",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Input array is null");
+                }
+                ArrayInstance inputArray = (ArrayInstance) args[0].asReference();
+                byte[] input = new byte[inputArray.getLength()];
+                for (int i = 0; i < input.length; i++) {
+                    input[i] = inputArray.getByte(i);
+                }
+                byte[] encoded = java.util.Base64.getEncoder().encode(input);
+                ArrayInstance result = ctx.getHeapManager().newArray("B", encoded.length);
+                for (int i = 0; i < encoded.length; i++) {
+                    result.setByte(i, encoded[i]);
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/util/Base64$Encoder", "encodeToString", "([B)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Input array is null");
+                }
+                ArrayInstance inputArray = (ArrayInstance) args[0].asReference();
+                byte[] input = new byte[inputArray.getLength()];
+                for (int i = 0; i < input.length; i++) {
+                    input[i] = inputArray.getByte(i);
+                }
+                String encoded = java.util.Base64.getEncoder().encodeToString(input);
+                return ConcreteValue.reference(ctx.getHeapManager().internString(encoded));
+            });
+    }
+
+    private void registerStringExtendedHandlers() {
+        register("java/lang/String", "getBytes", "()[B",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "getBytes() on null");
+                }
+                String str = ctx.getHeapManager().extractString(receiver);
+                if (str == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Cannot extract string");
+                }
+                byte[] bytes = str.getBytes();
+                ArrayInstance result = ctx.getHeapManager().newArray("B", bytes.length);
+                for (int i = 0; i < bytes.length; i++) {
+                    result.setByte(i, bytes[i]);
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/lang/String", "getBytes", "(Ljava/lang/String;)[B",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "getBytes() on null");
+                }
+                String str = ctx.getHeapManager().extractString(receiver);
+                if (str == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Cannot extract string");
+                }
+                String charset = ctx.getHeapManager().extractString(args[0].asReference());
+                try {
+                    byte[] bytes = str.getBytes(charset);
+                    ArrayInstance result = ctx.getHeapManager().newArray("B", bytes.length);
+                    for (int i = 0; i < bytes.length; i++) {
+                        result.setByte(i, bytes[i]);
+                    }
+                    return ConcreteValue.reference(result);
+                } catch (java.io.UnsupportedEncodingException e) {
+                    throw new NativeException("java/io/UnsupportedEncodingException", charset);
+                }
+            });
+
+        register("java/lang/String", "toCharArray", "()[C",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "toCharArray() on null");
+                }
+                String str = ctx.getHeapManager().extractString(receiver);
+                if (str == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Cannot extract string");
+                }
+                char[] chars = str.toCharArray();
+                ArrayInstance result = ctx.getHeapManager().newArray("C", chars.length);
+                for (int i = 0; i < chars.length; i++) {
+                    result.setChar(i, chars[i]);
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/lang/String", "substring", "(I)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "substring() on null");
+                }
+                String str = ctx.getHeapManager().extractString(receiver);
+                if (str == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Cannot extract string");
+                }
+                int beginIndex = args[0].asInt();
+                String sub = str.substring(beginIndex);
+                return ConcreteValue.reference(ctx.getHeapManager().internString(sub));
+            });
+
+        register("java/lang/String", "substring", "(II)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "substring() on null");
+                }
+                String str = ctx.getHeapManager().extractString(receiver);
+                if (str == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Cannot extract string");
+                }
+                int beginIndex = args[0].asInt();
+                int endIndex = args[1].asInt();
+                String sub = str.substring(beginIndex, endIndex);
+                return ConcreteValue.reference(ctx.getHeapManager().internString(sub));
+            });
+
+        register("java/lang/String", "<init>", "([B)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "String init on null");
+                }
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Null byte array");
+                }
+                ArrayInstance byteArray = (ArrayInstance) args[0].asReference();
+                byte[] bytes = new byte[byteArray.getLength()];
+                for (int i = 0; i < bytes.length; i++) {
+                    bytes[i] = byteArray.getByte(i);
+                }
+                String str = new String(bytes);
+                char[] chars = str.toCharArray();
+                ArrayInstance charArray = ctx.getHeapManager().newArray("C", chars.length);
+                for (int i = 0; i < chars.length; i++) {
+                    charArray.setChar(i, chars[i]);
+                }
+                receiver.setField("java/lang/String", "value", "[C", charArray);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/String", "<init>", "([BLjava/lang/String;)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "String init on null");
+                }
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Null byte array");
+                }
+                ArrayInstance byteArray = (ArrayInstance) args[0].asReference();
+                String charset = ctx.getHeapManager().extractString(args[1].asReference());
+                byte[] bytes = new byte[byteArray.getLength()];
+                for (int i = 0; i < bytes.length; i++) {
+                    bytes[i] = byteArray.getByte(i);
+                }
+                try {
+                    String str = new String(bytes, charset);
+                    char[] chars = str.toCharArray();
+                    ArrayInstance charArray = ctx.getHeapManager().newArray("C", chars.length);
+                    for (int i = 0; i < chars.length; i++) {
+                        charArray.setChar(i, chars[i]);
+                    }
+                    receiver.setField("java/lang/String", "value", "[C", charArray);
+                    return ConcreteValue.nullRef();
+                } catch (java.io.UnsupportedEncodingException e) {
+                    throw new NativeException("java/io/UnsupportedEncodingException", charset);
+                }
+            });
+
+        register("java/lang/String", "<init>", "([C)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "String init on null");
+                }
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Null char array");
+                }
+                ArrayInstance srcArray = (ArrayInstance) args[0].asReference();
+                int len = srcArray.getLength();
+                ArrayInstance charArray = ctx.getHeapManager().newArray("C", len);
+                for (int i = 0; i < len; i++) {
+                    charArray.setChar(i, srcArray.getChar(i));
+                }
+                receiver.setField("java/lang/String", "value", "[C", charArray);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/String", "equals", "(Ljava/lang/Object;)Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    return ConcreteValue.intValue(args[0].isNull() ? 1 : 0);
+                }
+                if (args[0].isNull()) {
+                    return ConcreteValue.intValue(0);
+                }
+                ObjectInstance other = args[0].asReference();
+                if (!"java/lang/String".equals(other.getClassName())) {
+                    return ConcreteValue.intValue(0);
+                }
+                String s1 = ctx.getHeapManager().extractString(receiver);
+                String s2 = ctx.getHeapManager().extractString(other);
+                return ConcreteValue.intValue(java.util.Objects.equals(s1, s2) ? 1 : 0);
+            });
+
+        register("java/lang/String", "hashCode", "()I",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "hashCode() on null");
+                }
+                String str = ctx.getHeapManager().extractString(receiver);
+                if (str == null) {
+                    return ConcreteValue.intValue(0);
+                }
+                return ConcreteValue.intValue(str.hashCode());
+            });
+
+        register("java/lang/String", "isEmpty", "()Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "isEmpty() on null");
+                }
+                String str = ctx.getHeapManager().extractString(receiver);
+                return ConcreteValue.intValue(str == null || str.isEmpty() ? 1 : 0);
+            });
+
+        register("java/lang/String", "concat", "(Ljava/lang/String;)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "concat() on null");
+                }
+                String s1 = ctx.getHeapManager().extractString(receiver);
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "concat with null");
+                }
+                String s2 = ctx.getHeapManager().extractString(args[0].asReference());
+                String result = s1 + s2;
+                return ConcreteValue.reference(ctx.getHeapManager().internString(result));
+            });
+
+        register("java/lang/String", "valueOf", "(I)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                String result = String.valueOf(args[0].asInt());
+                return ConcreteValue.reference(ctx.getHeapManager().internString(result));
+            });
+
+        register("java/lang/String", "valueOf", "(J)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                String result = String.valueOf(args[0].asLong());
+                return ConcreteValue.reference(ctx.getHeapManager().internString(result));
+            });
+
+        register("java/lang/String", "valueOf", "(Z)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                String result = String.valueOf(args[0].asInt() != 0);
+                return ConcreteValue.reference(ctx.getHeapManager().internString(result));
+            });
+
+        register("java/lang/String", "valueOf", "(C)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                String result = String.valueOf((char) args[0].asInt());
+                return ConcreteValue.reference(ctx.getHeapManager().internString(result));
             });
     }
 }

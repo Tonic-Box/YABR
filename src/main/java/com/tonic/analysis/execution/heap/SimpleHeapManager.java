@@ -8,12 +8,14 @@ public class SimpleHeapManager implements HeapManager {
     private final AtomicInteger nextId;
     private final ConcurrentHashMap<Integer, ObjectInstance> heap;
     private final StringPool stringPool;
+    private final ConcurrentHashMap<String, Object> staticFields;
     private Object classResolver;
 
     public SimpleHeapManager() {
         this.nextId = new AtomicInteger(1);
         this.heap = new ConcurrentHashMap<>();
         this.stringPool = new StringPool(nextId);
+        this.staticFields = new ConcurrentHashMap<>();
     }
 
     public void setClassResolver(Object classResolver) {
@@ -92,6 +94,30 @@ public class SimpleHeapManager implements HeapManager {
     }
 
     @Override
+    public String extractString(ObjectInstance instance) {
+        if (instance == null) {
+            return null;
+        }
+        if (!"java/lang/String".equals(instance.getClassName())) {
+            return null;
+        }
+
+        Object charArrayObj = instance.getField("java/lang/String", "value", "[C");
+        if (!(charArrayObj instanceof ArrayInstance)) {
+            return null;
+        }
+
+        ArrayInstance charArray = (ArrayInstance) charArrayObj;
+        int length = charArray.getLength();
+        char[] chars = new char[length];
+        for (int i = 0; i < length; i++) {
+            chars[i] = charArray.getChar(i);
+        }
+
+        return new String(chars);
+    }
+
+    @Override
     public boolean isNull(ObjectInstance instance) {
         return instance == null;
     }
@@ -107,5 +133,29 @@ public class SimpleHeapManager implements HeapManager {
     @Override
     public long objectCount() {
         return heap.size();
+    }
+
+    private String staticFieldKey(String owner, String name, String descriptor) {
+        return owner + "." + name + ":" + descriptor;
+    }
+
+    @Override
+    public void putStaticField(String owner, String name, String descriptor, Object value) {
+        staticFields.put(staticFieldKey(owner, name, descriptor), value);
+    }
+
+    @Override
+    public Object getStaticField(String owner, String name, String descriptor) {
+        return staticFields.get(staticFieldKey(owner, name, descriptor));
+    }
+
+    @Override
+    public boolean hasStaticField(String owner, String name, String descriptor) {
+        return staticFields.containsKey(staticFieldKey(owner, name, descriptor));
+    }
+
+    @Override
+    public void clearStaticFields() {
+        staticFields.clear();
     }
 }

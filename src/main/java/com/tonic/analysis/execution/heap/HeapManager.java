@@ -10,9 +10,19 @@ public interface HeapManager {
 
     ObjectInstance internString(String value);
 
+    String extractString(ObjectInstance instance);
+
     boolean isNull(ObjectInstance instance);
 
     int identityHashCode(ObjectInstance instance);
 
     long objectCount();
+
+    void putStaticField(String owner, String name, String descriptor, Object value);
+
+    Object getStaticField(String owner, String name, String descriptor);
+
+    boolean hasStaticField(String owner, String name, String descriptor);
+
+    void clearStaticFields();
 }

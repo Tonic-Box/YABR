@@ -7,6 +7,9 @@
     <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- bug fixes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/heap/HeapManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/heap/HeapManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/heap/SimpleHeapManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/heap/SimpleHeapManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,14 +226,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00036" summary="better dynamic family handling in IR/ast/source">
-      <option name="closed" value="true" />
-      <created>1765347951815</created>
-      <option name="number" value="00036" />
-      <option name="presentableId" value="LOCAL-00036" />
-      <option name="project" value="LOCAL" />
-      <updated>1765347951815</updated>
     </task>
     <task id="LOCAL-00037" summary="java 11 migration">
       <option name="closed" value="true" />
@@ -616,7 +611,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766616637719</updated>
     </task>
-    <option name="localTasksCounter" value="85" />
+    <task id="LOCAL-00085" summary="- bug fixes">
+      <option name="closed" value="true" />
+      <created>1766618845101</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1766618845101</updated>
+    </task>
+    <option name="localTasksCounter" value="86" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

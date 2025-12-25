@@ -34,6 +34,8 @@ import com.tonic.analysis.execution.resolve.ResolvedMethod;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class BytecodeEngine {
 
@@ -42,6 +44,7 @@ public final class BytecodeEngine {
     private final OpcodeDispatcher dispatcher;
     private final List<BytecodeListener> listeners;
     private final InvocationHandler invocationHandler;
+    private final Set<String> initializedClasses;
 
     private volatile boolean interrupted;
     private long instructionCount;
@@ -55,6 +58,7 @@ public final class BytecodeEngine {
         this.callStack = new CallStack(context.getMaxCallDepth());
         this.dispatcher = new OpcodeDispatcher();
         this.listeners = new ArrayList<>();
+        this.initializedClasses = ConcurrentHashMap.newKeySet();
         this.interrupted = false;
         this.instructionCount = 0;
 
@@ -195,6 +199,41 @@ public final class BytecodeEngine {
 
     public ConcreteValue getLastReturnValue() {
         return lastReturnValue;
+    }
+
+    public boolean ensureClassInitialized(String className) {
+        if (initializedClasses.contains(className)) {
+            return true;
+        }
+
+        try {
+            ResolvedMethod clinit = context.getClassResolver().resolveMethod(
+                className, "<clinit>", "()V");
+            if (clinit != null && clinit.getMethod() != null) {
+                BytecodeResult result = execute(clinit.getMethod());
+                if (result.getStatus() == BytecodeResult.Status.COMPLETED) {
+                    initializedClasses.add(className);
+                    return true;
+                }
+                return false;
+            }
+        } catch (Exception e) {
+        }
+
+        initializedClasses.add(className);
+        return true;
+    }
+
+    public boolean isClassInitialized(String className) {
+        return initializedClasses.contains(className);
+    }
+
+    public void markClassInitialized(String className) {
+        initializedClasses.add(className);
+    }
+
+    public void resetClassInitialization() {
+        initializedClasses.clear();
     }
 
     private void handleFrameCompletion() {
@@ -514,22 +553,22 @@ public final class BytecodeEngine {
     private void handleFieldGet(StackFrame frame, EngineDispatchContext ctx) {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
         String descriptor = fieldInfo.getDescriptor();
+        String owner = fieldInfo.getOwnerClass();
+        String name = fieldInfo.getFieldName();
 
-        if (!fieldInfo.isStatic()) {
-            frame.getStack().pop();
-        }
-
-        if ("J".equals(descriptor)) {
-            frame.getStack().pushLong(0L);
-        } else if ("D".equals(descriptor)) {
-            frame.getStack().pushDouble(0.0);
-        } else if ("F".equals(descriptor)) {
-            frame.getStack().pushFloat(0.0f);
-        } else if (descriptor.startsWith("L") || descriptor.startsWith("[")) {
-            ObjectInstance result = context.getHeapManager().newObject("java/lang/Object");
-            frame.getStack().pushReference(result);
+        if (fieldInfo.isStatic()) {
+            ensureClassInitialized(owner);
+            Object value = context.getHeapManager().getStaticField(owner, name, descriptor);
+            pushFieldValue(frame, descriptor, value);
         } else {
-            frame.getStack().pushInt(0);
+            ConcreteValue objRef = frame.getStack().pop();
+            if (objRef.isNull()) {
+                pushDefaultValue(frame, descriptor);
+            } else {
+                ObjectInstance obj = objRef.asReference();
+                Object value = obj.getField(owner, name, descriptor);
+                pushFieldValue(frame, descriptor, value);
+            }
         }
 
         frame.advancePC(frame.getCurrentInstruction().getLength());
@@ -538,19 +577,118 @@ public final class BytecodeEngine {
     private void handleFieldPut(StackFrame frame, EngineDispatchContext ctx) {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
         String descriptor = fieldInfo.getDescriptor();
+        String owner = fieldInfo.getOwnerClass();
+        String name = fieldInfo.getFieldName();
 
-        if ("J".equals(descriptor) || "D".equals(descriptor)) {
-            frame.getStack().pop();
-            frame.getStack().pop();
+        ConcreteValue value = frame.getStack().pop();
+
+        if (fieldInfo.isStatic()) {
+            ensureClassInitialized(owner);
+            context.getHeapManager().putStaticField(owner, name, descriptor, convertToStorable(value, descriptor));
         } else {
-            frame.getStack().pop();
-        }
-
-        if (!fieldInfo.isStatic()) {
-            frame.getStack().pop();
+            ConcreteValue objRef = frame.getStack().pop();
+            if (!objRef.isNull()) {
+                ObjectInstance obj = objRef.asReference();
+                obj.setField(owner, name, descriptor, convertToStorable(value, descriptor));
+            }
         }
 
         frame.advancePC(frame.getCurrentInstruction().getLength());
+    }
+
+    private void pushFieldValue(StackFrame frame, String descriptor, Object value) {
+        if (value == null) {
+            pushDefaultValue(frame, descriptor);
+            return;
+        }
+        char typeChar = descriptor.charAt(0);
+        switch (typeChar) {
+            case 'J':
+                frame.getStack().pushLong(value instanceof Long ? (Long) value : ((Number) value).longValue());
+                break;
+            case 'D':
+                frame.getStack().pushDouble(value instanceof Double ? (Double) value : ((Number) value).doubleValue());
+                break;
+            case 'F':
+                frame.getStack().pushFloat(value instanceof Float ? (Float) value : ((Number) value).floatValue());
+                break;
+            case 'I':
+            case 'Z':
+            case 'B':
+            case 'C':
+            case 'S':
+                if (value instanceof Boolean) {
+                    frame.getStack().pushInt((Boolean) value ? 1 : 0);
+                } else if (value instanceof Character) {
+                    frame.getStack().pushInt((Character) value);
+                } else {
+                    frame.getStack().pushInt(((Number) value).intValue());
+                }
+                break;
+            case 'L':
+            case '[':
+                if (value instanceof ObjectInstance) {
+                    frame.getStack().pushReference((ObjectInstance) value);
+                } else {
+                    frame.getStack().pushReference(null);
+                }
+                break;
+            default:
+                pushDefaultValue(frame, descriptor);
+                break;
+        }
+    }
+
+    private void pushDefaultValue(StackFrame frame, String descriptor) {
+        char typeChar = descriptor.charAt(0);
+        switch (typeChar) {
+            case 'J':
+                frame.getStack().pushLong(0L);
+                break;
+            case 'D':
+                frame.getStack().pushDouble(0.0);
+                break;
+            case 'F':
+                frame.getStack().pushFloat(0.0f);
+                break;
+            case 'L':
+            case '[':
+                frame.getStack().pushReference(null);
+                break;
+            default:
+                frame.getStack().pushInt(0);
+                break;
+        }
+    }
+
+    private Object convertToStorable(ConcreteValue value, String descriptor) {
+        if (value.isNull()) {
+            return null;
+        }
+        char typeChar = descriptor.charAt(0);
+        switch (typeChar) {
+            case 'J':
+                return value.asLong();
+            case 'D':
+                return value.asDouble();
+            case 'F':
+                return value.asFloat();
+            case 'I':
+                return value.asInt();
+            case 'Z':
+                return value.asInt() != 0;
+            case 'B':
+                return (byte) value.asInt();
+            case 'C':
+                return (char) value.asInt();
+            case 'S':
+                return (short) value.asInt();
+            case 'L':
+            case '[':
+                return value.asReference();
+            default:
+                return value.asInt();
+        }
     }
 
     private void handleNewObject(StackFrame frame, EngineDispatchContext ctx) {
