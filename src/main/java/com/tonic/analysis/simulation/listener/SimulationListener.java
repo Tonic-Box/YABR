@@ -2,10 +2,15 @@ package com.tonic.analysis.simulation.listener;
 
 import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
+import com.tonic.analysis.simulation.heap.AllocationSite;
+import com.tonic.analysis.simulation.heap.EscapeAnalyzer;
+import com.tonic.analysis.simulation.heap.FieldKey;
 import com.tonic.analysis.simulation.state.SimValue;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+
+import java.util.Set;
 
 /**
  * Listener interface for simulation events.
@@ -217,4 +222,76 @@ public interface SimulationListener {
      * @param state the current state
      */
     default void onMonitorExit(MonitorExitInstruction instr, SimulationState state) {}
+
+    // ========== Heap Tracking Events ==========
+
+    /**
+     * Called when an object is allocated on the simulation heap.
+     *
+     * @param site the allocation site
+     * @param ref the reference to the allocated object
+     */
+    default void onObjectAllocated(AllocationSite site, SimValue ref) {}
+
+    /**
+     * Called when an array is allocated on the simulation heap.
+     *
+     * @param site the allocation site
+     * @param ref the reference to the allocated array
+     * @param length the array length
+     */
+    default void onArrayAllocated(AllocationSite site, SimValue ref, SimValue length) {}
+
+    /**
+     * Called when a field is written on the simulation heap.
+     *
+     * @param objectRef the object reference
+     * @param field the field being written
+     * @param value the value being stored
+     */
+    default void onHeapFieldWrite(SimValue objectRef, FieldKey field, SimValue value) {}
+
+    /**
+     * Called when a field is read from the simulation heap.
+     *
+     * @param objectRef the object reference
+     * @param field the field being read
+     * @param values the possible values (may be multiple due to imprecision)
+     */
+    default void onHeapFieldRead(SimValue objectRef, FieldKey field, Set<SimValue> values) {}
+
+    /**
+     * Called when an array element is stored on the simulation heap.
+     *
+     * @param arrayRef the array reference
+     * @param index the array index
+     * @param value the value being stored
+     */
+    default void onHeapArrayStore(SimValue arrayRef, SimValue index, SimValue value) {}
+
+    /**
+     * Called when an array element is loaded from the simulation heap.
+     *
+     * @param arrayRef the array reference
+     * @param index the array index
+     * @param values the possible values
+     */
+    default void onHeapArrayLoad(SimValue arrayRef, SimValue index, Set<SimValue> values) {}
+
+    /**
+     * Called when an object escapes its allocation scope.
+     *
+     * @param site the allocation site
+     * @param escapeState the escape state
+     */
+    default void onObjectEscaped(AllocationSite site, EscapeAnalyzer.EscapeState escapeState) {}
+
+    /**
+     * Called when an aliasing relationship is detected.
+     *
+     * @param ref1 first reference
+     * @param ref2 second reference
+     * @param mustAlias true if definitely aliased, false if may-alias
+     */
+    default void onAlias(SimValue ref1, SimValue ref2, boolean mustAlias) {}
 }

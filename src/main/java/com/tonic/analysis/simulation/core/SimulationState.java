@@ -1,5 +1,7 @@
 package com.tonic.analysis.simulation.core;
 
+import com.tonic.analysis.simulation.heap.HeapMode;
+import com.tonic.analysis.simulation.heap.SimHeap;
 import com.tonic.analysis.simulation.state.LocalState;
 import com.tonic.analysis.simulation.state.SimValue;
 import com.tonic.analysis.simulation.state.StackState;
@@ -29,14 +31,21 @@ public final class SimulationState {
     private final IRBlock currentBlock;
     private final int instructionIndex;
     private final int callDepth;
+    private final SimHeap heap;
 
     private SimulationState(StackState stack, LocalState locals,
                             IRBlock currentBlock, int instructionIndex, int callDepth) {
+        this(stack, locals, currentBlock, instructionIndex, callDepth, new SimHeap(HeapMode.COPY_ON_MERGE));
+    }
+
+    private SimulationState(StackState stack, LocalState locals,
+                            IRBlock currentBlock, int instructionIndex, int callDepth, SimHeap heap) {
         this.stack = stack;
         this.locals = locals;
         this.currentBlock = currentBlock;
         this.instructionIndex = instructionIndex;
         this.callDepth = callDepth;
+        this.heap = heap;
     }
 
     // ========== Factory Methods ==========
@@ -68,35 +77,35 @@ public final class SimulationState {
      * Push a value onto the stack.
      */
     public SimulationState push(SimValue value) {
-        return new SimulationState(stack.push(value), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.push(value), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Push a wide value (long/double) onto the stack.
      */
     public SimulationState pushWide(SimValue value) {
-        return new SimulationState(stack.pushWide(value), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.pushWide(value), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Pop the top value from the stack.
      */
     public SimulationState pop() {
-        return new SimulationState(stack.pop(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.pop(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Pop multiple values from the stack.
      */
     public SimulationState pop(int count) {
-        return new SimulationState(stack.pop(count), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.pop(count), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Pop a wide value (2 slots) from the stack.
      */
     public SimulationState popWide() {
-        return new SimulationState(stack.popWide(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.popWide(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
@@ -146,56 +155,56 @@ public final class SimulationState {
      * Duplicate top stack value (dup).
      */
     public SimulationState dup() {
-        return new SimulationState(stack.dup(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.dup(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Duplicate with insertion (dup_x1).
      */
     public SimulationState dupX1() {
-        return new SimulationState(stack.dupX1(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.dupX1(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Duplicate with insertion (dup_x2).
      */
     public SimulationState dupX2() {
-        return new SimulationState(stack.dupX2(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.dupX2(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Duplicate top two values (dup2).
      */
     public SimulationState dup2() {
-        return new SimulationState(stack.dup2(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.dup2(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Duplicate two with insertion (dup2_x1).
      */
     public SimulationState dup2X1() {
-        return new SimulationState(stack.dup2X1(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.dup2X1(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Duplicate two with insertion (dup2_x2).
      */
     public SimulationState dup2X2() {
-        return new SimulationState(stack.dup2X2(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.dup2X2(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Swap top two values.
      */
     public SimulationState swap() {
-        return new SimulationState(stack.swap(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.swap(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Clear the stack (for exception handlers).
      */
     public SimulationState clearStack() {
-        return new SimulationState(stack.clear(), locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack.clear(), locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     // ========== Local Variable Operations ==========
@@ -204,14 +213,14 @@ public final class SimulationState {
      * Set a local variable.
      */
     public SimulationState setLocal(int index, SimValue value) {
-        return new SimulationState(stack, locals.set(index, value), currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack, locals.set(index, value), currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Set a wide local variable (long/double).
      */
     public SimulationState setLocalWide(int index, SimValue value) {
-        return new SimulationState(stack, locals.setWide(index, value), currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack, locals.setWide(index, value), currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
@@ -234,28 +243,28 @@ public final class SimulationState {
      * Move to a new block.
      */
     public SimulationState atBlock(IRBlock block) {
-        return new SimulationState(stack, locals, block, 0, callDepth);
+        return new SimulationState(stack, locals, block, 0, callDepth, heap);
     }
 
     /**
      * Move to a specific instruction index.
      */
     public SimulationState atInstruction(int index) {
-        return new SimulationState(stack, locals, currentBlock, index, callDepth);
+        return new SimulationState(stack, locals, currentBlock, index, callDepth, heap);
     }
 
     /**
      * Advance to the next instruction.
      */
     public SimulationState nextInstruction() {
-        return new SimulationState(stack, locals, currentBlock, instructionIndex + 1, callDepth);
+        return new SimulationState(stack, locals, currentBlock, instructionIndex + 1, callDepth, heap);
     }
 
     /**
      * Enter a method call (increment call depth).
      */
     public SimulationState enterCall() {
-        return new SimulationState(StackState.empty(), LocalState.empty(), null, 0, callDepth + 1);
+        return new SimulationState(StackState.empty(), LocalState.empty(), null, 0, callDepth + 1, heap);
     }
 
     /**
@@ -263,7 +272,7 @@ public final class SimulationState {
      */
     public SimulationState exitCall(SimulationState callerState) {
         return new SimulationState(callerState.stack, callerState.locals,
-            callerState.currentBlock, callerState.instructionIndex, callDepth - 1);
+            callerState.currentBlock, callerState.instructionIndex, callDepth - 1, heap);
     }
 
     // ========== State Queries ==========
@@ -304,6 +313,13 @@ public final class SimulationState {
     }
 
     /**
+     * Get the simulation heap.
+     */
+    public SimHeap getHeap() {
+        return heap;
+    }
+
+    /**
      * Get the current instruction.
      */
     public IRInstruction getCurrentInstruction() {
@@ -334,12 +350,14 @@ public final class SimulationState {
 
     /**
      * Merge this state with another for control flow convergence.
+     * Uses set-based union for heap merging.
      */
     public SimulationState merge(SimulationState other) {
         if (other == null) return this;
         StackState mergedStack = stack.merge(other.stack);
         LocalState mergedLocals = locals.merge(other.locals);
-        return new SimulationState(mergedStack, mergedLocals, currentBlock, instructionIndex, callDepth);
+        SimHeap mergedHeap = heap.merge(other.heap);
+        return new SimulationState(mergedStack, mergedLocals, currentBlock, instructionIndex, callDepth, mergedHeap);
     }
 
     /**
@@ -355,14 +373,21 @@ public final class SimulationState {
      * Create a new state with a different stack.
      */
     public SimulationState withStack(StackState newStack) {
-        return new SimulationState(newStack, locals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(newStack, locals, currentBlock, instructionIndex, callDepth, heap);
     }
 
     /**
      * Create a new state with different locals.
      */
     public SimulationState withLocals(LocalState newLocals) {
-        return new SimulationState(stack, newLocals, currentBlock, instructionIndex, callDepth);
+        return new SimulationState(stack, newLocals, currentBlock, instructionIndex, callDepth, heap);
+    }
+
+    /**
+     * Create a new state with a different heap.
+     */
+    public SimulationState withHeap(SimHeap newHeap) {
+        return new SimulationState(stack, locals, currentBlock, instructionIndex, callDepth, newHeap);
     }
 
     @Override
@@ -374,7 +399,8 @@ public final class SimulationState {
                callDepth == that.callDepth &&
                Objects.equals(stack, that.stack) &&
                Objects.equals(locals, that.locals) &&
-               Objects.equals(currentBlock, that.currentBlock);
+               Objects.equals(currentBlock, that.currentBlock) &&
+               Objects.equals(heap, that.heap);
     }
 
     @Override
@@ -389,6 +415,7 @@ public final class SimulationState {
             ", instr=" + instructionIndex +
             ", stack=" + stack.depth() +
             ", locals=" + locals.size() +
+            ", heap=" + (heap.getObjectCount() + heap.getArrayCount()) + " objects" +
             ", depth=" + callDepth +
             "]";
     }

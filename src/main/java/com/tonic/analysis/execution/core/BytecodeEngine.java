@@ -224,21 +224,20 @@ public final class BytecodeEngine {
             return true;
         }
 
+        initializedClasses.add(className);
+
         try {
             ResolvedMethod clinit = context.getClassResolver().resolveMethod(
                 className, "<clinit>", "()V");
             if (clinit != null && clinit.getMethod() != null) {
                 BytecodeResult result = execute(clinit.getMethod());
-                if (result.getStatus() == BytecodeResult.Status.COMPLETED) {
-                    initializedClasses.add(className);
-                    return true;
+                if (result.getStatus() != BytecodeResult.Status.COMPLETED) {
+                    return false;
                 }
-                return false;
             }
         } catch (Exception e) {
         }
 
-        initializedClasses.add(className);
         return true;
     }
 
@@ -788,6 +787,7 @@ public final class BytecodeEngine {
     private void handleNewObject(StackFrame frame, EngineDispatchContext ctx) {
         String className = ctx.getPendingNewClass();
         ObjectInstance obj = context.getHeapManager().newObject(className);
+        notifyObjectAllocation(obj);
         frame.getStack().pushReference(obj);
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
@@ -798,9 +798,11 @@ public final class BytecodeEngine {
 
         if (dimensions.length == 1) {
             ArrayInstance array = context.getHeapManager().newArray(className, dimensions[0]);
+            notifyArrayAllocation(array);
             frame.getStack().pushReference(array);
         } else {
             ArrayInstance array = context.getHeapManager().newMultiArray(className, dimensions);
+            notifyArrayAllocation(array);
             frame.getStack().pushReference(array);
         }
 
@@ -924,6 +926,18 @@ public final class BytecodeEngine {
     private void notifyAfterInstruction(StackFrame frame, Instruction instr) {
         for (BytecodeListener listener : listeners) {
             listener.afterInstruction(frame, instr);
+        }
+    }
+
+    private void notifyObjectAllocation(ObjectInstance instance) {
+        for (BytecodeListener listener : listeners) {
+            listener.onObjectAllocation(instance);
+        }
+    }
+
+    private void notifyArrayAllocation(ArrayInstance array) {
+        for (BytecodeListener listener : listeners) {
+            listener.onArrayAllocation(array);
         }
     }
 

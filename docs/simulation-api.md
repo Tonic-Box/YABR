@@ -471,6 +471,312 @@ CallMetrics metrics = result.getCallMetrics();
 
 ---
 
+## Object Tracking (Heap Simulation)
+
+The Simulation API supports full object tracking for points-to analysis, escape analysis, and field-sensitive data flow.
+
+### Core Heap Classes
+
+#### AllocationSite
+
+Unique identity per NEW instruction:
+
+```java
+import com.tonic.analysis.simulation.heap.*;
+
+// Create allocation site for a NEW instruction
+AllocationSite site = AllocationSite.of("com/example/Foo", 10, "myMethod()V");
+
+// For synthetic allocations (e.g., parameter modeling)
+AllocationSite synthetic = AllocationSite.synthetic("com/example/Bar", "parameter");
+
+// For external allocations (returned from native/library code)
+AllocationSite external = AllocationSite.external("java/util/ArrayList");
+
+// Queries
+String className = site.getClassName();
+int index = site.getInstructionIndex();
+boolean isSynthetic = site.isSynthetic();
+```
+
+#### FieldKey
+
+Field identifier for field-sensitive tracking:
+
+```java
+FieldKey field = FieldKey.of("com/example/User", "name", "Ljava/lang/String;");
+
+String owner = field.getOwner();
+String name = field.getName();
+String descriptor = field.getDescriptor();
+```
+
+#### HeapMode
+
+Configuration for heap behavior:
+
+```java
+HeapMode.IMMUTABLE     // Copy-on-write, safe for parallel analysis
+HeapMode.MUTABLE       // In-place updates, faster for single-path
+HeapMode.COPY_ON_MERGE // Copy only at control flow joins
+```
+
+### SimHeap
+
+Central heap manager:
+
+```java
+SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+
+// Object allocation
+AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
+heap.allocate(site);
+
+// Field operations
+FieldKey field = FieldKey.of("com/example/Foo", "value", "I");
+heap.putField(site, field, SimValue.constant(42, PrimitiveType.INT, null));
+Set<SimValue> values = heap.getField(site, field);
+
+// Array operations
+AllocationSite arraySite = AllocationSite.of("[I", 20, "method");
+heap.allocateArray(arraySite, PrimitiveType.INT, SimValue.constant(10, PrimitiveType.INT, null));
+heap.arrayStore(arraySite, index, value);
+Set<SimValue> elements = heap.arrayLoad(arraySite, index);
+
+// Static field operations
+heap.putStatic(staticField, value);
+Set<SimValue> staticValues = heap.getStatic(staticField);
+
+// Heap merge (at control flow joins)
+SimHeap merged = heap1.merge(heap2);
+
+// Escape tracking
+heap.markEscaped(site);
+boolean escaped = heap.hasEscaped(site);
+```
+
+### SimValue Enhancements
+
+SimValue now supports points-to sets and null state tracking:
+
+```java
+// Create value pointing to allocation site
+SimValue ref = SimValue.ofAllocation(site, type, sourceInstr);
+Set<AllocationSite> pointsTo = ref.getPointsTo();
+
+// Null values
+SimValue nullRef = SimValue.ofNull(type, sourceInstr);
+boolean isNull = nullRef.isDefinitelyNull();
+
+// Nullable reference
+SimValue nullable = SimValue.ofReference(type, sourceInstr, pointsTo, SimValue.NullState.MAYBE_NULL);
+boolean mayBeNull = nullable.mayBeNull();
+boolean notNull = nullable.isDefinitelyNotNull();
+
+// Merge values at control flow joins
+SimValue merged = value1.merge(value2);  // Union of points-to sets
+SimValue allMerged = SimValue.merge(listOfValues);
+```
+
+### SimValueBuilder
+
+Fluent API for constructing simulated arguments:
+
+```java
+SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+
+// Build object with fields
+SimValue user = SimValueBuilder.forClass("com/example/User")
+    .withField("name", "Alice")
+    .withField("age", 30)
+    .withField("active", true)
+    .definitelyNotNull()
+    .build(heap);
+
+// Build with nested objects
+SimValue config = SimValueBuilder.forClass("com/example/Config")
+    .withField("database", SimValueBuilder.forClass("com/example/DbConfig")
+        .withField("host", "localhost")
+        .withField("port", 5432))
+    .build(heap);
+
+// Build array
+SimValue arr = SimValueBuilder.forArray(PrimitiveType.INT)
+    .asArray(value1, value2, value3)
+    .build(heap);
+
+// Null handling
+SimValue nullable = SimValueBuilder.forClass("Foo").nullable().build(heap);
+SimValue nullVal = SimValueBuilder.forClass("Foo").definitelyNull().build(heap);
+SimValue notNull = SimValueBuilder.forClass("Foo").definitelyNotNull().build(heap);
+```
+
+### Points-To Query
+
+Query interface for points-to analysis:
+
+```java
+PointsToQuery query = new PointsToQuery(heap);
+
+// Points-to queries
+Set<AllocationSite> sites = query.pointsTo(ref);
+boolean mayPoint = query.mayPointTo(ref, site);
+boolean mustPoint = query.mustPointTo(ref, site);
+
+// Alias analysis
+boolean mayAlias = query.mayAlias(ref1, ref2);
+boolean mustAlias = query.mustAlias(ref1, ref2);
+
+// Null analysis
+boolean mayBeNull = query.mayBeNull(ref);
+boolean isNull = query.isDefinitelyNull(ref);
+boolean notNull = query.isDefinitelyNotNull(ref);
+
+// Reachability
+Set<SimValue> reachable = query.reachableFrom(rootRef);
+Set<AllocationSite> reachableSites = query.reachableSitesFrom(rootRef);
+
+// Field/array access
+Set<SimValue> fieldValues = query.getFieldValues(objectRef, field);
+Set<SimValue> arrayElements = query.getArrayElements(arrayRef);
+
+// Points-to set properties
+int ptsSize = query.getPointsToSetSize(ref);
+boolean singleton = query.isSingleton(ref);
+```
+
+### Escape Analysis
+
+Determine if objects escape method/thread scope:
+
+```java
+EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
+
+// Analyze single site
+EscapeAnalyzer.EscapeState state = analyzer.analyze(site);
+switch (state) {
+    case NO_ESCAPE -> // Method-local, safe for stack allocation
+    case ARG_ESCAPE -> // Escapes via argument (may-escape)
+    case GLOBAL_ESCAPE -> // Stored in static/heap, definitely escapes
+}
+
+// Batch queries
+Set<AllocationSite> nonEscaping = analyzer.getNonEscaping();
+Set<AllocationSite> escaping = analyzer.getEscaping();
+
+// Convenience methods
+boolean mayEscape = analyzer.mayEscape(site);
+boolean defEscapes = analyzer.definitelyEscapes(site);
+
+// Reachability from escaped objects
+Set<AllocationSite> reachable = analyzer.getReachableFrom(rootSite);
+boolean isReachable = analyzer.isReachableFrom(source, target);
+```
+
+### Constructor Analysis
+
+Auto-populate fields from constructor bytecode:
+
+```java
+ConstructorAnalyzer analyzer = new ConstructorAnalyzer();
+
+// Analyze constructor to get field assignments
+SimObject obj = analyzer.analyzeConstructor(site, constructor, args, heap);
+
+// Extract field assignments without creating object
+Map<FieldKey, SimValue> assignments = analyzer.extractFieldAssignments(constructor, args);
+
+// Query constructor properties
+Set<FieldKey> assigned = analyzer.getAssignedFields(constructor);
+boolean assignsField = analyzer.assignsField(constructor, field);
+boolean hasThisEscape = analyzer.hasThisEscape(constructor);
+```
+
+### Heap Listener Events
+
+New events for object tracking:
+
+```java
+public class HeapTrackingListener implements SimulationListener {
+    @Override
+    public void onObjectAllocated(AllocationSite site, SimValue ref) {
+        System.out.println("Allocated: " + site.getClassName());
+    }
+
+    @Override
+    public void onArrayAllocated(AllocationSite site, SimValue ref, SimValue length) {
+        System.out.println("Array allocated: " + site);
+    }
+
+    @Override
+    public void onHeapFieldWrite(SimValue objectRef, FieldKey field, SimValue value) {
+        System.out.println("Field write: " + field.getName());
+    }
+
+    @Override
+    public void onHeapFieldRead(SimValue objectRef, FieldKey field, Set<SimValue> values) {
+        System.out.println("Field read: " + field.getName() + " -> " + values.size() + " values");
+    }
+
+    @Override
+    public void onHeapArrayStore(SimValue arrayRef, SimValue index, SimValue value) {
+        System.out.println("Array store");
+    }
+
+    @Override
+    public void onHeapArrayLoad(SimValue arrayRef, SimValue index, Set<SimValue> values) {
+        System.out.println("Array load -> " + values.size() + " values");
+    }
+
+    @Override
+    public void onObjectEscaped(AllocationSite site, EscapeAnalyzer.EscapeState state) {
+        System.out.println("Escaped: " + site + " -> " + state);
+    }
+
+    @Override
+    public void onAlias(SimValue ref1, SimValue ref2, boolean mustAlias) {
+        System.out.println("Alias: " + (mustAlias ? "must" : "may"));
+    }
+}
+```
+
+### Object Tracking Example
+
+```java
+import com.tonic.analysis.simulation.heap.*;
+import com.tonic.analysis.simulation.state.SimValue;
+
+public class ObjectTrackingExample {
+    public static void analyzeObjectFlow(IRMethod method) {
+        SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+
+        // Build simulated argument
+        SimValue userArg = SimValueBuilder.forClass("com/example/User")
+            .withField("id", 123)
+            .withField("name", "test")
+            .definitelyNotNull()
+            .build(heap);
+
+        // Simulate method with heap tracking
+        SimulationContext ctx = SimulationContext.defaults();
+        SimulationEngine engine = new SimulationEngine(ctx);
+
+        SimulationState initialState = SimulationState.empty()
+            .withHeap(heap)
+            .setLocal(0, SimValue.ofType(IRType.fromDescriptor("Lcom/example/Service;"), null))
+            .setLocal(1, userArg);
+
+        SimulationResult result = engine.simulate(method, initialState);
+
+        // Query points-to
+        PointsToQuery query = new PointsToQuery(result.getFinalState().getHeap());
+        // ... perform alias/escape analysis
+    }
+}
+```
+
+---
+
 ## Complete Example
 
 ```java
@@ -540,12 +846,23 @@ com.tonic.analysis.simulation/
 │   ├── StateSnapshot.java          - Lightweight snapshot
 │   └── InterProceduralEngine.java  - Cross-method simulation
 ├── state/
-│   ├── SimValue.java               - Simulated value
+│   ├── SimValue.java               - Simulated value (with points-to)
 │   ├── StackState.java             - Operand stack
 │   ├── LocalState.java             - Local variables
 │   └── CallStackState.java         - Inter-procedural call stack
+├── heap/
+│   ├── AllocationSite.java         - Unique allocation identity
+│   ├── FieldKey.java               - Field identifier
+│   ├── HeapMode.java               - Heap configuration mode
+│   ├── SimObject.java              - Abstract heap object
+│   ├── SimArray.java               - Abstract heap array
+│   ├── SimHeap.java                - Central heap manager
+│   ├── SimValueBuilder.java        - Value construction API
+│   ├── ConstructorAnalyzer.java    - Constructor analysis
+│   ├── EscapeAnalyzer.java         - Escape analysis
+│   └── PointsToQuery.java          - Points-to query interface
 ├── listener/
-│   ├── SimulationListener.java     - Event interface
+│   ├── SimulationListener.java     - Event interface (with heap events)
 │   ├── AbstractListener.java       - Base implementation
 │   ├── CompositeListener.java      - Multi-listener adapter
 │   ├── StackOperationListener.java - Stack tracking
@@ -576,10 +893,20 @@ com.tonic.analysis.simulation/
 | `SimulationState` | Immutable execution state snapshot |
 | `SimulationEngine` | Drives simulation with listeners |
 | `SimulationResult` | Collected simulation data |
-| `SimValue` | Represents a simulated value |
+| `SimValue` | Represents a simulated value with points-to |
 | `StackState` | Immutable operand stack |
 | `LocalState` | Immutable local variables |
-| `SimulationListener` | Event hooks interface |
+| `AllocationSite` | Unique identity per NEW instruction |
+| `FieldKey` | Field identifier (owner, name, descriptor) |
+| `HeapMode` | Heap configuration (MUTABLE/IMMUTABLE/COPY_ON_MERGE) |
+| `SimObject` | Abstract heap object with field values |
+| `SimArray` | Abstract heap array with element tracking |
+| `SimHeap` | Central heap manager |
+| `SimValueBuilder` | Fluent API for value construction |
+| `ConstructorAnalyzer` | Constructor bytecode analysis |
+| `EscapeAnalyzer` | Object escape analysis |
+| `PointsToQuery` | Points-to/alias query interface |
+| `SimulationListener` | Event hooks interface (with heap events) |
 | `StackOperationListener` | Tracks push/pop operations |
 | `AllocationListener` | Tracks object allocations |
 | `FieldAccessListener` | Tracks field read/write |
