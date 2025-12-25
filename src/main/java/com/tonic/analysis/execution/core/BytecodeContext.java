@@ -1,6 +1,7 @@
 package com.tonic.analysis.execution.core;
 
 import com.tonic.analysis.execution.heap.HeapManager;
+import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 
 public final class BytecodeContext {
@@ -8,6 +9,7 @@ public final class BytecodeContext {
     private final ExecutionMode mode;
     private final HeapManager heapManager;
     private final ClassResolver classResolver;
+    private final NativeRegistry nativeRegistry;
     private final int maxCallDepth;
     private final int maxInstructions;
     private final boolean trackStatistics;
@@ -16,6 +18,7 @@ public final class BytecodeContext {
         this.mode = builder.mode;
         this.heapManager = builder.heapManager;
         this.classResolver = builder.classResolver;
+        this.nativeRegistry = builder.nativeRegistry;
         this.maxCallDepth = builder.maxCallDepth;
         this.maxInstructions = builder.maxInstructions;
         this.trackStatistics = builder.trackStatistics;
@@ -31,6 +34,10 @@ public final class BytecodeContext {
 
     public ClassResolver getClassResolver() {
         return classResolver;
+    }
+
+    public NativeRegistry getNativeRegistry() {
+        return nativeRegistry;
     }
 
     public int getMaxCallDepth() {
@@ -49,6 +56,7 @@ public final class BytecodeContext {
         private ExecutionMode mode = ExecutionMode.RECURSIVE;
         private HeapManager heapManager;
         private ClassResolver classResolver;
+        private NativeRegistry nativeRegistry;
         private int maxCallDepth = 1000;
         private int maxInstructions = 10_000_000;
         private boolean trackStatistics = false;
@@ -68,6 +76,11 @@ public final class BytecodeContext {
 
         public Builder classResolver(ClassResolver classResolver) {
             this.classResolver = classResolver;
+            return this;
+        }
+
+        public Builder nativeRegistry(NativeRegistry nativeRegistry) {
+            this.nativeRegistry = nativeRegistry;
             return this;
         }
 
@@ -98,6 +111,10 @@ public final class BytecodeContext {
             }
             if (classResolver == null) {
                 throw new IllegalStateException("ClassResolver is required");
+            }
+            if (nativeRegistry == null) {
+                nativeRegistry = new NativeRegistry();
+                nativeRegistry.registerDefaults();
             }
             return new BytecodeContext(this);
         }

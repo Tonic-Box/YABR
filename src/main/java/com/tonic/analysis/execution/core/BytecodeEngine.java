@@ -19,6 +19,9 @@ import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.table.ExceptionTableEntry;
+import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.DoubleItem;
 import com.tonic.parser.constpool.FloatItem;
 import com.tonic.parser.constpool.IntegerItem;
@@ -29,8 +32,11 @@ import com.tonic.parser.constpool.StringRefItem;
 import com.tonic.analysis.execution.invoke.InvocationContext;
 import com.tonic.analysis.execution.invoke.InvocationHandler;
 import com.tonic.analysis.execution.invoke.InvocationResult;
+import com.tonic.analysis.execution.invoke.NativeContext;
+import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.invoke.RecursiveHandler;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
+import com.tonic.analysis.execution.listener.BytecodeListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +55,7 @@ public final class BytecodeEngine {
     private volatile boolean interrupted;
     private long instructionCount;
     private ConcreteValue lastReturnValue;
+    private ObjectInstance lastException;
 
     public BytecodeEngine(BytecodeContext context) {
         if (context == null) {
@@ -63,7 +70,10 @@ public final class BytecodeEngine {
         this.instructionCount = 0;
 
         if (context.getMode() == ExecutionMode.RECURSIVE) {
-            this.invocationHandler = new RecursiveHandler(context.getClassResolver());
+            this.invocationHandler = new RecursiveHandler(
+                context.getClassResolver(),
+                context.getNativeRegistry()
+            );
         } else {
             this.invocationHandler = null;
         }
@@ -114,11 +124,9 @@ public final class BytecodeEngine {
 
                 } catch (Exception e) {
                     ObjectInstance exceptionObj = wrapException(e);
-                    current.completeExceptionally(exceptionObj);
-
-                    List<String> trace = buildStackTrace();
-                    long elapsed = System.nanoTime() - startTime;
-                    return BytecodeResult.exception(exceptionObj, trace).withStatistics(instructionCount, elapsed);
+                    if (!tryHandleException(current, exceptionObj)) {
+                        current.completeExceptionally(exceptionObj);
+                    }
                 }
             }
 
@@ -128,6 +136,10 @@ public final class BytecodeEngine {
             }
 
             long elapsed = System.nanoTime() - startTime;
+            if (lastException != null) {
+                List<String> trace = buildStackTrace();
+                return BytecodeResult.exception(lastException, trace).withStatistics(instructionCount, elapsed);
+            }
             return BytecodeResult.completed(lastReturnValue).withStatistics(instructionCount, elapsed);
 
         } catch (StackOverflowError e) {
@@ -183,6 +195,7 @@ public final class BytecodeEngine {
         instructionCount = 0;
         interrupted = false;
         lastReturnValue = ConcreteValue.nullRef();
+        lastException = null;
     }
 
     public StackFrame getCurrentFrame() {
@@ -206,6 +219,11 @@ public final class BytecodeEngine {
             return true;
         }
 
+        if (isJdkClass(className)) {
+            initializedClasses.add(className);
+            return true;
+        }
+
         try {
             ResolvedMethod clinit = context.getClassResolver().resolveMethod(
                 className, "<clinit>", "()V");
@@ -224,6 +242,14 @@ public final class BytecodeEngine {
         return true;
     }
 
+    private boolean isJdkClass(String className) {
+        return className.startsWith("java/") ||
+               className.startsWith("javax/") ||
+               className.startsWith("sun/") ||
+               className.startsWith("com/sun/") ||
+               className.startsWith("jdk/");
+    }
+
     public boolean isClassInitialized(String className) {
         return initializedClasses.contains(className);
     }
@@ -240,9 +266,13 @@ public final class BytecodeEngine {
         StackFrame completed = callStack.pop();
 
         if (callStack.isEmpty()) {
-            lastReturnValue = completed.getReturnValue();
-            if (lastReturnValue == null) {
-                lastReturnValue = ConcreteValue.nullRef();
+            if (completed.getException() != null) {
+                lastException = completed.getException();
+            } else {
+                lastReturnValue = completed.getReturnValue();
+                if (lastReturnValue == null) {
+                    lastReturnValue = ConcreteValue.nullRef();
+                }
             }
             return;
         }
@@ -250,7 +280,10 @@ public final class BytecodeEngine {
         StackFrame caller = callStack.peek();
 
         if (completed.getException() != null) {
-            caller.completeExceptionally(completed.getException());
+            ObjectInstance exception = completed.getException();
+            if (!tryHandleException(caller, exception)) {
+                caller.completeExceptionally(exception);
+            }
         } else {
             ConcreteValue returnValue = completed.getReturnValue();
             if (returnValue != null && !returnValue.isNull()) {
@@ -376,6 +409,9 @@ public final class BytecodeEngine {
 
             MethodEntry targetMethod = resolveMethod(methodInfo);
             if (targetMethod == null) {
+                if (tryNativeInvoke(frame, methodInfo, receiver, args)) {
+                    return;
+                }
                 stubInvoke(frame, descriptor, methodInfo.isStatic());
                 return;
             }
@@ -387,7 +423,8 @@ public final class BytecodeEngine {
                 callStack.push(result.getNewFrame());
             } else if (result.isNativeHandled()) {
                 ConcreteValue returnVal = result.getReturnValue();
-                if (returnVal != null) {
+                String returnType = getReturnType(descriptor);
+                if (returnVal != null && !"V".equals(returnType)) {
                     frame.getStack().push(returnVal);
                 }
                 frame.advancePC(frame.getCurrentInstruction().getLength());
@@ -399,6 +436,63 @@ public final class BytecodeEngine {
         } else {
             stubInvoke(frame, descriptor, methodInfo.isStatic());
         }
+    }
+
+    private boolean tryNativeInvoke(StackFrame frame, MethodInfo methodInfo,
+                                    ObjectInstance receiver, ConcreteValue[] args) {
+        NativeRegistry nativeRegistry = getNativeRegistry();
+        if (nativeRegistry == null) {
+            return false;
+        }
+
+        String owner = methodInfo.getOwnerClass();
+        String name = methodInfo.getMethodName();
+        String desc = methodInfo.getDescriptor();
+
+        boolean hasHandler = nativeRegistry.hasHandler(owner, name, desc);
+        if (!hasHandler) {
+            return false;
+        }
+
+        try {
+            NativeContext nativeContext = new NativeContext() {
+                @Override
+                public com.tonic.analysis.execution.heap.HeapManager getHeapManager() {
+                    return context.getHeapManager();
+                }
+                @Override
+                public com.tonic.analysis.execution.resolve.ClassResolver getClassResolver() {
+                    return context.getClassResolver();
+                }
+                @Override
+                public ObjectInstance createString(String value) {
+                    return context.getHeapManager().internString(value);
+                }
+                @Override
+                public ObjectInstance createException(String className, String message) {
+                    ObjectInstance exception = context.getHeapManager().newObject(className);
+                    if (message != null) {
+                        ObjectInstance messageStr = context.getHeapManager().internString(message);
+                        exception.setField(className, "detailMessage", "Ljava/lang/String;", messageStr);
+                    }
+                    return exception;
+                }
+            };
+
+            ConcreteValue result = nativeRegistry.execute(owner, name, desc, receiver, args, nativeContext);
+            String returnType = getReturnType(desc);
+            if (!"V".equals(returnType) && result != null) {
+                frame.getStack().push(result);
+            }
+            frame.advancePC(frame.getCurrentInstruction().getLength());
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private NativeRegistry getNativeRegistry() {
+        return context.getNativeRegistry();
     }
 
     private void stubInvoke(StackFrame frame, String descriptor, boolean isStatic) {
@@ -719,15 +813,88 @@ public final class BytecodeEngine {
             throw new NullPointerException("Cannot throw null exception");
         }
         ObjectInstance exception = exceptionRef.asReference();
-        frame.completeExceptionally(exception);
+
+        if (!tryHandleException(frame, exception)) {
+            frame.completeExceptionally(exception);
+        }
+    }
+
+    private boolean tryHandleException(StackFrame frame, ObjectInstance exception) {
+        ExceptionTableEntry handler = findExceptionHandler(frame, exception);
+        if (handler != null) {
+            frame.getStack().clear();
+            frame.getStack().pushReference(exception);
+            frame.setPC(handler.getHandlerPc());
+            return true;
+        }
+        return false;
+    }
+
+    private ExceptionTableEntry findExceptionHandler(StackFrame frame, ObjectInstance exception) {
+        CodeAttribute codeAttr = frame.getMethod().getCodeAttribute();
+        if (codeAttr == null) {
+            return null;
+        }
+
+        int pc = frame.getPC();
+        String exceptionType = exception.getClassName();
+
+        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
+            if (pc >= entry.getStartPc() && pc < entry.getEndPc()) {
+                if (entry.getCatchType() == 0) {
+                    return entry;
+                }
+                String catchTypeName = resolveCatchType(frame, entry.getCatchType());
+                if (catchTypeName != null && isExceptionAssignable(exceptionType, catchTypeName)) {
+                    return entry;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String resolveCatchType(StackFrame frame, int catchTypeIndex) {
+        if (catchTypeIndex == 0) {
+            return null;
+        }
+        ConstPool constPool = frame.getMethod().getClassFile().getConstPool();
+        Item<?> item = constPool.getItem(catchTypeIndex);
+        if (item instanceof ClassRefItem) {
+            return ((ClassRefItem) item).getClassName();
+        }
+        return null;
+    }
+
+    private boolean isExceptionAssignable(String exceptionType, String catchType) {
+        if (exceptionType == null || catchType == null) {
+            return false;
+        }
+        if (exceptionType.equals(catchType)) {
+            return true;
+        }
+        ClassResolver resolver = context.getClassResolver();
+        if (resolver != null) {
+            return resolver.isAssignableFrom(catchType, exceptionType);
+        }
+        return false;
     }
 
     private ObjectInstance wrapException(Exception e) {
         try {
-            return context.getHeapManager().newObject("java/lang/Exception");
+            String exceptionClass = mapJavaExceptionToInternalName(e.getClass());
+            return context.getHeapManager().newObject(exceptionClass);
         } catch (Exception ex) {
-            return null;
+            return context.getHeapManager().newObject("java/lang/Exception");
         }
+    }
+
+    private String mapJavaExceptionToInternalName(Class<?> exceptionClass) {
+        String name = exceptionClass.getName().replace('.', '/');
+        if (name.startsWith("java/lang/") || name.startsWith("java/io/") ||
+            name.startsWith("java/util/") || name.startsWith("java/net/")) {
+            return name;
+        }
+        return "java/lang/Exception";
     }
 
     private List<String> buildStackTrace() {
@@ -886,6 +1053,12 @@ public final class BytecodeEngine {
         }
 
         @Override
+        public ObjectInstance resolveStringObject(int index) {
+            String value = resolveStringConstant(index);
+            return context.getHeapManager().internString(value);
+        }
+
+        @Override
         public ObjectInstance resolveClassConstant(int index) {
             return context.getHeapManager().newObject("java/lang/Class");
         }
@@ -1023,10 +1196,5 @@ public final class BytecodeEngine {
         public ConstantDynamicInfo getPendingConstantDynamic() {
             return pendingConstantDynamic;
         }
-    }
-
-    public interface BytecodeListener {
-        void beforeInstruction(StackFrame frame, Instruction instruction);
-        void afterInstruction(StackFrame frame, Instruction instruction);
     }
 }

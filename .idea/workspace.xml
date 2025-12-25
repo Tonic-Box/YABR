@@ -4,8 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution api doc update">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- fingerprint api">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/execution-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/execution-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/DispatchContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/DispatchContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/core/BytecodeEngineTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/core/BytecodeEngineTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/InvokeDynamicDispatcherTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/InvokeDynamicDispatcherTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart2Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart2Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart3Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart3Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart4Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart4Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart5Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart5Test.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,7 +91,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
   }
 }</component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [test]">
+  <component name="RunManager" selected="Gradle.YABR-fixed [build]">
     <configuration name="Decompile" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ast.Decompile" />
       <module name="YABR.main" />
@@ -206,8 +221,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Gradle.YABR-fixed [test]" />
         <item itemvalue="Gradle.YABR-fixed [build]" />
+        <item itemvalue="Gradle.YABR-fixed [test]" />
         <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
         <item itemvalue="Application.YABRStudio" />
         <item itemvalue="Application.YABRApplication" />
@@ -222,22 +237,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00039" summary="configuration for transforms used in compilation">
-      <option name="closed" value="true" />
-      <created>1765387212033</created>
-      <option name="number" value="00039" />
-      <option name="presentableId" value="LOCAL-00039" />
-      <option name="project" value="LOCAL" />
-      <updated>1765387212033</updated>
-    </task>
-    <task id="LOCAL-00040" summary="ASTTransform">
-      <option name="closed" value="true" />
-      <created>1765392815426</created>
-      <option name="number" value="00040" />
-      <option name="presentableId" value="LOCAL-00040" />
-      <option name="project" value="LOCAL" />
-      <updated>1765392815426</updated>
     </task>
     <task id="LOCAL-00041" summary="ASTTransform docs">
       <option name="closed" value="true" />
@@ -615,7 +614,23 @@
       <option name="project" value="LOCAL" />
       <updated>1766637157282</updated>
     </task>
-    <option name="localTasksCounter" value="88" />
+    <task id="LOCAL-00088" summary="- verifier api">
+      <option name="closed" value="true" />
+      <created>1766647954906</created>
+      <option name="number" value="00088" />
+      <option name="presentableId" value="LOCAL-00088" />
+      <option name="project" value="LOCAL" />
+      <updated>1766647954906</updated>
+    </task>
+    <task id="LOCAL-00089" summary="- fingerprint api">
+      <option name="closed" value="true" />
+      <created>1766679608703</created>
+      <option name="number" value="00089" />
+      <option name="presentableId" value="LOCAL-00089" />
+      <option name="project" value="LOCAL" />
+      <updated>1766679608703</updated>
+    </task>
+    <option name="localTasksCounter" value="90" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -630,8 +645,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Renamer API:&#10;- Fluent API: Chain multiple renames easily&#10;- Class renames: Updates all references including descriptors and signatures&#10;- Method renames: Single class or full hierarchy propagation (overrides)&#10;- Field renames: Updates all access sites&#10;- Validation: Checks for conflicts, invalid names, and missing references&#10;- InvokeDynamic support: Updates bootstrap method arguments (lambdas)&#10;- MethodHandle support: Updates method/field handle references&#10;- Generic signature support: Remaps class references in generics" />
-    <MESSAGE value="Renamer API, ExprEditor, updated docs" />
     <MESSAGE value="updated docs" />
     <MESSAGE value="- Call Graph API - Building graphs, querying callers/callees, reachability analysis, virtual call resolution&#10;- Dependency Analysis API - Class dependencies, circular dependency detection, dependency types&#10;- Type Inference API - Nullability states, type states, polymorphic types&#10;- Pattern Search API - Finding method calls, field accesses, allocations, type operations, custom patterns" />
     <MESSAGE value="Instrumentation API" />
@@ -655,7 +668,9 @@
     <MESSAGE value="- bytecode execution api tests and bug fixes" />
     <MESSAGE value="- bug fixes" />
     <MESSAGE value="- execution api doc update" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution api doc update" />
+    <MESSAGE value="- verifier api" />
+    <MESSAGE value="- fingerprint api" />
+    <option name="LAST_COMMIT_MESSAGE" value="- fingerprint api" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

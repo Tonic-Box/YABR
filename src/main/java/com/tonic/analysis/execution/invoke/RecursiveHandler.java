@@ -35,16 +35,42 @@ public final class RecursiveHandler implements InvocationHandler {
     @Override
     public InvocationResult invoke(MethodEntry method, ObjectInstance receiver,
                                     ConcreteValue[] args, InvocationContext context) {
+        if (nativeRegistry.hasHandler(method)) {
+            return handleNative(method, receiver, args, context);
+        }
+
         MethodEntry targetMethod = resolveTarget(method, receiver);
 
-        if (isNative(targetMethod)) {
+        if (nativeRegistry.hasHandler(targetMethod)) {
             return handleNative(targetMethod, receiver, args, context);
+        }
+
+        if (isNative(targetMethod)) {
+            throw new UnsupportedOperationException(
+                "No native handler for native method: " + targetMethod.getOwnerName() + "." +
+                targetMethod.getName() + targetMethod.getDesc()
+            );
+        }
+
+        if (isJdkClass(targetMethod.getOwnerName())) {
+            throw new UnsupportedOperationException(
+                "No native handler for JDK method: " + targetMethod.getOwnerName() + "." +
+                targetMethod.getName() + targetMethod.getDesc()
+            );
         }
 
         ConcreteValue[] frameArgs = buildFrameArgs(targetMethod, receiver, args);
 
         StackFrame frame = new StackFrame(targetMethod, frameArgs);
         return InvocationResult.pushFrame(frame);
+    }
+
+    private boolean isJdkClass(String className) {
+        return className.startsWith("java/") ||
+               className.startsWith("javax/") ||
+               className.startsWith("sun/") ||
+               className.startsWith("com/sun/") ||
+               className.startsWith("jdk/");
     }
 
     private MethodEntry resolveTarget(MethodEntry method, ObjectInstance receiver) {
@@ -79,13 +105,6 @@ public final class RecursiveHandler implements InvocationHandler {
 
     private InvocationResult handleNative(MethodEntry method, ObjectInstance receiver,
                                          ConcreteValue[] args, InvocationContext context) {
-        if (!nativeRegistry.hasHandler(method)) {
-            throw new UnsupportedOperationException(
-                "No native handler for: " + method.getOwnerName() + "." +
-                method.getName() + method.getDesc()
-            );
-        }
-
         try {
             NativeContext nativeContext = new DefaultNativeContext(
                 context.getHeapManager(),

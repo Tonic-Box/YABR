@@ -15,6 +15,8 @@ public interface DispatchContext {
 
     String resolveStringConstant(int index);
 
+    ObjectInstance resolveStringObject(int index);
+
     ObjectInstance resolveClassConstant(int index);
 
     ArrayInstance getArray(ObjectInstance ref);

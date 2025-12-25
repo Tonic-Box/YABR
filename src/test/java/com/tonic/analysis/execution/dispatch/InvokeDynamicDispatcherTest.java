@@ -406,6 +406,9 @@ class InvokeDynamicDispatcherTest {
         }
 
         @Override
+        public ObjectInstance resolveStringObject(int index) { return null; }
+
+        @Override
         public ObjectInstance resolveClassConstant(int index) {
             return null;
         }

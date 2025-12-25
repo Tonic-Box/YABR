@@ -3,6 +3,7 @@ package com.tonic.analysis.execution.debug;
 import com.tonic.analysis.execution.core.BytecodeContext;
 import com.tonic.analysis.execution.core.BytecodeEngine;
 import com.tonic.analysis.execution.core.BytecodeResult;
+import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteValue;
@@ -516,7 +517,7 @@ public final class DebugSession {
         }
     }
 
-    private class DebugInterceptor implements BytecodeEngine.BytecodeListener {
+    private class DebugInterceptor implements BytecodeListener {
         @Override
         public void beforeInstruction(StackFrame frame, Instruction instruction) {
         }

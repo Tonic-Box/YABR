@@ -52,6 +52,9 @@ class OpcodeDispatcherPart2Test {
         }
 
         @Override
+        public ObjectInstance resolveStringObject(int index) { return null; }
+
+        @Override
         public ObjectInstance resolveClassConstant(int index) {
             return lastClassConstant;
         }

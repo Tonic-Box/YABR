@@ -54,6 +54,13 @@ public final class NativeRegistry {
         return handler.handle(receiver, args, context);
     }
 
+    public ConcreteValue execute(String owner, String name, String descriptor,
+                                ObjectInstance receiver, ConcreteValue[] args,
+                                NativeContext context) throws NativeException {
+        NativeMethodHandler handler = getHandler(owner, name, descriptor);
+        return handler.handle(receiver, args, context);
+    }
+
     public static String methodKey(String owner, String name, String descriptor) {
         return owner + "." + name + descriptor;
     }
@@ -71,6 +78,84 @@ public final class NativeRegistry {
         registerStringHandlers();
         registerBase64Handlers();
         registerStringExtendedHandlers();
+        registerExceptionHandlers();
+    }
+
+    private void registerExceptionHandlers() {
+        String[] exceptionClasses = {
+            "java/lang/Throwable",
+            "java/lang/Exception",
+            "java/lang/RuntimeException",
+            "java/lang/Error",
+            "java/lang/ArithmeticException",
+            "java/lang/IllegalArgumentException",
+            "java/lang/IllegalStateException",
+            "java/lang/NullPointerException",
+            "java/lang/IndexOutOfBoundsException",
+            "java/lang/ArrayIndexOutOfBoundsException",
+            "java/lang/StringIndexOutOfBoundsException",
+            "java/lang/ClassCastException",
+            "java/lang/UnsupportedOperationException",
+            "java/lang/NumberFormatException"
+        };
+
+        for (String exClass : exceptionClasses) {
+            register(exClass, "<init>", "()V",
+                (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+            register(exClass, "<init>", "(Ljava/lang/String;)V",
+                (receiver, args, ctx) -> {
+                    if (receiver != null && args != null && args.length > 0 && !args[0].isNull()) {
+                        receiver.setField(exClass, "detailMessage", "Ljava/lang/String;", args[0].asReference());
+                    }
+                    return ConcreteValue.nullRef();
+                });
+
+            register(exClass, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V",
+                (receiver, args, ctx) -> {
+                    if (receiver != null && args != null) {
+                        if (args.length > 0 && !args[0].isNull()) {
+                            receiver.setField(exClass, "detailMessage", "Ljava/lang/String;", args[0].asReference());
+                        }
+                        if (args.length > 1 && !args[1].isNull()) {
+                            receiver.setField(exClass, "cause", "Ljava/lang/Throwable;", args[1].asReference());
+                        }
+                    }
+                    return ConcreteValue.nullRef();
+                });
+
+            register(exClass, "<init>", "(Ljava/lang/Throwable;)V",
+                (receiver, args, ctx) -> {
+                    if (receiver != null && args != null && args.length > 0 && !args[0].isNull()) {
+                        receiver.setField(exClass, "cause", "Ljava/lang/Throwable;", args[0].asReference());
+                    }
+                    return ConcreteValue.nullRef();
+                });
+
+            register(exClass, "getMessage", "()Ljava/lang/String;",
+                (receiver, args, ctx) -> {
+                    if (receiver == null) {
+                        return ConcreteValue.nullRef();
+                    }
+                    Object msg = receiver.getField(exClass, "detailMessage", "Ljava/lang/String;");
+                    if (msg instanceof ObjectInstance) {
+                        return ConcreteValue.reference((ObjectInstance) msg);
+                    }
+                    return ConcreteValue.nullRef();
+                });
+
+            register(exClass, "getCause", "()Ljava/lang/Throwable;",
+                (receiver, args, ctx) -> {
+                    if (receiver == null) {
+                        return ConcreteValue.nullRef();
+                    }
+                    Object cause = receiver.getField(exClass, "cause", "Ljava/lang/Throwable;");
+                    if (cause instanceof ObjectInstance) {
+                        return ConcreteValue.reference((ObjectInstance) cause);
+                    }
+                    return ConcreteValue.nullRef();
+                });
+        }
     }
 
     private void registerObjectHandlers() {

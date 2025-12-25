@@ -408,6 +408,89 @@ DelegatingHandler delegating = new DelegatingHandler((method, receiver, args) ->
 
 ---
 
+## Exception Handling
+
+The BytecodeEngine implements proper JVM exception handler semantics.
+
+### Handler Lookup Algorithm
+
+When an exception is thrown (ATHROW) or propagated from a callee:
+
+1. Get current PC and exception type
+2. Search exception table for matching handler:
+   - `startPc <= currentPc < endPc` (PC in protected region)
+   - `catchType == 0` (catch-all/finally) OR exception assignable to catchType
+3. First matching handler in table order wins
+
+### Handler Entry
+
+When a handler is found:
+
+```java
+// Stack is cleared
+frame.getStack().clear();
+
+// Exception reference is pushed
+frame.getStack().pushReference(exception);
+
+// PC jumps to handler
+frame.setPC(handler.getHandlerPc());
+
+// Execution continues normally
+```
+
+### Propagation
+
+If no handler matches in the current method:
+
+- Frame completes exceptionally
+- Exception propagates to caller
+- Caller's handler table is searched at the invoke instruction's PC
+- Process repeats until handler found or top-level reached
+
+### Type Matching
+
+Exception handlers use `ClassResolver.isAssignableFrom()` for type matching:
+
+- Exact type matches always succeed
+- Subtype matches succeed (e.g., `catch(Exception)` catches `RuntimeException`)
+- `catchType == 0` matches any exception (finally blocks)
+
+### Example
+
+```java
+BytecodeEngine engine = new BytecodeEngine(ctx);
+BytecodeResult result = engine.execute(methodWithTryCatch, args);
+
+if (result.getStatus() == BytecodeResult.Status.COMPLETED) {
+    // Exception was caught and handled, method returned normally
+    ConcreteValue returnValue = result.getReturnValue();
+} else if (result.getStatus() == BytecodeResult.Status.EXCEPTION) {
+    // Exception propagated to top-level (no handler found)
+    ObjectInstance ex = result.getException();
+    String exceptionType = ex.getClassName();  // e.g., "java/lang/ArithmeticException"
+    List<String> stackTrace = result.getStackTrace();
+}
+```
+
+### Exception Table Entry
+
+The exception table is read from the method's `CodeAttribute`:
+
+```java
+CodeAttribute code = method.getCodeAttribute();
+List<ExceptionTableEntry> handlers = code.getExceptionTable();
+
+for (ExceptionTableEntry entry : handlers) {
+    int startPc = entry.getStartPc();      // Start of protected region (inclusive)
+    int endPc = entry.getEndPc();          // End of protected region (exclusive)
+    int handlerPc = entry.getHandlerPc();  // Target PC when exception matches
+    int catchType = entry.getCatchType();  // Constant pool index (0 = catch-all)
+}
+```
+
+---
+
 ## Debugging Support
 
 ### DebugSession

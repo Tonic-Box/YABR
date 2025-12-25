@@ -3,6 +3,7 @@ package com.tonic.analysis.execution.core;
 import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
+import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.heap.HeapManager;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.heap.SimpleHeapManager;
@@ -342,7 +343,7 @@ class BytecodeEngineTest {
         return createMockMethod();
     }
 
-    private static class TestListener implements BytecodeEngine.BytecodeListener {
+    private static class TestListener implements BytecodeListener {
         boolean beforeCalled = false;
         boolean afterCalled = false;
 

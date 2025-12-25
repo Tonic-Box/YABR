@@ -423,8 +423,7 @@ public final class OpcodeDispatcher {
                 stack.pushFloat(context.resolveFloatConstant(index));
                 break;
             case STRING:
-                context.resolveStringConstant(index);
-                stack.pushReference(context.resolveClassConstant(index));
+                stack.pushReference(context.resolveStringObject(index));
                 break;
             case CLASS:
                 stack.pushReference(context.resolveClassConstant(index));
@@ -468,8 +467,7 @@ public final class OpcodeDispatcher {
                 stack.pushDouble(context.resolveDoubleConstant(index));
                 break;
             case STRING:
-                context.resolveStringConstant(index);
-                stack.pushReference(context.resolveClassConstant(index));
+                stack.pushReference(context.resolveStringObject(index));
                 break;
             case CLASS:
                 stack.pushReference(context.resolveClassConstant(index));
@@ -1629,10 +1627,6 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchAThrow(StackFrame frame, ConcreteStack stack, Instruction instruction) {
-        ConcreteValue exceptionRef = stack.pop();
-        if (exceptionRef.isNull()) {
-            throw new NullPointerException("Cannot throw null");
-        }
         return DispatchResult.ATHROW;
     }
 
