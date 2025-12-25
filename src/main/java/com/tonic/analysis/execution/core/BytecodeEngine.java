@@ -80,14 +80,24 @@ public final class BytecodeEngine {
     }
 
     public BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+        if ("<clinit>".equals(method.getName())) {
+            String className = method.getClassFile().getClassName();
+            if (!initializedClasses.contains(className)) {
+                initializedClasses.add(className);
+            }
+        }
+
         boolean wasInterrupted = interrupted;
         reset();
 
         if (wasInterrupted) {
-            return BytecodeResult.interrupted().withStatistics(0, 0);
+            BytecodeResult result = BytecodeResult.interrupted().withStatistics(0, 0);
+            notifyExecutionEnd(result);
+            return result;
         }
 
         long startTime = System.nanoTime();
+        notifyExecutionStart(method);
 
         try {
             StackFrame frame = new StackFrame(method, args);
@@ -96,7 +106,9 @@ public final class BytecodeEngine {
             while (!callStack.isEmpty() && !interrupted) {
                 if (instructionCount >= context.getMaxInstructions()) {
                     long elapsed = System.nanoTime() - startTime;
-                    return BytecodeResult.instructionLimit(instructionCount).withStatistics(instructionCount, elapsed);
+                    BytecodeResult result = BytecodeResult.instructionLimit(instructionCount).withStatistics(instructionCount, elapsed);
+                    notifyExecutionEnd(result);
+                    return result;
                 }
 
                 StackFrame current = callStack.peek();
@@ -132,21 +144,29 @@ public final class BytecodeEngine {
 
             if (interrupted) {
                 long elapsed = System.nanoTime() - startTime;
-                return BytecodeResult.interrupted().withStatistics(instructionCount, elapsed);
+                BytecodeResult result = BytecodeResult.interrupted().withStatistics(instructionCount, elapsed);
+                notifyExecutionEnd(result);
+                return result;
             }
 
             long elapsed = System.nanoTime() - startTime;
+            BytecodeResult result;
             if (lastException != null) {
                 List<String> trace = buildStackTrace();
-                return BytecodeResult.exception(lastException, trace).withStatistics(instructionCount, elapsed);
+                result = BytecodeResult.exception(lastException, trace).withStatistics(instructionCount, elapsed);
+            } else {
+                result = BytecodeResult.completed(lastReturnValue).withStatistics(instructionCount, elapsed);
             }
-            return BytecodeResult.completed(lastReturnValue).withStatistics(instructionCount, elapsed);
+            notifyExecutionEnd(result);
+            return result;
 
         } catch (StackOverflowError e) {
             List<String> trace = buildStackTrace();
             trace.add("Stack overflow at depth: " + callStack.depth());
             long elapsed = System.nanoTime() - startTime;
-            return BytecodeResult.depthLimit(callStack.depth()).withStatistics(instructionCount, elapsed);
+            BytecodeResult result = BytecodeResult.depthLimit(callStack.depth()).withStatistics(instructionCount, elapsed);
+            notifyExecutionEnd(result);
+            return result;
         }
     }
 
@@ -938,6 +958,28 @@ public final class BytecodeEngine {
     private void notifyArrayAllocation(ArrayInstance array) {
         for (BytecodeListener listener : listeners) {
             listener.onArrayAllocation(array);
+        }
+    }
+
+    private void notifyExecutionStart(MethodEntry method) {
+        for (BytecodeListener listener : listeners) {
+            listener.onExecutionStart(method);
+        }
+    }
+
+    private void notifyExecutionEnd(BytecodeResult result) {
+        com.tonic.analysis.execution.result.BytecodeResult listenerResult;
+        if (result.getStatus() == BytecodeResult.Status.COMPLETED) {
+            listenerResult = com.tonic.analysis.execution.result.BytecodeResult.success(result.getReturnValue());
+        } else if (result.getStatus() == BytecodeResult.Status.EXCEPTION) {
+            ObjectInstance exObj = result.getException();
+            String exMsg = exObj != null ? exObj.getClassName() : "Unknown";
+            listenerResult = com.tonic.analysis.execution.result.BytecodeResult.failure(new RuntimeException(exMsg));
+        } else {
+            listenerResult = com.tonic.analysis.execution.result.BytecodeResult.incomplete();
+        }
+        for (BytecodeListener listener : listeners) {
+            listener.onExecutionEnd(listenerResult);
         }
     }
 
