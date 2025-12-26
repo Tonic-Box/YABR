@@ -57,6 +57,10 @@ public final class BytecodeEngine {
     private ConcreteValue lastReturnValue;
     private ObjectInstance lastException;
 
+    private final ConcurrentHashMap<String, Integer> methodCallCounts = new ConcurrentHashMap<>();
+    private static final int LOOP_DETECTION_THRESHOLD = 5;
+    private static final boolean LOOP_DEBUG = true;
+
     public BytecodeEngine(BytecodeContext context) {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
@@ -111,6 +115,14 @@ public final class BytecodeEngine {
                     return result;
                 }
 
+                if (LOOP_DEBUG && instructionCount > 0 && instructionCount % 100 == 0) {
+                    System.out.println("[LOOP-DEBUG] Progress: " + instructionCount + " instructions, depth=" + callStack.depth());
+                    StackFrame top = callStack.peek();
+                    if (top != null) {
+                        System.out.println("[LOOP-DEBUG] Current: " + top.getMethodSignature() + " pc=" + top.getPC());
+                    }
+                }
+
                 StackFrame current = callStack.peek();
 
                 if (current.isCompleted()) {
@@ -135,8 +147,6 @@ public final class BytecodeEngine {
                     notifyAfterInstruction(current, instr);
 
                 } catch (Exception e) {
-                    System.out.println("[BytecodeEngine] CAUGHT EXCEPTION: " + e.getClass().getName() + ": " + e.getMessage());
-                    e.printStackTrace();
                     ObjectInstance exceptionObj = wrapException(e);
                     if (!tryHandleException(current, exceptionObj)) {
                         current.completeExceptionally(exceptionObj);
@@ -158,6 +168,9 @@ public final class BytecodeEngine {
                 result = BytecodeResult.exception(lastException, trace).withStatistics(instructionCount, elapsed);
             } else {
                 result = BytecodeResult.completed(lastReturnValue).withStatistics(instructionCount, elapsed);
+            }
+            if (LOOP_DEBUG) {
+                printMethodCallSummary();
             }
             notifyExecutionEnd(result);
             return result;
@@ -218,6 +231,7 @@ public final class BytecodeEngine {
         interrupted = false;
         lastReturnValue = ConcreteValue.nullRef();
         lastException = null;
+        methodCallCounts.clear();
     }
 
     public StackFrame getCurrentFrame() {
@@ -441,7 +455,22 @@ public final class BytecodeEngine {
                 targetMethod, receiver, args, createInvocationContext());
 
             if (result.isPushFrame()) {
-                callStack.push(result.getNewFrame());
+                StackFrame newFrame = result.getNewFrame();
+                if (LOOP_DEBUG) {
+                    String methodKey = newFrame.getMethodSignature();
+                    int count = methodCallCounts.merge(methodKey, 1, Integer::sum);
+                    if (count >= LOOP_DETECTION_THRESHOLD) {
+                        System.out.println("[LOOP-DEBUG] Method called " + count + " times: " + methodKey);
+                        if (count == LOOP_DETECTION_THRESHOLD) {
+                            System.out.println("[LOOP-DEBUG] Call stack depth: " + callStack.depth());
+                            System.out.println("[LOOP-DEBUG] Instruction count: " + instructionCount);
+                            for (StackFrame sf : callStack.topToBottom()) {
+                                System.out.println("[LOOP-DEBUG]   -> " + sf.getMethodSignature() + " pc=" + sf.getPC());
+                            }
+                        }
+                    }
+                }
+                callStack.push(newFrame);
             } else if (result.isNativeHandled()) {
                 ConcreteValue returnVal = result.getReturnValue();
                 String returnType = getReturnType(descriptor);
@@ -937,6 +966,17 @@ public final class BytecodeEngine {
             trace.add(sb.toString());
         }
         return trace;
+    }
+
+    private void printMethodCallSummary() {
+        System.out.println("[LOOP-DEBUG] ===== Method Call Summary =====");
+        System.out.println("[LOOP-DEBUG] Total instructions: " + instructionCount);
+        System.out.println("[LOOP-DEBUG] Methods called (sorted by count):");
+        methodCallCounts.entrySet().stream()
+            .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+            .limit(20)
+            .forEach(e -> System.out.println("[LOOP-DEBUG]   " + e.getValue() + "x: " + e.getKey()));
+        System.out.println("[LOOP-DEBUG] ================================");
     }
 
     private void notifyBeforeInstruction(StackFrame frame, Instruction instr) {

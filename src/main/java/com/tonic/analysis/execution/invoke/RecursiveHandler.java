@@ -45,11 +45,6 @@ public final class RecursiveHandler implements InvocationHandler {
             return handleNative(targetMethod, receiver, args, context);
         }
 
-        System.out.println("[RecursiveHandler] invoke: " + targetMethod.getOwnerName() + "." +
-            targetMethod.getName() + targetMethod.getDesc() +
-            " access=0x" + Integer.toHexString(targetMethod.getAccess()) +
-            " isNative=" + isNative(targetMethod));
-
         if (isNative(targetMethod)) {
             throw new UnsupportedOperationException(
                 "No native handler for native method: " + targetMethod.getOwnerName() + "." +
