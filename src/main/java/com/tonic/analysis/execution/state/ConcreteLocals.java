@@ -122,6 +122,8 @@ public final class ConcreteLocals {
             int slot = 0;
             for (ConcreteValue arg : args) {
                 if (slot >= maxLocals) {
+                    System.out.println("[ConcreteLocals] TOO MANY ARGS: slot=" + slot + " maxLocals=" + maxLocals +
+                        " method=" + method.getOwnerName() + "." + method.getName() + method.getDesc());
                     throw new IllegalArgumentException("Too many arguments for method max locals: " + maxLocals);
                 }
                 locals.set(slot, arg);

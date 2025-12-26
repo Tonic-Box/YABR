@@ -38,6 +38,7 @@ public final class NativeRegistry {
         String key = methodKey(owner, name, descriptor);
         NativeMethodHandler handler = handlers.get(key);
         if (handler == null) {
+            System.out.println("[NativeRegistry] NO HANDLER for: " + key);
             throw new IllegalArgumentException("No handler for: " + key);
         }
         return handler;

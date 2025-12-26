@@ -135,6 +135,8 @@ public final class BytecodeEngine {
                     notifyAfterInstruction(current, instr);
 
                 } catch (Exception e) {
+                    System.out.println("[BytecodeEngine] CAUGHT EXCEPTION: " + e.getClass().getName() + ": " + e.getMessage());
+                    e.printStackTrace();
                     ObjectInstance exceptionObj = wrapException(e);
                     if (!tryHandleException(current, exceptionObj)) {
                         current.completeExceptionally(exceptionObj);
