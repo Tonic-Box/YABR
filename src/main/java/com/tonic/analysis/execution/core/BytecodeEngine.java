@@ -60,7 +60,7 @@ public final class BytecodeEngine {
 
     private final ConcurrentHashMap<String, Integer> methodCallCounts = new ConcurrentHashMap<>();
     private static final int LOOP_DETECTION_THRESHOLD = 5;
-    private static final boolean LOOP_DEBUG = true;
+    private static final boolean LOOP_DEBUG = false;
 
     public BytecodeEngine(BytecodeContext context) {
         if (context == null) {
@@ -816,11 +816,49 @@ public final class BytecodeEngine {
             ConcreteValue objRef = frame.getStack().pop();
             if (!objRef.isNull()) {
                 ObjectInstance obj = objRef.asReference();
+                Object oldRaw = obj.getField(owner, name, descriptor);
+                ConcreteValue oldValue = wrapStoredValue(oldRaw, descriptor);
                 obj.setField(owner, name, descriptor, convertToStorable(value, descriptor));
+                notifyFieldWrite(obj, name, oldValue, value);
             }
         }
 
         frame.advancePC(frame.getCurrentInstruction().getLength());
+    }
+
+    private ConcreteValue wrapStoredValue(Object raw, String descriptor) {
+        if (raw == null) {
+            return ConcreteValue.nullRef();
+        }
+        char typeChar = descriptor.charAt(0);
+        switch (typeChar) {
+            case 'J':
+                return ConcreteValue.longValue(raw instanceof Long ? (Long) raw : ((Number) raw).longValue());
+            case 'D':
+                return ConcreteValue.doubleValue(raw instanceof Double ? (Double) raw : ((Number) raw).doubleValue());
+            case 'F':
+                return ConcreteValue.floatValue(raw instanceof Float ? (Float) raw : ((Number) raw).floatValue());
+            case 'I':
+            case 'Z':
+            case 'B':
+            case 'C':
+            case 'S':
+                if (raw instanceof Boolean) {
+                    return ConcreteValue.intValue((Boolean) raw ? 1 : 0);
+                } else if (raw instanceof Character) {
+                    return ConcreteValue.intValue((Character) raw);
+                } else {
+                    return ConcreteValue.intValue(((Number) raw).intValue());
+                }
+            case 'L':
+            case '[':
+                if (raw instanceof ObjectInstance) {
+                    return ConcreteValue.reference((ObjectInstance) raw);
+                }
+                return ConcreteValue.nullRef();
+            default:
+                return ConcreteValue.nullRef();
+        }
     }
 
     private void pushFieldValue(StackFrame frame, String descriptor, Object value) {
@@ -1084,6 +1122,12 @@ public final class BytecodeEngine {
     private void notifyArrayAllocation(ArrayInstance array) {
         for (BytecodeListener listener : listeners) {
             listener.onArrayAllocation(array);
+        }
+    }
+
+    private void notifyFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue) {
+        for (BytecodeListener listener : listeners) {
+            listener.onFieldWrite(instance, fieldName, oldValue, newValue);
         }
     }
 

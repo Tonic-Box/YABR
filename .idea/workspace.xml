@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: missing native handlers">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: clinit">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,14 +223,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00054" summary="updated docs">
-      <option name="closed" value="true" />
-      <created>1765745445131</created>
-      <option name="number" value="00054" />
-      <option name="presentableId" value="LOCAL-00054" />
-      <option name="project" value="LOCAL" />
-      <updated>1765745445131</updated>
     </task>
     <task id="LOCAL-00055" summary="- Call Graph API - Building graphs, querying callers/callees, reachability analysis, virtual call resolution&#10;- Dependency Analysis API - Class dependencies, circular dependency detection, dependency types&#10;- Type Inference API - Nullability states, type states, polymorphic types&#10;- Pattern Search API - Finding method calls, field accesses, allocations, type operations, custom patterns">
       <option name="closed" value="true" />
@@ -616,7 +608,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766738288674</updated>
     </task>
-    <option name="localTasksCounter" value="103" />
+    <task id="LOCAL-00103" summary="- execution-api fixes: clinit">
+      <option name="closed" value="true" />
+      <created>1766766080639</created>
+      <option name="number" value="00103" />
+      <option name="presentableId" value="LOCAL-00103" />
+      <option name="project" value="LOCAL" />
+      <updated>1766766080639</updated>
+    </task>
+    <option name="localTasksCounter" value="104" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -631,7 +631,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- MIT" />
     <MESSAGE value="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package" />
     <MESSAGE value="- Simulation analysis system&#10;- restructured analysis apis docs" />
     <MESSAGE value="README update" />
@@ -656,7 +655,8 @@
     <MESSAGE value="- execution api fixes" />
     <MESSAGE value="- execution api fixes: missing native handlers for String and Array" />
     <MESSAGE value="- execution-api fixes: missing native handlers" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: missing native handlers" />
+    <MESSAGE value="- execution-api fixes: clinit" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: clinit" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
