@@ -32,7 +32,10 @@ public final class StackFrame {
 
         CodeAttribute codeAttr = method.getCodeAttribute();
         if (codeAttr == null) {
-            throw new IllegalArgumentException("Method has no code attribute (abstract/native): " + method.getName());
+            System.out.println("[StackFrame] NO CODE for: " + method.getOwnerName() + "." +
+                method.getName() + method.getDesc() + " access=0x" + Integer.toHexString(method.getAccess()));
+            throw new IllegalArgumentException("Method has no code attribute (abstract/native): " +
+                method.getOwnerName() + "." + method.getName() + method.getDesc());
         }
 
         this.code = new CodeWriter(method);
