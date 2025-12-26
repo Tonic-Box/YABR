@@ -45,16 +45,14 @@ public final class RecursiveHandler implements InvocationHandler {
             return handleNative(targetMethod, receiver, args, context);
         }
 
+        System.out.println("[RecursiveHandler] invoke: " + targetMethod.getOwnerName() + "." +
+            targetMethod.getName() + targetMethod.getDesc() +
+            " access=0x" + Integer.toHexString(targetMethod.getAccess()) +
+            " isNative=" + isNative(targetMethod));
+
         if (isNative(targetMethod)) {
             throw new UnsupportedOperationException(
                 "No native handler for native method: " + targetMethod.getOwnerName() + "." +
-                targetMethod.getName() + targetMethod.getDesc()
-            );
-        }
-
-        if (isJdkClass(targetMethod.getOwnerName())) {
-            throw new UnsupportedOperationException(
-                "No native handler for JDK method: " + targetMethod.getOwnerName() + "." +
                 targetMethod.getName() + targetMethod.getDesc()
             );
         }
@@ -63,14 +61,6 @@ public final class RecursiveHandler implements InvocationHandler {
 
         StackFrame frame = new StackFrame(targetMethod, frameArgs);
         return InvocationResult.pushFrame(frame);
-    }
-
-    private boolean isJdkClass(String className) {
-        return className.startsWith("java/") ||
-               className.startsWith("javax/") ||
-               className.startsWith("sun/") ||
-               className.startsWith("com/sun/") ||
-               className.startsWith("jdk/");
     }
 
     private MethodEntry resolveTarget(MethodEntry method, ObjectInstance receiver) {
