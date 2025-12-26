@@ -44,7 +44,11 @@ public final class ConcreteStack {
     }
 
     public void pushReference(ObjectInstance instance) {
-        push(ConcreteValue.reference(instance));
+        if (instance == null) {
+            push(ConcreteValue.nullRef());
+        } else {
+            push(ConcreteValue.reference(instance));
+        }
     }
 
     public void pushNull() {
