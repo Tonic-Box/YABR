@@ -22,6 +22,14 @@ public class SimpleHeapManager implements HeapManager {
         this.classResolver = classResolver;
     }
 
+    public void setUseCompactStrings(boolean compact) {
+        stringPool.setUseCompactStrings(compact);
+    }
+
+    public boolean isUsingCompactStrings() {
+        return stringPool.isUsingCompactStrings();
+    }
+
     @Override
     public ObjectInstance newObject(String className) {
         int id = nextId.getAndIncrement();
@@ -102,19 +110,53 @@ public class SimpleHeapManager implements HeapManager {
             return null;
         }
 
-        Object charArrayObj = instance.getField("java/lang/String", "value", "[C");
-        if (!(charArrayObj instanceof ArrayInstance)) {
-            return null;
+        Object byteArrayObj = instance.getField("java/lang/String", "value", "[B");
+        if (byteArrayObj instanceof ArrayInstance) {
+            return extractJava9PlusString(instance, (ArrayInstance) byteArrayObj);
         }
 
-        ArrayInstance charArray = (ArrayInstance) charArrayObj;
+        Object charArrayObj = instance.getField("java/lang/String", "value", "[C");
+        if (charArrayObj instanceof ArrayInstance) {
+            return extractJava8String((ArrayInstance) charArrayObj);
+        }
+
+        return null;
+    }
+
+    private String extractJava8String(ArrayInstance charArray) {
         int length = charArray.getLength();
         char[] chars = new char[length];
         for (int i = 0; i < length; i++) {
             chars[i] = charArray.getChar(i);
         }
-
         return new String(chars);
+    }
+
+    private String extractJava9PlusString(ObjectInstance stringObj, ArrayInstance byteArray) {
+        Object coderObj = stringObj.getField("java/lang/String", "coder", "B");
+        int coder = 0;
+        if (coderObj instanceof Byte) {
+            coder = (Byte) coderObj;
+        } else if (coderObj instanceof Integer) {
+            coder = (Integer) coderObj;
+        }
+
+        int length = byteArray.getLength();
+        if (coder == 0) {
+            char[] chars = new char[length];
+            for (int i = 0; i < length; i++) {
+                chars[i] = (char) (byteArray.getByte(i) & 0xFF);
+            }
+            return new String(chars);
+        } else {
+            char[] chars = new char[length / 2];
+            for (int i = 0; i < chars.length; i++) {
+                int lo = byteArray.getByte(i * 2) & 0xFF;
+                int hi = byteArray.getByte(i * 2 + 1) & 0xFF;
+                chars[i] = (char) (lo | (hi << 8));
+            }
+            return new String(chars);
+        }
     }
 
     @Override

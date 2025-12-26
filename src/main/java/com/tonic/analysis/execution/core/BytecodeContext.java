@@ -116,6 +116,10 @@ public final class BytecodeContext {
                 nativeRegistry = new NativeRegistry();
                 nativeRegistry.registerDefaults();
             }
+
+            boolean useCompactStrings = classResolver.usesCompactStrings();
+            heapManager.setUseCompactStrings(useCompactStrings);
+
             return new BytecodeContext(this);
         }
     }

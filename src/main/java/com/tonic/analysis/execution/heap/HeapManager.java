@@ -25,4 +25,11 @@ public interface HeapManager {
     boolean hasStaticField(String owner, String name, String descriptor);
 
     void clearStaticFields();
+
+    default void setUseCompactStrings(boolean compact) {
+    }
+
+    default boolean isUsingCompactStrings() {
+        return false;
+    }
 }

@@ -257,6 +257,22 @@ public class ClassResolver {
         return hierarchy;
     }
 
+    public boolean hasField(String className, String fieldName, String descriptor) {
+        try {
+            ClassFile cf = classPool.get(className);
+            if (cf == null) {
+                return false;
+            }
+            return findFieldInClass(cf, fieldName, descriptor) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean usesCompactStrings() {
+        return hasField("java/lang/String", "coder", "B");
+    }
+
     private MethodEntry findMethodInClass(ClassFile cf, String name, String descriptor) {
         for (MethodEntry method : cf.getMethods()) {
             if (method.getName().equals(name) && method.getDesc().equals(descriptor)) {

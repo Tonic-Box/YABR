@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution api fixes">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -76,7 +74,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
   }
 }</component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [build]">
+  <component name="RunManager">
     <configuration name="Decompile" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ast.Decompile" />
       <module name="YABR.main" />
@@ -222,14 +220,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00050" summary="Improvements to structural analysis">
-      <option name="closed" value="true" />
-      <created>1765697482885</created>
-      <option name="number" value="00050" />
-      <option name="presentableId" value="LOCAL-00050" />
-      <option name="project" value="LOCAL" />
-      <updated>1765697482886</updated>
     </task>
     <task id="LOCAL-00051" summary="Improvements to structural analysis">
       <option name="closed" value="true" />
@@ -615,7 +605,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766729691769</updated>
     </task>
-    <option name="localTasksCounter" value="99" />
+    <task id="LOCAL-00099" summary="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution">
+      <option name="closed" value="true" />
+      <created>1766733711562</created>
+      <option name="number" value="00099" />
+      <option name="presentableId" value="LOCAL-00099" />
+      <option name="project" value="LOCAL" />
+      <updated>1766733711562</updated>
+    </task>
+    <option name="localTasksCounter" value="100" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -630,7 +628,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="unit tests" />
     <MESSAGE value="- jitpack" />
     <MESSAGE value="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java" />
     <MESSAGE value="- MIT" />
@@ -655,7 +652,8 @@
     <MESSAGE value="- execution api init fixes" />
     <MESSAGE value="- readme spelling error" />
     <MESSAGE value="- execution api fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution api fixes" />
+    <MESSAGE value="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
