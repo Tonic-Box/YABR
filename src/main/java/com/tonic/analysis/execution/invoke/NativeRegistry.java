@@ -69,6 +69,22 @@ public final class NativeRegistry {
         return methodKey(method.getOwnerName(), method.getName(), method.getDesc());
     }
 
+    private static void copyStringFields(ObjectInstance src, ObjectInstance dst, NativeContext ctx) {
+        Object byteValue = src.getField("java/lang/String", "value", "[B");
+        if (byteValue instanceof ArrayInstance) {
+            dst.setField("java/lang/String", "value", "[B", byteValue);
+            Object coder = src.getField("java/lang/String", "coder", "B");
+            if (coder != null) {
+                dst.setField("java/lang/String", "coder", "B", coder);
+            }
+        } else {
+            Object charValue = src.getField("java/lang/String", "value", "[C");
+            if (charValue instanceof ArrayInstance) {
+                dst.setField("java/lang/String", "value", "[C", charValue);
+            }
+        }
+    }
+
     public void registerDefaults() {
         registerObjectHandlers();
         registerSystemHandlers();
@@ -79,6 +95,9 @@ public final class NativeRegistry {
         registerBase64Handlers();
         registerStringExtendedHandlers();
         registerExceptionHandlers();
+        registerArraysHandlers();
+        registerClassHandlers();
+        registerStringInternalHandlers();
     }
 
     private void registerExceptionHandlers() {
@@ -323,14 +342,8 @@ public final class NativeRegistry {
                     throw new NativeException("java/lang/NullPointerException",
                         "length() on null String");
                 }
-
-                Object charArrayObj = receiver.getField("java/lang/String", "value", "[C");
-                if (charArrayObj instanceof ArrayInstance) {
-                    ArrayInstance charArray = (ArrayInstance) charArrayObj;
-                    return ConcreteValue.intValue(charArray.getLength());
-                }
-
-                return ConcreteValue.intValue(0);
+                String str = ctx.getHeapManager().extractString(receiver);
+                return ConcreteValue.intValue(str != null ? str.length() : 0);
             });
 
         register("java/lang/String", "charAt", "(I)C",
@@ -339,23 +352,17 @@ public final class NativeRegistry {
                     throw new NativeException("java/lang/NullPointerException",
                         "charAt() on null String");
                 }
-
-                Object charArrayObj = receiver.getField("java/lang/String", "value", "[C");
-                if (!(charArrayObj instanceof ArrayInstance)) {
+                String str = ctx.getHeapManager().extractString(receiver);
+                if (str == null) {
                     throw new NativeException("java/lang/IllegalStateException",
-                        "String has no char array");
+                        "Cannot extract string");
                 }
-
-                ArrayInstance charArray = (ArrayInstance) charArrayObj;
                 int index = args[0].asInt();
-
-                if (index < 0 || index >= charArray.getLength()) {
+                if (index < 0 || index >= str.length()) {
                     throw new NativeException("java/lang/StringIndexOutOfBoundsException",
                         "Index: " + index);
                 }
-
-                char ch = charArray.getChar(index);
-                return ConcreteValue.intValue(ch);
+                return ConcreteValue.intValue(str.charAt(index));
             });
 
         register("java/lang/String", "intern", "()Ljava/lang/String;",
@@ -365,6 +372,99 @@ public final class NativeRegistry {
                         "intern() on null String");
                 }
                 return ConcreteValue.reference(receiver);
+            });
+
+        register("java/lang/String", "coder", "()B",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "coder() on null");
+                }
+                Object coder = receiver.getField("java/lang/String", "coder", "B");
+                if (coder instanceof Byte) {
+                    return ConcreteValue.intValue((Byte) coder);
+                } else if (coder instanceof Integer) {
+                    return ConcreteValue.intValue((Integer) coder);
+                }
+                return ConcreteValue.intValue(0);
+            });
+
+        register("java/lang/String", "isLatin1", "()Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "isLatin1() on null");
+                }
+                Object coder = receiver.getField("java/lang/String", "coder", "B");
+                int coderVal = 0;
+                if (coder instanceof Byte) {
+                    coderVal = (Byte) coder;
+                } else if (coder instanceof Integer) {
+                    coderVal = (Integer) coder;
+                }
+                return ConcreteValue.intValue(coderVal == 0 ? 1 : 0);
+            });
+
+        register("java/lang/String", "getBytes", "([BIB)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "getBytes on null");
+                }
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "dst is null");
+                }
+                ArrayInstance dst = (ArrayInstance) args[0].asReference();
+                int dstBegin = args[1].asInt();
+                int dstCoder = args[2].asInt();
+
+                Object srcValue = receiver.getField("java/lang/String", "value", "[B");
+                if (!(srcValue instanceof ArrayInstance)) {
+                    srcValue = receiver.getField("java/lang/String", "value", "[C");
+                    if (srcValue instanceof ArrayInstance) {
+                        ArrayInstance charArray = (ArrayInstance) srcValue;
+                        int len = charArray.getLength();
+                        if (dstCoder == 0) {
+                            for (int i = 0; i < len; i++) {
+                                dst.setByte(dstBegin + i, (byte) charArray.getChar(i));
+                            }
+                        } else {
+                            for (int i = 0; i < len; i++) {
+                                char c = charArray.getChar(i);
+                                dst.setByte((dstBegin + i) * 2, (byte) (c & 0xFF));
+                                dst.setByte((dstBegin + i) * 2 + 1, (byte) ((c >> 8) & 0xFF));
+                            }
+                        }
+                    }
+                    return ConcreteValue.nullRef();
+                }
+
+                ArrayInstance srcArray = (ArrayInstance) srcValue;
+                Object srcCoderObj = receiver.getField("java/lang/String", "coder", "B");
+                int srcCoder = 0;
+                if (srcCoderObj instanceof Byte) {
+                    srcCoder = (Byte) srcCoderObj;
+                } else if (srcCoderObj instanceof Integer) {
+                    srcCoder = (Integer) srcCoderObj;
+                }
+
+                if (srcCoder == dstCoder) {
+                    int len = srcArray.getLength();
+                    int dstOff = dstBegin << dstCoder;
+                    for (int i = 0; i < len; i++) {
+                        dst.setByte(dstOff + i, srcArray.getByte(i));
+                    }
+                } else if (srcCoder == 0 && dstCoder == 1) {
+                    int len = srcArray.getLength();
+                    for (int i = 0; i < len; i++) {
+                        byte b = srcArray.getByte(i);
+                        dst.setByte((dstBegin + i) * 2, b);
+                        dst.setByte((dstBegin + i) * 2 + 1, (byte) 0);
+                    }
+                } else {
+                    int len = srcArray.getLength() / 2;
+                    for (int i = 0; i < len; i++) {
+                        dst.setByte(dstBegin + i, srcArray.getByte(i * 2));
+                    }
+                }
+                return ConcreteValue.nullRef();
             });
     }
 
@@ -550,12 +650,8 @@ public final class NativeRegistry {
                     bytes[i] = byteArray.getByte(i);
                 }
                 String str = new String(bytes);
-                char[] chars = str.toCharArray();
-                ArrayInstance charArray = ctx.getHeapManager().newArray("C", chars.length);
-                for (int i = 0; i < chars.length; i++) {
-                    charArray.setChar(i, chars[i]);
-                }
-                receiver.setField("java/lang/String", "value", "[C", charArray);
+                ObjectInstance interned = ctx.getHeapManager().internString(str);
+                copyStringFields(interned, receiver, ctx);
                 return ConcreteValue.nullRef();
             });
 
@@ -575,12 +671,8 @@ public final class NativeRegistry {
                 }
                 try {
                     String str = new String(bytes, charset);
-                    char[] chars = str.toCharArray();
-                    ArrayInstance charArray = ctx.getHeapManager().newArray("C", chars.length);
-                    for (int i = 0; i < chars.length; i++) {
-                        charArray.setChar(i, chars[i]);
-                    }
-                    receiver.setField("java/lang/String", "value", "[C", charArray);
+                    ObjectInstance interned = ctx.getHeapManager().internString(str);
+                    copyStringFields(interned, receiver, ctx);
                     return ConcreteValue.nullRef();
                 } catch (java.io.UnsupportedEncodingException e) {
                     throw new NativeException("java/io/UnsupportedEncodingException", charset);
@@ -597,11 +689,26 @@ public final class NativeRegistry {
                 }
                 ArrayInstance srcArray = (ArrayInstance) args[0].asReference();
                 int len = srcArray.getLength();
-                ArrayInstance charArray = ctx.getHeapManager().newArray("C", len);
+                char[] chars = new char[len];
                 for (int i = 0; i < len; i++) {
-                    charArray.setChar(i, srcArray.getChar(i));
+                    chars[i] = srcArray.getChar(i);
                 }
-                receiver.setField("java/lang/String", "value", "[C", charArray);
+                String str = new String(chars);
+                ObjectInstance interned = ctx.getHeapManager().internString(str);
+                copyStringFields(interned, receiver, ctx);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/String", "<init>", "(Ljava/lang/String;)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "String init on null");
+                }
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Null source string");
+                }
+                ObjectInstance src = args[0].asReference();
+                copyStringFields(src, receiver, ctx);
                 return ConcreteValue.nullRef();
             });
 
@@ -679,6 +786,275 @@ public final class NativeRegistry {
             (receiver, args, ctx) -> {
                 String result = String.valueOf((char) args[0].asInt());
                 return ConcreteValue.reference(ctx.getHeapManager().internString(result));
+            });
+    }
+
+    private void registerArraysHandlers() {
+        register("java/util/Arrays", "copyOf", "([II)[I",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "copyOf null array");
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int newLen = args[1].asInt();
+                ArrayInstance result = ctx.getHeapManager().newArray("I", newLen);
+                int copyLen = Math.min(src.getLength(), newLen);
+                for (int i = 0; i < copyLen; i++) {
+                    result.set(i, src.get(i));
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/util/Arrays", "copyOf", "([BI)[B",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "copyOf null array");
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int newLen = args[1].asInt();
+                ArrayInstance result = ctx.getHeapManager().newArray("B", newLen);
+                int copyLen = Math.min(src.getLength(), newLen);
+                for (int i = 0; i < copyLen; i++) {
+                    result.setByte(i, src.getByte(i));
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/util/Arrays", "copyOf", "([CI)[C",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "copyOf null array");
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int newLen = args[1].asInt();
+                ArrayInstance result = ctx.getHeapManager().newArray("C", newLen);
+                int copyLen = Math.min(src.getLength(), newLen);
+                for (int i = 0; i < copyLen; i++) {
+                    result.setChar(i, src.getChar(i));
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/util/Arrays", "copyOfRange", "([BII)[B",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "copyOfRange null array");
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int from = args[1].asInt();
+                int to = args[2].asInt();
+                int newLen = to - from;
+                ArrayInstance result = ctx.getHeapManager().newArray("B", newLen);
+                int copyLen = Math.min(src.getLength() - from, newLen);
+                for (int i = 0; i < copyLen; i++) {
+                    result.setByte(i, src.getByte(from + i));
+                }
+                return ConcreteValue.reference(result);
+            });
+
+        register("java/util/Arrays", "fill", "([BB)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "fill null array");
+                }
+                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                byte val = (byte) args[1].asInt();
+                for (int i = 0; i < arr.getLength(); i++) {
+                    arr.setByte(i, val);
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/Arrays", "fill", "([II)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "fill null array");
+                }
+                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                int val = args[1].asInt();
+                for (int i = 0; i < arr.getLength(); i++) {
+                    arr.set(i, val);
+                }
+                return ConcreteValue.nullRef();
+            });
+    }
+
+    private void registerClassHandlers() {
+        register("java/lang/Class", "isArray", "()Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "isArray on null");
+                }
+                Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
+                if (nameObj instanceof ObjectInstance) {
+                    String name = ctx.getHeapManager().extractString((ObjectInstance) nameObj);
+                    return ConcreteValue.intValue(name != null && name.startsWith("[") ? 1 : 0);
+                }
+                return ConcreteValue.intValue(0);
+            });
+
+        register("java/lang/Class", "isPrimitive", "()Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "isPrimitive on null");
+                }
+                Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
+                if (nameObj instanceof ObjectInstance) {
+                    String name = ctx.getHeapManager().extractString((ObjectInstance) nameObj);
+                    if (name == null) return ConcreteValue.intValue(0);
+                    boolean isPrim = name.equals("int") || name.equals("long") || name.equals("byte") ||
+                                    name.equals("short") || name.equals("char") || name.equals("boolean") ||
+                                    name.equals("float") || name.equals("double") || name.equals("void");
+                    return ConcreteValue.intValue(isPrim ? 1 : 0);
+                }
+                return ConcreteValue.intValue(0);
+            });
+
+        register("java/lang/Class", "getName", "()Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "getName on null");
+                }
+                Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
+                if (nameObj instanceof ObjectInstance) {
+                    return ConcreteValue.reference((ObjectInstance) nameObj);
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/Class", "desiredAssertionStatus", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+    }
+
+    private void registerStringInternalHandlers() {
+        register("java/lang/StringLatin1", "inflate", "([BI[BI)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull() || args[2].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "inflate null array");
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int srcOff = args[1].asInt();
+                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                int dstOff = args[3].asInt();
+                int len = args[4].asInt();
+                for (int i = 0; i < len; i++) {
+                    byte b = src.getByte(srcOff + i);
+                    dst.setByte((dstOff + i) * 2, (byte) (b & 0xFF));
+                    dst.setByte((dstOff + i) * 2 + 1, (byte) 0);
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringLatin1", "inflate", "([BII[BI)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull() || args[3].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "inflate null array");
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int srcOff = args[1].asInt();
+                int srcLen = args[2].asInt();
+                ArrayInstance dst = (ArrayInstance) args[3].asReference();
+                int dstOff = args[4].asInt();
+                for (int i = 0; i < srcLen; i++) {
+                    byte b = src.getByte(srcOff + i);
+                    dst.setByte((dstOff + i) * 2, (byte) (b & 0xFF));
+                    dst.setByte((dstOff + i) * 2 + 1, (byte) 0);
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringUTF16", "putChar", "([BII)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "putChar null array");
+                }
+                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                int index = args[1].asInt();
+                int c = args[2].asInt();
+                arr.setByte(index * 2, (byte) (c & 0xFF));
+                arr.setByte(index * 2 + 1, (byte) ((c >> 8) & 0xFF));
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringUTF16", "getChar", "([BI)C",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "getChar null array");
+                }
+                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                int index = args[1].asInt();
+                int lo = arr.getByte(index * 2) & 0xFF;
+                int hi = arr.getByte(index * 2 + 1) & 0xFF;
+                return ConcreteValue.intValue((char) (lo | (hi << 8)));
+            });
+
+        register("java/lang/StringUTF16", "newBytesFor", "(I)[B",
+            (receiver, args, ctx) -> {
+                int len = args[0].asInt();
+                if (len < 0) {
+                    throw new NativeException("java/lang/NegativeArraySizeException", "len=" + len);
+                }
+                ArrayInstance arr = ctx.getHeapManager().newArray("B", len << 1);
+                return ConcreteValue.reference(arr);
+            });
+
+        register("java/lang/StringLatin1", "newString", "([BII)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "newString null array");
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int off = args[1].asInt();
+                int len = args[2].asInt();
+                byte[] bytes = new byte[len];
+                for (int i = 0; i < len; i++) {
+                    bytes[i] = src.getByte(off + i);
+                }
+                String str = new String(bytes, 0, len, java.nio.charset.StandardCharsets.ISO_8859_1);
+                return ConcreteValue.reference(ctx.getHeapManager().internString(str));
+            });
+
+        register("java/lang/Integer", "stringSize", "(I)I",
+            (receiver, args, ctx) -> {
+                int x = args[0].asInt();
+                int d = 1;
+                if (x >= 0) {
+                    d = 0;
+                    x = -x;
+                }
+                int p = -10;
+                for (int i = 1; i < 10; i++) {
+                    if (x > p) return ConcreteValue.intValue(i + d);
+                    p *= 10;
+                }
+                return ConcreteValue.intValue(10 + d);
+            });
+
+        register("java/lang/Integer", "getChars", "(II[B)V",
+            (receiver, args, ctx) -> {
+                int i = args[0].asInt();
+                int index = args[1].asInt();
+                ArrayInstance buf = (ArrayInstance) args[2].asReference();
+                String s = Integer.toString(i);
+                for (int j = 0; j < s.length(); j++) {
+                    buf.setByte((index - s.length() + j) * 2, (byte) s.charAt(j));
+                    buf.setByte((index - s.length() + j) * 2 + 1, (byte) 0);
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/AbstractStringBuilder", "getCoder", "()B",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "getCoder on null");
+                }
+                Object coder = receiver.getField("java/lang/AbstractStringBuilder", "coder", "B");
+                if (coder instanceof Byte) {
+                    return ConcreteValue.intValue((Byte) coder);
+                } else if (coder instanceof Integer) {
+                    return ConcreteValue.intValue((Integer) coder);
+                }
+                return ConcreteValue.intValue(0);
             });
     }
 }
