@@ -606,9 +606,8 @@ class ExecutionIntegrationTest {
                 ConcreteValue.intValue(10),
                 ConcreteValue.intValue(0));
 
-            // NOTE: YABR currently doesn't implement exception handler lookup
-            // Once implemented, this should be: COMPLETED with return -1
-            assertEquals(BytecodeResult.Status.EXCEPTION, result.getStatus());
+            assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
+            assertEquals(-1, result.getReturnValue().asInt());
         }
 
         @Test
@@ -661,9 +660,8 @@ class ExecutionIntegrationTest {
                 ConcreteValue.intValue(5),
                 ConcreteValue.intValue(0));
 
-            // NOTE: YABR currently doesn't implement exception handler lookup
-            // Once implemented, this should be: COMPLETED with return 10 (inner catch path)
-            assertEquals(BytecodeResult.Status.EXCEPTION, result.getStatus());
+            assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
+            assertEquals(10, result.getReturnValue().asInt());
         }
 
         @Test
@@ -688,9 +686,8 @@ class ExecutionIntegrationTest {
                 ConcreteValue.intValue(15),
                 ConcreteValue.intValue(10));
 
-            // NOTE: YABR currently doesn't implement exception handler lookup
-            // Once implemented, this should be: COMPLETED with return -1 (caught exception)
-            assertEquals(BytecodeResult.Status.EXCEPTION, result.getStatus());
+            assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
+            assertEquals(-1, result.getReturnValue().asInt());
         }
 
         @Test

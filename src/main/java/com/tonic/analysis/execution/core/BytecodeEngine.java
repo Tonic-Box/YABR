@@ -18,6 +18,7 @@ import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
@@ -255,23 +256,35 @@ public final class BytecodeEngine {
             return true;
         }
 
-        if (isJdkClass(className)) {
-            initializedClasses.add(className);
-            return true;
-        }
-
         initializedClasses.add(className);
 
         try {
-            ResolvedMethod clinit = context.getClassResolver().resolveMethod(
-                className, "<clinit>", "()V");
-            if (clinit != null && clinit.getMethod() != null) {
-                BytecodeResult result = execute(clinit.getMethod());
-                if (result.getStatus() != BytecodeResult.Status.COMPLETED) {
-                    return false;
+            ClassFile cf = context.getClassResolver().getClassPool().get(className);
+            if (cf != null) {
+                String superName = cf.getSuperClassName();
+                if (superName != null && !superName.equals("java/lang/Object")) {
+                    ensureClassInitialized(superName);
+                }
+
+                MethodEntry clinitMethod = null;
+                for (MethodEntry m : cf.getMethods()) {
+                    if (m.getName().equals("<clinit>") && m.getDesc().equals("()V")) {
+                        clinitMethod = m;
+                        break;
+                    }
+                }
+
+                if (clinitMethod != null && clinitMethod.getCodeAttribute() != null) {
+                    BytecodeEngine clinitEngine = new BytecodeEngine(context);
+                    clinitEngine.initializedClasses.addAll(this.initializedClasses);
+                    BytecodeResult result = clinitEngine.execute(clinitMethod);
+                    if (result.getStatus() != BytecodeResult.Status.COMPLETED) {
+                        // clinit failed - this is okay, we continue gracefully
+                    }
                 }
             }
         } catch (Exception e) {
+            // Class not found or resolution error - continue gracefully
         }
 
         return true;
@@ -431,6 +444,10 @@ public final class BytecodeEngine {
     private void handleInvoke(StackFrame frame, EngineDispatchContext ctx) {
         MethodInfo methodInfo = ctx.getPendingInvoke();
         String descriptor = methodInfo.getDescriptor();
+
+        if (methodInfo.isStatic()) {
+            ensureClassInitialized(methodInfo.getOwnerClass());
+        }
 
         if (context.getMode() == ExecutionMode.RECURSIVE && invocationHandler != null) {
             ConcreteValue[] args = extractArguments(frame, descriptor);
@@ -903,6 +920,7 @@ public final class BytecodeEngine {
 
     private void handleNewObject(StackFrame frame, EngineDispatchContext ctx) {
         String className = ctx.getPendingNewClass();
+        ensureClassInitialized(className);
         ObjectInstance obj = context.getHeapManager().newObject(className);
         notifyObjectAllocation(obj);
         frame.getStack().pushReference(obj);

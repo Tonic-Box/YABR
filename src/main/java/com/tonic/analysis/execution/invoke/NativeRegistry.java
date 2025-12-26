@@ -98,6 +98,8 @@ public final class NativeRegistry {
         registerArraysHandlers();
         registerClassHandlers();
         registerStringInternalHandlers();
+        registerCollectionHandlers();
+        registerWrapperHandlers();
     }
 
     private void registerExceptionHandlers() {
@@ -1181,6 +1183,508 @@ public final class NativeRegistry {
                     receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", newValue);
                 }
                 return ConcreteValue.nullRef();
+            });
+    }
+
+    private void registerCollectionHandlers() {
+        register("java/util/ArrayList", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "ArrayList init on null");
+                }
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("Ljava/lang/Object;", 0);
+                receiver.setField("java/util/ArrayList", "elementData", "[Ljava/lang/Object;", emptyArray);
+                receiver.setField("java/util/ArrayList", "size", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/ArrayList", "<init>", "(I)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "ArrayList init on null");
+                }
+                int initialCapacity = args[0].asInt();
+                if (initialCapacity < 0) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Negative capacity");
+                }
+                ArrayInstance array = ctx.getHeapManager().newArray("Ljava/lang/Object;", initialCapacity);
+                receiver.setField("java/util/ArrayList", "elementData", "[Ljava/lang/Object;", array);
+                receiver.setField("java/util/ArrayList", "size", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/ArrayList", "add", "(Ljava/lang/Object;)Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "add on null ArrayList");
+                }
+                Object elementDataObj = receiver.getField("java/util/ArrayList", "elementData", "[Ljava/lang/Object;");
+                Object sizeObj = receiver.getField("java/util/ArrayList", "size", "I");
+                int size = sizeObj instanceof Integer ? (Integer) sizeObj : 0;
+                ArrayInstance elementData;
+                if (elementDataObj instanceof ArrayInstance) {
+                    elementData = (ArrayInstance) elementDataObj;
+                } else {
+                    elementData = ctx.getHeapManager().newArray("Ljava/lang/Object;", 10);
+                    receiver.setField("java/util/ArrayList", "elementData", "[Ljava/lang/Object;", elementData);
+                }
+                if (size >= elementData.getLength()) {
+                    int newCapacity = Math.max(10, elementData.getLength() * 2);
+                    ArrayInstance newArray = ctx.getHeapManager().newArray("Ljava/lang/Object;", newCapacity);
+                    for (int i = 0; i < size; i++) {
+                        newArray.set(i, elementData.get(i));
+                    }
+                    elementData = newArray;
+                    receiver.setField("java/util/ArrayList", "elementData", "[Ljava/lang/Object;", elementData);
+                }
+                Object element = args[0].isNull() ? null : args[0].asReference();
+                elementData.set(size, element);
+                receiver.setField("java/util/ArrayList", "size", "I", size + 1);
+                return ConcreteValue.intValue(1);
+            });
+
+        register("java/util/ArrayList", "get", "(I)Ljava/lang/Object;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "get on null ArrayList");
+                }
+                int index = args[0].asInt();
+                Object sizeObj = receiver.getField("java/util/ArrayList", "size", "I");
+                int size = sizeObj instanceof Integer ? (Integer) sizeObj : 0;
+                if (index < 0 || index >= size) {
+                    throw new NativeException("java/lang/IndexOutOfBoundsException", "Index: " + index);
+                }
+                Object elementDataObj = receiver.getField("java/util/ArrayList", "elementData", "[Ljava/lang/Object;");
+                if (!(elementDataObj instanceof ArrayInstance)) {
+                    return ConcreteValue.nullRef();
+                }
+                Object element = ((ArrayInstance) elementDataObj).get(index);
+                if (element instanceof ObjectInstance) {
+                    return ConcreteValue.reference((ObjectInstance) element);
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/ArrayList", "size", "()I",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "size on null ArrayList");
+                }
+                Object sizeObj = receiver.getField("java/util/ArrayList", "size", "I");
+                return ConcreteValue.intValue(sizeObj instanceof Integer ? (Integer) sizeObj : 0);
+            });
+
+        register("java/util/HashMap", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "HashMap init on null");
+                }
+                receiver.setField("java/util/HashMap", "loadFactor", "F", 0.75f);
+                receiver.setField("java/util/HashMap", "threshold", "I", 12);
+                receiver.setField("java/util/HashMap", "size", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/HashMap", "<init>", "(I)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "HashMap init on null");
+                }
+                receiver.setField("java/util/HashMap", "loadFactor", "F", 0.75f);
+                int capacity = args[0].asInt();
+                receiver.setField("java/util/HashMap", "threshold", "I", (int)(capacity * 0.75f));
+                receiver.setField("java/util/HashMap", "size", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/HashMap", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "put on null HashMap");
+                }
+                Object sizeObj = receiver.getField("java/util/HashMap", "size", "I");
+                int size = sizeObj instanceof Integer ? (Integer) sizeObj : 0;
+                receiver.setField("java/util/HashMap", "size", "I", size + 1);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/HashMap", "get", "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        register("java/util/HashMap", "size", "()I",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "size on null HashMap");
+                }
+                Object sizeObj = receiver.getField("java/util/HashMap", "size", "I");
+                return ConcreteValue.intValue(sizeObj instanceof Integer ? (Integer) sizeObj : 0);
+            });
+
+        register("java/util/LinkedHashMap", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "LinkedHashMap init on null");
+                }
+                receiver.setField("java/util/HashMap", "loadFactor", "F", 0.75f);
+                receiver.setField("java/util/HashMap", "threshold", "I", 12);
+                receiver.setField("java/util/HashMap", "size", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/LinkedHashMap", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "put on null LinkedHashMap");
+                }
+                Object sizeObj = receiver.getField("java/util/HashMap", "size", "I");
+                int size = sizeObj instanceof Integer ? (Integer) sizeObj : 0;
+                receiver.setField("java/util/HashMap", "size", "I", size + 1);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/LinkedHashMap", "size", "()I",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "size on null LinkedHashMap");
+                }
+                Object sizeObj = receiver.getField("java/util/HashMap", "size", "I");
+                return ConcreteValue.intValue(sizeObj instanceof Integer ? (Integer) sizeObj : 0);
+            });
+
+        register("java/util/HashSet", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "HashSet init on null");
+                }
+                ObjectInstance map = ctx.getHeapManager().newObject("java/util/HashMap");
+                map.setField("java/util/HashMap", "loadFactor", "F", 0.75f);
+                map.setField("java/util/HashMap", "threshold", "I", 12);
+                map.setField("java/util/HashMap", "size", "I", 0);
+                receiver.setField("java/util/HashSet", "map", "Ljava/util/HashMap;", map);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/HashSet", "add", "(Ljava/lang/Object;)Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "add on null HashSet");
+                }
+                return ConcreteValue.intValue(1);
+            });
+
+        register("java/util/TreeMap", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "TreeMap init on null");
+                }
+                receiver.setField("java/util/TreeMap", "size", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/TreeMap", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "put on null TreeMap");
+                }
+                Object sizeObj = receiver.getField("java/util/TreeMap", "size", "I");
+                int size = sizeObj instanceof Integer ? (Integer) sizeObj : 0;
+                receiver.setField("java/util/TreeMap", "size", "I", size + 1);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/LinkedList", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "LinkedList init on null");
+                }
+                receiver.setField("java/util/LinkedList", "size", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/util/LinkedList", "add", "(Ljava/lang/Object;)Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "add on null LinkedList");
+                }
+                Object sizeObj = receiver.getField("java/util/LinkedList", "size", "I");
+                int size = sizeObj instanceof Integer ? (Integer) sizeObj : 0;
+                receiver.setField("java/util/LinkedList", "size", "I", size + 1);
+                return ConcreteValue.intValue(1);
+            });
+
+        register("java/util/AbstractList", "<init>", "()V",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        register("java/util/AbstractCollection", "<init>", "()V",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        register("java/util/AbstractMap", "<init>", "()V",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        register("java/util/AbstractSet", "<init>", "()V",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        register("java/util/AbstractSequentialList", "<init>", "()V",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+    }
+
+    private void registerWrapperHandlers() {
+        register("java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;",
+            (receiver, args, ctx) -> {
+                int value = args[0].asInt();
+                ObjectInstance intObj = ctx.getHeapManager().newObject("java/lang/Integer");
+                intObj.setField("java/lang/Integer", "value", "I", value);
+                return ConcreteValue.reference(intObj);
+            });
+
+        register("java/lang/Integer", "intValue", "()I",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "intValue on null");
+                }
+                Object value = receiver.getField("java/lang/Integer", "value", "I");
+                return ConcreteValue.intValue(value instanceof Integer ? (Integer) value : 0);
+            });
+
+        register("java/lang/Integer", "<init>", "(I)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Integer init on null");
+                }
+                receiver.setField("java/lang/Integer", "value", "I", args[0].asInt());
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/Long", "valueOf", "(J)Ljava/lang/Long;",
+            (receiver, args, ctx) -> {
+                long value = args[0].asLong();
+                ObjectInstance longObj = ctx.getHeapManager().newObject("java/lang/Long");
+                longObj.setField("java/lang/Long", "value", "J", value);
+                return ConcreteValue.reference(longObj);
+            });
+
+        register("java/lang/Long", "longValue", "()J",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "longValue on null");
+                }
+                Object value = receiver.getField("java/lang/Long", "value", "J");
+                return ConcreteValue.longValue(value instanceof Long ? (Long) value : 0L);
+            });
+
+        register("java/lang/Long", "<init>", "(J)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Long init on null");
+                }
+                receiver.setField("java/lang/Long", "value", "J", args[0].asLong());
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/Byte", "valueOf", "(B)Ljava/lang/Byte;",
+            (receiver, args, ctx) -> {
+                byte value = (byte) args[0].asInt();
+                ObjectInstance byteObj = ctx.getHeapManager().newObject("java/lang/Byte");
+                byteObj.setField("java/lang/Byte", "value", "B", value);
+                return ConcreteValue.reference(byteObj);
+            });
+
+        register("java/lang/Byte", "<init>", "(B)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Byte init on null");
+                }
+                receiver.setField("java/lang/Byte", "value", "B", (byte) args[0].asInt());
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/Short", "valueOf", "(S)Ljava/lang/Short;",
+            (receiver, args, ctx) -> {
+                short value = (short) args[0].asInt();
+                ObjectInstance shortObj = ctx.getHeapManager().newObject("java/lang/Short");
+                shortObj.setField("java/lang/Short", "value", "S", value);
+                return ConcreteValue.reference(shortObj);
+            });
+
+        register("java/lang/Short", "<init>", "(S)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Short init on null");
+                }
+                receiver.setField("java/lang/Short", "value", "S", (short) args[0].asInt());
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/Character", "valueOf", "(C)Ljava/lang/Character;",
+            (receiver, args, ctx) -> {
+                char value = (char) args[0].asInt();
+                ObjectInstance charObj = ctx.getHeapManager().newObject("java/lang/Character");
+                charObj.setField("java/lang/Character", "value", "C", value);
+                return ConcreteValue.reference(charObj);
+            });
+
+        register("java/lang/Character", "<init>", "(C)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Character init on null");
+                }
+                receiver.setField("java/lang/Character", "value", "C", (char) args[0].asInt());
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;",
+            (receiver, args, ctx) -> {
+                boolean value = args[0].asInt() != 0;
+                ObjectInstance boolObj = ctx.getHeapManager().newObject("java/lang/Boolean");
+                boolObj.setField("java/lang/Boolean", "value", "Z", value ? 1 : 0);
+                return ConcreteValue.reference(boolObj);
+            });
+
+        register("java/lang/Boolean", "<init>", "(Z)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "Boolean init on null");
+                }
+                receiver.setField("java/lang/Boolean", "value", "Z", args[0].asInt() != 0 ? 1 : 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/Number", "<init>", "()V",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        register("java/lang/StringBuffer", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "StringBuffer init on null");
+                }
+                ArrayInstance value = ctx.getHeapManager().newArray("B", 16);
+                receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
+                receiver.setField("java/lang/AbstractStringBuilder", "coder", "B", (byte) 0);
+                receiver.setField("java/lang/AbstractStringBuilder", "count", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringBuffer", "<init>", "(Ljava/lang/String;)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "StringBuffer init on null");
+                }
+                String str = "";
+                if (!args[0].isNull()) {
+                    str = ctx.getHeapManager().extractString(args[0].asReference());
+                    if (str == null) str = "";
+                }
+                int capacity = str.length() + 16;
+                ArrayInstance value = ctx.getHeapManager().newArray("B", capacity);
+                for (int i = 0; i < str.length(); i++) {
+                    value.setByte(i, (byte) str.charAt(i));
+                }
+                receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
+                receiver.setField("java/lang/AbstractStringBuilder", "coder", "B", (byte) 0);
+                receiver.setField("java/lang/AbstractStringBuilder", "count", "I", str.length());
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringBuilder", "<init>", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "StringBuilder init on null");
+                }
+                ArrayInstance value = ctx.getHeapManager().newArray("B", 16);
+                receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
+                receiver.setField("java/lang/AbstractStringBuilder", "coder", "B", (byte) 0);
+                receiver.setField("java/lang/AbstractStringBuilder", "count", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringBuilder", "<init>", "(Ljava/lang/String;)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "StringBuilder init on null");
+                }
+                String str = "";
+                if (!args[0].isNull()) {
+                    str = ctx.getHeapManager().extractString(args[0].asReference());
+                    if (str == null) str = "";
+                }
+                int capacity = str.length() + 16;
+                ArrayInstance value = ctx.getHeapManager().newArray("B", capacity);
+                for (int i = 0; i < str.length(); i++) {
+                    value.setByte(i, (byte) str.charAt(i));
+                }
+                receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
+                receiver.setField("java/lang/AbstractStringBuilder", "coder", "B", (byte) 0);
+                receiver.setField("java/lang/AbstractStringBuilder", "count", "I", str.length());
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringBuilder", "<init>", "(I)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "StringBuilder init on null");
+                }
+                int capacity = args[0].asInt();
+                ArrayInstance value = ctx.getHeapManager().newArray("B", capacity);
+                receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
+                receiver.setField("java/lang/AbstractStringBuilder", "coder", "B", (byte) 0);
+                receiver.setField("java/lang/AbstractStringBuilder", "count", "I", 0);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "append on null");
+                }
+                String str = "null";
+                if (!args[0].isNull()) {
+                    String extracted = ctx.getHeapManager().extractString(args[0].asReference());
+                    if (extracted != null) str = extracted;
+                }
+                Object valueObj = receiver.getField("java/lang/AbstractStringBuilder", "value", "[B");
+                Object countObj = receiver.getField("java/lang/AbstractStringBuilder", "count", "I");
+                int count = countObj instanceof Integer ? (Integer) countObj : 0;
+                ArrayInstance value;
+                if (valueObj instanceof ArrayInstance) {
+                    value = (ArrayInstance) valueObj;
+                } else {
+                    value = ctx.getHeapManager().newArray("B", 16);
+                    receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
+                }
+                int newCount = count + str.length();
+                if (newCount > value.getLength()) {
+                    int newCapacity = Math.max(newCount, value.getLength() * 2 + 2);
+                    ArrayInstance newValue = ctx.getHeapManager().newArray("B", newCapacity);
+                    for (int i = 0; i < count; i++) {
+                        newValue.setByte(i, value.getByte(i));
+                    }
+                    value = newValue;
+                    receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
+                }
+                for (int i = 0; i < str.length(); i++) {
+                    value.setByte(count + i, (byte) str.charAt(i));
+                }
+                receiver.setField("java/lang/AbstractStringBuilder", "count", "I", newCount);
+                return ConcreteValue.reference(receiver);
+            });
+
+        register("java/lang/StringBuilder", "toString", "()Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "toString on null");
+                }
+                Object valueObj = receiver.getField("java/lang/AbstractStringBuilder", "value", "[B");
+                Object countObj = receiver.getField("java/lang/AbstractStringBuilder", "count", "I");
+                int count = countObj instanceof Integer ? (Integer) countObj : 0;
+                if (!(valueObj instanceof ArrayInstance)) {
+                    return ConcreteValue.reference(ctx.getHeapManager().internString(""));
+                }
+                ArrayInstance value = (ArrayInstance) valueObj;
+                StringBuilder sb = new StringBuilder(count);
+                for (int i = 0; i < count; i++) {
+                    sb.append((char) (value.getByte(i) & 0xFF));
+                }
+                return ConcreteValue.reference(ctx.getHeapManager().internString(sb.toString()));
             });
     }
 }

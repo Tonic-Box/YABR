@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution api fixes: missing native handlers for String and Array">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: missing native handlers">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
     </list>
@@ -223,14 +223,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00053" summary="Renamer API, ExprEditor, updated docs">
-      <option name="closed" value="true" />
-      <created>1765745321055</created>
-      <option name="number" value="00053" />
-      <option name="presentableId" value="LOCAL-00053" />
-      <option name="project" value="LOCAL" />
-      <updated>1765745321055</updated>
     </task>
     <task id="LOCAL-00054" summary="updated docs">
       <option name="closed" value="true" />
@@ -616,7 +608,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766737629652</updated>
     </task>
-    <option name="localTasksCounter" value="102" />
+    <task id="LOCAL-00102" summary="- execution-api fixes: missing native handlers">
+      <option name="closed" value="true" />
+      <created>1766738288673</created>
+      <option name="number" value="00102" />
+      <option name="presentableId" value="LOCAL-00102" />
+      <option name="project" value="LOCAL" />
+      <updated>1766738288674</updated>
+    </task>
+    <option name="localTasksCounter" value="103" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -631,7 +631,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java" />
     <MESSAGE value="- MIT" />
     <MESSAGE value="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package" />
     <MESSAGE value="- Simulation analysis system&#10;- restructured analysis apis docs" />
@@ -656,7 +655,8 @@
     <MESSAGE value="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution" />
     <MESSAGE value="- execution api fixes" />
     <MESSAGE value="- execution api fixes: missing native handlers for String and Array" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution api fixes: missing native handlers for String and Array" />
+    <MESSAGE value="- execution-api fixes: missing native handlers" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: missing native handlers" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
