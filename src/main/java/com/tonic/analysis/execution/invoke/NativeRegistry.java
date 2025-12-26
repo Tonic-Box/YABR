@@ -1056,5 +1056,131 @@ public final class NativeRegistry {
                 }
                 return ConcreteValue.intValue(0);
             });
+
+        register("java/lang/AbstractStringBuilder", "isLatin1", "()Z",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    return ConcreteValue.intValue(0);
+                }
+                if (!ctx.getHeapManager().isUsingCompactStrings()) {
+                    return ConcreteValue.intValue(0);
+                }
+                Object coder = receiver.getField("java/lang/AbstractStringBuilder", "coder", "B");
+                int coderVal = 0;
+                if (coder instanceof Byte) {
+                    coderVal = (Byte) coder;
+                } else if (coder instanceof Integer) {
+                    coderVal = (Integer) coder;
+                }
+                return ConcreteValue.intValue(coderVal == 0 ? 1 : 0);
+            });
+
+        register("java/lang/AbstractStringBuilder", "inflate", "()V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "inflate on null");
+                }
+                Object coderObj = receiver.getField("java/lang/AbstractStringBuilder", "coder", "B");
+                int coder = 0;
+                if (coderObj instanceof Byte) {
+                    coder = (Byte) coderObj;
+                } else if (coderObj instanceof Integer) {
+                    coder = (Integer) coderObj;
+                }
+                if (coder != 0) {
+                    return ConcreteValue.nullRef();
+                }
+                Object valueObj = receiver.getField("java/lang/AbstractStringBuilder", "value", "[B");
+                if (!(valueObj instanceof ArrayInstance)) {
+                    return ConcreteValue.nullRef();
+                }
+                ArrayInstance oldValue = (ArrayInstance) valueObj;
+                Object countObj = receiver.getField("java/lang/AbstractStringBuilder", "count", "I");
+                int count = 0;
+                if (countObj instanceof Integer) {
+                    count = (Integer) countObj;
+                }
+                ArrayInstance newValue = ctx.getHeapManager().newArray("B", oldValue.getLength() * 2);
+                for (int i = 0; i < count; i++) {
+                    byte b = oldValue.getByte(i);
+                    newValue.setByte(i * 2, b);
+                    newValue.setByte(i * 2 + 1, (byte) 0);
+                }
+                receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", newValue);
+                receiver.setField("java/lang/AbstractStringBuilder", "coder", "B", (byte) 1);
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/AbstractStringBuilder", "putStringAt", "(ILjava/lang/String;)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "putStringAt on null");
+                }
+                int index = args[0].asInt();
+                if (args[1].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "putStringAt with null string");
+                }
+                ObjectInstance str = args[1].asReference();
+                String strValue = ctx.getHeapManager().extractString(str);
+                if (strValue == null) {
+                    return ConcreteValue.nullRef();
+                }
+                Object valueObj = receiver.getField("java/lang/AbstractStringBuilder", "value", "[B");
+                if (!(valueObj instanceof ArrayInstance)) {
+                    return ConcreteValue.nullRef();
+                }
+                ArrayInstance value = (ArrayInstance) valueObj;
+                Object coderObj = receiver.getField("java/lang/AbstractStringBuilder", "coder", "B");
+                int coder = 0;
+                if (coderObj instanceof Byte) {
+                    coder = (Byte) coderObj;
+                } else if (coderObj instanceof Integer) {
+                    coder = (Integer) coderObj;
+                }
+                if (coder == 0) {
+                    for (int i = 0; i < strValue.length(); i++) {
+                        value.setByte(index + i, (byte) strValue.charAt(i));
+                    }
+                } else {
+                    for (int i = 0; i < strValue.length(); i++) {
+                        char c = strValue.charAt(i);
+                        value.setByte((index + i) * 2, (byte) (c & 0xFF));
+                        value.setByte((index + i) * 2 + 1, (byte) ((c >> 8) & 0xFF));
+                    }
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        register("java/lang/AbstractStringBuilder", "ensureCapacityInternal", "(I)V",
+            (receiver, args, ctx) -> {
+                if (receiver == null) {
+                    throw new NativeException("java/lang/NullPointerException", "ensureCapacityInternal on null");
+                }
+                int minimumCapacity = args[0].asInt();
+                Object valueObj = receiver.getField("java/lang/AbstractStringBuilder", "value", "[B");
+                if (!(valueObj instanceof ArrayInstance)) {
+                    ArrayInstance newValue = ctx.getHeapManager().newArray("B", Math.max(16, minimumCapacity));
+                    receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", newValue);
+                    return ConcreteValue.nullRef();
+                }
+                ArrayInstance oldValue = (ArrayInstance) valueObj;
+                Object coderObj = receiver.getField("java/lang/AbstractStringBuilder", "coder", "B");
+                int coder = 0;
+                if (coderObj instanceof Byte) {
+                    coder = (Byte) coderObj;
+                } else if (coderObj instanceof Integer) {
+                    coder = (Integer) coderObj;
+                }
+                int oldCapacity = oldValue.getLength() >> coder;
+                if (minimumCapacity > oldCapacity) {
+                    int newCapacity = Math.max(minimumCapacity, oldCapacity * 2 + 2);
+                    ArrayInstance newValue = ctx.getHeapManager().newArray("B", newCapacity << coder);
+                    for (int i = 0; i < oldValue.getLength(); i++) {
+                        newValue.setByte(i, oldValue.getByte(i));
+                    }
+                    receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", newValue);
+                }
+                return ConcreteValue.nullRef();
+            });
     }
 }

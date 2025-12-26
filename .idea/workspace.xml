@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution api fixes">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution api fixes: missing native handlers for String and Array">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -222,14 +223,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00052" summary="Renamer API:&#10;- Fluent API: Chain multiple renames easily&#10;- Class renames: Updates all references including descriptors and signatures&#10;- Method renames: Single class or full hierarchy propagation (overrides)&#10;- Field renames: Updates all access sites&#10;- Validation: Checks for conflicts, invalid names, and missing references&#10;- InvokeDynamic support: Updates bootstrap method arguments (lambdas)&#10;- MethodHandle support: Updates method/field handle references&#10;- Generic signature support: Remaps class references in generics">
-      <option name="closed" value="true" />
-      <created>1765701556098</created>
-      <option name="number" value="00052" />
-      <option name="presentableId" value="LOCAL-00052" />
-      <option name="project" value="LOCAL" />
-      <updated>1765701556098</updated>
     </task>
     <task id="LOCAL-00053" summary="Renamer API, ExprEditor, updated docs">
       <option name="closed" value="true" />
@@ -615,7 +608,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766734628192</updated>
     </task>
-    <option name="localTasksCounter" value="101" />
+    <task id="LOCAL-00101" summary="- execution api fixes: missing native handlers for String and Array">
+      <option name="closed" value="true" />
+      <created>1766737629652</created>
+      <option name="number" value="00101" />
+      <option name="presentableId" value="LOCAL-00101" />
+      <option name="project" value="LOCAL" />
+      <updated>1766737629652</updated>
+    </task>
+    <option name="localTasksCounter" value="102" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -630,7 +631,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- jitpack" />
     <MESSAGE value="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java" />
     <MESSAGE value="- MIT" />
     <MESSAGE value="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package" />
@@ -655,7 +655,8 @@
     <MESSAGE value="- readme spelling error" />
     <MESSAGE value="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution" />
     <MESSAGE value="- execution api fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution api fixes" />
+    <MESSAGE value="- execution api fixes: missing native handlers for String and Array" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution api fixes: missing native handlers for String and Array" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
