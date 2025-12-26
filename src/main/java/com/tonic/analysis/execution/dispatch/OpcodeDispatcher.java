@@ -1546,7 +1546,8 @@ public final class OpcodeDispatcher {
             instruction.getMethodName(),
             instruction.getMethodDescriptor(),
             false,
-            false
+            false,
+            true
         );
         context.setPendingInvoke(methodInfo);
         return DispatchResult.INVOKE;

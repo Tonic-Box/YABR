@@ -451,8 +451,13 @@ public final class BytecodeEngine {
                 return;
             }
 
-            InvocationResult result = invocationHandler.invoke(
-                targetMethod, receiver, args, createInvocationContext());
+            InvocationResult result;
+            if (methodInfo.isSpecial()) {
+                result = handleSpecialInvoke(targetMethod, receiver, args);
+            } else {
+                result = invocationHandler.invoke(
+                    targetMethod, receiver, args, createInvocationContext());
+            }
 
             if (result.isPushFrame()) {
                 StackFrame newFrame = result.getNewFrame();
@@ -543,6 +548,67 @@ public final class BytecodeEngine {
 
     private NativeRegistry getNativeRegistry() {
         return context.getNativeRegistry();
+    }
+
+    private InvocationResult handleSpecialInvoke(MethodEntry targetMethod, ObjectInstance receiver, ConcreteValue[] args) {
+        NativeRegistry nativeRegistry = getNativeRegistry();
+        if (nativeRegistry != null && nativeRegistry.hasHandler(targetMethod)) {
+            try {
+                NativeContext nativeContext = new NativeContext() {
+                    @Override
+                    public com.tonic.analysis.execution.heap.HeapManager getHeapManager() {
+                        return context.getHeapManager();
+                    }
+                    @Override
+                    public com.tonic.analysis.execution.resolve.ClassResolver getClassResolver() {
+                        return context.getClassResolver();
+                    }
+                    @Override
+                    public ObjectInstance createString(String value) {
+                        return context.getHeapManager().internString(value);
+                    }
+                    @Override
+                    public ObjectInstance createException(String className, String message) {
+                        ObjectInstance exception = context.getHeapManager().newObject(className);
+                        if (message != null) {
+                            ObjectInstance messageStr = context.getHeapManager().internString(message);
+                            exception.setField(className, "detailMessage", "Ljava/lang/String;", messageStr);
+                        }
+                        return exception;
+                    }
+                };
+                ConcreteValue result = nativeRegistry.execute(targetMethod, receiver, args, nativeContext);
+                return InvocationResult.nativeHandled(result);
+            } catch (Exception e) {
+                ObjectInstance exception = context.getHeapManager().newObject("java/lang/Exception");
+                return InvocationResult.exception(exception);
+            }
+        }
+
+        if (targetMethod.getCodeAttribute() == null) {
+            return InvocationResult.nativeHandled(ConcreteValue.nullRef());
+        }
+
+        ConcreteValue[] frameArgs = buildSpecialFrameArgs(targetMethod, receiver, args);
+        StackFrame newFrame = new StackFrame(targetMethod, frameArgs);
+        return InvocationResult.pushFrame(newFrame);
+    }
+
+    private ConcreteValue[] buildSpecialFrameArgs(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args) {
+        boolean isStatic = (method.getAccess() & 0x0008) != 0;
+        if (isStatic) {
+            return args != null ? args : new ConcreteValue[0];
+        }
+
+        ConcreteValue receiverValue = receiver != null ?
+            ConcreteValue.reference(receiver) : ConcreteValue.nullRef();
+
+        ConcreteValue[] frameArgs = new ConcreteValue[1 + (args != null ? args.length : 0)];
+        frameArgs[0] = receiverValue;
+        if (args != null) {
+            System.arraycopy(args, 0, frameArgs, 1, args.length);
+        }
+        return frameArgs;
     }
 
     private void stubInvoke(StackFrame frame, String descriptor, boolean isStatic) {

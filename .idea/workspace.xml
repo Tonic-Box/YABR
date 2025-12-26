@@ -6,11 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution api fixes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/state/ConcreteLocals.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/state/ConcreteLocals.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -227,14 +222,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00049" summary="Improvements to recovery in source emission.">
-      <option name="closed" value="true" />
-      <created>1765672556509</created>
-      <option name="number" value="00049" />
-      <option name="presentableId" value="LOCAL-00049" />
-      <option name="project" value="LOCAL" />
-      <updated>1765672556509</updated>
     </task>
     <task id="LOCAL-00050" summary="Improvements to structural analysis">
       <option name="closed" value="true" />
@@ -620,7 +607,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766726598910</updated>
     </task>
-    <option name="localTasksCounter" value="98" />
+    <task id="LOCAL-00098" summary="- execution api fixes">
+      <option name="closed" value="true" />
+      <created>1766729691769</created>
+      <option name="number" value="00098" />
+      <option name="presentableId" value="LOCAL-00098" />
+      <option name="project" value="LOCAL" />
+      <updated>1766729691769</updated>
+    </task>
+    <option name="localTasksCounter" value="99" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
