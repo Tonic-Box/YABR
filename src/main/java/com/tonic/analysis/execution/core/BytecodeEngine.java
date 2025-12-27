@@ -1178,8 +1178,11 @@ public final class BytecodeEngine {
         if (exObj != null) {
             sb.append(exObj.getClassName());
             Object detailMsg = exObj.getField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;");
+            System.out.println("[DEBUG] Exception class: " + exObj.getClassName());
+            System.out.println("[DEBUG] detailMessage field: " + detailMsg);
             if (detailMsg instanceof ObjectInstance) {
                 String msg = context.getHeapManager().extractString((ObjectInstance) detailMsg);
+                System.out.println("[DEBUG] Extracted message: " + msg);
                 if (msg != null && !msg.isEmpty()) {
                     sb.append(": ").append(msg);
                 }
@@ -1187,6 +1190,7 @@ public final class BytecodeEngine {
         } else {
             sb.append("Unknown exception");
         }
+        System.out.println("[DEBUG] Stack trace size: " + (stackTrace != null ? stackTrace.size() : "null"));
         if (stackTrace != null && !stackTrace.isEmpty()) {
             sb.append("\n  VM Stack Trace:");
             for (String frame : stackTrace) {
