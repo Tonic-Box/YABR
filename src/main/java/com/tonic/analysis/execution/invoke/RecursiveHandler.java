@@ -52,6 +52,10 @@ public final class RecursiveHandler implements InvocationHandler {
             );
         }
 
+        if (targetMethod.getCodeAttribute() == null) {
+            return stubResult(targetMethod.getDesc(), context.getHeapManager());
+        }
+
         ConcreteValue[] frameArgs = buildFrameArgs(targetMethod, receiver, args);
 
         StackFrame frame = new StackFrame(targetMethod, frameArgs);
@@ -121,6 +125,38 @@ public final class RecursiveHandler implements InvocationHandler {
         }
 
         return frameArgs;
+    }
+
+    private InvocationResult stubResult(String descriptor, HeapManager heapManager) {
+        String returnType = getReturnType(descriptor);
+        ConcreteValue result;
+        if ("V".equals(returnType)) {
+            result = null;
+        } else if (returnType.startsWith("L") || returnType.startsWith("[")) {
+            result = ConcreteValue.reference(heapManager.newObject("java/lang/Object"));
+        } else if ("J".equals(returnType)) {
+            result = ConcreteValue.longValue(0L);
+        } else if ("D".equals(returnType)) {
+            result = ConcreteValue.doubleValue(0.0);
+        } else if ("F".equals(returnType)) {
+            result = ConcreteValue.floatValue(0.0f);
+        } else if ("Z".equals(returnType)) {
+            result = ConcreteValue.intValue(0);
+        } else {
+            result = ConcreteValue.intValue(0);
+        }
+        return InvocationResult.nativeHandled(result);
+    }
+
+    private String getReturnType(String descriptor) {
+        if (descriptor == null) {
+            return "V";
+        }
+        int parenIndex = descriptor.indexOf(')');
+        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1) {
+            return descriptor.substring(parenIndex + 1);
+        }
+        return "V";
     }
 
     private static class DefaultNativeContext implements NativeContext {

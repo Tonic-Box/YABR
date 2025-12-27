@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: events">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: invoke slots counting">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -222,14 +222,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00056" summary="Instrumentation API">
-      <option name="closed" value="true" />
-      <created>1765782159197</created>
-      <option name="number" value="00056" />
-      <option name="presentableId" value="LOCAL-00056" />
-      <option name="project" value="LOCAL" />
-      <updated>1765782159197</updated>
     </task>
     <task id="LOCAL-00057" summary="xref apis, CFG improvements">
       <option name="closed" value="true" />
@@ -615,7 +607,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766770603390</updated>
     </task>
-    <option name="localTasksCounter" value="105" />
+    <task id="LOCAL-00105" summary="- execution-api fixes: invoke slots counting">
+      <option name="closed" value="true" />
+      <created>1766798314855</created>
+      <option name="number" value="00105" />
+      <option name="presentableId" value="LOCAL-00105" />
+      <option name="project" value="LOCAL" />
+      <updated>1766798314855</updated>
+    </task>
+    <option name="localTasksCounter" value="106" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -630,7 +630,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Simulation analysis system&#10;- restructured analysis apis docs" />
     <MESSAGE value="README update" />
     <MESSAGE value="-  Bug fixed in ClassFile.java at line 633 - replaced the complex counting loop with a simple return constPool.getItems().size(); since the items list already correctly accounts for Long/Double second slots.&#10;- wrote tests to have coverage for this in the future." />
     <MESSAGE value="- implimented new ClassPool constructor to enable lazy loading of internal java classes optionally" />
@@ -655,7 +654,8 @@
     <MESSAGE value="- execution-api fixes: missing native handlers" />
     <MESSAGE value="- execution-api fixes: clinit" />
     <MESSAGE value="- execution-api fixes: events" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: events" />
+    <MESSAGE value="- execution-api fixes: invoke slots counting" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: invoke slots counting" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

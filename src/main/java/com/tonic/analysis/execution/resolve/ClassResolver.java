@@ -95,8 +95,41 @@ public class ClassResolver {
     public ResolvedMethod resolveVirtualMethod(String staticType, String name, String desc, Object receiver) {
         String key = "virtual:" + staticType + "." + name + desc;
         return cache.getMethod(key, () -> {
-            return resolveMethod(staticType, name, desc);
+            return resolveConcreteMethod(staticType, name, desc);
         });
+    }
+
+    private ResolvedMethod resolveConcreteMethod(String owner, String name, String descriptor) {
+        ClassFile ownerClass = classPool.get(owner);
+        if (ownerClass == null) {
+            throw new ResolutionException("Owner class not found: " + owner);
+        }
+
+        MethodEntry method = findMethodInClass(ownerClass, name, descriptor, true);
+        if (method != null) {
+            ResolvedMethod.InvokeKind kind = determineInvokeKind(method, ownerClass);
+            return new ResolvedMethod(method, ownerClass, kind);
+        }
+
+        ClassNode node = hierarchy.getNode(owner);
+        if (node == null) {
+            throw new ResolutionException("Method not found: " + owner + "." + name + descriptor);
+        }
+
+        ClassNode current = node.getSuperClass();
+        while (current != null) {
+            ClassFile cf = classPool.get(current.getName());
+            if (cf != null) {
+                method = findMethodInClass(cf, name, descriptor, true);
+                if (method != null) {
+                    ResolvedMethod.InvokeKind kind = determineInvokeKind(method, cf);
+                    return new ResolvedMethod(method, cf, kind);
+                }
+            }
+            current = current.getSuperClass();
+        }
+
+        throw new ResolutionException("No concrete method found: " + owner + "." + name + descriptor);
     }
 
     public ResolvedMethod resolveInterfaceMethod(String interfaceName, String name, String desc) {
@@ -274,12 +307,23 @@ public class ClassResolver {
     }
 
     private MethodEntry findMethodInClass(ClassFile cf, String name, String descriptor) {
+        return findMethodInClass(cf, name, descriptor, false);
+    }
+
+    private MethodEntry findMethodInClass(ClassFile cf, String name, String descriptor, boolean skipAbstract) {
         for (MethodEntry method : cf.getMethods()) {
             if (method.getName().equals(name) && method.getDesc().equals(descriptor)) {
+                if (skipAbstract && isAbstract(method)) {
+                    continue;
+                }
                 return method;
             }
         }
         return null;
+    }
+
+    private boolean isAbstract(MethodEntry method) {
+        return (method.getAccess() & 0x0400) != 0;
     }
 
     private FieldEntry findFieldInClass(ClassFile cf, String name, String descriptor) {
