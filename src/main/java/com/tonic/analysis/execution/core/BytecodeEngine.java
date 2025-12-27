@@ -629,8 +629,8 @@ public final class BytecodeEngine {
     }
 
     private void stubInvoke(StackFrame frame, String descriptor, boolean isStatic) {
-        int paramSlots = getParameterSlots(descriptor);
-        for (int i = 0; i < paramSlots; i++) {
+        int paramCount = getParameterCount(descriptor);
+        for (int i = 0; i < paramCount; i++) {
             frame.getStack().pop();
         }
 

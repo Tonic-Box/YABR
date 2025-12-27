@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: clinit">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: events">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,14 +222,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00055" summary="- Call Graph API - Building graphs, querying callers/callees, reachability analysis, virtual call resolution&#10;- Dependency Analysis API - Class dependencies, circular dependency detection, dependency types&#10;- Type Inference API - Nullability states, type states, polymorphic types&#10;- Pattern Search API - Finding method calls, field accesses, allocations, type operations, custom patterns">
-      <option name="closed" value="true" />
-      <created>1765779408752</created>
-      <option name="number" value="00055" />
-      <option name="presentableId" value="LOCAL-00055" />
-      <option name="project" value="LOCAL" />
-      <updated>1765779408752</updated>
     </task>
     <task id="LOCAL-00056" summary="Instrumentation API">
       <option name="closed" value="true" />
@@ -616,7 +607,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766766080639</updated>
     </task>
-    <option name="localTasksCounter" value="104" />
+    <task id="LOCAL-00104" summary="- execution-api fixes: events">
+      <option name="closed" value="true" />
+      <created>1766770603390</created>
+      <option name="number" value="00104" />
+      <option name="presentableId" value="LOCAL-00104" />
+      <option name="project" value="LOCAL" />
+      <updated>1766770603390</updated>
+    </task>
+    <option name="localTasksCounter" value="105" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -631,7 +630,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="# Codebase cleanup: ClassNameUtil, DescriptorUtil, MethodReference&#10;- New utility classes eliminate ~200 lines of duplicate code&#10;- Merge callgraph/xref MethodReference into common package" />
     <MESSAGE value="- Simulation analysis system&#10;- restructured analysis apis docs" />
     <MESSAGE value="README update" />
     <MESSAGE value="-  Bug fixed in ClassFile.java at line 633 - replaced the complex counting loop with a simple return constPool.getItems().size(); since the items list already correctly accounts for Long/Double second slots.&#10;- wrote tests to have coverage for this in the future." />
@@ -656,7 +654,8 @@
     <MESSAGE value="- execution api fixes: missing native handlers for String and Array" />
     <MESSAGE value="- execution-api fixes: missing native handlers" />
     <MESSAGE value="- execution-api fixes: clinit" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: clinit" />
+    <MESSAGE value="- execution-api fixes: events" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: events" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

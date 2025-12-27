@@ -31,29 +31,39 @@ public final class InvokeDynamicInfo {
     }
 
     public int getParameterSlots() {
+        return getParameterCount();
+    }
+
+    public int getParameterCount() {
         if (descriptor == null || !descriptor.startsWith("(")) {
             return 0;
         }
 
-        int slots = 0;
+        int count = 0;
         int i = 1;
         while (i < descriptor.length() && descriptor.charAt(i) != ')') {
             char c = descriptor.charAt(i);
             switch (c) {
                 case 'J':
                 case 'D':
-                    slots += 2;
+                case 'I':
+                case 'F':
+                case 'B':
+                case 'C':
+                case 'S':
+                case 'Z':
+                    count++;
                     i++;
                     break;
                 case 'L':
-                    slots++;
+                    count++;
                     while (i < descriptor.length() && descriptor.charAt(i) != ';') {
                         i++;
                     }
                     i++;
                     break;
                 case '[':
-                    slots++;
+                    count++;
                     while (i < descriptor.length() && descriptor.charAt(i) == '[') {
                         i++;
                     }
@@ -65,12 +75,12 @@ public final class InvokeDynamicInfo {
                     i++;
                     break;
                 default:
-                    slots++;
+                    count++;
                     i++;
                     break;
             }
         }
-        return slots;
+        return count;
     }
 
     public String getReturnType() {
