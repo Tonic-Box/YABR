@@ -65,7 +65,7 @@ public final class BytecodeEngine {
     private final ConcurrentHashMap<String, Integer> methodCallCounts = new ConcurrentHashMap<>();
     private static final int LOOP_DETECTION_THRESHOLD = 5;
     private static final boolean LOOP_DEBUG = false;
-    private static final boolean TRACE_INSTRUCTIONS = true;
+    private static final boolean TRACE_INSTRUCTIONS = false;
 
     public BytecodeEngine(BytecodeContext context) {
         if (context == null) {
