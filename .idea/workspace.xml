@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: debug">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: native handlers">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,14 +224,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00061" summary="- jitpack">
-      <option name="closed" value="true" />
-      <created>1765909975498</created>
-      <option name="number" value="00061" />
-      <option name="presentableId" value="LOCAL-00061" />
-      <option name="project" value="LOCAL" />
-      <updated>1765909975498</updated>
     </task>
     <task id="LOCAL-00062" summary="- Fixed the enum switch map decompilation bug by adding pattern detection in StatementRecoverer.java">
       <option name="closed" value="true" />
@@ -616,7 +609,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766816043887</updated>
     </task>
-    <option name="localTasksCounter" value="110" />
+    <task id="LOCAL-00110" summary="- execution-api fixes: native handlers">
+      <option name="closed" value="true" />
+      <created>1766817657245</created>
+      <option name="number" value="00110" />
+      <option name="presentableId" value="LOCAL-00110" />
+      <option name="project" value="LOCAL" />
+      <updated>1766817657245</updated>
+    </task>
+    <option name="localTasksCounter" value="111" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -631,7 +632,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- added new tests" />
     <MESSAGE value="- added new tests&#10;- added builder api" />
     <MESSAGE value="- bytecode execution (simulation) api" />
     <MESSAGE value="- bytecode execution api" />
@@ -656,7 +656,8 @@
     <MESSAGE value="- execution-api fixes: native handlers for LocalDateTime" />
     <MESSAGE value="- execution-api fixes: better error logging for execution api" />
     <MESSAGE value="- execution-api fixes: debug" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: debug" />
+    <MESSAGE value="- execution-api fixes: native handlers" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: native handlers" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

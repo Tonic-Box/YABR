@@ -12,7 +12,6 @@ import com.tonic.analysis.execution.dispatch.OpcodeDispatcher.DispatchResult;
 import com.tonic.analysis.execution.frame.CallStack;
 import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
-import com.tonic.analysis.execution.heap.HeapException;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
@@ -39,6 +38,7 @@ import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.invoke.RecursiveHandler;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.listener.BytecodeListener;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class BytecodeEngine {
 
     private final BytecodeContext context;
+    @Getter
     private final CallStack callStack;
     private final OpcodeDispatcher dispatcher;
     private final List<BytecodeListener> listeners;
@@ -55,7 +56,9 @@ public final class BytecodeEngine {
     private final Set<String> initializedClasses;
 
     private volatile boolean interrupted;
+    @Getter
     private long instructionCount;
+    @Getter
     private ConcreteValue lastReturnValue;
     private ObjectInstance lastException;
 
@@ -88,9 +91,7 @@ public final class BytecodeEngine {
     public BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
         if ("<clinit>".equals(method.getName())) {
             String className = method.getClassFile().getClassName();
-            if (!initializedClasses.contains(className)) {
-                initializedClasses.add(className);
-            }
+            initializedClasses.add(className);
         }
 
         boolean wasInterrupted = interrupted;
@@ -240,18 +241,6 @@ public final class BytecodeEngine {
         return callStack.isEmpty() ? null : callStack.peek();
     }
 
-    public CallStack getCallStack() {
-        return callStack;
-    }
-
-    public long getInstructionCount() {
-        return instructionCount;
-    }
-
-    public ConcreteValue getLastReturnValue() {
-        return lastReturnValue;
-    }
-
     public boolean ensureClassInitialized(String className) {
         if (initializedClasses.contains(className)) {
             return true;
@@ -291,26 +280,6 @@ public final class BytecodeEngine {
         return true;
     }
 
-    private boolean isJdkClass(String className) {
-        return className.startsWith("java/") ||
-               className.startsWith("javax/") ||
-               className.startsWith("sun/") ||
-               className.startsWith("com/sun/") ||
-               className.startsWith("jdk/");
-    }
-
-    public boolean isClassInitialized(String className) {
-        return initializedClasses.contains(className);
-    }
-
-    public void markClassInitialized(String className) {
-        initializedClasses.add(className);
-    }
-
-    public void resetClassInitialization() {
-        initializedClasses.clear();
-    }
-
     private void handleFrameCompletion() {
         StackFrame completed = callStack.pop();
 
@@ -345,6 +314,9 @@ public final class BytecodeEngine {
     private void handleDispatchResult(DispatchResult result, StackFrame frame, EngineDispatchContext ctx) {
         switch (result) {
             case CONTINUE:
+
+            case CHECKCAST:
+            case INSTANCEOF:
                 break;
 
             case BRANCH:
@@ -386,10 +358,6 @@ public final class BytecodeEngine {
                 handleAthrow(frame);
                 break;
 
-            case CHECKCAST:
-            case INSTANCEOF:
-                break;
-
             case CONSTANT_DYNAMIC:
                 handleConstantDynamic(frame, ctx);
                 break;
@@ -428,14 +396,14 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private void handleMethodHandle(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleMethodHandle(StackFrame frame, EngineDispatchContext ctx) { //TODO
         MethodHandleInfo info = ctx.getPendingMethodHandle();
         ObjectInstance mh = context.getHeapManager().newObject("java/lang/invoke/MethodHandle");
         frame.getStack().pushReference(mh);
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private void handleMethodType(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleMethodType(StackFrame frame, EngineDispatchContext ctx) { //TODO
         MethodTypeInfo info = ctx.getPendingMethodType();
         ObjectInstance mt = context.getHeapManager().newObject("java/lang/invoke/MethodType");
         frame.getStack().pushReference(mt);
@@ -1178,11 +1146,8 @@ public final class BytecodeEngine {
         if (exObj != null) {
             sb.append(exObj.getClassName());
             Object detailMsg = exObj.getField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;");
-            System.out.println("[DEBUG] Exception class: " + exObj.getClassName());
-            System.out.println("[DEBUG] detailMessage field: " + detailMsg);
             if (detailMsg instanceof ObjectInstance) {
                 String msg = context.getHeapManager().extractString((ObjectInstance) detailMsg);
-                System.out.println("[DEBUG] Extracted message: " + msg);
                 if (msg != null && !msg.isEmpty()) {
                     sb.append(": ").append(msg);
                 }
@@ -1190,7 +1155,6 @@ public final class BytecodeEngine {
         } else {
             sb.append("Unknown exception");
         }
-        System.out.println("[DEBUG] Stack trace size: " + (stackTrace != null ? stackTrace.size() : "null"));
         if (stackTrace != null && !stackTrace.isEmpty()) {
             sb.append("\n  VM Stack Trace:");
             for (String frame : stackTrace) {
@@ -1198,49 +1162,6 @@ public final class BytecodeEngine {
             }
         }
         return sb.toString();
-    }
-
-    private int getParameterSlots(String descriptor) {
-        if (descriptor == null || !descriptor.startsWith("(")) {
-            return 0;
-        }
-
-        int slots = 0;
-        int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
-            char c = descriptor.charAt(i);
-            switch (c) {
-                case 'J':
-                case 'D':
-                    slots += 2;
-                    i++;
-                    break;
-                case 'L':
-                    slots++;
-                    while (i < descriptor.length() && descriptor.charAt(i) != ';') {
-                        i++;
-                    }
-                    i++;
-                    break;
-                case '[':
-                    slots++;
-                    while (i < descriptor.length() && descriptor.charAt(i) == '[') {
-                        i++;
-                    }
-                    if (i < descriptor.length() && descriptor.charAt(i) == 'L') {
-                        while (i < descriptor.length() && descriptor.charAt(i) != ';') {
-                            i++;
-                        }
-                    }
-                    i++;
-                    break;
-                default:
-                    slots++;
-                    i++;
-                    break;
-            }
-        }
-        return slots;
     }
 
     private String getReturnType(String descriptor) {

@@ -1748,5 +1748,134 @@ public final class NativeRegistry {
                 ObjectInstance zone = ctx.getHeapManager().newObject("java/time/ZoneId");
                 return ConcreteValue.reference(zone);
             });
+
+        registerJdkCoreHandlers();
+    }
+
+    private void registerJdkCoreHandlers() {
+        register("java/lang/Object", "registerNatives", "()V",
+            (receiver, args, ctx) -> null);
+
+        register("java/lang/Class", "registerNatives", "()V",
+            (receiver, args, ctx) -> null);
+
+        register("java/lang/System", "registerNatives", "()V",
+            (receiver, args, ctx) -> null);
+
+        register("java/lang/Thread", "registerNatives", "()V",
+            (receiver, args, ctx) -> null);
+
+        register("java/lang/Class", "getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;",
+            (receiver, args, ctx) -> {
+                ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
+                if (args != null && args.length > 0 && !args[0].isNull()) {
+                    String typeName = ctx.getHeapManager().extractString(args[0].asReference());
+                    if (typeName != null) {
+                        classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", args[0].asReference());
+                    }
+                }
+                return ConcreteValue.reference(classObj);
+            });
+
+        register("java/lang/Class", "desiredAssertionStatus", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        register("java/lang/Class", "forName0", "(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
+            (receiver, args, ctx) -> {
+                ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
+                if (args != null && args.length > 0 && !args[0].isNull()) {
+                    classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", args[0].asReference());
+                }
+                return ConcreteValue.reference(classObj);
+            });
+
+        register("java/lang/StrictMath", "log", "(D)D",
+            (receiver, args, ctx) -> {
+                double val = args != null && args.length > 0 ? args[0].asDouble() : 0.0;
+                return ConcreteValue.doubleValue(Math.log(val));
+            });
+
+        register("java/lang/StrictMath", "sin", "(D)D",
+            (receiver, args, ctx) -> {
+                double val = args != null && args.length > 0 ? args[0].asDouble() : 0.0;
+                return ConcreteValue.doubleValue(Math.sin(val));
+            });
+
+        register("java/lang/StrictMath", "cos", "(D)D",
+            (receiver, args, ctx) -> {
+                double val = args != null && args.length > 0 ? args[0].asDouble() : 0.0;
+                return ConcreteValue.doubleValue(Math.cos(val));
+            });
+
+        register("java/lang/StrictMath", "sqrt", "(D)D",
+            (receiver, args, ctx) -> {
+                double val = args != null && args.length > 0 ? args[0].asDouble() : 0.0;
+                return ConcreteValue.doubleValue(Math.sqrt(val));
+            });
+
+        register("java/lang/StrictMath", "pow", "(DD)D",
+            (receiver, args, ctx) -> {
+                double base = args != null && args.length > 0 ? args[0].asDouble() : 0.0;
+                double exp = args != null && args.length > 1 ? args[1].asDouble() : 0.0;
+                return ConcreteValue.doubleValue(Math.pow(base, exp));
+            });
+
+        register("java/lang/Runtime", "availableProcessors", "()I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(Runtime.getRuntime().availableProcessors()));
+
+        register("java/lang/Thread", "currentThread", "()Ljava/lang/Thread;",
+            (receiver, args, ctx) -> {
+                ObjectInstance thread = ctx.getHeapManager().newObject("java/lang/Thread");
+                thread.setField("java/lang/Thread", "name", "Ljava/lang/String;",
+                    ctx.getHeapManager().internString("main"));
+                return ConcreteValue.reference(thread);
+            });
+
+        register("jdk/internal/misc/Unsafe", "registerNatives", "()V",
+            (receiver, args, ctx) -> null);
+
+        register("jdk/internal/misc/Unsafe", "compareAndSetInt", "(Ljava/lang/Object;JII)Z",
+            (receiver, args, ctx) -> {
+                if (args != null && args.length >= 4) {
+                    ObjectInstance obj = args[0].isNull() ? null : args[0].asReference();
+                    int expected = args[2].asInt();
+                    int update = args[3].asInt();
+                    return ConcreteValue.intValue(1);
+                }
+                return ConcreteValue.intValue(1);
+            });
+
+        register("jdk/internal/misc/Unsafe", "compareAndSetLong", "(Ljava/lang/Object;JJJ)Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+
+        register("jdk/internal/misc/Unsafe", "compareAndSetReference", "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+
+        register("jdk/internal/misc/Unsafe", "getIntVolatile", "(Ljava/lang/Object;J)I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        register("jdk/internal/misc/Unsafe", "getLongVolatile", "(Ljava/lang/Object;J)J",
+            (receiver, args, ctx) -> ConcreteValue.longValue(0L));
+
+        register("jdk/internal/misc/Unsafe", "getReferenceVolatile", "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        register("jdk/internal/misc/Unsafe", "putIntVolatile", "(Ljava/lang/Object;JI)V",
+            (receiver, args, ctx) -> null);
+
+        register("jdk/internal/misc/Unsafe", "putLongVolatile", "(Ljava/lang/Object;JJ)V",
+            (receiver, args, ctx) -> null);
+
+        register("jdk/internal/misc/Unsafe", "putReferenceVolatile", "(Ljava/lang/Object;JLjava/lang/Object;)V",
+            (receiver, args, ctx) -> null);
+
+        register("jdk/internal/misc/Unsafe", "objectFieldOffset1", "(Ljava/lang/Class;Ljava/lang/String;)J",
+            (receiver, args, ctx) -> ConcreteValue.longValue(16L));
+
+        register("jdk/internal/misc/Unsafe", "arrayBaseOffset0", "(Ljava/lang/Class;)I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(16));
+
+        register("jdk/internal/misc/Unsafe", "arrayIndexScale0", "(Ljava/lang/Class;)I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(4));
     }
 }
