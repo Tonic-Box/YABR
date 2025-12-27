@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: abstract resolution">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- execution-api fixes: native handlers for LocalDateTime">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,14 +224,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00058" summary="updated docs, clean-up">
-      <option name="closed" value="true" />
-      <created>1765861629465</created>
-      <option name="number" value="00058" />
-      <option name="presentableId" value="LOCAL-00058" />
-      <option name="project" value="LOCAL" />
-      <updated>1765861629465</updated>
     </task>
     <task id="LOCAL-00059" summary="unit tests">
       <option name="closed" value="true" />
@@ -616,7 +609,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766802296659</updated>
     </task>
-    <option name="localTasksCounter" value="107" />
+    <task id="LOCAL-00107" summary="- execution-api fixes: native handlers for LocalDateTime">
+      <option name="closed" value="true" />
+      <created>1766813385330</created>
+      <option name="number" value="00107" />
+      <option name="presentableId" value="LOCAL-00107" />
+      <option name="project" value="LOCAL" />
+      <updated>1766813385330</updated>
+    </task>
+    <option name="localTasksCounter" value="108" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -631,7 +632,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="-  Bug fixed in ClassFile.java at line 633 - replaced the complex counting loop with a simple return constPool.getItems().size(); since the items list already correctly accounts for Long/Double second slots.&#10;- wrote tests to have coverage for this in the future." />
     <MESSAGE value="- implimented new ClassPool constructor to enable lazy loading of internal java classes optionally" />
     <MESSAGE value="- better handling for dynamic stuff in decompile" />
     <MESSAGE value="- added new tests" />
@@ -656,7 +656,8 @@
     <MESSAGE value="- execution-api fixes: events" />
     <MESSAGE value="- execution-api fixes: invoke slots counting" />
     <MESSAGE value="- execution-api fixes: abstract resolution" />
-    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: abstract resolution" />
+    <MESSAGE value="- execution-api fixes: native handlers for LocalDateTime" />
+    <option name="LAST_COMMIT_MESSAGE" value="- execution-api fixes: native handlers for LocalDateTime" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

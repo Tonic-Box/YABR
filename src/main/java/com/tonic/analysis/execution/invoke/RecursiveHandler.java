@@ -103,6 +103,10 @@ public final class RecursiveHandler implements InvocationHandler {
             return InvocationResult.nativeHandled(result);
         } catch (NativeException e) {
             ObjectInstance exception = context.getHeapManager().newObject(e.getExceptionClass());
+            if (e.getMessage() != null) {
+                ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
+                exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
+            }
             return InvocationResult.exception(exception);
         }
     }

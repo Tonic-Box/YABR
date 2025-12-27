@@ -34,6 +34,7 @@ import com.tonic.analysis.execution.invoke.InvocationContext;
 import com.tonic.analysis.execution.invoke.InvocationHandler;
 import com.tonic.analysis.execution.invoke.InvocationResult;
 import com.tonic.analysis.execution.invoke.NativeContext;
+import com.tonic.analysis.execution.invoke.NativeException;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.invoke.RecursiveHandler;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
@@ -558,6 +559,14 @@ public final class BytecodeEngine {
             }
             frame.advancePC(frame.getCurrentInstruction().getLength());
             return true;
+        } catch (NativeException e) {
+            ObjectInstance exception = context.getHeapManager().newObject(e.getExceptionClass());
+            if (e.getMessage() != null) {
+                ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
+                exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
+            }
+            frame.completeExceptionally(exception);
+            return true;
         } catch (Exception e) {
             return false;
         }
@@ -596,8 +605,19 @@ public final class BytecodeEngine {
                 };
                 ConcreteValue result = nativeRegistry.execute(targetMethod, receiver, args, nativeContext);
                 return InvocationResult.nativeHandled(result);
+            } catch (NativeException e) {
+                ObjectInstance exception = context.getHeapManager().newObject(e.getExceptionClass());
+                if (e.getMessage() != null) {
+                    ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
+                    exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
+                }
+                return InvocationResult.exception(exception);
             } catch (Exception e) {
                 ObjectInstance exception = context.getHeapManager().newObject("java/lang/Exception");
+                if (e.getMessage() != null) {
+                    ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
+                    exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
+                }
                 return InvocationResult.exception(exception);
             }
         }
@@ -1143,7 +1163,7 @@ public final class BytecodeEngine {
             listenerResult = com.tonic.analysis.execution.result.BytecodeResult.success(result.getReturnValue());
         } else if (result.getStatus() == BytecodeResult.Status.EXCEPTION) {
             ObjectInstance exObj = result.getException();
-            String exMsg = exObj != null ? exObj.getClassName() : "Unknown";
+            String exMsg = buildExceptionMessage(exObj, result.getStackTrace());
             listenerResult = com.tonic.analysis.execution.result.BytecodeResult.failure(new RuntimeException(exMsg));
         } else {
             listenerResult = com.tonic.analysis.execution.result.BytecodeResult.incomplete();
@@ -1151,6 +1171,29 @@ public final class BytecodeEngine {
         for (BytecodeListener listener : listeners) {
             listener.onExecutionEnd(listenerResult);
         }
+    }
+
+    private String buildExceptionMessage(ObjectInstance exObj, List<String> stackTrace) {
+        StringBuilder sb = new StringBuilder();
+        if (exObj != null) {
+            sb.append(exObj.getClassName());
+            Object detailMsg = exObj.getField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;");
+            if (detailMsg instanceof ObjectInstance) {
+                String msg = context.getHeapManager().extractString((ObjectInstance) detailMsg);
+                if (msg != null && !msg.isEmpty()) {
+                    sb.append(": ").append(msg);
+                }
+            }
+        } else {
+            sb.append("Unknown exception");
+        }
+        if (stackTrace != null && !stackTrace.isEmpty()) {
+            sb.append("\n  VM Stack Trace:");
+            for (String frame : stackTrace) {
+                sb.append("\n    at ").append(frame);
+            }
+        }
+        return sb.toString();
     }
 
     private int getParameterSlots(String descriptor) {
