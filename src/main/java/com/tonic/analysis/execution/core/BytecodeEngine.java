@@ -65,6 +65,7 @@ public final class BytecodeEngine {
     private final ConcurrentHashMap<String, Integer> methodCallCounts = new ConcurrentHashMap<>();
     private static final int LOOP_DETECTION_THRESHOLD = 5;
     private static final boolean LOOP_DEBUG = false;
+    private static final boolean TRACE_INSTRUCTIONS = true;
 
     public BytecodeEngine(BytecodeContext context) {
         if (context == null) {
@@ -137,6 +138,12 @@ public final class BytecodeEngine {
                 if (instr == null) {
                     current.complete(ConcreteValue.nullRef());
                     continue;
+                }
+
+                if (TRACE_INSTRUCTIONS) {
+                    System.out.println("[TRACE] #" + instructionCount + " " +
+                        current.getMethodSignature() + " pc=" + current.getPC() +
+                        " op=" + instr.getOpcode() + " (" + instr.getClass().getSimpleName() + ")");
                 }
 
                 notifyBeforeInstruction(current, instr);
@@ -447,6 +454,9 @@ public final class BytecodeEngine {
 
             if (result.isPushFrame()) {
                 StackFrame newFrame = result.getNewFrame();
+                if (TRACE_INSTRUCTIONS) {
+                    System.out.println("[TRACE] CALL -> " + newFrame.getMethodSignature());
+                }
                 if (LOOP_DEBUG) {
                     String methodKey = newFrame.getMethodSignature();
                     int count = methodCallCounts.merge(methodKey, 1, Integer::sum);
@@ -976,6 +986,18 @@ public final class BytecodeEngine {
             throw new NullPointerException("Cannot throw null exception");
         }
         ObjectInstance exception = exceptionRef.asReference();
+
+        if (TRACE_INSTRUCTIONS) {
+            String exClass = exception.getClassName();
+            Object detailMsg = exception.getField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;");
+            String msgStr = null;
+            if (detailMsg instanceof ObjectInstance) {
+                msgStr = context.getHeapManager().extractString((ObjectInstance) detailMsg);
+            }
+            System.out.println("[TRACE] ATHROW " + exClass +
+                (msgStr != null ? ": " + msgStr : "") +
+                " at " + frame.getMethodSignature() + " pc=" + frame.getPC());
+        }
 
         if (!tryHandleException(frame, exception)) {
             frame.completeExceptionally(exception);
