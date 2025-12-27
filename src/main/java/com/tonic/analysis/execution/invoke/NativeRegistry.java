@@ -1877,5 +1877,11 @@ public final class NativeRegistry {
 
         register("jdk/internal/misc/Unsafe", "arrayIndexScale0", "(Ljava/lang/Class;)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(4));
+
+        register("jdk/internal/misc/Unsafe", "addressSize0", "()I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(8));
+
+        register("jdk/internal/misc/Unsafe", "getObjectVolatile", "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
     }
 }
