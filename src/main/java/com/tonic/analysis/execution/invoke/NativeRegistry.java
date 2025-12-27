@@ -1851,6 +1851,9 @@ public final class NativeRegistry {
         register("jdk/internal/misc/Unsafe", "compareAndSetReference", "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
+        register("jdk/internal/misc/Unsafe", "compareAndSetObject", "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+
         register("jdk/internal/misc/Unsafe", "getIntVolatile", "(Ljava/lang/Object;J)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
