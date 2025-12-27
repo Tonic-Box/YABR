@@ -46,10 +46,10 @@ public final class RecursiveHandler implements InvocationHandler {
         }
 
         if (isNative(targetMethod)) {
-            throw new UnsupportedOperationException(
-                "No native handler for native method: " + targetMethod.getOwnerName() + "." +
-                targetMethod.getName() + targetMethod.getDesc()
-            );
+            String msg = "No native handler for: " + targetMethod.getOwnerName() + "." +
+                targetMethod.getName() + targetMethod.getDesc();
+            System.out.println("[DEBUG] " + msg);
+            throw new UnsupportedOperationException(msg);
         }
 
         if (targetMethod.getCodeAttribute() == null) {
