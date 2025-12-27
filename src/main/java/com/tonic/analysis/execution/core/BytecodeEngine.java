@@ -315,7 +315,7 @@ public final class BytecodeEngine {
             }
         } else {
             ConcreteValue returnValue = completed.getReturnValue();
-            if (returnValue != null && !returnValue.isNull()) {
+            if (returnValue != null) {
                 caller.getStack().push(returnValue);
             }
             caller.advancePC(caller.getCurrentInstruction().getLength());
@@ -336,8 +336,15 @@ public final class BytecodeEngine {
                 break;
 
             case RETURN:
-                ConcreteValue returnValue = frame.getStack().isEmpty() ?
-                    ConcreteValue.nullRef() : frame.getStack().pop();
+                int returnOpcode = frame.getCurrentInstruction().getOpcode();
+                ConcreteValue returnValue;
+                if (returnOpcode == 0xB1) {
+                    returnValue = null;
+                } else if (frame.getStack().isEmpty()) {
+                    returnValue = ConcreteValue.nullRef();
+                } else {
+                    returnValue = frame.getStack().pop();
+                }
                 frame.complete(returnValue);
                 break;
 
