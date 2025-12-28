@@ -222,10 +222,27 @@ stack.dupX2();    // ..., v3, v2, v1 -> ..., v1, v3, v2, v1
 stack.dup2();     // ..., v2, v1 -> ..., v2, v1, v2, v1 (or wide)
 stack.swap();     // ..., v2, v1 -> ..., v1, v2
 
+// Direct index access (for debugging)
+ConcreteValue atIndex = stack.get(2);     // Get value at index from top
+stack.set(0, ConcreteValue.intValue(42)); // Set value at index from top
+
 // Info
 int depth = stack.depth();
 boolean empty = stack.isEmpty();
 ```
+
+| Method | Description |
+|--------|-------------|
+| `push(value)` | Push value onto stack |
+| `pop()` | Pop and return top value |
+| `peek()` | Return top value without removing |
+| `peek(n)` | Return value n slots from top |
+| `get(index)` | Get value at index from top |
+| `set(index, value)` | Set value at index from top |
+| `depth()` | Current stack depth |
+| `isEmpty()` | Check if stack is empty |
+| `clear()` | Remove all values |
+| `dup()`, `dupX1()`, etc. | JVM stack manipulation operations |
 
 ### ConcreteLocals
 
@@ -260,13 +277,29 @@ int id = obj.getId();
 String className = obj.getClassName();
 int hashCode = obj.getIdentityHashCode();
 
-// Field access
+// Field access (owner, name, descriptor)
 obj.setField("java/util/ArrayList", "size", "I", 10);
 Object size = obj.getField("java/util/ArrayList", "size", "I");
 
 // Type checking
 boolean isInstance = obj.isInstanceOf("java/util/List");
 ```
+
+#### Field Key System
+
+Fields are stored with a composite key of `(owner, name, descriptor)` to support field shadowing in inheritance hierarchies:
+
+```java
+// Child class shadows parent's field
+obj.setField("com/example/Child", "value", "I", 10);   // Child's field
+obj.setField("com/example/Parent", "value", "I", 20);  // Parent's field (shadowed)
+
+// Each field is stored separately
+int childValue = (int) obj.getField("com/example/Child", "value", "I");   // 10
+int parentValue = (int) obj.getField("com/example/Parent", "value", "I"); // 20
+```
+
+This matches JVM semantics where a subclass can declare a field with the same name as a superclass field, resulting in two distinct storage locations.
 
 ### ArrayInstance
 
@@ -406,6 +439,54 @@ DelegatingHandler delegating = new DelegatingHandler((method, receiver, args) ->
 });
 ```
 
+### InvocationResult
+
+Method invocation outcome:
+
+```java
+InvocationResult result = handler.invoke(method, receiver, args, context);
+
+// Status types
+switch (result.getStatus()) {
+    case COMPLETED:        // Method returned normally
+        ConcreteValue ret = result.getReturnValue();
+        break;
+    case PUSH_FRAME:       // New frame needs to be pushed
+        StackFrame frame = result.getNewFrame();
+        break;
+    case DELEGATED:        // Invocation was delegated externally
+        break;
+    case NATIVE_HANDLED:   // Native method executed
+        ConcreteValue nativeRet = result.getReturnValue();
+        break;
+    case EXCEPTION:        // Method threw exception
+        ObjectInstance ex = result.getException();
+        break;
+}
+
+// Factory methods
+InvocationResult completed = InvocationResult.completed(returnValue);
+InvocationResult push = InvocationResult.pushFrame(newFrame);
+InvocationResult delegated = InvocationResult.delegated();
+InvocationResult native = InvocationResult.nativeHandled(returnValue);
+InvocationResult exception = InvocationResult.exception(exceptionInstance);
+
+// Query methods
+boolean isDone = result.isCompleted();
+boolean needsPush = result.isPushFrame();
+boolean wasDelegate = result.isDelegated();
+boolean wasNative = result.isNativeHandled();
+boolean hadError = result.isException();
+```
+
+| Status | Description |
+|--------|-------------|
+| `COMPLETED` | Method executed and returned normally |
+| `PUSH_FRAME` | New stack frame needs to be pushed |
+| `DELEGATED` | Invocation handled by external callback |
+| `NATIVE_HANDLED` | Native method was executed |
+| `EXCEPTION` | Method threw an exception |
+
 ---
 
 ## Exception Handling
@@ -517,51 +598,142 @@ state = session.resume();                 // Run until breakpoint or end
 // State inspection
 StackFrame frame = session.getCurrentFrame();
 List<?> callStack = session.getCallStack();
+BytecodeEngine engine = session.getEngine();  // Access underlying engine
+
+// Value editing (when paused)
+session.setLocalValue(0, ConcreteValue.intValue(42));
+session.setStackValue(0, ConcreteValue.longValue(100L));
 
 // Stop
 session.stop();
 BytecodeResult result = session.getResult();
 ```
 
+| Method | Description |
+|--------|-------------|
+| `start(method, args)` | Start debugging session |
+| `stepInto()` | Step into method calls |
+| `stepOver()` | Step over method calls |
+| `stepOut()` | Run until current method returns |
+| `runToCursor(pc)` | Run until PC reaches target |
+| `resume()` | Run until breakpoint or end |
+| `stop()` | Stop the session |
+| `getCurrentFrame()` | Get current stack frame |
+| `getCallStack()` | Get full call stack |
+| `getCurrentState()` | Get debug state snapshot |
+| `getResult()` | Get execution result |
+| `getEngine()` | Access underlying BytecodeEngine |
+| `setLocalValue(slot, value)` | Edit local variable (paused only) |
+| `setStackValue(index, value)` | Edit stack value (paused only) |
+| `isPaused()` | Check if session is paused |
+| `isStopped()` | Check if session is stopped |
+| `addBreakpoint(bp)` | Add a breakpoint |
+| `removeBreakpoint(bp)` | Remove a breakpoint |
+| `addListener(listener)` | Add debug event listener |
+
 ### DebugState
 
-Snapshot for UI display:
+Thread-safe immutable snapshot of debug session state:
 
 ```java
 DebugState state = session.getCurrentState();
+
+// Status (enum)
+DebugState.Status status = state.getStatus();
+// IDLE, RUNNING, PAUSED, STEPPING, COMPLETED, EXCEPTION, ABORTED
 
 // Location
 String methodSig = state.getMethodSignature();
 int pc = state.getPC();
 int lineNumber = state.getLineNumber();
 
-// Stack
-List<ConcreteValue> stack = state.getOperandStack();
+// Call stack as StackFrameInfo list
+List<StackFrameInfo> callStack = state.getCallStack();
 
-// Locals
-Map<Integer, ConcreteValue> locals = state.getLocalVariables();
+// Locals and stack as immutable snapshots
+LocalsSnapshot locals = state.getLocals();
+StackSnapshot stack = state.getOperandStack();
 
-// Call stack
-List<String> callStack = state.getCallStackTrace();
+// Legacy string-based call stack trace
+List<String> callStackTrace = state.getCallStackTrace();
 ```
+
+#### Building DebugState
+
+The `DebugState.Builder` is used internally by `DebugSession`:
+
+```java
+DebugState state = new DebugState.Builder()
+    .status(DebugState.Status.PAUSED)
+    .methodSignature("com/example/MyClass.process(I)V")
+    .pc(15)
+    .lineNumber(42)
+    .callStack(frameInfoList)
+    .locals(localsSnapshot)
+    .operandStack(stackSnapshot)
+    .build();
+```
+
+#### Status Enum
+
+| Status | Description |
+|--------|-------------|
+| `IDLE` | Session created but not started |
+| `RUNNING` | Execution in progress |
+| `PAUSED` | Stopped at breakpoint or step |
+| `STEPPING` | Executing single step |
+| `COMPLETED` | Execution finished normally |
+| `EXCEPTION` | Execution ended with exception |
+| `ABORTED` | Execution was interrupted |
 
 ### Breakpoint
 
 Execution pause points:
 
 ```java
+// Factory methods (preferred)
+Breakpoint bp1 = Breakpoint.methodEntry("com/example/MyClass", "process", "(I)V");
+Breakpoint bp2 = Breakpoint.atLine("com/example/MyClass", "process", "(I)V", 42);
+Breakpoint bp3 = Breakpoint.atPC("com/example/MyClass", "process", "(I)V", 15);
+
+// Direct constructor
 Breakpoint bp = new Breakpoint("com/example/MyClass", "process", "(I)V", 15);
 
 // Enable/disable
 bp.setEnabled(false);
 boolean enabled = bp.isEnabled();
 
-// Conditional breakpoint (hit count)
-bp.setHitCount(5);  // Break after 5 hits
+// Hit count management
+bp.setHitCount(5);        // Break after 5 hits
+bp.incrementHitCount();   // Increment count
+bp.resetHitCount();       // Reset to 0
+int hits = bp.getHitCount();
+
+// Conditional breakpoints
+bp.setCondition("count > 10");
+String cond = bp.getCondition();
+
+// Unique key for breakpoint identification
+String key = bp.getKey();  // "com/example/MyClass.process(I)V@15"
 
 // Check match
 boolean matches = bp.matches(method, pc);
 ```
+
+| Method | Description |
+|--------|-------------|
+| `methodEntry(class, method, desc)` | Create breakpoint at method entry (PC=0) |
+| `atLine(class, method, desc, line)` | Create breakpoint at source line |
+| `atPC(class, method, desc, pc)` | Create breakpoint at specific PC |
+| `setEnabled(bool)` | Enable or disable breakpoint |
+| `isEnabled()` | Check if enabled |
+| `setHitCount(n)` | Set hit count threshold |
+| `incrementHitCount()` | Increment hit counter |
+| `resetHitCount()` | Reset hit counter to zero |
+| `setCondition(expr)` | Set conditional expression |
+| `getCondition()` | Get conditional expression |
+| `getKey()` | Get unique identifier string |
+| `matches(method, pc)` | Check if breakpoint matches |
 
 ### BreakpointManager
 
@@ -632,6 +804,94 @@ session.addListener(new DebugEventListener() {
         System.out.println("State: " + oldState + " -> " + newState);
     }
 });
+```
+
+### Value Editing During Debug
+
+When the debugger is paused, you can modify local variables, stack values, and object fields:
+
+```java
+DebugSession session = new DebugSession(ctx);
+session.start(method, args);
+
+// Wait for breakpoint or step...
+if (session.isPaused()) {
+    // Edit local variable at slot 0
+    session.setLocalValue(0, ConcreteValue.intValue(100));
+
+    // Edit stack value at index 0 (top of stack)
+    session.setStackValue(0, ConcreteValue.longValue(999L));
+
+    // Edit object field through the engine
+    BytecodeEngine engine = session.getEngine();
+    StackFrame frame = engine.getCurrentFrame();
+    ConcreteLocals locals = frame.getLocals();
+    ConcreteValue objRef = locals.get(1);  // Get object reference from local slot 1
+
+    if (objRef.getTag() == ValueTag.REFERENCE && !objRef.isNull()) {
+        ObjectInstance obj = objRef.asReference();
+        obj.setField("com/example/MyClass", "counter", "I", 42);
+    }
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `setLocalValue(slot, value)` | Set local variable at slot (paused only) |
+| `setStackValue(index, value)` | Set stack value at index (paused only) |
+| `getEngine()` | Access underlying BytecodeEngine |
+
+**Note**: Value editing is only available when the session is paused. Attempting to edit values while running will throw an `IllegalStateException`.
+
+### Debug State Snapshots
+
+The debug API provides lightweight snapshot classes for thread-safe access to execution state:
+
+#### StackFrameInfo
+
+Lightweight immutable snapshot of a stack frame:
+
+```java
+DebugState state = session.getCurrentState();
+List<StackFrameInfo> callStack = state.getCallStack();
+
+for (StackFrameInfo frame : callStack) {
+    String sig = frame.getMethodSignature();  // "com/example/MyClass.process(I)V"
+    int pc = frame.getPC();                   // Current program counter
+    int line = frame.getLineNumber();         // Source line number (-1 if unavailable)
+}
+```
+
+#### ValueInfo
+
+Snapshot of a ConcreteValue with type and string representation:
+
+```java
+LocalsSnapshot locals = state.getLocals();
+for (ValueInfo info : locals.getValues()) {
+    String type = info.getType();            // "int", "long", "reference", etc.
+    String str = info.getValueString();      // String representation
+    Object raw = info.getRawValue();         // Actual value (Integer, Long, ObjectInstance, etc.)
+    ValueTag tag = info.getTag();            // Value type tag
+}
+```
+
+#### LocalsSnapshot & StackSnapshot
+
+Immutable snapshots for thread-safe access during debugging:
+
+```java
+DebugState state = session.getCurrentState();
+
+// Local variables snapshot
+LocalsSnapshot locals = state.getLocals();
+int slotCount = locals.size();
+ValueInfo value = locals.get(0);  // Get value at slot
+
+// Operand stack snapshot
+StackSnapshot stack = state.getOperandStack();
+int depth = stack.size();
+ValueInfo top = stack.get(0);  // Get top of stack
 ```
 
 ---
@@ -757,6 +1017,7 @@ com.tonic.analysis.execution/
 │   └── FieldInfo.java            - Resolved field info
 ├── invoke/
 │   ├── InvocationHandler.java    - Invocation interface
+│   ├── InvocationResult.java     - Invocation outcome
 │   ├── RecursiveHandler.java     - Internal call handling
 │   ├── DelegatingHandler.java    - External call handling
 │   ├── NativeRegistry.java       - Native method handlers
@@ -770,12 +1031,16 @@ com.tonic.analysis.execution/
 │   └── StatisticsListener.java   - Execution metrics
 └── debug/
     ├── DebugSession.java         - Debug controller
-    ├── DebugState.java           - UI snapshot
+    ├── DebugState.java           - State snapshot (with Builder)
     ├── DebugSessionState.java    - Session state enum
     ├── DebugEventListener.java   - Debug events
-    ├── Breakpoint.java           - Pause point
+    ├── Breakpoint.java           - Pause point (with factory methods)
     ├── BreakpointManager.java    - Breakpoint collection
     ├── StepMode.java             - Step granularity
+    ├── StackFrameInfo.java       - Lightweight frame snapshot
+    ├── ValueInfo.java            - Value snapshot with metadata
+    ├── LocalsSnapshot.java       - Immutable locals copy
+    ├── StackSnapshot.java        - Immutable stack copy
     └── InstructionInterceptor.java - Execution interception
 ```
 
