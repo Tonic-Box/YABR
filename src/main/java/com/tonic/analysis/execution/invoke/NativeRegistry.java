@@ -101,6 +101,7 @@ public final class NativeRegistry {
         registerCollectionHandlers();
         registerWrapperHandlers();
         registerIOHandlers();
+        registerAtomicHandlers();
     }
 
     private void registerExceptionHandlers() {
@@ -181,6 +182,9 @@ public final class NativeRegistry {
     }
 
     private void registerObjectHandlers() {
+        register("java/lang/Object", "<init>", "()V",
+            (receiver, args, ctx) -> null);
+
         register("java/lang/Object", "hashCode", "()I",
             (receiver, args, ctx) -> {
                 if (receiver == null) {
@@ -258,6 +262,21 @@ public final class NativeRegistry {
 
                 return ConcreteValue.intValue(0);
             });
+
+        register("java/lang/Runtime", "totalMemory", "()J",
+            (receiver, args, ctx) -> ConcreteValue.longValue(Runtime.getRuntime().totalMemory()));
+
+        register("java/lang/Runtime", "freeMemory", "()J",
+            (receiver, args, ctx) -> ConcreteValue.longValue(Runtime.getRuntime().freeMemory()));
+
+        register("java/lang/Runtime", "maxMemory", "()J",
+            (receiver, args, ctx) -> ConcreteValue.longValue(Runtime.getRuntime().maxMemory()));
+
+        register("java/lang/Runtime", "availableProcessors", "()I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(Runtime.getRuntime().availableProcessors()));
+
+        register("java/lang/Runtime", "gc", "()V",
+            (receiver, args, ctx) -> null);
     }
 
     private void registerMathHandlers() {
@@ -927,6 +946,12 @@ public final class NativeRegistry {
 
         register("java/lang/Class", "desiredAssertionStatus", "()Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        register("java/lang/Class", "getDeclaredFields0", "(Z)[Ljava/lang/reflect/Field;",
+            (receiver, args, ctx) -> {
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("[Ljava/lang/reflect/Field;", 0);
+                return ConcreteValue.reference(emptyArray);
+            });
     }
 
     private void registerStringInternalHandlers() {
@@ -2339,5 +2364,13 @@ public final class NativeRegistry {
         register("java/io/BufferedWriter", "write", "(Ljava/lang/String;II)V", voidNoOp);
         register("java/io/BufferedWriter", "newLine", "()V", voidNoOp);
         register("java/io/BufferedWriter", "flush", "()V", voidNoOp);
+    }
+
+    private void registerAtomicHandlers() {
+        register("java/util/concurrent/atomic/AtomicLong", "VMSupportsCS8", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+
+        register("java/util/concurrent/atomic/AtomicInteger", "VMSupportsCS8", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(1));
     }
 }
