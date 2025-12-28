@@ -210,6 +210,40 @@ public final class DebugSession {
         return engine.getCallStack().snapshot();
     }
 
+    public BytecodeEngine getEngine() {
+        return engine;
+    }
+
+    public void setLocalValue(int slot, ConcreteValue value) {
+        ensurePausedForEditing();
+        StackFrame frame = getCurrentFrame();
+        if (frame == null) {
+            throw new IllegalStateException("No current frame");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("Value cannot be null");
+        }
+        frame.getLocals().set(slot, value);
+    }
+
+    public void setStackValue(int index, ConcreteValue value) {
+        ensurePausedForEditing();
+        StackFrame frame = getCurrentFrame();
+        if (frame == null) {
+            throw new IllegalStateException("No current frame");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("Value cannot be null");
+        }
+        frame.getStack().set(index, value);
+    }
+
+    private void ensurePausedForEditing() {
+        if (state != DebugSessionState.PAUSED) {
+            throw new IllegalStateException("Can only edit values when paused. Current state: " + state);
+        }
+    }
+
     public void addListener(DebugEventListener listener) {
         if (listener != null) {
             listeners.add(listener);

@@ -4,14 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- native handlers modularization">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- native handlers additions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/NativeRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/CollectionHandlers.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/CollectionHandlers.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/CoreHandlers.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/CoreHandlers.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/MathHandlers.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/MathHandlers.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/StringHandlers.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/StringHandlers.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/SystemHandlers.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/handlers/SystemHandlers.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -228,14 +222,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00073" summary="- added new tests">
-      <option name="closed" value="true" />
-      <created>1766428386207</created>
-      <option name="number" value="00073" />
-      <option name="presentableId" value="LOCAL-00073" />
-      <option name="project" value="LOCAL" />
-      <updated>1766428386207</updated>
     </task>
     <task id="LOCAL-00074" summary="- added new tests">
       <option name="closed" value="true" />
@@ -621,7 +607,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766895190933</updated>
     </task>
-    <option name="localTasksCounter" value="122" />
+    <task id="LOCAL-00122" summary="- native handlers additions">
+      <option name="closed" value="true" />
+      <created>1766901495196</created>
+      <option name="number" value="00122" />
+      <option name="presentableId" value="LOCAL-00122" />
+      <option name="project" value="LOCAL" />
+      <updated>1766901495196</updated>
+    </task>
+    <option name="localTasksCounter" value="123" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -636,7 +630,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- exception api heap/object allocation support" />
     <MESSAGE value="- execution api init fixes" />
     <MESSAGE value="- readme spelling error" />
     <MESSAGE value="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution" />
@@ -661,7 +654,8 @@
     <MESSAGE value="- execution api: native handlers" />
     <MESSAGE value="- execution api native handlers" />
     <MESSAGE value="- native handlers modularization" />
-    <option name="LAST_COMMIT_MESSAGE" value="- native handlers modularization" />
+    <MESSAGE value="- native handlers additions" />
+    <option name="LAST_COMMIT_MESSAGE" value="- native handlers additions" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

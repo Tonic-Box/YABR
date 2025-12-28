@@ -107,6 +107,23 @@ public final class ConcreteStack {
         return stack[index];
     }
 
+    public void set(int index, ConcreteValue value) {
+        if (index < 0 || index >= top) {
+            throw new IndexOutOfBoundsException("Stack index " + index + " out of bounds [0, " + top + ")");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("Value cannot be null");
+        }
+        stack[index] = value;
+    }
+
+    public ConcreteValue get(int index) {
+        if (index < 0 || index >= top) {
+            throw new IndexOutOfBoundsException("Stack index " + index + " out of bounds [0, " + top + ")");
+        }
+        return stack[index];
+    }
+
     public void dup() {
         push(peek());
     }
