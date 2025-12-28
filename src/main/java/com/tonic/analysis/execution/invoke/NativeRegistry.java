@@ -83,5 +83,15 @@ public final class NativeRegistry {
         registerProvider(new TimeHandlers());
         registerProvider(new SystemHandlers());
         registerProvider(new ConcurrencyHandlers());
+        registerProvider(new ZipHandlers());
+        registerProvider(new FileIOHandlers());
+        registerProvider(new ProcessHandlers());
+        registerProvider(new ThreadHandlers());
+        registerProvider(new ReflectionHandlers());
+        registerProvider(new NetworkHandlers());
+        registerProvider(new NIOHandlers());
+        registerProvider(new VMHandlers());
+        registerProvider(new SecurityHandlers());
+        registerProvider(new LocaleHandlers());
     }
 }

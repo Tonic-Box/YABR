@@ -13,6 +13,7 @@ public class CollectionHandlers implements NativeHandlerProvider {
     public void register(NativeRegistry registry) {
         registerArraysHandlers(registry);
         registerCollectionHandlers(registry);
+        registerReflectArrayHandlers(registry);
     }
 
     private void registerArraysHandlers(NativeRegistry registry) {
@@ -345,5 +346,415 @@ public class CollectionHandlers implements NativeHandlerProvider {
 
         registry.register("java/util/AbstractSequentialList", "<init>", "()V",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
+    }
+
+    private void registerReflectArrayHandlers(NativeRegistry registry) {
+        registry.register("java/lang/reflect/Array", "getLength", "(Ljava/lang/Object;)I",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getLength on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                return ConcreteValue.intValue(((ArrayInstance) obj).getLength());
+            });
+
+        registry.register("java/lang/reflect/Array", "get", "(Ljava/lang/Object;I)Ljava/lang/Object;",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.get on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object element = arr.get(index);
+                if (element instanceof ObjectInstance) {
+                    return ConcreteValue.reference((ObjectInstance) element);
+                } else if (element instanceof Integer) {
+                    ObjectInstance boxed = ctx.getHeapManager().newObject("java/lang/Integer");
+                    boxed.setField("java/lang/Integer", "value", "I", element);
+                    return ConcreteValue.reference(boxed);
+                } else if (element instanceof Long) {
+                    ObjectInstance boxed = ctx.getHeapManager().newObject("java/lang/Long");
+                    boxed.setField("java/lang/Long", "value", "J", element);
+                    return ConcreteValue.reference(boxed);
+                } else if (element instanceof Byte) {
+                    ObjectInstance boxed = ctx.getHeapManager().newObject("java/lang/Byte");
+                    boxed.setField("java/lang/Byte", "value", "B", element);
+                    return ConcreteValue.reference(boxed);
+                }
+                return ConcreteValue.nullRef();
+            });
+
+        registry.register("java/lang/reflect/Array", "set", "(Ljava/lang/Object;ILjava/lang/Object;)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.set on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object value = args[2].isNull() ? null : args[2].asReference();
+                arr.set(index, value);
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getInt", "(Ljava/lang/Object;I)I",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getInt on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object element = arr.get(index);
+                if (element instanceof Integer) {
+                    return ConcreteValue.intValue((Integer) element);
+                }
+                return ConcreteValue.intValue(0);
+            });
+
+        registry.register("java/lang/reflect/Array", "setInt", "(Ljava/lang/Object;II)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setInt on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.set(index, args[2].asInt());
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getLong", "(Ljava/lang/Object;I)J",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getLong on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object element = arr.get(index);
+                if (element instanceof Long) {
+                    return ConcreteValue.longValue((Long) element);
+                }
+                return ConcreteValue.longValue(0L);
+            });
+
+        registry.register("java/lang/reflect/Array", "setLong", "(Ljava/lang/Object;IJ)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setLong on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.set(index, args[2].asLong());
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getByte", "(Ljava/lang/Object;I)B",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getByte on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                return ConcreteValue.intValue(arr.getByte(index));
+            });
+
+        registry.register("java/lang/reflect/Array", "setByte", "(Ljava/lang/Object;IB)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setByte on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.setByte(index, (byte) args[2].asInt());
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getBoolean", "(Ljava/lang/Object;I)Z",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getBoolean on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object element = arr.get(index);
+                if (element instanceof Boolean) {
+                    return ConcreteValue.intValue((Boolean) element ? 1 : 0);
+                }
+                return ConcreteValue.intValue(0);
+            });
+
+        registry.register("java/lang/reflect/Array", "setBoolean", "(Ljava/lang/Object;IZ)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setBoolean on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.set(index, args[2].asInt() != 0);
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getChar", "(Ljava/lang/Object;I)C",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getChar on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                return ConcreteValue.intValue(arr.getChar(index));
+            });
+
+        registry.register("java/lang/reflect/Array", "setChar", "(Ljava/lang/Object;IC)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setChar on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.setChar(index, (char) args[2].asInt());
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getShort", "(Ljava/lang/Object;I)S",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getShort on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object element = arr.get(index);
+                if (element instanceof Short) {
+                    return ConcreteValue.intValue((Short) element);
+                }
+                return ConcreteValue.intValue(0);
+            });
+
+        registry.register("java/lang/reflect/Array", "setShort", "(Ljava/lang/Object;IS)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setShort on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.set(index, (short) args[2].asInt());
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getFloat", "(Ljava/lang/Object;I)F",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getFloat on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object element = arr.get(index);
+                if (element instanceof Float) {
+                    return ConcreteValue.floatValue((Float) element);
+                }
+                return ConcreteValue.floatValue(0.0f);
+            });
+
+        registry.register("java/lang/reflect/Array", "setFloat", "(Ljava/lang/Object;IF)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setFloat on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.set(index, args[2].asFloat());
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "getDouble", "(Ljava/lang/Object;I)D",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.getDouble on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                Object element = arr.get(index);
+                if (element instanceof Double) {
+                    return ConcreteValue.doubleValue((Double) element);
+                }
+                return ConcreteValue.doubleValue(0.0);
+            });
+
+        registry.register("java/lang/reflect/Array", "setDouble", "(Ljava/lang/Object;ID)V",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.setDouble on null");
+                }
+                ObjectInstance obj = args[0].asReference();
+                if (!(obj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Argument is not an array");
+                }
+                ArrayInstance arr = (ArrayInstance) obj;
+                int index = args[1].asInt();
+                if (index < 0 || index >= arr.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "Index: " + index);
+                }
+                arr.set(index, args[2].asDouble());
+                return null;
+            });
+
+        registry.register("java/lang/reflect/Array", "newArray", "(Ljava/lang/Class;I)Ljava/lang/Object;",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.newArray with null class");
+                }
+                int length = args[1].asInt();
+                if (length < 0) {
+                    throw new NativeException("java/lang/NegativeArraySizeException", "Length: " + length);
+                }
+                ObjectInstance classObj = args[0].asReference();
+                Object nameObj = classObj.getField("java/lang/Class", "name", "Ljava/lang/String;");
+                String componentType = "Ljava/lang/Object;";
+                if (nameObj instanceof ObjectInstance) {
+                    String name = ctx.getHeapManager().extractString((ObjectInstance) nameObj);
+                    if (name != null) {
+                        componentType = "L" + name.replace('.', '/') + ";";
+                    }
+                }
+                ArrayInstance arr = ctx.getHeapManager().newArray("[" + componentType, length);
+                return ConcreteValue.reference(arr);
+            });
+
+        registry.register("java/lang/reflect/Array", "multiNewArray", "(Ljava/lang/Class;[I)Ljava/lang/Object;",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull() || args[1].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "Array.multiNewArray with null");
+                }
+                ArrayInstance dims = (ArrayInstance) args[1].asReference();
+                if (dims.getLength() == 0) {
+                    throw new NativeException("java/lang/IllegalArgumentException", "Empty dimensions array");
+                }
+                int firstDim = 0;
+                Object d = dims.get(0);
+                if (d instanceof Integer) {
+                    firstDim = (Integer) d;
+                }
+                ArrayInstance arr = ctx.getHeapManager().newArray("[Ljava/lang/Object;", firstDim);
+                return ConcreteValue.reference(arr);
+            });
     }
 }

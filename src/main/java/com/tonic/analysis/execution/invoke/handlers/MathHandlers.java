@@ -9,6 +9,7 @@ public final class MathHandlers implements NativeHandlerProvider {
     @Override
     public void register(NativeRegistry registry) {
         registerMathHandlers(registry);
+        registerStrictMathHandlers(registry);
         registerFloatHandlers(registry);
         registerDoubleHandlers(registry);
     }
@@ -69,6 +70,77 @@ public final class MathHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Math", "tan", "(D)D",
             (receiver, args, ctx) -> ConcreteValue.doubleValue(Math.tan(args[0].asDouble())));
+
+        registry.register("java/lang/Math", "log", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(Math.log(args[0].asDouble())));
+
+        registry.register("java/lang/Math", "log10", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(Math.log10(args[0].asDouble())));
+
+        registry.register("java/lang/Math", "exp", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(Math.exp(args[0].asDouble())));
+
+        registry.register("java/lang/Math", "pow", "(DD)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(Math.pow(args[0].asDouble(), args[1].asDouble())));
+
+        registry.register("java/lang/Math", "floor", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(Math.floor(args[0].asDouble())));
+
+        registry.register("java/lang/Math", "ceil", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(Math.ceil(args[0].asDouble())));
+
+        registry.register("java/lang/Math", "round", "(D)J",
+            (receiver, args, ctx) -> ConcreteValue.longValue(Math.round(args[0].asDouble())));
+
+        registry.register("java/lang/Math", "round", "(F)I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(Math.round(args[0].asFloat())));
+    }
+
+    private void registerStrictMathHandlers(NativeRegistry registry) {
+        registry.register("java/lang/StrictMath", "sin", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.sin(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "cos", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.cos(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "tan", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.tan(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "asin", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.asin(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "acos", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.acos(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "atan", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.atan(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "atan2", "(DD)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.atan2(args[0].asDouble(), args[1].asDouble())));
+
+        registry.register("java/lang/StrictMath", "sinh", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.sinh(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "cosh", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.cosh(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "tanh", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.tanh(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "log", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.log(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "log10", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.log10(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "log1p", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.log1p(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "expm1", "(D)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.expm1(args[0].asDouble())));
+
+        registry.register("java/lang/StrictMath", "IEEEremainder", "(DD)D",
+            (receiver, args, ctx) -> ConcreteValue.doubleValue(StrictMath.IEEEremainder(args[0].asDouble(), args[1].asDouble())));
     }
 
     private void registerFloatHandlers(NativeRegistry registry) {

@@ -254,6 +254,70 @@ public final class SystemHandlers implements NativeHandlerProvider {
     }
 
     private void registerMoreSystemHandlers(NativeRegistry registry) {
+        registry.register("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+            (receiver, args, ctx) -> {
+                if (args == null || args.length < 5) {
+                    throw new NativeException("java/lang/NullPointerException", "arraycopy null args");
+                }
+                if (args[0].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "arraycopy source is null");
+                }
+                if (args[2].isNull()) {
+                    throw new NativeException("java/lang/NullPointerException", "arraycopy dest is null");
+                }
+                ObjectInstance srcObj = args[0].asReference();
+                int srcPos = args[1].asInt();
+                ObjectInstance destObj = args[2].asReference();
+                int destPos = args[3].asInt();
+                int length = args[4].asInt();
+                if (!(srcObj instanceof ArrayInstance) || !(destObj instanceof ArrayInstance)) {
+                    throw new NativeException("java/lang/ArrayStoreException", "arraycopy requires arrays");
+                }
+                ArrayInstance src = (ArrayInstance) srcObj;
+                ArrayInstance dest = (ArrayInstance) destObj;
+                if (srcPos < 0 || destPos < 0 || length < 0 ||
+                    srcPos + length > src.getLength() || destPos + length > dest.getLength()) {
+                    throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "arraycopy bounds");
+                }
+                for (int i = 0; i < length; i++) {
+                    Object val = src.get(srcPos + i);
+                    if (val instanceof ConcreteValue) {
+                        dest.set(destPos + i, (ConcreteValue) val);
+                    } else {
+                        dest.set(destPos + i, val);
+                    }
+                }
+                return null;
+            });
+
+        registry.register("java/lang/System", "setIn0", "(Ljava/io/InputStream;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("java/lang/System", "setOut0", "(Ljava/io/PrintStream;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("java/lang/System", "setErr0", "(Ljava/io/PrintStream;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("java/lang/System", "mapLibraryName", "(Ljava/lang/String;)Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (args == null || args.length == 0 || args[0].isNull()) {
+                    return ConcreteValue.nullRef();
+                }
+                String libName = ctx.getHeapManager().extractString(args[0].asReference());
+                if (libName == null) return ConcreteValue.nullRef();
+                String mapped = System.mapLibraryName(libName);
+                return ConcreteValue.reference(ctx.getHeapManager().internString(mapped));
+            });
+
+        registry.register("java/lang/System", "initProperties", "(Ljava/util/Properties;)Ljava/util/Properties;",
+            (receiver, args, ctx) -> {
+                if (args != null && args.length > 0 && !args[0].isNull()) {
+                    return ConcreteValue.reference(args[0].asReference());
+                }
+                return ConcreteValue.nullRef();
+            });
+
         registry.register("java/lang/System", "currentTimeMillis", "()J",
             (receiver, args, ctx) -> ConcreteValue.longValue(System.currentTimeMillis()));
 

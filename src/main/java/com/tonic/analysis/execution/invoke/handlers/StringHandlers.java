@@ -744,5 +744,90 @@ public final class StringHandlers implements NativeHandlerProvider {
                 }
                 return ConcreteValue.nullRef();
             });
+
+        registry.register("java/lang/StringUTF16", "isBigEndian", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        registry.register("java/lang/StringCoding", "hasNegatives", "([BII)Z",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    return ConcreteValue.intValue(0);
+                }
+                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                int off = args[1].asInt();
+                int len = args[2].asInt();
+                for (int i = 0; i < len; i++) {
+                    if (arr.getByte(off + i) < 0) {
+                        return ConcreteValue.intValue(1);
+                    }
+                }
+                return ConcreteValue.intValue(0);
+            });
+
+        registry.register("java/lang/StringCoding", "countPositives", "([BII)I",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull()) {
+                    return ConcreteValue.intValue(0);
+                }
+                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                int off = args[1].asInt();
+                int len = args[2].asInt();
+                int count = 0;
+                for (int i = 0; i < len; i++) {
+                    if (arr.getByte(off + i) >= 0) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+                return ConcreteValue.intValue(count);
+            });
+
+        registry.register("java/lang/StringCoding", "err", "(Ljava/lang/String;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("java/lang/StringCoding", "implEncodeISOArray", "([BI[BII)I",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull() || args[2].isNull()) {
+                    return ConcreteValue.intValue(0);
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int sp = args[1].asInt();
+                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                int dp = args[3].asInt();
+                int len = args[4].asInt();
+                int i = 0;
+                for (; i < len; i++) {
+                    int lo = src.getByte((sp + i) * 2) & 0xFF;
+                    int hi = src.getByte((sp + i) * 2 + 1) & 0xFF;
+                    int c = lo | (hi << 8);
+                    if (c > 0xFF) {
+                        break;
+                    }
+                    dst.setByte(dp + i, (byte) c);
+                }
+                return ConcreteValue.intValue(i);
+            });
+
+        registry.register("java/lang/StringCoding", "implEncodeAsciiArray", "([CI[BII)I",
+            (receiver, args, ctx) -> {
+                if (args[0].isNull() || args[2].isNull()) {
+                    return ConcreteValue.intValue(0);
+                }
+                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                int sp = args[1].asInt();
+                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                int dp = args[3].asInt();
+                int len = args[4].asInt();
+                int i = 0;
+                for (; i < len; i++) {
+                    char c = src.getChar(sp + i);
+                    if (c > 0x7F) {
+                        break;
+                    }
+                    dst.setByte(dp + i, (byte) c);
+                }
+                return ConcreteValue.intValue(i);
+            });
     }
 }

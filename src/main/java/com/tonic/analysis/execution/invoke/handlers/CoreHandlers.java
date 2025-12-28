@@ -178,5 +178,105 @@ public final class CoreHandlers implements NativeHandlerProvider {
                 ArrayInstance emptyArray = ctx.getHeapManager().newArray("[Ljava/lang/reflect/Field;", 0);
                 return ConcreteValue.reference(emptyArray);
             });
+
+        registry.register("java/lang/Class", "getDeclaredMethods0", "(Z)[Ljava/lang/reflect/Method;",
+            (receiver, args, ctx) -> {
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("[Ljava/lang/reflect/Method;", 0);
+                return ConcreteValue.reference(emptyArray);
+            });
+
+        registry.register("java/lang/Class", "getDeclaredConstructors0", "(Z)[Ljava/lang/reflect/Constructor;",
+            (receiver, args, ctx) -> {
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("[Ljava/lang/reflect/Constructor;", 0);
+                return ConcreteValue.reference(emptyArray);
+            });
+
+        registry.register("java/lang/Class", "getDeclaredClasses0", "()[Ljava/lang/Class;",
+            (receiver, args, ctx) -> {
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("[Ljava/lang/Class;", 0);
+                return ConcreteValue.reference(emptyArray);
+            });
+
+        registry.register("java/lang/Class", "getInterfaces0", "()[Ljava/lang/Class;",
+            (receiver, args, ctx) -> {
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("[Ljava/lang/Class;", 0);
+                return ConcreteValue.reference(emptyArray);
+            });
+
+        registry.register("java/lang/Class", "getSuperclass", "()Ljava/lang/Class;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getModifiers", "()I",
+            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+
+        registry.register("java/lang/Class", "isInterface", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        registry.register("java/lang/Class", "isInstance", "(Ljava/lang/Object;)Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        registry.register("java/lang/Class", "isAssignableFrom", "(Ljava/lang/Class;)Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        registry.register("java/lang/Class", "getSigners", "()[Ljava/lang/Object;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "setSigners", "([Ljava/lang/Object;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("java/lang/Class", "getDeclaringClass0", "()Ljava/lang/Class;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getEnclosingMethod0", "()[Ljava/lang/Object;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getSimpleBinaryName0", "()Ljava/lang/String;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getGenericSignature0", "()Ljava/lang/String;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getRawAnnotations", "()[B",
+            (receiver, args, ctx) -> {
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("[B", 0);
+                return ConcreteValue.reference(emptyArray);
+            });
+
+        registry.register("java/lang/Class", "getRawTypeAnnotations", "()[B",
+            (receiver, args, ctx) -> {
+                ArrayInstance emptyArray = ctx.getHeapManager().newArray("[B", 0);
+                return ConcreteValue.reference(emptyArray);
+            });
+
+        registry.register("java/lang/Class", "getConstantPool", "()Ljdk/internal/reflect/ConstantPool;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getProtectionDomain0", "()Ljava/security/ProtectionDomain;",
+            (receiver, args, ctx) -> ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getNestHost0", "()Ljava/lang/Class;",
+            (receiver, args, ctx) -> receiver != null ? ConcreteValue.reference(receiver) : ConcreteValue.nullRef());
+
+        registry.register("java/lang/Class", "getNestMembers0", "()[Ljava/lang/Class;",
+            (receiver, args, ctx) -> {
+                ArrayInstance arr = ctx.getHeapManager().newArray("[Ljava/lang/Class;", 1);
+                if (receiver != null) {
+                    arr.set(0, ConcreteValue.reference(receiver));
+                }
+                return ConcreteValue.reference(arr);
+            });
+
+        registry.register("java/lang/Class", "initClassName", "()Ljava/lang/String;",
+            (receiver, args, ctx) -> {
+                if (receiver == null) return ConcreteValue.nullRef();
+                Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
+                if (nameObj instanceof ObjectInstance) {
+                    return ConcreteValue.reference((ObjectInstance) nameObj);
+                }
+                return ConcreteValue.reference(ctx.createString("Unknown"));
+            });
+
+        registry.register("java/lang/Class", "desiredAssertionStatus0", "(Ljava/lang/Class;)Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
     }
 }
