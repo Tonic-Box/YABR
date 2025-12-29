@@ -16,6 +16,7 @@ public final class VMHandlers implements NativeHandlerProvider {
         registerVMSupportHandlers(registry);
         registerSignalHandlers(registry);
         registerConstantPoolHandlers(registry);
+        registerCDSHandlers(registry);
     }
 
     private void registerVMHandlers(NativeRegistry registry) {
@@ -177,5 +178,34 @@ public final class VMHandlers implements NativeHandlerProvider {
 
         registry.register("jdk/internal/reflect/Reflection", "areNestMates", "(Ljava/lang/Class;Ljava/lang/Class;)Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(1));
+    }
+
+    private void registerCDSHandlers(NativeRegistry registry) {
+        registry.register("jdk/internal/misc/CDS", "isDumpingClassList0", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        registry.register("jdk/internal/misc/CDS", "isDumpingArchive0", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        registry.register("jdk/internal/misc/CDS", "isSharingEnabled0", "()Z",
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+
+        registry.register("jdk/internal/misc/CDS", "getRandomSeedForDumping", "()J",
+            (receiver, args, ctx) -> ConcreteValue.longValue(0L));
+
+        registry.register("jdk/internal/misc/CDS", "logLambdaFormInvoker", "(Ljava/lang/String;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("jdk/internal/misc/CDS", "initializeFromArchive", "(Ljava/lang/Class;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("jdk/internal/misc/CDS", "defineArchivedModules", "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("jdk/internal/misc/CDS", "dumpClassList", "(Ljava/lang/String;)V",
+            (receiver, args, ctx) -> null);
+
+        registry.register("jdk/internal/misc/CDS", "dumpDynamicArchive", "(Ljava/lang/String;)V",
+            (receiver, args, ctx) -> null);
     }
 }
