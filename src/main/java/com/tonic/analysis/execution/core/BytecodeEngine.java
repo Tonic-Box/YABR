@@ -38,9 +38,12 @@ import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.invoke.RecursiveHandler;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.listener.BytecodeListener;
+import com.tonic.analysis.execution.listener.CapableListener;
+import com.tonic.analysis.execution.listener.ListenerCapability;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,6 +55,7 @@ public final class BytecodeEngine {
     private final CallStack callStack;
     private final OpcodeDispatcher dispatcher;
     private final List<BytecodeListener> listeners;
+    private final EnumSet<ListenerCapability> aggregateCapabilities;
     private final InvocationHandler invocationHandler;
     private final Set<String> initializedClasses;
 
@@ -75,6 +79,7 @@ public final class BytecodeEngine {
         this.callStack = new CallStack(context.getMaxCallDepth());
         this.dispatcher = new OpcodeDispatcher();
         this.listeners = new ArrayList<>();
+        this.aggregateCapabilities = EnumSet.noneOf(ListenerCapability.class);
         this.initializedClasses = ConcurrentHashMap.newKeySet();
         this.interrupted = false;
         this.instructionCount = 0;
@@ -110,6 +115,7 @@ public final class BytecodeEngine {
         try {
             StackFrame frame = new StackFrame(method, args);
             callStack.push(frame);
+            notifyFramePush(frame);
 
             while (!callStack.isEmpty() && !interrupted) {
                 if (instructionCount >= context.getMaxInstructions()) {
@@ -231,8 +237,19 @@ public final class BytecodeEngine {
     public BytecodeEngine addListener(BytecodeListener listener) {
         if (listener != null) {
             listeners.add(listener);
+            if (listener instanceof CapableListener) {
+                Set<ListenerCapability> caps = ((CapableListener) listener).getCapabilities();
+                if (caps != null) {
+                    aggregateCapabilities.addAll(caps);
+                }
+            }
         }
         return this;
+    }
+
+    private boolean hasCapability(ListenerCapability capability) {
+        return aggregateCapabilities.contains(ListenerCapability.ALL_OPERATIONS) ||
+               aggregateCapabilities.contains(capability);
     }
 
     public void interrupt() {
@@ -293,12 +310,18 @@ public final class BytecodeEngine {
 
     private void handleFrameCompletion() {
         StackFrame completed = callStack.pop();
+        ConcreteValue returnVal = completed.getReturnValue();
+        notifyFramePop(completed, returnVal);
+
+        if (completed.getException() == null && returnVal != null) {
+            notifyMethodReturn(completed, returnVal);
+        }
 
         if (callStack.isEmpty()) {
             if (completed.getException() != null) {
                 lastException = completed.getException();
             } else {
-                lastReturnValue = completed.getReturnValue();
+                lastReturnValue = returnVal;
                 if (lastReturnValue == null) {
                     lastReturnValue = ConcreteValue.nullRef();
                 }
@@ -331,7 +354,9 @@ public final class BytecodeEngine {
                 break;
 
             case BRANCH:
+                int fromPC = frame.getPC();
                 int target = ctx.getBranchTarget();
+                notifyBranch(frame, fromPC, target, true);
                 frame.setPC(target);
                 break;
 
@@ -482,7 +507,9 @@ public final class BytecodeEngine {
                         }
                     }
                 }
+                notifyMethodCall(frame, targetMethod, args);
                 callStack.push(newFrame);
+                notifyFramePush(newFrame);
             } else if (result.isNativeHandled()) {
                 ConcreteValue returnVal = result.getReturnValue();
                 String returnType = getReturnType(descriptor);
@@ -803,6 +830,8 @@ public final class BytecodeEngine {
             } else {
                 ObjectInstance obj = objRef.asReference();
                 Object value = obj.getField(owner, name, descriptor);
+                ConcreteValue wrappedValue = wrapStoredValue(value, descriptor);
+                notifyFieldRead(obj, name, wrappedValue);
                 pushFieldValue(frame, descriptor, value);
             }
         }
@@ -1010,6 +1039,8 @@ public final class BytecodeEngine {
                 " at " + frame.getMethodSignature() + " pc=" + frame.getPC());
         }
 
+        notifyExceptionThrow(frame, exception);
+
         if (!tryHandleException(frame, exception)) {
             frame.completeExceptionally(exception);
         }
@@ -1018,9 +1049,11 @@ public final class BytecodeEngine {
     private boolean tryHandleException(StackFrame frame, ObjectInstance exception) {
         ExceptionTableEntry handler = findExceptionHandler(frame, exception);
         if (handler != null) {
+            int handlerPC = handler.getHandlerPc();
+            notifyExceptionCatch(frame, exception, handlerPC);
             frame.getStack().clear();
             frame.getStack().pushReference(exception);
-            frame.setPC(handler.getHandlerPc());
+            frame.setPC(handlerPC);
             return true;
         }
         return false;
@@ -1171,6 +1204,72 @@ public final class BytecodeEngine {
         }
         for (BytecodeListener listener : listeners) {
             listener.onExecutionEnd(listenerResult);
+        }
+    }
+
+    private void notifyFramePush(StackFrame frame) {
+        for (BytecodeListener listener : listeners) {
+            listener.onFramePush(frame);
+        }
+    }
+
+    private void notifyFramePop(StackFrame frame, ConcreteValue returnValue) {
+        for (BytecodeListener listener : listeners) {
+            listener.onFramePop(frame, returnValue);
+        }
+    }
+
+    private void notifyMethodCall(StackFrame caller, MethodEntry target, ConcreteValue[] args) {
+        for (BytecodeListener listener : listeners) {
+            listener.onMethodCall(caller, target, args);
+        }
+    }
+
+    private void notifyMethodReturn(StackFrame frame, ConcreteValue returnValue) {
+        for (BytecodeListener listener : listeners) {
+            listener.onMethodReturn(frame, returnValue);
+        }
+    }
+
+    private void notifyExceptionThrow(StackFrame frame, ObjectInstance exception) {
+        for (BytecodeListener listener : listeners) {
+            listener.onExceptionThrow(frame, exception);
+        }
+    }
+
+    private void notifyExceptionCatch(StackFrame frame, ObjectInstance exception, int handlerPC) {
+        for (BytecodeListener listener : listeners) {
+            listener.onExceptionCatch(frame, exception, handlerPC);
+        }
+    }
+
+    private void notifyNativeMethodCall(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args) {
+        for (BytecodeListener listener : listeners) {
+            listener.onNativeMethodCall(method, receiver, args);
+        }
+    }
+
+    private void notifyNativeMethodReturn(MethodEntry method, ConcreteValue result) {
+        for (BytecodeListener listener : listeners) {
+            listener.onNativeMethodReturn(method, result);
+        }
+    }
+
+    private void notifyBranch(StackFrame frame, int fromPC, int toPC, boolean taken) {
+        if (!hasCapability(ListenerCapability.BRANCH_OPERATIONS)) {
+            return;
+        }
+        for (BytecodeListener listener : listeners) {
+            listener.onBranch(frame, fromPC, toPC, taken);
+        }
+    }
+
+    private void notifyFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value) {
+        if (!hasCapability(ListenerCapability.FIELD_OPERATIONS)) {
+            return;
+        }
+        for (BytecodeListener listener : listeners) {
+            listener.onFieldRead(instance, fieldName, value);
         }
     }
 

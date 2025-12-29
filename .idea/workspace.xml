@@ -4,8 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- debugger edit stack &amp; local values">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Tracing listener infrastructure">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/listener/CapableListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/listener/ListenerCapability.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/listener/TracingListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/listener/TracingListener.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -222,14 +226,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00075" summary="- added new tests">
-      <option name="closed" value="true" />
-      <created>1766466544343</created>
-      <option name="number" value="00075" />
-      <option name="presentableId" value="LOCAL-00075" />
-      <option name="project" value="LOCAL" />
-      <updated>1766466544343</updated>
     </task>
     <task id="LOCAL-00076" summary="- added new tests&#10;- added builder api">
       <option name="closed" value="true" />
@@ -615,7 +611,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766943914512</updated>
     </task>
-    <option name="localTasksCounter" value="124" />
+    <task id="LOCAL-00124" summary="- execution api docs update">
+      <option name="closed" value="true" />
+      <created>1766956032291</created>
+      <option name="number" value="00124" />
+      <option name="presentableId" value="LOCAL-00124" />
+      <option name="project" value="LOCAL" />
+      <updated>1766956032291</updated>
+    </task>
+    <option name="localTasksCounter" value="125" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -630,8 +634,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- readme spelling error" />
-    <MESSAGE value="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution" />
     <MESSAGE value="- execution api fixes" />
     <MESSAGE value="- execution api fixes: missing native handlers for String and Array" />
     <MESSAGE value="- execution-api fixes: missing native handlers" />
@@ -655,7 +657,9 @@
     <MESSAGE value="- native handlers modularization" />
     <MESSAGE value="- native handlers additions" />
     <MESSAGE value="- debugger edit stack &amp; local values" />
-    <option name="LAST_COMMIT_MESSAGE" value="- debugger edit stack &amp; local values" />
+    <MESSAGE value="- execution api docs update" />
+    <MESSAGE value="- Tracing listener infrastructure" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Tracing listener infrastructure" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -10,9 +10,14 @@ import com.tonic.parser.MethodEntry;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
-public final class TracingListener extends AbstractBytecodeListener {
+public final class TracingListener extends AbstractBytecodeListener implements CapableListener {
+
+    private static final Set<ListenerCapability> DEFAULT_CAPABILITIES =
+        EnumSet.of(ListenerCapability.ALL_OPERATIONS);
 
     private final List<TraceEvent> events;
     private final boolean includeStackState;
@@ -230,5 +235,10 @@ public final class TracingListener extends AbstractBytecodeListener {
     public void reset() {
         super.reset();
         events.clear();
+    }
+
+    @Override
+    public Set<ListenerCapability> getCapabilities() {
+        return DEFAULT_CAPABILITIES;
     }
 }
