@@ -128,6 +128,24 @@ public class XrefDatabase {
     }
 
     /**
+     * Get all references TO a method by owner and name, ignoring descriptor.
+     * Useful for queries that don't specify a descriptor (e.g., finding all calls to println).
+     */
+    public List<Xref> getRefsToMethodByName(String owner, String name) {
+        List<Xref> results = new ArrayList<>();
+        for (var entry : byTargetMethod.entrySet()) {
+            MethodReference ref = entry.getKey();
+            boolean ownerMatches = owner == null || owner.isEmpty() ||
+                ref.getOwner().equals(owner) || ref.getOwner().endsWith("/" + owner);
+            boolean nameMatches = name == null || name.isEmpty() || ref.getName().equals(name);
+            if (ownerMatches && nameMatches) {
+                results.addAll(entry.getValue());
+            }
+        }
+        return results;
+    }
+
+    /**
      * Get all references FROM a method (outgoing - what does this method call?).
      */
     public List<Xref> getRefsFromMethod(MethodReference method) {
