@@ -40,6 +40,7 @@ public class ClassFile extends AbstractParser {
 
     private static final int MINOR_VERSION_OFFSET = 4;
     private static final int MAJOR_VERSION_OFFSET = 6;
+    public static final int CLASS_MAGIC = 0xCAFEBABE;
 
     /**
      * Creates a ClassFile from raw class bytes.
@@ -250,7 +251,7 @@ public class ClassFile extends AbstractParser {
 
     @Override
     protected boolean verify() {
-        return readInt() == 0xCAFEBABE;
+        return readInt() == CLASS_MAGIC;
     }
 
     /**
@@ -354,7 +355,7 @@ public class ClassFile extends AbstractParser {
     /**
      * Adds a new field to the class.
      *
-     * @param accessFlags the access flags for the field (e.g., 0x0001 for public)
+     * @param accessFlags the access flags for the field (e.g., Modifiers.PUBLIC)
      * @param fieldName the name of the field
      * @param fieldDescriptor the descriptor of the field (e.g., "Ljava/lang/String;")
      * @param attributes a list of attributes for the field (can be null)
@@ -571,7 +572,7 @@ public class ClassFile extends AbstractParser {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (DataOutputStream dos = new DataOutputStream(bos)) {
 
-            dos.writeInt(0xCAFEBABE);
+            dos.writeInt(CLASS_MAGIC);
 
             dos.writeShort(minorVersion);
             dos.writeShort(majorVersion);
@@ -695,14 +696,14 @@ public class ClassFile extends AbstractParser {
 
     private String getAccessFlagsDescription(int access) {
         List<String> flags = new ArrayList<>();
-        if ((access & 0x0001) != 0) flags.add("public");
-        if ((access & 0x0010) != 0) flags.add("final");
-        if ((access & 0x0020) != 0) flags.add("super");
-        if ((access & 0x0200) != 0) flags.add("interface");
-        if ((access & 0x0400) != 0) flags.add("abstract");
-        if ((access & 0x1000) != 0) flags.add("synthetic");
-        if ((access & 0x2000) != 0) flags.add("annotation");
-        if ((access & 0x4000) != 0) flags.add("enum");
+        if ((access & Modifiers.PUBLIC) != 0) flags.add("public");
+        if ((access & Modifiers.FINAL) != 0) flags.add("final");
+        if ((access & Modifiers.SYNCHRONIZED) != 0) flags.add("super");
+        if ((access & Modifiers.INTERFACE) != 0) flags.add("interface");
+        if ((access & Modifiers.ABSTRACT) != 0) flags.add("abstract");
+        if ((access & Modifiers.SYNTHETIC) != 0) flags.add("synthetic");
+        if ((access & Modifiers.ANNOTATION) != 0) flags.add("annotation");
+        if ((access & Modifiers.ENUM) != 0) flags.add("enum");
 
         return String.join(", ", flags);
     }
@@ -812,8 +813,8 @@ public class ClassFile extends AbstractParser {
         List<Attribute> methodAttributes = new ArrayList<>();
         CodeAttribute codeAttr = null;
 
-        boolean isAbstract = (accessFlags & 0x0400) != 0;
-        boolean isNative = (accessFlags & 0x0100) != 0;
+        boolean isAbstract = (accessFlags & Modifiers.ABSTRACT) != 0;
+        boolean isNative = (accessFlags & Modifiers.NATIVE) != 0;
         if (!isAbstract && !isNative) {
             Utf8Item codeUtf8 = constPool.findOrAddUtf8("Code");
             int codeNameIndex = constPool.getIndexOf(codeUtf8);
@@ -852,7 +853,7 @@ public class ClassFile extends AbstractParser {
         String returnType = methodDescriptor.split("\\)")[1];
         switch (returnType) {
             case "V":
-                bytecode.addReturn(0xB1);
+                bytecode.addReturn(ReturnType.RETURN.getOpcode());
                 break;
             case "I":
             case "S":
@@ -861,23 +862,23 @@ public class ClassFile extends AbstractParser {
             case "Z":
                 bytecode.addILoad(0);
                 bytecode.addIConst(0);
-                bytecode.addReturn(0xAC);
+                bytecode.addReturn(ReturnType.IRETURN.getOpcode());
                 break;
             case "J":
                 bytecode.addLLoad(0);
-                bytecode.addReturn(0xAD);
+                bytecode.addReturn(ReturnType.LRETURN.getOpcode());
                 break;
             case "F":
                 bytecode.addFLoad(0);
-                bytecode.addReturn(0xAE);
+                bytecode.addReturn(ReturnType.FRETURN.getOpcode());
                 break;
             case "D":
                 bytecode.addDLoad(0);
-                bytecode.addReturn(0xAF);
+                bytecode.addReturn(ReturnType.DRETURN.getOpcode());
                 break;
             default:
                 bytecode.addAConstNull();
-                bytecode.addReturn(0xB0);
+                bytecode.addReturn(ReturnType.ARETURN.getOpcode());
                 break;
         }
 

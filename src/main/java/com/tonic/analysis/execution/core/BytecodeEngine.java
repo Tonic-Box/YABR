@@ -40,6 +40,7 @@ import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.listener.CapableListener;
 import com.tonic.analysis.execution.listener.ListenerCapability;
+import com.tonic.utill.Modifiers;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -648,7 +649,7 @@ public final class BytecodeEngine {
     }
 
     private ConcreteValue[] buildSpecialFrameArgs(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args) {
-        boolean isStatic = (method.getAccess() & 0x0008) != 0;
+        boolean isStatic = (method.getAccess() & Modifiers.STATIC) != 0;
         if (isStatic) {
             return args != null ? args : new ConcreteValue[0];
         }

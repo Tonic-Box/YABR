@@ -9,6 +9,7 @@ import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.MethodEntry;
 import com.tonic.utill.DescriptorUtil;
+import com.tonic.utill.Modifiers;
 
 import java.util.List;
 
@@ -83,13 +84,13 @@ public final class RecursiveHandler implements InvocationHandler {
 
     private boolean isStaticOrSpecial(MethodEntry method) {
         int access = method.getAccess();
-        boolean isStatic = (access & 0x0008) != 0;
-        boolean isPrivate = (access & 0x0002) != 0;
+        boolean isStatic = (access & Modifiers.STATIC) != 0;
+        boolean isPrivate = (access & Modifiers.PRIVATE) != 0;
         return isStatic || isPrivate || method.getName().equals("<init>");
     }
 
     private boolean isNative(MethodEntry method) {
-        return (method.getAccess() & 0x0100) != 0;
+        return (method.getAccess() & Modifiers.NATIVE) != 0;
     }
 
     private InvocationResult handleNative(MethodEntry method, ObjectInstance receiver,
@@ -113,7 +114,7 @@ public final class RecursiveHandler implements InvocationHandler {
 
     private ConcreteValue[] buildFrameArgs(MethodEntry method, ObjectInstance receiver,
                                           ConcreteValue[] args) {
-        boolean isStatic = (method.getAccess() & 0x0008) != 0;
+        boolean isStatic = (method.getAccess() & Modifiers.STATIC) != 0;
 
         if (isStatic) {
             return args != null ? args : new ConcreteValue[0];

@@ -2,6 +2,7 @@ package com.tonic.analysis.execution.resolve;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
+import com.tonic.utill.Modifiers;
 
 public class ResolvedMethod {
 
@@ -30,15 +31,15 @@ public class ResolvedMethod {
     }
 
     public boolean isStatic() {
-        return (method.getAccess() & 0x0008) != 0;
+        return (method.getAccess() & Modifiers.STATIC) != 0;
     }
 
     public boolean isNative() {
-        return (method.getAccess() & 0x0100) != 0;
+        return (method.getAccess() & Modifiers.NATIVE) != 0;
     }
 
     public boolean isAbstract() {
-        return (method.getAccess() & 0x0400) != 0;
+        return (method.getAccess() & Modifiers.ABSTRACT) != 0;
     }
 
     @Override

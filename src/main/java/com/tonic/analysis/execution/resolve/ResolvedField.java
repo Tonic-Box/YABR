@@ -2,6 +2,7 @@ package com.tonic.analysis.execution.resolve;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.FieldEntry;
+import com.tonic.utill.Modifiers;
 
 public class ResolvedField {
 
@@ -22,7 +23,7 @@ public class ResolvedField {
     }
 
     public boolean isStatic() {
-        return (field.getAccess() & 0x0008) != 0;
+        return (field.getAccess() & Modifiers.STATIC) != 0;
     }
 
     @Override

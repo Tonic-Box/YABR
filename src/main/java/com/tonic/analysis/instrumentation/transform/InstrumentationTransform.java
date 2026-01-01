@@ -10,6 +10,7 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
+import com.tonic.utill.Modifiers;
 import lombok.Getter;
 
 import java.lang.reflect.Modifier;
@@ -105,8 +106,8 @@ public class InstrumentationTransform {
 
         if (config.isSkipAbstract() && Modifier.isAbstract(access)) return false;
         if (config.isSkipNative() && Modifier.isNative(access)) return false;
-        if (config.isSkipSynthetic() && (access & 0x1000) != 0) return false;
-        if (config.isSkipBridge() && (access & 0x0040) != 0) return false;
+        if (config.isSkipSynthetic() && (access & Modifiers.SYNTHETIC) != 0) return false;
+        if (config.isSkipBridge() && (access & Modifiers.BRIDGE) != 0) return false;
         if (config.isSkipConstructors() && method.getName().equals("<init>")) return false;
         if (config.isSkipStaticInitializers() && method.getName().equals("<clinit>")) return false;
 

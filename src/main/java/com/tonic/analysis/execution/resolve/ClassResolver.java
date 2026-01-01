@@ -8,6 +8,7 @@ import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 import com.tonic.renamer.hierarchy.ClassNode;
 import com.tonic.utill.DescriptorUtil;
+import com.tonic.utill.Modifiers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -323,7 +324,7 @@ public class ClassResolver {
     }
 
     private boolean isAbstract(MethodEntry method) {
-        return (method.getAccess() & 0x0400) != 0;
+        return (method.getAccess() & Modifiers.ABSTRACT) != 0;
     }
 
     private FieldEntry findFieldInClass(ClassFile cf, String name, String descriptor) {
@@ -337,14 +338,14 @@ public class ClassResolver {
 
     private ResolvedMethod.InvokeKind determineInvokeKind(MethodEntry method, ClassFile owner) {
         int access = method.getAccess();
-        boolean isStatic = (access & 0x0008) != 0;
-        boolean isPrivate = (access & 0x0002) != 0;
+        boolean isStatic = (access & Modifiers.STATIC) != 0;
+        boolean isPrivate = (access & Modifiers.PRIVATE) != 0;
 
         if (isStatic) {
             return ResolvedMethod.InvokeKind.STATIC;
         } else if (isPrivate || method.getName().equals("<init>")) {
             return ResolvedMethod.InvokeKind.SPECIAL;
-        } else if ((owner.getAccess() & 0x0200) != 0) {
+        } else if ((owner.getAccess() & Modifiers.INTERFACE) != 0) {
             return ResolvedMethod.InvokeKind.INTERFACE;
         } else {
             return ResolvedMethod.InvokeKind.VIRTUAL;

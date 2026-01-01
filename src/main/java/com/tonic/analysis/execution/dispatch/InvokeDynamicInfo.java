@@ -1,5 +1,7 @@
 package com.tonic.analysis.execution.dispatch;
 
+import com.tonic.utill.DescriptorUtil;
+
 public final class InvokeDynamicInfo {
 
     private final int bootstrapMethodIndex;
@@ -31,7 +33,7 @@ public final class InvokeDynamicInfo {
     }
 
     public int getParameterSlots() {
-        return getParameterCount();
+        return DescriptorUtil.countParameterSlots(descriptor);
     }
 
     public int getParameterCount() {
