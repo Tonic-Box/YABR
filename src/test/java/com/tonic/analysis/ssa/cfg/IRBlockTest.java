@@ -160,7 +160,7 @@ class IRBlockTest {
     void insertInstructionAtIndex() {
         IRBlock block = new IRBlock();
         IRBlock targetBlock = new IRBlock("target");
-        IRInstruction first = new GotoInstruction(targetBlock);
+        IRInstruction first = SimpleInstruction.createGoto(targetBlock);
         IRInstruction second = new ReturnInstruction();
         block.addInstruction(second);
 
@@ -299,9 +299,9 @@ class IRBlockTest {
     @Test
     void getTerminatorReturnsNullIfLastNotTerminator() {
         IRBlock block = new IRBlock();
-        // Use a non-terminator instruction - MonitorEnterInstruction is not a terminator
+        // Use a non-terminator instruction - MonitorEnter is not a terminator
         SSAValue obj = new SSAValue(ReferenceType.OBJECT, "obj");
-        MonitorEnterInstruction monitorEnter = new MonitorEnterInstruction(obj);
+        IRInstruction monitorEnter = SimpleInstruction.createMonitorEnter(obj);
         block.addInstruction(monitorEnter);
 
         assertNull(block.getTerminator());

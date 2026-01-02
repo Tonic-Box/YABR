@@ -182,8 +182,11 @@ public class InterProceduralEngine {
 
                 if (instr instanceof ReturnInstruction) {
                     listeners.onMethodReturn((ReturnInstruction) instr, state);
-                } else if (instr instanceof ThrowInstruction) {
-                    listeners.onException((ThrowInstruction) instr, state);
+                } else if (instr instanceof SimpleInstruction) {
+                    SimpleInstruction simple = (SimpleInstruction) instr;
+                    if (simple.getOp() == SimpleOp.ATHROW) {
+                        listeners.onException(simple, state);
+                    }
                 }
             }
 
@@ -382,22 +385,37 @@ public class InterProceduralEngine {
             listeners.onAllocation((NewInstruction) instr, before);
         } else if (instr instanceof NewArrayInstruction) {
             listeners.onArrayAllocation((NewArrayInstruction) instr, before);
-        } else if (instr instanceof GetFieldInstruction) {
-            listeners.onFieldRead((GetFieldInstruction) instr, before);
-        } else if (instr instanceof PutFieldInstruction) {
-            listeners.onFieldWrite((PutFieldInstruction) instr, before);
-        } else if (instr instanceof ArrayLoadInstruction) {
-            listeners.onArrayRead((ArrayLoadInstruction) instr, before);
-        } else if (instr instanceof ArrayStoreInstruction) {
-            listeners.onArrayWrite((ArrayStoreInstruction) instr, before);
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            if (fieldAccess.isLoad()) {
+                listeners.onFieldRead(fieldAccess, before);
+            } else {
+                listeners.onFieldWrite(fieldAccess, before);
+            }
+        } else if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+            if (arrayAccess.isLoad()) {
+                listeners.onArrayRead(arrayAccess, before);
+            } else {
+                listeners.onArrayWrite(arrayAccess, before);
+            }
         } else if (instr instanceof BranchInstruction) {
             listeners.onBranch((BranchInstruction) instr, true, before);
         } else if (instr instanceof SwitchInstruction) {
             listeners.onSwitch((SwitchInstruction) instr, -1, before);
-        } else if (instr instanceof MonitorEnterInstruction) {
-            listeners.onMonitorEnter((MonitorEnterInstruction) instr, before);
-        } else if (instr instanceof MonitorExitInstruction) {
-            listeners.onMonitorExit((MonitorExitInstruction) instr, before);
+        } else if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            switch (simple.getOp()) {
+                case MONITORENTER:
+                    listeners.onMonitorEnter(simple, before);
+                    break;
+                case MONITOREXIT:
+                    listeners.onMonitorExit(simple, before);
+                    break;
+                case ATHROW:
+                    listeners.onException(simple, before);
+                    break;
+            }
         }
     }
 }

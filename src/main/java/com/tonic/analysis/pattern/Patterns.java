@@ -121,14 +121,24 @@ public final class Patterns {
      * Matches any field read.
      */
     public static PatternMatcher anyFieldRead() {
-        return (instr, method, sourceMethod, classFile) -> instr instanceof GetFieldInstruction;
+        return (instr, method, sourceMethod, classFile) -> {
+            if (instr instanceof FieldAccessInstruction) {
+                return ((FieldAccessInstruction) instr).isLoad();
+            }
+            return false;
+        };
     }
 
     /**
      * Matches any field write.
      */
     public static PatternMatcher anyFieldWrite() {
-        return (instr, method, sourceMethod, classFile) -> instr instanceof PutFieldInstruction;
+        return (instr, method, sourceMethod, classFile) -> {
+            if (instr instanceof FieldAccessInstruction) {
+                return ((FieldAccessInstruction) instr).isStore();
+            }
+            return false;
+        };
     }
 
     /**
@@ -136,11 +146,8 @@ public final class Patterns {
      */
     public static PatternMatcher fieldAccessOn(String ownerClass) {
         return (instr, method, sourceMethod, classFile) -> {
-            if (instr instanceof GetFieldInstruction) {
-                return ownerClass.equals(((GetFieldInstruction) instr).getOwner());
-            }
-            if (instr instanceof PutFieldInstruction) {
-                return ownerClass.equals(((PutFieldInstruction) instr).getOwner());
+            if (instr instanceof FieldAccessInstruction) {
+                return ownerClass.equals(((FieldAccessInstruction) instr).getOwner());
             }
             return false;
         };
@@ -151,11 +158,8 @@ public final class Patterns {
      */
     public static PatternMatcher fieldNamed(String fieldName) {
         return (instr, method, sourceMethod, classFile) -> {
-            if (instr instanceof GetFieldInstruction) {
-                return fieldName.equals(((GetFieldInstruction) instr).getName());
-            }
-            if (instr instanceof PutFieldInstruction) {
-                return fieldName.equals(((PutFieldInstruction) instr).getName());
+            if (instr instanceof FieldAccessInstruction) {
+                return fieldName.equals(((FieldAccessInstruction) instr).getName());
             }
             return false;
         };
@@ -167,7 +171,12 @@ public final class Patterns {
      * Matches instanceof checks.
      */
     public static PatternMatcher anyInstanceOf() {
-        return (instr, method, sourceMethod, classFile) -> instr instanceof InstanceOfInstruction;
+        return (instr, method, sourceMethod, classFile) -> {
+            if (instr instanceof TypeCheckInstruction) {
+                return ((TypeCheckInstruction) instr).isInstanceOf();
+            }
+            return false;
+        };
     }
 
     /**
@@ -175,9 +184,14 @@ public final class Patterns {
      */
     public static PatternMatcher instanceOf(String typeName) {
         return (instr, method, sourceMethod, classFile) -> {
-            if (!(instr instanceof InstanceOfInstruction)) return false;
-            InstanceOfInstruction iof = (InstanceOfInstruction) instr;
-            IRType checkType = iof.getCheckType();
+            if (!(instr instanceof TypeCheckInstruction)) {
+                return false;
+            }
+            TypeCheckInstruction tc = (TypeCheckInstruction) instr;
+            if (!tc.isInstanceOf()) {
+                return false;
+            }
+            IRType checkType = tc.getTargetType();
             if (checkType instanceof ReferenceType) {
                 return typeName.equals(((ReferenceType) checkType).getInternalName());
             }
@@ -189,7 +203,12 @@ public final class Patterns {
      * Matches cast instructions.
      */
     public static PatternMatcher anyCast() {
-        return (instr, method, sourceMethod, classFile) -> instr instanceof CastInstruction;
+        return (instr, method, sourceMethod, classFile) -> {
+            if (instr instanceof TypeCheckInstruction) {
+                return ((TypeCheckInstruction) instr).isCast();
+            }
+            return false;
+        };
     }
 
     /**
@@ -197,9 +216,14 @@ public final class Patterns {
      */
     public static PatternMatcher castTo(String typeName) {
         return (instr, method, sourceMethod, classFile) -> {
-            if (!(instr instanceof CastInstruction)) return false;
-            CastInstruction cast = (CastInstruction) instr;
-            IRType targetType = cast.getTargetType();
+            if (!(instr instanceof TypeCheckInstruction)) {
+                return false;
+            }
+            TypeCheckInstruction tc = (TypeCheckInstruction) instr;
+            if (!tc.isCast()) {
+                return false;
+            }
+            IRType targetType = tc.getTargetType();
             if (targetType instanceof ReferenceType) {
                 return typeName.equals(((ReferenceType) targetType).getInternalName());
             }
@@ -255,7 +279,12 @@ public final class Patterns {
      * Matches throw instructions.
      */
     public static PatternMatcher anyThrow() {
-        return (instr, method, sourceMethod, classFile) -> instr instanceof ThrowInstruction;
+        return (instr, method, sourceMethod, classFile) -> {
+            if (instr instanceof SimpleInstruction) {
+                return ((SimpleInstruction) instr).getOp() == SimpleOp.ATHROW;
+            }
+            return false;
+        };
     }
 
     /**

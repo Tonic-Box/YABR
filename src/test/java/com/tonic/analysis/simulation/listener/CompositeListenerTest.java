@@ -333,56 +333,56 @@ class CompositeListenerTest {
     @Test
     void onFieldReadDelegatesToAllListeners() {
         composite.add(listener1).add(listener2);
-        GetFieldInstruction instr = null;
+        FieldAccessInstruction instr = null;
         SimulationState state = null;
 
         composite.onFieldRead(instr, state);
 
         assertEquals(1, listener1.fieldReadCalls);
         assertEquals(1, listener2.fieldReadCalls);
-        assertSame(instr, listener1.lastGetFieldInstruction);
+        assertSame(instr, listener1.lastFieldAccessInstruction);
         assertSame(state, listener1.lastState);
     }
 
     @Test
     void onFieldWriteDelegatesToAllListeners() {
         composite.add(listener1).add(listener2);
-        PutFieldInstruction instr = null;
+        FieldAccessInstruction instr = null;
         SimulationState state = null;
 
         composite.onFieldWrite(instr, state);
 
         assertEquals(1, listener1.fieldWriteCalls);
         assertEquals(1, listener2.fieldWriteCalls);
-        assertSame(instr, listener1.lastPutFieldInstruction);
+        assertSame(instr, listener1.lastFieldAccessInstruction);
         assertSame(state, listener1.lastState);
     }
 
     @Test
     void onArrayReadDelegatesToAllListeners() {
         composite.add(listener1).add(listener2);
-        ArrayLoadInstruction instr = null;
+        ArrayAccessInstruction instr = null;
         SimulationState state = null;
 
         composite.onArrayRead(instr, state);
 
         assertEquals(1, listener1.arrayReadCalls);
         assertEquals(1, listener2.arrayReadCalls);
-        assertSame(instr, listener1.lastArrayLoadInstruction);
+        assertSame(instr, listener1.lastArrayAccessInstruction);
         assertSame(state, listener1.lastState);
     }
 
     @Test
     void onArrayWriteDelegatesToAllListeners() {
         composite.add(listener1).add(listener2);
-        ArrayStoreInstruction instr = null;
+        ArrayAccessInstruction instr = null;
         SimulationState state = null;
 
         composite.onArrayWrite(instr, state);
 
         assertEquals(1, listener1.arrayWriteCalls);
         assertEquals(1, listener2.arrayWriteCalls);
-        assertSame(instr, listener1.lastArrayStoreInstruction);
+        assertSame(instr, listener1.lastArrayAccessInstruction);
         assertSame(state, listener1.lastState);
     }
 
@@ -449,42 +449,42 @@ class CompositeListenerTest {
     @Test
     void onExceptionDelegatesToAllListeners() {
         composite.add(listener1).add(listener2);
-        ThrowInstruction instr = null;
+        SimpleInstruction instr = null;
         SimulationState state = null;
 
         composite.onException(instr, state);
 
         assertEquals(1, listener1.exceptionCalls);
         assertEquals(1, listener2.exceptionCalls);
-        assertSame(instr, listener1.lastThrowInstruction);
+        assertSame(instr, listener1.lastSimpleInstruction);
         assertSame(state, listener1.lastState);
     }
 
     @Test
     void onMonitorEnterDelegatesToAllListeners() {
         composite.add(listener1).add(listener2);
-        MonitorEnterInstruction instr = null;
+        SimpleInstruction instr = null;
         SimulationState state = null;
 
         composite.onMonitorEnter(instr, state);
 
         assertEquals(1, listener1.monitorEnterCalls);
         assertEquals(1, listener2.monitorEnterCalls);
-        assertSame(instr, listener1.lastMonitorEnterInstruction);
+        assertSame(instr, listener1.lastSimpleInstruction);
         assertSame(state, listener1.lastState);
     }
 
     @Test
     void onMonitorExitDelegatesToAllListeners() {
         composite.add(listener1).add(listener2);
-        MonitorExitInstruction instr = null;
+        SimpleInstruction instr = null;
         SimulationState state = null;
 
         composite.onMonitorExit(instr, state);
 
         assertEquals(1, listener1.monitorExitCalls);
         assertEquals(1, listener2.monitorExitCalls);
-        assertSame(instr, listener1.lastMonitorExitInstruction);
+        assertSame(instr, listener1.lastSimpleInstruction);
         assertSame(state, listener1.lastState);
     }
 
@@ -598,19 +598,15 @@ class CompositeListenerTest {
         SimValue lastValue;
         NewInstruction lastNewInstruction;
         NewArrayInstruction lastNewArrayInstruction;
-        GetFieldInstruction lastGetFieldInstruction;
-        PutFieldInstruction lastPutFieldInstruction;
-        ArrayLoadInstruction lastArrayLoadInstruction;
-        ArrayStoreInstruction lastArrayStoreInstruction;
+        FieldAccessInstruction lastFieldAccessInstruction;
+        ArrayAccessInstruction lastArrayAccessInstruction;
         BranchInstruction lastBranchInstruction;
         boolean lastBranchTaken;
         SwitchInstruction lastSwitchInstruction;
         int lastTargetIndex;
         InvokeInstruction lastInvokeInstruction;
         ReturnInstruction lastReturnInstruction;
-        ThrowInstruction lastThrowInstruction;
-        MonitorEnterInstruction lastMonitorEnterInstruction;
-        MonitorExitInstruction lastMonitorExitInstruction;
+        SimpleInstruction lastSimpleInstruction;
 
         MockListener(String name) {
             this.name = name;
@@ -687,30 +683,30 @@ class CompositeListenerTest {
         }
 
         @Override
-        public void onFieldRead(GetFieldInstruction instr, SimulationState state) {
+        public void onFieldRead(FieldAccessInstruction instr, SimulationState state) {
             fieldReadCalls++;
-            lastGetFieldInstruction = instr;
+            lastFieldAccessInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onFieldWrite(PutFieldInstruction instr, SimulationState state) {
+        public void onFieldWrite(FieldAccessInstruction instr, SimulationState state) {
             fieldWriteCalls++;
-            lastPutFieldInstruction = instr;
+            lastFieldAccessInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onArrayRead(ArrayLoadInstruction instr, SimulationState state) {
+        public void onArrayRead(ArrayAccessInstruction instr, SimulationState state) {
             arrayReadCalls++;
-            lastArrayLoadInstruction = instr;
+            lastArrayAccessInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onArrayWrite(ArrayStoreInstruction instr, SimulationState state) {
+        public void onArrayWrite(ArrayAccessInstruction instr, SimulationState state) {
             arrayWriteCalls++;
-            lastArrayStoreInstruction = instr;
+            lastArrayAccessInstruction = instr;
             lastState = state;
         }
 
@@ -745,23 +741,23 @@ class CompositeListenerTest {
         }
 
         @Override
-        public void onException(ThrowInstruction instr, SimulationState state) {
+        public void onException(SimpleInstruction instr, SimulationState state) {
             exceptionCalls++;
-            lastThrowInstruction = instr;
+            lastSimpleInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onMonitorEnter(MonitorEnterInstruction instr, SimulationState state) {
+        public void onMonitorEnter(SimpleInstruction instr, SimulationState state) {
             monitorEnterCalls++;
-            lastMonitorEnterInstruction = instr;
+            lastSimpleInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onMonitorExit(MonitorExitInstruction instr, SimulationState state) {
+        public void onMonitorExit(SimpleInstruction instr, SimulationState state) {
             monitorExitCalls++;
-            lastMonitorExitInstruction = instr;
+            lastSimpleInstruction = instr;
             lastState = state;
         }
     }

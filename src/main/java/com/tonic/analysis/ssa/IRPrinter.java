@@ -57,12 +57,15 @@ public final class IRPrinter {
                 sb.append(invoke.getOwner()).append(".");
             }
             sb.append(invoke.getName()).append("(").append(invoke.getArguments().size()).append(" args)");
-        } else if (instr instanceof GetFieldInstruction) {
-            GetFieldInstruction get = (GetFieldInstruction) instr;
-            sb.append("getfield ").append(get.getOwner()).append(".").append(get.getName());
-        } else if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction put = (PutFieldInstruction) instr;
-            sb.append("putfield ").append(put.getOwner()).append(".").append(put.getName());
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fai = (FieldAccessInstruction) instr;
+            if (fai.isLoad()) {
+                sb.append(fai.isStatic() ? "getstatic " : "getfield ");
+                sb.append(fai.getOwner()).append(".").append(fai.getName());
+            } else {
+                sb.append(fai.isStatic() ? "putstatic " : "putfield ");
+                sb.append(fai.getOwner()).append(".").append(fai.getName());
+            }
         } else if (instr instanceof BranchInstruction) {
             BranchInstruction br = (BranchInstruction) instr;
             sb.append("if ").append(br.getLeft()).append(" ").append(br.getCondition());
@@ -71,9 +74,25 @@ public final class IRPrinter {
             }
             sb.append(" goto ").append(br.getTrueTarget().getName())
               .append(" else ").append(br.getFalseTarget().getName());
-        } else if (instr instanceof GotoInstruction) {
-            GotoInstruction gt = (GotoInstruction) instr;
-            sb.append("goto ").append(gt.getTarget().getName());
+        } else if (instr instanceof SimpleInstruction) {
+            SimpleInstruction si = (SimpleInstruction) instr;
+            switch (si.getOp()) {
+                case GOTO:
+                    sb.append("goto ").append(si.getTarget().getName());
+                    break;
+                case ATHROW:
+                    sb.append("throw ").append(si.getOperand());
+                    break;
+                case ARRAYLENGTH:
+                    sb.append("arraylength ").append(si.getOperand());
+                    break;
+                case MONITORENTER:
+                    sb.append("monitorenter ").append(si.getOperand());
+                    break;
+                case MONITOREXIT:
+                    sb.append("monitorexit ").append(si.getOperand());
+                    break;
+            }
         } else if (instr instanceof ReturnInstruction) {
             ReturnInstruction ret = (ReturnInstruction) instr;
             sb.append("return");
@@ -83,36 +102,26 @@ public final class IRPrinter {
         } else if (instr instanceof NewInstruction) {
             NewInstruction ni = (NewInstruction) instr;
             sb.append("new ").append(ni.getClassName());
-        } else if (instr instanceof ArrayLoadInstruction) {
-            ArrayLoadInstruction al = (ArrayLoadInstruction) instr;
-            sb.append("arrayload ").append(al.getArray()).append("[").append(al.getIndex()).append("]");
-        } else if (instr instanceof ArrayStoreInstruction) {
-            ArrayStoreInstruction as = (ArrayStoreInstruction) instr;
-            sb.append("arraystore ").append(as.getArray()).append("[").append(as.getIndex()).append("] = ").append(as.getValue());
-        } else if (instr instanceof ThrowInstruction) {
-            ThrowInstruction th = (ThrowInstruction) instr;
-            sb.append("throw ").append(th.getException());
-        } else if (instr instanceof CastInstruction) {
-            CastInstruction cast = (CastInstruction) instr;
-            sb.append("checkcast ").append(cast.getObjectRef()).append(" to ").append(cast.getTargetType());
+        } else if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction aai = (ArrayAccessInstruction) instr;
+            if (aai.isLoad()) {
+                sb.append("arrayload ").append(aai.getArray()).append("[").append(aai.getIndex()).append("]");
+            } else {
+                sb.append("arraystore ").append(aai.getArray()).append("[").append(aai.getIndex()).append("] = ").append(aai.getValue());
+            }
+        } else if (instr instanceof TypeCheckInstruction) {
+            TypeCheckInstruction tci = (TypeCheckInstruction) instr;
+            if (tci.isCast()) {
+                sb.append("checkcast ").append(tci.getOperand()).append(" to ").append(tci.getTargetType());
+            } else {
+                sb.append("instanceof ").append(tci.getOperand()).append(" ").append(tci.getTargetType());
+            }
         } else if (instr instanceof SwitchInstruction) {
             SwitchInstruction sw = (SwitchInstruction) instr;
             sb.append("switch ").append(sw.getKey()).append(" [").append(sw.getCases().size()).append(" cases]");
         } else if (instr instanceof NewArrayInstruction) {
             NewArrayInstruction na = (NewArrayInstruction) instr;
             sb.append("newarray ").append(na.getElementType());
-        } else if (instr instanceof ArrayLengthInstruction) {
-            ArrayLengthInstruction al = (ArrayLengthInstruction) instr;
-            sb.append("arraylength ").append(al.getArray());
-        } else if (instr instanceof InstanceOfInstruction) {
-            InstanceOfInstruction iof = (InstanceOfInstruction) instr;
-            sb.append("instanceof ").append(iof.getObjectRef()).append(" ").append(iof.getCheckType());
-        } else if (instr instanceof MonitorEnterInstruction) {
-            MonitorEnterInstruction me = (MonitorEnterInstruction) instr;
-            sb.append("monitorenter ").append(me.getObjectRef());
-        } else if (instr instanceof MonitorExitInstruction) {
-            MonitorExitInstruction me = (MonitorExitInstruction) instr;
-            sb.append("monitorexit ").append(me.getObjectRef());
         } else {
             sb.append(instr.getClass().getSimpleName());
         }

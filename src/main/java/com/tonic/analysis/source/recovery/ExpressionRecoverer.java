@@ -1259,13 +1259,15 @@ public class ExpressionRecoverer {
                         invoke.getInvokeType() == InvokeType.STATIC, retType);
                 }
 
-                if (instr instanceof GetFieldInstruction) {
-                    GetFieldInstruction getField = (GetFieldInstruction) instr;
-                    Expression obj = getField.isStatic() ? null :
-                        recoverLambdaOperand(getField.getObjectRef(), lambdaIR);
-                    if (obj instanceof ThisExpr) obj = null;
-                    SourceType type = typeRecoverer.recoverType(getField.getResult());
-                    return new FieldAccessExpr(obj, getField.getName(), getField.getOwner(), getField.isStatic(), type);
+                if (instr instanceof FieldAccessInstruction) {
+                    FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+                    if (fieldAccess.isLoad()) {
+                        Expression obj = fieldAccess.isStatic() ? null :
+                            recoverLambdaOperand(fieldAccess.getObjectRef(), lambdaIR);
+                        if (obj instanceof ThisExpr) obj = null;
+                        SourceType type = typeRecoverer.recoverType(fieldAccess.getResult());
+                        return new FieldAccessExpr(obj, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), type);
+                    }
                 }
 
                 if (instr instanceof BinaryOpInstruction) {
@@ -1341,15 +1343,19 @@ public class ExpressionRecoverer {
             return new NewExpr(instr.getClassName());
         }
 
-        @Override
-        public Expression visitGetField(GetFieldInstruction instr) {
+        public Expression visitFieldAccess(FieldAccessInstruction instr) {
+            if (!instr.isLoad()) {
+                return null;
+            }
             Expression receiver = instr.isStatic() ? null : recoverOperand(instr.getObjectRef());
             SourceType type = typeRecoverer.recoverType(instr.getResult());
             return new FieldAccessExpr(receiver, instr.getName(), instr.getOwner(), instr.isStatic(), type);
         }
 
-        @Override
-        public Expression visitArrayLoad(ArrayLoadInstruction instr) {
+        public Expression visitArrayAccess(ArrayAccessInstruction instr) {
+            if (!instr.isLoad()) {
+                return null;
+            }
             Expression array = recoverOperand(instr.getArray());
             Expression index = recoverOperand(instr.getIndex());
             SourceType type = typeRecoverer.recoverType(instr.getResult());
@@ -1375,11 +1381,17 @@ public class ExpressionRecoverer {
             return new VarRefExpr(name, type, instr.getResult());
         }
 
-        @Override
-        public Expression visitCast(CastInstruction instr) {
-            Expression operand = recoverOperand(instr.getObjectRef());
-            SourceType targetType = SourceType.fromIRType(instr.getTargetType());
-            return new CastExpr(targetType, operand);
+        public Expression visitTypeCheck(TypeCheckInstruction instr) {
+            if (instr.isCast()) {
+                Expression operand = recoverOperand(instr.getOperand());
+                SourceType targetType = SourceType.fromIRType(instr.getTargetType());
+                return new CastExpr(targetType, operand);
+            } else if (instr.isInstanceOf()) {
+                Expression operand = recoverOperand(instr.getOperand());
+                SourceType targetType = SourceType.fromIRType(instr.getTargetType());
+                return new InstanceOfExpr(operand, targetType);
+            }
+            return null;
         }
 
         @Override
@@ -1392,18 +1404,13 @@ public class ExpressionRecoverer {
             return new NewArrayExpr(elementType, dims);
         }
 
-        @Override
-        public Expression visitArrayLength(ArrayLengthInstruction instr) {
-            Expression array = recoverOperand(instr.getArray());
-            SourceType type = com.tonic.analysis.source.ast.type.PrimitiveSourceType.INT;
-            return new FieldAccessExpr(array, "length", "[]", false, type);
-        }
-
-        @Override
-        public Expression visitInstanceOf(InstanceOfInstruction instr) {
-            Expression operand = recoverOperand(instr.getObjectRef());
-            SourceType targetType = SourceType.fromIRType(instr.getCheckType());
-            return new InstanceOfExpr(operand, targetType);
+        public Expression visitSimple(SimpleInstruction instr) {
+            if (instr.getOp() == SimpleOp.ARRAYLENGTH) {
+                Expression array = recoverOperand(instr.getOperand());
+                SourceType type = com.tonic.analysis.source.ast.type.PrimitiveSourceType.INT;
+                return new FieldAccessExpr(array, "length", "[]", false, type);
+            }
+            return null;
         }
 
         @Override

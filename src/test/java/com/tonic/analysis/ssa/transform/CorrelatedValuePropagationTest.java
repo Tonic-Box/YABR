@@ -98,7 +98,7 @@ class CorrelatedValuePropagationTest {
 
         // The second branch should be converted to a goto
         IRInstruction term = trueBlock.getTerminator();
-        assertTrue(term instanceof GotoInstruction);
+        assertTrue(term instanceof SimpleInstruction);
     }
 
     @Test

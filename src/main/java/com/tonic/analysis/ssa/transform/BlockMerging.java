@@ -69,12 +69,13 @@ public class BlockMerging implements IRTransform {
         }
 
         IRInstruction term = block.getTerminator();
-        if (!(term instanceof GotoInstruction)) {
-            return false;
+        if (term instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) term;
+            if (simple.getOp() == SimpleOp.GOTO) {
+                return simple.getTarget() == successor;
+            }
         }
-        GotoInstruction gotoInstr = (GotoInstruction) term;
-
-        return gotoInstr.getTarget() == successor;
+        return false;
     }
 
     /**
@@ -131,10 +132,10 @@ public class BlockMerging implements IRTransform {
      * Updates terminator instruction targets to handle merged blocks.
      */
     private void updateTerminatorTargets(IRInstruction term, IRBlock oldTarget, IRBlock newTarget) {
-        if (term instanceof GotoInstruction) {
-            GotoInstruction gotoInstr = (GotoInstruction) term;
-            if (gotoInstr.getTarget() == oldTarget) {
-                gotoInstr.setTarget(newTarget);
+        if (term instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) term;
+            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() == oldTarget) {
+                simple.setTarget(newTarget);
             }
         } else if (term instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) term;

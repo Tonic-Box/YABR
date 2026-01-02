@@ -100,8 +100,11 @@ public class ControlFlowListener extends AbstractListener {
 
     @Override
     public void onBeforeInstruction(IRInstruction instr, SimulationState state) {
-        if (instr instanceof GotoInstruction) {
-            gotoCount++;
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            if (simple.getOp() == SimpleOp.GOTO) {
+                gotoCount++;
+            }
         }
     }
 
@@ -111,7 +114,7 @@ public class ControlFlowListener extends AbstractListener {
     }
 
     @Override
-    public void onException(ThrowInstruction instr, SimulationState state) {
+    public void onException(SimpleInstruction instr, SimulationState state) {
         throwCount++;
     }
 

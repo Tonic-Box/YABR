@@ -13,27 +13,15 @@ public interface IRVisitor<T> {
 
     T visitUnaryOp(UnaryOpInstruction unaryOp);
 
-    T visitGoto(GotoInstruction gotoInstr);
-
     T visitBranch(BranchInstruction branch);
 
     T visitSwitch(SwitchInstruction switchInstr);
 
     T visitReturn(ReturnInstruction returnInstr);
 
-    T visitThrow(ThrowInstruction throwInstr);
-
     T visitLoadLocal(LoadLocalInstruction loadLocal);
 
     T visitStoreLocal(StoreLocalInstruction storeLocal);
-
-    T visitGetField(GetFieldInstruction getField);
-
-    T visitPutField(PutFieldInstruction putField);
-
-    T visitArrayLoad(ArrayLoadInstruction arrayLoad);
-
-    T visitArrayStore(ArrayStoreInstruction arrayStore);
 
     T visitInvoke(InvokeInstruction invoke);
 
@@ -41,17 +29,15 @@ public interface IRVisitor<T> {
 
     T visitNewArray(NewArrayInstruction newArray);
 
-    T visitArrayLength(ArrayLengthInstruction arrayLength);
-
-    T visitInstanceOf(InstanceOfInstruction instanceOf);
-
-    T visitCast(CastInstruction cast);
-
-    T visitMonitorEnter(MonitorEnterInstruction monitorEnter);
-
-    T visitMonitorExit(MonitorExitInstruction monitorExit);
-
     T visitCopy(CopyInstruction copy);
 
     T visitConstant(ConstantInstruction constant);
+
+    T visitFieldAccess(FieldAccessInstruction fieldAccess);
+
+    T visitArrayAccess(ArrayAccessInstruction arrayAccess);
+
+    T visitTypeCheck(TypeCheckInstruction typeCheck);
+
+    T visitSimple(SimpleInstruction simple);
 }

@@ -837,7 +837,7 @@ class SSATransformTest {
 
             SSAValue counter = new SSAValue(PrimitiveType.INT);
             entry.addInstruction(new ConstantInstruction(counter, IntConstant.ZERO));
-            entry.addInstruction(new GotoInstruction(loopHeader));
+            entry.addInstruction(SimpleInstruction.createGoto(loopHeader));
             entry.addSuccessor(loopHeader);
 
             PhiInstruction phi = new PhiInstruction(counter);
@@ -850,7 +850,7 @@ class SSATransformTest {
 
             SSAValue incremented = new SSAValue(PrimitiveType.INT);
             loopBody.addInstruction(new BinaryOpInstruction(incremented, BinaryOp.ADD, counter, IntConstant.of(1)));
-            loopBody.addInstruction(new GotoInstruction(loopHeader));
+            loopBody.addInstruction(SimpleInstruction.createGoto(loopHeader));
             loopBody.addSuccessor(loopHeader);
 
             exit.addInstruction(new ReturnInstruction());
@@ -874,7 +874,7 @@ class SSATransformTest {
             method.addBlock(exit);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(outerLoop));
+            entry.addInstruction(SimpleInstruction.createGoto(outerLoop));
             entry.addSuccessor(outerLoop);
 
             SSAValue outerCond = new SSAValue(PrimitiveType.INT);
@@ -910,7 +910,7 @@ class SSATransformTest {
             method.addBlock(exit2);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(loop));
+            entry.addInstruction(SimpleInstruction.createGoto(loop));
             entry.addSuccessor(loop);
 
             SSAValue cond1 = new SSAValue(PrimitiveType.INT);
@@ -958,12 +958,12 @@ class SSATransformTest {
 
             SSAValue v1 = new SSAValue(PrimitiveType.INT);
             b1.addInstruction(new ConstantInstruction(v1, IntConstant.of(10)));
-            b1.addInstruction(new GotoInstruction(merge));
+            b1.addInstruction(SimpleInstruction.createGoto(merge));
             b1.addSuccessor(merge);
 
             SSAValue v2 = new SSAValue(PrimitiveType.INT);
             b2.addInstruction(new ConstantInstruction(v2, IntConstant.of(20)));
-            b2.addInstruction(new GotoInstruction(merge));
+            b2.addInstruction(SimpleInstruction.createGoto(merge));
             b2.addSuccessor(merge);
 
             SSAValue phiResult = new SSAValue(PrimitiveType.INT);
@@ -1038,7 +1038,7 @@ class SSATransformTest {
             method.addBlock(exit);
             method.setEntryBlock(preheader);
 
-            preheader.addInstruction(new GotoInstruction(header));
+            preheader.addInstruction(SimpleInstruction.createGoto(header));
             preheader.addSuccessor(header);
 
             SSAValue i = new SSAValue(PrimitiveType.INT);
@@ -1051,7 +1051,7 @@ class SSATransformTest {
 
             SSAValue iNext = new SSAValue(PrimitiveType.INT);
             body.addInstruction(new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(1)));
-            body.addInstruction(new GotoInstruction(header));
+            body.addInstruction(SimpleInstruction.createGoto(header));
             body.addSuccessor(header);
             phi.addIncoming(iNext, body);
 
@@ -1080,7 +1080,7 @@ class SSATransformTest {
             method.addBlock(exit);
             method.setEntryBlock(preheader);
 
-            preheader.addInstruction(new GotoInstruction(header));
+            preheader.addInstruction(SimpleInstruction.createGoto(header));
             preheader.addSuccessor(header);
 
             SSAValue i = new SSAValue(PrimitiveType.INT);
@@ -1095,15 +1095,15 @@ class SSATransformTest {
             guardCheck.addSuccessor(guardTrue);
             guardCheck.addSuccessor(guardFalse);
 
-            guardTrue.addInstruction(new GotoInstruction(latch));
+            guardTrue.addInstruction(SimpleInstruction.createGoto(latch));
             guardTrue.addSuccessor(latch);
 
-            guardFalse.addInstruction(new GotoInstruction(latch));
+            guardFalse.addInstruction(SimpleInstruction.createGoto(latch));
             guardFalse.addSuccessor(latch);
 
             SSAValue iNext = new SSAValue(PrimitiveType.INT);
             latch.addInstruction(new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(1)));
-            latch.addInstruction(new GotoInstruction(header));
+            latch.addInstruction(SimpleInstruction.createGoto(header));
             latch.addSuccessor(header);
             phi.addIncoming(iNext, latch);
 
@@ -1134,7 +1134,7 @@ class SSATransformTest {
             method.addBlock(exit);
             method.setEntryBlock(preheader);
 
-            preheader.addInstruction(new GotoInstruction(outerHeader));
+            preheader.addInstruction(SimpleInstruction.createGoto(outerHeader));
             preheader.addSuccessor(outerHeader);
 
             SSAValue i = new SSAValue(PrimitiveType.INT);
@@ -1145,7 +1145,7 @@ class SSATransformTest {
             outerHeader.addSuccessor(innerPreheader);
             outerHeader.addSuccessor(exit);
 
-            innerPreheader.addInstruction(new GotoInstruction(innerHeader));
+            innerPreheader.addInstruction(SimpleInstruction.createGoto(innerHeader));
             innerPreheader.addSuccessor(innerHeader);
 
             SSAValue j = new SSAValue(PrimitiveType.INT);
@@ -1158,16 +1158,16 @@ class SSATransformTest {
 
             SSAValue jNext = new SSAValue(PrimitiveType.INT);
             innerBody.addInstruction(new BinaryOpInstruction(jNext, BinaryOp.ADD, j, IntConstant.of(1)));
-            innerBody.addInstruction(new GotoInstruction(innerHeader));
+            innerBody.addInstruction(SimpleInstruction.createGoto(innerHeader));
             innerBody.addSuccessor(innerHeader);
             innerPhi.addIncoming(jNext, innerBody);
 
-            innerExit.addInstruction(new GotoInstruction(outerLatch));
+            innerExit.addInstruction(SimpleInstruction.createGoto(outerLatch));
             innerExit.addSuccessor(outerLatch);
 
             SSAValue iNext = new SSAValue(PrimitiveType.INT);
             outerLatch.addInstruction(new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(1)));
-            outerLatch.addInstruction(new GotoInstruction(outerHeader));
+            outerLatch.addInstruction(SimpleInstruction.createGoto(outerHeader));
             outerLatch.addSuccessor(outerHeader);
             outerPhi.addIncoming(iNext, outerLatch);
 
@@ -1194,7 +1194,7 @@ class SSATransformTest {
             method.addBlock(exit2);
             method.setEntryBlock(preheader);
 
-            preheader.addInstruction(new GotoInstruction(header));
+            preheader.addInstruction(SimpleInstruction.createGoto(header));
             preheader.addSuccessor(header);
 
             SSAValue i = new SSAValue(PrimitiveType.INT);
@@ -1211,7 +1211,7 @@ class SSATransformTest {
 
             SSAValue iNext = new SSAValue(PrimitiveType.INT);
             branch.addInstruction(new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(1)));
-            branch.addInstruction(new GotoInstruction(header));
+            branch.addInstruction(SimpleInstruction.createGoto(header));
             branch.addSuccessor(header);
             phi.addIncoming(iNext, branch);
 
@@ -1235,7 +1235,7 @@ class SSATransformTest {
             method.addBlock(exit);
             method.setEntryBlock(preheader);
 
-            preheader.addInstruction(new GotoInstruction(header));
+            preheader.addInstruction(SimpleInstruction.createGoto(header));
             preheader.addSuccessor(header);
 
             SSAValue i = new SSAValue(PrimitiveType.INT);
@@ -1248,7 +1248,7 @@ class SSATransformTest {
 
             SSAValue iNext = new SSAValue(PrimitiveType.INT);
             body.addInstruction(new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(2)));
-            body.addInstruction(new GotoInstruction(header));
+            body.addInstruction(SimpleInstruction.createGoto(header));
             body.addSuccessor(header);
             phi.addIncoming(iNext, body);
 
@@ -1275,7 +1275,7 @@ class SSATransformTest {
             method.addBlock(exit);
             method.setEntryBlock(preheader);
 
-            preheader.addInstruction(new GotoInstruction(header));
+            preheader.addInstruction(SimpleInstruction.createGoto(header));
             preheader.addSuccessor(header);
 
             SSAValue i = new SSAValue(PrimitiveType.INT);
@@ -1292,11 +1292,11 @@ class SSATransformTest {
 
             SSAValue iNext = new SSAValue(PrimitiveType.INT);
             guardTrue.addInstruction(new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(1)));
-            guardTrue.addInstruction(new GotoInstruction(header));
+            guardTrue.addInstruction(SimpleInstruction.createGoto(header));
             guardTrue.addSuccessor(header);
             phi.addIncoming(iNext, guardTrue);
 
-            guardFalse.addInstruction(new GotoInstruction(exit));
+            guardFalse.addInstruction(SimpleInstruction.createGoto(exit));
             guardFalse.addSuccessor(exit);
 
             exit.addInstruction(new ReturnInstruction());
@@ -1582,14 +1582,14 @@ class SSATransformTest {
             entry.addSuccessor(b1);
             entry.addSuccessor(b2);
 
-            b1.addInstruction(new GotoInstruction(merge));
+            b1.addInstruction(SimpleInstruction.createGoto(merge));
             b1.addSuccessor(merge);
 
             b2.addInstruction(new BranchInstruction(CompareOp.GT, x, IntConstant.of(3), b3, merge));
             b2.addSuccessor(b3);
             b2.addSuccessor(merge);
 
-            b3.addInstruction(new GotoInstruction(merge));
+            b3.addInstruction(SimpleInstruction.createGoto(merge));
             b3.addSuccessor(merge);
 
             merge.addInstruction(new BranchInstruction(CompareOp.LT, x, IntConstant.of(8), exit, entry));
@@ -1628,10 +1628,10 @@ class SSATransformTest {
             method.addBlock(target);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(intermediate));
+            entry.addInstruction(SimpleInstruction.createGoto(intermediate));
             entry.addSuccessor(intermediate);
 
-            intermediate.addInstruction(new GotoInstruction(target));
+            intermediate.addInstruction(SimpleInstruction.createGoto(target));
             intermediate.addSuccessor(target);
 
             target.addInstruction(new ReturnInstruction());
@@ -1639,7 +1639,7 @@ class SSATransformTest {
             boolean changed = transform.run(method);
 
             assertTrue(changed);
-            GotoInstruction gotoInstr = (GotoInstruction) entry.getTerminator();
+            SimpleInstruction gotoInstr = (SimpleInstruction) entry.getTerminator();
             assertEquals(target, gotoInstr.getTarget());
         }
 
@@ -1662,7 +1662,7 @@ class SSATransformTest {
             entry.addSuccessor(intermediate);
             entry.addSuccessor(falseBlock);
 
-            intermediate.addInstruction(new GotoInstruction(target));
+            intermediate.addInstruction(SimpleInstruction.createGoto(target));
             intermediate.addSuccessor(target);
 
             target.addInstruction(new ReturnInstruction());
@@ -1696,7 +1696,7 @@ class SSATransformTest {
 
             trueBlock.addInstruction(new ReturnInstruction());
 
-            intermediate.addInstruction(new GotoInstruction(target));
+            intermediate.addInstruction(SimpleInstruction.createGoto(target));
             intermediate.addSuccessor(target);
 
             target.addInstruction(new ReturnInstruction());
@@ -1725,7 +1725,7 @@ class SSATransformTest {
             entry.addInstruction(switchInstr);
             entry.addSuccessor(intermediate);
 
-            intermediate.addInstruction(new GotoInstruction(target));
+            intermediate.addInstruction(SimpleInstruction.createGoto(target));
             intermediate.addSuccessor(target);
 
             target.addInstruction(new ReturnInstruction());
@@ -1763,10 +1763,10 @@ class SSATransformTest {
             entry.addSuccessor(intermediate2);
             entry.addSuccessor(defaultBlock);
 
-            intermediate1.addInstruction(new GotoInstruction(target1));
+            intermediate1.addInstruction(SimpleInstruction.createGoto(target1));
             intermediate1.addSuccessor(target1);
 
-            intermediate2.addInstruction(new GotoInstruction(target2));
+            intermediate2.addInstruction(SimpleInstruction.createGoto(target2));
             intermediate2.addSuccessor(target2);
 
             target1.addInstruction(new ReturnInstruction());
@@ -1804,12 +1804,12 @@ class SSATransformTest {
 
             SSAValue v1 = new SSAValue(PrimitiveType.INT);
             b1.addInstruction(new ConstantInstruction(v1, IntConstant.of(10)));
-            b1.addInstruction(new GotoInstruction(merge));
+            b1.addInstruction(SimpleInstruction.createGoto(merge));
             b1.addSuccessor(merge);
 
             SSAValue v2 = new SSAValue(PrimitiveType.INT);
             b2.addInstruction(new ConstantInstruction(v2, IntConstant.of(20)));
-            b2.addInstruction(new GotoInstruction(merge));
+            b2.addInstruction(SimpleInstruction.createGoto(merge));
             b2.addSuccessor(merge);
 
             SSAValue phiResult = new SSAValue(PrimitiveType.INT);
@@ -1817,7 +1817,7 @@ class SSATransformTest {
             phi.addIncoming(v1, b1);
             phi.addIncoming(v2, b2);
             merge.addPhiInstruction(phi);
-            merge.addInstruction(new GotoInstruction(target));
+            merge.addInstruction(SimpleInstruction.createGoto(target));
             merge.addSuccessor(target);
 
             target.addInstruction(new ReturnInstruction());
@@ -1838,12 +1838,12 @@ class SSATransformTest {
             method.addBlock(target);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(intermediate));
+            entry.addInstruction(SimpleInstruction.createGoto(intermediate));
             entry.addSuccessor(intermediate);
 
             SSAValue temp = new SSAValue(PrimitiveType.INT);
             intermediate.addInstruction(new ConstantInstruction(temp, IntConstant.of(5)));
-            intermediate.addInstruction(new GotoInstruction(target));
+            intermediate.addInstruction(SimpleInstruction.createGoto(target));
             intermediate.addSuccessor(target);
 
             target.addInstruction(new ReturnInstruction());
@@ -1866,10 +1866,10 @@ class SSATransformTest {
             method.addBlock(unreachable);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(intermediate));
+            entry.addInstruction(SimpleInstruction.createGoto(intermediate));
             entry.addSuccessor(intermediate);
 
-            intermediate.addInstruction(new GotoInstruction(reachable));
+            intermediate.addInstruction(SimpleInstruction.createGoto(reachable));
             intermediate.addSuccessor(reachable);
 
             reachable.addInstruction(new ReturnInstruction());
@@ -1894,10 +1894,10 @@ class SSATransformTest {
             method.addBlock(target);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(intermediate));
+            entry.addInstruction(SimpleInstruction.createGoto(intermediate));
             entry.addSuccessor(intermediate);
 
-            intermediate.addInstruction(new GotoInstruction(target));
+            intermediate.addInstruction(SimpleInstruction.createGoto(target));
             intermediate.addSuccessor(target);
 
             SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -1925,13 +1925,13 @@ class SSATransformTest {
             method.addBlock(loop2);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(loop1));
+            entry.addInstruction(SimpleInstruction.createGoto(loop1));
             entry.addSuccessor(loop1);
 
-            loop1.addInstruction(new GotoInstruction(loop2));
+            loop1.addInstruction(SimpleInstruction.createGoto(loop2));
             loop1.addSuccessor(loop2);
 
-            loop2.addInstruction(new GotoInstruction(loop1));
+            loop2.addInstruction(SimpleInstruction.createGoto(loop1));
             loop2.addSuccessor(loop1);
 
             boolean changed = transform.run(method);

@@ -551,7 +551,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof GetFieldInstruction));
+            .anyMatch(i -> i instanceof FieldAccessInstruction && ((FieldAccessInstruction) i).isLoad()));
     }
 
     @Test
@@ -569,7 +569,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof GetFieldInstruction));
+            .anyMatch(i -> i instanceof FieldAccessInstruction && ((FieldAccessInstruction) i).isLoad()));
     }
 
     // ========== Array Operations Tests ==========
@@ -587,7 +587,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof ArrayLoadInstruction));
+            .anyMatch(i -> i instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) i).isLoad()));
     }
 
     @Test
@@ -606,7 +606,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof ArrayStoreInstruction));
+            .anyMatch(i -> i instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) i).isStore()));
     }
 
     // ========== Object Creation Tests ==========
@@ -664,7 +664,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof CastInstruction));
+            .anyMatch(i -> i instanceof TypeCheckInstruction && ((TypeCheckInstruction) i).isCast()));
     }
 
     // ========== Ternary Tests ==========
@@ -697,7 +697,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof InstanceOfInstruction));
+            .anyMatch(i -> i instanceof TypeCheckInstruction && ((TypeCheckInstruction) i).isInstanceOf()));
     }
 
     // ========== This Tests ==========

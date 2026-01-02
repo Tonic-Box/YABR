@@ -55,7 +55,7 @@ class InductionVariableSimplificationTest {
         header.addSuccessor(exit);
         body.addSuccessor(header);
 
-        GotoInstruction gotoHeader = new GotoInstruction(header);
+        SimpleInstruction gotoHeader = SimpleInstruction.createGoto(header);
         gotoHeader.setBlock(preheader);
         preheader.addInstruction(gotoHeader);
 
@@ -77,7 +77,7 @@ class InductionVariableSimplificationTest {
         increment.setBlock(body);
         body.addInstruction(increment);
 
-        GotoInstruction gotoHeaderFromBody = new GotoInstruction(header);
+        SimpleInstruction gotoHeaderFromBody = SimpleInstruction.createGoto(header);
         gotoHeaderFromBody.setBlock(body);
         body.addInstruction(gotoHeaderFromBody);
 
@@ -114,7 +114,7 @@ class InductionVariableSimplificationTest {
         header.addSuccessor(exit);
         body.addSuccessor(header);
 
-        GotoInstruction gotoHeader = new GotoInstruction(header);
+        SimpleInstruction gotoHeader = SimpleInstruction.createGoto(header);
         gotoHeader.setBlock(preheader);
         preheader.addInstruction(gotoHeader);
 
@@ -142,7 +142,7 @@ class InductionVariableSimplificationTest {
         increment.setBlock(body);
         body.addInstruction(increment);
 
-        GotoInstruction gotoHeaderFromBody = new GotoInstruction(header);
+        SimpleInstruction gotoHeaderFromBody = SimpleInstruction.createGoto(header);
         gotoHeaderFromBody.setBlock(body);
         body.addInstruction(gotoHeaderFromBody);
 
@@ -178,7 +178,7 @@ class InductionVariableSimplificationTest {
         header.addSuccessor(exit);
         body.addSuccessor(header);
 
-        GotoInstruction gotoHeader = new GotoInstruction(header);
+        SimpleInstruction gotoHeader = SimpleInstruction.createGoto(header);
         gotoHeader.setBlock(preheader);
         preheader.addInstruction(gotoHeader);
 
@@ -200,7 +200,7 @@ class InductionVariableSimplificationTest {
         increment.setBlock(body);
         body.addInstruction(increment);
 
-        GotoInstruction gotoHeaderFromBody = new GotoInstruction(header);
+        SimpleInstruction gotoHeaderFromBody = SimpleInstruction.createGoto(header);
         gotoHeaderFromBody.setBlock(body);
         body.addInstruction(gotoHeaderFromBody);
 
@@ -243,7 +243,7 @@ class InductionVariableSimplificationTest {
         mul.setBlock(entry);
         entry.addInstruction(mul);
 
-        GotoInstruction gotoExit = new GotoInstruction(exit);
+        SimpleInstruction gotoExit = SimpleInstruction.createGoto(exit);
         gotoExit.setBlock(entry);
         entry.addInstruction(gotoExit);
 
@@ -279,7 +279,7 @@ class InductionVariableSimplificationTest {
         SSAValue step = new SSAValue(PrimitiveType.INT, "step");
         method.addParameter(step);
 
-        GotoInstruction gotoHeader = new GotoInstruction(header);
+        SimpleInstruction gotoHeader = SimpleInstruction.createGoto(header);
         gotoHeader.setBlock(preheader);
         preheader.addInstruction(gotoHeader);
 
@@ -301,7 +301,7 @@ class InductionVariableSimplificationTest {
         increment.setBlock(body);
         body.addInstruction(increment);
 
-        GotoInstruction gotoHeaderFromBody = new GotoInstruction(header);
+        SimpleInstruction gotoHeaderFromBody = SimpleInstruction.createGoto(header);
         gotoHeaderFromBody.setBlock(body);
         body.addInstruction(gotoHeaderFromBody);
 

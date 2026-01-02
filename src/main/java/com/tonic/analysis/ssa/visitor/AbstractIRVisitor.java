@@ -27,11 +27,6 @@ public abstract class AbstractIRVisitor<T> implements IRVisitor<T> {
     }
 
     @Override
-    public T visitGoto(GotoInstruction gotoInstr) {
-        return defaultValue();
-    }
-
-    @Override
     public T visitBranch(BranchInstruction branch) {
         return defaultValue();
     }
@@ -47,37 +42,12 @@ public abstract class AbstractIRVisitor<T> implements IRVisitor<T> {
     }
 
     @Override
-    public T visitThrow(ThrowInstruction throwInstr) {
-        return defaultValue();
-    }
-
-    @Override
     public T visitLoadLocal(LoadLocalInstruction loadLocal) {
         return defaultValue();
     }
 
     @Override
     public T visitStoreLocal(StoreLocalInstruction storeLocal) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitGetField(GetFieldInstruction getField) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitPutField(PutFieldInstruction putField) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitArrayLoad(ArrayLoadInstruction arrayLoad) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitArrayStore(ArrayStoreInstruction arrayStore) {
         return defaultValue();
     }
 
@@ -97,37 +67,32 @@ public abstract class AbstractIRVisitor<T> implements IRVisitor<T> {
     }
 
     @Override
-    public T visitArrayLength(ArrayLengthInstruction arrayLength) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitInstanceOf(InstanceOfInstruction instanceOf) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitCast(CastInstruction cast) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitMonitorEnter(MonitorEnterInstruction monitorEnter) {
-        return defaultValue();
-    }
-
-    @Override
-    public T visitMonitorExit(MonitorExitInstruction monitorExit) {
-        return defaultValue();
-    }
-
-    @Override
     public T visitCopy(CopyInstruction copy) {
         return defaultValue();
     }
 
     @Override
     public T visitConstant(ConstantInstruction constant) {
+        return defaultValue();
+    }
+
+    @Override
+    public T visitFieldAccess(FieldAccessInstruction fieldAccess) {
+        return defaultValue();
+    }
+
+    @Override
+    public T visitArrayAccess(ArrayAccessInstruction arrayAccess) {
+        return defaultValue();
+    }
+
+    @Override
+    public T visitTypeCheck(TypeCheckInstruction typeCheck) {
+        return defaultValue();
+    }
+
+    @Override
+    public T visitSimple(SimpleInstruction simple) {
         return defaultValue();
     }
 }

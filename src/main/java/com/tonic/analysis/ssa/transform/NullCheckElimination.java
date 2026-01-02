@@ -90,7 +90,7 @@ public class NullCheckElimination implements IRTransform {
                             targetBlock = branch.getTrueTarget();
                         }
 
-                        GotoInstruction gotoInstr = new GotoInstruction(targetBlock);
+                        SimpleInstruction gotoInstr = SimpleInstruction.createGoto(targetBlock);
                         gotoInstr.setBlock(block);
 
                         List<IRInstruction> instructions = block.getInstructions();

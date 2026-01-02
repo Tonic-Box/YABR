@@ -505,8 +505,9 @@ public class TypeInference {
             state = state.pop();
         }
 
-        if (instr instanceof GetFieldInstruction) {
-            GetFieldInstruction getField = (GetFieldInstruction) instr;
+        if (instr instanceof com.tonic.analysis.instruction.GetFieldInstruction) {
+            com.tonic.analysis.instruction.GetFieldInstruction getField =
+                (com.tonic.analysis.instruction.GetFieldInstruction) instr;
             int fieldIndex = getField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
             if (item instanceof FieldRefItem) {
@@ -519,20 +520,13 @@ public class TypeInference {
             }
         }
 
-        return state.push(VerificationType.INTEGER); // Fallback
+        return state.push(VerificationType.INTEGER);
     }
 
-    /**
-     * Handles PUTSTATIC and PUTFIELD instructions.
-     *
-     * @param state the current type state
-     * @param instr the field instruction
-     * @param isStatic true if PUTSTATIC, false if PUTFIELD
-     * @return updated state with value and object popped
-     */
     private TypeState applyPutField(TypeState state, Instruction instr, boolean isStatic) {
-        if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction putField = (PutFieldInstruction) instr;
+        if (instr instanceof com.tonic.analysis.instruction.PutFieldInstruction) {
+            com.tonic.analysis.instruction.PutFieldInstruction putField =
+                (com.tonic.analysis.instruction.PutFieldInstruction) instr;
             int fieldIndex = putField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
             if (item instanceof FieldRefItem) {

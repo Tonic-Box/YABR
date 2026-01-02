@@ -109,10 +109,10 @@ class CopyPropagationTest {
 
         // pred1: v1 = v0 (copy)
         pred1.addInstruction(new CopyInstruction(v1, v0));
-        pred1.addInstruction(new GotoInstruction(merge));
+        pred1.addInstruction(SimpleInstruction.createGoto(merge));
 
         // pred2: just goto
-        pred2.addInstruction(new GotoInstruction(merge));
+        pred2.addInstruction(SimpleInstruction.createGoto(merge));
 
         // merge: v3 = phi [v1, pred1], [v2, pred2]
         PhiInstruction phi = new PhiInstruction(v3);
@@ -232,7 +232,7 @@ class CopyPropagationTest {
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
 
         block.addInstruction(new CopyInstruction(v1, v0));
-        block.addInstruction(new GotoInstruction(block2));
+        block.addInstruction(SimpleInstruction.createGoto(block2));
 
         block2.addInstruction(new BinaryOpInstruction(v2, BinaryOp.ADD, v1, IntConstant.of(5)));
         block2.addInstruction(new ReturnInstruction(v2));

@@ -97,7 +97,7 @@ class ControlFlowListenerTest {
 
     @Test
     void countThrowInstructions() {
-        ThrowInstruction throwInstr = createThrow();
+        SimpleInstruction throwInstr = createThrow();
 
         listener.onException(throwInstr, mockState);
         listener.onException(throwInstr, mockState);
@@ -129,7 +129,7 @@ class ControlFlowListenerTest {
 
     @Test
     void trackGotoInstructions() {
-        GotoInstruction gotoInstr = createGoto();
+        SimpleInstruction gotoInstr = createGoto();
 
         listener.onBeforeInstruction(gotoInstr, mockState);
         listener.onBeforeInstruction(gotoInstr, mockState);
@@ -154,9 +154,9 @@ class ControlFlowListenerTest {
     void trackMixedControlFlowInstructions() {
         BranchInstruction branch = createBranch();
         SwitchInstruction switchInstr = createSwitch();
-        GotoInstruction gotoInstr = createGoto();
+        SimpleInstruction gotoInstr = createGoto();
         ReturnInstruction returnInstr = createReturn();
-        ThrowInstruction throwInstr = createThrow();
+        SimpleInstruction throwInstr = createThrow();
 
         listener.onBranch(branch, true, mockState);
         listener.onBranch(branch, false, mockState);
@@ -370,9 +370,9 @@ class ControlFlowListenerTest {
     void listenerToString() {
         BranchInstruction branch = createBranch();
         SwitchInstruction switchInstr = createSwitch();
-        GotoInstruction gotoInstr = createGoto();
+        SimpleInstruction gotoInstr = createGoto();
         ReturnInstruction returnInstr = createReturn();
-        ThrowInstruction throwInstr = createThrow();
+        SimpleInstruction throwInstr = createThrow();
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
 
@@ -397,7 +397,7 @@ class ControlFlowListenerTest {
     void onBeforeInstructionOnlyCountsGoto() {
         BranchInstruction branch = createBranch();
         ReturnInstruction returnInstr = createReturn();
-        GotoInstruction gotoInstr = createGoto();
+        SimpleInstruction gotoInstr = createGoto();
 
         listener.onBeforeInstruction(branch, mockState);
         listener.onBeforeInstruction(returnInstr, mockState);
@@ -430,7 +430,7 @@ class ControlFlowListenerTest {
         IRBlock exit = new IRBlock("exit");
 
         BranchInstruction branch = createBranch();
-        GotoInstruction gotoInstr = createGoto();
+        SimpleInstruction gotoInstr = createGoto();
         ReturnInstruction returnInstr = createReturn();
 
         listener.onBlockEntry(entry, mockState);
@@ -480,16 +480,16 @@ class ControlFlowListenerTest {
         return switchInstr;
     }
 
-    private GotoInstruction createGoto() {
+    private SimpleInstruction createGoto() {
         IRBlock target = new IRBlock("target");
-        return new GotoInstruction(target);
+        return SimpleInstruction.createGoto(target);
     }
 
     private ReturnInstruction createReturn() {
         return new ReturnInstruction(null);
     }
 
-    private ThrowInstruction createThrow() {
-        return new ThrowInstruction(null);
+    private SimpleInstruction createThrow() {
+        return SimpleInstruction.createThrow(null);
     }
 }

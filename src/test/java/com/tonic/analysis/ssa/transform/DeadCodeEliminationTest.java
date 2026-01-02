@@ -99,7 +99,7 @@ class DeadCodeEliminationTest {
         SSAValue obj = new SSAValue(ReferenceType.OBJECT);
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
 
-        PutFieldInstruction putfield = new PutFieldInstruction("com/test/Test", "field", "I", obj, v0);
+        FieldAccessInstruction putfield = FieldAccessInstruction.createStore("com/test/Test", "field", "I", obj, v0);
         block.addInstruction(putfield);
         block.addInstruction(new ReturnInstruction());
 

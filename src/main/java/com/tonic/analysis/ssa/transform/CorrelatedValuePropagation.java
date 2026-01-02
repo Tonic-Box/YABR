@@ -184,7 +184,7 @@ public class CorrelatedValuePropagation implements IRTransform {
             IRBlock target = result ? branch.getTrueTarget() : branch.getFalseTarget();
             IRBlock deadTarget = result ? branch.getFalseTarget() : branch.getTrueTarget();
 
-            GotoInstruction gotoInstr = new GotoInstruction(target);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(target);
             int idx = block.getInstructions().indexOf(branch);
             block.removeInstruction(branch);
             block.insertInstruction(idx, gotoInstr);

@@ -3,10 +3,8 @@ package com.tonic.analysis.simulation.listener;
 import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.ArrayLoadInstruction;
-import com.tonic.analysis.ssa.ir.ArrayStoreInstruction;
-import com.tonic.analysis.ssa.ir.GetFieldInstruction;
-import com.tonic.analysis.ssa.ir.PutFieldInstruction;
+import com.tonic.analysis.ssa.ir.ArrayAccessInstruction;
+import com.tonic.analysis.ssa.ir.FieldAccessInstruction;
 
 import java.util.*;
 
@@ -60,7 +58,7 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     @Override
-    public void onFieldRead(GetFieldInstruction instr, SimulationState state) {
+    public void onFieldRead(FieldAccessInstruction instr, SimulationState state) {
         fieldReadCount++;
         if (instr.isStatic()) {
             staticFieldReadCount++;
@@ -71,7 +69,7 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     @Override
-    public void onFieldWrite(PutFieldInstruction instr, SimulationState state) {
+    public void onFieldWrite(FieldAccessInstruction instr, SimulationState state) {
         fieldWriteCount++;
         if (instr.isStatic()) {
             staticFieldWriteCount++;
@@ -82,12 +80,12 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     @Override
-    public void onArrayRead(ArrayLoadInstruction instr, SimulationState state) {
+    public void onArrayRead(ArrayAccessInstruction instr, SimulationState state) {
         arrayReadCount++;
     }
 
     @Override
-    public void onArrayWrite(ArrayStoreInstruction instr, SimulationState state) {
+    public void onArrayWrite(ArrayAccessInstruction instr, SimulationState state) {
         arrayWriteCount++;
     }
 

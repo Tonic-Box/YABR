@@ -41,7 +41,7 @@ public class PhiEliminator {
             edge.from().addSuccessor(splitBlock);
             splitBlock.addSuccessor(edge.to());
 
-            splitBlock.addInstruction(new GotoInstruction(edge.to()));
+            splitBlock.addInstruction(SimpleInstruction.createGoto(edge.to()));
 
             updatePhiPredecessor(edge.to(), edge.from(), splitBlock);
 
@@ -63,10 +63,10 @@ public class PhiEliminator {
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return;
 
-        if (terminator instanceof GotoInstruction) {
-            GotoInstruction gotoInstr = (GotoInstruction) terminator;
-            if (gotoInstr.getTarget() == oldTarget) {
-                gotoInstr.setTarget(newTarget);
+        if (terminator instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) terminator;
+            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() == oldTarget) {
+                simple.setTarget(newTarget);
             }
         } else if (terminator instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) terminator;

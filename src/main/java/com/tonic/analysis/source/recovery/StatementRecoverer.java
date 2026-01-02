@@ -545,7 +545,12 @@ public class StatementRecoverer {
         }
 
         IRInstruction handlerTerminator = handlerBlock.getTerminator();
-        if (!(handlerTerminator instanceof GotoInstruction)) {
+        boolean isGoto = false;
+        if (handlerTerminator instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) handlerTerminator;
+            isGoto = (simple.getOp() == SimpleOp.GOTO);
+        }
+        if (!isGoto) {
             Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
             visitedHandlerBlocks.add(handlerBlock);
             recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts);
@@ -608,20 +613,34 @@ public class StatementRecoverer {
             }
 
             IRInstruction terminator = block.getTerminator();
-            if (terminator instanceof ThrowInstruction) {
-                ThrowInstruction throwInstr = (ThrowInstruction) terminator;
-                Statement throwStmt = recoverThrow(throwInstr);
+            boolean isThrow = false;
+            boolean isReturn = terminator instanceof ReturnInstruction;
+            boolean isGoto = false;
+
+            if (!isReturn && terminator instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) terminator;
+                if (simple.getOp() == SimpleOp.ATHROW) {
+                    isThrow = true;
+                } else if (simple.getOp() == SimpleOp.GOTO) {
+                    isGoto = true;
+                }
+            }
+
+            if (isThrow) {
+                SimpleInstruction simple = (SimpleInstruction) terminator;
+                Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
+                Statement throwStmt = new ThrowStmt(exception);
                 if (throwStmt != null) {
                     stmts.add(throwStmt);
                 }
                 continue;
             }
 
-            if (terminator instanceof ReturnInstruction) {
+            if (isReturn) {
                 continue;
             }
 
-            if (terminator instanceof GotoInstruction) {
+            if (isGoto) {
                 continue;
             }
 
@@ -1267,34 +1286,48 @@ public class StatementRecoverer {
 
         for (IRInstruction use : uses) {
             if (use instanceof InvokeInstruction) continue;
-            if (use instanceof ThrowInstruction) continue;
             if (use instanceof ReturnInstruction) continue;
             if (use instanceof BinaryOpInstruction) continue;
             if (use instanceof UnaryOpInstruction) continue;
-            if (use instanceof CastInstruction) continue;
-            if (use instanceof ArrayLengthInstruction) continue;
-            if (use instanceof ArrayLoadInstruction) continue;
-            if (use instanceof GetFieldInstruction) continue;
-            if (use instanceof InstanceOfInstruction) continue;
             if (use instanceof NewArrayInstruction) continue;
             if (use instanceof BranchInstruction) return false;
-            if (use instanceof PutFieldInstruction) return false;
-            if (use instanceof ArrayStoreInstruction) return false;
             if (use instanceof StoreLocalInstruction) return false;
             if (use instanceof PhiInstruction) return false;
+
+            if (use instanceof FieldAccessInstruction) {
+                FieldAccessInstruction fa = (FieldAccessInstruction) use;
+                if (fa.isStore()) return false;
+                continue;
+            }
+            if (use instanceof ArrayAccessInstruction) {
+                ArrayAccessInstruction aa = (ArrayAccessInstruction) use;
+                if (aa.isStore()) return false;
+                continue;
+            }
+            if (use instanceof TypeCheckInstruction) continue;
+            if (use instanceof SimpleInstruction) {
+                SimpleInstruction si = (SimpleInstruction) use;
+                if (si.getOp() == SimpleOp.ATHROW) continue;
+                if (si.getOp() == SimpleOp.ARRAYLENGTH) continue;
+            }
         }
         return true;
     }
 
     /**
-     * Checks if an SSA value is used exactly once and that use is a PutFieldInstruction.
+     * Checks if an SSA value is used exactly once and that use is a FieldAccessInstruction store.
      * Such values can be safely inlined into the field assignment.
      */
     private boolean isSingleUsePutField(SSAValue value) {
         if (value == null) return false;
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.size() != 1) return false;
-        return uses.get(0) instanceof PutFieldInstruction;
+        IRInstruction use = uses.get(0);
+        if (use instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fa = (FieldAccessInstruction) use;
+            return fa.isStore();
+        }
+        return false;
     }
 
     /**
@@ -1545,14 +1578,36 @@ public class StatementRecoverer {
             return recoverStoreLocal(store);
         }
 
-        if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction putField = (PutFieldInstruction) instr;
-            return recoverPutField(putField);
+        if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            if (fieldAccess.isStore()) {
+                Expression receiver = fieldAccess.isStatic() ? null :
+                    exprRecoverer.recoverOperand(fieldAccess.getObjectRef());
+                SourceType fieldType = typeRecoverer.recoverType(fieldAccess.getDescriptor());
+                Expression value = exprRecoverer.recoverOperand(fieldAccess.getValue(), fieldType);
+                Expression target = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
+                    receiver, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), fieldType);
+                return new ExprStmt(new com.tonic.analysis.source.ast.expr.BinaryExpr(
+                    com.tonic.analysis.source.ast.expr.BinaryOperator.ASSIGN, target, value, fieldType));
+            }
+            if (fieldAccess.isLoad() && fieldAccess.getResult() != null) {
+                Expression value = exprRecoverer.recover(instr);
+                context.getExpressionContext().cacheExpression(instr.getResult(), value);
+            }
+            return null;
         }
 
-        if (instr instanceof ArrayStoreInstruction) {
-            ArrayStoreInstruction arrayStore = (ArrayStoreInstruction) instr;
-            return recoverArrayStore(arrayStore);
+        if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+            if (arrayAccess.isStore()) {
+                Expression array = exprRecoverer.recoverOperand(arrayAccess.getArray());
+                Expression index = exprRecoverer.recoverOperand(arrayAccess.getIndex());
+                Expression value = exprRecoverer.recoverOperand(arrayAccess.getValue());
+                SourceType elemType = value.getType();
+                Expression target = new com.tonic.analysis.source.ast.expr.ArrayAccessExpr(array, index, elemType);
+                return new ExprStmt(new com.tonic.analysis.source.ast.expr.BinaryExpr(
+                    com.tonic.analysis.source.ast.expr.BinaryOperator.ASSIGN, target, value, elemType));
+            }
         }
 
         if (instr instanceof InvokeInstruction) {
@@ -1604,8 +1659,16 @@ public class StatementRecoverer {
             return null;
         }
 
-        if (instr instanceof MonitorEnterInstruction || instr instanceof MonitorExitInstruction) {
-            return null;
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            if (simple.getOp() == SimpleOp.MONITORENTER ||
+                simple.getOp() == SimpleOp.MONITOREXIT) {
+                return null;
+            }
+            if (simple.getOp() == SimpleOp.ATHROW) {
+                Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
+                return new ThrowStmt(exception);
+            }
         }
 
         if (instr instanceof LoadLocalInstruction) {
@@ -1626,15 +1689,15 @@ public class StatementRecoverer {
             return null;
         }
 
-        if (instr instanceof GetFieldInstruction) {
-            if (instr.getResult() != null) {
+        if (instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction || instr instanceof TypeCheckInstruction) {
+            if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
+                return null;
             }
-            return null;
         }
 
-        if (instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction || instr instanceof CastInstruction) {
+        if (instr instanceof com.tonic.analysis.ssa.ir.TypeCheckInstruction) {
             if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
@@ -1682,9 +1745,12 @@ public class StatementRecoverer {
             ReturnInstruction ret = (ReturnInstruction) instr;
             return recoverReturn(ret);
         }
-        if (instr instanceof ThrowInstruction) {
-            ThrowInstruction throwInstr = (ThrowInstruction) instr;
-            return recoverThrow(throwInstr);
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            if (simple.getOp() == SimpleOp.ATHROW) {
+                Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
+                return new ThrowStmt(exception);
+            }
         }
         return null;
     }
@@ -1749,30 +1815,6 @@ public class StatementRecoverer {
         return new VarDeclStmt(type, name, value);
     }
 
-    private Statement recoverPutField(PutFieldInstruction putField) {
-        Expression receiver = putField.isStatic() ? null : exprRecoverer.recoverOperand(putField.getObjectRef());
-
-        SourceType fieldType = typeRecoverer.recoverType(putField.getDescriptor());
-        Expression value = exprRecoverer.recoverOperand(putField.getValue(), fieldType);
-
-        Expression target = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
-                receiver, putField.getName(), putField.getOwner(), putField.isStatic(), fieldType);
-
-        return new ExprStmt(new com.tonic.analysis.source.ast.expr.BinaryExpr(
-                com.tonic.analysis.source.ast.expr.BinaryOperator.ASSIGN, target, value, fieldType));
-    }
-
-    private Statement recoverArrayStore(ArrayStoreInstruction arrayStore) {
-        Expression array = exprRecoverer.recoverOperand(arrayStore.getArray());
-        Expression index = exprRecoverer.recoverOperand(arrayStore.getIndex());
-        Expression value = exprRecoverer.recoverOperand(arrayStore.getValue());
-
-        SourceType elemType = value.getType();
-        Expression target = new com.tonic.analysis.source.ast.expr.ArrayAccessExpr(array, index, elemType);
-
-        return new ExprStmt(new com.tonic.analysis.source.ast.expr.BinaryExpr(
-                com.tonic.analysis.source.ast.expr.BinaryOperator.ASSIGN, target, value, elemType));
-    }
 
     private Statement recoverReturn(ReturnInstruction ret) {
         if (ret.isVoidReturn()) {
@@ -1791,10 +1833,6 @@ public class StatementRecoverer {
         return new ReturnStmt(value);
     }
 
-    private Statement recoverThrow(ThrowInstruction throwInstr) {
-        Expression exception = exprRecoverer.recoverOperand(throwInstr.getException());
-        return new ThrowStmt(exception);
-    }
 
     private Statement recoverVarDecl(IRInstruction instr) {
         SSAValue result = instr.getResult();
@@ -2231,8 +2269,11 @@ public class StatementRecoverer {
                 return true;
             }
             com.tonic.analysis.ssa.ir.IRInstruction def = ssaValue.getDefinition();
-            if (def instanceof com.tonic.analysis.ssa.ir.InstanceOfInstruction) {
-                return true;
+            if (def instanceof TypeCheckInstruction) {
+                TypeCheckInstruction typeCheck = (TypeCheckInstruction) def;
+                if (typeCheck.isInstanceOf()) {
+                    return true;
+                }
             }
         }
         return false;
@@ -2760,7 +2801,13 @@ public class StatementRecoverer {
             if (instr instanceof ConstantInstruction) {
                 ConstantInstruction ci = (ConstantInstruction) instr;
                 constInstr = ci;
-            } else if (instr instanceof GotoInstruction) {
+            } else if (instr instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) instr;
+                if (simple.getOp() != SimpleOp.GOTO) {
+                    if (!instr.isTerminator()) {
+                        return null;
+                    }
+                }
             } else if (!instr.isTerminator()) {
                 return null;
             }
@@ -2942,8 +2989,11 @@ public class StatementRecoverer {
 
         SSAValue producedValue = null;
         for (IRInstruction instr : instructions) {
-            if (instr instanceof GotoInstruction) {
-                continue;
+            if (instr instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) instr;
+                if (simple.getOp() == SimpleOp.GOTO) {
+                    continue;
+                }
             }
             if (instr.isTerminator()) {
                 continue;

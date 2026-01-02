@@ -154,7 +154,7 @@ public class StatementLowerer {
         ctx.setCurrentBlock(thenBlock);
         lower(ifStmt.getThenBranch());
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
             ctx.getCurrentBlock().addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
@@ -162,7 +162,7 @@ public class StatementLowerer {
             ctx.setCurrentBlock(elseBlock);
             lower(ifStmt.getElseBranch());
             if (ctx.getCurrentBlock().getTerminator() == null) {
-                ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
                 ctx.getCurrentBlock().addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
             }
         }
@@ -175,7 +175,7 @@ public class StatementLowerer {
         IRBlock bodyBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
 
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(condBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
         ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
@@ -190,7 +190,7 @@ public class StatementLowerer {
         ctx.setCurrentBlock(bodyBlock);
         lower(whileStmt.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(condBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
             ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
@@ -203,7 +203,7 @@ public class StatementLowerer {
         IRBlock condBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
 
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(bodyBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(bodyBlock));
         ctx.getCurrentBlock().addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.pushLoop(doWhile.getLabel(), condBlock, exitBlock);
@@ -211,7 +211,7 @@ public class StatementLowerer {
         ctx.setCurrentBlock(bodyBlock);
         lower(doWhile.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(condBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
             ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
@@ -236,7 +236,7 @@ public class StatementLowerer {
         IRBlock updateBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
 
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(condBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
         ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
@@ -248,7 +248,7 @@ public class StatementLowerer {
             condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
             condBlock.addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         } else {
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(bodyBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(bodyBlock));
             condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
@@ -257,7 +257,7 @@ public class StatementLowerer {
         ctx.setCurrentBlock(bodyBlock);
         lower(forStmt.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(updateBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(updateBlock));
             ctx.getCurrentBlock().addSuccessor(updateBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
@@ -265,7 +265,7 @@ public class StatementLowerer {
         for (Expression update : forStmt.getUpdate()) {
             exprLowerer.lower(update);
         }
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(condBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
         updateBlock.addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.popLoop();
@@ -286,12 +286,13 @@ public class StatementLowerer {
         IRBlock updateBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
 
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(condBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
         ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
         SSAValue length = ctx.newValue(intType);
-        ctx.getCurrentBlock().addInstruction(new ArrayLengthInstruction(length, iterable));
+        SimpleInstruction arrayLenInstr = SimpleInstruction.createArrayLength(length, iterable);
+        ctx.getCurrentBlock().addInstruction(arrayLenInstr);
 
         SSAValue index = ctx.getVariable(indexName);
         BranchInstruction branch = new BranchInstruction(CompareOp.LT, index, length, bodyBlock, exitBlock);
@@ -305,12 +306,13 @@ public class StatementLowerer {
         index = ctx.getVariable(indexName);
         IRType elemType = forEach.getVariable().getType().toIRType();
         SSAValue elem = ctx.newValue(elemType);
-        ctx.getCurrentBlock().addInstruction(new ArrayLoadInstruction(elem, iterable, index));
+        ArrayAccessInstruction loadInstr = ArrayAccessInstruction.createLoad(elem, iterable, index);
+        ctx.getCurrentBlock().addInstruction(loadInstr);
         ctx.setVariable(forEach.getVariable().getName(), elem);
 
         lower(forEach.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(updateBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(updateBlock));
             ctx.getCurrentBlock().addSuccessor(updateBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
@@ -321,7 +323,7 @@ public class StatementLowerer {
         SSAValue newIndex = ctx.newValue(intType);
         ctx.getCurrentBlock().addInstruction(new BinaryOpInstruction(newIndex, BinaryOp.ADD, index, one));
         ctx.setVariable(indexName, newIndex);
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(condBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
         updateBlock.addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.popLoop();
@@ -380,10 +382,10 @@ public class StatementLowerer {
 
             if (ctx.getCurrentBlock().getTerminator() == null) {
                 if (i + 1 < cases.size()) {
-                    ctx.getCurrentBlock().addInstruction(new GotoInstruction(caseBlocks[i + 1]));
+                    ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(caseBlocks[i + 1]));
                     ctx.getCurrentBlock().addSuccessor(caseBlocks[i + 1], com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
                 } else {
-                    ctx.getCurrentBlock().addInstruction(new GotoInstruction(exitBlock));
+                    ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
                     ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
                 }
             }
@@ -395,18 +397,19 @@ public class StatementLowerer {
 
     private void lowerThrow(ThrowStmt throwStmt) {
         Value exception = exprLowerer.lower(throwStmt.getException());
-        ctx.getCurrentBlock().addInstruction(new ThrowInstruction(exception));
+        SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
+        ctx.getCurrentBlock().addInstruction(throwInstr);
     }
 
     private void lowerBreak(BreakStmt breakStmt) {
         IRBlock target = ctx.getBreakTarget(breakStmt.getTargetLabel());
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(target));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(target));
         ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
     }
 
     private void lowerContinue(ContinueStmt contStmt) {
         IRBlock target = ctx.getContinueTarget(contStmt.getTargetLabel());
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(target));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(target));
         ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
     }
 
@@ -414,13 +417,13 @@ public class StatementLowerer {
         IRBlock tryBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
 
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(tryBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(tryBlock));
         ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(tryBlock);
         lower(tryCatch.getTryBlock());
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(exitBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
             ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
@@ -437,7 +440,7 @@ public class StatementLowerer {
 
             lower(catchClause.body());
             if (ctx.getCurrentBlock().getTerminator() == null) {
-                ctx.getCurrentBlock().addInstruction(new GotoInstruction(exitBlock));
+                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
                 ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
             }
         }
@@ -447,7 +450,7 @@ public class StatementLowerer {
             ctx.setCurrentBlock(finallyBlock);
             lower(tryCatch.getFinallyBlock());
             if (ctx.getCurrentBlock().getTerminator() == null) {
-                ctx.getCurrentBlock().addInstruction(new GotoInstruction(exitBlock));
+                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
                 ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
             }
         }
@@ -458,12 +461,14 @@ public class StatementLowerer {
     private void lowerSynchronized(SynchronizedStmt syncStmt) {
         Value monitor = exprLowerer.lower(syncStmt.getLock());
 
-        ctx.getCurrentBlock().addInstruction(new MonitorEnterInstruction(monitor));
+        SimpleInstruction monitorEnterInstr = SimpleInstruction.createMonitorEnter(monitor);
+        ctx.getCurrentBlock().addInstruction(monitorEnterInstr);
 
         lower(syncStmt.getBody());
 
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new MonitorExitInstruction(monitor));
+            SimpleInstruction monitorExitInstr = SimpleInstruction.createMonitorExit(monitor);
+            ctx.getCurrentBlock().addInstruction(monitorExitInstr);
         }
     }
 

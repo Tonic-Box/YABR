@@ -99,16 +99,13 @@ public class DuplicateBlockMerging implements IRTransform {
         } else if (instr instanceof StoreLocalInstruction) {
             StoreLocalInstruction st = (StoreLocalInstruction) instr;
             return "ST:" + st.getLocalIndex();
-        } else if (instr instanceof GetFieldInstruction) {
-            GetFieldInstruction fl = (GetFieldInstruction) instr;
-            return "FLD:" + fl.getOwner() + "." + fl.getName();
-        } else if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction fs = (PutFieldInstruction) instr;
-            return "FST:" + fs.getOwner() + "." + fs.getName();
-        } else if (instr instanceof ArrayLoadInstruction) {
-            return "ALD";
-        } else if (instr instanceof ArrayStoreInstruction) {
-            return "AST";
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fa = (FieldAccessInstruction) instr;
+            String prefix = fa.isLoad() ? "FLD:" : "FST:";
+            return prefix + fa.getOwner() + "." + fa.getName();
+        } else if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction aa = (ArrayAccessInstruction) instr;
+            return aa.isLoad() ? "ALD" : "AST";
         } else if (instr instanceof InvokeInstruction) {
             InvokeInstruction inv = (InvokeInstruction) instr;
             return "INV:" + inv.getOwner() + "." + inv.getName() + inv.getDescriptor();
@@ -118,24 +115,26 @@ public class DuplicateBlockMerging implements IRTransform {
         } else if (instr instanceof NewArrayInstruction) {
             NewArrayInstruction na = (NewArrayInstruction) instr;
             return "NEWA:" + na.getElementType();
-        } else if (instr instanceof CastInstruction) {
-            CastInstruction cast = (CastInstruction) instr;
-            return "CAST:" + cast.getTargetType();
-        } else if (instr instanceof InstanceOfInstruction) {
-            InstanceOfInstruction iof = (InstanceOfInstruction) instr;
-            return "IOF:" + iof.getCheckType();
+        } else if (instr instanceof TypeCheckInstruction) {
+            TypeCheckInstruction tc = (TypeCheckInstruction) instr;
+            String prefix = tc.isCast() ? "CAST:" : "IOF:";
+            return prefix + tc.getTargetType();
         } else if (instr instanceof PhiInstruction) {
             return "PHI";
         } else if (instr instanceof ConstantInstruction) {
             ConstantInstruction c = (ConstantInstruction) instr;
             return "CONST:" + c.getConstant();
+        } else if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            return "SIMPLE:" + simple.getOp();
         }
         return instr.getClass().getSimpleName();
     }
 
     private String getTerminatorSignature(IRInstruction term) {
-        if (term instanceof GotoInstruction) {
-            return "GOTO";
+        if (term instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) term;
+            return simple.getOp().name();
         } else if (term instanceof BranchInstruction) {
             BranchInstruction br = (BranchInstruction) term;
             return "BR:" + br.getCondition();
@@ -145,8 +144,6 @@ public class DuplicateBlockMerging implements IRTransform {
         } else if (term instanceof ReturnInstruction) {
             ReturnInstruction ret = (ReturnInstruction) term;
             return "RET:" + (ret.isVoidReturn() ? "V" : "R");
-        } else if (term instanceof ThrowInstruction) {
-            return "THROW";
         }
         return term.getClass().getSimpleName();
     }

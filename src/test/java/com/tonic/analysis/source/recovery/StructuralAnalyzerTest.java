@@ -205,7 +205,7 @@ class StructuralAnalyzerTest {
             header.addInstruction(branch);
 
             // gotoBlock only has a goto to sharedExit
-            GotoInstruction gotoInstr = new GotoInstruction(sharedExit);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(sharedExit);
             gotoBlock.addInstruction(gotoInstr);
 
             sharedExit.addInstruction(new ReturnInstruction(IntConstant.of(0)));
@@ -864,7 +864,7 @@ class StructuralAnalyzerTest {
             header.addInstruction(branch);
 
             // No increment instruction in noIncrement block
-            GotoInstruction gotoInstr = new GotoInstruction(header);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(header);
             noIncrement.addInstruction(gotoInstr);
 
             exit.addInstruction(new ReturnInstruction(null));
@@ -1089,7 +1089,7 @@ class StructuralAnalyzerTest {
             );
             header.addInstruction(branch);
 
-            GotoInstruction gotoInstr = new GotoInstruction(header);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(header);
             continueBlock.addInstruction(gotoInstr);
 
             exit.addInstruction(new ReturnInstruction(null));
@@ -1124,7 +1124,7 @@ class StructuralAnalyzerTest {
             entry.addSuccessor(gotoBlock);
             gotoBlock.addSuccessor(target);
 
-            GotoInstruction gotoInstr = new GotoInstruction(target);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(target);
             gotoBlock.addInstruction(gotoInstr);
 
             target.addInstruction(new ReturnInstruction(null));
@@ -1526,7 +1526,7 @@ class StructuralAnalyzerTest {
             BinaryOpInstruction add = new BinaryOpInstruction(result, BinaryOp.ADD, a, b);
             nonTrivialGoto.addInstruction(add);
 
-            GotoInstruction gotoInstr = new GotoInstruction(exitBlock);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(exitBlock);
             nonTrivialGoto.addInstruction(gotoInstr);
 
             exitBlock.addInstruction(new ReturnInstruction(IntConstant.of(0)));
@@ -1571,7 +1571,7 @@ class StructuralAnalyzerTest {
             header.addInstruction(branch);
 
             SSAValue exception = new SSAValue(PrimitiveType.INT, "exception");
-            ThrowInstruction throwInstr = new ThrowInstruction(exception);
+            SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
             throwBlock.addInstruction(throwInstr);
 
             continueBlock.addInstruction(new ReturnInstruction(null));

@@ -48,7 +48,7 @@ class DuplicateBlockMergingTest {
         b1.addInstruction(new ConstantInstruction(v1, new IntConstant(1)));
         b2.addInstruction(new ConstantInstruction(v2, new IntConstant(2)));
 
-        entry.addInstruction(new GotoInstruction(b1));
+        entry.addInstruction(SimpleInstruction.createGoto(b1));
         b1.addInstruction(new ReturnInstruction());
         b2.addInstruction(new ReturnInstruction());
 
@@ -77,9 +77,9 @@ class DuplicateBlockMergingTest {
         b1.addInstruction(new ConstantInstruction(v1, new IntConstant(42)));
         b2.addInstruction(new ConstantInstruction(v2, new IntConstant(42)));
 
-        entry.addInstruction(new GotoInstruction(b1));
-        b1.addInstruction(new GotoInstruction(exit));
-        b2.addInstruction(new GotoInstruction(exit));
+        entry.addInstruction(SimpleInstruction.createGoto(b1));
+        b1.addInstruction(SimpleInstruction.createGoto(exit));
+        b2.addInstruction(SimpleInstruction.createGoto(exit));
         exit.addInstruction(new ReturnInstruction(v1));
 
         // Set up CFG edges
@@ -157,12 +157,12 @@ class DuplicateBlockMergingTest {
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
         b1.addInstruction(new ConstantInstruction(v1, new IntConstant(10)));
-        b1.addInstruction(new GotoInstruction(target1));
+        b1.addInstruction(SimpleInstruction.createGoto(target1));
 
         b2.addInstruction(new ConstantInstruction(v2, new IntConstant(10)));
-        b2.addInstruction(new GotoInstruction(target2));
+        b2.addInstruction(SimpleInstruction.createGoto(target2));
 
-        entry.addInstruction(new GotoInstruction(b1));
+        entry.addInstruction(SimpleInstruction.createGoto(b1));
         target1.addInstruction(new ReturnInstruction());
         target2.addInstruction(new ReturnInstruction());
 

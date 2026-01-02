@@ -49,6 +49,7 @@ byte[] bytes = newClass.write();
 | [Visitors](docs/visitors.md) | Traversal patterns |
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
+| [SSA IR Migration](docs/SSA_IR_MIGRATION.md) | API changes from SSA IR redesign |
 | [Analysis APIs](docs/analysis-apis.md) | High-level code analysis and semantic queries |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |

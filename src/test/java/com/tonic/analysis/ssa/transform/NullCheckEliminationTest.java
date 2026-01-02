@@ -66,8 +66,8 @@ class NullCheckEliminationTest {
 
         assertTrue(changed);
         IRInstruction terminator = entry.getInstructions().get(entry.getInstructions().size() - 1);
-        assertTrue(terminator instanceof GotoInstruction);
-        GotoInstruction gotoInstr = (GotoInstruction) terminator;
+        assertTrue(terminator instanceof SimpleInstruction);
+        SimpleInstruction gotoInstr = (SimpleInstruction) terminator;
         assertEquals(nonNullBranch, gotoInstr.getTarget());
     }
 
@@ -101,8 +101,8 @@ class NullCheckEliminationTest {
 
         assertTrue(changed);
         IRInstruction terminator = entry.getInstructions().get(entry.getInstructions().size() - 1);
-        assertTrue(terminator instanceof GotoInstruction);
-        GotoInstruction gotoInstr = (GotoInstruction) terminator;
+        assertTrue(terminator instanceof SimpleInstruction);
+        SimpleInstruction gotoInstr = (SimpleInstruction) terminator;
         assertEquals(nonNullBranch, gotoInstr.getTarget());
     }
 
@@ -135,7 +135,7 @@ class NullCheckEliminationTest {
 
         assertTrue(changed);
         IRInstruction terminator = entry.getInstructions().get(entry.getInstructions().size() - 1);
-        assertTrue(terminator instanceof GotoInstruction);
+        assertTrue(terminator instanceof SimpleInstruction);
     }
 
     // ========== No Change Tests ==========

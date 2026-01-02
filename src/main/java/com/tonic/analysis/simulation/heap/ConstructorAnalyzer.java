@@ -51,15 +51,15 @@ public final class ConstructorAnalyzer {
 
         for (IRBlock block : blocks) {
             for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof PutFieldInstruction) {
-                    PutFieldInstruction putField = (PutFieldInstruction) instr;
-                    if (!putField.isStatic()) {
+                if (instr instanceof FieldAccessInstruction) {
+                    FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+                    if (fieldAccess.isStore() && !fieldAccess.isStatic()) {
                         FieldKey fieldKey = FieldKey.of(
-                            putField.getOwner(),
-                            putField.getName(),
-                            putField.getDescriptor()
+                            fieldAccess.getOwner(),
+                            fieldAccess.getName(),
+                            fieldAccess.getDescriptor()
                         );
-                        SimValue value = resolveValue(putField.getValue(), localBindings, instr);
+                        SimValue value = resolveValue(fieldAccess.getValue(), localBindings, instr);
                         assignments.put(fieldKey, value);
                     }
                 } else if (instr instanceof StoreLocalInstruction) {
@@ -107,9 +107,9 @@ public final class ConstructorAnalyzer {
                 if (instr instanceof InvokeInstruction) {
                     return true;
                 }
-                if (instr instanceof PutFieldInstruction) {
-                    PutFieldInstruction put = (PutFieldInstruction) instr;
-                    if (put.isStatic()) {
+                if (instr instanceof FieldAccessInstruction) {
+                    FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+                    if (fieldAccess.isStore() && fieldAccess.isStatic()) {
                         return true;
                     }
                 }

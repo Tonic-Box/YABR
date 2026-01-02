@@ -411,9 +411,6 @@ class PhiInstructionTest {
         public Integer visitUnaryOp(UnaryOpInstruction unaryOp) { return null; }
 
         @Override
-        public Integer visitGoto(GotoInstruction gotoInstr) { return null; }
-
-        @Override
         public Integer visitBranch(BranchInstruction branch) { return null; }
 
         @Override
@@ -423,25 +420,10 @@ class PhiInstructionTest {
         public Integer visitReturn(ReturnInstruction returnInstr) { return null; }
 
         @Override
-        public Integer visitThrow(ThrowInstruction throwInstr) { return null; }
-
-        @Override
         public Integer visitLoadLocal(LoadLocalInstruction loadLocal) { return null; }
 
         @Override
         public Integer visitStoreLocal(StoreLocalInstruction storeLocal) { return null; }
-
-        @Override
-        public Integer visitGetField(GetFieldInstruction getField) { return null; }
-
-        @Override
-        public Integer visitPutField(PutFieldInstruction putField) { return null; }
-
-        @Override
-        public Integer visitArrayLoad(ArrayLoadInstruction arrayLoad) { return null; }
-
-        @Override
-        public Integer visitArrayStore(ArrayStoreInstruction arrayStore) { return null; }
 
         @Override
         public Integer visitInvoke(InvokeInstruction invoke) { return null; }
@@ -453,25 +435,22 @@ class PhiInstructionTest {
         public Integer visitNewArray(NewArrayInstruction newArray) { return null; }
 
         @Override
-        public Integer visitArrayLength(ArrayLengthInstruction arrayLength) { return null; }
-
-        @Override
-        public Integer visitInstanceOf(InstanceOfInstruction instanceOf) { return null; }
-
-        @Override
-        public Integer visitCast(CastInstruction cast) { return null; }
-
-        @Override
-        public Integer visitMonitorEnter(MonitorEnterInstruction monitorEnter) { return null; }
-
-        @Override
-        public Integer visitMonitorExit(MonitorExitInstruction monitorExit) { return null; }
-
-        @Override
         public Integer visitCopy(CopyInstruction copy) { return null; }
 
         @Override
         public Integer visitConstant(ConstantInstruction constant) { return null; }
+
+        @Override
+        public Integer visitFieldAccess(FieldAccessInstruction fieldAccess) { return null; }
+
+        @Override
+        public Integer visitArrayAccess(ArrayAccessInstruction arrayAccess) { return null; }
+
+        @Override
+        public Integer visitTypeCheck(TypeCheckInstruction typeCheck) { return null; }
+
+        @Override
+        public Integer visitSimple(SimpleInstruction simple) { return null; }
     }
 
     private static class TestConstantValue implements Value {

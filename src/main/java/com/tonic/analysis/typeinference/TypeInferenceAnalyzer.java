@@ -170,14 +170,23 @@ public class TypeInferenceAnalyzer {
             return processNewArray((NewArrayInstruction) instr);
         } else if (instr instanceof InvokeInstruction) {
             return processInvoke((InvokeInstruction) instr, state);
-        } else if (instr instanceof GetFieldInstruction) {
-            return processGetField((GetFieldInstruction) instr, state);
-        } else if (instr instanceof ArrayLoadInstruction) {
-            return processArrayLoad((ArrayLoadInstruction) instr, state);
-        } else if (instr instanceof CastInstruction) {
-            return processCast((CastInstruction) instr, state);
-        } else if (instr instanceof InstanceOfInstruction) {
-            return processInstanceOf((InstanceOfInstruction) instr);
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            if (fieldAccess.isLoad()) {
+                return processFieldAccess(fieldAccess, state);
+            }
+        } else if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+            if (arrayAccess.isLoad()) {
+                return processArrayAccess(arrayAccess, state);
+            }
+        } else if (instr instanceof TypeCheckInstruction) {
+            TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
+            if (typeCheck.isCast()) {
+                return processTypeCheck(typeCheck, state);
+            } else if (typeCheck.isInstanceOf()) {
+                return processTypeCheck(typeCheck, state);
+            }
         } else if (instr instanceof ConstantInstruction) {
             return processConstant((ConstantInstruction) instr);
         } else if (instr instanceof CopyInstruction) {
@@ -270,29 +279,27 @@ public class TypeInferenceAnalyzer {
         return false;
     }
 
-    private TypeState processGetField(GetFieldInstruction instr, Map<SSAValue, TypeState> state) {
+    private TypeState processFieldAccess(FieldAccessInstruction instr, Map<SSAValue, TypeState> state) {
         IRType fieldType = instr.getResult().getType();
         Nullability nullability = fieldType.isReference() ? Nullability.UNKNOWN : Nullability.NOT_NULL;
         return new TypeState(fieldType, nullability);
     }
 
-    private TypeState processArrayLoad(ArrayLoadInstruction instr, Map<SSAValue, TypeState> state) {
+    private TypeState processArrayAccess(ArrayAccessInstruction instr, Map<SSAValue, TypeState> state) {
         IRType elementType = instr.getResult().getType();
         Nullability nullability = elementType.isReference() ? Nullability.UNKNOWN : Nullability.NOT_NULL;
         return new TypeState(elementType, nullability);
     }
 
-    private TypeState processCast(CastInstruction instr, Map<SSAValue, TypeState> state) {
-        IRType targetType = instr.getTargetType();
-        TypeState sourceState = getValueState(instr.getObjectRef(), state);
-
-        // Cast preserves nullability
-        return new TypeState(targetType, sourceState.getNullability());
-    }
-
-    private TypeState processInstanceOf(InstanceOfInstruction instr) {
-        // instanceof always returns a boolean (int in JVM)
-        return TypeState.notNull(PrimitiveType.INT);
+    private TypeState processTypeCheck(TypeCheckInstruction instr, Map<SSAValue, TypeState> state) {
+        if (instr.isCast()) {
+            IRType targetType = instr.getTargetType();
+            TypeState sourceState = getValueState(instr.getOperand(), state);
+            return new TypeState(targetType, sourceState.getNullability());
+        } else if (instr.isInstanceOf()) {
+            return TypeState.notNull(PrimitiveType.INT);
+        }
+        return TypeState.BOTTOM;
     }
 
     private TypeState processConstant(ConstantInstruction instr) {

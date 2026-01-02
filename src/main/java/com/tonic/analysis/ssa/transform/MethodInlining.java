@@ -217,7 +217,7 @@ public class MethodInlining implements ClassTransform {
             callBlock.addSuccessor(inlinedEntry);
 
             callBlock.removeInstruction(invoke);
-            callBlock.addInstruction(new GotoInstruction(inlinedEntry));
+            callBlock.addInstruction(SimpleInstruction.createGoto(inlinedEntry));
 
             return true;
 
@@ -366,7 +366,7 @@ public class MethodInlining implements ClassTransform {
                 retBlock.removeInstruction(ret);
             }
 
-            retBlock.addInstruction(new GotoInstruction(continuationBlock));
+            retBlock.addInstruction(SimpleInstruction.createGoto(continuationBlock));
             retBlock.addSuccessor(continuationBlock);
 
         } else {
@@ -385,7 +385,7 @@ public class MethodInlining implements ClassTransform {
                 }
 
                 retBlock.removeInstruction(ret);
-                retBlock.addInstruction(new GotoInstruction(continuationBlock));
+                retBlock.addInstruction(SimpleInstruction.createGoto(continuationBlock));
                 retBlock.addSuccessor(continuationBlock);
             }
         }

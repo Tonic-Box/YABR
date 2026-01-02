@@ -46,10 +46,10 @@ class JumpThreadingTest {
         method.setEntryBlock(blockA);
 
         // Connect: A jumps to B (empty), B jumps to C
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
-        blockB.addInstruction(new GotoInstruction(blockC));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockC));
         blockB.addSuccessor(blockC);
 
         boolean changed = transform.run(method);
@@ -57,7 +57,7 @@ class JumpThreadingTest {
         assertTrue(changed, "Transform should thread jump through empty block");
 
         // Verify A now jumps directly to C
-        GotoInstruction gotoInstr = (GotoInstruction) blockA.getInstructions().get(0);
+        SimpleInstruction gotoInstr = (SimpleInstruction) blockA.getInstructions().get(0);
         assertEquals(blockC, gotoInstr.getTarget(), "A should now jump directly to C");
     }
 
@@ -74,14 +74,14 @@ class JumpThreadingTest {
         method.setEntryBlock(blockA);
 
         // Connect blocks
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
         // Add instruction to B (making it non-empty)
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue result = new SSAValue(PrimitiveType.INT);
         blockB.addInstruction(new BinaryOpInstruction(result, BinaryOp.ADD, x, IntConstant.of(1)));
-        blockB.addInstruction(new GotoInstruction(blockC));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockC));
         blockB.addSuccessor(blockC);
 
         boolean changed = transform.run(method);
@@ -123,13 +123,13 @@ class JumpThreadingTest {
         method.setEntryBlock(blockA);
 
         // Connect chain
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
-        blockB.addInstruction(new GotoInstruction(blockC));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockC));
         blockB.addSuccessor(blockC);
 
-        blockC.addInstruction(new GotoInstruction(blockD));
+        blockC.addInstruction(SimpleInstruction.createGoto(blockD));
         blockC.addSuccessor(blockD);
 
         boolean changed = transform.run(method);
@@ -153,13 +153,13 @@ class JumpThreadingTest {
         method.setEntryBlock(blockA);
 
         // Connect blocks
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
-        blockC.addInstruction(new GotoInstruction(blockB));
+        blockC.addInstruction(SimpleInstruction.createGoto(blockB));
         blockC.addSuccessor(blockB);
 
-        blockB.addInstruction(new GotoInstruction(blockD));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockD));
         blockB.addSuccessor(blockD);
 
         // This test depends on transform implementation - it may or may not thread
@@ -186,15 +186,15 @@ class JumpThreadingTest {
         method.setEntryBlock(blockA);
 
         // First chain: A -> B (empty) -> C
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
-        blockB.addInstruction(new GotoInstruction(blockC));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockC));
         blockB.addSuccessor(blockC);
 
         // Second chain: D -> E (empty) -> F
-        blockD.addInstruction(new GotoInstruction(blockE));
+        blockD.addInstruction(SimpleInstruction.createGoto(blockE));
         blockD.addSuccessor(blockE);
-        blockE.addInstruction(new GotoInstruction(blockF));
+        blockE.addInstruction(SimpleInstruction.createGoto(blockF));
         blockE.addSuccessor(blockF);
 
         boolean changed = transform.run(method);
@@ -213,10 +213,10 @@ class JumpThreadingTest {
         method.addBlock(blockB);
         method.setEntryBlock(blockA);
 
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
-        blockB.addInstruction(new GotoInstruction(blockA));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockA));
         blockB.addSuccessor(blockA);
 
         // Should complete without infinite loop
@@ -235,10 +235,10 @@ class JumpThreadingTest {
         method.addBlock(blockC);
         method.setEntryBlock(blockA);
 
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
-        blockB.addInstruction(new GotoInstruction(blockC));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockC));
         blockB.addSuccessor(blockC);
 
         // Add instruction to C to make it non-empty

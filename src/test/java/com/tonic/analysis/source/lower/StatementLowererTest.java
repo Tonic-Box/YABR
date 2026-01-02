@@ -197,7 +197,8 @@ class StatementLowererTest {
 
         // Entry should goto condition block
         IRInstruction entryTerm = entryBlock.getTerminator();
-        assertTrue(entryTerm instanceof GotoInstruction);
+        assertTrue(entryTerm instanceof SimpleInstruction &&
+            ((SimpleInstruction) entryTerm).getOp() == SimpleOp.GOTO);
     }
 
     @Test
@@ -248,7 +249,8 @@ class StatementLowererTest {
 
         // Entry should goto body block (not condition)
         IRInstruction entryTerm = entryBlock.getTerminator();
-        assertTrue(entryTerm instanceof GotoInstruction);
+        assertTrue(entryTerm instanceof SimpleInstruction &&
+            ((SimpleInstruction) entryTerm).getOp() == SimpleOp.GOTO);
     }
 
     @Test
@@ -565,7 +567,8 @@ class StatementLowererTest {
         lowerer.lower(syncStmt);
 
         List<IRInstruction> instructions = entryBlock.getInstructions();
-        assertTrue(instructions.stream().anyMatch(i -> i instanceof MonitorEnterInstruction));
+        assertTrue(instructions.stream().anyMatch(i -> i instanceof SimpleInstruction &&
+            ((SimpleInstruction) i).getOp() == SimpleOp.MONITORENTER));
     }
 
     @Test
@@ -577,7 +580,8 @@ class StatementLowererTest {
         lowerer.lower(syncStmt);
 
         List<IRInstruction> instructions = entryBlock.getInstructions();
-        assertTrue(instructions.stream().anyMatch(i -> i instanceof MonitorEnterInstruction));
+        assertTrue(instructions.stream().anyMatch(i -> i instanceof SimpleInstruction &&
+            ((SimpleInstruction) i).getOp() == SimpleOp.MONITORENTER));
         // Monitor exit should not be added after return (terminator present)
     }
 
@@ -590,8 +594,10 @@ class StatementLowererTest {
         lowerer.lower(syncStmt);
 
         List<IRInstruction> instructions = entryBlock.getInstructions();
-        assertTrue(instructions.stream().anyMatch(i -> i instanceof MonitorEnterInstruction));
-        assertTrue(instructions.stream().anyMatch(i -> i instanceof MonitorExitInstruction));
+        assertTrue(instructions.stream().anyMatch(i -> i instanceof SimpleInstruction &&
+            ((SimpleInstruction) i).getOp() == SimpleOp.MONITORENTER));
+        assertTrue(instructions.stream().anyMatch(i -> i instanceof SimpleInstruction &&
+            ((SimpleInstruction) i).getOp() == SimpleOp.MONITOREXIT));
     }
 
     // ========== Break and Continue Tests ==========
@@ -742,7 +748,8 @@ class StatementLowererTest {
 
         IRInstruction terminator = entryBlock.getTerminator();
         assertNotNull(terminator);
-        assertTrue(terminator instanceof ThrowInstruction);
+        assertTrue(terminator instanceof SimpleInstruction &&
+            ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW);
     }
 
     // ========== Labeled Statement Tests ==========
@@ -818,7 +825,8 @@ class StatementLowererTest {
         lowerer.lower(whileStmt);
 
         // Entry should goto condition block
-        assertTrue(entryBlock.getTerminator() instanceof GotoInstruction);
+        assertTrue(entryBlock.getTerminator() instanceof SimpleInstruction &&
+            ((SimpleInstruction) entryBlock.getTerminator()).getOp() == SimpleOp.GOTO);
         assertEquals(1, entryBlock.getSuccessors().size());
     }
 

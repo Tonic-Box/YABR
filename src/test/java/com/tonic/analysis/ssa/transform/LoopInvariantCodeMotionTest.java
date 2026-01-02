@@ -62,7 +62,7 @@ class LoopInvariantCodeMotionTest {
         method.addParameter(a);
         method.addParameter(b);
 
-        GotoInstruction gotoHeader = new GotoInstruction(header);
+        SimpleInstruction gotoHeader = SimpleInstruction.createGoto(header);
         gotoHeader.setBlock(preheader);
         preheader.addInstruction(gotoHeader);
 
@@ -91,7 +91,7 @@ class LoopInvariantCodeMotionTest {
         increment.setBlock(body);
         body.addInstruction(increment);
 
-        GotoInstruction gotoHeaderFromBody = new GotoInstruction(header);
+        SimpleInstruction gotoHeaderFromBody = SimpleInstruction.createGoto(header);
         gotoHeaderFromBody.setBlock(body);
         body.addInstruction(gotoHeaderFromBody);
 
@@ -145,7 +145,7 @@ class LoopInvariantCodeMotionTest {
         header.addSuccessor(exit);
         body.addSuccessor(header);
 
-        GotoInstruction gotoHeader = new GotoInstruction(header);
+        SimpleInstruction gotoHeader = SimpleInstruction.createGoto(header);
         gotoHeader.setBlock(preheader);
         preheader.addInstruction(gotoHeader);
 
@@ -172,7 +172,7 @@ class LoopInvariantCodeMotionTest {
         increment.setBlock(body);
         body.addInstruction(increment);
 
-        GotoInstruction gotoHeaderFromBody = new GotoInstruction(header);
+        SimpleInstruction gotoHeaderFromBody = SimpleInstruction.createGoto(header);
         gotoHeaderFromBody.setBlock(body);
         body.addInstruction(gotoHeaderFromBody);
 
@@ -215,7 +215,7 @@ class LoopInvariantCodeMotionTest {
         add.setBlock(entry);
         entry.addInstruction(add);
 
-        GotoInstruction gotoExit = new GotoInstruction(exit);
+        SimpleInstruction gotoExit = SimpleInstruction.createGoto(exit);
         gotoExit.setBlock(entry);
         entry.addInstruction(gotoExit);
 
@@ -253,7 +253,7 @@ class LoopInvariantCodeMotionTest {
         increment.setBlock(body);
         body.addInstruction(increment);
 
-        GotoInstruction gotoHeader = new GotoInstruction(header);
+        SimpleInstruction gotoHeader = SimpleInstruction.createGoto(header);
         gotoHeader.setBlock(body);
         body.addInstruction(gotoHeader);
 

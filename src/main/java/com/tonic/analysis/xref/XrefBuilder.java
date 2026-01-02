@@ -186,24 +186,15 @@ public class XrefBuilder {
                 .type(XrefType.METHOD_CALL)
                 .build());
 
-        } else if (instr instanceof GetFieldInstruction) {
-            GetFieldInstruction getField = (GetFieldInstruction) instr;
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            XrefType xrefType = fieldAccess.isLoad() ? XrefType.FIELD_READ : XrefType.FIELD_WRITE;
             database.addXref(Xref.builder()
                 .sourceClass(sourceClass)
                 .sourceMethod(sourceMethod, sourceMethodDesc)
                 .instructionIndex(instrIndex)
-                .targetField(getField.getOwner(), getField.getName(), getField.getDescriptor())
-                .type(XrefType.FIELD_READ)
-                .build());
-
-        } else if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction putField = (PutFieldInstruction) instr;
-            database.addXref(Xref.builder()
-                .sourceClass(sourceClass)
-                .sourceMethod(sourceMethod, sourceMethodDesc)
-                .instructionIndex(instrIndex)
-                .targetField(putField.getOwner(), putField.getName(), putField.getDescriptor())
-                .type(XrefType.FIELD_WRITE)
+                .targetField(fieldAccess.getOwner(), fieldAccess.getName(), fieldAccess.getDescriptor())
+                .type(xrefType)
                 .build());
 
         } else if (instr instanceof NewInstruction) {
@@ -217,34 +208,19 @@ public class XrefBuilder {
                 .type(XrefType.CLASS_INSTANTIATE)
                 .build());
 
-        } else if (instr instanceof CastInstruction) {
-            CastInstruction cast = (CastInstruction) instr;
-            IRType targetType = cast.getTargetType();
+        } else if (instr instanceof TypeCheckInstruction) {
+            TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
+            IRType targetType = typeCheck.getTargetType();
             if (targetType != null) {
                 String typeName = extractTypeFromIRType(targetType);
                 if (typeName != null && !isPrimitive(typeName)) {
+                    XrefType xrefType = typeCheck.isCast() ? XrefType.CLASS_CAST : XrefType.CLASS_INSTANCEOF;
                     database.addXref(Xref.builder()
                         .sourceClass(sourceClass)
                         .sourceMethod(sourceMethod, sourceMethodDesc)
                         .instructionIndex(instrIndex)
                         .targetClass(typeName)
-                        .type(XrefType.CLASS_CAST)
-                        .build());
-                }
-            }
-
-        } else if (instr instanceof InstanceOfInstruction) {
-            InstanceOfInstruction instanceOf = (InstanceOfInstruction) instr;
-            IRType checkType = instanceOf.getCheckType();
-            if (checkType != null) {
-                String typeName = extractTypeFromIRType(checkType);
-                if (typeName != null && !isPrimitive(typeName)) {
-                    database.addXref(Xref.builder()
-                        .sourceClass(sourceClass)
-                        .sourceMethod(sourceMethod, sourceMethodDesc)
-                        .instructionIndex(instrIndex)
-                        .targetClass(typeName)
-                        .type(XrefType.CLASS_INSTANCEOF)
+                        .type(xrefType)
                         .build());
                 }
             }

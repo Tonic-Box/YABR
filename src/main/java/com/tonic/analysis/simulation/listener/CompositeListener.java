@@ -153,28 +153,28 @@ public class CompositeListener implements SimulationListener {
     }
 
     @Override
-    public void onFieldRead(GetFieldInstruction instr, SimulationState state) {
+    public void onFieldRead(FieldAccessInstruction instr, SimulationState state) {
         for (SimulationListener listener : listeners) {
             listener.onFieldRead(instr, state);
         }
     }
 
     @Override
-    public void onFieldWrite(PutFieldInstruction instr, SimulationState state) {
+    public void onFieldWrite(FieldAccessInstruction instr, SimulationState state) {
         for (SimulationListener listener : listeners) {
             listener.onFieldWrite(instr, state);
         }
     }
 
     @Override
-    public void onArrayRead(ArrayLoadInstruction instr, SimulationState state) {
+    public void onArrayRead(ArrayAccessInstruction instr, SimulationState state) {
         for (SimulationListener listener : listeners) {
             listener.onArrayRead(instr, state);
         }
     }
 
     @Override
-    public void onArrayWrite(ArrayStoreInstruction instr, SimulationState state) {
+    public void onArrayWrite(ArrayAccessInstruction instr, SimulationState state) {
         for (SimulationListener listener : listeners) {
             listener.onArrayWrite(instr, state);
         }
@@ -209,21 +209,21 @@ public class CompositeListener implements SimulationListener {
     }
 
     @Override
-    public void onException(ThrowInstruction instr, SimulationState state) {
+    public void onException(SimpleInstruction instr, SimulationState state) {
         for (SimulationListener listener : listeners) {
             listener.onException(instr, state);
         }
     }
 
     @Override
-    public void onMonitorEnter(MonitorEnterInstruction instr, SimulationState state) {
+    public void onMonitorEnter(SimpleInstruction instr, SimulationState state) {
         for (SimulationListener listener : listeners) {
             listener.onMonitorEnter(instr, state);
         }
     }
 
     @Override
-    public void onMonitorExit(MonitorExitInstruction instr, SimulationState state) {
+    public void onMonitorExit(SimpleInstruction instr, SimulationState state) {
         for (SimulationListener listener : listeners) {
             listener.onMonitorExit(instr, state);
         }

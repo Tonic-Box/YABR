@@ -59,10 +59,10 @@ class LoopPredicationTest {
         method.setEntryBlock(entry);
 
         entry.addSuccessor(block1);
-        entry.addInstruction(new GotoInstruction(block1));
+        entry.addInstruction(SimpleInstruction.createGoto(block1));
 
         block1.addSuccessor(exit);
-        block1.addInstruction(new GotoInstruction(exit));
+        block1.addInstruction(SimpleInstruction.createGoto(exit));
 
         exit.addInstruction(new ReturnInstruction());
 
@@ -94,7 +94,7 @@ class LoopPredicationTest {
         initInstr.setBlock(preheader);
         preheader.addInstruction(initInstr);
         preheader.addSuccessor(header);
-        preheader.addInstruction(new GotoInstruction(header));
+        preheader.addInstruction(SimpleInstruction.createGoto(header));
 
         // Header: phi(v0 from preheader, v2 from body)
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "v1");
@@ -123,7 +123,7 @@ class LoopPredicationTest {
         phi.addIncoming(incrementResult, body);
 
         body.addSuccessor(header);
-        body.addInstruction(new GotoInstruction(header));
+        body.addInstruction(SimpleInstruction.createGoto(header));
 
         exit.addInstruction(new ReturnInstruction());
 
@@ -164,7 +164,7 @@ class LoopPredicationTest {
         initInstr.setBlock(preheader);
         preheader.addInstruction(initInstr);
         preheader.addSuccessor(header);
-        preheader.addInstruction(new GotoInstruction(header));
+        preheader.addInstruction(SimpleInstruction.createGoto(header));
 
         // Header: phi
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "v1");
@@ -199,7 +199,7 @@ class LoopPredicationTest {
         guardTrue.addInstruction(increment);
         phi.addIncoming(incrementResult, guardTrue);
         guardTrue.addSuccessor(header);
-        guardTrue.addInstruction(new GotoInstruction(header));
+        guardTrue.addInstruction(SimpleInstruction.createGoto(header));
 
         // GuardFalse: error handling
         guardFalse.addInstruction(new ReturnInstruction());
@@ -240,7 +240,7 @@ class LoopPredicationTest {
         initInstr.setBlock(preheader);
         preheader.addInstruction(initInstr);
         preheader.addSuccessor(header);
-        preheader.addInstruction(new GotoInstruction(header));
+        preheader.addInstruction(SimpleInstruction.createGoto(header));
 
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "v1");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -264,7 +264,7 @@ class LoopPredicationTest {
         phi.addIncoming(incrementResult, body);
 
         body.addSuccessor(header);
-        body.addInstruction(new GotoInstruction(header));
+        body.addInstruction(SimpleInstruction.createGoto(header));
 
         exit.addInstruction(new ReturnInstruction());
 

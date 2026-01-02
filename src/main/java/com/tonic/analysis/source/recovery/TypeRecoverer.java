@@ -58,8 +58,12 @@ public class TypeRecoverer {
 
         com.tonic.analysis.ssa.ir.IRInstruction def = ssa.getDefinition();
 
-        if (def instanceof com.tonic.analysis.ssa.ir.InstanceOfInstruction) {
-            return PrimitiveSourceType.BOOLEAN;
+        if (def instanceof com.tonic.analysis.ssa.ir.TypeCheckInstruction) {
+            com.tonic.analysis.ssa.ir.TypeCheckInstruction typeCheck =
+                (com.tonic.analysis.ssa.ir.TypeCheckInstruction) def;
+            if (typeCheck.isInstanceOf()) {
+                return PrimitiveSourceType.BOOLEAN;
+            }
         }
 
         if (def instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction) {

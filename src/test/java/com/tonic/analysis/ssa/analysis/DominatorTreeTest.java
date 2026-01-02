@@ -2,7 +2,6 @@ package com.tonic.analysis.ssa.analysis;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.GotoInstruction;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

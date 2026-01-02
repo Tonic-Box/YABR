@@ -107,8 +107,9 @@ public class FrameGenerator {
                 }
             }
 
-            if (instr instanceof GotoInstruction) {
-                GotoInstruction gotoInstr = (GotoInstruction) instr;
+            if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
+                com.tonic.analysis.instruction.GotoInstruction gotoInstr =
+                    (com.tonic.analysis.instruction.GotoInstruction) instr;
                 int target = offset + gotoInstr.getBranchOffset();
                 if (target > 0) {
                     targets.add(target);
@@ -353,8 +354,9 @@ public class FrameGenerator {
      * @return target offset or -1 if not a jump
      */
     private int getJumpTarget(Instruction instr) {
-        if (instr instanceof GotoInstruction) {
-            GotoInstruction gotoInstr = (GotoInstruction) instr;
+        if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
+            com.tonic.analysis.instruction.GotoInstruction gotoInstr =
+                (com.tonic.analysis.instruction.GotoInstruction) instr;
             return instr.getOffset() + gotoInstr.getBranchOffset();
         }
         if (instr instanceof JsrInstruction) {

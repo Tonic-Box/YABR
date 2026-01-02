@@ -685,7 +685,7 @@ class StackSchedulerTest {
             block2.addInstruction(ret);
 
             // Connect blocks
-            GotoInstruction gotoInstr = new GotoInstruction(block2);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(block2);
             entry.addInstruction(gotoInstr);
             entry.addSuccessor(block2);
 
@@ -728,7 +728,7 @@ class StackSchedulerTest {
             next.addInstruction(ret);
 
             // Connect blocks
-            GotoInstruction gotoInstr = new GotoInstruction(next);
+            SimpleInstruction gotoInstr = SimpleInstruction.createGoto(next);
             entry.addInstruction(gotoInstr);
             entry.addSuccessor(next);
 
@@ -786,11 +786,11 @@ class StackSchedulerTest {
             entry.addSuccessor(falseBlock);
 
             // Add gotos
-            GotoInstruction gotoFromTrue = new GotoInstruction(merge);
+            SimpleInstruction gotoFromTrue = SimpleInstruction.createGoto(merge);
             trueBlock.addInstruction(gotoFromTrue);
             trueBlock.addSuccessor(merge);
 
-            GotoInstruction gotoFromFalse = new GotoInstruction(merge);
+            SimpleInstruction gotoFromFalse = SimpleInstruction.createGoto(merge);
             falseBlock.addInstruction(gotoFromFalse);
             falseBlock.addSuccessor(merge);
 

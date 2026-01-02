@@ -43,8 +43,8 @@ class ControlFlowReducibilityTest {
         method.setEntryBlock(entry);
 
         // Simple reducible flow: entry -> b1 -> b2
-        entry.addInstruction(new GotoInstruction(b1));
-        b1.addInstruction(new GotoInstruction(b2));
+        entry.addInstruction(SimpleInstruction.createGoto(b1));
+        b1.addInstruction(SimpleInstruction.createGoto(b2));
         b2.addInstruction(new ReturnInstruction());
 
         entry.addSuccessor(b1);
@@ -92,7 +92,7 @@ class ControlFlowReducibilityTest {
 
         // Simple loop: entry -> loop -> (loop or exit)
         SSAValue condition = new SSAValue(PrimitiveType.INT);
-        entry.addInstruction(new GotoInstruction(loop));
+        entry.addInstruction(SimpleInstruction.createGoto(loop));
         loop.addInstruction(new ConstantInstruction(condition, new IntConstant(1)));
         loop.addInstruction(new BranchInstruction(CompareOp.IFNE, condition, loop, exit));
         exit.addInstruction(new ReturnInstruction());
@@ -125,8 +125,8 @@ class ControlFlowReducibilityTest {
         SSAValue cond = new SSAValue(PrimitiveType.INT);
         entry.addInstruction(new ConstantInstruction(cond, new IntConstant(0)));
         entry.addInstruction(new BranchInstruction(CompareOp.IFNE, cond, b1, b2));
-        b1.addInstruction(new GotoInstruction(b2));
-        b2.addInstruction(new GotoInstruction(b1));
+        b1.addInstruction(SimpleInstruction.createGoto(b2));
+        b2.addInstruction(SimpleInstruction.createGoto(b1));
 
         entry.addSuccessor(b1);
         entry.addSuccessor(b2);
@@ -174,8 +174,8 @@ class ControlFlowReducibilityTest {
         SSAValue cond = new SSAValue(PrimitiveType.INT);
         entry.addInstruction(new ConstantInstruction(cond, new IntConstant(0)));
         entry.addInstruction(new BranchInstruction(CompareOp.IFNE, cond, b1, b2));
-        b1.addInstruction(new GotoInstruction(merge));
-        b2.addInstruction(new GotoInstruction(merge));
+        b1.addInstruction(SimpleInstruction.createGoto(merge));
+        b2.addInstruction(SimpleInstruction.createGoto(merge));
         merge.addInstruction(new ReturnInstruction());
 
         entry.addSuccessor(b1);
@@ -199,7 +199,7 @@ class ControlFlowReducibilityTest {
         method.addBlock(b1);
         method.setEntryBlock(entry);
 
-        entry.addInstruction(new GotoInstruction(b1));
+        entry.addInstruction(SimpleInstruction.createGoto(b1));
         b1.addInstruction(new ReturnInstruction());
         entry.addSuccessor(b1);
 

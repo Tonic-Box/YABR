@@ -166,7 +166,7 @@ class BitTrackingDCETest {
 
         // Dead operation in entry block
         entry.addInstruction(new ConstantInstruction(v1, new IntConstant(99)));
-        entry.addInstruction(new GotoInstruction(b1));
+        entry.addInstruction(SimpleInstruction.createGoto(b1));
 
         b1.addInstruction(new ConstantInstruction(v2, new IntConstant(100)));
         b1.addInstruction(new ReturnInstruction(v2));
@@ -223,10 +223,10 @@ class BitTrackingDCETest {
         entry.addInstruction(new BranchInstruction(CompareOp.IFNE, cond, b1, b2));
 
         b1.addInstruction(new ConstantInstruction(v1, new IntConstant(1)));
-        b1.addInstruction(new GotoInstruction(merge));
+        b1.addInstruction(SimpleInstruction.createGoto(merge));
 
         b2.addInstruction(new ConstantInstruction(v2, new IntConstant(2)));
-        b2.addInstruction(new GotoInstruction(merge));
+        b2.addInstruction(SimpleInstruction.createGoto(merge));
 
         PhiInstruction phiInstr = new PhiInstruction(phi);
         phiInstr.addIncoming(v1, b1);

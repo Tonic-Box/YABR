@@ -3,7 +3,7 @@ package com.tonic.analysis.source.recovery;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.ssa.ir.BinaryOp;
 import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
-import com.tonic.analysis.ssa.ir.InstanceOfInstruction;
+import com.tonic.analysis.ssa.ir.TypeCheckInstruction;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
@@ -159,7 +159,7 @@ class TypeRecovererTest {
         void recoverTypeWithContext_instanceOfInstruction_returnsBoolean() {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             SSAValue objectRef = new SSAValue(ReferenceType.OBJECT);
-            InstanceOfInstruction instanceOf = new InstanceOfInstruction(
+            TypeCheckInstruction instanceOf = TypeCheckInstruction.createInstanceOf(
                 result, objectRef, ReferenceType.STRING
             );
             result.setDefinition(instanceOf);
@@ -172,7 +172,7 @@ class TypeRecovererTest {
         void recoverTypeWithContext_binaryOpAnd_withBooleanOperand_returnsBoolean() {
             SSAValue left = new SSAValue(PrimitiveType.INT);
             SSAValue leftDef = new SSAValue(PrimitiveType.INT);
-            InstanceOfInstruction instanceOf = new InstanceOfInstruction(
+            TypeCheckInstruction instanceOf = TypeCheckInstruction.createInstanceOf(
                 leftDef, new SSAValue(ReferenceType.OBJECT), ReferenceType.STRING
             );
             leftDef.setDefinition(instanceOf);
@@ -190,7 +190,7 @@ class TypeRecovererTest {
         void recoverTypeWithContext_binaryOpOr_withBooleanOperand_returnsBoolean() {
             SSAValue left = new SSAValue(PrimitiveType.INT);
             SSAValue leftDef = new SSAValue(PrimitiveType.INT);
-            InstanceOfInstruction instanceOf = new InstanceOfInstruction(
+            TypeCheckInstruction instanceOf = TypeCheckInstruction.createInstanceOf(
                 leftDef, new SSAValue(ReferenceType.OBJECT), ReferenceType.STRING
             );
             leftDef.setDefinition(instanceOf);
@@ -208,7 +208,7 @@ class TypeRecovererTest {
         void recoverTypeWithContext_binaryOpXor_withBooleanOperand_returnsBoolean() {
             SSAValue left = new SSAValue(PrimitiveType.INT);
             SSAValue leftDef = new SSAValue(PrimitiveType.INT);
-            InstanceOfInstruction instanceOf = new InstanceOfInstruction(
+            TypeCheckInstruction instanceOf = TypeCheckInstruction.createInstanceOf(
                 leftDef, new SSAValue(ReferenceType.OBJECT), ReferenceType.STRING
             );
             leftDef.setDefinition(instanceOf);

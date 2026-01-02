@@ -222,10 +222,28 @@ public class RedundantCopyElimination implements IRTransform {
      * Checks if an instruction has side effects that could affect local variables.
      */
     private boolean hasSideEffects(IRInstruction instr) {
-        return instr instanceof InvokeInstruction
-                || instr instanceof PutFieldInstruction
-                || instr instanceof ArrayStoreInstruction
-                || instr instanceof MonitorEnterInstruction
-                || instr instanceof MonitorExitInstruction;
+        if (instr instanceof InvokeInstruction) {
+            return true;
+        }
+        if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            if (fieldAccess.isStore()) {
+                return true;
+            }
+        }
+        if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+            if (arrayAccess.isStore()) {
+                return true;
+            }
+        }
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            SimpleOp op = simple.getOp();
+            if (op == SimpleOp.MONITORENTER || op == SimpleOp.MONITOREXIT) {
+                return true;
+            }
+        }
+        return false;
     }
 }

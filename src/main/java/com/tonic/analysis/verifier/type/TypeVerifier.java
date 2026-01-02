@@ -285,16 +285,16 @@ public class TypeVerifier {
         int nextOffset = offset + instr.getLength();
 
         if (opcode == 0xA7) {
-            if (instr instanceof GotoInstruction) {
-                int target = offset + ((GotoInstruction) instr).getBranchOffset();
+            if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
+                int target = offset + ((com.tonic.analysis.instruction.GotoInstruction) instr).getBranchOffset();
                 successors.add(target);
             }
             return successors;
         }
 
         if (opcode == 0xC8) {
-            if (instr instanceof GotoInstruction) {
-                int target = offset + ((GotoInstruction) instr).getBranchOffset();
+            if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
+                int target = offset + ((com.tonic.analysis.instruction.GotoInstruction) instr).getBranchOffset();
                 successors.add(target);
             }
             return successors;

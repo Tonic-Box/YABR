@@ -30,17 +30,19 @@ public class JumpThreading implements IRTransform {
             IRInstruction term = block.getTerminator();
             if (term == null) continue;
 
-            if (term instanceof GotoInstruction) {
-                GotoInstruction gotoInstr = (GotoInstruction) term;
-                IRBlock original = gotoInstr.getTarget();
-                IRBlock ultimate = findUltimateTarget(original);
+            if (term instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) term;
+                if (simple.getOp() == SimpleOp.GOTO) {
+                    IRBlock original = simple.getTarget();
+                    IRBlock ultimate = findUltimateTarget(original);
 
-                if (ultimate != original) {
-                    block.removeSuccessor(original);
-                    block.addSuccessor(ultimate);
-                    gotoInstr.setTarget(ultimate);
-                    updatePhisForThreading(block, original, ultimate);
-                    changed = true;
+                    if (ultimate != original) {
+                        block.removeSuccessor(original);
+                        block.addSuccessor(ultimate);
+                        simple.setTarget(ultimate);
+                        updatePhisForThreading(block, original, ultimate);
+                        changed = true;
+                    }
                 }
             } else if (term instanceof BranchInstruction) {
                 BranchInstruction branch = (BranchInstruction) term;
@@ -127,7 +129,17 @@ public class JumpThreading implements IRTransform {
 
         while (isEmptyGotoBlock(block) && !visited.contains(block)) {
             visited.add(block);
-            block = ((GotoInstruction) block.getTerminator()).getTarget();
+            IRInstruction term = block.getTerminator();
+            if (term instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) term;
+                if (simple.getOp() == SimpleOp.GOTO) {
+                    block = simple.getTarget();
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
         }
 
         return block;
@@ -137,14 +149,21 @@ public class JumpThreading implements IRTransform {
      * Checks if a block is an empty goto block (contains only a goto instruction).
      */
     private boolean isEmptyGotoBlock(IRBlock block) {
-        // Must have no phi instructions
         if (!block.getPhiInstructions().isEmpty()) {
             return false;
         }
 
-        // Must have exactly one instruction that is a goto
         List<IRInstruction> instrs = block.getInstructions();
-        return instrs.size() == 1 && instrs.get(0) instanceof GotoInstruction;
+        if (instrs.size() != 1) {
+            return false;
+        }
+
+        IRInstruction instr = instrs.get(0);
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            return simple.getOp() == SimpleOp.GOTO;
+        }
+        return false;
     }
 
     /**

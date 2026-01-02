@@ -420,7 +420,7 @@ class DataFlowGraphTest {
 
         entry.addInstruction(new NewInstruction(obj, "com/test/MyClass"));
         entry.addInstruction(new ConstantInstruction(value, new IntConstant(42)));
-        PutFieldInstruction putField = new PutFieldInstruction(
+        FieldAccessInstruction putField = FieldAccessInstruction.createStore(
             "com/test/MyClass", "field", "I", obj, value);
         entry.addInstruction(putField);
 
@@ -438,7 +438,7 @@ class DataFlowGraphTest {
         SSAValue value = new SSAValue(PrimitiveType.INT, "value");
 
         entry.addInstruction(new NewInstruction(obj, "com/test/MyClass"));
-        GetFieldInstruction getField = new GetFieldInstruction(
+        FieldAccessInstruction getField = FieldAccessInstruction.createLoad(
             value, "com/test/MyClass", "field", "I", obj);
         entry.addInstruction(getField);
 

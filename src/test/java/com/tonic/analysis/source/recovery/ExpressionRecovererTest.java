@@ -1157,7 +1157,7 @@ class ExpressionRecovererTest {
 
             for (IRBlock block : ir.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof ArrayLoadInstruction) {
+                    if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isLoad()) {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof ArrayAccessExpr);
@@ -1189,7 +1189,7 @@ class ExpressionRecovererTest {
 
             for (IRBlock block : ir.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof ArrayLoadInstruction) {
+                    if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isLoad()) {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof ArrayAccessExpr);
@@ -1220,7 +1220,7 @@ class ExpressionRecovererTest {
 
             for (IRBlock block : ir.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof ArrayLengthInstruction) {
+                    if (instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.ARRAYLENGTH) {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof FieldAccessExpr);
@@ -1288,7 +1288,7 @@ class ExpressionRecovererTest {
 
             for (IRBlock block : ir.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof GetFieldInstruction) {
+                    if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isLoad()) {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof FieldAccessExpr);
@@ -1318,9 +1318,9 @@ class ExpressionRecovererTest {
 
             for (IRBlock block : ir.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof GetFieldInstruction) {
-                        GetFieldInstruction getField = (GetFieldInstruction) instr;
-                        if (getField.isStatic()) {
+                    if (instr instanceof FieldAccessInstruction) {
+                        FieldAccessInstruction getField = (FieldAccessInstruction) instr;
+                        if (getField.isStatic() && getField.isLoad()) {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof FieldAccessExpr);
@@ -1359,7 +1359,7 @@ class ExpressionRecovererTest {
 
             for (IRBlock block : ir.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof CastInstruction) {
+                    if (instr instanceof TypeCheckInstruction && ((TypeCheckInstruction) instr).isCast()) {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof CastExpr);
@@ -1388,7 +1388,7 @@ class ExpressionRecovererTest {
 
             for (IRBlock block : ir.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof InstanceOfInstruction) {
+                    if (instr instanceof TypeCheckInstruction && ((TypeCheckInstruction) instr).isInstanceOf()) {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof InstanceOfExpr);

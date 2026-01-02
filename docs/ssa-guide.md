@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md)
+[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [Migration Guide](SSA_IR_MIGRATION.md)
 
 # SSA Guide
 
@@ -147,7 +147,7 @@ SSAType type = result.getType();    // INT, LONG, OBJECT, etc.
 
 ## IR Instructions
 
-YABR defines 29 IR instruction types:
+YABR defines IR instruction types organized into functional categories. Recent refactoring consolidated symmetric instruction pairs (e.g., GetField/PutField) into unified classes with mode enums. See [SSA IR Migration Guide](SSA_IR_MIGRATION.md) for migration details.
 
 ### Constants and Loads
 
@@ -180,8 +180,9 @@ UnaryOpInstruction un;  // v3 = NEG v1
 // Conditional branch
 BranchInstruction br;  // if v1 EQ v2 goto block_1 else block_2
 
-// Unconditional jump
-GotoInstruction gt;  // goto block_3
+// Unconditional jump (use SimpleInstruction)
+SimpleInstruction gt = SimpleInstruction.createGoto(targetBlock);
+// Check: gt.getOp() == SimpleOp.GOTO
 
 // Return
 ReturnInstruction ret;  // return v5
@@ -193,12 +194,18 @@ SwitchInstruction sw;  // switch v1 [3 cases]
 ### Field Access
 
 ```java
-// Instance field
-GetFieldInstruction get;  // v2 = getfield MyClass.field
-PutFieldInstruction put;  // putfield MyClass.field = v3
+// FieldAccessInstruction combines field reads and writes with AccessMode enum
+FieldAccessInstruction fieldAccess;
 
-// Static field
-// (also represented by GetField/PutField with static flag)
+// Check mode
+fieldAccess.isLoad()   // true for field reads
+fieldAccess.isStore()  // true for field writes
+
+// Factory methods:
+FieldAccessInstruction.createLoad(result, owner, name, desc, objectRef)
+FieldAccessInstruction.createStaticLoad(result, owner, name, desc)
+FieldAccessInstruction.createStore(owner, name, desc, objectRef, value)
+FieldAccessInstruction.createStaticStore(owner, name, desc, value)
 ```
 
 ### Method Invocation
@@ -213,25 +220,44 @@ InvokeInstruction inv;  // v4 = invoke VIRTUAL MyClass.method(2 args)
 ```java
 NewInstruction ni;           // v1 = new MyClass
 NewArrayInstruction na;      // v2 = newarray int
-ArrayLoadInstruction al;     // v3 = arrayload v1[v2]
-ArrayStoreInstruction as;    // arraystore v1[v2] = v3
-ArrayLengthInstruction len;  // v4 = arraylength v1
-CastInstruction cast;        // v5 = checkcast v1 to String
-InstanceOfInstruction iof;   // v6 = instanceof v1 String
+
+// ArrayAccessInstruction combines array reads and writes
+ArrayAccessInstruction arrayAccess;
+// Check mode: arrayAccess.isLoad() or arrayAccess.isStore()
+// Factory methods:
+ArrayAccessInstruction.createLoad(result, array, index)
+ArrayAccessInstruction.createStore(array, index, value)
+
+// TypeCheckInstruction combines cast and instanceof operations
+TypeCheckInstruction typeCheck;
+// Check mode: typeCheck.isCast() or typeCheck.isInstanceOf()
+// Factory methods:
+TypeCheckInstruction.createCast(result, operand, targetType)
+TypeCheckInstruction.createInstanceOf(result, operand, checkType)
+
+// SimpleInstruction for array length and other simple operations
+SimpleInstruction simple;  // For ARRAYLENGTH, MONITORENTER, MONITOREXIT, ATHROW, GOTO
+// Check op: simple.getOp() == SimpleOp.ARRAYLENGTH
+// Factory: SimpleInstruction.createArrayLength(result, array)
 ```
 
 ### Synchronization
 
 ```java
-MonitorEnterInstruction me;  // monitorenter v1
-MonitorExitInstruction mx;   // monitorexit v1
+// Use SimpleInstruction for monitor operations
+SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(objectRef);
+SimpleInstruction monExit = SimpleInstruction.createMonitorExit(objectRef);
+// Check: simple.getOp() == SimpleOp.MONITORENTER / MONITOREXIT
 ```
 
 ### Exception Handling
 
 ```java
-ThrowInstruction th;  // throw v1
+// Use SimpleInstruction for throw
+SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
+// Check: throwInstr.getOp() == SimpleOp.ATHROW
 ```
+
 
 ### Phi Functions
 
@@ -370,7 +396,8 @@ analyzer.printStats();
 
 - [SSA Transforms](ssa-transforms.md) - Optimization passes
 - [Analysis APIs](analysis-apis.md) - Call graph, dependency analysis, type inference, pattern search
+- [SSA IR Migration Guide](SSA_IR_MIGRATION.md) - API changes from the SSA IR redesign
 
 ---
 
-[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md)
+[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [Migration Guide](SSA_IR_MIGRATION.md)

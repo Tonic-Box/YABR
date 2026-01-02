@@ -214,7 +214,8 @@ public class ExpressionLowerer {
         ctx.setCurrentBlock(evalRight);
         Value right = lower(bin.getRight());
         IRBlock rightEndBlock = ctx.getCurrentBlock();
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+        SimpleInstruction gotoInstr = SimpleInstruction.createGoto(mergeBlock);
+        ctx.getCurrentBlock().addInstruction(gotoInstr);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -274,12 +275,12 @@ public class ExpressionLowerer {
         ctx.setCurrentBlock(trueBlock);
         SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
 
         ctx.setCurrentBlock(falseBlock);
         SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -322,12 +323,12 @@ public class ExpressionLowerer {
             ctx.setCurrentBlock(trueBlock);
             SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
 
             ctx.setCurrentBlock(falseBlock);
             SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
-            ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
 
             ctx.setCurrentBlock(mergeBlock);
             SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -427,19 +428,19 @@ public class ExpressionLowerer {
         SSAValue result = ctx.newValue(fieldType);
         String descriptor = fieldType.getDescriptor();
 
+        FieldAccessInstruction instr;
         if (field.isStatic()) {
-            GetFieldInstruction instr = new GetFieldInstruction(
+            instr = FieldAccessInstruction.createStaticLoad(
                 result, field.getOwnerClass(), field.getFieldName(), descriptor
             );
-            ctx.getCurrentBlock().addInstruction(instr);
         } else {
             Expression receiver = field.getReceiver();
             Value receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            GetFieldInstruction instr = new GetFieldInstruction(
+            instr = FieldAccessInstruction.createLoad(
                 result, field.getOwnerClass(), field.getFieldName(), descriptor, receiverVal
             );
-            ctx.getCurrentBlock().addInstruction(instr);
         }
+        ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
     }
@@ -447,19 +448,19 @@ public class ExpressionLowerer {
     private Value lowerFieldStore(FieldAccessExpr field, Value value) {
         String descriptor = field.getType().toIRType().getDescriptor();
 
+        FieldAccessInstruction instr;
         if (field.isStatic()) {
-            PutFieldInstruction instr = new PutFieldInstruction(
+            instr = FieldAccessInstruction.createStaticStore(
                 field.getOwnerClass(), field.getFieldName(), descriptor, value
             );
-            ctx.getCurrentBlock().addInstruction(instr);
         } else {
             Expression receiver = field.getReceiver();
             Value receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            PutFieldInstruction instr = new PutFieldInstruction(
+            instr = FieldAccessInstruction.createStore(
                 field.getOwnerClass(), field.getFieldName(), descriptor, receiverVal, value
             );
-            ctx.getCurrentBlock().addInstruction(instr);
         }
+        ctx.getCurrentBlock().addInstruction(instr);
 
         return value;
     }
@@ -471,7 +472,7 @@ public class ExpressionLowerer {
         IRType elementType = arr.getType().toIRType();
         SSAValue result = ctx.newValue(elementType);
 
-        ArrayLoadInstruction instr = new ArrayLoadInstruction(result, array, index);
+        ArrayAccessInstruction instr = ArrayAccessInstruction.createLoad(result, array, index);
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
@@ -481,7 +482,7 @@ public class ExpressionLowerer {
         Value array = lower(arr.getArray());
         Value index = lower(arr.getIndex());
 
-        ArrayStoreInstruction instr = new ArrayStoreInstruction(array, index, value);
+        ArrayAccessInstruction instr = ArrayAccessInstruction.createStore(array, index, value);
         ctx.getCurrentBlock().addInstruction(instr);
 
         return value;
@@ -559,7 +560,7 @@ public class ExpressionLowerer {
             ReferenceSourceType refType = (ReferenceSourceType) toType;
             IRType resultType = toType.toIRType();
             SSAValue result = ctx.newValue(resultType);
-            CastInstruction instr = new CastInstruction(result, operand, resultType);
+            TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, operand, resultType);
             ctx.getCurrentBlock().addInstruction(instr);
             return result;
         }
@@ -580,12 +581,12 @@ public class ExpressionLowerer {
         ctx.setCurrentBlock(thenBlock);
         Value thenVal = lower(ternary.getThenExpr());
         IRBlock thenEndBlock = ctx.getCurrentBlock();
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
 
         ctx.setCurrentBlock(elseBlock);
         Value elseVal = lower(ternary.getElseExpr());
         IRBlock elseEndBlock = ctx.getCurrentBlock();
-        ctx.getCurrentBlock().addInstruction(new GotoInstruction(mergeBlock));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
 
         ctx.setCurrentBlock(mergeBlock);
         IRType resultType = ternary.getType().toIRType();
@@ -609,7 +610,7 @@ public class ExpressionLowerer {
         }
 
         SSAValue result = ctx.newValue(PrimitiveType.INT);
-        InstanceOfInstruction instr = new InstanceOfInstruction(result, operand, checkType);
+        TypeCheckInstruction instr = TypeCheckInstruction.createInstanceOf(result, operand, checkType);
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
@@ -636,7 +637,8 @@ public class ExpressionLowerer {
             Value elemVal = lower(elem);
             SSAValue indexVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(indexVal, IntConstant.of(i)));
-            ctx.getCurrentBlock().addInstruction(new ArrayStoreInstruction(result, indexVal, elemVal));
+            ArrayAccessInstruction storeInstr = ArrayAccessInstruction.createStore(result, indexVal, elemVal);
+            ctx.getCurrentBlock().addInstruction(storeInstr);
             i++;
         }
 

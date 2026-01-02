@@ -85,7 +85,7 @@ public class InstrumentationFactory {
                 Value boxedValue = boxIfPrimitive(param, instructions);
 
                 // Store in array
-                instructions.add(new ArrayStoreInstruction(arrayRef, indexValue, boxedValue));
+                instructions.add(ArrayAccessInstruction.createStore(arrayRef, indexValue, boxedValue));
             }
 
             arguments.add(arrayRef);
@@ -197,18 +197,10 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-    /**
-     * Creates instructions to invoke a field write hook.
-     *
-     * @param hook the field write hook configuration
-     * @param putField the put field instruction being hooked
-     * @param irMethod the IR method
-     * @param className the class name
-     * @return list of IR instructions to insert
-     */
+
     public List<IRInstruction> createFieldWriteHook(
             FieldWriteHook hook,
-            PutFieldInstruction putField,
+            FieldAccessInstruction fieldAccess,
             IRMethod irMethod,
             String className) {
 
@@ -217,43 +209,43 @@ public class InstrumentationFactory {
         HookDescriptor descriptor = hook.getHookDescriptor();
 
         if (hook.isPassOwner()) {
-            if (putField.isStatic()) {
+            if (fieldAccess.isStatic()) {
                 arguments.add(NullConstant.INSTANCE);
             } else {
-                arguments.add(putField.getObjectRef());
+                arguments.add(fieldAccess.getObjectRef());
             }
         }
 
         if (hook.isPassFieldName()) {
             SSAValue fieldNameValue = new SSAValue(ReferenceType.STRING);
-            instructions.add(new ConstantInstruction(fieldNameValue, new StringConstant(putField.getName())));
+            instructions.add(new ConstantInstruction(fieldNameValue, new StringConstant(fieldAccess.getName())));
             arguments.add(fieldNameValue);
         }
 
         if (hook.isPassNewValue()) {
-            Value newValue = putField.getValue();
+            Value newValue = fieldAccess.getValue();
             Value boxedValue = boxIfPrimitive(newValue, instructions);
             arguments.add(boxedValue);
         }
 
         if (hook.isPassOldValue()) {
-            // Load the old value first
-            SSAValue oldValue = new SSAValue(IRType.fromDescriptor(putField.getDescriptor()));
-            if (putField.isStatic()) {
-                instructions.add(new GetFieldInstruction(oldValue, putField.getOwner(),
-                        putField.getName(), putField.getDescriptor()));
+            SSAValue oldValue = new SSAValue(IRType.fromDescriptor(fieldAccess.getDescriptor()));
+            FieldAccessInstruction loadField;
+            if (fieldAccess.isStatic()) {
+                loadField = FieldAccessInstruction.createStaticLoad(
+                    oldValue, fieldAccess.getOwner(), fieldAccess.getName(), fieldAccess.getDescriptor());
             } else {
-                instructions.add(new GetFieldInstruction(oldValue, putField.getOwner(),
-                        putField.getName(), putField.getDescriptor(), putField.getObjectRef()));
+                loadField = FieldAccessInstruction.createLoad(
+                    oldValue, fieldAccess.getOwner(), fieldAccess.getName(),
+                    fieldAccess.getDescriptor(), fieldAccess.getObjectRef());
             }
+            instructions.add(loadField);
             Value boxedValue = boxIfPrimitive(oldValue, instructions);
             arguments.add(boxedValue);
         }
 
-        // Create the invoke instruction
         SSAValue result = null;
         if (hook.isCanModifyValue()) {
-            // Hook returns new value to use
             result = new SSAValue(ReferenceType.OBJECT);
         }
 
@@ -270,17 +262,10 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-    /**
-     * Creates instructions to invoke an array store hook.
-     *
-     * @param hook the array store hook configuration
-     * @param arrayStore the array store instruction being hooked
-     * @param irMethod the IR method
-     * @return list of IR instructions to insert
-     */
+
     public List<IRInstruction> createArrayStoreHook(
             ArrayStoreHook hook,
-            ArrayStoreInstruction arrayStore,
+            ArrayAccessInstruction arrayAccess,
             IRMethod irMethod) {
 
         List<IRInstruction> instructions = new ArrayList<>();
@@ -288,20 +273,19 @@ public class InstrumentationFactory {
         HookDescriptor descriptor = hook.getHookDescriptor();
 
         if (hook.isPassArray()) {
-            arguments.add(arrayStore.getArray());
+            arguments.add(arrayAccess.getArray());
         }
 
         if (hook.isPassIndex()) {
-            arguments.add(arrayStore.getIndex());
+            arguments.add(arrayAccess.getIndex());
         }
 
         if (hook.isPassValue()) {
-            Value value = arrayStore.getValue();
+            Value value = arrayAccess.getValue();
             Value boxedValue = boxIfPrimitive(value, instructions);
             arguments.add(boxedValue);
         }
 
-        // Create the invoke instruction
         SSAValue result = null;
         if (hook.isCanModifyValue()) {
             result = new SSAValue(ReferenceType.OBJECT);
@@ -320,18 +304,10 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-    /**
-     * Creates instructions to invoke a field read hook.
-     *
-     * @param hook the field read hook configuration
-     * @param getField the get field instruction being hooked
-     * @param irMethod the IR method
-     * @param className the class name
-     * @return list of IR instructions to insert
-     */
+
     public List<IRInstruction> createFieldReadHook(
             FieldReadHook hook,
-            GetFieldInstruction getField,
+            FieldAccessInstruction fieldAccess,
             IRMethod irMethod,
             String className) {
 
@@ -340,29 +316,27 @@ public class InstrumentationFactory {
         HookDescriptor descriptor = hook.getHookDescriptor();
 
         if (hook.isPassOwner()) {
-            if (getField.isStatic()) {
+            if (fieldAccess.isStatic()) {
                 arguments.add(NullConstant.INSTANCE);
             } else {
-                arguments.add(getField.getObjectRef());
+                arguments.add(fieldAccess.getObjectRef());
             }
         }
 
         if (hook.isPassFieldName()) {
             SSAValue fieldNameValue = new SSAValue(ReferenceType.STRING);
-            instructions.add(new ConstantInstruction(fieldNameValue, new StringConstant(getField.getName())));
+            instructions.add(new ConstantInstruction(fieldNameValue, new StringConstant(fieldAccess.getName())));
             arguments.add(fieldNameValue);
         }
 
         if (hook.isPassReadValue()) {
-            // The value read is the result of the GetFieldInstruction
-            SSAValue readValue = getField.getResult();
+            SSAValue readValue = fieldAccess.getResult();
             if (readValue != null) {
                 Value boxedValue = boxIfPrimitive(readValue, instructions);
                 arguments.add(boxedValue);
             }
         }
 
-        // Create the invoke instruction
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
         if (!returnType.equals("V")) {
@@ -382,17 +356,10 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-    /**
-     * Creates instructions to invoke an array load hook.
-     *
-     * @param hook the array load hook configuration
-     * @param arrayLoad the array load instruction being hooked
-     * @param irMethod the IR method
-     * @return list of IR instructions to insert
-     */
+
     public List<IRInstruction> createArrayLoadHook(
             ArrayLoadHook hook,
-            ArrayLoadInstruction arrayLoad,
+            ArrayAccessInstruction arrayAccess,
             IRMethod irMethod) {
 
         List<IRInstruction> instructions = new ArrayList<>();
@@ -400,23 +367,21 @@ public class InstrumentationFactory {
         HookDescriptor descriptor = hook.getHookDescriptor();
 
         if (hook.isPassArray()) {
-            arguments.add(arrayLoad.getArray());
+            arguments.add(arrayAccess.getArray());
         }
 
         if (hook.isPassIndex()) {
-            arguments.add(arrayLoad.getIndex());
+            arguments.add(arrayAccess.getIndex());
         }
 
         if (hook.isPassValue()) {
-            // The value loaded is the result of the ArrayLoadInstruction
-            SSAValue loadedValue = arrayLoad.getResult();
+            SSAValue loadedValue = arrayAccess.getResult();
             if (loadedValue != null) {
                 Value boxedValue = boxIfPrimitive(loadedValue, instructions);
                 arguments.add(boxedValue);
             }
         }
 
-        // Create the invoke instruction
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
         if (!returnType.equals("V")) {
@@ -501,7 +466,7 @@ public class InstrumentationFactory {
                 Value boxedValue = boxIfPrimitive(arg, instructions);
 
                 // Store in array
-                instructions.add(new ArrayStoreInstruction(arrayRef, indexValue, boxedValue));
+                instructions.add(ArrayAccessInstruction.createStore(arrayRef, indexValue, boxedValue));
             }
 
             arguments.add(arrayRef);

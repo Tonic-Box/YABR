@@ -348,7 +348,7 @@ public class LoopPredication implements IRTransform {
         BranchInstruction branch = guard.branch;
         IRBlock block = branch.getBlock();
 
-        GotoInstruction gotoInstr = new GotoInstruction(guard.safeTarget);
+        SimpleInstruction gotoInstr = SimpleInstruction.createGoto(guard.safeTarget);
         gotoInstr.setBlock(block);
 
         int idx = block.getInstructions().indexOf(branch);

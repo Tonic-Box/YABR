@@ -9,7 +9,7 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
-import com.tonic.analysis.ssa.ir.GotoInstruction;
+import com.tonic.analysis.ssa.ir.SimpleInstruction;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -759,10 +759,10 @@ class PathQueryTest {
         IRBlock b2 = new IRBlock("B2");
 
         // Add instructions to make blocks non-empty
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
         b0.addInstruction(new ReturnInstruction());
 
-        b1.addInstruction(new GotoInstruction(b2));
+        b1.addInstruction(SimpleInstruction.createGoto(b2));
         b1.addInstruction(new ReturnInstruction());
 
         b2.addInstruction(new ReturnInstruction());
@@ -796,8 +796,8 @@ class PathQueryTest {
 
         // Add instructions
         b0.addInstruction(new ReturnInstruction());
-        b1.addInstruction(new GotoInstruction(b3));
-        b2.addInstruction(new GotoInstruction(b3));
+        b1.addInstruction(SimpleInstruction.createGoto(b3));
+        b2.addInstruction(SimpleInstruction.createGoto(b3));
         b3.addInstruction(new ReturnInstruction());
 
         method.addBlock(b0);
@@ -830,9 +830,9 @@ class PathQueryTest {
         IRBlock b3 = new IRBlock("B3_exit");
 
         // Add instructions
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
         b1.addInstruction(new ReturnInstruction());
-        b2.addInstruction(new GotoInstruction(b1)); // Back edge
+        b2.addInstruction(SimpleInstruction.createGoto(b1)); // Back edge
         b3.addInstruction(new ReturnInstruction());
 
         method.addBlock(b0);

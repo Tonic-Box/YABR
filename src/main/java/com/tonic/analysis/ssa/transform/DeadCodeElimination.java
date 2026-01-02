@@ -96,16 +96,27 @@ public class DeadCodeElimination implements IRTransform {
     }
 
     private boolean isEssential(IRInstruction instr) {
-        return instr instanceof ReturnInstruction
-                || instr instanceof ThrowInstruction
-                || instr instanceof InvokeInstruction
-                || instr instanceof PutFieldInstruction
-                || instr instanceof ArrayStoreInstruction
-                || instr instanceof MonitorEnterInstruction
-                || instr instanceof MonitorExitInstruction
-                || instr instanceof GotoInstruction
-                || instr instanceof BranchInstruction
-                || instr instanceof SwitchInstruction;
+        if (instr instanceof ReturnInstruction) return true;
+        if (instr instanceof InvokeInstruction) return true;
+        if (instr instanceof BranchInstruction) return true;
+        if (instr instanceof SwitchInstruction) return true;
+
+        if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction access = (FieldAccessInstruction) instr;
+            return access.isStore();
+        }
+        if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction access = (ArrayAccessInstruction) instr;
+            return access.isStore();
+        }
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            SimpleOp op = simple.getOp();
+            return op == SimpleOp.MONITORENTER || op == SimpleOp.MONITOREXIT
+                || op == SimpleOp.ATHROW || op == SimpleOp.GOTO;
+        }
+
+        return false;
     }
 
     private void removeUnreachableBlocks(IRMethod method) {

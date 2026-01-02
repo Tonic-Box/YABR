@@ -141,13 +141,13 @@ public class BytecodeEmitter {
         IRInstruction term = block.getTerminator();
         if (term instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) term;
-            // Prefer false branch as fall-through (allows skipping the goto)
             return branch.getFalseTarget();
         }
-        if (term instanceof GotoInstruction) {
-            GotoInstruction gotoInstr = (GotoInstruction) term;
-            // Goto's target is the only successor - prefer it as fall-through
-            return gotoInstr.getTarget();
+        if (term instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) term;
+            if (simple.getOp() == SimpleOp.GOTO) {
+                return simple.getTarget();
+            }
         }
         return null;
     }
@@ -233,9 +233,9 @@ public class BytecodeEmitter {
         } else if (instr instanceof UnaryOpInstruction) {
             UnaryOpInstruction unaryOp = (UnaryOpInstruction) instr;
             emitUnaryOp(unaryOp);
-        } else if (instr instanceof GotoInstruction) {
-            GotoInstruction gotoInstr = (GotoInstruction) instr;
-            emitGoto(gotoInstr);
+        } else if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            emitSimple(simple);
         } else if (instr instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) instr;
             emitBranch(branch);
@@ -245,38 +245,21 @@ public class BytecodeEmitter {
         } else if (instr instanceof InvokeInstruction) {
             InvokeInstruction invoke = (InvokeInstruction) instr;
             emitInvoke(invoke);
-        } else if (instr instanceof GetFieldInstruction) {
-            GetFieldInstruction getField = (GetFieldInstruction) instr;
-            emitGetField(getField);
-        } else if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction putField = (PutFieldInstruction) instr;
-            emitPutField(putField);
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            emitFieldAccess(fieldAccess);
         } else if (instr instanceof NewInstruction) {
             NewInstruction newInstr = (NewInstruction) instr;
             emitNew(newInstr);
         } else if (instr instanceof NewArrayInstruction) {
             NewArrayInstruction newArray = (NewArrayInstruction) instr;
             emitNewArray(newArray);
-        } else if (instr instanceof ArrayLoadInstruction) {
-            ArrayLoadInstruction arrayLoad = (ArrayLoadInstruction) instr;
-            emitArrayLoad(arrayLoad);
-        } else if (instr instanceof ArrayStoreInstruction) {
-            ArrayStoreInstruction arrayStore = (ArrayStoreInstruction) instr;
-            emitArrayStore(arrayStore);
-        } else if (instr instanceof ArrayLengthInstruction) {
-            emit(Opcode.ARRAYLENGTH.getCode());
-        } else if (instr instanceof ThrowInstruction) {
-            emit(Opcode.ATHROW.getCode());
-        } else if (instr instanceof CastInstruction) {
-            CastInstruction cast = (CastInstruction) instr;
-            emitCast(cast);
-        } else if (instr instanceof InstanceOfInstruction) {
-            InstanceOfInstruction instanceOf = (InstanceOfInstruction) instr;
-            emitInstanceOf(instanceOf);
-        } else if (instr instanceof MonitorEnterInstruction) {
-            emit(Opcode.MONITORENTER.getCode());
-        } else if (instr instanceof MonitorExitInstruction) {
-            emit(Opcode.MONITOREXIT.getCode());
+        } else if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+            emitArrayAccess(arrayAccess);
+        } else if (instr instanceof TypeCheckInstruction) {
+            TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
+            emitTypeCheck(typeCheck);
         } else if (instr instanceof SwitchInstruction) {
             SwitchInstruction switchInstr = (SwitchInstruction) instr;
             emitSwitch(switchInstr);
@@ -292,9 +275,14 @@ public class BytecodeEmitter {
         if (instr instanceof ConstantInstruction ||
             instr instanceof LoadLocalInstruction ||
             instr instanceof StoreLocalInstruction ||
-            instr instanceof GotoInstruction ||
             instr instanceof CopyInstruction) {
             return;
+        }
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            if (simple.getOp() == SimpleOp.GOTO) {
+                return;
+            }
         }
 
         for (Value operand : instr.getOperands()) {
@@ -758,16 +746,6 @@ public class BytecodeEmitter {
         emit(opcode);
     }
 
-    private void emitGoto(GotoInstruction instr) throws IOException {
-        // Skip goto if target is the next block (fall-through optimization)
-        if (instr.getTarget() == nextBlock) {
-            return;
-        }
-        emit(Opcode.GOTO.getCode());
-        pendingJumps.add(new PendingJump(currentOffset, instr.getTarget(), false));
-        emitShort((short) 0);
-    }
-
     private void emitBranch(BranchInstruction instr) throws IOException {
         int opcode;
         switch (instr.getCondition()) {
@@ -926,24 +904,6 @@ public class BytecodeEmitter {
         }
     }
 
-    private void emitGetField(GetFieldInstruction instr) throws IOException {
-        int fieldRef = constPool.findOrAddFieldRef(
-                instr.getOwner(), instr.getName(), instr.getDescriptor()
-        ).getIndex(constPool);
-
-        emit(instr.isStatic() ? Opcode.GETSTATIC.getCode() : Opcode.GETFIELD.getCode());
-        emitShort((short) fieldRef);
-    }
-
-    private void emitPutField(PutFieldInstruction instr) throws IOException {
-        int fieldRef = constPool.findOrAddFieldRef(
-                instr.getOwner(), instr.getName(), instr.getDescriptor()
-        ).getIndex(constPool);
-
-        emit(instr.isStatic() ? Opcode.PUTSTATIC.getCode() : Opcode.PUTFIELD.getCode());
-        emitShort((short) fieldRef);
-    }
-
     private void emitNew(NewInstruction instr) throws IOException {
         int classRef = constPool.findOrAddClass(instr.getClassName()).getIndex(constPool);
         emit(Opcode.NEW.getCode());
@@ -1003,98 +963,132 @@ public class BytecodeEmitter {
         }
     }
 
-    private void emitArrayLoad(ArrayLoadInstruction instr) throws IOException {
-        IRType elemType = instr.getResult().getType();
-        int opcode;
-        if (elemType instanceof PrimitiveType) {
-            PrimitiveType prim = (PrimitiveType) elemType;
-            switch (prim) {
-                case INT:
-                    opcode = Opcode.IALOAD.getCode();
-                    break;
-                case LONG:
-                    opcode = Opcode.LALOAD.getCode();
-                    break;
-                case FLOAT:
-                    opcode = Opcode.FALOAD.getCode();
-                    break;
-                case DOUBLE:
-                    opcode = Opcode.DALOAD.getCode();
-                    break;
-                case BYTE:
-                case BOOLEAN:
-                    opcode = Opcode.BALOAD.getCode();
-                    break;
-                case CHAR:
-                    opcode = Opcode.CALOAD.getCode();
-                    break;
-                case SHORT:
-                    opcode = Opcode.SALOAD.getCode();
-                    break;
-                default:
-                    throw new IllegalStateException("Unknown primitive type: " + prim);
-            }
+    private void emitFieldAccess(FieldAccessInstruction instr) throws IOException {
+        int fieldRef = constPool.findOrAddFieldRef(
+                instr.getOwner(), instr.getName(), instr.getDescriptor()
+        ).getIndex(constPool);
+
+        if (instr.isLoad()) {
+            emit(instr.isStatic() ? Opcode.GETSTATIC.getCode() : Opcode.GETFIELD.getCode());
         } else {
-            opcode = Opcode.AALOAD.getCode();
+            emit(instr.isStatic() ? Opcode.PUTSTATIC.getCode() : Opcode.PUTFIELD.getCode());
         }
-        emit(opcode);
+        emitShort((short) fieldRef);
     }
 
-    private void emitArrayStore(ArrayStoreInstruction instr) throws IOException {
-        IRType elemType = instr.getValue().getType();
-        int opcode;
-        if (elemType instanceof PrimitiveType) {
-            PrimitiveType prim = (PrimitiveType) elemType;
-            switch (prim) {
-                case INT:
-                    opcode = Opcode.IASTORE.getCode();
-                    break;
-                case LONG:
-                    opcode = Opcode.LASTORE.getCode();
-                    break;
-                case FLOAT:
-                    opcode = Opcode.FASTORE.getCode();
-                    break;
-                case DOUBLE:
-                    opcode = Opcode.DASTORE.getCode();
-                    break;
-                case BYTE:
-                case BOOLEAN:
-                    opcode = Opcode.BASTORE.getCode();
-                    break;
-                case CHAR:
-                    opcode = Opcode.CASTORE.getCode();
-                    break;
-                case SHORT:
-                    opcode = Opcode.SASTORE.getCode();
-                    break;
-                default:
-                    throw new IllegalStateException("Unknown primitive type: " + prim);
+    private void emitArrayAccess(ArrayAccessInstruction instr) throws IOException {
+        if (instr.isLoad()) {
+            IRType elemType = instr.getResult().getType();
+            int opcode;
+            if (elemType instanceof PrimitiveType) {
+                PrimitiveType prim = (PrimitiveType) elemType;
+                switch (prim) {
+                    case INT:
+                        opcode = Opcode.IALOAD.getCode();
+                        break;
+                    case LONG:
+                        opcode = Opcode.LALOAD.getCode();
+                        break;
+                    case FLOAT:
+                        opcode = Opcode.FALOAD.getCode();
+                        break;
+                    case DOUBLE:
+                        opcode = Opcode.DALOAD.getCode();
+                        break;
+                    case BYTE:
+                    case BOOLEAN:
+                        opcode = Opcode.BALOAD.getCode();
+                        break;
+                    case CHAR:
+                        opcode = Opcode.CALOAD.getCode();
+                        break;
+                    case SHORT:
+                        opcode = Opcode.SALOAD.getCode();
+                        break;
+                    default:
+                        throw new IllegalStateException("Unknown primitive type: " + prim);
+                }
+            } else {
+                opcode = Opcode.AALOAD.getCode();
             }
+            emit(opcode);
         } else {
-            opcode = Opcode.AASTORE.getCode();
+            IRType elemType = instr.getValue().getType();
+            int opcode;
+            if (elemType instanceof PrimitiveType) {
+                PrimitiveType prim = (PrimitiveType) elemType;
+                switch (prim) {
+                    case INT:
+                        opcode = Opcode.IASTORE.getCode();
+                        break;
+                    case LONG:
+                        opcode = Opcode.LASTORE.getCode();
+                        break;
+                    case FLOAT:
+                        opcode = Opcode.FASTORE.getCode();
+                        break;
+                    case DOUBLE:
+                        opcode = Opcode.DASTORE.getCode();
+                        break;
+                    case BYTE:
+                    case BOOLEAN:
+                        opcode = Opcode.BASTORE.getCode();
+                        break;
+                    case CHAR:
+                        opcode = Opcode.CASTORE.getCode();
+                        break;
+                    case SHORT:
+                        opcode = Opcode.SASTORE.getCode();
+                        break;
+                    default:
+                        throw new IllegalStateException("Unknown primitive type: " + prim);
+                }
+            } else {
+                opcode = Opcode.AASTORE.getCode();
+            }
+            emit(opcode);
         }
-        emit(opcode);
     }
 
-    private void emitCast(CastInstruction instr) throws IOException {
+    private void emitTypeCheck(TypeCheckInstruction instr) throws IOException {
         String typeName = instr.getTargetType().getDescriptor();
         if (typeName.startsWith("L") && typeName.endsWith(";")) {
             typeName = typeName.substring(1, typeName.length() - 1);
         }
         int classRef = constPool.findOrAddClass(typeName).getIndex(constPool);
-        emit(Opcode.CHECKCAST.getCode());
+
+        if (instr.isCast()) {
+            emit(Opcode.CHECKCAST.getCode());
+        } else {
+            emit(Opcode.INSTANCEOF.getCode());
+        }
         emitShort((short) classRef);
     }
 
-    private void emitInstanceOf(InstanceOfInstruction instr) throws IOException {
-        String typeName = instr.getCheckType().getDescriptor();
-        if (typeName.startsWith("L") && typeName.endsWith(";")) {
-            typeName = typeName.substring(1, typeName.length() - 1);
+    private void emitSimple(SimpleInstruction instr) throws IOException {
+        switch (instr.getOp()) {
+            case ARRAYLENGTH:
+                emit(Opcode.ARRAYLENGTH.getCode());
+                break;
+            case MONITORENTER:
+                emit(Opcode.MONITORENTER.getCode());
+                break;
+            case MONITOREXIT:
+                emit(Opcode.MONITOREXIT.getCode());
+                break;
+            case ATHROW:
+                emit(Opcode.ATHROW.getCode());
+                break;
+            case GOTO:
+                if (instr.getTarget() != nextBlock) {
+                    emit(Opcode.GOTO.getCode());
+                    pendingJumps.add(new PendingJump(currentOffset, instr.getTarget(), false));
+                    emitShort((short) 0);
+                }
+                break;
+            default:
+                throw new IllegalStateException("Unknown simple op: " + instr.getOp());
         }
-        int classRef = constPool.findOrAddClass(typeName).getIndex(constPool);
-        emit(Opcode.INSTANCEOF.getCode());
-        emitShort((short) classRef);
     }
 
     private void emitSwitch(SwitchInstruction instr) throws IOException {

@@ -88,8 +88,11 @@ public class DataFlowGraph {
         SSAValue result = instr.getResult();
         if (result == null) {
             // Instructions without results (stores, returns) - create sink nodes
-            if (instr instanceof PutFieldInstruction) {
-                createSinkNode(instr, DataFlowNodeType.FIELD_STORE, blockId, instrIndex);
+            if (instr instanceof FieldAccessInstruction) {
+                FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+                if (fieldAccess.isStore()) {
+                    createSinkNode(instr, DataFlowNodeType.FIELD_STORE, blockId, instrIndex);
+                }
             } else if (instr instanceof ReturnInstruction) {
                 ReturnInstruction ret = (ReturnInstruction) instr;
                 if (!ret.isVoidReturn()) {
@@ -121,8 +124,11 @@ public class DataFlowGraph {
 
     private void createSinkNode(IRInstruction instr, DataFlowNodeType type, int blockId, int instrIndex) {
         String name = type.getDisplayName();
-        if (instr instanceof PutFieldInstruction) {
-            name = "store→" + ((PutFieldInstruction) instr).getName();
+        if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            if (fieldAccess.isStore()) {
+                name = "store→" + fieldAccess.getName();
+            }
         } else if (instr instanceof ReturnInstruction) {
             name = "return";
         }
@@ -163,15 +169,17 @@ public class DataFlowGraph {
             return DataFlowNodeType.PARAM;
         } else if (instr instanceof InvokeInstruction) {
             return DataFlowNodeType.INVOKE_RESULT;
-        } else if (instr instanceof GetFieldInstruction) {
-            return DataFlowNodeType.FIELD_LOAD;
-        } else if (instr instanceof ArrayLoadInstruction) {
-            return DataFlowNodeType.ARRAY_LOAD;
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            return fieldAccess.isLoad() ? DataFlowNodeType.FIELD_LOAD : DataFlowNodeType.LOCAL;
+        } else if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+            return arrayAccess.isLoad() ? DataFlowNodeType.ARRAY_LOAD : DataFlowNodeType.LOCAL;
         } else if (instr instanceof BinaryOpInstruction) {
             return DataFlowNodeType.BINARY_OP;
         } else if (instr instanceof UnaryOpInstruction) {
             return DataFlowNodeType.UNARY_OP;
-        } else if (instr instanceof CastInstruction) {
+        } else if (instr instanceof TypeCheckInstruction) {
             return DataFlowNodeType.CAST;
         } else if (instr instanceof NewInstruction) {
             return DataFlowNodeType.NEW_OBJECT;
@@ -185,10 +193,12 @@ public class DataFlowGraph {
             return DataFlowEdgeType.PHI_INPUT;
         } else if (useInstr instanceof InvokeInstruction) {
             return DataFlowEdgeType.CALL_ARG;
-        } else if (useInstr instanceof PutFieldInstruction) {
-            return DataFlowEdgeType.FIELD_STORE;
-        } else if (useInstr instanceof ArrayStoreInstruction) {
-            return DataFlowEdgeType.ARRAY_STORE;
+        } else if (useInstr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) useInstr;
+            return fieldAccess.isStore() ? DataFlowEdgeType.FIELD_STORE : DataFlowEdgeType.DEF_USE;
+        } else if (useInstr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) useInstr;
+            return arrayAccess.isStore() ? DataFlowEdgeType.ARRAY_STORE : DataFlowEdgeType.DEF_USE;
         } else if (useInstr instanceof BinaryOpInstruction ||
                    useInstr instanceof UnaryOpInstruction) {
             return DataFlowEdgeType.OPERAND;

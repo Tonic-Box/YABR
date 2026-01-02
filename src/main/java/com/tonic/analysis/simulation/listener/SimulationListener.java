@@ -126,36 +126,36 @@ public interface SimulationListener {
     /**
      * Called when a field is read.
      *
-     * @param instr the GETFIELD/GETSTATIC instruction
+     * @param instr the field access instruction (LOAD mode)
      * @param state the current state
      */
-    default void onFieldRead(GetFieldInstruction instr, SimulationState state) {}
+    default void onFieldRead(FieldAccessInstruction instr, SimulationState state) {}
 
     /**
      * Called when a field is written.
      *
-     * @param instr the PUTFIELD/PUTSTATIC instruction
+     * @param instr the field access instruction (STORE mode)
      * @param state the current state
      */
-    default void onFieldWrite(PutFieldInstruction instr, SimulationState state) {}
+    default void onFieldWrite(FieldAccessInstruction instr, SimulationState state) {}
 
     // ========== Array Access Events ==========
 
     /**
      * Called when an array element is read.
      *
-     * @param instr the AALOAD/IALOAD/etc instruction
+     * @param instr the array access instruction (LOAD mode)
      * @param state the current state
      */
-    default void onArrayRead(ArrayLoadInstruction instr, SimulationState state) {}
+    default void onArrayRead(ArrayAccessInstruction instr, SimulationState state) {}
 
     /**
      * Called when an array element is written.
      *
-     * @param instr the AASTORE/IASTORE/etc instruction
+     * @param instr the array access instruction (STORE mode)
      * @param state the current state
      */
-    default void onArrayWrite(ArrayStoreInstruction instr, SimulationState state) {}
+    default void onArrayWrite(ArrayAccessInstruction instr, SimulationState state) {}
 
     // ========== Control Flow Events ==========
 
@@ -200,28 +200,28 @@ public interface SimulationListener {
     /**
      * Called when an exception is thrown.
      *
-     * @param instr the throw instruction
+     * @param instr the simple instruction (ATHROW)
      * @param state the current state
      */
-    default void onException(ThrowInstruction instr, SimulationState state) {}
+    default void onException(SimpleInstruction instr, SimulationState state) {}
 
     // ========== Monitor Events ==========
 
     /**
      * Called when a monitor is entered.
      *
-     * @param instr the monitor enter instruction
+     * @param instr the simple instruction (MONITORENTER)
      * @param state the current state
      */
-    default void onMonitorEnter(MonitorEnterInstruction instr, SimulationState state) {}
+    default void onMonitorEnter(SimpleInstruction instr, SimulationState state) {}
 
     /**
      * Called when a monitor is exited.
      *
-     * @param instr the monitor exit instruction
+     * @param instr the simple instruction (MONITOREXIT)
      * @param state the current state
      */
-    default void onMonitorExit(MonitorExitInstruction instr, SimulationState state) {}
+    default void onMonitorExit(SimpleInstruction instr, SimulationState state) {}
 
     // ========== Heap Tracking Events ==========
 

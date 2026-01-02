@@ -60,8 +60,13 @@ public class StructuralAnalyzer {
         } else if (terminator instanceof SwitchInstruction) {
             SwitchInstruction sw = (SwitchInstruction) terminator;
             analyzeSwitch(block, sw);
-        } else if (terminator instanceof GotoInstruction) {
-            analyzeGoto(block);
+        } else if (terminator instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) terminator;
+            if (simple.getOp() == SimpleOp.GOTO) {
+                analyzeGoto(block);
+            } else {
+                regionInfos.put(block, new RegionInfo(StructuredRegion.SEQUENCE, block));
+            }
         } else {
             regionInfos.put(block, new RegionInfo(StructuredRegion.SEQUENCE, block));
         }
@@ -291,13 +296,19 @@ public class StructuralAnalyzer {
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return false;
 
-        boolean isExit = terminator instanceof ReturnInstruction ||
-                         terminator instanceof ThrowInstruction;
+        boolean isExit = terminator instanceof ReturnInstruction;
+        if (!isExit && terminator instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) terminator;
+            isExit = (simple.getOp() == SimpleOp.ATHROW);
+        }
         if (isExit && block.getSuccessors().isEmpty()) {
             return true;
         }
 
-        if (terminator instanceof GotoInstruction) {
+        boolean isGoto = terminator instanceof SimpleInstruction &&
+                         ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO;
+
+        if (isGoto) {
             List<IRBlock> successors = block.getSuccessors();
             if (successors.size() == 1) {
                 IRBlock target = successors.get(0);
@@ -320,8 +331,12 @@ public class StructuralAnalyzer {
         if (block == null) return false;
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return false;
-        return (terminator instanceof ReturnInstruction || terminator instanceof ThrowInstruction)
-               && block.getSuccessors().isEmpty();
+        boolean isExit = terminator instanceof ReturnInstruction;
+        if (!isExit && terminator instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) terminator;
+            isExit = (simple.getOp() == SimpleOp.ATHROW);
+        }
+        return isExit && block.getSuccessors().isEmpty();
     }
 
     /**
@@ -370,7 +385,10 @@ public class StructuralAnalyzer {
     private boolean hasNonTrivialInstructions(IRBlock block) {
         for (IRInstruction instr : block.getInstructions()) {
             if (instr.isTerminator()) continue;
-            if (instr instanceof GotoInstruction) continue;
+            if (instr instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) instr;
+                if (simple.getOp() == SimpleOp.GOTO) continue;
+            }
 
             return true;
         }
@@ -479,7 +497,9 @@ public class StructuralAnalyzer {
 
         if (block.getInstructions().size() == 1) {
             IRInstruction instr = block.getInstructions().get(0);
-            if (instr instanceof GotoInstruction) {
+            boolean isGotoInstr = instr instanceof SimpleInstruction &&
+                                  ((SimpleInstruction) instr).getOp() == SimpleOp.GOTO;
+            if (isGotoInstr) {
                 List<IRBlock> succs = block.getSuccessors();
                 if (succs.size() == 1 && isExitBlock(succs.get(0))) {
                     return false;

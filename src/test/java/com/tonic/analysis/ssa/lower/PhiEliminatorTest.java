@@ -45,7 +45,7 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(b1);
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
 
         // Add phi in B1
         SSAValue val0 = new SSAValue(PrimitiveType.INT, "x0");
@@ -94,10 +94,10 @@ class PhiEliminatorTest {
         entry.addInstruction(new BranchInstruction(CompareOp.IFNE, condition, left, right));
 
         left.addSuccessor(merge);
-        left.addInstruction(new GotoInstruction(merge));
+        left.addInstruction(SimpleInstruction.createGoto(merge));
 
         right.addSuccessor(merge);
-        right.addInstruction(new GotoInstruction(merge));
+        right.addInstruction(SimpleInstruction.createGoto(merge));
 
         // Add phi with two incoming values
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left_val");
@@ -149,7 +149,7 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(b1);
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
 
         int blockCountBefore = method.getBlocks().size();
         int b0InstrCountBefore = b0.getInstructions().size();
@@ -189,7 +189,7 @@ class PhiEliminatorTest {
 
         // Left has single successor to merge
         left.addSuccessor(merge);
-        left.addInstruction(new GotoInstruction(merge));
+        left.addInstruction(SimpleInstruction.createGoto(merge));
 
         // Merge has phi (causing critical edge)
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
@@ -257,8 +257,8 @@ class PhiEliminatorTest {
         // Verify split block has goto to merge
         IRInstruction terminator = splitBlock.getTerminator();
         assertNotNull(terminator, "Split block should have terminator");
-        assertTrue(terminator instanceof GotoInstruction, "Split block should have goto");
-        assertEquals(merge, ((GotoInstruction) terminator).getTarget(), "Split block should goto merge");
+        assertTrue(terminator instanceof SimpleInstruction, "Split block should have goto");
+        assertEquals(merge, ((SimpleInstruction) terminator).getTarget(), "Split block should goto merge");
 
         // Verify entry's terminator updated to target split block instead of merge
         BranchInstruction updatedBranch = (BranchInstruction) entry.getTerminator();
@@ -327,7 +327,7 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(b1);
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
 
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi");
@@ -365,10 +365,10 @@ class PhiEliminatorTest {
         entry.addInstruction(new BranchInstruction(CompareOp.IFNE, cond, left, right));
 
         left.addSuccessor(merge);
-        left.addInstruction(new GotoInstruction(merge));
+        left.addInstruction(SimpleInstruction.createGoto(merge));
 
         right.addSuccessor(merge);
-        right.addInstruction(new GotoInstruction(merge));
+        right.addInstruction(SimpleInstruction.createGoto(merge));
 
         // Add phi
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left");
@@ -420,7 +420,7 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(b1);
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
 
         // Add two phis
         SSAValue val1 = new SSAValue(PrimitiveType.INT, "val1");
@@ -646,7 +646,7 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(b1);
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
 
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_result");
@@ -693,10 +693,10 @@ class PhiEliminatorTest {
         entry.addInstruction(new BranchInstruction(CompareOp.IFNE, cond, left, right));
 
         left.addSuccessor(merge);
-        left.addInstruction(new GotoInstruction(merge));
+        left.addInstruction(SimpleInstruction.createGoto(merge));
 
         right.addSuccessor(merge);
-        right.addInstruction(new GotoInstruction(merge));
+        right.addInstruction(SimpleInstruction.createGoto(merge));
 
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left");
         SSAValue rightVal = new SSAValue(PrimitiveType.INT, "right");
@@ -745,7 +745,7 @@ class PhiEliminatorTest {
         b0.addInstruction(new BranchInstruction(CompareOp.IFNE, cond, b1, b2));
 
         b1.addSuccessor(b2);
-        b1.addInstruction(new GotoInstruction(b2));
+        b1.addInstruction(SimpleInstruction.createGoto(b2));
 
         // This creates a critical edge that should be split
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
@@ -791,10 +791,10 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(merge);
-        b0.addInstruction(new GotoInstruction(merge));
+        b0.addInstruction(SimpleInstruction.createGoto(merge));
 
         b1.addSuccessor(merge);
-        b1.addInstruction(new GotoInstruction(merge));
+        b1.addInstruction(SimpleInstruction.createGoto(merge));
 
         // Add three phis
         for (int i = 0; i < 3; i++) {
@@ -827,7 +827,7 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(b1);
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
 
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi");
@@ -902,16 +902,16 @@ class PhiEliminatorTest {
         entry.addInstruction(new BranchInstruction(CompareOp.IFNE, cond1, a, b));
 
         a.addSuccessor(merge1);
-        a.addInstruction(new GotoInstruction(merge1));
+        a.addInstruction(SimpleInstruction.createGoto(merge1));
 
         b.addSuccessor(c);
-        b.addInstruction(new GotoInstruction(c));
+        b.addInstruction(SimpleInstruction.createGoto(c));
 
         c.addSuccessor(merge1);
-        c.addInstruction(new GotoInstruction(merge1));
+        c.addInstruction(SimpleInstruction.createGoto(merge1));
 
         merge1.addSuccessor(merge2);
-        merge1.addInstruction(new GotoInstruction(merge2));
+        merge1.addInstruction(SimpleInstruction.createGoto(merge2));
 
         // Add phis at merge1
         SSAValue valA = new SSAValue(PrimitiveType.INT, "valA");
@@ -941,7 +941,7 @@ class PhiEliminatorTest {
         method.setEntryBlock(b0);
 
         b0.addSuccessor(b1);
-        b0.addInstruction(new GotoInstruction(b1));
+        b0.addInstruction(SimpleInstruction.createGoto(b1));
 
         SSAValue val = new SSAValue(PrimitiveType.LONG, "long_val");
         SSAValue phiResult = new SSAValue(PrimitiveType.LONG, "phi_long");

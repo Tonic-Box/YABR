@@ -184,7 +184,7 @@ class SimulationEngineTest {
             method.addBlock(exit);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(loopHeader));
+            entry.addInstruction(SimpleInstruction.createGoto(loopHeader));
             entry.addSuccessor(loopHeader);
 
             SSAValue zero = new SSAValue(PrimitiveType.INT, "zero");
@@ -193,7 +193,7 @@ class SimulationEngineTest {
             loopHeader.addSuccessor(loopBody);
             loopHeader.addSuccessor(exit);
 
-            loopBody.addInstruction(new GotoInstruction(loopHeader));
+            loopBody.addInstruction(SimpleInstruction.createGoto(loopHeader));
             loopBody.addSuccessor(loopHeader);
 
             exit.addInstruction(new ReturnInstruction(null));
@@ -228,10 +228,10 @@ class SimulationEngineTest {
             entry.addSuccessor(path1);
             entry.addSuccessor(path2);
 
-            path1.addInstruction(new GotoInstruction(loopHeader));
+            path1.addInstruction(SimpleInstruction.createGoto(loopHeader));
             path1.addSuccessor(loopHeader);
 
-            path2.addInstruction(new GotoInstruction(loopHeader));
+            path2.addInstruction(SimpleInstruction.createGoto(loopHeader));
             path2.addSuccessor(loopHeader);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "condition");
@@ -278,19 +278,19 @@ class SimulationEngineTest {
 
             SSAValue trueValue = new SSAValue(PrimitiveType.INT, "true_val");
             trueBranch.addInstruction(new ConstantInstruction(trueValue, new IntConstant(10)));
-            trueBranch.addInstruction(new GotoInstruction(merge));
+            trueBranch.addInstruction(SimpleInstruction.createGoto(merge));
             trueBranch.addSuccessor(merge);
 
             SSAValue falseValue = new SSAValue(PrimitiveType.INT, "false_val");
             falseBranch.addInstruction(new ConstantInstruction(falseValue, new IntConstant(20)));
-            falseBranch.addInstruction(new GotoInstruction(merge));
+            falseBranch.addInstruction(SimpleInstruction.createGoto(merge));
             falseBranch.addSuccessor(merge);
 
             PhiInstruction phi = new PhiInstruction(new SSAValue(PrimitiveType.INT, "merged"));
             phi.addIncoming(trueValue, trueBranch);
             phi.addIncoming(falseValue, falseBranch);
             merge.addPhi(phi);
-            merge.addInstruction(new GotoInstruction(exit));
+            merge.addInstruction(SimpleInstruction.createGoto(exit));
             merge.addSuccessor(exit);
 
             exit.addInstruction(new ReturnInstruction(null));
@@ -369,7 +369,7 @@ class SimulationEngineTest {
 
             SSAValue exception = new SSAValue(null, "exception");
             entry.addInstruction(new NewInstruction(exception, "java/lang/RuntimeException"));
-            entry.addInstruction(new ThrowInstruction(exception));
+            entry.addInstruction(SimpleInstruction.createThrow(exception));
 
             SimulationEngine engine = new SimulationEngine(context);
             SimulationResult result = engine.simulate(method);
@@ -399,7 +399,7 @@ class SimulationEngineTest {
 
             SSAValue exception = new SSAValue(null, "exception");
             throwBlock.addInstruction(new NewInstruction(exception, "java/lang/IllegalArgumentException"));
-            throwBlock.addInstruction(new ThrowInstruction(exception));
+            throwBlock.addInstruction(SimpleInstruction.createThrow(exception));
 
             normalPath.addInstruction(new ReturnInstruction(null));
 
@@ -463,17 +463,17 @@ class SimulationEngineTest {
             method.addBlock(exit);
             method.setEntryBlock(entry);
 
-            entry.addInstruction(new GotoInstruction(block1));
+            entry.addInstruction(SimpleInstruction.createGoto(block1));
             entry.addSuccessor(block1);
 
             SSAValue val1 = new SSAValue(PrimitiveType.INT, "val1");
             block1.addInstruction(new ConstantInstruction(val1, new IntConstant(10)));
-            block1.addInstruction(new GotoInstruction(block2));
+            block1.addInstruction(SimpleInstruction.createGoto(block2));
             block1.addSuccessor(block2);
 
             SSAValue val2 = new SSAValue(PrimitiveType.INT, "val2");
             block2.addInstruction(new ConstantInstruction(val2, new IntConstant(20)));
-            block2.addInstruction(new GotoInstruction(exit));
+            block2.addInstruction(SimpleInstruction.createGoto(exit));
             block2.addSuccessor(exit);
 
             exit.addInstruction(new ReturnInstruction(null));

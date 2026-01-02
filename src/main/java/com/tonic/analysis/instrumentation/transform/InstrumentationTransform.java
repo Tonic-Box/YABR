@@ -167,42 +167,35 @@ public class InstrumentationTransform {
         int count = 0;
 
         for (IRBlock block : irMethod.getBlocks()) {
-            // Work with a copy to avoid concurrent modification
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
             int offset = 0;
 
             for (int i = 0; i < instructions.size(); i++) {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof PutFieldInstruction) {
-                    PutFieldInstruction putField = (PutFieldInstruction) instr;
+                if (instr instanceof FieldAccessInstruction) {
+                    FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+                    if (!fieldAccess.isStore()) continue;
 
-                    // Check field-specific filters
-                    if (!matchesFieldFilters(hook.getFilters(), putField)) continue;
-
-                    // Check static/instance filter
-                    if (putField.isStatic() && !hook.isInstrumentStatic()) continue;
-                    if (!putField.isStatic() && !hook.isInstrumentInstance()) continue;
+                    if (!matchesFieldFilters(hook.getFilters(), fieldAccess)) continue;
+                    if (fieldAccess.isStatic() && !hook.isInstrumentStatic()) continue;
+                    if (!fieldAccess.isStatic() && !hook.isInstrumentInstance()) continue;
 
                     List<IRInstruction> hookInstructions = factory.createFieldWriteHook(
-                            hook, putField, irMethod, className);
+                            hook, fieldAccess, irMethod, className);
 
-                    // Insert before the putfield
                     int insertIdx = i + offset;
                     for (int j = 0; j < hookInstructions.size(); j++) {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                     }
                     offset += hookInstructions.size();
 
-                    // Handle value modification if enabled
                     if (hook.isCanModifyValue() && !hookInstructions.isEmpty()) {
                         IRInstruction lastHook = hookInstructions.get(hookInstructions.size() - 1);
                         if (lastHook instanceof InvokeInstruction) {
                             InvokeInstruction hookInvoke = (InvokeInstruction) lastHook;
                             if (hookInvoke.getResult() != null) {
-                                // Unbox if needed and replace the value
-                                // This is simplified - full impl would handle unboxing
-                                putField.replaceOperand(putField.getValue(), hookInvoke.getResult());
+                                fieldAccess.replaceOperand(fieldAccess.getValue(), hookInvoke.getResult());
                             }
                         }
                     }
@@ -225,17 +218,17 @@ public class InstrumentationTransform {
             for (int i = 0; i < instructions.size(); i++) {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof GetFieldInstruction) {
-                    GetFieldInstruction getField = (GetFieldInstruction) instr;
+                if (instr instanceof FieldAccessInstruction) {
+                    FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+                    if (!fieldAccess.isLoad()) continue;
 
-                    if (!matchesFieldFilters(hook.getFilters(), getField)) continue;
-                    if (getField.isStatic() && !hook.isInstrumentStatic()) continue;
-                    if (!getField.isStatic() && !hook.isInstrumentInstance()) continue;
+                    if (!matchesFieldFilters(hook.getFilters(), fieldAccess)) continue;
+                    if (fieldAccess.isStatic() && !hook.isInstrumentStatic()) continue;
+                    if (!fieldAccess.isStatic() && !hook.isInstrumentInstance()) continue;
 
                     List<IRInstruction> hookInstructions = factory.createFieldReadHook(
-                            hook, getField, irMethod, className);
+                            hook, fieldAccess, irMethod, className);
 
-                    // Insert after the getfield
                     int insertIdx = i + offset + 1;
                     for (int j = 0; j < hookInstructions.size(); j++) {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
@@ -260,32 +253,29 @@ public class InstrumentationTransform {
             for (int i = 0; i < instructions.size(); i++) {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof ArrayStoreInstruction) {
-                    ArrayStoreInstruction arrayStore = (ArrayStoreInstruction) instr;
+                if (instr instanceof ArrayAccessInstruction) {
+                    ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+                    if (!arrayAccess.isStore()) continue;
 
-                    // Check array type filter if specified
                     if (hook.getArrayTypeFilter() != null) {
                         // Would need type analysis to check this properly
-                        // For now, skip filter check
                     }
 
                     List<IRInstruction> hookInstructions = factory.createArrayStoreHook(
-                            hook, arrayStore, irMethod);
+                            hook, arrayAccess, irMethod);
 
-                    // Insert before the array store
                     int insertIdx = i + offset;
                     for (int j = 0; j < hookInstructions.size(); j++) {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                     }
                     offset += hookInstructions.size();
 
-                    // Handle value modification if enabled
                     if (hook.isCanModifyValue() && !hookInstructions.isEmpty()) {
                         IRInstruction lastHook = hookInstructions.get(hookInstructions.size() - 1);
                         if (lastHook instanceof InvokeInstruction) {
                             InvokeInstruction hookInvoke = (InvokeInstruction) lastHook;
                             if (hookInvoke.getResult() != null) {
-                                arrayStore.replaceOperand(arrayStore.getValue(), hookInvoke.getResult());
+                                arrayAccess.replaceOperand(arrayAccess.getValue(), hookInvoke.getResult());
                             }
                         }
                     }
@@ -308,13 +298,13 @@ public class InstrumentationTransform {
             for (int i = 0; i < instructions.size(); i++) {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof ArrayLoadInstruction) {
-                    ArrayLoadInstruction arrayLoad = (ArrayLoadInstruction) instr;
+                if (instr instanceof ArrayAccessInstruction) {
+                    ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
+                    if (!arrayAccess.isLoad()) continue;
 
                     List<IRInstruction> hookInstructions = factory.createArrayLoadHook(
-                            hook, arrayLoad, irMethod);
+                            hook, arrayAccess, irMethod);
 
-                    // Insert after the array load
                     int insertIdx = i + offset + 1;
                     for (int j = 0; j < hookInstructions.size(); j++) {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
@@ -378,18 +368,9 @@ public class InstrumentationTransform {
         return 0;
     }
 
-    private boolean matchesFieldFilters(List<InstrumentationFilter> filters, PutFieldInstruction put) {
+    private boolean matchesFieldFilters(List<InstrumentationFilter> filters, FieldAccessInstruction fieldAccess) {
         for (InstrumentationFilter filter : filters) {
-            if (!filter.matchesField(put.getOwner(), put.getName(), put.getDescriptor())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean matchesFieldFilters(List<InstrumentationFilter> filters, GetFieldInstruction get) {
-        for (InstrumentationFilter filter : filters) {
-            if (!filter.matchesField(get.getOwner(), get.getName(), get.getDescriptor())) {
+            if (!filter.matchesField(fieldAccess.getOwner(), fieldAccess.getName(), fieldAccess.getDescriptor())) {
                 return false;
             }
         }

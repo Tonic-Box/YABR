@@ -356,7 +356,7 @@ public class InstructionTranslator {
         Value array = state.pop();
         IRType elemType = getArrayElementType(opcode);
         SSAValue result = new SSAValue(elemType);
-        block.addInstruction(new ArrayLoadInstruction(result, array, index));
+        block.addInstruction(ArrayAccessInstruction.createLoad(result, array, index));
         state.push(result);
     }
 
@@ -394,7 +394,7 @@ public class InstructionTranslator {
         Value value = state.pop();
         Value index = state.pop();
         Value array = state.pop();
-        block.addInstruction(new ArrayStoreInstruction(array, index, value));
+        block.addInstruction(ArrayAccessInstruction.createStore(array, index, value));
     }
 
     /**
@@ -687,7 +687,7 @@ public class InstructionTranslator {
     private void translateGoto(com.tonic.analysis.instruction.GotoInstruction instr, AbstractState state, IRBlock block) {
         int target = instr.getOffset() + instr.getBranchOffset();
         IRBlock targetBlock = offsetToBlock.get(target);
-        block.addInstruction(new com.tonic.analysis.ssa.ir.GotoInstruction(targetBlock));
+        block.addInstruction(SimpleInstruction.createGoto(targetBlock));
     }
 
     /**
@@ -726,7 +726,7 @@ public class InstructionTranslator {
         state.push(returnAddr);
 
         // Jump to the subroutine
-        block.addInstruction(new com.tonic.analysis.ssa.ir.GotoInstruction(subroutineBlock));
+        block.addInstruction(SimpleInstruction.createGoto(subroutineBlock));
     }
 
     /**
@@ -753,14 +753,14 @@ public class InstructionTranslator {
         if (allContinuations.size() == 1) {
             // Single continuation - simple case, just GOTO
             IRBlock continuation = allContinuations.get(0);
-            block.addInstruction(new com.tonic.analysis.ssa.ir.GotoInstruction(continuation));
+            block.addInstruction(SimpleInstruction.createGoto(continuation));
         } else {
             // Multiple possible continuations
             // For now, we handle this by jumping to the first one
             // A more sophisticated approach would use a switch based on the return address
             // but that requires runtime dispatch which SSA doesn't support directly
             IRBlock firstContinuation = allContinuations.get(0);
-            block.addInstruction(new com.tonic.analysis.ssa.ir.GotoInstruction(firstContinuation));
+            block.addInstruction(SimpleInstruction.createGoto(firstContinuation));
         }
     }
 
@@ -808,14 +808,14 @@ public class InstructionTranslator {
         String desc = fieldRef.getDescriptor();
         IRType fieldType = IRType.fromDescriptor(desc);
         SSAValue result = new SSAValue(fieldType);
-        block.addInstruction(new com.tonic.analysis.ssa.ir.GetFieldInstruction(result, owner, name, desc));
+        block.addInstruction(FieldAccessInstruction.createStaticLoad(result, owner, name, desc));
         state.push(result);
     }
 
     private void translatePutStatic(com.tonic.analysis.instruction.PutFieldInstruction instr, AbstractState state, IRBlock block) {
         Value value = state.pop();
         FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(instr.getFieldIndex());
-        block.addInstruction(new com.tonic.analysis.ssa.ir.PutFieldInstruction(
+        block.addInstruction(FieldAccessInstruction.createStaticStore(
                 fieldRef.getOwner(), fieldRef.getName(), fieldRef.getDescriptor(), value));
     }
 
@@ -824,7 +824,7 @@ public class InstructionTranslator {
         FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(instr.getFieldIndex());
         IRType fieldType = IRType.fromDescriptor(fieldRef.getDescriptor());
         SSAValue result = new SSAValue(fieldType);
-        block.addInstruction(new com.tonic.analysis.ssa.ir.GetFieldInstruction(
+        block.addInstruction(FieldAccessInstruction.createLoad(
                 result, fieldRef.getOwner(), fieldRef.getName(), fieldRef.getDescriptor(), objectRef));
         state.push(result);
     }
@@ -833,7 +833,7 @@ public class InstructionTranslator {
         Value value = state.pop();
         Value objectRef = state.pop();
         FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(instr.getFieldIndex());
-        block.addInstruction(new com.tonic.analysis.ssa.ir.PutFieldInstruction(
+        block.addInstruction(FieldAccessInstruction.createStore(
                 fieldRef.getOwner(), fieldRef.getName(), fieldRef.getDescriptor(), objectRef, value));
     }
 
@@ -963,13 +963,13 @@ public class InstructionTranslator {
     private void translateArrayLength(AbstractState state, IRBlock block) {
         Value array = state.pop();
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        block.addInstruction(new com.tonic.analysis.ssa.ir.ArrayLengthInstruction(result, array));
+        block.addInstruction(SimpleInstruction.createArrayLength(result, array));
         state.push(result);
     }
 
     private void translateAThrow(AbstractState state, IRBlock block) {
         Value exception = state.pop();
-        block.addInstruction(new ThrowInstruction(exception));
+        block.addInstruction(SimpleInstruction.createThrow(exception));
     }
 
     private void translateCheckCast(CheckCastInstruction instr, AbstractState state, IRBlock block) {
@@ -977,7 +977,7 @@ public class InstructionTranslator {
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
         IRType targetType = IRType.fromInternalName(classRef.getClassName());
         SSAValue result = new SSAValue(targetType);
-        block.addInstruction(new CastInstruction(result, objectRef, targetType));
+        block.addInstruction(TypeCheckInstruction.createCast(result, objectRef, targetType));
         state.push(result);
     }
 
@@ -986,18 +986,18 @@ public class InstructionTranslator {
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
         IRType checkType = IRType.fromInternalName(classRef.getClassName());
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        block.addInstruction(new com.tonic.analysis.ssa.ir.InstanceOfInstruction(result, objectRef, checkType));
+        block.addInstruction(TypeCheckInstruction.createInstanceOf(result, objectRef, checkType));
         state.push(result);
     }
 
     private void translateMonitorEnter(AbstractState state, IRBlock block) {
         Value objectRef = state.pop();
-        block.addInstruction(new com.tonic.analysis.ssa.ir.MonitorEnterInstruction(objectRef));
+        block.addInstruction(SimpleInstruction.createMonitorEnter(objectRef));
     }
 
     private void translateMonitorExit(AbstractState state, IRBlock block) {
         Value objectRef = state.pop();
-        block.addInstruction(new com.tonic.analysis.ssa.ir.MonitorExitInstruction(objectRef));
+        block.addInstruction(SimpleInstruction.createMonitorExit(objectRef));
     }
 
     private IRType getArrayElementType(int opcode) {

@@ -312,7 +312,7 @@ public class BytecodeLifter {
                 if (i > startIndex && offsetToBlock.containsKey(offset)) {
                     IRBlock nextBlock = offsetToBlock.get(offset);
                     if (!currentBlock.hasTerminator()) {
-                        currentBlock.addInstruction(new com.tonic.analysis.ssa.ir.GotoInstruction(nextBlock));
+                        currentBlock.addInstruction(SimpleInstruction.createGoto(nextBlock));
                     }
                     if (!blockStates.containsKey(nextBlock)) {
                         blockStates.put(nextBlock, state.copy());
@@ -358,9 +358,11 @@ public class BytecodeLifter {
         if (terminator == null) return;
 
         List<IRBlock> successors = new ArrayList<>();
-        if (terminator instanceof com.tonic.analysis.ssa.ir.GotoInstruction) {
-            com.tonic.analysis.ssa.ir.GotoInstruction gotoInstr = (com.tonic.analysis.ssa.ir.GotoInstruction) terminator;
-            successors.add(gotoInstr.getTarget());
+        if (terminator instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) terminator;
+            if (simple.getOp() == SimpleOp.GOTO) {
+                successors.add(simple.getTarget());
+            }
         } else if (terminator instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) terminator;
             successors.add(branch.getTrueTarget());
@@ -493,11 +495,13 @@ public class BytecodeLifter {
             IRInstruction terminator = block.getTerminator();
             if (terminator == null) continue;
 
-            if (terminator instanceof com.tonic.analysis.ssa.ir.GotoInstruction) {
-                com.tonic.analysis.ssa.ir.GotoInstruction gotoInstr = (com.tonic.analysis.ssa.ir.GotoInstruction) terminator;
-                IRBlock target = gotoInstr.getTarget();
-                if (target != null) {
-                    block.addSuccessor(target);
+            if (terminator instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) terminator;
+                if (simple.getOp() == SimpleOp.GOTO) {
+                    IRBlock target = simple.getTarget();
+                    if (target != null) {
+                        block.addSuccessor(target);
+                    }
                 }
             } else if (terminator instanceof BranchInstruction) {
                 BranchInstruction branch = (BranchInstruction) terminator;

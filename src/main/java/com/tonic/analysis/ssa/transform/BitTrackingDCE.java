@@ -57,16 +57,20 @@ public class BitTrackingDCE implements IRTransform {
             for (Value arg : invoke.getArguments()) {
                 demandAllBits(arg);
             }
-        } else if (instr instanceof ArrayStoreInstruction) {
-            ArrayStoreInstruction store = (ArrayStoreInstruction) instr;
-            demandAllBits(store.getArray());
-            demandAllBits(store.getIndex());
-            demandAllBits(store.getValue());
-        } else if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction put = (PutFieldInstruction) instr;
-            demandAllBits(put.getValue());
-            if (put.getObjectRef() != null) {
-                demandAllBits(put.getObjectRef());
+        } else if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction access = (ArrayAccessInstruction) instr;
+            if (access.isStore()) {
+                demandAllBits(access.getArray());
+                demandAllBits(access.getIndex());
+                demandAllBits(access.getValue());
+            }
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction access = (FieldAccessInstruction) instr;
+            if (access.isStore()) {
+                demandAllBits(access.getValue());
+                if (access.getObjectRef() != null) {
+                    demandAllBits(access.getObjectRef());
+                }
             }
         } else if (instr instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) instr;
@@ -254,11 +258,22 @@ public class BitTrackingDCE implements IRTransform {
     }
 
     private boolean hasSideEffects(IRInstruction instr) {
-        return instr instanceof InvokeInstruction
-            || instr instanceof PutFieldInstruction
-            || instr instanceof ArrayStoreInstruction
-            || instr instanceof MonitorEnterInstruction
-            || instr instanceof MonitorExitInstruction
-            || instr instanceof ThrowInstruction;
+        if (instr instanceof InvokeInstruction) return true;
+
+        if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction access = (FieldAccessInstruction) instr;
+            return access.isStore();
+        }
+        if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction access = (ArrayAccessInstruction) instr;
+            return access.isStore();
+        }
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            SimpleOp op = simple.getOp();
+            return op == SimpleOp.MONITORENTER || op == SimpleOp.MONITOREXIT || op == SimpleOp.ATHROW;
+        }
+
+        return false;
     }
 }

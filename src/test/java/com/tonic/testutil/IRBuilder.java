@@ -447,7 +447,7 @@ public class IRBuilder {
      */
     public IRBuilder goTo(String targetName) {
         IRBlock target = getBlock(targetName);
-        GotoInstruction inst = new GotoInstruction(target);
+        SimpleInstruction inst = SimpleInstruction.createGoto(target);
         currentBlock.addInstruction(inst);
         currentBlock.addSuccessor(target);
         return this;

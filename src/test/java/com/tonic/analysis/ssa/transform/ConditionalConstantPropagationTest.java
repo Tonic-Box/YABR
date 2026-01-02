@@ -72,8 +72,8 @@ class ConditionalConstantPropagationTest {
         // Branch should be converted to goto
         assertTrue(changed);
         IRInstruction term = entry.getTerminator();
-        assertTrue(term instanceof GotoInstruction);
-        GotoInstruction gotoInstr = (GotoInstruction) term;
+        assertTrue(term instanceof SimpleInstruction);
+        SimpleInstruction gotoInstr = (SimpleInstruction) term;
         assertEquals(trueBlock, gotoInstr.getTarget());
     }
 
@@ -110,8 +110,8 @@ class ConditionalConstantPropagationTest {
 
         assertTrue(changed);
         IRInstruction term = entry.getTerminator();
-        assertTrue(term instanceof GotoInstruction);
-        GotoInstruction gotoInstr = (GotoInstruction) term;
+        assertTrue(term instanceof SimpleInstruction);
+        SimpleInstruction gotoInstr = (SimpleInstruction) term;
         assertEquals(falseBlock, gotoInstr.getTarget());
     }
 

@@ -400,7 +400,7 @@ class VariableRenamerTest {
         SSAValue value = new SSAValue(PrimitiveType.INT, "val");
         StoreLocalInstruction store = new StoreLocalInstruction(0, value);
         entry.addInstruction(store);
-        entry.addInstruction(new GotoInstruction(child));
+        entry.addInstruction(SimpleInstruction.createGoto(child));
 
         // Load in child - should see parent's definition
         SSAValue loadResult = new SSAValue(PrimitiveType.INT, "loaded");
@@ -441,15 +441,15 @@ class VariableRenamerTest {
         // Store in entry
         SSAValue entryVal = new SSAValue(PrimitiveType.INT, "entry_val");
         entry.addInstruction(new StoreLocalInstruction(0, entryVal));
-        entry.addInstruction(new GotoInstruction(left));
+        entry.addInstruction(SimpleInstruction.createGoto(left));
 
         // Store in left branch
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left_val");
         left.addInstruction(new StoreLocalInstruction(0, leftVal));
-        left.addInstruction(new GotoInstruction(merge));
+        left.addInstruction(SimpleInstruction.createGoto(merge));
 
         // Right branch has no store
-        right.addInstruction(new GotoInstruction(merge));
+        right.addInstruction(SimpleInstruction.createGoto(merge));
 
         merge.addInstruction(new ReturnInstruction());
 
@@ -482,10 +482,10 @@ class VariableRenamerTest {
         SSAValue v2 = new SSAValue(PrimitiveType.INT, "v2");
 
         entry.addInstruction(new StoreLocalInstruction(0, v1));
-        entry.addInstruction(new GotoInstruction(child1));
+        entry.addInstruction(SimpleInstruction.createGoto(child1));
 
         child1.addInstruction(new StoreLocalInstruction(0, v2));
-        child1.addInstruction(new GotoInstruction(child2));
+        child1.addInstruction(SimpleInstruction.createGoto(child2));
 
         // Load in child2 should get v2
         SSAValue loadResult = new SSAValue(PrimitiveType.INT, "result");
@@ -527,13 +527,13 @@ class VariableRenamerTest {
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left_val");
         SSAValue rightVal = new SSAValue(PrimitiveType.INT, "right_val");
 
-        entry.addInstruction(new GotoInstruction(left));
+        entry.addInstruction(SimpleInstruction.createGoto(left));
 
         left.addInstruction(new StoreLocalInstruction(0, leftVal));
-        left.addInstruction(new GotoInstruction(merge));
+        left.addInstruction(SimpleInstruction.createGoto(merge));
 
         right.addInstruction(new StoreLocalInstruction(0, rightVal));
-        right.addInstruction(new GotoInstruction(merge));
+        right.addInstruction(SimpleInstruction.createGoto(merge));
 
         // Phi in merge for variable 0
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_0");
@@ -564,7 +564,7 @@ class VariableRenamerTest {
 
         SSAValue value = new SSAValue(PrimitiveType.INT, "val");
         entry.addInstruction(new StoreLocalInstruction(0, value));
-        entry.addInstruction(new GotoInstruction(block));
+        entry.addInstruction(SimpleInstruction.createGoto(block));
 
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_0");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -594,7 +594,7 @@ class VariableRenamerTest {
 
         SSAValue value = new SSAValue(PrimitiveType.INT, "val");
         entry.addInstruction(new StoreLocalInstruction(0, value));
-        entry.addInstruction(new GotoInstruction(block));
+        entry.addInstruction(SimpleInstruction.createGoto(block));
 
         // Phi with v0_0 name (already renamed)
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "v0_0");
@@ -670,7 +670,7 @@ class VariableRenamerTest {
         PhiInstruction phi0 = new PhiInstruction(phi0Result);
         PhiInstruction phi1 = new PhiInstruction(phi1Result);
 
-        entry.addInstruction(new GotoInstruction(loop));
+        entry.addInstruction(SimpleInstruction.createGoto(loop));
 
         loop.addPhi(phi0);
         loop.addPhi(phi1);
@@ -680,7 +680,7 @@ class VariableRenamerTest {
         SSAValue newVal1 = new SSAValue(PrimitiveType.INT, "new_val1");
         loop.addInstruction(new StoreLocalInstruction(0, newVal0));
         loop.addInstruction(new StoreLocalInstruction(1, newVal1));
-        loop.addInstruction(new GotoInstruction(exit));
+        loop.addInstruction(SimpleInstruction.createGoto(exit));
 
         exit.addInstruction(new ReturnInstruction());
 

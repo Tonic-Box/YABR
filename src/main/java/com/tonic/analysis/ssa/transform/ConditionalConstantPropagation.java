@@ -37,7 +37,7 @@ public class ConditionalConstantPropagation implements IRTransform {
                     IRBlock targetBlock = constantResult ? branch.getTrueTarget() : branch.getFalseTarget();
                     IRBlock deadBlock = constantResult ? branch.getFalseTarget() : branch.getTrueTarget();
 
-                    GotoInstruction gotoInstr = new GotoInstruction(targetBlock);
+                    SimpleInstruction gotoInstr = SimpleInstruction.createGoto(targetBlock);
                     gotoInstr.setBlock(block);
 
                     int idx = block.getInstructions().indexOf(branch);

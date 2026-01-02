@@ -380,17 +380,19 @@ public class PatternSearch {
                         }
 
                         // Check for field access on nullable receiver
-                        if (instr instanceof GetFieldInstruction) {
-                            GetFieldInstruction gfi = (GetFieldInstruction) instr;
-                            var obj = gfi.getObjectRef();
-                            if (obj instanceof com.tonic.analysis.ssa.value.SSAValue) {
-                                TypeState state = typeAnalyzer.getTypeState(
-                                    (com.tonic.analysis.ssa.value.SSAValue) obj);
-                                if (state.getNullability() == Nullability.UNKNOWN ||
-                                    state.getNullability() == Nullability.NULL) {
-                                    results.add(new SearchResult(cf, method, instr, -1,
-                                        "potential null dereference: field access on nullable"));
-                                    if (results.size() >= maxResults) return results;
+                        if (instr instanceof FieldAccessInstruction) {
+                            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+                            if (fieldAccess.isLoad()) {
+                                var obj = fieldAccess.getObjectRef();
+                                if (obj instanceof com.tonic.analysis.ssa.value.SSAValue) {
+                                    TypeState state = typeAnalyzer.getTypeState(
+                                        (com.tonic.analysis.ssa.value.SSAValue) obj);
+                                    if (state.getNullability() == Nullability.UNKNOWN ||
+                                        state.getNullability() == Nullability.NULL) {
+                                        results.add(new SearchResult(cf, method, instr, -1,
+                                            "potential null dereference: field access on nullable"));
+                                        if (results.size() >= maxResults) return results;
+                                    }
                                 }
                             }
                         }
@@ -482,20 +484,24 @@ public class PatternSearch {
         if (instr instanceof InvokeInstruction) {
             InvokeInstruction invoke = (InvokeInstruction) instr;
             return "call " + invoke.getOwner() + "." + invoke.getName();
-        } else if (instr instanceof GetFieldInstruction) {
-            GetFieldInstruction gfi = (GetFieldInstruction) instr;
-            return "read " + gfi.getOwner() + "." + gfi.getName();
-        } else if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction pfi = (PutFieldInstruction) instr;
-            return "write " + pfi.getOwner() + "." + pfi.getName();
+        } else if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
+            String op = fieldAccess.isLoad() ? "read" : "write";
+            return op + " " + fieldAccess.getOwner() + "." + fieldAccess.getName();
         } else if (instr instanceof NewInstruction) {
             return "new " + ((NewInstruction) instr).getClassName();
-        } else if (instr instanceof InstanceOfInstruction) {
-            return "instanceof " + ((InstanceOfInstruction) instr).getCheckType();
-        } else if (instr instanceof CastInstruction) {
-            return "cast to " + ((CastInstruction) instr).getTargetType();
-        } else if (instr instanceof ThrowInstruction) {
-            return "throw";
+        } else if (instr instanceof TypeCheckInstruction) {
+            TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
+            if (typeCheck.isInstanceOf()) {
+                return "instanceof " + typeCheck.getTargetType();
+            } else {
+                return "cast to " + typeCheck.getTargetType();
+            }
+        } else if (instr instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) instr;
+            if (simple.getOp() == SimpleOp.ATHROW) {
+                return "throw";
+            }
         } else if (instr instanceof ReturnInstruction) {
             return "return";
         }

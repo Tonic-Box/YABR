@@ -232,10 +232,20 @@ public class IRMethodCloner {
             return new ReturnInstruction(mapValue(ri.getReturnValue()));
         }
 
-        if (instr instanceof GotoInstruction) {
-            GotoInstruction gi = (GotoInstruction) instr;
-            IRBlock target = blockMapping.get(gi.getTarget());
-            return new GotoInstruction(target);
+        if (instr instanceof SimpleInstruction) {
+            SimpleInstruction si = (SimpleInstruction) instr;
+            switch (si.getOp()) {
+                case GOTO:
+                    return SimpleInstruction.createGoto(blockMapping.get(si.getTarget()));
+                case ATHROW:
+                    return SimpleInstruction.createThrow(mapValue(si.getOperand()));
+                case ARRAYLENGTH:
+                    return SimpleInstruction.createArrayLength(cloneValue((SSAValue) si.getResult()), mapValue(si.getOperand()));
+                case MONITORENTER:
+                    return SimpleInstruction.createMonitorEnter(mapValue(si.getOperand()));
+                case MONITOREXIT:
+                    return SimpleInstruction.createMonitorExit(mapValue(si.getOperand()));
+            }
         }
 
         if (instr instanceof BranchInstruction) {
@@ -312,103 +322,77 @@ public class IRMethodCloner {
             }
         }
 
-        if (instr instanceof ArrayLoadInstruction) {
-            ArrayLoadInstruction ali = (ArrayLoadInstruction) instr;
-            return new ArrayLoadInstruction(
-                    cloneValue(ali.getResult()),
-                    mapValue(ali.getArray()),
-                    mapValue(ali.getIndex())
-            );
-        }
-
-        if (instr instanceof ArrayStoreInstruction) {
-            ArrayStoreInstruction asi = (ArrayStoreInstruction) instr;
-            return new ArrayStoreInstruction(
-                    mapValue(asi.getArray()),
-                    mapValue(asi.getIndex()),
-                    mapValue(asi.getValue())
-            );
-        }
-
-        if (instr instanceof ArrayLengthInstruction) {
-            ArrayLengthInstruction ali = (ArrayLengthInstruction) instr;
-            return new ArrayLengthInstruction(
-                    cloneValue(ali.getResult()),
-                    mapValue(ali.getArray())
-            );
-        }
-
-        if (instr instanceof GetFieldInstruction) {
-            GetFieldInstruction gfi = (GetFieldInstruction) instr;
-            if (gfi.isStatic()) {
-                return new GetFieldInstruction(
-                        cloneValue(gfi.getResult()),
-                        gfi.getOwner(),
-                        gfi.getName(),
-                        gfi.getDescriptor()
+        if (instr instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction aai = (ArrayAccessInstruction) instr;
+            if (aai.isLoad()) {
+                return ArrayAccessInstruction.createLoad(
+                        cloneValue((SSAValue) aai.getResult()),
+                        mapValue(aai.getArray()),
+                        mapValue(aai.getIndex())
                 );
             } else {
-                return new GetFieldInstruction(
-                        cloneValue(gfi.getResult()),
-                        gfi.getOwner(),
-                        gfi.getName(),
-                        gfi.getDescriptor(),
-                        mapValue(gfi.getObjectRef())
+                return ArrayAccessInstruction.createStore(
+                        mapValue(aai.getArray()),
+                        mapValue(aai.getIndex()),
+                        mapValue(aai.getValue())
                 );
             }
         }
 
-        if (instr instanceof PutFieldInstruction) {
-            PutFieldInstruction pfi = (PutFieldInstruction) instr;
-            if (pfi.isStatic()) {
-                return new PutFieldInstruction(
-                        pfi.getOwner(),
-                        pfi.getName(),
-                        pfi.getDescriptor(),
-                        mapValue(pfi.getValue())
-                );
+        if (instr instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fai = (FieldAccessInstruction) instr;
+            if (fai.isLoad()) {
+                if (fai.isStatic()) {
+                    return FieldAccessInstruction.createStaticLoad(
+                            cloneValue((SSAValue) fai.getResult()),
+                            fai.getOwner(),
+                            fai.getName(),
+                            fai.getDescriptor()
+                    );
+                } else {
+                    return FieldAccessInstruction.createLoad(
+                            cloneValue((SSAValue) fai.getResult()),
+                            fai.getOwner(),
+                            fai.getName(),
+                            fai.getDescriptor(),
+                            mapValue(fai.getObjectRef())
+                    );
+                }
             } else {
-                return new PutFieldInstruction(
-                        pfi.getOwner(),
-                        pfi.getName(),
-                        pfi.getDescriptor(),
-                        mapValue(pfi.getObjectRef()),
-                        mapValue(pfi.getValue())
-                );
+                if (fai.isStatic()) {
+                    return FieldAccessInstruction.createStaticStore(
+                            fai.getOwner(),
+                            fai.getName(),
+                            fai.getDescriptor(),
+                            mapValue(fai.getValue())
+                    );
+                } else {
+                    return FieldAccessInstruction.createStore(
+                            fai.getOwner(),
+                            fai.getName(),
+                            fai.getDescriptor(),
+                            mapValue(fai.getObjectRef()),
+                            mapValue(fai.getValue())
+                    );
+                }
             }
         }
 
-        if (instr instanceof CastInstruction) {
-            CastInstruction ci = (CastInstruction) instr;
-            return new CastInstruction(
-                    cloneValue(ci.getResult()),
-                    mapValue(ci.getObjectRef()),
-                    ci.getTargetType()
-            );
-        }
-
-        if (instr instanceof InstanceOfInstruction) {
-            InstanceOfInstruction ioi = (InstanceOfInstruction) instr;
-            return new InstanceOfInstruction(
-                    cloneValue(ioi.getResult()),
-                    mapValue(ioi.getObjectRef()),
-                    ioi.getCheckType()
-            );
-        }
-
-        if (instr instanceof ThrowInstruction) {
-            ThrowInstruction ti = (ThrowInstruction) instr;
-            return new ThrowInstruction(mapValue(ti.getException()));
-        }
-
-        if (instr instanceof MonitorEnterInstruction) {
-            MonitorEnterInstruction mei = (MonitorEnterInstruction) instr;
-            return new MonitorEnterInstruction(mapValue(mei.getObjectRef()));
-        }
-
-        if (instr instanceof MonitorExitInstruction) {
-            MonitorExitInstruction mxi = (MonitorExitInstruction) instr;
-            return new MonitorExitInstruction(mapValue(mxi.getObjectRef()));
+        if (instr instanceof TypeCheckInstruction) {
+            TypeCheckInstruction tci = (TypeCheckInstruction) instr;
+            if (tci.isCast()) {
+                return TypeCheckInstruction.createCast(
+                        cloneValue((SSAValue) tci.getResult()),
+                        mapValue(tci.getOperand()),
+                        tci.getTargetType()
+                );
+            } else {
+                return TypeCheckInstruction.createInstanceOf(
+                        cloneValue((SSAValue) tci.getResult()),
+                        mapValue(tci.getOperand()),
+                        tci.getTargetType()
+                );
+            }
         }
 
         if (instr instanceof LoadLocalInstruction) {

@@ -44,7 +44,7 @@ class BlockMergingTest {
         method.setEntryBlock(blockA);
 
         // Connect blocks
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
         // Add some instructions to verify merging
@@ -93,9 +93,9 @@ class BlockMergingTest {
         method.setEntryBlock(blockA);
 
         // Connect blocks
-        blockA.addInstruction(new GotoInstruction(blockC));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockC));
         blockA.addSuccessor(blockC);
-        blockB.addInstruction(new GotoInstruction(blockC));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockC));
         blockB.addSuccessor(blockC);
 
         boolean changed = transform.run(method);
@@ -135,9 +135,9 @@ class BlockMergingTest {
         method.setEntryBlock(blockA);
 
         // Connect blocks
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
-        blockB.addInstruction(new GotoInstruction(blockC));
+        blockB.addInstruction(SimpleInstruction.createGoto(blockC));
         blockB.addSuccessor(blockC);
 
         int initialBlockCount = method.getBlocks().size();
@@ -164,7 +164,7 @@ class BlockMergingTest {
         SSAValue result2 = new SSAValue(PrimitiveType.INT);
 
         blockA.addInstruction(new BinaryOpInstruction(result1, BinaryOp.ADD, x, IntConstant.of(1)));
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
         blockB.addInstruction(new BinaryOpInstruction(result2, BinaryOp.MUL, y, IntConstant.of(2)));
@@ -204,11 +204,11 @@ class BlockMergingTest {
         method.setEntryBlock(blockA);
 
         // Connect first pair
-        blockA.addInstruction(new GotoInstruction(blockB));
+        blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
         // Connect second pair
-        blockC.addInstruction(new GotoInstruction(blockD));
+        blockC.addInstruction(SimpleInstruction.createGoto(blockD));
         blockC.addSuccessor(blockD);
 
         int initialBlockCount = method.getBlocks().size();

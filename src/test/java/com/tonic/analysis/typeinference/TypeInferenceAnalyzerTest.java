@@ -373,7 +373,7 @@ class TypeInferenceAnalyzerTest {
         SSAValue v1 = new SSAValue(targetType, "v1");
 
         entry.addInstruction(new NewInstruction(v0, "java/lang/Object"));
-        CastInstruction cast = new CastInstruction(v1, v0, targetType);
+        TypeCheckInstruction cast = TypeCheckInstruction.createCast(v1, v0, targetType);
         entry.addInstruction(cast);
 
         analyzer.analyze();
@@ -391,7 +391,7 @@ class TypeInferenceAnalyzerTest {
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
 
         entry.addInstruction(new NewInstruction(v0, "java/lang/Object"));
-        InstanceOfInstruction iof = new InstanceOfInstruction(v1, v0,
+        TypeCheckInstruction iof = TypeCheckInstruction.createInstanceOf(v1, v0,
             new ReferenceType("java/lang/String"));
         entry.addInstruction(iof);
 
