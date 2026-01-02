@@ -1,5 +1,7 @@
 package com.tonic.analysis.source.ast.stmt;
 
+import com.tonic.analysis.source.ast.expr.Expression;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -7,14 +9,24 @@ import java.util.Objects;
 
 /**
  * Represents a case clause in a switch statement.
+ * Supports both integer labels (regular switch) and expression labels (enum switch).
  */
 public final class SwitchCase {
     private final List<Integer> labels;
+    private final List<Expression> expressionLabels;
     private final boolean isDefault;
     private final List<Statement> statements;
 
     public SwitchCase(List<Integer> labels, boolean isDefault, List<Statement> statements) {
         this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
+        this.expressionLabels = Collections.emptyList();
+        this.isDefault = isDefault;
+        this.statements = statements != null ? Collections.unmodifiableList(new ArrayList<>(statements)) : Collections.emptyList();
+    }
+
+    public SwitchCase(List<Integer> labels, List<Expression> expressionLabels, boolean isDefault, List<Statement> statements) {
+        this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
+        this.expressionLabels = expressionLabels != null ? Collections.unmodifiableList(new ArrayList<>(expressionLabels)) : Collections.emptyList();
         this.isDefault = isDefault;
         this.statements = statements != null ? Collections.unmodifiableList(new ArrayList<>(statements)) : Collections.emptyList();
     }
@@ -40,8 +52,23 @@ public final class SwitchCase {
         return new SwitchCase(labels, false, statements);
     }
 
+    /**
+     * Creates a case with expression labels (for enum switches).
+     */
+    public static SwitchCase ofExpressions(List<Expression> expressionLabels, List<Statement> statements) {
+        return new SwitchCase(Collections.emptyList(), expressionLabels, false, statements);
+    }
+
     public List<Integer> labels() {
         return labels;
+    }
+
+    public List<Expression> expressionLabels() {
+        return expressionLabels;
+    }
+
+    public boolean hasExpressionLabels() {
+        return !expressionLabels.isEmpty();
     }
 
     public boolean isDefault() {

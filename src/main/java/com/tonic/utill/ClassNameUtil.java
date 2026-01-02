@@ -40,7 +40,8 @@ public final class ClassNameUtil {
             return internalName;
         }
         int lastSlash = internalName.lastIndexOf('/');
-        return lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;
+        String simpleName = lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;
+        return simpleName.replace('$', '.');
     }
 
     /**

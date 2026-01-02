@@ -1,6 +1,10 @@
 package com.tonic.analysis.source.decompile;
 
+import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.MethodCallExpr;
+import com.tonic.analysis.source.ast.expr.SuperExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.transform.ASTTransform;
@@ -11,6 +15,7 @@ import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
+import com.tonic.analysis.source.recovery.SwitchMapAnalyzer;
 import com.tonic.analysis.source.recovery.TypeRecoverer;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -24,11 +29,14 @@ import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.ConstantValueAttribute;
 import com.tonic.parser.attribute.RuntimeVisibleAnnotationsAttribute;
 import com.tonic.parser.attribute.RuntimeInvisibleAnnotationsAttribute;
+import com.tonic.parser.attribute.SignatureAttribute;
 import com.tonic.parser.attribute.anotation.Annotation;
 import com.tonic.parser.attribute.anotation.ElementValue;
 import com.tonic.parser.attribute.anotation.ElementValuePair;
 import com.tonic.parser.attribute.anotation.EnumConst;
 import com.tonic.parser.constpool.*;
+import com.tonic.parser.util.DescriptorParser;
+import com.tonic.parser.util.TypeInfo;
 import com.tonic.utill.ClassNameUtil;
 import com.tonic.utill.Modifiers;
 
@@ -54,6 +62,7 @@ public class ClassDecompiler {
     private final ControlFlowSimplifier astSimplifier;
     private final DeadVariableEliminator deadVarEliminator;
     private final DeadStoreEliminator deadStoreEliminator;
+    private final Set<String> usedTypes = new TreeSet<>();
 
     public ClassDecompiler(ClassFile classFile) {
         this(classFile, DecompilerConfig.defaults());
@@ -150,29 +159,35 @@ public class ClassDecompiler {
      * Decompiles the entire class to the given writer.
      */
     public void decompile(IndentingWriter writer) {
-        // Package declaration
+        analyzeSwitchMaps();
+        usedTypes.clear();
+
         String className = classFile.getClassName();
         String packageName = ClassNameUtil.getPackageNameAsSource(className);
+
+        IndentingWriter bodyWriter = new IndentingWriter(new StringWriter());
+        emitClassBody(bodyWriter, className);
+        String bodyContent = bodyWriter.toString();
+
         if (!packageName.isEmpty()) {
             writer.writeLine("package " + packageName + ";");
             writer.newLine();
         }
 
-        // Import statements (only when using simple names)
         if (!emitterConfig.isUseFullyQualifiedNames()) {
             emitImports(writer, className);
         }
 
-        // Class annotations
-        emitClassAnnotations(writer);
+        writer.writeRaw(bodyContent);
+    }
 
-        // Class declaration
+    private void emitClassBody(IndentingWriter writer, String className) {
+        emitClassAnnotations(writer);
         emitClassDeclaration(writer);
         writer.writeLine(" {");
         writer.newLine();
         writer.indent();
 
-        // Fields
         List<FieldEntry> fields = classFile.getFields();
         if (!fields.isEmpty()) {
             for (FieldEntry field : fields) {
@@ -181,34 +196,33 @@ public class ClassDecompiler {
             writer.newLine();
         }
 
-        // Static initializer
         MethodEntry clinit = findMethod("<clinit>");
         if (clinit != null && clinit.getCodeAttribute() != null) {
             emitStaticInitializer(writer, clinit);
             writer.newLine();
         }
 
-        // Constructors and methods
         List<MethodEntry> constructors = new ArrayList<>();
         List<MethodEntry> methods = new ArrayList<>();
 
         for (MethodEntry method : classFile.getMethods()) {
-            if (method.getName().equals("<clinit>")) {
-                continue; // Already handled
-            } else if (method.getName().equals("<init>")) {
+            String methodName = method.getName();
+            if (methodName.equals("<clinit>")) {
+                continue;
+            } else if (methodName.equals("<init>")) {
                 constructors.add(method);
+            } else if (isSyntheticLambdaMethod(methodName)) {
+                continue;
             } else {
                 methods.add(method);
             }
         }
 
-        // Emit constructors
         for (MethodEntry ctor : constructors) {
             emitConstructor(writer, ctor);
             writer.newLine();
         }
 
-        // Emit methods
         for (MethodEntry method : methods) {
             emitMethod(writer, method);
             writer.newLine();
@@ -216,6 +230,36 @@ public class ClassDecompiler {
 
         writer.dedent();
         writer.writeLine("}");
+    }
+
+    private void analyzeSwitchMaps() {
+        boolean hasSwitchMapField = false;
+        for (FieldEntry field : classFile.getFields()) {
+            String name = field.getName();
+            if (name != null && name.startsWith("$SwitchMap$")) {
+                hasSwitchMapField = true;
+                break;
+            }
+        }
+
+        if (!hasSwitchMapField) {
+            return;
+        }
+
+        MethodEntry clinit = findMethod("<clinit>");
+        if (clinit == null || clinit.getCodeAttribute() == null) {
+            return;
+        }
+
+        try {
+            IRMethod ir = ssa.lift(clinit);
+            applyBaselineTransforms(ir);
+            List<IRMethod> methods = new ArrayList<>();
+            methods.add(ir);
+            SwitchMapAnalyzer.analyzeClass(classFile.getFields(), methods);
+        } catch (Exception e) {
+            // Switch map analysis failed, continue without it
+        }
     }
 
     private void emitClassDeclaration(IndentingWriter writer) {
@@ -281,13 +325,11 @@ public class ClassDecompiler {
     }
 
     private void emitField(IndentingWriter writer, FieldEntry field) {
-        // Field annotations
         emitFieldAnnotations(writer, field);
 
         int access = field.getAccess();
         StringBuilder sb = new StringBuilder();
 
-        // Modifiers
         if (Modifiers.isPublic(access)) sb.append("public ");
         if (Modifiers.isPrivate(access)) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
@@ -296,14 +338,11 @@ public class ClassDecompiler {
         if (Modifiers.isVolatile(access)) sb.append("volatile ");
         if (Modifiers.isTransient(access)) sb.append("transient ");
 
-        // Type
-        String typeStr = typeRecoverer.recoverType(field.getDesc()).toJavaSource();
+        String typeStr = trackAndFormatType(getFieldType(field));
         sb.append(typeStr).append(" ");
 
-        // Name
         sb.append(field.getName());
 
-        // Recover constant value from ConstantValue attribute if present
         String constantValue = getConstantValue(field);
         if (constantValue != null) {
             sb.append(" = ").append(constantValue);
@@ -311,6 +350,29 @@ public class ClassDecompiler {
 
         sb.append(";");
         writer.writeLine(sb.toString());
+    }
+
+    private com.tonic.analysis.source.ast.type.SourceType getFieldType(FieldEntry field) {
+        String signature = getSignature(field.getAttributes());
+        if (signature != null) {
+            return typeRecoverer.recoverGenericType(signature);
+        }
+        return typeRecoverer.recoverType(field.getDesc());
+    }
+
+    private String getSignature(List<Attribute> attributes) {
+        if (attributes == null) return null;
+        for (Attribute attr : attributes) {
+            if (attr instanceof SignatureAttribute) {
+                SignatureAttribute sigAttr = (SignatureAttribute) attr;
+                int sigIndex = sigAttr.getSignatureIndex();
+                Item<?> item = classFile.getConstPool().getItem(sigIndex);
+                if (item instanceof Utf8Item) {
+                    return ((Utf8Item) item).getValue();
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -469,6 +531,25 @@ public class ClassDecompiler {
         }
     }
 
+    private void removeRedundantSuper(BlockStmt body) {
+        List<Statement> stmts = body.getStatements();
+        for (int i = 0; i < stmts.size(); i++) {
+            Statement stmt = stmts.get(i);
+            if (stmt instanceof ExprStmt) {
+                Expression expr = ((ExprStmt) stmt).getExpression();
+                if (expr instanceof MethodCallExpr) {
+                    MethodCallExpr call = (MethodCallExpr) expr;
+                    if ("super".equals(call.getMethodName()) &&
+                        call.getReceiver() == null &&
+                        call.getArguments().isEmpty()) {
+                        stmts.remove(i);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     private void emitConstructor(IndentingWriter writer, MethodEntry ctor) {
         // Constructor annotations
         emitMethodAnnotations(writer, ctor);
@@ -481,14 +562,16 @@ public class ClassDecompiler {
         if (Modifiers.isPrivate(access)) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
 
-        // Simple class name as constructor name
         String fullName = classFile.getClassName();
         String simpleName = ClassNameUtil.getSimpleNameWithInnerClasses(fullName);
         sb.append(simpleName);
 
-        // Parameters
+        String desc = ctor.getDesc();
+        String signature = getSignature(ctor.getAttributes());
+        String sigOrDesc = signature != null ? signature : desc;
+
         sb.append("(");
-        sb.append(formatParameters(ctor.getDesc()));
+        sb.append(formatParameters(sigOrDesc, signature != null));
         sb.append(")");
 
         // Throws clause (TODO: could extract from Exceptions attribute)
@@ -511,6 +594,8 @@ public class ClassDecompiler {
             astSimplifier.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            removeRedundantSuper(body);
+            removeTrailingReturn(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile constructor: " + e.getMessage());
@@ -539,17 +624,17 @@ public class ClassDecompiler {
         if (Modifiers.isSynchronized(access)) sb.append("synchronized ");
         if (Modifiers.isNative(access)) sb.append("native ");
 
-        // Return type
         String desc = method.getDesc();
-        String returnType = extractReturnType(desc);
+        String signature = getSignature(method.getAttributes());
+        String sigOrDesc = signature != null ? signature : desc;
+
+        String returnType = extractReturnType(sigOrDesc, signature != null);
         sb.append(returnType).append(" ");
 
-        // Method name
         sb.append(method.getName());
 
-        // Parameters
         sb.append("(");
-        sb.append(formatParameters(desc));
+        sb.append(formatParameters(sigOrDesc, signature != null));
         sb.append(")");
 
         writer.write(sb.toString());
@@ -573,6 +658,7 @@ public class ClassDecompiler {
             astSimplifier.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            removeTrailingReturn(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile: " + e.getMessage());
@@ -583,11 +669,11 @@ public class ClassDecompiler {
     }
 
     private void emitBlockContents(IndentingWriter writer, BlockStmt block) {
-        // Use SourceEmitter to emit the block contents (without the outer braces)
         SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
         for (com.tonic.analysis.source.ast.stmt.Statement stmt : block.getStatements()) {
             stmt.accept(emitter);
         }
+        usedTypes.addAll(emitter.getUsedTypes());
     }
 
     private MethodEntry findMethod(String name) {
@@ -601,6 +687,7 @@ public class ClassDecompiler {
 
     private String formatClassName(String internalName) {
         if (internalName == null) return "";
+        usedTypes.add(internalName);
         if (emitterConfig.isUseFullyQualifiedNames()) {
             return ClassNameUtil.toSourceName(internalName);
         }
@@ -616,26 +703,93 @@ public class ClassDecompiler {
         }
     }
 
-    private String extractReturnType(String desc) {
-        int parenEnd = desc.indexOf(')');
+    private String extractReturnType(String desc, boolean isSignature) {
+        String workDesc = desc;
+        if (isSignature && workDesc.startsWith("<")) {
+            int depth = 1;
+            int i = 1;
+            while (i < workDesc.length() && depth > 0) {
+                char c = workDesc.charAt(i);
+                if (c == '<') depth++;
+                else if (c == '>') depth--;
+                i++;
+            }
+            workDesc = workDesc.substring(i);
+        }
+
+        int parenEnd = findClosingParen(workDesc);
         if (parenEnd < 0) return "void";
-        String returnDesc = desc.substring(parenEnd + 1);
-        return typeRecoverer.recoverType(returnDesc).toJavaSource();
+        String returnDesc = workDesc.substring(parenEnd + 1);
+
+        if (returnDesc.startsWith("^")) {
+            int semi = returnDesc.indexOf(';');
+            if (semi > 0) returnDesc = returnDesc.substring(semi + 1);
+        }
+
+        if (isSignature) {
+            return trackAndFormatType(typeRecoverer.recoverGenericType(returnDesc));
+        }
+        return trackAndFormatType(typeRecoverer.recoverType(returnDesc));
     }
 
-    private String formatParameters(String desc) {
-        int parenStart = desc.indexOf('(');
-        int parenEnd = desc.indexOf(')');
+    private int findClosingParen(String s) {
+        int depth = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') {
+                depth--;
+                if (depth == 0) return i;
+            }
+        }
+        return -1;
+    }
+
+    private String trackAndFormatType(com.tonic.analysis.source.ast.type.SourceType type) {
+        recordTypeFromSourceType(type);
+        return type.toJavaSource();
+    }
+
+    private void recordTypeFromSourceType(com.tonic.analysis.source.ast.type.SourceType type) {
+        if (type instanceof com.tonic.analysis.source.ast.type.ReferenceSourceType) {
+            com.tonic.analysis.source.ast.type.ReferenceSourceType refType =
+                (com.tonic.analysis.source.ast.type.ReferenceSourceType) type;
+            usedTypes.add(refType.getInternalName());
+            for (com.tonic.analysis.source.ast.type.SourceType typeArg : refType.getTypeArguments()) {
+                recordTypeFromSourceType(typeArg);
+            }
+        } else if (type instanceof com.tonic.analysis.source.ast.type.ArraySourceType) {
+            com.tonic.analysis.source.ast.type.ArraySourceType arrType =
+                (com.tonic.analysis.source.ast.type.ArraySourceType) type;
+            recordTypeFromSourceType(arrType.getElementType());
+        }
+    }
+
+    private String formatParameters(String desc, boolean isSignature) {
+        String workDesc = desc;
+        if (isSignature && workDesc.startsWith("<")) {
+            int depth = 1;
+            int idx = 1;
+            while (idx < workDesc.length() && depth > 0) {
+                char c = workDesc.charAt(idx);
+                if (c == '<') depth++;
+                else if (c == '>') depth--;
+                idx++;
+            }
+            workDesc = workDesc.substring(idx);
+        }
+
+        int parenStart = workDesc.indexOf('(');
+        int parenEnd = findClosingParen(workDesc);
         if (parenStart < 0 || parenEnd < 0) return "";
 
-        String params = desc.substring(parenStart + 1, parenEnd);
+        String params = workDesc.substring(parenStart + 1, parenEnd);
         if (params.isEmpty()) return "";
 
         List<String> paramTypes = new ArrayList<>();
         int i = 0;
         while (i < params.length()) {
             int start = i;
-            // Handle arrays
             while (i < params.length() && params.charAt(i) == '[') {
                 i++;
             }
@@ -643,16 +797,24 @@ public class ClassDecompiler {
 
             char c = params.charAt(i);
             if (c == 'L') {
-                // Object type
-                int end = params.indexOf(';', i);
+                int end = findTypeEnd(params, i);
                 if (end < 0) break;
                 String typeDesc = params.substring(start, end + 1);
-                paramTypes.add(typeRecoverer.recoverType(typeDesc).toJavaSource());
+                if (isSignature) {
+                    paramTypes.add(trackAndFormatType(typeRecoverer.recoverGenericType(typeDesc)));
+                } else {
+                    paramTypes.add(trackAndFormatType(typeRecoverer.recoverType(typeDesc)));
+                }
+                i = end + 1;
+            } else if (c == 'T') {
+                int end = params.indexOf(';', i);
+                if (end < 0) break;
+                String typeVar = params.substring(i + 1, end);
+                paramTypes.add(typeVar);
                 i = end + 1;
             } else {
-                // Primitive type
                 String typeDesc = params.substring(start, i + 1);
-                paramTypes.add(typeRecoverer.recoverType(typeDesc).toJavaSource());
+                paramTypes.add(trackAndFormatType(typeRecoverer.recoverType(typeDesc)));
                 i++;
             }
         }
@@ -666,17 +828,29 @@ public class ClassDecompiler {
         return sb.toString();
     }
 
+    private int findTypeEnd(String s, int start) {
+        int depth = 0;
+        for (int i = start; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (c == ';' && depth == 0) return i;
+        }
+        return -1;
+    }
+
     /**
-     * Emits import statements by scanning the constant pool for referenced classes.
+     * Emits import statements based on types actually used in the emitted code.
      */
     private void emitImports(IndentingWriter writer, String thisClassName) {
-        Set<String> referencedTypes = collectReferencedTypes();
         String thisPackage = getPackageName(thisClassName);
 
-        List<String> imports = referencedTypes.stream()
+        List<String> imports = usedTypes.stream()
                 .filter(name -> !isJavaLangClass(name))
+                .filter(name -> !isInternalJdkClass(name))
                 .filter(name -> !getPackageName(name).equals(thisPackage))
-                .filter(name -> !name.equals(thisClassName)) // Skip self
+                .filter(name -> !name.equals(thisClassName))
+                .filter(name -> !isInnerClassOf(name, thisClassName))
                 .map(name -> name.replace('/', '.').replace('$', '.'))
                 .sorted()
                 .collect(java.util.stream.Collectors.toList());
@@ -687,6 +861,10 @@ public class ClassDecompiler {
             }
             writer.newLine();
         }
+    }
+
+    private boolean isInnerClassOf(String className, String outerClassName) {
+        return className.startsWith(outerClassName + "$");
     }
 
     /**
@@ -706,24 +884,59 @@ public class ClassDecompiler {
             }
         }
 
-        // Collect from class annotations
-        collectAnnotationTypes(classFile.getClassAttributes(), types);
-
-        // Collect from field annotations
+        // Collect from field descriptors
         for (FieldEntry field : classFile.getFields()) {
+            collectTypesFromDescriptor(field.getDesc(), types);
             if (field.getAttributes() != null) {
                 collectAnnotationTypes(field.getAttributes(), types);
             }
         }
 
-        // Collect from method annotations
+        // Collect from method descriptors and annotations
         for (MethodEntry method : classFile.getMethods()) {
+            String descriptor = method.getDesc();
+            for (TypeInfo argType : DescriptorParser.getArgumentTypes(descriptor)) {
+                String className = argType.getClassName();
+                if (className != null && !className.startsWith("[")) {
+                    types.add(className);
+                }
+            }
+            TypeInfo returnType = DescriptorParser.getReturnType(descriptor);
+            String returnClassName = returnType.getClassName();
+            if (returnClassName != null && !returnClassName.startsWith("[")) {
+                types.add(returnClassName);
+            }
             if (method.getAttributes() != null) {
                 collectAnnotationTypes(method.getAttributes(), types);
             }
         }
 
+        // Collect from class annotations
+        collectAnnotationTypes(classFile.getClassAttributes(), types);
+
         return types;
+    }
+
+    private void collectTypesFromDescriptor(String descriptor, Set<String> types) {
+        if (descriptor == null || descriptor.isEmpty()) {
+            return;
+        }
+        TypeInfo type = TypeInfo.of(descriptor);
+        if (type.isArray()) {
+            TypeInfo elementType = type;
+            while (elementType.isArray()) {
+                elementType = elementType.getElementType();
+            }
+            String className = elementType.getClassName();
+            if (className != null) {
+                types.add(className);
+            }
+        } else {
+            String className = type.getClassName();
+            if (className != null) {
+                types.add(className);
+            }
+        }
     }
 
     /**
@@ -824,9 +1037,22 @@ public class ClassDecompiler {
         if (!internalName.startsWith("java/lang/")) {
             return false;
         }
-        // java.lang.* is implicit, but java.lang.reflect.*, java.lang.invoke.* etc. are not
         String afterLang = internalName.substring("java/lang/".length());
         return !afterLang.contains("/");
+    }
+
+    private boolean isInternalJdkClass(String internalName) {
+        if (internalName.startsWith("java/lang/invoke/")) {
+            return true;
+        }
+        if (internalName.startsWith("sun/") || internalName.startsWith("jdk/internal/")) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isSyntheticLambdaMethod(String methodName) {
+        return methodName.startsWith("lambda$");
     }
 
     /**

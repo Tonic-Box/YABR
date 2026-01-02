@@ -3,6 +3,7 @@ package com.tonic.analysis.source.ast.stmt;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,8 @@ public final class ReturnStmt implements Statement {
     private final SourceLocation location;
     @Setter
     private ASTNode parent;
+    @Setter
+    private SourceType methodReturnType;
 
     public ReturnStmt(Expression value, SourceLocation location) {
         this.value = value;

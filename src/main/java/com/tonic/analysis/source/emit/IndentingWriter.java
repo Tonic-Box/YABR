@@ -110,6 +110,21 @@ public class IndentingWriter {
     }
 
     /**
+     * Writes content directly without adding indentation.
+     * Useful for already-formatted content.
+     */
+    public void writeRaw(String text) {
+        try {
+            writer.write(text);
+            if (!text.isEmpty()) {
+                atLineStart = text.charAt(text.length() - 1) == '\n';
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write", e);
+        }
+    }
+
+    /**
      * Flushes the underlying writer.
      */
     public void flush() {

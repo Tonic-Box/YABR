@@ -149,7 +149,9 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (ret.getValue() != null) {
                 Expression simplified = simplifyExpression(ret.getValue());
                 if (simplified != ret.getValue()) {
-                    return new ReturnStmt(simplified);
+                    ReturnStmt newRet = new ReturnStmt(simplified);
+                    newRet.setMethodReturnType(ret.getMethodReturnType());
+                    return newRet;
                 }
             }
         } else if (stmt instanceof ExprStmt) {

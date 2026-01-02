@@ -6,6 +6,9 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.type.PrimitiveType;
+import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.MethodEntry;
@@ -78,17 +81,23 @@ public class MethodRecoverer {
 
     /**
      * Assigns variable names to all SSA values using the name recoverer.
+     * When a bytecode slot is reused with an incompatible type (e.g., int then StringBuilder),
+     * assigns unique names to avoid type unification issues.
      */
     private void assignVariableNames() {
         assignParameterNames();
 
         java.util.Map<Integer, String> localSlotNames = new java.util.HashMap<>();
+        java.util.Map<Integer, IRType> localSlotTypes = new java.util.HashMap<>();
+        java.util.Map<Integer, Integer> slotReuseCounter = new java.util.HashMap<>();
 
         irMethod.getBlocks().forEach(block -> {
             block.getInstructions().forEach(instr -> {
                 if (instr instanceof LoadLocalInstruction) {
                     LoadLocalInstruction load = (LoadLocalInstruction) instr;
                     int localIndex = load.getLocalIndex();
+                    IRType valueType = load.getResult() != null ? load.getResult().getType() : null;
+
                     if (!localSlotNames.containsKey(localIndex)) {
                         if (!irMethod.isStatic() && localIndex == 0) {
                             localSlotNames.put(localIndex, "this");
@@ -101,6 +110,7 @@ public class MethodRecoverer {
                                 localSlotNames.put(localIndex, "local" + localIndex);
                             }
                         }
+                        localSlotTypes.put(localIndex, valueType);
                     }
                 }
             });
@@ -110,9 +120,17 @@ public class MethodRecoverer {
             block.getPhiInstructions().forEach(phi -> {
                 if (phi.getResult() != null) {
                     Integer localSlot = findPhiLocalSlot(phi);
+                    IRType valueType = phi.getResult().getType();
                     String name;
                     if (localSlot != null && localSlotNames.containsKey(localSlot)) {
-                        name = localSlotNames.get(localSlot);
+                        IRType existingType = localSlotTypes.get(localSlot);
+                        if (areTypesCompatible(existingType, valueType)) {
+                            name = localSlotNames.get(localSlot);
+                        } else {
+                            int count = slotReuseCounter.getOrDefault(localSlot, 0) + 1;
+                            slotReuseCounter.put(localSlot, count);
+                            name = "local" + localSlot + "_" + count;
+                        }
                     } else if (localSlot != null) {
                         int paramSlots = computeParameterSlots();
                         if (localSlot < paramSlots) {
@@ -122,6 +140,7 @@ public class MethodRecoverer {
                             name = "local" + localSlot;
                         }
                         localSlotNames.put(localSlot, name);
+                        localSlotTypes.put(localSlot, valueType);
                     } else {
                         name = nameRecoverer.generateSyntheticName(phi.getResult());
                     }
@@ -131,11 +150,31 @@ public class MethodRecoverer {
 
             block.getInstructions().forEach(instr -> {
                 if (instr.getResult() != null) {
-                    String name = recoverNameForInstruction(instr, localSlotNames);
+                    String name = recoverNameForInstruction(instr, localSlotNames, localSlotTypes, slotReuseCounter);
                     recoveryContext.setVariableName(instr.getResult(), name);
                 }
             });
         });
+    }
+
+    private boolean areTypesCompatible(IRType type1, IRType type2) {
+        if (type1 == null || type2 == null) {
+            return true;
+        }
+        if (type1.equals(type2)) {
+            return true;
+        }
+        boolean type1Primitive = type1 instanceof PrimitiveType;
+        boolean type2Primitive = type2 instanceof PrimitiveType;
+        if (type1Primitive && type2Primitive) {
+            return true;
+        }
+        boolean type1Reference = type1 instanceof ReferenceType || type1.isArray();
+        boolean type2Reference = type2 instanceof ReferenceType || type2.isArray();
+        if (type1Reference && type2Reference) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -206,11 +245,17 @@ public class MethodRecoverer {
     /**
      * Recovers a name for the result of an instruction.
      * Uses local slot information when available to detect 'this' and parameters.
+     * When a slot is reused with incompatible types, assigns a unique name.
      */
-    private String recoverNameForInstruction(IRInstruction instr, java.util.Map<Integer, String> localSlotNames) {
+    private String recoverNameForInstruction(IRInstruction instr,
+                                              java.util.Map<Integer, String> localSlotNames,
+                                              java.util.Map<Integer, IRType> localSlotTypes,
+                                              java.util.Map<Integer, Integer> slotReuseCounter) {
         if (instr instanceof LoadLocalInstruction) {
             LoadLocalInstruction load = (LoadLocalInstruction) instr;
             int localIndex = load.getLocalIndex();
+            IRType valueType = load.getResult() != null ? load.getResult().getType() : null;
+
             if (!irMethod.isStatic() && localIndex == 0) {
                 return "this";
             }
@@ -220,10 +265,20 @@ public class MethodRecoverer {
                 return "arg" + argIndex;
             }
             if (localSlotNames.containsKey(localIndex)) {
-                return localSlotNames.get(localIndex);
+                IRType existingType = localSlotTypes.get(localIndex);
+                if (areTypesCompatible(existingType, valueType)) {
+                    return localSlotNames.get(localIndex);
+                } else {
+                    int count = slotReuseCounter.getOrDefault(localIndex, 0) + 1;
+                    slotReuseCounter.put(localIndex, count);
+                    String newName = "local" + localIndex + "_" + count;
+                    localSlotTypes.put(localIndex, valueType);
+                    return newName;
+                }
             }
             String name = "local" + localIndex;
             localSlotNames.put(localIndex, name);
+            localSlotTypes.put(localIndex, valueType);
             return name;
         }
         return nameRecoverer.generateSyntheticName(instr.getResult());

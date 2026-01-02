@@ -6,7 +6,9 @@ import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.utill.ClassNameUtil;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Emits Java source code from AST nodes.
@@ -16,6 +18,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     private final IndentingWriter writer;
     private final SourceEmitterConfig config;
     private final IdentifierNormalizer normalizer;
+    private final Set<String> usedTypes = new HashSet<>();
 
     public SourceEmitter(IndentingWriter writer) {
         this(writer, SourceEmitterConfig.defaults());
@@ -25,6 +28,20 @@ public class SourceEmitter implements SourceVisitor<Void> {
         this.writer = writer;
         this.config = config;
         this.normalizer = new IdentifierNormalizer(config.getIdentifierMode());
+    }
+
+    public Set<String> getUsedTypes() {
+        return usedTypes;
+    }
+
+    public void clearUsedTypes() {
+        usedTypes.clear();
+    }
+
+    private void recordTypeUsage(String internalName) {
+        if (internalName != null && !internalName.isEmpty() && !internalName.startsWith("[")) {
+            usedTypes.add(internalName);
+        }
     }
 
     /**
@@ -56,9 +73,13 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitBlock(BlockStmt stmt) {
+        List<Statement> stmts = stmt.getStatements();
+        if (stmts.isEmpty()) {
+            return null;
+        }
         writer.writeLine("{");
         writer.indent();
-        for (Statement s : stmt.getStatements()) {
+        for (Statement s : stmts) {
             s.accept(this);
         }
         writer.dedent();
@@ -191,17 +212,29 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.writeLine(") {");
         writer.indent();
 
-        for (SwitchCase switchCase : stmt.getCases()) {
+        List<SwitchCase> cases = stmt.getCases();
+        for (int i = 0; i < cases.size(); i++) {
+            SwitchCase switchCase = cases.get(i);
             if (switchCase.isDefault()) {
                 writer.writeLine("default:");
+            } else if (switchCase.hasExpressionLabels()) {
+                for (Expression label : switchCase.expressionLabels()) {
+                    writer.write("case ");
+                    label.accept(this);
+                    writer.writeLine(":");
+                }
             } else {
                 for (Integer label : switchCase.labels()) {
                     writer.writeLine("case " + label + ":");
                 }
             }
             writer.indent();
-            for (Statement s : switchCase.statements()) {
+            List<Statement> stmts = switchCase.statements();
+            for (Statement s : stmts) {
                 s.accept(this);
+            }
+            if (!stmts.isEmpty() && needsBreak(stmts)) {
+                writer.writeLine("break;");
             }
             writer.dedent();
         }
@@ -209,6 +242,23 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.dedent();
         writer.writeLine("}");
         return null;
+    }
+
+    private boolean needsBreak(List<Statement> statements) {
+        if (statements.isEmpty()) {
+            return false;
+        }
+        Statement last = statements.get(statements.size() - 1);
+        if (last instanceof ReturnStmt || last instanceof ThrowStmt || last instanceof BreakStmt) {
+            return false;
+        }
+        if (last instanceof BlockStmt) {
+            BlockStmt block = (BlockStmt) last;
+            if (!block.getStatements().isEmpty()) {
+                return needsBreak(block.getStatements());
+            }
+        }
+        return true;
     }
 
     @Override
@@ -254,7 +304,25 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.writeLine("return;");
         } else {
             writer.write("return ");
-            stmt.getValue().accept(this);
+            Expression value = stmt.getValue();
+            SourceType retType = stmt.getMethodReturnType();
+            if (value instanceof LiteralExpr && retType != null) {
+                LiteralExpr lit = (LiteralExpr) value;
+                Object val = lit.getValue();
+                if (val instanceof Integer && retType == PrimitiveSourceType.BOOLEAN) {
+                    int intVal = (Integer) val;
+                    writer.write(intVal != 0 ? "true" : "false");
+                    writer.writeLine(";");
+                    return null;
+                }
+                if (val instanceof Integer && retType == PrimitiveSourceType.CHAR) {
+                    int intVal = (Integer) val;
+                    writer.write("'" + escapeChar((char) intVal) + "'");
+                    writer.writeLine(";");
+                    return null;
+                }
+            }
+            value.accept(this);
             writer.writeLine(";");
         }
         return null;
@@ -366,6 +434,15 @@ public class SourceEmitter implements SourceVisitor<Void> {
         Object value = expr.getValue();
         if (value == null) {
             return "null";
+        }
+        SourceType type = expr.getType();
+        if (value instanceof Integer && type == PrimitiveSourceType.BOOLEAN) {
+            int intVal = (Integer) value;
+            return intVal != 0 ? "true" : "false";
+        }
+        if (value instanceof Integer && type == PrimitiveSourceType.CHAR) {
+            int intVal = (Integer) value;
+            return "'" + escapeChar((char) intVal) + "'";
         }
         if (value instanceof String) {
             String s = (String) value;
@@ -693,12 +770,22 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitReferenceType(ReferenceSourceType type) {
+        recordTypeUsage(type.getInternalName());
+        for (SourceType typeArg : type.getTypeArguments()) {
+            if (typeArg instanceof ReferenceSourceType) {
+                recordTypeUsage(((ReferenceSourceType) typeArg).getInternalName());
+            }
+        }
         writer.write(type.toJavaSource());
         return null;
     }
 
     @Override
     public Void visitArrayType(ArraySourceType type) {
+        SourceType elemType = type.getElementType();
+        if (elemType instanceof ReferenceSourceType) {
+            recordTypeUsage(((ReferenceSourceType) elemType).getInternalName());
+        }
         writer.write(type.toJavaSource());
         return null;
     }
@@ -746,6 +833,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     private String formatClassName(String internalName) {
         if (internalName == null) return "";
+        recordTypeUsage(internalName);
         String formatted;
         if (config.isUseFullyQualifiedNames()) {
             formatted = ClassNameUtil.toSourceName(internalName);

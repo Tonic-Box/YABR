@@ -53,3 +53,5 @@ bin/
 /verify_exception_handlers.sh
 /VerifyTest.class
 /ConstPoolItemTest-Summary.md
+/DemoJar.jar
+/decompiled-output/

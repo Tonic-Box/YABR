@@ -4,6 +4,7 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
+import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
@@ -637,6 +638,11 @@ public class StatementRecoverer {
             }
 
             if (isReturn) {
+                ReturnInstruction ret = (ReturnInstruction) terminator;
+                Statement returnStmt = recoverReturn(ret);
+                if (returnStmt != null) {
+                    stmts.add(returnStmt);
+                }
                 continue;
             }
 
@@ -1029,8 +1035,59 @@ public class StatementRecoverer {
         return null;
     }
 
+    private boolean isTerminatingTryCatch(TryCatchStmt tryCatch) {
+        if (!isTerminatingBranch(tryCatch.getTryBlock())) {
+            return false;
+        }
+        for (CatchClause clause : tryCatch.getCatches()) {
+            if (!isTerminatingBranch(clause.body())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isTerminatingBlock(BlockStmt block) {
+        if (block == null || block.getStatements().isEmpty()) {
+            return false;
+        }
+        Statement lastStmt = block.getStatements().get(block.getStatements().size() - 1);
+        return isTerminatingStatement(lastStmt);
+    }
+
+    private boolean isTerminatingStatement(Statement stmt) {
+        if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
+            return true;
+        }
+        if (stmt instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) stmt;
+            if (ifStmt.getElseBranch() == null) {
+                return false;
+            }
+            return isTerminatingBranch(ifStmt.getThenBranch())
+                && isTerminatingBranch(ifStmt.getElseBranch());
+        }
+        if (stmt instanceof TryCatchStmt) {
+            return isTerminatingTryCatch((TryCatchStmt) stmt);
+        }
+        if (stmt instanceof BlockStmt) {
+            return isTerminatingBlock((BlockStmt) stmt);
+        }
+        return false;
+    }
+
+    private boolean isTerminatingBranch(Statement branch) {
+        if (branch instanceof BlockStmt) {
+            return isTerminatingBlock((BlockStmt) branch);
+        }
+        return isTerminatingStatement(branch);
+    }
+
     /** Map from local slot name to unified type (computed from all assignments) */
     private Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
+
+    /** Maps slot index to (typeCategory -> variableName) for consistent naming of reused slots */
+    private Map<Integer, Map<String, String>> slotTypeCategoryToName = new HashMap<>();
 
     /**
      * Emits declarations for phi variables at method scope.
@@ -1047,13 +1104,16 @@ public class StatementRecoverer {
 
         Map<String, List<SourceType>> localSlotTypes = new HashMap<>();
 
+        slotTypeCategoryToName.clear();
+
         for (IRBlock block : method.getBlocks()) {
             for (IRInstruction instr : block.getInstructions()) {
                 if (instr instanceof LoadLocalInstruction) {
                     LoadLocalInstruction loadLocal = (LoadLocalInstruction) instr;
                     if (loadLocal.getResult() != null) {
                         int localIndex = loadLocal.getLocalIndex();
-                        String localName = getNameForLocalSlot(localIndex);
+                        SourceType valueType = typeRecoverer.recoverType(loadLocal.getResult());
+                        String localName = getNameForLocalSlotWithType(localIndex, valueType);
                         context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                         // Mark as materialized so recoverOperand returns a VarRefExpr instead of
                         // re-recovering the instruction (which would create duplicate new expressions)
@@ -1062,10 +1122,11 @@ public class StatementRecoverer {
                 } else if (instr instanceof StoreLocalInstruction) {
                     StoreLocalInstruction storeLocal = (StoreLocalInstruction) instr;
                     int localIndex = storeLocal.getLocalIndex();
-                    String localName = getNameForLocalSlot(localIndex);
 
                     Value storedValue = storeLocal.getValue();
                     SourceType storedType = typeRecoverer.recoverType(storedValue);
+                    String localName = getNameForLocalSlotWithType(localIndex, storedType);
+
                     if (storedType != null && !storedType.isVoid()) {
                         localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
                     }
@@ -1408,7 +1469,11 @@ public class StatementRecoverer {
                 if (tryCatch != null) {
                     result.add(tryCatch);
                     visited.addAll(tryVisited);
-                    current = findBlockAfterTryCatch(tryHandler, visited);
+                    if (isTerminatingTryCatch(tryCatch)) {
+                        current = null;
+                    } else {
+                        current = findBlockAfterTryCatch(tryHandler, visited);
+                    }
                     continue;
                 }
             }
@@ -1779,8 +1844,13 @@ public class StatementRecoverer {
 
         int localIndex = store.getLocalIndex();
 
-        // Use proper name for parameter slots vs local variable slots
-        String name = getNameForLocalSlot(localIndex);
+        SourceType valueType = value.getType();
+        if (valueType == null) {
+            valueType = typeRecoverer.recoverType(store.getValue());
+        }
+
+        // Use proper name for parameter slots vs local variable slots, considering type compatibility
+        String name = getNameForLocalSlotWithType(localIndex, valueType);
 
         SourceType type = getLocalSlotUnifiedType(name);
         if (type == null) {
@@ -1830,7 +1900,28 @@ public class StatementRecoverer {
             }
         }
         Expression value = exprRecoverer.recoverOperand(ret.getReturnValue(), returnType);
-        return new ReturnStmt(value);
+        value = applyReturnTypeCoercion(value, returnType);
+        ReturnStmt returnStmt = new ReturnStmt(value);
+        returnStmt.setMethodReturnType(returnType);
+        return returnStmt;
+    }
+
+    private Expression applyReturnTypeCoercion(Expression expr, SourceType returnType) {
+        if (returnType == null) return expr;
+        if (expr instanceof LiteralExpr) {
+            LiteralExpr lit = (LiteralExpr) expr;
+            Object val = lit.getValue();
+            if (val instanceof Integer) {
+                int intVal = (Integer) val;
+                if (returnType == PrimitiveSourceType.BOOLEAN) {
+                    return LiteralExpr.ofBoolean(intVal != 0);
+                }
+                if (returnType == PrimitiveSourceType.CHAR) {
+                    return LiteralExpr.ofChar((char) intVal);
+                }
+            }
+        }
+        return expr;
     }
 
 
@@ -2068,7 +2159,10 @@ public class StatementRecoverer {
 
         // Detect and simplify enum switch map pattern:
         // SwitchMapClass.$SwitchMap$pkg$EnumName[enumVar.ordinal()] -> enumVar
-        selector = simplifyEnumSwitchSelector(selector);
+        EnumSwitchInfo enumInfo = detectEnumSwitchPattern(selector);
+        if (enumInfo != null) {
+            selector = enumInfo.enumVariable;
+        }
 
         List<SwitchCase> cases = new ArrayList<>();
 
@@ -2088,6 +2182,23 @@ public class StatementRecoverer {
             List<Integer> labels = entry.getValue();
 
             List<Statement> caseStmts = recoverBlockSequence(target, stopBlocks);
+
+            if (enumInfo != null && enumInfo.enumClassName != null) {
+                List<Expression> enumLabels = new ArrayList<>();
+                for (Integer caseValue : labels) {
+                    String constantName = EnumSwitchMapRegistry.getInstance()
+                            .lookupEnumConstant(enumInfo.enumClassName, caseValue);
+                    if (constantName != null) {
+                        SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
+                        enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
+                    }
+                }
+                if (!enumLabels.isEmpty()) {
+                    cases.add(SwitchCase.ofExpressions(enumLabels, caseStmts));
+                    continue;
+                }
+            }
+
             cases.add(SwitchCase.of(labels, caseStmts));
         }
 
@@ -2099,56 +2210,49 @@ public class StatementRecoverer {
         return new SwitchStmt(selector, cases);
     }
 
-    /**
-     * Detects and simplifies the enum switch map pattern.
-     * Java compilers compile enum switches as:
-     *   switch (SyntheticClass.$SwitchMap$pkg$EnumName[enumVar.ordinal()])
-     *
-     * This method detects the pattern and simplifies to just: enumVar
-     *
-     * @param selector the switch selector expression
-     * @return the simplified enum variable if pattern matches, otherwise the original selector
-     */
-    private Expression simplifyEnumSwitchSelector(Expression selector) {
-        // Pattern: ArrayAccess[FieldAccess($SwitchMap$*)][MethodCall(ordinal)]
+    private static class EnumSwitchInfo {
+        Expression enumVariable;
+        String enumClassName;
+    }
+
+    private EnumSwitchInfo detectEnumSwitchPattern(Expression selector) {
         if (!(selector instanceof ArrayAccessExpr)) {
-            return selector;
+            return null;
         }
 
         ArrayAccessExpr arrayAccess = (ArrayAccessExpr) selector;
         Expression array = arrayAccess.getArray();
         Expression index = arrayAccess.getIndex();
 
-        // Check if array is a static field access with $SwitchMap$ in the name
         if (!(array instanceof FieldAccessExpr)) {
-            return selector;
+            return null;
         }
 
         FieldAccessExpr fieldAccess = (FieldAccessExpr) array;
         String fieldName = fieldAccess.getFieldName();
 
         if (!fieldName.startsWith("$SwitchMap$")) {
-            return selector;
+            return null;
         }
 
-        // Check if index is a call to ordinal()
         if (!(index instanceof MethodCallExpr)) {
-            return selector;
+            return null;
         }
 
         MethodCallExpr methodCall = (MethodCallExpr) index;
         if (!"ordinal".equals(methodCall.getMethodName())) {
-            return selector;
+            return null;
         }
 
-        // The receiver of ordinal() is the enum variable we want
         Expression enumVar = methodCall.getReceiver();
         if (enumVar == null) {
-            return selector;
+            return null;
         }
 
-        // Successfully detected enum switch pattern, return the enum variable
-        return enumVar;
+        EnumSwitchInfo info = new EnumSwitchInfo();
+        info.enumVariable = enumVar;
+        info.enumClassName = EnumSwitchMapRegistry.parseEnumClassFromFieldName(fieldName);
+        return info;
     }
 
     private Statement recoverIrreducible(IRBlock header, RegionInfo info) {
@@ -3099,6 +3203,44 @@ public class StatementRecoverer {
         }
 
         return "local" + localIndex;
+    }
+
+    private String getNameForLocalSlotWithType(int localIndex, SourceType valueType) {
+        boolean isStatic = context.getIrMethod().isStatic();
+        if (!isStatic && localIndex == 0) {
+            return "this";
+        }
+
+        int paramSlots = computeParameterSlots();
+        if (localIndex < paramSlots) {
+            int argIndex = isStatic ? localIndex : localIndex - 1;
+            return "arg" + argIndex;
+        }
+
+        String typeCategory = getTypeCategory(valueType);
+        Map<String, String> categoryMap = slotTypeCategoryToName.computeIfAbsent(localIndex, k -> new LinkedHashMap<>());
+
+        if (categoryMap.containsKey(typeCategory)) {
+            return categoryMap.get(typeCategory);
+        }
+
+        if (categoryMap.isEmpty()) {
+            String name = "local" + localIndex;
+            categoryMap.put(typeCategory, name);
+            return name;
+        }
+
+        int suffix = categoryMap.size();
+        String name = "local" + localIndex + "_" + suffix;
+        categoryMap.put(typeCategory, name);
+        return name;
+    }
+
+    private String getTypeCategory(SourceType type) {
+        if (type == null) {
+            return "unknown";
+        }
+        return type.isPrimitive() ? "primitive" : "reference";
     }
 
     /**

@@ -292,4 +292,126 @@ public class TypeRecoverer {
                 return VoidSourceType.INSTANCE;
         }
     }
+
+    /**
+     * Recovers a source type from a JVM generic signature.
+     * Generic signatures include parameterized types like List&lt;String&gt;.
+     */
+    public SourceType recoverGenericType(String signature) {
+        if (signature == null || signature.isEmpty()) {
+            return VoidSourceType.INSTANCE;
+        }
+        SignatureParser parser = new SignatureParser(signature);
+        return parser.parseType();
+    }
+
+    private static class SignatureParser {
+        private final String sig;
+        private int pos;
+
+        SignatureParser(String sig) {
+            this.sig = sig;
+            this.pos = 0;
+        }
+
+        SourceType parseType() {
+            if (pos >= sig.length()) {
+                return VoidSourceType.INSTANCE;
+            }
+
+            char c = sig.charAt(pos);
+            switch (c) {
+                case 'V':
+                    pos++;
+                    return VoidSourceType.INSTANCE;
+                case 'Z':
+                    pos++;
+                    return PrimitiveSourceType.BOOLEAN;
+                case 'B':
+                    pos++;
+                    return PrimitiveSourceType.BYTE;
+                case 'C':
+                    pos++;
+                    return PrimitiveSourceType.CHAR;
+                case 'S':
+                    pos++;
+                    return PrimitiveSourceType.SHORT;
+                case 'I':
+                    pos++;
+                    return PrimitiveSourceType.INT;
+                case 'J':
+                    pos++;
+                    return PrimitiveSourceType.LONG;
+                case 'F':
+                    pos++;
+                    return PrimitiveSourceType.FLOAT;
+                case 'D':
+                    pos++;
+                    return PrimitiveSourceType.DOUBLE;
+                case 'L':
+                    return parseClassType();
+                case '[':
+                    pos++;
+                    SourceType component = parseType();
+                    return new ArraySourceType(component);
+                case 'T':
+                    return parseTypeVariable();
+                case '*':
+                    pos++;
+                    return new ReferenceSourceType("java/lang/Object", java.util.Collections.emptyList());
+                case '+':
+                case '-':
+                    pos++;
+                    return parseType();
+                default:
+                    return VoidSourceType.INSTANCE;
+            }
+        }
+
+        private SourceType parseClassType() {
+            pos++;
+            StringBuilder name = new StringBuilder();
+            java.util.List<SourceType> typeArgs = new java.util.ArrayList<>();
+
+            while (pos < sig.length()) {
+                char c = sig.charAt(pos);
+                if (c == ';') {
+                    pos++;
+                    break;
+                }
+                if (c == '<') {
+                    pos++;
+                    while (pos < sig.length() && sig.charAt(pos) != '>') {
+                        typeArgs.add(parseType());
+                    }
+                    if (pos < sig.length() && sig.charAt(pos) == '>') {
+                        pos++;
+                    }
+                } else if (c == '.') {
+                    name.append('$');
+                    pos++;
+                } else {
+                    name.append(c);
+                    pos++;
+                }
+            }
+
+            return new ReferenceSourceType(name.toString(), typeArgs);
+        }
+
+        private SourceType parseTypeVariable() {
+            pos++;
+            StringBuilder name = new StringBuilder();
+            while (pos < sig.length() && sig.charAt(pos) != ';') {
+                name.append(sig.charAt(pos));
+                pos++;
+            }
+            if (pos < sig.length() && sig.charAt(pos) == ';') {
+                pos++;
+            }
+            return new ReferenceSourceType("java/lang/Object", java.util.Collections.singletonList(
+                new ReferenceSourceType(name.toString(), java.util.Collections.emptyList())
+            ));
+        }
+    }
 }
