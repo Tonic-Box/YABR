@@ -1,11 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the JVM DLOAD instruction.
@@ -33,7 +34,7 @@ public class DLoadInstruction extends Instruction {
      * @return True if the opcode is DLOAD_0-3, false otherwise.
      */
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x26 && opcode <= 0x29;
+        return opcode >= DLOAD_0.getCode() && opcode <= DLOAD_3.getCode();
     }
 
     @Override

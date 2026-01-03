@@ -6,6 +6,8 @@ import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Represents the ALOAD instructions (0x19, 0x2A-0x2D).
  */
@@ -37,7 +39,7 @@ public class ALoadInstruction extends Instruction {
     }
 
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x2A && opcode <= 0x2D;
+        return opcode >= ALOAD_0.getCode() && opcode <= ALOAD_3.getCode();
     }
 
     @Override
@@ -60,10 +62,10 @@ public class ALoadInstruction extends Instruction {
 
     @Override
     public String toString() {
-        if (opcode == 0x19) {
+        if (opcode == ALOAD.getCode()) {
             return String.format("ALOAD %d", varIndex);
         } else {
-            int index = opcode - 0x2A;
+            int index = opcode - ALOAD_0.getCode();
             return String.format("ALOAD_%d", index);
         }
     }

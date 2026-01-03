@@ -5,6 +5,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
+import static com.tonic.utill.Opcode.*;
+
 public class Level2Features implements FeatureVector {
     private final Map<String, Integer> opcodeNgramHistogram;
     private final Map<String, Integer> cfgEdgeTypeDistribution;
@@ -40,17 +42,17 @@ public class Level2Features implements FeatureVector {
     }
 
     public static String getOpcodeCategory(int opcode) {
-        if (opcode >= 0x00 && opcode <= 0x14) return "const";
-        if (opcode >= 0x15 && opcode <= 0x35) return "load";
-        if (opcode >= 0x36 && opcode <= 0x56) return "store";
-        if (opcode >= 0x57 && opcode <= 0x5F) return "stack";
-        if (opcode >= 0x60 && opcode <= 0x84) return "math";
-        if (opcode >= 0x85 && opcode <= 0x93) return "convert";
-        if (opcode >= 0x94 && opcode <= 0xA6) return "compare";
-        if (opcode >= 0xA7 && opcode <= 0xB1) return "control";
-        if (opcode >= 0xB2 && opcode <= 0xB5) return "field";
-        if (opcode >= 0xB6 && opcode <= 0xBA) return "invoke";
-        if (opcode >= 0xBB && opcode <= 0xC3) return "object";
+        if (opcode >= NOP.getCode() && opcode <= LDC2_W.getCode()) return "const";
+        if (opcode >= ILOAD.getCode() && opcode <= SALOAD.getCode()) return "load";
+        if (opcode >= ISTORE.getCode() && opcode <= SASTORE.getCode()) return "store";
+        if (opcode >= POP.getCode() && opcode <= SWAP.getCode()) return "stack";
+        if (opcode >= IADD.getCode() && opcode <= IINC.getCode()) return "math";
+        if (opcode >= I2L.getCode() && opcode <= I2S.getCode()) return "convert";
+        if (opcode >= LCMP.getCode() && opcode <= IF_ACMPNE.getCode()) return "compare";
+        if (opcode >= GOTO.getCode() && opcode <= RETURN_.getCode()) return "control";
+        if (opcode >= GETSTATIC.getCode() && opcode <= PUTFIELD.getCode()) return "field";
+        if (opcode >= INVOKEVIRTUAL.getCode() && opcode <= INVOKEDYNAMIC.getCode()) return "invoke";
+        if (opcode >= NEW.getCode() && opcode <= MONITOREXIT.getCode()) return "object";
         return "other";
     }
 

@@ -1,11 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the ISTORE instructions (0x36, 0x3B-0x3E).
@@ -38,7 +39,7 @@ public class IStoreInstruction extends Instruction {
      * @return True if the opcode is ISTORE_0-3, false otherwise.
      */
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x3B && opcode <= 0x3E;
+        return opcode >= ISTORE_0.getCode() && opcode <= ISTORE_3.getCode();
     }
 
     /**
@@ -82,10 +83,10 @@ public class IStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x36) {
+        if (opcode == ISTORE.getCode()) {
             return String.format("ISTORE %d", varIndex);
         } else {
-            int index = opcode - 0x3B;
+            int index = opcode - ISTORE_0.getCode();
             return String.format("ISTORE_%d", index);
         }
     }

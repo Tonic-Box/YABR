@@ -1,14 +1,17 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
+import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Represents the JVM FLOAD instruction.
  */
+@Getter
 public class FLoadInstruction extends Instruction {
     private final int varIndex;
 
@@ -31,7 +34,7 @@ public class FLoadInstruction extends Instruction {
      * @return True if the opcode is FLOAD_0-3, false otherwise.
      */
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x22 && opcode <= 0x25;
+        return opcode >= FLOAD_0.getCode() && opcode <= FLOAD_3.getCode();
     }
 
     @Override
@@ -71,15 +74,6 @@ public class FLoadInstruction extends Instruction {
     @Override
     public int getLocalChange() {
         return 0;
-    }
-
-    /**
-     * Returns the local variable index being loaded.
-     *
-     * @return The local variable index.
-     */
-    public int getVarIndex() {
-        return varIndex;
     }
 
     /**

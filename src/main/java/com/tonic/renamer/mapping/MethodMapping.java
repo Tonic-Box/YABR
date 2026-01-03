@@ -1,5 +1,7 @@
 package com.tonic.renamer.mapping;
 
+import lombok.Getter;
+
 import java.util.Objects;
 
 /**
@@ -7,10 +9,13 @@ import java.util.Objects;
  */
 public final class MethodMapping implements RenameMapping {
 
+    @Getter
     private final String owner;
     private final String oldName;
+    @Getter
     private final String descriptor;
     private final String newName;
+    @Getter
     private final boolean propagate;
 
     /**
@@ -55,26 +60,14 @@ public final class MethodMapping implements RenameMapping {
         this(owner, oldName, descriptor, newName, false);
     }
 
-    public String getOwner() {
-        return owner;
-    }
-
     @Override
     public String getOldName() {
         return oldName;
     }
 
-    public String getDescriptor() {
-        return descriptor;
-    }
-
     @Override
     public String getNewName() {
         return newName;
-    }
-
-    public boolean isPropagate() {
-        return propagate;
     }
 
     /**

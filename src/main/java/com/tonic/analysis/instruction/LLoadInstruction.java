@@ -1,11 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the LLOAD instruction (0x16).
@@ -38,7 +39,7 @@ public class LLoadInstruction extends Instruction {
      * @return True if the opcode is LLOAD_0-3, false otherwise.
      */
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x1E && opcode <= 0x21;
+        return opcode >= LLOAD_0.getCode() && opcode <= LLOAD_3.getCode();
     }
 
     /**

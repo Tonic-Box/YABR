@@ -1,11 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the JVM GOTO and GOTO_W instructions.
@@ -18,8 +19,8 @@ public class GotoInstruction extends Instruction {
 
     @Getter
     public enum GotoType {
-        GOTO(0xA7, "goto"),
-        GOTO_W(0xC8, "goto_w");
+        GOTO_NORMAL(GOTO.getCode(), "goto"),
+        GOTO_WIDE(GOTO_W.getCode(), "goto_w");
 
         private final int opcode;
         private final String mnemonic;
@@ -47,7 +48,7 @@ public class GotoInstruction extends Instruction {
      * @param branchOffset The branch target offset relative to current instruction.
      */
     public GotoInstruction(int opcode, int offset, int branchOffset) {
-        super(opcode, offset, (opcode == 0xA7) ? 3 : 5);
+        super(opcode, offset, (opcode == GOTO.getCode()) ? 3 : 5);
         this.type = GotoType.fromOpcode(opcode);
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid GOTO opcode: " + opcode);
@@ -69,7 +70,7 @@ public class GotoInstruction extends Instruction {
      * @param branchOffset The branch target offset relative to current instruction.
      */
     public GotoInstruction(int opcode, int offset, short branchOffset) {
-        super(opcode, offset, (opcode == 0xA7) ? 3 : 5);
+        super(opcode, offset, (opcode == GOTO.getCode()) ? 3 : 5);
         this.type = GotoType.fromOpcode(opcode);
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid GOTO opcode: " + opcode);
@@ -87,9 +88,9 @@ public class GotoInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        if (type == GotoType.GOTO) {
+        if (type == GotoType.GOTO_NORMAL) {
             dos.writeShort(getBranchOffset());
-        } else if (type == GotoType.GOTO_W) {
+        } else if (type == GotoType.GOTO_WIDE) {
             dos.writeInt(getBranchOffsetWide());
         }
     }

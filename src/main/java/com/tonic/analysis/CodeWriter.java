@@ -417,23 +417,23 @@ public class CodeWriter {
                 case 0x06:
                 case 0x07:
                 case 0x08:
-                    int iconstValue = (opcode == 0x02) ? -1 : (opcode - 0x03);
+                    int iconstValue = (opcode == ICONST_M1.getCode()) ? -1 : (opcode - ICONST_0.getCode());
                     return new IConstInstruction(opcode, offset, iconstValue);
 
                 case 0x09:
                 case 0x0A:
-                    long lconstValue = (opcode == 0x09) ? 0L : 1L;
+                    long lconstValue = (opcode == LCONST_0.getCode()) ? 0L : 1L;
                     return new LConstInstruction(opcode, offset, lconstValue);
 
                 case 0x0B:
                 case 0x0C:
                 case 0x0D:
-                    float fconstValue = (opcode == 0x0B) ? 0.0f : ((opcode == 0x0C) ? 1.0f : 2.0f);
+                    float fconstValue = (opcode == FCONST_0.getCode()) ? 0.0f : ((opcode == FCONST_1.getCode()) ? 1.0f : 2.0f);
                     return new FConstInstruction(opcode, offset, fconstValue);
 
                 case 0x0E:
                 case 0x0F:
-                    double dconstValue = (opcode == 0x0E) ? 0.0 : 1.0;
+                    double dconstValue = (opcode == DCONST_0.getCode()) ? 0.0 : 1.0;
                     return new DConstInstruction(opcode, offset, dconstValue);
 
                 case 0x10:

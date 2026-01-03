@@ -28,6 +28,8 @@ import com.tonic.parser.constpool.IntegerItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.LongItem;
 import com.tonic.parser.constpool.Utf8Item;
+
+import static com.tonic.utill.Opcode.*;
 import com.tonic.parser.constpool.StringRefItem;
 import com.tonic.analysis.execution.invoke.InvocationContext;
 import com.tonic.analysis.execution.invoke.InvocationHandler;
@@ -364,7 +366,7 @@ public final class BytecodeEngine {
             case RETURN:
                 int returnOpcode = frame.getCurrentInstruction().getOpcode();
                 ConcreteValue returnValue;
-                if (returnOpcode == 0xB1) {
+                if (returnOpcode == RETURN_.getCode()) {
                     returnValue = null;
                 } else if (frame.getStack().isEmpty()) {
                     returnValue = ConcreteValue.nullRef();

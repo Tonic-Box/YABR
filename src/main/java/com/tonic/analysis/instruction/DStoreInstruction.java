@@ -1,11 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the JVM DSTORE instruction.
@@ -22,7 +23,7 @@ public class DStoreInstruction extends Instruction {
      * @param varIndex The index of the local variable to store. For DSTORE_0-3, this is 0-3 respectively.
      */
     public DStoreInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, (opcode == 0x39) ? 2 : 1);
+        super(opcode, offset, (opcode == DSTORE.getCode()) ? 2 : 1);
         this.varIndex = varIndex;
     }
 
@@ -40,7 +41,7 @@ public class DStoreInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        if (opcode == 0x39) {
+        if (opcode == DSTORE.getCode()) {
             dos.writeByte(varIndex);
         }
     }
@@ -72,10 +73,10 @@ public class DStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x39) {
+        if (opcode == DSTORE.getCode()) {
             return String.format("DSTORE %d", varIndex);
         } else {
-            int index = opcode - 0x47;
+            int index = opcode - DSTORE_0.getCode();
             return String.format("DSTORE_%d", index);
         }
     }

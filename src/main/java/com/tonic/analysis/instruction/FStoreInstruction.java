@@ -1,10 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the JVM FSTORE instruction.
@@ -37,7 +39,7 @@ public class FStoreInstruction extends Instruction {
      * @return True if the opcode is FSTORE_0-3, false otherwise.
      */
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x43 && opcode <= 0x46;
+        return opcode >= FSTORE_0.getCode() && opcode <= FSTORE_3.getCode();
     }
 
     /**
@@ -81,10 +83,10 @@ public class FStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x38) {
+        if (opcode == FSTORE.getCode()) {
             return String.format("FSTORE %d", varIndex);
         } else {
-            int index = opcode - 0x43;
+            int index = opcode - FSTORE_0.getCode();
             return String.format("FSTORE_%d", index);
         }
     }

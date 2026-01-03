@@ -1,11 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the JVM ILOAD instruction.
@@ -27,7 +28,7 @@ public class ILoadInstruction extends Instruction {
     }
 
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x1A && opcode <= 0x1D;
+        return opcode >= ILOAD_0.getCode() && opcode <= ILOAD_3.getCode();
     }
 
     @Override

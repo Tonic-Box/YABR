@@ -1,6 +1,7 @@
 package com.tonic.parser.constpool;
 
 import com.tonic.parser.ClassFile;
+import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.io.IOException;
  */
 public class Utf8Item extends Item<String> {
 
+    @Setter
     private String value;
 
     @Override
@@ -32,15 +34,5 @@ public class Utf8Item extends Item<String> {
     @Override
     public String getValue() {
         return value;
-    }
-
-    /**
-     * Sets the string value.
-     *
-     * @param value string value to set
-     */
-    public void setValue(String value)
-    {
-        this.value = value;
     }
 }

@@ -6,6 +6,8 @@ import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Represents the ASTORE instruction and its variants (ASTORE, ASTORE_0-3) (0x4B-0x4E).
  */
@@ -31,7 +33,7 @@ public class AStoreInstruction extends Instruction {
     }
 
     private static boolean isShortForm(int opcode) {
-        return opcode >= 0x4B && opcode <= 0x4E;
+        return opcode >= ASTORE_0.getCode() && opcode <= ASTORE_3.getCode();
     }
 
     @Override
@@ -54,33 +56,16 @@ public class AStoreInstruction extends Instruction {
 
     @Override
     public String toString() {
-        String mnemonic;
-        switch (opcode) {
-            case 0x4B:
-                mnemonic = "astore_0";
-                break;
-            case 0x4C:
-                mnemonic = "astore_1";
-                break;
-            case 0x4D:
-                mnemonic = "astore_2";
-                break;
-            case 0x4E:
-                mnemonic = "astore_3";
-                break;
-            case 0x3B:
-            case 0x3C:
-            case 0x3D:
-            case 0x3E:
-                mnemonic = "astore";
-                break;
-            default:
-                mnemonic = "astore_unknown";
-        }
-        if (opcode >= 0x4B && opcode <= 0x4E) {
-            return String.format("%s", mnemonic);
+        if (opcode == ASTORE_0.getCode()) {
+            return "astore_0";
+        } else if (opcode == ASTORE_1.getCode()) {
+            return "astore_1";
+        } else if (opcode == ASTORE_2.getCode()) {
+            return "astore_2";
+        } else if (opcode == ASTORE_3.getCode()) {
+            return "astore_3";
         } else {
-            return String.format("%s %d", mnemonic, varIndex);
+            return String.format("astore %d", varIndex);
         }
     }
 }

@@ -1,11 +1,12 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import static com.tonic.utill.Opcode.*;
 
 /**
  * Represents the LSTORE instructions (0x37, 0x3F-0x42).
@@ -22,7 +23,7 @@ public class LStoreInstruction extends Instruction {
      * @param varIndex The index of the local variable to store. For LSTORE_0-3, this is 0-3 respectively.
      */
     public LStoreInstruction(int opcode, int offset, int varIndex) {
-        super(opcode, offset, (opcode == 0x37) ? 2 : 1);
+        super(opcode, offset, (opcode == LSTORE.getCode()) ? 2 : 1);
         this.varIndex = varIndex;
     }
 
@@ -40,7 +41,7 @@ public class LStoreInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        if (opcode == 0x37) {
+        if (opcode == LSTORE.getCode()) {
             dos.writeByte(varIndex);
         }
     }
@@ -72,10 +73,10 @@ public class LStoreInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        if (opcode == 0x37) {
+        if (opcode == LSTORE.getCode()) {
             return String.format("LSTORE %d", varIndex);
         } else {
-            int index = opcode - 0x3F;
+            int index = opcode - LSTORE_0.getCode();
             return String.format("LSTORE_%d", index);
         }
     }

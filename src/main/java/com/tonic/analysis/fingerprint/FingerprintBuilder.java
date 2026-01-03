@@ -480,7 +480,7 @@ public class FingerprintBuilder {
             case 0xC4: {
                 if (offset + 1 >= bytecode.length) return -1;
                 int wideOpcode = Byte.toUnsignedInt(bytecode[offset + 1]);
-                if (wideOpcode == 0x84) return 6;
+                if (wideOpcode == IINC.getCode()) return 6;
                 return 4;
             }
             case 0xC5: return 4;
