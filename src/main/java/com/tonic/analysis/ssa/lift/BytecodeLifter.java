@@ -14,6 +14,8 @@ import com.tonic.utill.Modifiers;
 
 import java.util.*;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Lifts bytecode to SSA-form IR.
  */
@@ -577,15 +579,10 @@ public class BytecodeLifter {
     }
 
     private boolean isTerminator(int opcode) {
-        return opcode == 0xAC   // ireturn
-                || opcode == 0xAD   // lreturn
-                || opcode == 0xAE   // freturn
-                || opcode == 0xAF   // dreturn
-                || opcode == 0xB0   // areturn
-                || opcode == 0xB1   // return
-                || opcode == 0xBF   // athrow
-                || opcode == 0xA8   // jsr
-                || opcode == 0xA9   // ret
-                || opcode == 0xC9;  // jsr_w
+        return (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode())
+                || opcode == ATHROW.getCode()
+                || opcode == JSR.getCode()
+                || opcode == RET.getCode()
+                || opcode == JSR_W.getCode();
     }
 }

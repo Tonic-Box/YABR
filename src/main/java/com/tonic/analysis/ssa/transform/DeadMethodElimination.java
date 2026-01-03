@@ -8,6 +8,8 @@ import com.tonic.parser.attribute.CodeAttribute;
 import java.lang.reflect.Modifier;
 import java.util.*;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Dead method elimination optimization.
  * Removes private methods that are never called from the class.
@@ -142,10 +144,10 @@ public class DeadMethodElimination implements ClassTransform {
      * Checks if an opcode is an invoke instruction.
      */
     private boolean isInvokeInstruction(int opcode) {
-        return opcode == 0xB6  // invokevirtual
-                || opcode == 0xB7  // invokespecial
-                || opcode == 0xB8  // invokestatic
-                || opcode == 0xB9; // invokeinterface
+        return opcode == INVOKEVIRTUAL.getCode()
+                || opcode == INVOKESPECIAL.getCode()
+                || opcode == INVOKESTATIC.getCode()
+                || opcode == INVOKEINTERFACE.getCode();
     }
 
     /**
@@ -246,15 +248,15 @@ public class DeadMethodElimination implements ClassTransform {
      * Gets the length of a bytecode instruction.
      */
     private int getInstructionLength(int opcode, byte[] bytecode, int offset) {
-        if (opcode == 0xC4) {
+        if (opcode == WIDE.getCode()) {
             int nextOpcode = bytecode[offset + 1] & 0xFF;
-            if (nextOpcode == 0x84) {
+            if (nextOpcode == IINC.getCode()) {
                 return 6;
             }
             return 4;
         }
 
-        if (opcode == 0xAA) {
+        if (opcode == TABLESWITCH.getCode()) {
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int base = offset + 1 + padding;
             int low = ((bytecode[base + 4] & 0xFF) << 24) | ((bytecode[base + 5] & 0xFF) << 16)
@@ -264,7 +266,7 @@ public class DeadMethodElimination implements ClassTransform {
             return 1 + padding + 12 + (high - low + 1) * 4;
         }
 
-        if (opcode == 0xAB) {
+        if (opcode == LOOKUPSWITCH.getCode()) {
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int base = offset + 1 + padding;
             int npairs = ((bytecode[base + 4] & 0xFF) << 24) | ((bytecode[base + 5] & 0xFF) << 16)

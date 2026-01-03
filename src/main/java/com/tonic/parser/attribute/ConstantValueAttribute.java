@@ -15,6 +15,10 @@ import java.io.IOException;
 public class ConstantValueAttribute extends Attribute {
     private int constantValueIndex;
 
+    public void setConstantValueIndex(int index) {
+        this.constantValueIndex = index;
+    }
+
     public ConstantValueAttribute(String name, MemberEntry parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
     }

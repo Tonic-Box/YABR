@@ -11,6 +11,8 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
 import com.tonic.utill.Opcode;
 
+import static com.tonic.utill.Opcode.*;
+
 public final class OpcodeDispatcher {
 
     public enum DispatchResult {
@@ -372,28 +374,28 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchIConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
-        int value = opcode - 0x03;
+        int value = opcode - ICONST_0.getCode();
         stack.pushInt(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
     private DispatchResult dispatchLConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
-        long value = opcode - 0x09;
+        long value = opcode - LCONST_0.getCode();
         stack.pushLong(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
     private DispatchResult dispatchFConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
-        float value = opcode - 0x0B;
+        float value = opcode - FCONST_0.getCode();
         stack.pushFloat(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
     private DispatchResult dispatchDConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
-        double value = opcode - 0x0E;
+        double value = opcode - DCONST_0.getCode();
         stack.pushDouble(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
@@ -557,7 +559,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchILoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x1A;
+        int index = opcode - ILOAD_0.getCode();
         int value = locals.getInt(index);
         stack.pushInt(value);
         frame.advancePC(instruction.getLength());
@@ -565,7 +567,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchLLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x1E;
+        int index = opcode - LLOAD_0.getCode();
         long value = locals.getLong(index);
         stack.pushLong(value);
         frame.advancePC(instruction.getLength());
@@ -573,7 +575,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchFLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x22;
+        int index = opcode - FLOAD_0.getCode();
         float value = locals.getFloat(index);
         stack.pushFloat(value);
         frame.advancePC(instruction.getLength());
@@ -581,7 +583,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchDLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x26;
+        int index = opcode - DLOAD_0.getCode();
         double value = locals.getDouble(index);
         stack.pushDouble(value);
         frame.advancePC(instruction.getLength());
@@ -589,7 +591,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchALoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x2A;
+        int index = opcode - ALOAD_0.getCode();
         ObjectInstance value = locals.getReference(index);
         if (value == null) {
             stack.pushNull();
@@ -740,7 +742,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchIStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x3B;
+        int index = opcode - ISTORE_0.getCode();
         int value = stack.popInt();
         locals.setInt(index, value);
         frame.advancePC(instruction.getLength());
@@ -748,7 +750,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchLStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x3F;
+        int index = opcode - LSTORE_0.getCode();
         long value = stack.popLong();
         locals.setLong(index, value);
         frame.advancePC(instruction.getLength());
@@ -756,7 +758,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchFStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x43;
+        int index = opcode - FSTORE_0.getCode();
         float value = stack.popFloat();
         locals.setFloat(index, value);
         frame.advancePC(instruction.getLength());
@@ -764,7 +766,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchDStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x47;
+        int index = opcode - DSTORE_0.getCode();
         double value = stack.popDouble();
         locals.setDouble(index, value);
         frame.advancePC(instruction.getLength());
@@ -772,7 +774,7 @@ public final class OpcodeDispatcher {
     }
 
     private DispatchResult dispatchAStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
-        int index = opcode - 0x4B;
+        int index = opcode - ASTORE_0.getCode();
         ObjectInstance value = stack.popReference();
         if (value == null) {
             locals.setNull(index);

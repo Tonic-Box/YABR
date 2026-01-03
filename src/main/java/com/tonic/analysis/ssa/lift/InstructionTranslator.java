@@ -12,6 +12,8 @@ import lombok.Getter;
 
 import java.util.*;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Translates JVM bytecode instructions to IR instructions.
  */
@@ -609,15 +611,13 @@ public class InstructionTranslator {
         int fallthrough = instr.getOffset() + instr.getLength();
 
         CompareOp cmpOp;
-        switch (opcode) {
-            case 0x99: cmpOp = CompareOp.IFEQ; break;
-            case 0x9A: cmpOp = CompareOp.IFNE; break;
-            case 0x9B: cmpOp = CompareOp.IFLT; break;
-            case 0x9C: cmpOp = CompareOp.IFGE; break;
-            case 0x9D: cmpOp = CompareOp.IFGT; break;
-            case 0x9E: cmpOp = CompareOp.IFLE; break;
-            default: throw new IllegalStateException();
-        }
+        if (opcode == IFEQ.getCode()) cmpOp = CompareOp.IFEQ;
+        else if (opcode == IFNE.getCode()) cmpOp = CompareOp.IFNE;
+        else if (opcode == IFLT.getCode()) cmpOp = CompareOp.IFLT;
+        else if (opcode == IFGE.getCode()) cmpOp = CompareOp.IFGE;
+        else if (opcode == IFGT.getCode()) cmpOp = CompareOp.IFGT;
+        else if (opcode == IFLE.getCode()) cmpOp = CompareOp.IFLE;
+        else throw new IllegalStateException();
 
         IRBlock trueBlock = offsetToBlock.get(target);
         IRBlock falseBlock = offsetToBlock.get(fallthrough);
@@ -632,15 +632,13 @@ public class InstructionTranslator {
         int fallthrough = instr.getOffset() + instr.getLength();
 
         CompareOp cmpOp;
-        switch (opcode) {
-            case 0x9F: cmpOp = CompareOp.EQ; break;
-            case 0xA0: cmpOp = CompareOp.NE; break;
-            case 0xA1: cmpOp = CompareOp.LT; break;
-            case 0xA2: cmpOp = CompareOp.GE; break;
-            case 0xA3: cmpOp = CompareOp.GT; break;
-            case 0xA4: cmpOp = CompareOp.LE; break;
-            default: throw new IllegalStateException();
-        }
+        if (opcode == IF_ICMPEQ.getCode()) cmpOp = CompareOp.EQ;
+        else if (opcode == IF_ICMPNE.getCode()) cmpOp = CompareOp.NE;
+        else if (opcode == IF_ICMPLT.getCode()) cmpOp = CompareOp.LT;
+        else if (opcode == IF_ICMPGE.getCode()) cmpOp = CompareOp.GE;
+        else if (opcode == IF_ICMPGT.getCode()) cmpOp = CompareOp.GT;
+        else if (opcode == IF_ICMPLE.getCode()) cmpOp = CompareOp.LE;
+        else throw new IllegalStateException();
 
         IRBlock trueBlock = offsetToBlock.get(target);
         IRBlock falseBlock = offsetToBlock.get(fallthrough);
@@ -654,7 +652,7 @@ public class InstructionTranslator {
         int target = instr.getOffset() + instr.getBranchOffset();
         int fallthrough = instr.getOffset() + instr.getLength();
 
-        CompareOp cmpOp = opcode == 0xA5 ? CompareOp.ACMPEQ : CompareOp.ACMPNE;
+        CompareOp cmpOp = opcode == IF_ACMPEQ.getCode() ? CompareOp.ACMPEQ : CompareOp.ACMPNE;
 
         IRBlock trueBlock = offsetToBlock.get(target);
         IRBlock falseBlock = offsetToBlock.get(fallthrough);
@@ -1001,44 +999,35 @@ public class InstructionTranslator {
     }
 
     private IRType getArrayElementType(int opcode) {
-        switch (opcode) {
-            case 0x2E: return PrimitiveType.INT;
-            case 0x2F: return PrimitiveType.LONG;
-            case 0x30: return PrimitiveType.FLOAT;
-            case 0x31: return PrimitiveType.DOUBLE;
-            case 0x32: return ReferenceType.OBJECT;
-            case 0x33: return PrimitiveType.BYTE;
-            case 0x34: return PrimitiveType.CHAR;
-            case 0x35: return PrimitiveType.SHORT;
-            default: return PrimitiveType.INT;
-        }
+        if (opcode == IALOAD.getCode()) return PrimitiveType.INT;
+        if (opcode == LALOAD.getCode()) return PrimitiveType.LONG;
+        if (opcode == FALOAD.getCode()) return PrimitiveType.FLOAT;
+        if (opcode == DALOAD.getCode()) return PrimitiveType.DOUBLE;
+        if (opcode == AALOAD.getCode()) return ReferenceType.OBJECT;
+        if (opcode == BALOAD.getCode()) return PrimitiveType.BYTE;
+        if (opcode == CALOAD.getCode()) return PrimitiveType.CHAR;
+        if (opcode == SALOAD.getCode()) return PrimitiveType.SHORT;
+        return PrimitiveType.INT;
     }
 
     private IRType getBinaryOpResultType(int opcode) {
-        // Shift and bitwise operations (0x78-0x83) only have INT and LONG variants
-        // They alternate: even=INT, odd=LONG
-        if (opcode >= 0x78 && opcode <= 0x83) {
+        if (opcode >= ISHL.getCode() && opcode <= LXOR.getCode()) {
             return (opcode % 2 == 0) ? PrimitiveType.INT : PrimitiveType.LONG;
         }
-        // Arithmetic operations (0x60-0x73) have all 4 variants
-        int typeVariant = (opcode - 0x60) % 4;
-        switch (typeVariant) {
-            case 0: return PrimitiveType.INT;
-            case 1: return PrimitiveType.LONG;
-            case 2: return PrimitiveType.FLOAT;
-            case 3: return PrimitiveType.DOUBLE;
-            default: return PrimitiveType.INT;
-        }
+        int typeVariant = (opcode - IADD.getCode()) % 4;
+        if (typeVariant == 0) return PrimitiveType.INT;
+        if (typeVariant == 1) return PrimitiveType.LONG;
+        if (typeVariant == 2) return PrimitiveType.FLOAT;
+        if (typeVariant == 3) return PrimitiveType.DOUBLE;
+        return PrimitiveType.INT;
     }
 
     private IRType getNegResultType(int opcode) {
-        switch (opcode) {
-            case 0x74: return PrimitiveType.INT;
-            case 0x75: return PrimitiveType.LONG;
-            case 0x76: return PrimitiveType.FLOAT;
-            case 0x77: return PrimitiveType.DOUBLE;
-            default: return PrimitiveType.INT;
-        }
+        if (opcode == INEG.getCode()) return PrimitiveType.INT;
+        if (opcode == LNEG.getCode()) return PrimitiveType.LONG;
+        if (opcode == FNEG.getCode()) return PrimitiveType.FLOAT;
+        if (opcode == DNEG.getCode()) return PrimitiveType.DOUBLE;
+        return PrimitiveType.INT;
     }
 
     private IRType getNewArrayElementType(int atype) {

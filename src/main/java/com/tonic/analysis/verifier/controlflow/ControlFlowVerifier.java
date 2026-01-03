@@ -3,19 +3,15 @@ package com.tonic.analysis.verifier.controlflow;
 import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.instruction.*;
 import com.tonic.analysis.verifier.*;
-import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 
 import java.util.*;
 
-public class ControlFlowVerifier {
-    private final ClassFile classFile;
-    private final VerifierConfig config;
+import static com.tonic.utill.Opcode.*;
 
-    public ControlFlowVerifier(ClassFile classFile, VerifierConfig config) {
-        this.classFile = classFile;
-        this.config = config;
+public class ControlFlowVerifier {
+    public ControlFlowVerifier() {
     }
 
     public void verify(MethodEntry method, ErrorCollector collector) {
@@ -53,7 +49,7 @@ public class ControlFlowVerifier {
             }
         }
 
-        verifyAllPathsTerminate(instructionMap, bytecode, reachable, terminating, code, collector);
+        verifyAllPathsTerminate(instructionMap, bytecode, reachable, collector);
     }
 
     private void findReachableInstructions(Map<Integer, Instruction> instructions, byte[] bytecode,
@@ -95,9 +91,7 @@ public class ControlFlowVerifier {
     }
 
     private void verifyAllPathsTerminate(Map<Integer, Instruction> instructions, byte[] bytecode,
-                                         Set<Integer> reachable, Set<Integer> terminating,
-                                         CodeAttribute code, ErrorCollector collector) {
-        Map<Integer, Set<Integer>> predecessors = buildPredecessorMap(instructions, bytecode, code);
+                                         Set<Integer> reachable, ErrorCollector collector) {
 
         for (Integer offset : reachable) {
             Instruction instr = instructions.get(offset);
@@ -170,28 +164,28 @@ public class ControlFlowVerifier {
     }
 
     private boolean isTerminatingInstruction(int opcode) {
-        return (opcode >= 0xAC && opcode <= 0xB1) ||
-               opcode == 0xBF ||
-               opcode == 0xA7 ||
-               opcode == 0xC8;
+        return (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode()) ||
+               opcode == ATHROW.getCode() ||
+               opcode == GOTO.getCode() ||
+               opcode == GOTO_W.getCode();
     }
 
     private List<Integer> getSuccessors(Instruction instr, int offset, byte[] bytecode) {
         List<Integer> successors = new ArrayList<>();
         int opcode = instr.getOpcode();
 
-        if (opcode >= 0xAC && opcode <= 0xB1) {
+        if (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode()) {
             return successors;
         }
-        if (opcode == 0xBF) {
+        if (opcode == ATHROW.getCode()) {
             return successors;
         }
 
         int nextOffset = offset + instr.getLength();
 
-        if (opcode == 0xA7 || opcode == 0xC8) {
-            if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
-                int target = offset + ((com.tonic.analysis.instruction.GotoInstruction) instr).getBranchOffset();
+        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode()) {
+            if (instr instanceof GotoInstruction) {
+                int target = offset + ((GotoInstruction) instr).getBranchOffset();
                 successors.add(target);
             }
             return successors;
@@ -224,7 +218,7 @@ public class ControlFlowVerifier {
             return successors;
         }
 
-        if (opcode == 0xA8 || opcode == 0xC9) {
+        if (opcode == JSR.getCode() || opcode == JSR_W.getCode()) {
             if (instr instanceof JsrInstruction) {
                 JsrInstruction jsr = (JsrInstruction) instr;
                 successors.add(offset + jsr.getBranchOffset());

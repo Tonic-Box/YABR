@@ -75,7 +75,7 @@ public final class Verifier {
         }
 
         if (config.isVerifyStructure() && !collector.shouldStop()) {
-            StructuralVerifier structural = new StructuralVerifier(classFile, config);
+            StructuralVerifier structural = new StructuralVerifier(classFile);
             structural.verify(method, collector);
         }
 
@@ -85,15 +85,15 @@ public final class Verifier {
         }
 
         if (config.isVerifyControlFlow() && !collector.shouldStop()) {
-            ControlFlowVerifier cfVerifier = new ControlFlowVerifier(classFile, config);
+            ControlFlowVerifier cfVerifier = new ControlFlowVerifier();
             cfVerifier.verify(method, collector);
 
-            ExceptionTableVerifier exVerifier = new ExceptionTableVerifier(classFile, config);
+            ExceptionTableVerifier exVerifier = new ExceptionTableVerifier(classFile);
             exVerifier.verify(method, collector);
         }
 
         if (config.isVerifyStackMapTable() && !collector.shouldStop()) {
-            StackMapVerifier stackMapVerifier = new StackMapVerifier(classFile, classPool, config);
+            StackMapVerifier stackMapVerifier = new StackMapVerifier(classFile);
             stackMapVerifier.verify(method, collector);
         }
 

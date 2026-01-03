@@ -14,6 +14,8 @@ import com.tonic.parser.attribute.CodeAttribute;
 
 import java.util.*;
 
+import static com.tonic.utill.Opcode.*;
+
 public class TypeVerifier {
     private final ClassFile classFile;
     private final ClassPool classPool;
@@ -225,14 +227,14 @@ public class TypeVerifier {
     private void verifyReturnType(Instruction instr, TypeState state, MethodEntry method,
                                   int offset, ConstPool constPool, ErrorCollector collector) {
         int opcode = instr.getOpcode();
-        if (opcode < 0xAC || opcode > 0xB1) {
+        if (opcode < IRETURN.getCode() || opcode > RETURN_.getCode()) {
             return;
         }
 
         String desc = method.getDesc();
         VerificationType expectedReturn = TypeState.getReturnType(desc, constPool);
 
-        if (opcode == 0xB1) {
+        if (opcode == RETURN_.getCode()) {
             if (expectedReturn != null) {
                 collector.addError(new VerificationError(
                         VerificationErrorType.INCOMPATIBLE_RETURN_TYPE,
@@ -275,26 +277,18 @@ public class TypeVerifier {
         List<Integer> successors = new ArrayList<>();
         int opcode = instr.getOpcode();
 
-        if (opcode >= 0xAC && opcode <= 0xB1) {
+        if (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode()) {
             return successors;
         }
-        if (opcode == 0xBF) {
+        if (opcode == ATHROW.getCode()) {
             return successors;
         }
 
         int nextOffset = offset + instr.getLength();
 
-        if (opcode == 0xA7) {
-            if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
-                int target = offset + ((com.tonic.analysis.instruction.GotoInstruction) instr).getBranchOffset();
-                successors.add(target);
-            }
-            return successors;
-        }
-
-        if (opcode == 0xC8) {
-            if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
-                int target = offset + ((com.tonic.analysis.instruction.GotoInstruction) instr).getBranchOffset();
+        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode()) {
+            if (instr instanceof GotoInstruction) {
+                int target = offset + ((GotoInstruction) instr).getBranchOffset();
                 successors.add(target);
             }
             return successors;

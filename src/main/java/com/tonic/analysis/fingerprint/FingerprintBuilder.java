@@ -13,11 +13,10 @@ import com.tonic.parser.constpool.*;
 
 import java.util.*;
 
-public class FingerprintBuilder {
-    private final ClassPool classPool;
+import static com.tonic.utill.Opcode.*;
 
-    public FingerprintBuilder(ClassPool classPool) {
-        this.classPool = classPool;
+public class FingerprintBuilder {
+    public FingerprintBuilder() {
     }
 
     public MethodFingerprint build(MethodEntry method, ClassFile classFile) {
@@ -131,7 +130,7 @@ public class FingerprintBuilder {
         int count = 0;
         for (byte b : bytecode) {
             int op = Byte.toUnsignedInt(b);
-            if (op == 0xC2 || op == 0xC3) {
+            if (op == MONITORENTER.getCode() || op == MONITOREXIT.getCode()) {
                 count++;
             }
         }
@@ -265,17 +264,17 @@ public class FingerprintBuilder {
     }
 
     private void categorizeBranchOp(int op, Map<String, Integer> branches) {
-        if (op >= 0x99 && op <= 0xA6) {
+        if (op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode()) {
             branches.merge("conditional", 1, Integer::sum);
-        } else if (op == 0xA7 || op == 0xC8) {
+        } else if (op == GOTO.getCode() || op == GOTO_W.getCode()) {
             branches.merge("goto", 1, Integer::sum);
-        } else if (op == 0xAA || op == 0xAB) {
+        } else if (op == TABLESWITCH.getCode() || op == LOOKUPSWITCH.getCode()) {
             branches.merge("switch", 1, Integer::sum);
         }
     }
 
     private void categorizeArithmeticOp(int op, Map<String, Integer> arithmetic) {
-        if ((op >= 0x60 && op <= 0x83) || (op >= 0x74 && op <= 0x77)) {
+        if ((op >= IADD.getCode() && op <= LXOR.getCode()) || (op >= INEG.getCode() && op <= DNEG.getCode())) {
             arithmetic.merge("math", 1, Integer::sum);
         }
     }
@@ -291,28 +290,28 @@ public class FingerprintBuilder {
     }
 
     private int getArrayFlag(int op) {
-        if (op >= 0x2E && op <= 0x35) return Level1Features.ARRAY_LOAD;
-        if (op >= 0x4F && op <= 0x56) return Level1Features.ARRAY_STORE;
-        if (op == 0xBC || op == 0xBD || op == 0xC5) return Level1Features.ARRAY_NEW;
-        if (op == 0xBE) return Level1Features.ARRAY_LENGTH;
+        if (op >= IALOAD.getCode() && op <= SALOAD.getCode()) return Level1Features.ARRAY_LOAD;
+        if (op >= IASTORE.getCode() && op <= SASTORE.getCode()) return Level1Features.ARRAY_STORE;
+        if (op == NEWARRAY.getCode() || op == ANEWARRAY.getCode() || op == MULTIANEWARRAY.getCode()) return Level1Features.ARRAY_NEW;
+        if (op == ARRAYLENGTH.getCode()) return Level1Features.ARRAY_LENGTH;
         return 0;
     }
 
     private boolean isBranchInstruction(int op) {
-        return (op >= 0x99 && op <= 0xA6) || op == 0xA7 || op == 0xA8 ||
-               op == 0xAA || op == 0xAB || op == 0xC8 || op == 0xC9;
+        return (op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode()) || op == GOTO.getCode() || op == JSR.getCode() ||
+               op == TABLESWITCH.getCode() || op == LOOKUPSWITCH.getCode() || op == GOTO_W.getCode() || op == JSR_W.getCode();
     }
 
     private boolean isTerminator(int op) {
-        return (op >= 0xAC && op <= 0xB1) || op == 0xBF ||
-               op == 0xA7 || op == 0xC8;
+        return (op >= IRETURN.getCode() && op <= RETURN_.getCode()) || op == ATHROW.getCode() ||
+               op == GOTO.getCode() || op == GOTO_W.getCode();
     }
 
     private String getTerminatorType(int op) {
-        if (op >= 0xAC && op <= 0xB0) return "return_value";
-        if (op == 0xB1) return "return_void";
-        if (op == 0xBF) return "athrow";
-        if (op == 0xA7 || op == 0xC8) return "goto";
+        if (op >= IRETURN.getCode() && op <= ARETURN.getCode()) return "return_value";
+        if (op == RETURN_.getCode()) return "return_void";
+        if (op == ATHROW.getCode()) return "athrow";
+        if (op == GOTO.getCode() || op == GOTO_W.getCode()) return "goto";
         return "other";
     }
 
@@ -327,14 +326,14 @@ public class FingerprintBuilder {
                 continue;
             }
 
-            if ((op >= 0x99 && op <= 0xA6) || op == 0xA7) {
+            if ((op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode()) || op == GOTO.getCode()) {
                 if (i + 2 < bytecode.length) {
                     short offset = (short) readUnsignedShort(bytecode, i + 1);
                     if (offset < 0) {
                         backwardJumps++;
                     }
                 }
-            } else if (op == 0xC8) {
+            } else if (op == GOTO_W.getCode()) {
                 if (i + 4 < bytecode.length) {
                     int offset = readInt(bytecode, i + 1);
                     if (offset < 0) {

@@ -4,6 +4,8 @@ import com.tonic.analysis.instruction.*;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Type inference engine for bytecode analysis.
  * Maps each instruction to its effect on the TypeState (locals and stack).
@@ -30,168 +32,168 @@ public class TypeInference {
     public TypeState apply(TypeState state, Instruction instr) {
         int opcode = instr.getOpcode();
 
-        if (opcode == 0x00) {
+        if (opcode == NOP.getCode()) {
             return state;
         }
 
-        if (opcode == 0x01) {
+        if (opcode == ACONST_NULL.getCode()) {
             return state.push(VerificationType.NULL);
         }
 
-        if (opcode >= 0x02 && opcode <= 0x08) {
+        if (opcode >= ICONST_M1.getCode() && opcode <= ICONST_5.getCode()) {
             return state.push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x09 || opcode == 0x0A) {
+        if (opcode == LCONST_0.getCode() || opcode == LCONST_1.getCode()) {
             return state.push(VerificationType.LONG);
         }
 
-        if (opcode >= 0x0B && opcode <= 0x0D) {
+        if (opcode >= FCONST_0.getCode() && opcode <= FCONST_2.getCode()) {
             return state.push(VerificationType.FLOAT);
         }
 
-        if (opcode == 0x0E || opcode == 0x0F) {
+        if (opcode == DCONST_0.getCode() || opcode == DCONST_1.getCode()) {
             return state.push(VerificationType.DOUBLE);
         }
 
-        if (opcode == 0x10 || opcode == 0x11) {
+        if (opcode == BIPUSH.getCode() || opcode == SIPUSH.getCode()) {
             return state.push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x12 || opcode == 0x13 || opcode == 0x14) {
+        if (opcode == LDC.getCode() || opcode == LDC_W.getCode() || opcode == LDC2_W.getCode()) {
             return applyLdc(state, instr);
         }
 
-        if (opcode == 0x15 || (opcode >= 0x1A && opcode <= 0x1D)) {
+        if (opcode == ILOAD.getCode() || (opcode >= ILOAD_0.getCode() && opcode <= ILOAD_3.getCode())) {
             return state.push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x16 || (opcode >= 0x1E && opcode <= 0x21)) {
+        if (opcode == LLOAD.getCode() || (opcode >= LLOAD_0.getCode() && opcode <= LLOAD_3.getCode())) {
             return state.push(VerificationType.LONG);
         }
 
-        if (opcode == 0x17 || (opcode >= 0x22 && opcode <= 0x25)) {
+        if (opcode == FLOAD.getCode() || (opcode >= FLOAD_0.getCode() && opcode <= FLOAD_3.getCode())) {
             return state.push(VerificationType.FLOAT);
         }
 
-        if (opcode == 0x18 || (opcode >= 0x26 && opcode <= 0x29)) {
+        if (opcode == DLOAD.getCode() || (opcode >= DLOAD_0.getCode() && opcode <= DLOAD_3.getCode())) {
             return state.push(VerificationType.DOUBLE);
         }
 
-        if (opcode == 0x19 || (opcode >= 0x2A && opcode <= 0x2D)) {
+        if (opcode == ALOAD.getCode() || (opcode >= ALOAD_0.getCode() && opcode <= ALOAD_3.getCode())) {
             int index = getLocalIndex(instr);
             VerificationType localType = state.getLocal(index);
             return state.push(localType);
         }
 
-        if (opcode == 0x2E || opcode == 0x33 || opcode == 0x34 || opcode == 0x35) {
+        if (opcode == IALOAD.getCode() || opcode == BALOAD.getCode() || opcode == CALOAD.getCode() || opcode == SALOAD.getCode()) {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x2F) {
+        if (opcode == LALOAD.getCode()) {
             return state.pop(2).push(VerificationType.LONG);
         }
 
-        if (opcode == 0x30) {
+        if (opcode == FALOAD.getCode()) {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == 0x31) {
+        if (opcode == DALOAD.getCode()) {
             return state.pop(2).push(VerificationType.DOUBLE);
         }
 
-        if (opcode == 0x32) {
+        if (opcode == AALOAD.getCode()) {
             VerificationType arrayType = state.peek(1);
             state = state.pop(2);
             return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == 0x36 || (opcode >= 0x3B && opcode <= 0x3E)) {
+        if (opcode == ISTORE.getCode() || (opcode >= ISTORE_0.getCode() && opcode <= ISTORE_3.getCode())) {
             int index = getLocalIndex(instr);
             return state.pop().setLocal(index, VerificationType.INTEGER);
         }
 
-        if (opcode == 0x37 || (opcode >= 0x3F && opcode <= 0x42)) {
+        if (opcode == LSTORE.getCode() || (opcode >= LSTORE_0.getCode() && opcode <= LSTORE_3.getCode())) {
             int index = getLocalIndex(instr);
             return state.pop(2).setLocal(index, VerificationType.LONG);
         }
 
-        if (opcode == 0x38 || (opcode >= 0x43 && opcode <= 0x46)) {
+        if (opcode == FSTORE.getCode() || (opcode >= FSTORE_0.getCode() && opcode <= FSTORE_3.getCode())) {
             int index = getLocalIndex(instr);
             return state.pop().setLocal(index, VerificationType.FLOAT);
         }
 
-        if (opcode == 0x39 || (opcode >= 0x47 && opcode <= 0x4A)) {
+        if (opcode == DSTORE.getCode() || (opcode >= DSTORE_0.getCode() && opcode <= DSTORE_3.getCode())) {
             int index = getLocalIndex(instr);
             return state.pop(2).setLocal(index, VerificationType.DOUBLE);
         }
 
-        if (opcode == 0x3A || (opcode >= 0x4B && opcode <= 0x4E)) {
+        if (opcode == ASTORE.getCode() || (opcode >= ASTORE_0.getCode() && opcode <= ASTORE_3.getCode())) {
             int index = getLocalIndex(instr);
             VerificationType type = state.peek();
             return state.pop().setLocal(index, type);
         }
 
-        if (opcode == 0x4F || opcode == 0x54 || opcode == 0x55 || opcode == 0x56) {
+        if (opcode == IASTORE.getCode() || opcode == BASTORE.getCode() || opcode == CASTORE.getCode() || opcode == SASTORE.getCode()) {
             return state.pop(3);
         }
 
-        if (opcode == 0x50) {
+        if (opcode == LASTORE.getCode()) {
             return state.pop(4);
         }
 
-        if (opcode == 0x51) {
+        if (opcode == FASTORE.getCode()) {
             return state.pop(3);
         }
 
-        if (opcode == 0x52) {
+        if (opcode == DASTORE.getCode()) {
             return state.pop(4);
         }
 
-        if (opcode == 0x53) {
+        if (opcode == AASTORE.getCode()) {
             return state.pop(3);
         }
 
-        if (opcode == 0x57) {
+        if (opcode == POP.getCode()) {
             return state.pop();
         }
 
-        if (opcode == 0x58) {
+        if (opcode == POP2.getCode()) {
             return state.pop(2);
         }
 
-        if (opcode == 0x59) {
+        if (opcode == DUP.getCode()) {
             VerificationType top = state.peek();
             return state.push(top);
         }
 
-        if (opcode == 0x5A) {
+        if (opcode == DUP_X1.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             return state.pop(2).push(v1).push(v2).push(v1);
         }
 
-        if (opcode == 0x5B) {
+        if (opcode == DUP_X2.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
             return state.pop(3).push(v1).push(v3).push(v2).push(v1);
         }
 
-        if (opcode == 0x5C) {
+        if (opcode == DUP2.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             return state.push(v2).push(v1);
         }
 
-        if (opcode == 0x5D) {
+        if (opcode == DUP2_X1.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
             return state.pop(3).push(v2).push(v1).push(v3).push(v2).push(v1);
         }
 
-        if (opcode == 0x5E) {
+        if (opcode == DUP2_X2.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
@@ -199,219 +201,219 @@ public class TypeInference {
             return state.pop(4).push(v2).push(v1).push(v4).push(v3).push(v2).push(v1);
         }
 
-        if (opcode == 0x5F) {
+        if (opcode == SWAP.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             return state.pop(2).push(v1).push(v2);
         }
 
-        if (opcode == 0x60 || opcode == 0x64 || opcode == 0x68 || opcode == 0x6C ||
-            opcode == 0x70 || opcode == 0x7E || opcode == 0x80 || opcode == 0x82) {
+        if (opcode == IADD.getCode() || opcode == ISUB.getCode() || opcode == IMUL.getCode() || opcode == IDIV.getCode() ||
+            opcode == IREM.getCode() || opcode == IAND.getCode() || opcode == IOR.getCode() || opcode == IXOR.getCode()) {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x61 || opcode == 0x65 || opcode == 0x69 || opcode == 0x6D ||
-            opcode == 0x71 || opcode == 0x7F || opcode == 0x81 || opcode == 0x83) {
+        if (opcode == LADD.getCode() || opcode == LSUB.getCode() || opcode == LMUL.getCode() || opcode == LDIV.getCode() ||
+            opcode == LREM.getCode() || opcode == LAND.getCode() || opcode == LOR.getCode() || opcode == LXOR.getCode()) {
             return state.pop(4).push(VerificationType.LONG);
         }
 
-        if (opcode == 0x62 || opcode == 0x66 || opcode == 0x6A || opcode == 0x6E || opcode == 0x72) {
+        if (opcode == FADD.getCode() || opcode == FSUB.getCode() || opcode == FMUL.getCode() || opcode == FDIV.getCode() || opcode == FREM.getCode()) {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == 0x63 || opcode == 0x67 || opcode == 0x6B || opcode == 0x6F || opcode == 0x73) {
+        if (opcode == DADD.getCode() || opcode == DSUB.getCode() || opcode == DMUL.getCode() || opcode == DDIV.getCode() || opcode == DREM.getCode()) {
             return state.pop(4).push(VerificationType.DOUBLE);
         }
 
-        if (opcode >= 0x74 && opcode <= 0x77) {
+        if (opcode >= INEG.getCode() && opcode <= DNEG.getCode()) {
             return state;
         }
 
-        if (opcode == 0x78 || opcode == 0x7A || opcode == 0x7C) {
+        if (opcode == ISHL.getCode() || opcode == ISHR.getCode() || opcode == IUSHR.getCode()) {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x79 || opcode == 0x7B || opcode == 0x7D) {
+        if (opcode == LSHL.getCode() || opcode == LSHR.getCode() || opcode == LUSHR.getCode()) {
             return state.pop(3).push(VerificationType.LONG);
         }
 
-        if (opcode == 0x84) {
+        if (opcode == IINC.getCode()) {
             return state;
         }
 
-        if (opcode == 0x85) {
+        if (opcode == I2L.getCode()) {
             return state.pop().push(VerificationType.LONG);
         }
 
-        if (opcode == 0x86) {
+        if (opcode == I2F.getCode()) {
             return state.pop().push(VerificationType.FLOAT);
         }
 
-        if (opcode == 0x87) {
+        if (opcode == I2D.getCode()) {
             return state.pop().push(VerificationType.DOUBLE);
         }
 
-        if (opcode == 0x88) {
+        if (opcode == L2I.getCode()) {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x89) {
+        if (opcode == L2F.getCode()) {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == 0x8A) {
+        if (opcode == L2D.getCode()) {
             return state.pop(2).push(VerificationType.DOUBLE);
         }
 
-        if (opcode == 0x8B) {
+        if (opcode == F2I.getCode()) {
             return state.pop().push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x8C) {
+        if (opcode == F2L.getCode()) {
             return state.pop().push(VerificationType.LONG);
         }
 
-        if (opcode == 0x8D) {
+        if (opcode == F2D.getCode()) {
             return state.pop().push(VerificationType.DOUBLE);
         }
 
-        if (opcode == 0x8E) {
+        if (opcode == D2I.getCode()) {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x8F) {
+        if (opcode == D2L.getCode()) {
             return state.pop(2).push(VerificationType.LONG);
         }
 
-        if (opcode == 0x90) {
+        if (opcode == D2F.getCode()) {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == 0x91 || opcode == 0x92 || opcode == 0x93) {
+        if (opcode == I2B.getCode() || opcode == I2C.getCode() || opcode == I2S.getCode()) {
             return state;
         }
 
-        if (opcode == 0x94) {
+        if (opcode == LCMP.getCode()) {
             return state.pop(4).push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x95 || opcode == 0x96) {
+        if (opcode == FCMPL.getCode() || opcode == FCMPG.getCode()) {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0x97 || opcode == 0x98) {
+        if (opcode == DCMPL.getCode() || opcode == DCMPG.getCode()) {
             return state.pop(4).push(VerificationType.INTEGER);
         }
 
-        if (opcode >= 0x99 && opcode <= 0x9E) {
+        if (opcode >= IFEQ.getCode() && opcode <= IFLE.getCode()) {
             return state.pop();
         }
 
-        if (opcode >= 0x9F && opcode <= 0xA4) {
+        if (opcode >= IF_ICMPEQ.getCode() && opcode <= IF_ICMPLE.getCode()) {
             return state.pop(2);
         }
 
-        if (opcode == 0xA5 || opcode == 0xA6) {
+        if (opcode == IF_ACMPEQ.getCode() || opcode == IF_ACMPNE.getCode()) {
             return state.pop(2);
         }
 
-        if (opcode == 0xA7 || opcode == 0xC8) {
+        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode()) {
             return state;
         }
 
-        if (opcode == 0xA8 || opcode == 0xC9) {
+        if (opcode == JSR.getCode() || opcode == JSR_W.getCode()) {
             return state.push(VerificationType.TOP);
         }
 
-        if (opcode == 0xA9) {
+        if (opcode == RET.getCode()) {
             return state;
         }
 
-        if (opcode == 0xAA || opcode == 0xAB) {
+        if (opcode == TABLESWITCH.getCode() || opcode == LOOKUPSWITCH.getCode()) {
             return state.pop();
         }
 
-        if (opcode == 0xAC) {
+        if (opcode == IRETURN.getCode()) {
             return state.clearStack();
         }
 
-        if (opcode == 0xAD) {
+        if (opcode == LRETURN.getCode()) {
             return state.clearStack();
         }
 
-        if (opcode == 0xAE) {
+        if (opcode == FRETURN.getCode()) {
             return state.clearStack();
         }
 
-        if (opcode == 0xAF) {
+        if (opcode == DRETURN.getCode()) {
             return state.clearStack();
         }
 
-        if (opcode == 0xB0) {
+        if (opcode == ARETURN.getCode()) {
             return state.clearStack();
         }
 
-        if (opcode == 0xB1) {
+        if (opcode == RETURN_.getCode()) {
             return state.clearStack();
         }
 
-        if (opcode == 0xB2) {
+        if (opcode == GETSTATIC.getCode()) {
             return applyGetField(state, instr, true);
         }
 
-        if (opcode == 0xB3) {
+        if (opcode == PUTSTATIC.getCode()) {
             return applyPutField(state, instr, true);
         }
 
-        if (opcode == 0xB4) {
+        if (opcode == GETFIELD.getCode()) {
             return applyGetField(state, instr, false);
         }
 
-        if (opcode == 0xB5) {
+        if (opcode == PUTFIELD.getCode()) {
             return applyPutField(state, instr, false);
         }
 
-        if (opcode == 0xB6) {
+        if (opcode == INVOKEVIRTUAL.getCode()) {
             return applyInvoke(state, instr, false, false);
         }
 
-        if (opcode == 0xB7) {
+        if (opcode == INVOKESPECIAL.getCode()) {
             return applyInvoke(state, instr, false, true);
         }
 
-        if (opcode == 0xB8) {
+        if (opcode == INVOKESTATIC.getCode()) {
             return applyInvoke(state, instr, true, false);
         }
 
-        if (opcode == 0xB9) {
+        if (opcode == INVOKEINTERFACE.getCode()) {
             return applyInvoke(state, instr, false, false);
         }
 
-        if (opcode == 0xBA) {
+        if (opcode == INVOKEDYNAMIC.getCode()) {
             return applyInvokeDynamic(state, instr);
         }
 
-        if (opcode == 0xBB) {
+        if (opcode == NEW.getCode()) {
             return state.push(VerificationType.uninitialized(instr.getOffset()));
         }
 
-        if (opcode == 0xBC) {
+        if (opcode == NEWARRAY.getCode()) {
             return state.pop().push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == 0xBD) {
+        if (opcode == ANEWARRAY.getCode()) {
             return state.pop().push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == 0xBE) {
+        if (opcode == ARRAYLENGTH.getCode()) {
             return state.pop().push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0xBF) {
+        if (opcode == ATHROW.getCode()) {
             return state.clearStack();
         }
 
-        if (opcode == 0xC0) {
+        if (opcode == CHECKCAST.getCode()) {
             state = state.pop();
             if (instr instanceof CheckCastInstruction) {
                 CheckCastInstruction checkCast = (CheckCastInstruction) instr;
@@ -421,19 +423,19 @@ public class TypeInference {
             return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == 0xC1) {
+        if (opcode == INSTANCEOF.getCode()) {
             return state.pop().push(VerificationType.INTEGER);
         }
 
-        if (opcode == 0xC2 || opcode == 0xC3) {
+        if (opcode == MONITORENTER.getCode() || opcode == MONITOREXIT.getCode()) {
             return state.pop();
         }
 
-        if (opcode == 0xC4) {
+        if (opcode == WIDE.getCode()) {
             return state;
         }
 
-        if (opcode == 0xC5) {
+        if (opcode == MULTIANEWARRAY.getCode()) {
             if (instr instanceof MultiANewArrayInstruction) {
                 MultiANewArrayInstruction multiArray = (MultiANewArrayInstruction) instr;
                 int dimensions = multiArray.getDimensions();
@@ -443,7 +445,7 @@ public class TypeInference {
             return state;
         }
 
-        if (opcode == 0xC6 || opcode == 0xC7) {
+        if (opcode == IFNULL.getCode() || opcode == IFNONNULL.getCode()) {
             return state.pop();
         }
 

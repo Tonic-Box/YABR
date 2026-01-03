@@ -14,6 +14,8 @@ import com.tonic.utill.ReturnType;
 import lombok.Getter;
 
 import java.io.ByteArrayOutputStream;
+
+import static com.tonic.utill.Opcode.*;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.*;
@@ -872,20 +874,12 @@ public class CodeWriter {
          * @return The name of the load instruction.
          */
         private static String getLoadInstructionName(int opcode) {
-            switch (opcode) {
-                case 0x15:
-                    return "ILOAD";
-                case 0x16:
-                    return "LLOAD";
-                case 0x17:
-                    return "FLOAD";
-                case 0x18:
-                    return "DLOAD";
-                case 0x19:
-                    return "ALOAD";
-                default:
-                    return "UNKNOWN_LOAD";
-            }
+            if (opcode == ILOAD.getCode()) return "ILOAD";
+            if (opcode == LLOAD.getCode()) return "LLOAD";
+            if (opcode == FLOAD.getCode()) return "FLOAD";
+            if (opcode == DLOAD.getCode()) return "DLOAD";
+            if (opcode == ALOAD.getCode()) return "ALOAD";
+            return "UNKNOWN_LOAD";
         }
 
         /**
@@ -895,20 +889,12 @@ public class CodeWriter {
          * @return The name of the store instruction.
          */
         private static String getStoreInstructionName(int opcode) {
-            switch (opcode) {
-                case 0x36:
-                    return "ISTORE";
-                case 0x37:
-                    return "LSTORE";
-                case 0x38:
-                    return "FSTORE";
-                case 0x39:
-                    return "DSTORE";
-                case 0x3A:
-                    return "ASTORE";
-                default:
-                    return "UNKNOWN_STORE";
-            }
+            if (opcode == ISTORE.getCode()) return "ISTORE";
+            if (opcode == LSTORE.getCode()) return "LSTORE";
+            if (opcode == FSTORE.getCode()) return "FSTORE";
+            if (opcode == DSTORE.getCode()) return "DSTORE";
+            if (opcode == ASTORE.getCode()) return "ASTORE";
+            return "UNKNOWN_STORE";
         }
 
         /**
@@ -982,13 +968,13 @@ public class CodeWriter {
          * @return A GotoInstruction instance or UnknownInstruction if malformed.
          */
         private static Instruction parseGotoInstruction(int opcode, int offset, byte[] bytecode) {
-            if (opcode == 0xA7) {
+            if (opcode == GOTO.getCode()) {
                 if (offset + 2 >= bytecode.length) {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                 }
                 short branchOffset = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
                 return new GotoInstruction(opcode, offset, branchOffset);
-            } else if (opcode == 0xC8) {
+            } else if (opcode == GOTO_W.getCode()) {
                 if (offset + 4 >= bytecode.length) {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                 }
@@ -1009,13 +995,13 @@ public class CodeWriter {
          * @return A JsrInstruction instance or UnknownInstruction if malformed.
          */
         private static Instruction parseJsrInstruction(int opcode, int offset, byte[] bytecode) {
-            if (opcode == 0xA8) {
+            if (opcode == JSR.getCode()) {
                 if (offset + 2 >= bytecode.length) {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                 }
                 short jsrOffset = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
                 return new JsrInstruction(opcode, offset, jsrOffset);
-            } else if (opcode == 0xC9) {
+            } else if (opcode == JSR_W.getCode()) {
                 if (offset + 4 >= bytecode.length) {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset);
                 }
@@ -1041,16 +1027,14 @@ public class CodeWriter {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset);
             }
             int methodRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
-            switch (opcode) {
-                case 0xB6:
-                    return new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
-                case 0xB7:
-                    return new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
-                case 0xB8:
-                    return new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
-                default:
-                    return new UnknownInstruction(opcode, offset, 3);
+            if (opcode == INVOKEVIRTUAL.getCode()) {
+                return new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
+            } else if (opcode == INVOKESPECIAL.getCode()) {
+                return new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
+            } else if (opcode == INVOKESTATIC.getCode()) {
+                return new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
             }
+            return new UnknownInstruction(opcode, offset, 3);
         }
 
         /**
@@ -1247,8 +1231,7 @@ public class CodeWriter {
      * @param methodRefIndex  The index into the constant pool for the method reference.
      */
     public InvokeVirtualInstruction insertInvokeVirtual(int offset, int methodRefIndex) {
-        int opcode = 0xB6;
-        InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
+        InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, INVOKEVIRTUAL.getCode(), offset, methodRefIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1260,8 +1243,7 @@ public class CodeWriter {
      * @param methodRefIndex  The index into the constant pool for the method reference.
      */
     public InvokeSpecialInstruction insertInvokeSpecial(int offset, int methodRefIndex) {
-        int opcode = 0xB7;
-        InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
+        InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, INVOKESPECIAL.getCode(), offset, methodRefIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1273,8 +1255,7 @@ public class CodeWriter {
      * @param methodRefIndex  The index into the constant pool for the method reference.
      */
     public InvokeStaticInstruction insertInvokeStatic(int offset, int methodRefIndex) {
-        int opcode = 0xB8;
-        InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
+        InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, INVOKESTATIC.getCode(), offset, methodRefIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1287,8 +1268,7 @@ public class CodeWriter {
      * @param count                   The count of arguments for the interface method.
      */
     public InvokeInterfaceInstruction insertInvokeInterface(int offset, int interfaceMethodRefIndex, int count) {
-        int opcode = 0xB9;
-        InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, opcode, offset, interfaceMethodRefIndex, count);
+        InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, INVOKEINTERFACE.getCode(), offset, interfaceMethodRefIndex, count);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1300,8 +1280,7 @@ public class CodeWriter {
      * @param cpIndex The constant pool index to the CONSTANT_InvokeDynamic_info entry.
      */
     public InvokeDynamicInstruction insertInvokeDynamic(int offset, int cpIndex) {
-        int opcode = 0xBA;
-        InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, opcode, offset, cpIndex);
+        InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, INVOKEDYNAMIC.getCode(), offset, cpIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1313,8 +1292,7 @@ public class CodeWriter {
      * @param index  The local variable index to load from.
      */
     public ALoadInstruction insertALoad(int offset, int index) {
-        int opcode = 0x19;
-        ALoadInstruction instr = new ALoadInstruction(opcode, offset, index);
+        ALoadInstruction instr = new ALoadInstruction(ALOAD.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1326,8 +1304,7 @@ public class CodeWriter {
      * @param index  The local variable index to store into.
      */
     public AStoreInstruction insertAStore(int offset, int index) {
-        int opcode = 0x3A;
-        AStoreInstruction instr = new AStoreInstruction(opcode, offset, index);
+        AStoreInstruction instr = new AStoreInstruction(ASTORE.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1339,8 +1316,7 @@ public class CodeWriter {
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
     public GetFieldInstruction insertGetStatic(int offset, int fieldRefIndex) {
-        int opcode = 0xB2;
-        GetFieldInstruction instr = new GetFieldInstruction(constPool, opcode, offset, fieldRefIndex);
+        GetFieldInstruction instr = new GetFieldInstruction(constPool, GETSTATIC.getCode(), offset, fieldRefIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1352,8 +1328,7 @@ public class CodeWriter {
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
     public GetFieldInstruction insertGetField(int offset, int fieldRefIndex) {
-        int opcode = 0xB4;
-        GetFieldInstruction instr = new GetFieldInstruction(constPool, opcode, offset, fieldRefIndex);
+        GetFieldInstruction instr = new GetFieldInstruction(constPool, GETFIELD.getCode(), offset, fieldRefIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1365,8 +1340,7 @@ public class CodeWriter {
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
     public PutFieldInstruction insertPutStatic(int offset, int fieldRefIndex) {
-        int opcode = 0xB3;
-        PutFieldInstruction instr = new PutFieldInstruction(constPool, opcode, offset, fieldRefIndex);
+        PutFieldInstruction instr = new PutFieldInstruction(constPool, PUTSTATIC.getCode(), offset, fieldRefIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1378,8 +1352,7 @@ public class CodeWriter {
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
     public PutFieldInstruction insertPutField(int offset, int fieldRefIndex) {
-        int opcode = 0xB5;
-        PutFieldInstruction instr = new PutFieldInstruction(constPool, opcode, offset, fieldRefIndex);
+        PutFieldInstruction instr = new PutFieldInstruction(constPool, PUTFIELD.getCode(), offset, fieldRefIndex);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1391,8 +1364,7 @@ public class CodeWriter {
      * @param index  The local variable index to load from.
      */
     public ILoadInstruction insertILoad(int offset, int index) {
-        int opcode = 0x15;
-        ILoadInstruction instr = new ILoadInstruction(opcode, offset, index);
+        ILoadInstruction instr = new ILoadInstruction(ILOAD.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1404,8 +1376,7 @@ public class CodeWriter {
      * @param index  The local variable index to store into.
      */
     public IStoreInstruction insertIStore(int offset, int index) {
-        int opcode = 0x36;
-        IStoreInstruction instr = new IStoreInstruction(opcode, offset, index);
+        IStoreInstruction instr = new IStoreInstruction(ISTORE.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1417,8 +1388,7 @@ public class CodeWriter {
      * @param index  The local variable index to load from.
      */
     public LLoadInstruction insertLLoad(int offset, int index) {
-        int opcode = 0x16;
-        LLoadInstruction instr = new LLoadInstruction(opcode, offset, index);
+        LLoadInstruction instr = new LLoadInstruction(LLOAD.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1430,8 +1400,7 @@ public class CodeWriter {
      * @param index  The local variable index to store into.
      */
     public LStoreInstruction insertLStore(int offset, int index) {
-        int opcode = 0x37;
-        LStoreInstruction instr = new LStoreInstruction(opcode, offset, index);
+        LStoreInstruction instr = new LStoreInstruction(LSTORE.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1443,8 +1412,7 @@ public class CodeWriter {
      * @param index  The local variable index to load from.
      */
     public FLoadInstruction insertFLoad(int offset, int index) {
-        int opcode = 0x17;
-        FLoadInstruction instr = new FLoadInstruction(opcode, offset, index);
+        FLoadInstruction instr = new FLoadInstruction(FLOAD.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1456,8 +1424,7 @@ public class CodeWriter {
      * @param index  The local variable index to store into.
      */
     public FStoreInstruction insertFStore(int offset, int index) {
-        int opcode = 0x38;
-        FStoreInstruction instr = new FStoreInstruction(opcode, offset, index);
+        FStoreInstruction instr = new FStoreInstruction(FSTORE.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1469,8 +1436,7 @@ public class CodeWriter {
      * @param index  The local variable index to load from.
      */
     public DLoadInstruction insertDLoad(int offset, int index) {
-        int opcode = 0x18;
-        DLoadInstruction instr = new DLoadInstruction(opcode, offset, index);
+        DLoadInstruction instr = new DLoadInstruction(DLOAD.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1482,8 +1448,7 @@ public class CodeWriter {
      * @param index  The local variable index to store into.
      */
     public DStoreInstruction insertDStore(int offset, int index) {
-        int opcode = 0x39;
-        DStoreInstruction instr = new DStoreInstruction(opcode, offset, index);
+        DStoreInstruction instr = new DStoreInstruction(DSTORE.getCode(), offset, index);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1496,8 +1461,7 @@ public class CodeWriter {
      * @param increment The constant by which to increment the variable.
      */
     public IIncInstruction insertIInc(int offset, int varIndex, int increment) {
-        int opcode = 0x84;
-        IIncInstruction instr = new IIncInstruction(opcode, offset, varIndex, increment);
+        IIncInstruction instr = new IIncInstruction(IINC.getCode(), offset, varIndex, increment);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1509,8 +1473,7 @@ public class CodeWriter {
      * @param branchOffset The signed short branch offset relative to the GOTO instruction.
      */
     public GotoInstruction insertGoto(int offset, short branchOffset) {
-        int opcode = 0xA7;
-        GotoInstruction gotoInstr = new GotoInstruction(opcode, offset, branchOffset);
+        GotoInstruction gotoInstr = new GotoInstruction(GOTO.getCode(), offset, branchOffset);
         insertInstruction(offset, gotoInstr);
         return gotoInstr;
     }
@@ -1523,10 +1486,7 @@ public class CodeWriter {
      * @throws IllegalArgumentException If the specified offset is invalid.
      */
     public GotoInstruction insertGotoW(int offset, int branchOffset) {
-        final int GOTO_W_OPCODE = 0xC8;
-
-        GotoInstruction gotoWInstr = new GotoInstruction(GOTO_W_OPCODE, offset, branchOffset);
-
+        GotoInstruction gotoWInstr = new GotoInstruction(GOTO_W.getCode(), offset, branchOffset);
         insertInstruction(offset, gotoWInstr);
         return gotoWInstr;
     }
@@ -1538,8 +1498,7 @@ public class CodeWriter {
      * @param classRefIndex The index into the constant pool for the class reference.
      */
     public NewInstruction insertNew(int offset, int classRefIndex) {
-        int opcode = 0xBB;
-        NewInstruction newInstr = new NewInstruction(constPool, opcode, offset, classRefIndex);
+        NewInstruction newInstr = new NewInstruction(constPool, NEW.getCode(), offset, classRefIndex);
         insertInstruction(offset, newInstr);
         return newInstr;
     }
@@ -1551,8 +1510,7 @@ public class CodeWriter {
      * @param constantPoolIndex  The index into the constant pool for the constant.
      */
     public LdcInstruction insertLDC(int offset, int constantPoolIndex) {
-        int opcode = 0x12;
-        LdcInstruction ldcInstr = new LdcInstruction(constPool, opcode, offset, constantPoolIndex);
+        LdcInstruction ldcInstr = new LdcInstruction(constPool, LDC.getCode(), offset, constantPoolIndex);
         insertInstruction(offset, ldcInstr);
         return ldcInstr;
     }
@@ -1564,9 +1522,8 @@ public class CodeWriter {
      * @param constantPoolIndex The 2-byte index into the constant pool for the constant.
      */
     public LdcWInstruction insertLDCW(int offset, int constantPoolIndex) {
-        int opcode = 0x13;
         Logger.info("Inserting LDC_W at offset " + offset + " with index " + constantPoolIndex);
-        LdcWInstruction ldcWInstr = new LdcWInstruction(constPool, opcode, offset, constantPoolIndex);
+        LdcWInstruction ldcWInstr = new LdcWInstruction(constPool, LDC_W.getCode(), offset, constantPoolIndex);
         insertInstruction(offset, ldcWInstr);
         return ldcWInstr;
     }
@@ -1585,7 +1542,7 @@ public class CodeWriter {
     public TableSwitchInstruction insertTableSwitch(int offset, int padding,
                                                      int defaultOffset, int low, int high, Map<Integer, Integer> jumpOffsets) {
         TableSwitchInstruction instr = new TableSwitchInstruction(
-            0xAA, offset, padding, defaultOffset, low, high, jumpOffsets);
+            TABLESWITCH.getCode(), offset, padding, defaultOffset, low, high, jumpOffsets);
         insertInstruction(offset, instr);
         return instr;
     }
@@ -1603,7 +1560,7 @@ public class CodeWriter {
     public LookupSwitchInstruction insertLookupSwitch(int offset, int padding,
                                                        int defaultOffset, int npairs, Map<Integer, Integer> matchOffsets) {
         LookupSwitchInstruction instr = new LookupSwitchInstruction(
-            0xAB, offset, padding, defaultOffset, npairs, matchOffsets);
+            LOOKUPSWITCH.getCode(), offset, padding, defaultOffset, npairs, matchOffsets);
         insertInstruction(offset, instr);
         return instr;
     }

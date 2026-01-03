@@ -15,6 +15,8 @@ import com.tonic.utill.Logger;
 
 import java.util.*;
 
+import static com.tonic.utill.Opcode.*;
+
 /**
  * Generates StackMapTable frames for a method.
  * Uses FULL_FRAME for all entries (simple and always valid).
@@ -324,10 +326,10 @@ public class FrameGenerator {
      * @return true if unconditional jump
      */
     private boolean isUnconditionalJump(int opcode) {
-        return opcode == 0xA7
-            || opcode == 0xC8
-            || opcode == 0xA8
-            || opcode == 0xC9;
+        return opcode == GOTO.getCode()
+            || opcode == GOTO_W.getCode()
+            || opcode == JSR.getCode()
+            || opcode == JSR_W.getCode();
     }
 
     /**
@@ -337,14 +339,9 @@ public class FrameGenerator {
      * @return true if terminator
      */
     private boolean isTerminator(int opcode) {
-        return opcode == 0xAC
-            || opcode == 0xAD
-            || opcode == 0xAE
-            || opcode == 0xAF
-            || opcode == 0xB0
-            || opcode == 0xB1
-            || opcode == 0xBF
-            || opcode == 0xA9;
+        return (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode())
+            || opcode == ATHROW.getCode()
+            || opcode == RET.getCode();
     }
 
     /**

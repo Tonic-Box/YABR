@@ -9,11 +9,13 @@ import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.parser.constpool.*;
 import com.tonic.type.MethodHandle;
+import com.tonic.utill.Opcode;
 import com.tonic.utill.ReturnType;
 
 import java.util.*;
 
 import static com.tonic.analysis.instruction.ArithmeticInstruction.ArithmeticType;
+import static com.tonic.utill.Opcode.*;
 
 public class CodeBuilder {
 
@@ -92,14 +94,14 @@ public class CodeBuilder {
 
     public CodeBuilder bipush(int value) {
         addOp((bc, cw) -> {
-            cw.appendInstruction(new BipushInstruction(0x10, cw.getBytecodeSize(), value));
+            cw.appendInstruction(new BipushInstruction(BIPUSH.getCode(), cw.getBytecodeSize(), value));
         }, 2);
         return this;
     }
 
     public CodeBuilder sipush(int value) {
         addOp((bc, cw) -> {
-            cw.appendInstruction(new SipushInstruction(0x11, cw.getBytecodeSize(), value));
+            cw.appendInstruction(new SipushInstruction(SIPUSH.getCode(), cw.getBytecodeSize(), value));
         }, 3);
         return this;
     }
@@ -155,132 +157,132 @@ public class CodeBuilder {
     }
 
     public CodeBuilder iaload() {
-        addOp((bc, cw) -> cw.appendInstruction(new IALoadInstruction(0x2E, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new IALoadInstruction(IALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder laload() {
-        addOp((bc, cw) -> cw.appendInstruction(new LALoadInstruction(0x2F, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new LALoadInstruction(LALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder faload() {
-        addOp((bc, cw) -> cw.appendInstruction(new FALoadInstruction(0x30, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new FALoadInstruction(FALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder daload() {
-        addOp((bc, cw) -> cw.appendInstruction(new DALoadInstruction(0x31, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DALoadInstruction(DALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder aaload() {
-        addOp((bc, cw) -> cw.appendInstruction(new AALoadInstruction(0x32, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new AALoadInstruction(AALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder baload() {
-        addOp((bc, cw) -> cw.appendInstruction(new BALOADInstruction(0x33, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new BALOADInstruction(BALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder caload() {
-        addOp((bc, cw) -> cw.appendInstruction(new CALoadInstruction(0x34, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new CALoadInstruction(CALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder saload() {
-        addOp((bc, cw) -> cw.appendInstruction(new SALoadInstruction(0x35, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new SALoadInstruction(SALOAD.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder iastore() {
-        addOp((bc, cw) -> cw.appendInstruction(new IAStoreInstruction(0x4F, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new IAStoreInstruction(IASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder lastore() {
-        addOp((bc, cw) -> cw.appendInstruction(new LAStoreInstruction(0x50, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new LAStoreInstruction(LASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder fastore() {
-        addOp((bc, cw) -> cw.appendInstruction(new FAStoreInstruction(0x51, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new FAStoreInstruction(FASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dastore() {
-        addOp((bc, cw) -> cw.appendInstruction(new DAStoreInstruction(0x52, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DAStoreInstruction(DASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder aastore() {
-        addOp((bc, cw) -> cw.appendInstruction(new AAStoreInstruction(0x53, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new AAStoreInstruction(AASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder bastore() {
-        addOp((bc, cw) -> cw.appendInstruction(new BAStoreInstruction(0x54, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new BAStoreInstruction(BASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder castore() {
-        addOp((bc, cw) -> cw.appendInstruction(new CAStoreInstruction(0x55, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new CAStoreInstruction(CASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder sastore() {
-        addOp((bc, cw) -> cw.appendInstruction(new SAStoreInstruction(0x56, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new SAStoreInstruction(SASTORE.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder arraylength() {
-        addOp((bc, cw) -> cw.appendInstruction(new ArrayLengthInstruction(0xBE, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ArrayLengthInstruction(ARRAYLENGTH.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder pop() {
-        addOp((bc, cw) -> cw.appendInstruction(new PopInstruction(0x57, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new PopInstruction(POP.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder pop2() {
-        addOp((bc, cw) -> cw.appendInstruction(new Pop2Instruction(0x58, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new Pop2Instruction(POP2.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dup() {
-        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x59, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(DUP.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dup_x1() {
-        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5A, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(DUP_X1.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dup_x2() {
-        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5B, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(DUP_X2.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dup2() {
-        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5C, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(DUP2.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dup2_x1() {
-        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5D, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(DUP2_X1.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dup2_x2() {
-        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(0x5E, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DupInstruction(DUP2_X2.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder swap() {
-        addOp((bc, cw) -> cw.appendInstruction(new SwapInstruction(0x5F, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new SwapInstruction(SWAP.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
@@ -310,7 +312,7 @@ public class CodeBuilder {
     }
 
     public CodeBuilder ineg() {
-        addOp((bc, cw) -> cw.appendInstruction(new INegInstruction(0x74, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new INegInstruction(INEG.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
@@ -340,7 +342,7 @@ public class CodeBuilder {
     }
 
     public CodeBuilder lneg() {
-        addOp((bc, cw) -> cw.appendInstruction(new LNegInstruction(0x75, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new LNegInstruction(LNEG.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
@@ -370,7 +372,7 @@ public class CodeBuilder {
     }
 
     public CodeBuilder fneg() {
-        addOp((bc, cw) -> cw.appendInstruction(new FNegInstruction(0x76, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new FNegInstruction(FNEG.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
@@ -400,269 +402,269 @@ public class CodeBuilder {
     }
 
     public CodeBuilder dneg() {
-        addOp((bc, cw) -> cw.appendInstruction(new DNegInstruction(0x77, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new DNegInstruction(DNEG.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder iand() {
-        addOp((bc, cw) -> cw.appendInstruction(new IAndInstruction(0x7E, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new IAndInstruction(IAND.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder ior() {
-        addOp((bc, cw) -> cw.appendInstruction(new IOrInstruction(0x80, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new IOrInstruction(IOR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder ixor() {
-        addOp((bc, cw) -> cw.appendInstruction(new IXorInstruction(0x82, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new IXorInstruction(IXOR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder ishl() {
-        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x78, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(ISHL.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder ishr() {
-        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x7A, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(ISHR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder iushr() {
-        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x7C, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(IUSHR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder land() {
-        addOp((bc, cw) -> cw.appendInstruction(new LandInstruction(0x7F, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new LandInstruction(LAND.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder lor() {
-        addOp((bc, cw) -> cw.appendInstruction(new LorInstruction(0x81, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new LorInstruction(LOR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder lxor() {
-        addOp((bc, cw) -> cw.appendInstruction(new LXorInstruction(0x83, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new LXorInstruction(LXOR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder lshl() {
-        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x79, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(LSHL.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder lshr() {
-        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x7B, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(LSHR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder lushr() {
-        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(0x7D, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ArithmeticShiftInstruction(LUSHR.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder i2l() {
-        addOp((bc, cw) -> cw.appendInstruction(new I2LInstruction(0x85, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new I2LInstruction(I2L.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder i2f() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x86, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(I2F.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder i2d() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x87, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(I2D.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder l2i() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x88, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(L2I.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder l2f() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x89, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(L2F.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder l2d() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8A, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(L2D.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder f2i() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8B, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(F2I.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder f2l() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8C, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(F2L.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder f2d() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8D, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(F2D.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder d2i() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8E, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(D2I.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder d2l() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x8F, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(D2L.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder d2f() {
-        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(0x90, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ConversionInstruction(D2F.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder i2b() {
-        addOp((bc, cw) -> cw.appendInstruction(new NarrowingConversionInstruction(0x91, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new NarrowingConversionInstruction(I2B.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder i2c() {
-        addOp((bc, cw) -> cw.appendInstruction(new NarrowingConversionInstruction(0x92, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new NarrowingConversionInstruction(I2C.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder i2s() {
-        addOp((bc, cw) -> cw.appendInstruction(new NarrowingConversionInstruction(0x93, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new NarrowingConversionInstruction(I2S.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder lcmp() {
-        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(0x94, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(LCMP.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder fcmpl() {
-        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(0x95, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(FCMPL.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder fcmpg() {
-        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(0x96, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(FCMPG.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dcmpl() {
-        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(0x97, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(DCMPL.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder dcmpg() {
-        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(0x98, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new CompareInstruction(DCMPG.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder ifeq(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0x99, target, 3));
+        sizedOps.add(new BranchOp(IFEQ.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder ifne(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0x9A, target, 3));
+        sizedOps.add(new BranchOp(IFNE.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder iflt(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0x9B, target, 3));
+        sizedOps.add(new BranchOp(IFLT.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder ifge(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0x9C, target, 3));
+        sizedOps.add(new BranchOp(IFGE.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder ifgt(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0x9D, target, 3));
+        sizedOps.add(new BranchOp(IFGT.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder ifle(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0x9E, target, 3));
+        sizedOps.add(new BranchOp(IFLE.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_icmpeq(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0x9F, target, 3));
+        sizedOps.add(new BranchOp(IF_ICMPEQ.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_icmpne(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA0, target, 3));
+        sizedOps.add(new BranchOp(IF_ICMPNE.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_icmplt(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA1, target, 3));
+        sizedOps.add(new BranchOp(IF_ICMPLT.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_icmpge(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA2, target, 3));
+        sizedOps.add(new BranchOp(IF_ICMPGE.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_icmpgt(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA3, target, 3));
+        sizedOps.add(new BranchOp(IF_ICMPGT.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_icmple(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA4, target, 3));
+        sizedOps.add(new BranchOp(IF_ICMPLE.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_acmpeq(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA5, target, 3));
+        sizedOps.add(new BranchOp(IF_ACMPEQ.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder if_acmpne(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA6, target, 3));
+        sizedOps.add(new BranchOp(IF_ACMPNE.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder ifnull(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xC6, target, 3));
+        sizedOps.add(new BranchOp(IFNULL.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder ifnonnull(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xC7, target, 3));
+        sizedOps.add(new BranchOp(IFNONNULL.getCode(), target, 3));
         return this;
     }
 
     public CodeBuilder goto_(String labelName) {
         Label target = getOrCreateLabel(labelName);
-        sizedOps.add(new BranchOp(0xA7, target, 3));
+        sizedOps.add(new BranchOp(GOTO.getCode(), target, 3));
         return this;
     }
 
@@ -808,7 +810,7 @@ public class CodeBuilder {
     }
 
     public CodeBuilder newarray(int arrayType) {
-        addOp((bc, cw) -> cw.appendInstruction(new NewArrayInstruction(0xBC, cw.getBytecodeSize(), arrayType, 0)), 2);
+        addOp((bc, cw) -> cw.appendInstruction(new NewArrayInstruction(NEWARRAY.getCode(), cw.getBytecodeSize(), arrayType, 0)), 2);
         return this;
     }
 
@@ -817,7 +819,7 @@ public class CodeBuilder {
             ConstPool cp = bc.getConstPool();
             ClassRefItem classRef = cp.findOrAddClass(type);
             int classRefIndex = cp.getIndexOf(classRef);
-            cw.appendInstruction(new ANewArrayInstruction(cp, 0xBD, cw.getBytecodeSize(), classRefIndex, 0));
+            cw.appendInstruction(new ANewArrayInstruction(cp, ANEWARRAY.getCode(), cw.getBytecodeSize(), classRefIndex, 0));
         }, 3);
         return this;
     }
@@ -827,7 +829,7 @@ public class CodeBuilder {
             ConstPool cp = bc.getConstPool();
             ClassRefItem classRef = cp.findOrAddClass(descriptor);
             int classRefIndex = cp.getIndexOf(classRef);
-            cw.appendInstruction(new MultiANewArrayInstruction(cp, 0xC5, cw.getBytecodeSize(), classRefIndex, dims));
+            cw.appendInstruction(new MultiANewArrayInstruction(cp, MULTIANEWARRAY.getCode(), cw.getBytecodeSize(), classRefIndex, dims));
         }, 4);
         return this;
     }
@@ -837,7 +839,7 @@ public class CodeBuilder {
             ConstPool cp = bc.getConstPool();
             ClassRefItem classRef = cp.findOrAddClass(type);
             int classRefIndex = cp.getIndexOf(classRef);
-            cw.appendInstruction(new CheckCastInstruction(cp, 0xC0, cw.getBytecodeSize(), classRefIndex));
+            cw.appendInstruction(new CheckCastInstruction(cp, CHECKCAST.getCode(), cw.getBytecodeSize(), classRefIndex));
         }, 3);
         return this;
     }
@@ -847,7 +849,7 @@ public class CodeBuilder {
             ConstPool cp = bc.getConstPool();
             ClassRefItem classRef = cp.findOrAddClass(type);
             int classRefIndex = cp.getIndexOf(classRef);
-            cw.appendInstruction(new InstanceOfInstruction(cp, 0xC1, cw.getBytecodeSize(), classRefIndex));
+            cw.appendInstruction(new InstanceOfInstruction(cp, INSTANCEOF.getCode(), cw.getBytecodeSize(), classRefIndex));
         }, 3);
         return this;
     }
@@ -883,7 +885,7 @@ public class CodeBuilder {
     }
 
     public CodeBuilder athrow() {
-        addOp((bc, cw) -> cw.appendInstruction(new ATHROWInstruction(0xBF, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new ATHROWInstruction(ATHROW.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
@@ -896,17 +898,17 @@ public class CodeBuilder {
     }
 
     public CodeBuilder nop() {
-        addOp((bc, cw) -> cw.appendInstruction(new NopInstruction(0x00, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new NopInstruction(NOP.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder monitorenter() {
-        addOp((bc, cw) -> cw.appendInstruction(new MonitorEnterInstruction(0xC2, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new MonitorEnterInstruction(MONITORENTER.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
     public CodeBuilder monitorexit() {
-        addOp((bc, cw) -> cw.appendInstruction(new MonitorExitInstruction(0xC3, cw.getBytecodeSize())), 1);
+        addOp((bc, cw) -> cw.appendInstruction(new MonitorExitInstruction(MONITOREXIT.getCode(), cw.getBytecodeSize())), 1);
         return this;
     }
 
@@ -1073,9 +1075,9 @@ public class CodeBuilder {
             if (targetOffset == null) throw new IllegalStateException("Label not found in label map");
             int relativeOffset = targetOffset - currentOffset;
 
-            if (opcode == 0xA7) {
+            if (opcode == GOTO.getCode()) {
                 cw.appendInstruction(new GotoInstruction(opcode, currentOffset, (short) relativeOffset));
-            } else if (opcode == 0xC8) {
+            } else if (opcode == GOTO_W.getCode()) {
                 cw.appendInstruction(new GotoInstruction(opcode, currentOffset, relativeOffset));
             } else {
                 cw.appendInstruction(new ConditionalBranchInstruction(opcode, currentOffset, (short) relativeOffset));

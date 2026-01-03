@@ -5,6 +5,9 @@ import com.tonic.analysis.verifier.VerificationError;
 import com.tonic.analysis.verifier.VerificationErrorType;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
+import com.tonic.utill.Opcode;
+
+import static com.tonic.utill.Opcode.*;
 
 public class OperandValidator {
     private final ConstPool constPool;
@@ -14,47 +17,29 @@ public class OperandValidator {
     }
 
     public void validate(int opcode, int offset, byte[] bytecode, ErrorCollector collector) {
-        switch (opcode) {
-            case 0x12:
-                validateLdc(offset, bytecode, collector);
-                break;
-            case 0x13:
-                validateLdcW(offset, bytecode, collector);
-                break;
-            case 0x14:
-                validateLdc2W(offset, bytecode, collector);
-                break;
-            case 0xB2:
-            case 0xB3:
-            case 0xB4:
-            case 0xB5:
-                validateFieldRef(offset, bytecode, opcode, collector);
-                break;
-            case 0xB6:
-            case 0xB7:
-            case 0xB8:
-                validateMethodRef(offset, bytecode, opcode, collector);
-                break;
-            case 0xB9:
-                validateInterfaceMethodRef(offset, bytecode, collector);
-                break;
-            case 0xBA:
-                validateInvokeDynamic(offset, bytecode, collector);
-                break;
-            case 0xBB:
-            case 0xBD:
-            case 0xC0:
-            case 0xC1:
-                validateClassRef(offset, bytecode, opcode, collector);
-                break;
-            case 0xBC:
-                validateNewArray(offset, bytecode, collector);
-                break;
-            case 0xC5:
-                validateMultiANewArray(offset, bytecode, collector);
-                break;
-            default:
-                break;
+        if (opcode == LDC.getCode()) {
+            validateLdc(offset, bytecode, collector);
+        } else if (opcode == LDC_W.getCode()) {
+            validateLdcW(offset, bytecode, collector);
+        } else if (opcode == LDC2_W.getCode()) {
+            validateLdc2W(offset, bytecode, collector);
+        } else if (opcode == GETSTATIC.getCode() || opcode == PUTSTATIC.getCode() ||
+                   opcode == GETFIELD.getCode() || opcode == PUTFIELD.getCode()) {
+            validateFieldRef(offset, bytecode, opcode, collector);
+        } else if (opcode == INVOKEVIRTUAL.getCode() || opcode == INVOKESPECIAL.getCode() ||
+                   opcode == INVOKESTATIC.getCode()) {
+            validateMethodRef(offset, bytecode, opcode, collector);
+        } else if (opcode == INVOKEINTERFACE.getCode()) {
+            validateInterfaceMethodRef(offset, bytecode, collector);
+        } else if (opcode == INVOKEDYNAMIC.getCode()) {
+            validateInvokeDynamic(offset, bytecode, collector);
+        } else if (opcode == NEW.getCode() || opcode == ANEWARRAY.getCode() ||
+                   opcode == CHECKCAST.getCode() || opcode == INSTANCEOF.getCode()) {
+            validateClassRef(offset, bytecode, opcode, collector);
+        } else if (opcode == NEWARRAY.getCode()) {
+            validateNewArray(offset, bytecode, collector);
+        } else if (opcode == MULTIANEWARRAY.getCode()) {
+            validateMultiANewArray(offset, bytecode, collector);
         }
     }
 
@@ -325,31 +310,17 @@ public class OperandValidator {
     }
 
     private String getOpcodeNameForField(int opcode) {
-        switch (opcode) {
-            case 0xB2: return "GETSTATIC";
-            case 0xB3: return "PUTSTATIC";
-            case 0xB4: return "GETFIELD";
-            case 0xB5: return "PUTFIELD";
-            default: return "FIELD_OP";
-        }
+        Opcode op = Opcode.fromCode(opcode);
+        return op != Opcode.UNKNOWN ? op.getMnemonic().toUpperCase() : "FIELD_OP";
     }
 
     private String getOpcodeNameForMethod(int opcode) {
-        switch (opcode) {
-            case 0xB6: return "INVOKEVIRTUAL";
-            case 0xB7: return "INVOKESPECIAL";
-            case 0xB8: return "INVOKESTATIC";
-            default: return "INVOKE_OP";
-        }
+        Opcode op = Opcode.fromCode(opcode);
+        return op != Opcode.UNKNOWN ? op.getMnemonic().toUpperCase() : "INVOKE_OP";
     }
 
     private String getOpcodeNameForClass(int opcode) {
-        switch (opcode) {
-            case 0xBB: return "NEW";
-            case 0xBD: return "ANEWARRAY";
-            case 0xC0: return "CHECKCAST";
-            case 0xC1: return "INSTANCEOF";
-            default: return "CLASS_OP";
-        }
+        Opcode op = Opcode.fromCode(opcode);
+        return op != Opcode.UNKNOWN ? op.getMnemonic().toUpperCase() : "CLASS_OP";
     }
 }

@@ -10,6 +10,8 @@ import com.tonic.utill.ReturnType;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.tonic.utill.Opcode.*;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -251,21 +253,18 @@ public class Bytecode {
     public void addIConst(int value) {
         Instruction instr;
         if (value >= -1 && value <= 5) {
-            int opcode = 0x02 + (value + 1);
+            int opcode = ICONST_M1.getCode() + (value + 1);
             instr = new IConstInstruction(opcode, processOffset(), value);
         } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
-            int opcode = 0x10;
             byte operand = (byte) value;
-            instr = new BipushInstruction(opcode, processOffset(), operand);
+            instr = new BipushInstruction(BIPUSH.getCode(), processOffset(), operand);
         } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
-            int opcode = 0x11;
             short operand = (short) value;
-            instr = new SipushInstruction(opcode, processOffset(), operand);
+            instr = new SipushInstruction(SIPUSH.getCode(), processOffset(), operand);
         } else {
-            int opcode = 0x12;
             IntegerItem intItem = constPool.findOrAddInteger(value);
             int ldcIndex = constPool.getIndexOf(intItem);
-            instr = new LdcInstruction(constPool, opcode, processOffset(), ldcIndex);
+            instr = new LdcInstruction(constPool, LDC.getCode(), processOffset(), ldcIndex);
         }
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -279,13 +278,12 @@ public class Bytecode {
     public void addLConst(long value) {
         Instruction instr;
         if (value == 0L || value == 1L) {
-            int opcode = (value == 0L) ? 0x09 : 0x0A;
+            int opcode = (value == 0L) ? LCONST_0.getCode() : LCONST_1.getCode();
             instr = new LConstInstruction(opcode, processOffset(), value);
         } else {
-            int opcode = 0x14;
             LongItem longItem = constPool.findOrAddLong(value);
             int ldc2WIndex = constPool.getIndexOf(longItem);
-            instr = new Ldc2WInstruction(constPool, opcode, processOffset(), ldc2WIndex);
+            instr = new Ldc2WInstruction(constPool, LDC2_W.getCode(), processOffset(), ldc2WIndex);
         }
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -300,16 +298,15 @@ public class Bytecode {
     public void addFConst(float value) {
         Instruction instr;
         if (value == 0.0f) {
-            instr = new FConstInstruction(0x0B, processOffset(), 0.0f);
+            instr = new FConstInstruction(FCONST_0.getCode(), processOffset(), 0.0f);
         } else if (value == 1.0f) {
-            instr = new FConstInstruction(0x0C, processOffset(), 1.0f);
+            instr = new FConstInstruction(FCONST_1.getCode(), processOffset(), 1.0f);
         } else if (value == 2.0f) {
-            instr = new FConstInstruction(0x0D, processOffset(), 2.0f);
+            instr = new FConstInstruction(FCONST_2.getCode(), processOffset(), 2.0f);
         } else {
-            int opcode = 0x12;
             FloatItem floatItem = constPool.findOrAddFloat(value);
             int ldcIndex = constPool.getIndexOf(floatItem);
-            instr = new LdcInstruction(constPool, opcode, processOffset(), ldcIndex);
+            instr = new LdcInstruction(constPool, LDC.getCode(), processOffset(), ldcIndex);
         }
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -324,13 +321,12 @@ public class Bytecode {
     public void addDConst(double value) {
         Instruction instr;
         if (value == 0.0d || value == 1.0d) {
-            int opcode = (value == 0.0d) ? 0x0E : 0x0F;
+            int opcode = (value == 0.0d) ? DCONST_0.getCode() : DCONST_1.getCode();
             instr = new DConstInstruction(opcode, processOffset(), value);
         } else {
-            int opcode = 0x14;
             DoubleItem doubleItem = constPool.findOrAddDouble(value);
             int ldc2WIndex = constPool.getIndexOf(doubleItem);
-            instr = new Ldc2WInstruction(constPool, opcode, processOffset(), ldc2WIndex);
+            instr = new Ldc2WInstruction(constPool, LDC2_W.getCode(), processOffset(), ldc2WIndex);
         }
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -341,8 +337,7 @@ public class Bytecode {
      * Appends an ACONST_NULL instruction to push a null reference onto the stack.
      */
     public void addAConstNull() {
-        int opcode = 0x01;
-        Instruction instr = new AConstNullInstruction(opcode, processOffset());
+        Instruction instr = new AConstNullInstruction(ACONST_NULL.getCode(), processOffset());
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
         Logger.info("Appended ACONST_NULL instruction at offset " + (processOffset() - instr.getLength()));
@@ -354,8 +349,7 @@ public class Bytecode {
      * @param index The local variable index to load from.
      */
     public void addLLoad(int index) {
-        int opcode = 0x16;
-        Instruction instr = new LLoadInstruction(opcode, processOffset(), index);
+        Instruction instr = new LLoadInstruction(LLOAD.getCode(), processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
         Logger.info("Appended LLOAD instruction for index " + index + " at offset " + (processOffset() - instr.getLength()));
@@ -367,8 +361,7 @@ public class Bytecode {
      * @param index The local variable index to load from.
      */
     public void addFLoad(int index) {
-        int opcode = 0x17;
-        Instruction instr = new FLoadInstruction(opcode, processOffset(), index);
+        Instruction instr = new FLoadInstruction(FLOAD.getCode(), processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
         Logger.info("Appended FLOAD instruction for index " + index + " at offset " + (processOffset() - instr.getLength()));
@@ -380,8 +373,7 @@ public class Bytecode {
      * @param index The local variable index to load from.
      */
     public void addDLoad(int index) {
-        int opcode = 0x18;
-        Instruction instr = new DLoadInstruction(opcode, processOffset(), index);
+        Instruction instr = new DLoadInstruction(DLOAD.getCode(), processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
         Logger.info("Appended DLOAD instruction for index " + index + " at offset " + (processOffset() - instr.getLength()));
@@ -400,7 +392,7 @@ public class Bytecode {
         int gotoOffset = processOffset();
         short relativeOffset = (short) (targetOffset - (gotoOffset + 3));
 
-        GotoInstruction gotoInstr = new GotoInstruction(0xA7, gotoOffset, relativeOffset);
+        GotoInstruction gotoInstr = new GotoInstruction(GOTO.getCode(), gotoOffset, relativeOffset);
         codeWriter.appendInstruction(gotoInstr);
         insertBeforeOffset += gotoInstr.getLength();
     }
@@ -417,7 +409,7 @@ public class Bytecode {
         int gotoWOffset = processOffset();
         int relativeOffset = targetOffset - (gotoWOffset + 5);
 
-        GotoInstruction gotoWInstr = new GotoInstruction(0xC8, gotoWOffset, relativeOffset);
+        GotoInstruction gotoWInstr = new GotoInstruction(GOTO_W.getCode(), gotoWOffset, relativeOffset);
         codeWriter.appendInstruction(gotoWInstr);
         insertBeforeOffset += gotoWInstr.getLength();
     }

@@ -11,16 +11,23 @@ import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.table.LineNumberTableEntry;
 import com.tonic.utill.Logger;
+import lombok.Getter;
 
 public final class StackFrame {
 
+    @Getter
     private final MethodEntry method;
+    @Getter
     private final CodeWriter code;
+    @Getter
     private final ConcreteStack stack;
+    @Getter
     private final ConcreteLocals locals;
     private int pc;
+    @Getter
     private boolean completed;
     private ConcreteValue returnValue;
+    @Getter
     private ObjectInstance exception;
 
     public StackFrame(MethodEntry method, ConcreteValue[] args) {
@@ -112,35 +119,11 @@ public final class StackFrame {
         this.exception = exception;
     }
 
-    public boolean isCompleted() {
-        return completed;
-    }
-
     public ConcreteValue getReturnValue() {
         if (!completed) {
             throw new IllegalStateException("Frame not yet completed");
         }
         return returnValue;
-    }
-
-    public ObjectInstance getException() {
-        return exception;
-    }
-
-    public MethodEntry getMethod() {
-        return method;
-    }
-
-    public CodeWriter getCode() {
-        return code;
-    }
-
-    public ConcreteStack getStack() {
-        return stack;
-    }
-
-    public ConcreteLocals getLocals() {
-        return locals;
     }
 
     public String getMethodSignature() {

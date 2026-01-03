@@ -8,6 +8,7 @@ import com.tonic.type.AccessFlags;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ClassBuilder implements AccessFlags {
@@ -22,7 +23,6 @@ public class ClassBuilder implements AccessFlags {
     private final List<MethodBuilder> methods = new ArrayList<>();
     private final List<BootstrapMethodDef> bootstrapMethods = new ArrayList<>();
 
-    private ClassPool classPool;
     private ClassFile classFile;
     private ConstPool constPool;
 
@@ -54,9 +54,7 @@ public class ClassBuilder implements AccessFlags {
     }
 
     public ClassBuilder interfaces(String... interfaceNames) {
-        for (String iface : interfaceNames) {
-            this.interfaces.add(iface);
-        }
+        Collections.addAll(this.interfaces, interfaceNames);
         return this;
     }
 
@@ -74,7 +72,7 @@ public class ClassBuilder implements AccessFlags {
 
     public ClassFile build() {
         try {
-            classPool = new ClassPool(true);
+            ClassPool classPool = new ClassPool(true);
             classFile = classPool.createNewClass(className, accessFlags);
             constPool = classFile.getConstPool();
 

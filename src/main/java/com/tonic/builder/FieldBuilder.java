@@ -4,6 +4,7 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.ConstantValueAttribute;
 import com.tonic.parser.attribute.DeprecatedAttribute;
 import com.tonic.type.AccessFlags;
 
@@ -69,10 +70,34 @@ public class FieldBuilder {
     void buildField(ClassFile classFile, ConstPool constPool) {
         List<Attribute> attributes = new ArrayList<>();
         FieldEntry field = classFile.createNewField(getAccess(), name, descriptor, attributes);
+
+        if (constantValue != null) {
+            int nameIndex = constPool.getIndexOf(constPool.findOrAddUtf8("ConstantValue"));
+            int valueIndex = addConstantToPool(constPool, constantValue);
+            ConstantValueAttribute cvAttr = new ConstantValueAttribute("ConstantValue", field, nameIndex, 2);
+            cvAttr.setConstantValueIndex(valueIndex);
+            field.getAttributes().add(cvAttr);
+        }
+
         if (deprecated) {
             int nameIndex = constPool.getIndexOf(constPool.findOrAddUtf8("Deprecated"));
             DeprecatedAttribute deprecatedAttr = new DeprecatedAttribute("Deprecated", field, nameIndex, 0);
             field.getAttributes().add(deprecatedAttr);
         }
+    }
+
+    private int addConstantToPool(ConstPool pool, Object value) {
+        if (value instanceof Integer) {
+            return pool.getIndexOf(pool.findOrAddInteger((Integer) value));
+        } else if (value instanceof Long) {
+            return pool.getIndexOf(pool.findOrAddLong((Long) value));
+        } else if (value instanceof Float) {
+            return pool.getIndexOf(pool.findOrAddFloat((Float) value));
+        } else if (value instanceof Double) {
+            return pool.getIndexOf(pool.findOrAddDouble((Double) value));
+        } else if (value instanceof String) {
+            return pool.getIndexOf(pool.findOrAddString((String) value));
+        }
+        throw new IllegalArgumentException("Unsupported constant type: " + value.getClass());
     }
 }
