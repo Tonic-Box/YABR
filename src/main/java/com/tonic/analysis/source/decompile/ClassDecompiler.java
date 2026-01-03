@@ -11,6 +11,7 @@ import com.tonic.analysis.source.ast.transform.ASTTransform;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
+import com.tonic.analysis.source.ast.transform.DeclarationHoister;
 import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
@@ -62,6 +63,7 @@ public class ClassDecompiler {
     private final ControlFlowSimplifier astSimplifier;
     private final DeadVariableEliminator deadVarEliminator;
     private final DeadStoreEliminator deadStoreEliminator;
+    private final DeclarationHoister declarationHoister;
     private final Set<String> usedTypes = new TreeSet<>();
 
     public ClassDecompiler(ClassFile classFile) {
@@ -83,6 +85,7 @@ public class ClassDecompiler {
         this.astSimplifier = new ControlFlowSimplifier();
         this.deadVarEliminator = new DeadVariableEliminator();
         this.deadStoreEliminator = new DeadStoreEliminator();
+        this.declarationHoister = new DeclarationHoister();
     }
 
     /**
@@ -507,6 +510,7 @@ public class ClassDecompiler {
             astSimplifier.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            declarationHoister.transform(body);
             removeTrailingReturn(body); // Static initializers cannot have return statements
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -594,6 +598,7 @@ public class ClassDecompiler {
             astSimplifier.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            declarationHoister.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
@@ -658,6 +663,7 @@ public class ClassDecompiler {
             astSimplifier.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            declarationHoister.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {

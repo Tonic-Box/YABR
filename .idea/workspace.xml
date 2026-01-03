@@ -4,19 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- SSA IR rewrite">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="# Decompiler issues fixes&#10;1. Removed redundant return; at end of void methods&#10;2. Removed redundant super(); in constructors&#10;3. Fixed switch selector variable&#10;4. Fixed boolean returns&#10;5. Fixed inner class names&#10;6. Removed unused imports&#10;- Added two-pass code emission in ClassDecompiler (emit body first, collect types, then emit imports)&#10;- Added type tracking in SourceEmitter and ClassDecompiler&#10;- Fixed EnumSwitchMapRegistry.parseEnumClassFromFieldName to correctly handle inner class separators ($ vs /)&#10;7. Fixed raw generic types&#10;- Added SignatureParser inner class to TypeRecoverer for parsing generic signatures&#10;- Added recoverGenericType() method to parse JVM generic signatures&#10;- Updated ClassDecompiler to check for SignatureAttribute on fields and methods&#10;- Fields like List&lt;AuthenticationAttempt&gt; and method return types now show generics&#10;8. Fixed unreachable code after try-catch&#10;- Added isTerminatingTryCatch(), isTerminatingBlock(), isTerminatingBranch(), and isTerminatingStatement()">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ReturnStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ReturnStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/SwitchCase.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/SwitchCase.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/IndentingWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/IndentingWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/TypeRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/TypeRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/utill/ClassNameUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/utill/ClassNameUtil.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -233,14 +223,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00081" summary="- bytecode execution api tests">
-      <option name="closed" value="true" />
-      <created>1766586505071</created>
-      <option name="number" value="00081" />
-      <option name="presentableId" value="LOCAL-00081" />
-      <option name="project" value="LOCAL" />
-      <updated>1766586505071</updated>
     </task>
     <task id="LOCAL-00082" summary="- bytecode execution api tests and bug fixes">
       <option name="closed" value="true" />
@@ -626,7 +608,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767324035347</updated>
     </task>
-    <option name="localTasksCounter" value="130" />
+    <task id="LOCAL-00130" summary="# Decompiler issues fixes&#10;1. Removed redundant return; at end of void methods&#10;2. Removed redundant super(); in constructors&#10;3. Fixed switch selector variable&#10;4. Fixed boolean returns&#10;5. Fixed inner class names&#10;6. Removed unused imports&#10;- Added two-pass code emission in ClassDecompiler (emit body first, collect types, then emit imports)&#10;- Added type tracking in SourceEmitter and ClassDecompiler&#10;- Fixed EnumSwitchMapRegistry.parseEnumClassFromFieldName to correctly handle inner class separators ($ vs /)&#10;7. Fixed raw generic types&#10;- Added SignatureParser inner class to TypeRecoverer for parsing generic signatures&#10;- Added recoverGenericType() method to parse JVM generic signatures&#10;- Updated ClassDecompiler to check for SignatureAttribute on fields and methods&#10;- Fields like List&lt;AuthenticationAttempt&gt; and method return types now show generics&#10;8. Fixed unreachable code after try-catch&#10;- Added isTerminatingTryCatch(), isTerminatingBlock(), isTerminatingBranch(), and isTerminatingStatement()">
+      <option name="closed" value="true" />
+      <created>1767387862062</created>
+      <option name="number" value="00130" />
+      <option name="presentableId" value="LOCAL-00130" />
+      <option name="project" value="LOCAL" />
+      <updated>1767387862062</updated>
+    </task>
+    <option name="localTasksCounter" value="131" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -641,7 +631,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- execution-api fixes: events" />
     <MESSAGE value="- execution-api fixes: invoke slots counting" />
     <MESSAGE value="- execution-api fixes: abstract resolution" />
     <MESSAGE value="- execution-api fixes: native handlers for LocalDateTime" />
@@ -666,7 +655,8 @@
     <MESSAGE value="- SQL" />
     <MESSAGE value="- Cleanup" />
     <MESSAGE value="- SSA IR rewrite" />
-    <option name="LAST_COMMIT_MESSAGE" value="- SSA IR rewrite" />
+    <MESSAGE value="# Decompiler issues fixes&#10;1. Removed redundant return; at end of void methods&#10;2. Removed redundant super(); in constructors&#10;3. Fixed switch selector variable&#10;4. Fixed boolean returns&#10;5. Fixed inner class names&#10;6. Removed unused imports&#10;- Added two-pass code emission in ClassDecompiler (emit body first, collect types, then emit imports)&#10;- Added type tracking in SourceEmitter and ClassDecompiler&#10;- Fixed EnumSwitchMapRegistry.parseEnumClassFromFieldName to correctly handle inner class separators ($ vs /)&#10;7. Fixed raw generic types&#10;- Added SignatureParser inner class to TypeRecoverer for parsing generic signatures&#10;- Added recoverGenericType() method to parse JVM generic signatures&#10;- Updated ClassDecompiler to check for SignatureAttribute on fields and methods&#10;- Fields like List&lt;AuthenticationAttempt&gt; and method return types now show generics&#10;8. Fixed unreachable code after try-catch&#10;- Added isTerminatingTryCatch(), isTerminatingBlock(), isTerminatingBranch(), and isTerminatingStatement()" />
+    <option name="LAST_COMMIT_MESSAGE" value="# Decompiler issues fixes&#10;1. Removed redundant return; at end of void methods&#10;2. Removed redundant super(); in constructors&#10;3. Fixed switch selector variable&#10;4. Fixed boolean returns&#10;5. Fixed inner class names&#10;6. Removed unused imports&#10;- Added two-pass code emission in ClassDecompiler (emit body first, collect types, then emit imports)&#10;- Added type tracking in SourceEmitter and ClassDecompiler&#10;- Fixed EnumSwitchMapRegistry.parseEnumClassFromFieldName to correctly handle inner class separators ($ vs /)&#10;7. Fixed raw generic types&#10;- Added SignatureParser inner class to TypeRecoverer for parsing generic signatures&#10;- Added recoverGenericType() method to parse JVM generic signatures&#10;- Updated ClassDecompiler to check for SignatureAttribute on fields and methods&#10;- Fields like List&lt;AuthenticationAttempt&gt; and method return types now show generics&#10;8. Fixed unreachable code after try-catch&#10;- Added isTerminatingTryCatch(), isTerminatingBlock(), isTerminatingBranch(), and isTerminatingStatement()" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
