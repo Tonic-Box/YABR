@@ -12,6 +12,7 @@ import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
 import com.tonic.analysis.source.ast.transform.DeclarationHoister;
+import com.tonic.analysis.source.ast.transform.SingleUseInliner;
 import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
@@ -64,6 +65,7 @@ public class ClassDecompiler {
     private final DeadVariableEliminator deadVarEliminator;
     private final DeadStoreEliminator deadStoreEliminator;
     private final DeclarationHoister declarationHoister;
+    private final SingleUseInliner singleUseInliner;
     private final Set<String> usedTypes = new TreeSet<>();
 
     public ClassDecompiler(ClassFile classFile) {
@@ -86,6 +88,7 @@ public class ClassDecompiler {
         this.deadVarEliminator = new DeadVariableEliminator();
         this.deadStoreEliminator = new DeadStoreEliminator();
         this.declarationHoister = new DeclarationHoister();
+        this.singleUseInliner = new SingleUseInliner();
     }
 
     /**
@@ -511,6 +514,7 @@ public class ClassDecompiler {
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
+            singleUseInliner.transform(body);
             removeTrailingReturn(body); // Static initializers cannot have return statements
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -599,6 +603,7 @@ public class ClassDecompiler {
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
+            singleUseInliner.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
@@ -664,6 +669,7 @@ public class ClassDecompiler {
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
+            singleUseInliner.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
