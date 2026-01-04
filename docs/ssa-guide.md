@@ -92,6 +92,43 @@ ssa.runTransforms(irMethod);
 ssa.lower(irMethod, methodEntry);
 ```
 
+### Convenience Methods
+
+For common workflows, SSA provides convenience methods that combine multiple steps:
+
+```java
+// optimizeAndLower: Run transforms on existing IR and lower to bytecode
+// Useful when you've already lifted and want to optimize before lowering
+IRMethod ir = ssa.lift(methodEntry);
+// ... inspect or modify IR ...
+ssa.optimizeAndLower(ir, methodEntry);  // Runs transforms, then lowers
+```
+
+### Class-Level Processing
+
+To transform an entire class file including cross-method optimizations:
+
+```java
+SSA ssa = new SSA(cp)
+    .withMethodInlining()           // Class-level: inline small methods
+    .withDeadMethodElimination()    // Class-level: remove unused private methods
+    .withAllOptimizations();        // Method-level: all standard optimizations
+
+// Transform entire class: runs class transforms first, then each method
+ssa.transformClass(classFile);
+
+// Rebuild the class file after transformation
+classFile.computeFrames();
+classFile.rebuild();
+```
+
+The `transformClass()` method:
+1. Runs all registered class-level transforms (e.g., method inlining)
+2. For each regular method with code (skips constructors and static initializers):
+   - Lifts to SSA
+   - Runs method-level transforms
+   - Lowers back to bytecode
+
 ## IR Structure
 
 ### IRMethod

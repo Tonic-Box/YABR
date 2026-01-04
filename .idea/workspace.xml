@@ -8,11 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ast-editor.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-editor.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
-    </list>
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- AST api docs update" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -229,14 +225,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00087" summary="- execution api doc update">
-      <option name="closed" value="true" />
-      <created>1766637157282</created>
-      <option name="number" value="00087" />
-      <option name="presentableId" value="LOCAL-00087" />
-      <option name="project" value="LOCAL" />
-      <updated>1766637157282</updated>
     </task>
     <task id="LOCAL-00088" summary="- verifier api">
       <option name="closed" value="true" />
@@ -622,7 +610,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767506424425</updated>
     </task>
-    <option name="localTasksCounter" value="136" />
+    <task id="LOCAL-00136" summary="- AST api docs update">
+      <option name="closed" value="true" />
+      <created>1767510307958</created>
+      <option name="number" value="00136" />
+      <option name="presentableId" value="LOCAL-00136" />
+      <option name="project" value="LOCAL" />
+      <updated>1767510307958</updated>
+    </task>
+    <option name="localTasksCounter" value="137" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -637,7 +633,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- execution-api fixes: native handlers" />
     <MESSAGE value="- execution-api: fixes native handlers" />
     <MESSAGE value="- execution-api fixes native handlers" />
     <MESSAGE value="- execution-api fixes: instruction trace" />
@@ -662,7 +657,8 @@
     <MESSAGE value="- better local inlining in decompile.&#10;- cleanup" />
     <MESSAGE value="- cleanup" />
     <MESSAGE value="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks" />
-    <option name="LAST_COMMIT_MESSAGE" value="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks" />
+    <MESSAGE value="- AST api docs update" />
+    <option name="LAST_COMMIT_MESSAGE" value="- AST api docs update" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
