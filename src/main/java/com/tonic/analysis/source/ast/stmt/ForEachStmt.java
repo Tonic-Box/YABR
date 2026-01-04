@@ -49,6 +49,41 @@ public final class ForEachStmt implements Statement {
         return label;
     }
 
+    public ForEachStmt withVariable(VarDeclStmt variable) {
+        if (this.variable != null) this.variable.setParent(null);
+        this.variable = variable;
+        if (variable != null) variable.setParent(this);
+        return this;
+    }
+
+    public ForEachStmt withIterable(Expression iterable) {
+        if (this.iterable != null) this.iterable.setParent(null);
+        this.iterable = iterable;
+        if (iterable != null) iterable.setParent(this);
+        return this;
+    }
+
+    public ForEachStmt withBody(Statement body) {
+        if (this.body != null) this.body.setParent(null);
+        this.body = body;
+        if (body != null) body.setParent(this);
+        return this;
+    }
+
+    public ForEachStmt withLabel(String label) {
+        this.label = label;
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (variable != null) children.add(variable);
+        if (iterable != null) children.add(iterable);
+        if (body != null) children.add(body);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitForEach(this);

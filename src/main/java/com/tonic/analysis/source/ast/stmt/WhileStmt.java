@@ -48,6 +48,33 @@ public final class WhileStmt implements Statement {
         return label;
     }
 
+    public WhileStmt withCondition(Expression condition) {
+        if (this.condition != null) this.condition.setParent(null);
+        this.condition = condition;
+        if (condition != null) condition.setParent(this);
+        return this;
+    }
+
+    public WhileStmt withBody(Statement body) {
+        if (this.body != null) this.body.setParent(null);
+        this.body = body;
+        if (body != null) body.setParent(this);
+        return this;
+    }
+
+    public WhileStmt withLabel(String label) {
+        this.label = label;
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (condition != null) children.add(condition);
+        if (body != null) children.add(body);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitWhile(this);

@@ -75,6 +75,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitBlock(BlockStmt stmt) {
         List<Statement> stmts = stmt.getStatements();
         if (stmts.isEmpty()) {
+            writer.writeLine("{}");
             return null;
         }
         writer.writeLine("{");

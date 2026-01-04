@@ -58,6 +58,23 @@ public final class UnaryExpr implements Expression {
         return operator.isIncDec();
     }
 
+    public UnaryExpr withOperator(UnaryOperator operator) {
+        this.operator = operator;
+        return this;
+    }
+
+    public UnaryExpr withOperand(Expression operand) {
+        if (this.operand != null) this.operand.setParent(null);
+        this.operand = operand;
+        if (operand != null) operand.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return operand != null ? java.util.List.of(operand) : java.util.List.of();
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitUnary(this);

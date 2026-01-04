@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.ast.stmt;
 
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
@@ -22,25 +23,25 @@ public final class TryCatchStmt implements Statement {
     private final List<CatchClause> catches;
     @Setter
     private Statement finallyBlock;
-    private final List<Expression> resources;
+    private final NodeList<Expression> resources;
     private final SourceLocation location;
     @Setter
     private ASTNode parent;
 
     public TryCatchStmt(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock,
                         List<Expression> resources, SourceLocation location) {
+        this.resources = new NodeList<>(this);
         this.tryBlock = Objects.requireNonNull(tryBlock, "tryBlock cannot be null");
         this.catches = new ArrayList<>(catches != null ? catches : List.of());
         this.finallyBlock = finallyBlock;
-        this.resources = new ArrayList<>(resources != null ? resources : List.of());
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
         tryBlock.setParent(this);
         if (finallyBlock != null) {
             finallyBlock.setParent(this);
         }
-        for (Expression resource : this.resources) {
-            resource.setParent(this);
+        if (resources != null) {
+            this.resources.addAll(resources);
         }
         for (CatchClause clause : this.catches) {
             clause.body().setParent(this);
@@ -67,7 +68,6 @@ public final class TryCatchStmt implements Statement {
      * Adds a resource for try-with-resources.
      */
     public void addResource(Expression resource) {
-        resource.setParent(this);
         resources.add(resource);
     }
 
@@ -90,6 +90,40 @@ public final class TryCatchStmt implements Statement {
      */
     public boolean hasCatch() {
         return !catches.isEmpty();
+    }
+
+    public TryCatchStmt withTryBlock(Statement tryBlock) {
+        if (this.tryBlock != null) {
+            this.tryBlock.setParent(null);
+        }
+        this.tryBlock = tryBlock;
+        if (tryBlock != null) {
+            tryBlock.setParent(this);
+        }
+        return this;
+    }
+
+    public TryCatchStmt withFinallyBlock(Statement finallyBlock) {
+        if (this.finallyBlock != null) {
+            this.finallyBlock.setParent(null);
+        }
+        this.finallyBlock = finallyBlock;
+        if (finallyBlock != null) {
+            finallyBlock.setParent(this);
+        }
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        children.addAll(resources);
+        if (tryBlock != null) children.add(tryBlock);
+        for (CatchClause clause : catches) {
+            children.add(clause.body());
+        }
+        if (finallyBlock != null) children.add(finallyBlock);
+        return children;
     }
 
     @Override

@@ -70,6 +70,33 @@ public final class BinaryExpr implements Expression {
         return operator.isLogical();
     }
 
+    public BinaryExpr withOperator(BinaryOperator operator) {
+        this.operator = operator;
+        return this;
+    }
+
+    public BinaryExpr withLeft(Expression left) {
+        if (this.left != null) this.left.setParent(null);
+        this.left = left;
+        if (left != null) left.setParent(this);
+        return this;
+    }
+
+    public BinaryExpr withRight(Expression right) {
+        if (this.right != null) this.right.setParent(null);
+        this.right = right;
+        if (right != null) right.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (left != null) children.add(left);
+        if (right != null) children.add(right);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitBinary(this);

@@ -68,6 +68,11 @@ public final class ArrayInitExpr implements Expression {
     }
 
     @Override
+    public java.util.List<ASTNode> getChildren() {
+        return new java.util.ArrayList<>(elements);
+    }
+
+    @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitArrayInit(this);
     }

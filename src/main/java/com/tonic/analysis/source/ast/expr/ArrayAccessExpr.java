@@ -38,6 +38,28 @@ public final class ArrayAccessExpr implements Expression {
         this(array, index, type, SourceLocation.UNKNOWN);
     }
 
+    public ArrayAccessExpr withArray(Expression array) {
+        if (this.array != null) this.array.setParent(null);
+        this.array = array;
+        if (array != null) array.setParent(this);
+        return this;
+    }
+
+    public ArrayAccessExpr withIndex(Expression index) {
+        if (this.index != null) this.index.setParent(null);
+        this.index = index;
+        if (index != null) index.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (array != null) children.add(array);
+        if (index != null) children.add(index);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitArrayAccess(this);

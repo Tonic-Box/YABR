@@ -71,6 +71,28 @@ public final class SwitchStmt implements Statement {
         return cases.size();
     }
 
+    public SwitchStmt withSelector(Expression selector) {
+        if (this.selector != null) {
+            this.selector.setParent(null);
+        }
+        this.selector = selector;
+        if (selector != null) {
+            selector.setParent(this);
+        }
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (selector != null) children.add(selector);
+        for (SwitchCase sc : cases) {
+            children.addAll(sc.expressionLabels());
+            children.addAll(sc.statements());
+        }
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitSwitch(this);

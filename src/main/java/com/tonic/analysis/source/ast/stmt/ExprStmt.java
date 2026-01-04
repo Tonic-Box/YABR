@@ -33,6 +33,20 @@ public final class ExprStmt implements Statement {
         this(expression, SourceLocation.UNKNOWN);
     }
 
+    public ExprStmt withExpression(Expression expression) {
+        if (this.expression != null) {
+            this.expression.setParent(null);
+        }
+        this.expression = Objects.requireNonNull(expression, "expression cannot be null");
+        expression.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return expression != null ? java.util.List.of(expression) : java.util.List.of();
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitExprStmt(this);

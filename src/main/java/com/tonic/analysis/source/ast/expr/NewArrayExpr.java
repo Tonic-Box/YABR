@@ -97,6 +97,25 @@ public final class NewArrayExpr implements Expression {
         return initializer != null;
     }
 
+    public NewArrayExpr withInitializer(ArrayInitExpr initializer) {
+        if (this.initializer != null) {
+            this.initializer.setParent(null);
+        }
+        this.initializer = initializer;
+        if (initializer != null) {
+            initializer.setParent(this);
+        }
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        children.addAll(dimensions);
+        if (initializer != null) children.add(initializer);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitNewArray(this);

@@ -3,10 +3,12 @@ package com.tonic.analysis.source.ast.stmt;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
+import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -2438,5 +2440,333 @@ class StatementASTTest {
         LabeledStmt labeledStmt = new LabeledStmt("myLabel", createTestStatement());
 
         assertEquals("myLabel", labeledStmt.getLabel());
+    }
+
+    @Nested
+    class FluentSetterTests {
+
+        @Test
+        void ifStmt_fluentChaining() {
+            LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
+            BlockStmt thenB = new BlockStmt();
+            BlockStmt elseB = new BlockStmt();
+
+            LiteralExpr newCond = new LiteralExpr(false, PrimitiveSourceType.BOOLEAN);
+            BlockStmt newThen = new BlockStmt();
+            BlockStmt newElse = new BlockStmt();
+
+            IfStmt stmt = new IfStmt(cond, thenB, elseB);
+
+            IfStmt result = stmt
+                    .withCondition(newCond)
+                    .withThenBranch(newThen)
+                    .withElseBranch(newElse);
+
+            assertSame(stmt, result);
+            assertSame(newCond, stmt.getCondition());
+            assertSame(newThen, stmt.getThenBranch());
+            assertSame(newElse, stmt.getElseBranch());
+            assertSame(stmt, newCond.getParent());
+            assertSame(stmt, newThen.getParent());
+            assertSame(stmt, newElse.getParent());
+            assertNull(cond.getParent());
+            assertNull(thenB.getParent());
+            assertNull(elseB.getParent());
+        }
+
+        @Test
+        void whileStmt_fluentChaining() {
+            LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
+            BlockStmt body = new BlockStmt();
+
+            LiteralExpr newCond = new LiteralExpr(false, PrimitiveSourceType.BOOLEAN);
+            BlockStmt newBody = new BlockStmt();
+
+            WhileStmt stmt = new WhileStmt(cond, body, null);
+
+            WhileStmt result = stmt
+                    .withCondition(newCond)
+                    .withBody(newBody)
+                    .withLabel("loop");
+
+            assertSame(stmt, result);
+            assertSame(newCond, stmt.getCondition());
+            assertSame(newBody, stmt.getBody());
+            assertEquals("loop", stmt.getLabel());
+            assertSame(stmt, newCond.getParent());
+            assertSame(stmt, newBody.getParent());
+        }
+
+        @Test
+        void doWhileStmt_fluentChaining() {
+            BlockStmt body = new BlockStmt();
+            LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
+
+            BlockStmt newBody = new BlockStmt();
+            LiteralExpr newCond = new LiteralExpr(false, PrimitiveSourceType.BOOLEAN);
+
+            DoWhileStmt stmt = new DoWhileStmt(body, cond, null);
+
+            DoWhileStmt result = stmt
+                    .withBody(newBody)
+                    .withCondition(newCond)
+                    .withLabel("myLoop");
+
+            assertSame(stmt, result);
+            assertSame(newBody, stmt.getBody());
+            assertSame(newCond, stmt.getCondition());
+            assertEquals("myLoop", stmt.getLabel());
+        }
+
+        @Test
+        void forStmt_fluentChaining() {
+            LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
+            BlockStmt body = new BlockStmt();
+
+            LiteralExpr newCond = new LiteralExpr(false, PrimitiveSourceType.BOOLEAN);
+            BlockStmt newBody = new BlockStmt();
+
+            ForStmt stmt = new ForStmt(
+                    Collections.emptyList(),
+                    cond,
+                    Collections.emptyList(),
+                    body,
+                    null,
+                    SourceLocation.UNKNOWN
+            );
+
+            ForStmt result = stmt
+                    .withCondition(newCond)
+                    .withBody(newBody)
+                    .withLabel("forLoop");
+
+            assertSame(stmt, result);
+            assertSame(newCond, stmt.getCondition());
+            assertSame(newBody, stmt.getBody());
+            assertEquals("forLoop", stmt.getLabel());
+        }
+
+        @Test
+        void forEachStmt_fluentChaining() {
+            VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "item");
+            VarRefExpr iterable = new VarRefExpr("list", ReferenceSourceType.OBJECT);
+            BlockStmt body = new BlockStmt();
+
+            VarDeclStmt newVar = new VarDeclStmt(PrimitiveSourceType.LONG, "elem");
+            VarRefExpr newIterable = new VarRefExpr("array", ReferenceSourceType.OBJECT);
+            BlockStmt newBody = new BlockStmt();
+
+            ForEachStmt stmt = new ForEachStmt(varDecl, iterable, body, null, SourceLocation.UNKNOWN);
+
+            ForEachStmt result = stmt
+                    .withVariable(newVar)
+                    .withIterable(newIterable)
+                    .withBody(newBody)
+                    .withLabel("eachLoop");
+
+            assertSame(stmt, result);
+            assertSame(newVar, stmt.getVariable());
+            assertSame(newIterable, stmt.getIterable());
+            assertSame(newBody, stmt.getBody());
+            assertEquals("eachLoop", stmt.getLabel());
+        }
+
+        @Test
+        void returnStmt_fluentChaining() {
+            LiteralExpr value = new LiteralExpr(1, PrimitiveSourceType.INT);
+            LiteralExpr newValue = new LiteralExpr(42, PrimitiveSourceType.INT);
+
+            ReturnStmt stmt = new ReturnStmt(value);
+
+            ReturnStmt result = stmt.withValue(newValue);
+
+            assertSame(stmt, result);
+            assertSame(newValue, stmt.getValue());
+            assertSame(stmt, newValue.getParent());
+            assertNull(value.getParent());
+        }
+
+        @Test
+        void returnStmt_withNullValue() {
+            LiteralExpr value = new LiteralExpr(1, PrimitiveSourceType.INT);
+            ReturnStmt stmt = new ReturnStmt(value);
+
+            stmt.withValue(null);
+
+            assertNull(stmt.getValue());
+            assertNull(value.getParent());
+        }
+
+        @Test
+        void throwStmt_fluentChaining() {
+            VarRefExpr exception = new VarRefExpr("ex", ReferenceSourceType.OBJECT);
+            VarRefExpr newException = new VarRefExpr("newEx", ReferenceSourceType.OBJECT);
+
+            ThrowStmt stmt = new ThrowStmt(exception);
+
+            ThrowStmt result = stmt.withExpression(newException);
+
+            assertSame(stmt, result);
+            assertSame(newException, stmt.getException());
+            assertSame(stmt, newException.getParent());
+            assertNull(exception.getParent());
+        }
+
+        @Test
+        void varDeclStmt_fluentChaining() {
+            LiteralExpr init = new LiteralExpr(10, PrimitiveSourceType.INT);
+            LiteralExpr newInit = new LiteralExpr(20, PrimitiveSourceType.INT);
+
+            VarDeclStmt stmt = new VarDeclStmt(PrimitiveSourceType.INT, "x", init);
+
+            VarDeclStmt result = stmt.withInitializer(newInit);
+
+            assertSame(stmt, result);
+            assertSame(newInit, stmt.getInitializer());
+            assertSame(stmt, newInit.getParent());
+            assertNull(init.getParent());
+        }
+
+        @Test
+        void exprStmt_fluentChaining() {
+            VarRefExpr expr = new VarRefExpr("x", PrimitiveSourceType.INT);
+            VarRefExpr newExpr = new VarRefExpr("y", PrimitiveSourceType.INT);
+
+            ExprStmt stmt = new ExprStmt(expr);
+
+            ExprStmt result = stmt.withExpression(newExpr);
+
+            assertSame(stmt, result);
+            assertSame(newExpr, stmt.getExpression());
+            assertSame(stmt, newExpr.getParent());
+            assertNull(expr.getParent());
+        }
+
+        @Test
+        void synchronizedStmt_fluentChaining() {
+            VarRefExpr lock = new VarRefExpr("mutex", ReferenceSourceType.OBJECT);
+            BlockStmt body = new BlockStmt();
+            VarRefExpr newLock = new VarRefExpr("lock", ReferenceSourceType.OBJECT);
+            BlockStmt newBody = new BlockStmt();
+
+            SynchronizedStmt stmt = new SynchronizedStmt(lock, body);
+
+            SynchronizedStmt result = stmt
+                    .withLock(newLock)
+                    .withBody(newBody);
+
+            assertSame(stmt, result);
+            assertSame(newLock, stmt.getLock());
+            assertSame(newBody, stmt.getBody());
+            assertSame(stmt, newLock.getParent());
+            assertSame(stmt, newBody.getParent());
+        }
+
+        @Test
+        void labeledStmt_fluentChaining() {
+            ExprStmt inner = new ExprStmt(new VarRefExpr("x", PrimitiveSourceType.INT));
+            ExprStmt newInner = new ExprStmt(new VarRefExpr("y", PrimitiveSourceType.INT));
+
+            LabeledStmt stmt = new LabeledStmt("label", inner);
+
+            LabeledStmt result = stmt.withStatement(newInner);
+
+            assertSame(stmt, result);
+            assertSame(newInner, stmt.getStatement());
+            assertSame(stmt, newInner.getParent());
+            assertNull(inner.getParent());
+        }
+
+        @Test
+        void tryCatchStmt_fluentChaining() {
+            BlockStmt tryBlock = new BlockStmt();
+            BlockStmt finallyBlock = new BlockStmt();
+            BlockStmt newTry = new BlockStmt();
+            BlockStmt newFinally = new BlockStmt();
+
+            TryCatchStmt stmt = new TryCatchStmt(tryBlock, Collections.emptyList(), finallyBlock);
+
+            TryCatchStmt result = stmt
+                    .withTryBlock(newTry)
+                    .withFinallyBlock(newFinally);
+
+            assertSame(stmt, result);
+            assertSame(newTry, stmt.getTryBlock());
+            assertSame(newFinally, stmt.getFinallyBlock());
+            assertSame(stmt, newTry.getParent());
+            assertSame(stmt, newFinally.getParent());
+        }
+
+        @Test
+        void switchStmt_fluentChaining() {
+            VarRefExpr selector = new VarRefExpr("x", PrimitiveSourceType.INT);
+            VarRefExpr newSelector = new VarRefExpr("y", PrimitiveSourceType.INT);
+
+            SwitchStmt stmt = new SwitchStmt(selector, Collections.emptyList());
+
+            SwitchStmt result = stmt.withSelector(newSelector);
+
+            assertSame(stmt, result);
+            assertSame(newSelector, stmt.getSelector());
+            assertSame(stmt, newSelector.getParent());
+            assertNull(selector.getParent());
+        }
+
+        @Test
+        void fluentSetters_preserveParentChildRelationship() {
+            IfStmt parent = new IfStmt(
+                    new LiteralExpr(true, PrimitiveSourceType.BOOLEAN),
+                    new BlockStmt(),
+                    null
+            );
+
+            BlockStmt newChild = new BlockStmt();
+            parent.withThenBranch(newChild);
+
+            assertSame(parent, newChild.getParent());
+        }
+
+        @Test
+        void fluentSetters_clearOldParent() {
+            BlockStmt child = new BlockStmt();
+            IfStmt parent1 = new IfStmt(
+                    new LiteralExpr(true, PrimitiveSourceType.BOOLEAN),
+                    child,
+                    null
+            );
+
+            assertSame(parent1, child.getParent());
+
+            IfStmt parent2 = new IfStmt(
+                    new LiteralExpr(false, PrimitiveSourceType.BOOLEAN),
+                    new BlockStmt(),
+                    null
+            );
+            parent2.withThenBranch(child);
+
+            assertSame(parent2, child.getParent());
+        }
+
+        @Test
+        void fluentSetters_chainMultipleOperations() {
+            IfStmt stmt = new IfStmt(
+                    new LiteralExpr(true, PrimitiveSourceType.BOOLEAN),
+                    new BlockStmt(),
+                    null
+            );
+
+            LiteralExpr newCond = new LiteralExpr(false, PrimitiveSourceType.BOOLEAN);
+            BlockStmt newThen = new BlockStmt();
+            BlockStmt newElse = new BlockStmt();
+
+            IfStmt result = stmt
+                    .withCondition(newCond)
+                    .withThenBranch(newThen)
+                    .withElseBranch(newElse);
+
+            assertSame(newCond, result.getCondition());
+            assertSame(newThen, result.getThenBranch());
+            assertSame(newElse, result.getElseBranch());
+        }
     }
 }

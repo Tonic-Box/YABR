@@ -89,6 +89,18 @@ public final class MethodRefExpr implements Expression {
         return new MethodRefExpr(null, "new", typeName, MethodRefKind.ARRAY_CONSTRUCTOR, arrayType);
     }
 
+    public MethodRefExpr withReceiver(Expression receiver) {
+        if (this.receiver != null) this.receiver.setParent(null);
+        this.receiver = receiver;
+        if (receiver != null) receiver.setParent(this);
+        return this;
+    }
+
+    public MethodRefExpr withMethodName(String methodName) {
+        this.methodName = methodName;
+        return this;
+    }
+
     /**
      * Gets the simple class name of the owner.
      */
@@ -101,6 +113,11 @@ public final class MethodRefExpr implements Expression {
      */
     public boolean isConstructorRef() {
         return kind == MethodRefKind.CONSTRUCTOR || kind == MethodRefKind.ARRAY_CONSTRUCTOR;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return receiver != null ? java.util.List.of(receiver) : java.util.List.of();
     }
 
     @Override

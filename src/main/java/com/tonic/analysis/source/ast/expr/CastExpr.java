@@ -39,6 +39,18 @@ public final class CastExpr implements Expression {
         return targetType;
     }
 
+    public CastExpr withExpression(Expression expression) {
+        if (this.expression != null) this.expression.setParent(null);
+        this.expression = expression;
+        if (expression != null) expression.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return expression != null ? java.util.List.of(expression) : java.util.List.of();
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitCast(this);

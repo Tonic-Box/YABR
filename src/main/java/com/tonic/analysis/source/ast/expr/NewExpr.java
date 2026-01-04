@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.ast.expr;
 
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
@@ -9,7 +10,6 @@ import com.tonic.utill.ClassNameUtil;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -23,20 +23,20 @@ public final class NewExpr implements Expression {
      * The class being instantiated (in internal format).
      */
     private final String className;
-    private final List<Expression> arguments;
+    private final NodeList<Expression> arguments;
     private final SourceType type;
     private final SourceLocation location;
     @Setter
     private ASTNode parent;
 
     public NewExpr(String className, List<Expression> arguments, SourceType type, SourceLocation location) {
+        this.arguments = new NodeList<>(this);
         this.className = Objects.requireNonNull(className, "className cannot be null");
-        this.arguments = new ArrayList<>(arguments != null ? arguments : List.of());
         this.type = type != null ? type : new ReferenceSourceType(className);
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
-        for (Expression arg : this.arguments) {
-            arg.setParent(this);
+        if (arguments != null) {
+            this.arguments.addAll(arguments);
         }
     }
 
@@ -56,7 +56,6 @@ public final class NewExpr implements Expression {
      * Adds an argument to this constructor call.
      */
     public void addArgument(Expression arg) {
-        arg.setParent(this);
         arguments.add(arg);
     }
 
@@ -72,6 +71,11 @@ public final class NewExpr implements Expression {
      */
     public String getSimpleName() {
         return ClassNameUtil.getSimpleNameWithInnerClasses(className);
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return new java.util.ArrayList<>(arguments);
     }
 
     @Override

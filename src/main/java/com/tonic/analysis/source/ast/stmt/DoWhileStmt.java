@@ -48,6 +48,33 @@ public final class DoWhileStmt implements Statement {
         return label;
     }
 
+    public DoWhileStmt withBody(Statement body) {
+        if (this.body != null) this.body.setParent(null);
+        this.body = body;
+        if (body != null) body.setParent(this);
+        return this;
+    }
+
+    public DoWhileStmt withCondition(Expression condition) {
+        if (this.condition != null) this.condition.setParent(null);
+        this.condition = condition;
+        if (condition != null) condition.setParent(this);
+        return this;
+    }
+
+    public DoWhileStmt withLabel(String label) {
+        this.label = label;
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (body != null) children.add(body);
+        if (condition != null) children.add(condition);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitDoWhile(this);

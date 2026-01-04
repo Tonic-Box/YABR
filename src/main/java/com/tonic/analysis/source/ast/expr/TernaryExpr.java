@@ -43,6 +43,36 @@ public final class TernaryExpr implements Expression {
         this(condition, thenExpr, elseExpr, type, SourceLocation.UNKNOWN);
     }
 
+    public TernaryExpr withCondition(Expression condition) {
+        if (this.condition != null) this.condition.setParent(null);
+        this.condition = condition;
+        if (condition != null) condition.setParent(this);
+        return this;
+    }
+
+    public TernaryExpr withThenExpr(Expression thenExpr) {
+        if (this.thenExpr != null) this.thenExpr.setParent(null);
+        this.thenExpr = thenExpr;
+        if (thenExpr != null) thenExpr.setParent(this);
+        return this;
+    }
+
+    public TernaryExpr withElseExpr(Expression elseExpr) {
+        if (this.elseExpr != null) this.elseExpr.setParent(null);
+        this.elseExpr = elseExpr;
+        if (elseExpr != null) elseExpr.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (condition != null) children.add(condition);
+        if (thenExpr != null) children.add(thenExpr);
+        if (elseExpr != null) children.add(elseExpr);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitTernary(this);

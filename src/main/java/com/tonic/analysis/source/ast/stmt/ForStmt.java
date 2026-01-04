@@ -1,13 +1,13 @@
 package com.tonic.analysis.source.ast.stmt;
 
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -17,10 +17,10 @@ import java.util.Objects;
 @Getter
 public final class ForStmt implements Statement {
 
-    private final List<Statement> init;
+    private final NodeList<Statement> init;
     @Setter
     private Expression condition;
-    private final List<Expression> update;
+    private final NodeList<Expression> update;
     @Setter
     private Statement body;
     @Setter
@@ -31,7 +31,10 @@ public final class ForStmt implements Statement {
 
     public ForStmt(List<Statement> init, Expression condition, List<Expression> update,
                    Statement body, String label, SourceLocation location) {
-        this.init = new ArrayList<>();
+        this.init = new NodeList<>(this);
+        this.update = new NodeList<>(this);
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
+
         if (init != null) {
             for (Statement s : init) {
                 if (s != null) {
@@ -40,7 +43,6 @@ public final class ForStmt implements Statement {
             }
         }
         this.condition = condition;
-        this.update = new ArrayList<>();
         if (update != null) {
             for (Expression e : update) {
                 if (e != null) {
@@ -50,16 +52,9 @@ public final class ForStmt implements Statement {
         }
         this.body = Objects.requireNonNull(body, "body cannot be null");
         this.label = label;
-        this.location = location != null ? location : SourceLocation.UNKNOWN;
 
-        for (Statement s : this.init) {
-            s.setParent(this);
-        }
         if (this.condition != null) {
             this.condition.setParent(this);
-        }
-        for (Expression e : this.update) {
-            e.setParent(this);
         }
         this.body.setParent(this);
     }
@@ -86,23 +81,52 @@ public final class ForStmt implements Statement {
      * Adds an initialization statement.
      */
     public void addInit(Statement stmt) {
-        if (stmt == null) return;
-        stmt.setParent(this);
-        init.add(stmt);
+        if (stmt != null) {
+            init.add(stmt);
+        }
     }
 
     /**
      * Adds an update expression.
      */
     public void addUpdate(Expression expr) {
-        if (expr == null) return;
-        expr.setParent(this);
-        update.add(expr);
+        if (expr != null) {
+            update.add(expr);
+        }
     }
 
     @Override
     public String getLabel() {
         return label;
+    }
+
+    public ForStmt withCondition(Expression condition) {
+        if (this.condition != null) this.condition.setParent(null);
+        this.condition = condition;
+        if (condition != null) condition.setParent(this);
+        return this;
+    }
+
+    public ForStmt withBody(Statement body) {
+        if (this.body != null) this.body.setParent(null);
+        this.body = body;
+        if (body != null) body.setParent(this);
+        return this;
+    }
+
+    public ForStmt withLabel(String label) {
+        this.label = label;
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        children.addAll(init);
+        if (condition != null) children.add(condition);
+        children.addAll(update);
+        if (body != null) children.add(body);
+        return children;
     }
 
     @Override

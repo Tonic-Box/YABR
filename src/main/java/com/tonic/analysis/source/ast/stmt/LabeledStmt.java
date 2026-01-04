@@ -33,9 +33,23 @@ public final class LabeledStmt implements Statement {
         this(label, statement, SourceLocation.UNKNOWN);
     }
 
+    public LabeledStmt withStatement(Statement statement) {
+        if (this.statement != null) {
+            this.statement.setParent(null);
+        }
+        this.statement = Objects.requireNonNull(statement, "statement cannot be null");
+        statement.setParent(this);
+        return this;
+    }
+
     @Override
     public String getLabel() {
         return label;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return statement != null ? java.util.List.of(statement) : java.util.List.of();
     }
 
     @Override

@@ -65,6 +65,16 @@ public final class LiteralExpr implements Expression {
         return new LiteralExpr(null, ReferenceSourceType.OBJECT);
     }
 
+    public LiteralExpr withValue(Object value) {
+        this.value = value;
+        return this;
+    }
+
+    public LiteralExpr withType(SourceType type) {
+        this.type = type;
+        return this;
+    }
+
     /**
      * Checks if this is a null literal.
      */

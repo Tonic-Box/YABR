@@ -42,6 +42,11 @@ public final class VarRefExpr implements Expression {
         this(name, type, null, SourceLocation.UNKNOWN);
     }
 
+    public VarRefExpr withName(String name) {
+        this.name = name;
+        return this;
+    }
+
     /**
      * Checks if this variable reference has an associated SSA value.
      */

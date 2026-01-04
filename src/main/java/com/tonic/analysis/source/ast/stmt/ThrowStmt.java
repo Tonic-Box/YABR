@@ -32,6 +32,20 @@ public final class ThrowStmt implements Statement {
         this(exception, SourceLocation.UNKNOWN);
     }
 
+    public ThrowStmt withExpression(Expression exception) {
+        if (this.exception != null) {
+            this.exception.setParent(null);
+        }
+        this.exception = Objects.requireNonNull(exception, "exception cannot be null");
+        exception.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return exception != null ? java.util.List.of(exception) : java.util.List.of();
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitThrow(this);

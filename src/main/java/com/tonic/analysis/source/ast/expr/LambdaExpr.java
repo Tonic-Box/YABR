@@ -43,6 +43,13 @@ public final class LambdaExpr implements Expression {
         this(parameters, body, type, SourceLocation.UNKNOWN);
     }
 
+    public LambdaExpr withBody(ASTNode body) {
+        if (this.body != null) this.body.setParent(null);
+        this.body = body;
+        if (body != null) body.setParent(this);
+        return this;
+    }
+
     /**
      * Checks if this lambda has an expression body (vs. block body).
      */
@@ -89,6 +96,11 @@ public final class LambdaExpr implements Expression {
      */
     public int getParameterCount() {
         return parameters.size();
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return body != null ? java.util.List.of(body) : java.util.List.of();
     }
 
     @Override

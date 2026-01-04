@@ -67,6 +67,22 @@ public final class VarDeclStmt implements Statement {
         return initializer != null;
     }
 
+    public VarDeclStmt withInitializer(Expression initializer) {
+        if (this.initializer != null) {
+            this.initializer.setParent(null);
+        }
+        this.initializer = initializer;
+        if (initializer != null) {
+            initializer.setParent(this);
+        }
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return initializer != null ? java.util.List.of(initializer) : java.util.List.of();
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitVarDecl(this);

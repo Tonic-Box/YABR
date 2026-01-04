@@ -74,6 +74,18 @@ public final class FieldAccessExpr implements Expression {
         return ClassNameUtil.getSimpleNameWithInnerClasses(ownerClass);
     }
 
+    public FieldAccessExpr withReceiver(Expression receiver) {
+        if (this.receiver != null) this.receiver.setParent(null);
+        this.receiver = receiver;
+        if (receiver != null) receiver.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return receiver != null ? java.util.List.of(receiver) : java.util.List.of();
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitFieldAccess(this);

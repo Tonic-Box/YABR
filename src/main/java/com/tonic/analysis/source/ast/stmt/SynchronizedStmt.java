@@ -36,6 +36,32 @@ public final class SynchronizedStmt implements Statement {
         this(lock, body, SourceLocation.UNKNOWN);
     }
 
+    public SynchronizedStmt withLock(Expression lock) {
+        if (this.lock != null) {
+            this.lock.setParent(null);
+        }
+        this.lock = Objects.requireNonNull(lock, "lock cannot be null");
+        lock.setParent(this);
+        return this;
+    }
+
+    public SynchronizedStmt withBody(Statement body) {
+        if (this.body != null) {
+            this.body.setParent(null);
+        }
+        this.body = Objects.requireNonNull(body, "body cannot be null");
+        body.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (lock != null) children.add(lock);
+        if (body != null) children.add(body);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitSynchronized(this);

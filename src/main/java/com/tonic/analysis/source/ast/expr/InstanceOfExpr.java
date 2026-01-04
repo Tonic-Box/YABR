@@ -47,6 +47,18 @@ public final class InstanceOfExpr implements Expression {
         this(expression, checkType, null, SourceLocation.UNKNOWN);
     }
 
+    public InstanceOfExpr withExpression(Expression expression) {
+        if (this.expression != null) this.expression.setParent(null);
+        this.expression = expression;
+        if (expression != null) expression.setParent(this);
+        return this;
+    }
+
+    public InstanceOfExpr withPatternVariable(String patternVariable) {
+        this.patternVariable = patternVariable;
+        return this;
+    }
+
     /**
      * Checks if this is a pattern matching instanceof (Java 16+).
      */
@@ -57,6 +69,11 @@ public final class InstanceOfExpr implements Expression {
     @Override
     public SourceType getType() {
         return PrimitiveSourceType.BOOLEAN;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return expression != null ? java.util.List.of(expression) : java.util.List.of();
     }
 
     @Override

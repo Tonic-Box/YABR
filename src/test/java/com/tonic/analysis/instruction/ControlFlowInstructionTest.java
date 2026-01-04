@@ -344,7 +344,7 @@ class ControlFlowInstructionTest {
                 GotoInstruction instr = new GotoInstruction(0xA7, 10, (short) 42);
 
                 assertEquals(0xA7, instr.getOpcode());
-                assertEquals(GotoInstruction.GotoType.GOTO, instr.getType());
+                assertEquals(GotoInstruction.GotoType.GOTO_NORMAL, instr.getType());
             }
 
             @Test
@@ -393,7 +393,7 @@ class ControlFlowInstructionTest {
                 GotoInstruction instr = new GotoInstruction(0xC8, 10, 42);
 
                 assertEquals(0xC8, instr.getOpcode());
-                assertEquals(GotoInstruction.GotoType.GOTO_W, instr.getType());
+                assertEquals(GotoInstruction.GotoType.GOTO_WIDE, instr.getType());
             }
 
             @Test
@@ -486,9 +486,9 @@ class ControlFlowInstructionTest {
 
             @Test
             void gotoTypeFromOpcodeReturnsCorrectType() {
-                assertEquals(GotoInstruction.GotoType.GOTO,
+                assertEquals(GotoInstruction.GotoType.GOTO_NORMAL,
                         GotoInstruction.GotoType.fromOpcode(0xA7));
-                assertEquals(GotoInstruction.GotoType.GOTO_W,
+                assertEquals(GotoInstruction.GotoType.GOTO_WIDE,
                         GotoInstruction.GotoType.fromOpcode(0xC8));
             }
 

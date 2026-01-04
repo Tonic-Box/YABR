@@ -1,12 +1,12 @@
 package com.tonic.analysis.source.ast.stmt;
 
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,21 +15,20 @@ import java.util.List;
 @Getter
 public final class BlockStmt implements Statement {
 
-    private final List<Statement> statements;
+    private final NodeList<Statement> statements;
     private final SourceLocation location;
     @Setter
     private ASTNode parent;
 
     public BlockStmt(List<Statement> statements, SourceLocation location) {
-        this.statements = new ArrayList<>();
-        for (Statement stmt : statements) {
-            if (stmt != null) {
-                this.statements.add(stmt);
-            }
-        }
+        this.statements = new NodeList<>(this);
         this.location = location != null ? location : SourceLocation.UNKNOWN;
-        for (Statement stmt : this.statements) {
-            stmt.setParent(this);
+        if (statements != null) {
+            for (Statement stmt : statements) {
+                if (stmt != null) {
+                    this.statements.add(stmt);
+                }
+            }
         }
     }
 
@@ -45,18 +44,18 @@ public final class BlockStmt implements Statement {
      * Adds a statement to the end of this block.
      */
     public void addStatement(Statement stmt) {
-        if (stmt == null) return;
-        stmt.setParent(this);
-        statements.add(stmt);
+        if (stmt != null) {
+            statements.add(stmt);
+        }
     }
 
     /**
      * Inserts a statement at the specified index.
      */
     public void insertStatement(int index, Statement stmt) {
-        if (stmt == null) return;
-        stmt.setParent(this);
-        statements.add(index, stmt);
+        if (stmt != null) {
+            statements.add(index, stmt);
+        }
     }
 
     /**
@@ -78,6 +77,11 @@ public final class BlockStmt implements Statement {
      */
     public int size() {
         return statements.size();
+    }
+
+    @Override
+    public List<ASTNode> getChildren() {
+        return new java.util.ArrayList<>(statements);
     }
 
     @Override

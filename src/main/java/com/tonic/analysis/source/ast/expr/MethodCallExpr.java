@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.ast.expr;
 
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
@@ -8,7 +9,6 @@ import com.tonic.utill.ClassNameUtil;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,7 +29,7 @@ public final class MethodCallExpr implements Expression {
      * The class that declares the method (in internal format).
      */
     private final String ownerClass;
-    private final List<Expression> arguments;
+    private final NodeList<Expression> arguments;
     private final boolean isStatic;
     private final SourceType type;
     private final SourceLocation location;
@@ -39,10 +39,10 @@ public final class MethodCallExpr implements Expression {
     public MethodCallExpr(Expression receiver, String methodName, String ownerClass,
                           List<Expression> arguments, boolean isStatic, SourceType type,
                           SourceLocation location) {
+        this.arguments = new NodeList<>(this);
         this.receiver = receiver;
         this.methodName = Objects.requireNonNull(methodName, "methodName cannot be null");
         this.ownerClass = Objects.requireNonNull(ownerClass, "ownerClass cannot be null");
-        this.arguments = new ArrayList<>(arguments != null ? arguments : List.of());
         this.isStatic = isStatic;
         this.type = type != null ? type : com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
@@ -50,8 +50,8 @@ public final class MethodCallExpr implements Expression {
         if (receiver != null) {
             receiver.setParent(this);
         }
-        for (Expression arg : this.arguments) {
-            arg.setParent(this);
+        if (arguments != null) {
+            this.arguments.addAll(arguments);
         }
     }
 
@@ -81,7 +81,6 @@ public final class MethodCallExpr implements Expression {
      * Adds an argument to this call.
      */
     public void addArgument(Expression arg) {
-        arg.setParent(this);
         arguments.add(arg);
     }
 
@@ -97,6 +96,26 @@ public final class MethodCallExpr implements Expression {
      */
     public String getOwnerSimpleName() {
         return ClassNameUtil.getSimpleNameWithInnerClasses(ownerClass);
+    }
+
+    public MethodCallExpr withReceiver(Expression receiver) {
+        if (this.receiver != null) this.receiver.setParent(null);
+        this.receiver = receiver;
+        if (receiver != null) receiver.setParent(this);
+        return this;
+    }
+
+    public MethodCallExpr withMethodName(String methodName) {
+        this.methodName = methodName;
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (receiver != null) children.add(receiver);
+        children.addAll(arguments);
+        return children;
     }
 
     @Override

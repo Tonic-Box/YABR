@@ -49,6 +49,22 @@ public final class ReturnStmt implements Statement {
         return value == null;
     }
 
+    public ReturnStmt withValue(Expression value) {
+        if (this.value != null) {
+            this.value.setParent(null);
+        }
+        this.value = value;
+        if (value != null) {
+            value.setParent(this);
+        }
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        return value != null ? java.util.List.of(value) : java.util.List.of();
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitReturn(this);

@@ -60,6 +60,36 @@ public final class IfStmt implements Statement {
         return elseBranch instanceof IfStmt;
     }
 
+    public IfStmt withCondition(Expression condition) {
+        if (this.condition != null) this.condition.setParent(null);
+        this.condition = condition;
+        if (condition != null) condition.setParent(this);
+        return this;
+    }
+
+    public IfStmt withThenBranch(Statement thenBranch) {
+        if (this.thenBranch != null) this.thenBranch.setParent(null);
+        this.thenBranch = thenBranch;
+        if (thenBranch != null) thenBranch.setParent(this);
+        return this;
+    }
+
+    public IfStmt withElseBranch(Statement elseBranch) {
+        if (this.elseBranch != null) this.elseBranch.setParent(null);
+        this.elseBranch = elseBranch;
+        if (elseBranch != null) elseBranch.setParent(this);
+        return this;
+    }
+
+    @Override
+    public java.util.List<ASTNode> getChildren() {
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (condition != null) children.add(condition);
+        if (thenBranch != null) children.add(thenBranch);
+        if (elseBranch != null) children.add(elseBranch);
+        return children;
+    }
+
     @Override
     public <T> T accept(SourceVisitor<T> visitor) {
         return visitor.visitIf(this);

@@ -10,6 +10,7 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -2684,6 +2685,287 @@ class ExpressionASTTest {
             assertEquals("--", UnaryOperator.PRE_DEC.toString());
             assertEquals("++", UnaryOperator.POST_INC.toString());
             assertEquals("--", UnaryOperator.POST_DEC.toString());
+        }
+    }
+
+    @Nested
+    class FluentSetterTests {
+
+        @Test
+        void binaryExpr_fluentChaining() {
+            LiteralExpr left = new LiteralExpr(1, PrimitiveSourceType.INT);
+            LiteralExpr right = new LiteralExpr(2, PrimitiveSourceType.INT);
+            LiteralExpr newLeft = new LiteralExpr(10, PrimitiveSourceType.INT);
+            LiteralExpr newRight = new LiteralExpr(20, PrimitiveSourceType.INT);
+
+            BinaryExpr expr = new BinaryExpr(BinaryOperator.ADD, left, right, PrimitiveSourceType.INT);
+
+            BinaryExpr result = expr
+                    .withOperator(BinaryOperator.MUL)
+                    .withLeft(newLeft)
+                    .withRight(newRight);
+
+            assertSame(expr, result);
+            assertEquals(BinaryOperator.MUL, expr.getOperator());
+            assertSame(newLeft, expr.getLeft());
+            assertSame(newRight, expr.getRight());
+            assertSame(expr, newLeft.getParent());
+            assertSame(expr, newRight.getParent());
+            assertNull(left.getParent());
+            assertNull(right.getParent());
+        }
+
+        @Test
+        void binaryExpr_withNullOperands() {
+            LiteralExpr left = new LiteralExpr(1, PrimitiveSourceType.INT);
+            LiteralExpr right = new LiteralExpr(2, PrimitiveSourceType.INT);
+            BinaryExpr expr = new BinaryExpr(BinaryOperator.ADD, left, right, PrimitiveSourceType.INT);
+
+            expr.withLeft(null).withRight(null);
+
+            assertNull(expr.getLeft());
+            assertNull(expr.getRight());
+            assertNull(left.getParent());
+            assertNull(right.getParent());
+        }
+
+        @Test
+        void unaryExpr_fluentChaining() {
+            LiteralExpr operand = new LiteralExpr(5, PrimitiveSourceType.INT);
+            LiteralExpr newOperand = new LiteralExpr(10, PrimitiveSourceType.INT);
+
+            UnaryExpr expr = new UnaryExpr(UnaryOperator.NEG, operand, PrimitiveSourceType.INT);
+
+            UnaryExpr result = expr
+                    .withOperator(UnaryOperator.BNOT)
+                    .withOperand(newOperand);
+
+            assertSame(expr, result);
+            assertEquals(UnaryOperator.BNOT, expr.getOperator());
+            assertSame(newOperand, expr.getOperand());
+            assertSame(expr, newOperand.getParent());
+            assertNull(operand.getParent());
+        }
+
+        @Test
+        void methodCallExpr_fluentChaining() {
+            VarRefExpr receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
+            VarRefExpr newReceiver = new VarRefExpr("other", ReferenceSourceType.OBJECT);
+            List<Expression> args = new ArrayList<>();
+
+            MethodCallExpr expr = new MethodCallExpr(receiver, "method", "java/lang/Object", args, false, ReferenceSourceType.OBJECT);
+
+            MethodCallExpr result = expr
+                    .withReceiver(newReceiver)
+                    .withMethodName("newMethod");
+
+            assertSame(expr, result);
+            assertSame(newReceiver, expr.getReceiver());
+            assertEquals("newMethod", expr.getMethodName());
+            assertSame(expr, newReceiver.getParent());
+            assertNull(receiver.getParent());
+        }
+
+        @Test
+        void fieldAccessExpr_fluentChaining() {
+            VarRefExpr receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
+            VarRefExpr newReceiver = new VarRefExpr("other", ReferenceSourceType.OBJECT);
+
+            FieldAccessExpr expr = new FieldAccessExpr(receiver, "field", "java/lang/Object", false, PrimitiveSourceType.INT);
+
+            FieldAccessExpr result = expr.withReceiver(newReceiver);
+
+            assertSame(expr, result);
+            assertSame(newReceiver, expr.getReceiver());
+            assertSame(expr, newReceiver.getParent());
+            assertNull(receiver.getParent());
+        }
+
+        @Test
+        void arrayAccessExpr_fluentChaining() {
+            VarRefExpr array = new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT, 1));
+            LiteralExpr index = new LiteralExpr(0, PrimitiveSourceType.INT);
+            VarRefExpr newArray = new VarRefExpr("arr2", new ArraySourceType(PrimitiveSourceType.INT, 1));
+            LiteralExpr newIndex = new LiteralExpr(5, PrimitiveSourceType.INT);
+
+            ArrayAccessExpr expr = new ArrayAccessExpr(array, index, PrimitiveSourceType.INT);
+
+            ArrayAccessExpr result = expr.withArray(newArray).withIndex(newIndex);
+
+            assertSame(expr, result);
+            assertSame(newArray, expr.getArray());
+            assertSame(newIndex, expr.getIndex());
+            assertSame(expr, newArray.getParent());
+            assertSame(expr, newIndex.getParent());
+            assertNull(array.getParent());
+            assertNull(index.getParent());
+        }
+
+        @Test
+        void castExpr_fluentChaining() {
+            LiteralExpr original = new LiteralExpr(1, PrimitiveSourceType.INT);
+            LiteralExpr newExpr = new LiteralExpr(2, PrimitiveSourceType.INT);
+
+            CastExpr expr = new CastExpr(PrimitiveSourceType.LONG, original);
+
+            CastExpr result = expr.withExpression(newExpr);
+
+            assertSame(expr, result);
+            assertSame(newExpr, expr.getExpression());
+            assertSame(expr, newExpr.getParent());
+            assertNull(original.getParent());
+        }
+
+        @Test
+        void ternaryExpr_fluentChaining() {
+            LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
+            LiteralExpr thenE = new LiteralExpr(1, PrimitiveSourceType.INT);
+            LiteralExpr elseE = new LiteralExpr(2, PrimitiveSourceType.INT);
+            LiteralExpr newCond = new LiteralExpr(false, PrimitiveSourceType.BOOLEAN);
+            LiteralExpr newThen = new LiteralExpr(10, PrimitiveSourceType.INT);
+            LiteralExpr newElse = new LiteralExpr(20, PrimitiveSourceType.INT);
+
+            TernaryExpr expr = new TernaryExpr(cond, thenE, elseE, PrimitiveSourceType.INT);
+
+            TernaryExpr result = expr
+                    .withCondition(newCond)
+                    .withThenExpr(newThen)
+                    .withElseExpr(newElse);
+
+            assertSame(expr, result);
+            assertSame(newCond, expr.getCondition());
+            assertSame(newThen, expr.getThenExpr());
+            assertSame(newElse, expr.getElseExpr());
+            assertSame(expr, newCond.getParent());
+            assertSame(expr, newThen.getParent());
+            assertSame(expr, newElse.getParent());
+        }
+
+        @Test
+        void instanceOfExpr_fluentChaining() {
+            VarRefExpr original = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
+            VarRefExpr newExpr = new VarRefExpr("other", ReferenceSourceType.OBJECT);
+
+            InstanceOfExpr expr = new InstanceOfExpr(original, ReferenceSourceType.STRING, "str");
+
+            InstanceOfExpr result = expr
+                    .withExpression(newExpr)
+                    .withPatternVariable("newVar");
+
+            assertSame(expr, result);
+            assertSame(newExpr, expr.getExpression());
+            assertEquals("newVar", expr.getPatternVariable());
+            assertSame(expr, newExpr.getParent());
+            assertNull(original.getParent());
+        }
+
+        @Test
+        void varRefExpr_fluentChaining() {
+            VarRefExpr expr = new VarRefExpr("oldName", PrimitiveSourceType.INT);
+
+            VarRefExpr result = expr.withName("newName");
+
+            assertSame(expr, result);
+            assertEquals("newName", expr.getName());
+        }
+
+        @Test
+        void literalExpr_fluentChaining() {
+            LiteralExpr expr = new LiteralExpr(42, PrimitiveSourceType.INT);
+
+            LiteralExpr result = expr
+                    .withValue(100L)
+                    .withType(PrimitiveSourceType.LONG);
+
+            assertSame(expr, result);
+            assertEquals(100L, expr.getValue());
+            assertEquals(PrimitiveSourceType.LONG, expr.getType());
+        }
+
+        @Test
+        void methodRefExpr_fluentChaining() {
+            VarRefExpr receiver = new VarRefExpr("list", ReferenceSourceType.OBJECT);
+            VarRefExpr newReceiver = new VarRefExpr("set", ReferenceSourceType.OBJECT);
+
+            MethodRefExpr expr = new MethodRefExpr(receiver, "add", "java/util/List", MethodRefKind.BOUND, ReferenceSourceType.OBJECT);
+
+            MethodRefExpr result = expr
+                    .withReceiver(newReceiver)
+                    .withMethodName("put");
+
+            assertSame(expr, result);
+            assertSame(newReceiver, expr.getReceiver());
+            assertEquals("put", expr.getMethodName());
+            assertSame(expr, newReceiver.getParent());
+            assertNull(receiver.getParent());
+        }
+
+        @Test
+        void newArrayExpr_fluentChaining() {
+            ArrayInitExpr init = new ArrayInitExpr(
+                    List.of(new LiteralExpr(1, PrimitiveSourceType.INT)),
+                    new ArraySourceType(PrimitiveSourceType.INT, 1)
+            );
+            ArrayInitExpr newInit = new ArrayInitExpr(
+                    List.of(new LiteralExpr(2, PrimitiveSourceType.INT)),
+                    new ArraySourceType(PrimitiveSourceType.INT, 1)
+            );
+
+            NewArrayExpr expr = new NewArrayExpr(PrimitiveSourceType.INT, init);
+
+            NewArrayExpr result = expr.withInitializer(newInit);
+
+            assertSame(expr, result);
+            assertSame(newInit, expr.getInitializer());
+            assertSame(expr, newInit.getParent());
+            assertNull(init.getParent());
+        }
+
+        @Test
+        void fluentSetters_preserveParentChildRelationship() {
+            BinaryExpr parent = new BinaryExpr(
+                    BinaryOperator.ADD,
+                    new LiteralExpr(1, PrimitiveSourceType.INT),
+                    new LiteralExpr(2, PrimitiveSourceType.INT),
+                    PrimitiveSourceType.INT
+            );
+
+            LiteralExpr newChild = new LiteralExpr(99, PrimitiveSourceType.INT);
+            parent.withLeft(newChild);
+
+            assertSame(parent, newChild.getParent());
+        }
+
+        @Test
+        void fluentSetters_clearOldParent() {
+            LiteralExpr child = new LiteralExpr(1, PrimitiveSourceType.INT);
+            BinaryExpr parent1 = new BinaryExpr(BinaryOperator.ADD, child, new LiteralExpr(2, PrimitiveSourceType.INT), PrimitiveSourceType.INT);
+
+            assertSame(parent1, child.getParent());
+
+            BinaryExpr parent2 = new BinaryExpr(BinaryOperator.MUL, new LiteralExpr(3, PrimitiveSourceType.INT), new LiteralExpr(4, PrimitiveSourceType.INT), PrimitiveSourceType.INT);
+            parent2.withLeft(child);
+
+            assertSame(parent2, child.getParent());
+        }
+
+        @Test
+        void fluentSetters_chainMultipleOperations() {
+            BinaryExpr expr = new BinaryExpr(
+                    BinaryOperator.ADD,
+                    new LiteralExpr(1, PrimitiveSourceType.INT),
+                    new LiteralExpr(2, PrimitiveSourceType.INT),
+                    PrimitiveSourceType.INT
+            );
+
+            BinaryExpr result = expr
+                    .withOperator(BinaryOperator.SUB)
+                    .withLeft(new LiteralExpr(10, PrimitiveSourceType.INT))
+                    .withRight(new LiteralExpr(5, PrimitiveSourceType.INT));
+
+            assertEquals(BinaryOperator.SUB, result.getOperator());
+            assertEquals(10, ((LiteralExpr) result.getLeft()).getValue());
+            assertEquals(5, ((LiteralExpr) result.getRight()).getValue());
         }
     }
 }
