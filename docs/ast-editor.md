@@ -328,10 +328,16 @@ editor.onMethodCall((ctx, call) -> {
 
 ## ASTFactory
 
-Build new AST nodes programmatically:
+Build new AST nodes programmatically. You can use either the context factory or the static `ASTFactory`:
 
 ```java
+// From editor context
 ASTFactory factory = ctx.factory();
+
+// Or use the static ASTFactory directly
+import com.tonic.analysis.source.ast.ASTFactory;
+LiteralExpr lit = ASTFactory.intLit(42);
+BinaryExpr sum = ASTFactory.add(left, right);
 
 // Literals
 LiteralExpr intLit = factory.intLiteral(42);

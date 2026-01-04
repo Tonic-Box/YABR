@@ -136,13 +136,13 @@ String formatted = SourceEmitter.emit(statement, config);
 
 ### Mutating the AST
 
-AST nodes are mutable. You can traverse and modify them:
+AST nodes are mutable. You can traverse and modify them using traditional iteration or the built-in traversal API:
 
 ```java
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 
-// Traverse and modify literals
+// Traditional traversal
 void mutateBlock(BlockStmt block) {
     for (Statement stmt : block.getStatements()) {
         if (stmt instanceof ReturnStmt ret && ret.getValue() != null) {
@@ -164,6 +164,100 @@ void mutateExpression(Expression expr) {
         mutateExpression(bin.getRight());
     }
 }
+```
+
+#### Built-in Traversal Methods
+
+All AST nodes provide traversal methods:
+
+```java
+// Walk all descendants
+block.walk(node -> System.out.println(node.getClass().getSimpleName()));
+
+// Find first matching node
+Optional<VarRefExpr> varRef = block.findFirst(VarRefExpr.class);
+Optional<VarRefExpr> namedX = block.findFirst(VarRefExpr.class, v -> v.getName().equals("x"));
+
+// Find all matching nodes
+List<MethodCallExpr> allCalls = block.findAll(MethodCallExpr.class);
+List<LiteralExpr> intLits = block.findAll(LiteralExpr.class,
+    lit -> lit.getType() == PrimitiveSourceType.INT);
+
+// Stream API
+long callCount = block.stream(MethodCallExpr.class).count();
+Set<String> methodNames = block.stream(MethodCallExpr.class)
+    .map(MethodCallExpr::getMethodName)
+    .collect(Collectors.toSet());
+
+// Navigate up the tree
+Optional<IfStmt> parentIf = expr.findAncestor(IfStmt.class);
+
+// Get direct children
+List<ASTNode> children = node.getChildren();
+```
+
+#### Fluent Setters
+
+All AST nodes support fluent `withX()` setters for method chaining:
+
+```java
+// Fluent modification
+BinaryExpr expr = new BinaryExpr(BinaryOperator.ADD, left, right, type)
+    .withLeft(newLeft)
+    .withRight(newRight);
+
+IfStmt ifStmt = new IfStmt(condition, thenBranch)
+    .withElseBranch(elseBranch)
+    .withCondition(newCondition);
+```
+
+#### Clone, Replace, and Remove
+
+```java
+import com.tonic.analysis.source.ast.ASTMutations;
+
+// Deep clone a subtree
+BinaryExpr copy = ASTMutations.deepClone(original);
+// Or via default method:
+BinaryExpr copy = (BinaryExpr) original.deepClone();
+
+// Replace a node in its parent
+boolean success = ASTMutations.replace(oldExpr, newExpr);
+// Or via default method:
+boolean success = oldExpr.replaceWith(newExpr);
+
+// Remove from parent (for list elements like statements)
+boolean success = ASTMutations.remove(stmt);
+// Or via default method:
+boolean success = stmt.remove();
+```
+
+#### ASTFactory
+
+Use the factory for convenient node creation:
+
+```java
+import com.tonic.analysis.source.ast.ASTFactory;
+
+// Literals
+LiteralExpr intLit = ASTFactory.intLit(42);
+LiteralExpr strLit = ASTFactory.stringLit("hello");
+LiteralExpr nullLit = ASTFactory.nullLit();
+
+// Variables
+VarRefExpr x = ASTFactory.intVar("x");
+VarRefExpr flag = ASTFactory.boolVar("flag");
+
+// Binary operations
+BinaryExpr sum = ASTFactory.add(left, right);
+BinaryExpr isEqual = ASTFactory.eq(a, b);
+BinaryExpr both = ASTFactory.and(cond1, cond2);
+
+// Statements
+BlockStmt block = ASTFactory.block(stmt1, stmt2, stmt3);
+IfStmt ifElse = ASTFactory.ifElse(condition, thenBranch, elseBranch);
+ReturnStmt ret = ASTFactory.returnStmt(value);
+VarDeclStmt decl = ASTFactory.varDecl(PrimitiveSourceType.INT, "count", ASTFactory.intLit(0));
 ```
 
 ### Lowering AST to Bytecode
@@ -252,6 +346,70 @@ IRType irType = sourceType.toIRType();
 
 // Get Java source representation
 String javaType = sourceType.toJavaSource();  // "int[]", "String", etc.
+```
+
+#### Extended Types
+
+For complex Java type constructs:
+
+```java
+import com.tonic.analysis.source.ast.type.*;
+
+// Generic types: List<String>, Map<K, V>
+GenericSourceType listOfString = new GenericSourceType(
+    "java/util/List",
+    List.of(new ReferenceSourceType("java/lang/String"))
+);
+// toJavaSource() → "List<String>"
+
+// Wildcard types: ?, ? extends Number, ? super Integer
+WildcardSourceType unbounded = WildcardSourceType.unbounded();           // ?
+WildcardSourceType upper = WildcardSourceType.extendsType(numberType);   // ? extends Number
+WildcardSourceType lower = WildcardSourceType.superType(integerType);    // ? super Integer
+
+// Intersection types: T extends A & B
+IntersectionSourceType intersection = new IntersectionSourceType(
+    new ReferenceSourceType("java/io/Serializable"),
+    new ReferenceSourceType("java/lang/Comparable")
+);
+// toJavaSource() → "Serializable & Comparable"
+
+// Union types: catch (IOException | SQLException e)
+UnionSourceType union = new UnionSourceType(
+    new ReferenceSourceType("java/io/IOException"),
+    new ReferenceSourceType("java/sql/SQLException")
+);
+// toJavaSource() → "IOException | SQLException"
+```
+
+#### TypeUtils
+
+Utility methods for type operations:
+
+```java
+import com.tonic.analysis.source.ast.type.TypeUtils;
+
+// Type checks
+TypeUtils.isNumeric(type);       // int, long, float, double, byte, short, char
+TypeUtils.isIntegral(type);      // int, long, byte, short, char
+TypeUtils.isPrimitive(type);
+TypeUtils.isReference(type);
+TypeUtils.isVoid(type);
+TypeUtils.isArray(type);
+TypeUtils.isBoxedType(type);     // Integer, Long, etc.
+
+// Boxing/unboxing
+SourceType boxed = TypeUtils.box(PrimitiveSourceType.INT);      // → Integer
+SourceType unboxed = TypeUtils.unbox(integerType);               // → int
+
+// Type relationships
+SourceType common = TypeUtils.commonSupertype(typeA, typeB);
+boolean assignable = TypeUtils.isAssignableTo(fromType, toType);
+
+// Utilities
+String simpleName = TypeUtils.getSimpleName(type);               // "String" from "java/lang/String"
+SourceType element = TypeUtils.getElementType(arrayType);
+SourceType raw = TypeUtils.getRawType(genericType);
 ```
 
 ## Recovery System
@@ -847,6 +1005,80 @@ On obfuscated code, the ControlFlowSimplifier achieves:
 | Self-assignments | -98% |
 | Ternary expressions | +148 (from if-else conversion) |
 | AND conditions | +315 (from nested if merging) |
+
+## NodeList
+
+`NodeList<T>` is a specialized list that automatically manages parent-child relationships:
+
+```java
+import com.tonic.analysis.source.ast.NodeList;
+
+// Create a NodeList owned by a block
+NodeList<Statement> statements = new NodeList<>(blockStmt);
+
+// Adding sets parent automatically
+statements.add(newStatement);  // newStatement.getParent() == blockStmt
+
+// Fluent helpers
+statements.addNode(stmt1).addNode(stmt2).addAll(stmt3, stmt4);
+
+// Removal clears parent
+statements.remove(oldStatement);  // oldStatement.getParent() == null
+
+// Works with all standard List operations
+statements.set(0, replacementStmt);
+statements.clear();
+```
+
+NodeList is used internally by:
+- `BlockStmt.statements`
+- `ForStmt.init` and `ForStmt.update`
+- `MethodCallExpr.arguments`
+- `NewExpr.arguments`
+- `TryCatchStmt.resources`
+- `SwitchStmt.cases`
+
+## AST Validation
+
+The validation framework checks AST integrity:
+
+```java
+import com.tonic.analysis.source.ast.validation.*;
+
+// Create and configure validator
+ASTValidator validator = new ASTValidator()
+    .withStructureValidation(true)   // Parent-child consistency
+    .withTypeValidation(true)        // Type checking
+    .withNullValidation(true);       // Required fields
+
+// Validate an AST
+ASTValidator.ValidationResult result = validator.validate(rootNode);
+
+if (!result.isValid()) {
+    System.out.println("Errors: " + result.getErrorCount());
+    for (ValidationError error : result.getErrors()) {
+        System.err.println(error);
+        // [ERROR] STRUCTURAL: Parent mismatch... at line 42 (BinaryExpr)
+    }
+}
+
+if (result.hasWarnings()) {
+    for (ValidationError warning : result.getWarnings()) {
+        System.out.println(warning);
+    }
+}
+```
+
+### StructuralValidator
+
+For focused parent-child validation:
+
+```java
+import com.tonic.analysis.source.ast.validation.StructuralValidator;
+
+StructuralValidator validator = new StructuralValidator();
+List<ValidationError> errors = validator.validate(rootNode);
+```
 
 ## Related Documentation
 
