@@ -2,7 +2,7 @@
 
 # Analysis APIs
 
-YABR provides ten high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
+YABR provides thirteen high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
 
 ---
 
@@ -20,6 +20,9 @@ YABR provides ten high-level analysis APIs that build on top of the SSA IR syste
 | **Method Similarity** | `similarity` | Find duplicate and similar methods | [Details](similarity-api.md) |
 | **Simulation** | `simulation` | Abstract bytecode/IR simulation with metrics | [Details](simulation-api.md) |
 | **Execution** | `execution` | Concrete bytecode execution and debugging | [Details](execution-api.md) |
+| **PDG** | `pdg` | Program Dependence Graph with slicing | [Details](pdg-api.md) |
+| **SDG** | `pdg.sdg` | Interprocedural System Dependence Graph | [Details](sdg-api.md) |
+| **CPG** | `cpg` | Code Property Graph with taint analysis | [Details](cpg-api.md) |
 
 ---
 
@@ -195,6 +198,62 @@ DebugState state = session.stepOver();
 **Key features:** Concrete value execution, mutable heap/stack, object simulation, native method handlers, breakpoints, step debugging, call stack inspection, full Java 11 support (invokedynamic, lambdas, string concatenation, constant dynamic, method handles).
 
 [Full documentation →](execution-api.md)
+
+---
+
+## PDG (Program Dependence Graph) API
+
+Build intraprocedural program dependence graphs combining control and data dependencies.
+
+```java
+PDG pdg = PDGBuilder.build(irMethod);
+PDGSlicer slicer = new PDGSlicer(pdg);
+SliceResult slice = slicer.backwardSlice(criterion);
+```
+
+**Key features:** Control dependencies via post-dominance, data dependencies via def-use chains, backward/forward slicing, chop computation, DOT export.
+
+[Full documentation →](pdg-api.md)
+
+---
+
+## SDG (System Dependence Graph) API
+
+Build interprocedural dependence graphs for whole-program analysis.
+
+```java
+CallGraph callGraph = CallGraph.build(pool);
+SDG sdg = SDGBuilder.build(callGraph, irMethods);
+SDGSlicer slicer = new SDGSlicer(sdg);
+SliceResult slice = slicer.contextSensitiveSlice(criterion);
+```
+
+**Key features:** Interprocedural slicing, summary edges, parameter passing edges, context-sensitive analysis, call graph integration.
+
+[Full documentation →](sdg-api.md)
+
+---
+
+## CPG (Code Property Graph) API
+
+Unified graph combining CFG, PDG, and call graph for comprehensive analysis.
+
+```java
+CodePropertyGraph cpg = CPGBuilder.forClassPool(pool)
+    .withCallGraph()
+    .withPDG()
+    .build();
+
+List<TaintPath> vulns = new TaintQuery(cpg)
+    .withDefaultSources()
+    .withDefaultSinks()
+    .analyze()
+    .getPaths();
+```
+
+**Key features:** Fluent query API, taint analysis, data flow tracking, DOT export, unified traversal across CFG/PDG/call edges.
+
+[Full documentation →](cpg-api.md)
 
 ---
 

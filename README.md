@@ -12,7 +12,7 @@ A comprehensive alternative to ASM, Javassist, and other bytecode libraries.
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
 - **Class decompilation** - Full class decompilation with imports, fields, and methods
-- **Analysis APIs** - Call graph, dependency, type inference, pattern search, xrefs, data flow, similarity
+- **Analysis APIs** - Call graph, dependency, type inference, pattern search, xrefs, data flow, similarity, PDG, SDG, CPG, taint analysis
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+
 
@@ -51,6 +51,9 @@ byte[] bytes = newClass.write();
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
 | [SSA IR Migration](docs/SSA_IR_MIGRATION.md) | API changes from SSA IR redesign |
 | [Analysis APIs](docs/analysis-apis.md) | High-level code analysis and semantic queries |
+| [PDG API](docs/pdg-api.md) | Program Dependence Graph with slicing |
+| [SDG API](docs/sdg-api.md) | Interprocedural System Dependence Graph |
+| [CPG API](docs/cpg-api.md) | Code Property Graph with taint analysis |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
 | [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |
