@@ -605,6 +605,174 @@ class BytecodeLifterTest {
 
             assertNotNull(ir);
         }
+
+        @Test
+        void liftDupX2Form1_ThreeCategoryOneValues() throws Exception {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/DupX2Form1")
+                .publicStaticMethod("compute", "(III)I")
+                    .iload(0)
+                    .iload(1)
+                    .iload(2)
+                    .dup_x2()
+                    .iadd()
+                    .iadd()
+                    .iadd()
+                    .ireturn()
+                .build();
+
+            MethodEntry method = findMethod(cf, "compute");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            assertNotNull(ir);
+
+            SSA ssa = new SSA(cf.getConstPool());
+            ssa.lower(ir, method);
+
+            Class<?> clazz = TestUtils.loadAndVerify(cf);
+            java.lang.reflect.Method m = clazz.getMethod("compute", int.class, int.class, int.class);
+            int result = (int) m.invoke(null, 1, 2, 3);
+            assertEquals(9, result);
+        }
+
+        @Test
+        void liftDupX2Form2_CategoryOneOverCategoryTwo() throws Exception {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/DupX2Form2")
+                .publicStaticMethod("compute", "(JI)I")
+                    .lload(0)
+                    .iload(2)
+                    .dup_x2()
+                    .pop()
+                    .pop2()
+                    .ireturn()
+                .build();
+
+            MethodEntry method = findMethod(cf, "compute");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            assertNotNull(ir);
+
+            SSA ssa = new SSA(cf.getConstPool());
+            ssa.lower(ir, method);
+
+            Class<?> clazz = TestUtils.loadAndVerify(cf);
+            java.lang.reflect.Method m = clazz.getMethod("compute", long.class, int.class);
+            int result = (int) m.invoke(null, 100L, 5);
+            assertEquals(5, result);
+        }
+
+        @Test
+        void liftDupX2Form2_DoubleAndInt() throws Exception {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/DupX2Double")
+                .publicStaticMethod("compute", "(DI)I")
+                    .dload(0)
+                    .iload(2)
+                    .dup_x2()
+                    .pop()
+                    .pop2()
+                    .ireturn()
+                .build();
+
+            MethodEntry method = findMethod(cf, "compute");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            assertNotNull(ir);
+
+            SSA ssa = new SSA(cf.getConstPool());
+            ssa.lower(ir, method);
+
+            Class<?> clazz = TestUtils.loadAndVerify(cf);
+            java.lang.reflect.Method m = clazz.getMethod("compute", double.class, int.class);
+            int result = (int) m.invoke(null, 10.5, 3);
+            assertEquals(3, result);
+        }
+
+        @Test
+        void liftDup2X1Form1_TwoCategoryOneOverOne() throws Exception {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/Dup2X1")
+                .publicStaticMethod("compute", "(III)I")
+                    .iload(0)
+                    .iload(1)
+                    .iload(2)
+                    .dup2_x1()
+                    .iadd()
+                    .iadd()
+                    .iadd()
+                    .iadd()
+                    .ireturn()
+                .build();
+
+            MethodEntry method = findMethod(cf, "compute");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            assertNotNull(ir);
+
+            SSA ssa = new SSA(cf.getConstPool());
+            ssa.lower(ir, method);
+
+            Class<?> clazz = TestUtils.loadAndVerify(cf);
+            java.lang.reflect.Method m = clazz.getMethod("compute", int.class, int.class, int.class);
+            int result = (int) m.invoke(null, 1, 2, 3);
+            assertEquals(11, result);
+        }
+
+        @Test
+        void liftDup2X1Form2_CategoryTwoOverOne() throws Exception {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/Dup2X1Long")
+                .publicStaticMethod("compute", "(IJ)J")
+                    .iload(0)
+                    .lload(1)
+                    .dup2_x1()
+                    .lstore(3)
+                    .pop()
+                    .pop2()
+                    .lload(3)
+                    .lreturn()
+                .build();
+
+            MethodEntry method = findMethod(cf, "compute");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            assertNotNull(ir);
+
+            SSA ssa = new SSA(cf.getConstPool());
+            ssa.lower(ir, method);
+
+            Class<?> clazz = TestUtils.loadAndVerify(cf);
+            java.lang.reflect.Method m = clazz.getMethod("compute", int.class, long.class);
+            long result = (long) m.invoke(null, 5, 100L);
+            assertEquals(100L, result);
+        }
+
+        @Test
+        void liftDup2X2Form1_FourCategoryOneValues() throws Exception {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/Dup2X2")
+                .publicStaticMethod("compute", "(IIII)I")
+                    .iload(0)
+                    .iload(1)
+                    .iload(2)
+                    .iload(3)
+                    .dup2_x2()
+                    .iadd()
+                    .iadd()
+                    .iadd()
+                    .iadd()
+                    .iadd()
+                    .ireturn()
+                .build();
+
+            MethodEntry method = findMethod(cf, "compute");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            assertNotNull(ir);
+
+            SSA ssa = new SSA(cf.getConstPool());
+            ssa.lower(ir, method);
+
+            Class<?> clazz = TestUtils.loadAndVerify(cf);
+            java.lang.reflect.Method m = clazz.getMethod("compute", int.class, int.class, int.class, int.class);
+            int result = (int) m.invoke(null, 1, 2, 3, 4);
+            assertEquals(17, result);
+        }
     }
 
     // ========== Local Variable Tests ==========

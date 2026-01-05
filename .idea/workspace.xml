@@ -9,65 +9,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- CPG">
-      <change afterPath="$PROJECT_DIR$/docs/cpg-api.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/pdg-api.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/sdg-api.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/CPGBuilder.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/CPGIndex.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/CodePropertyGraph.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/edge/CPGEdge.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/edge/CPGEdgeType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/node/BlockNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/node/CPGNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/node/CPGNodeType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/node/CallSiteNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/node/InstructionNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/node/MethodNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/query/CPGQuery.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/Severity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/TaintAnalysisResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/TaintPath.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/TaintQuery.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/TaintSink.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/TaintSource.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/TaintType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/taint/VulnerabilityType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/export/CPGDOTExporter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/export/DOTExporter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/export/DOTExporterConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/export/PDGDOTExporter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/export/SDGDOTExporter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/print/CPGPrinter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/print/GraphPrinterConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/print/PDGPrinter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/print/SDGPrinter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/graph/print/Verbosity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/PDG.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/PDGBuilder.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/edge/PDGDependenceType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/edge/PDGEdge.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/node/PDGInstructionNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/node/PDGNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/node/PDGNodeType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/node/PDGRegionNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/SDG.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/SDGBuilder.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/node/SDGActualInNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/node/SDGActualOutNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/node/SDGCallNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/node/SDGEntryNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/node/SDGFormalInNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/node/SDGFormalOutNode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/sdg/slice/SDGSlicer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/slice/PDGSlicer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/slice/SliceResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/cpg/CPGBuilderTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/cpg/CPGIntegrationTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/cpg/CPGQueryTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/pdg/PDGBuilderTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/pdg/PDGSlicerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/pdg/sdg/SDGBuilderTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/lift/BytecodeLifterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/lift/BytecodeLifterTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -285,14 +229,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00091" summary="- exception api heap/object allocation support">
-      <option name="closed" value="true" />
-      <created>1766703220981</created>
-      <option name="number" value="00091" />
-      <option name="presentableId" value="LOCAL-00091" />
-      <option name="project" value="LOCAL" />
-      <updated>1766703220981</updated>
     </task>
     <task id="LOCAL-00092" summary="- exception api heap/object allocation support">
       <option name="closed" value="true" />
@@ -678,7 +614,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767576140256</updated>
     </task>
-    <option name="localTasksCounter" value="140" />
+    <task id="LOCAL-00140" summary="- CPG">
+      <option name="closed" value="true" />
+      <created>1767655461489</created>
+      <option name="number" value="00140" />
+      <option name="presentableId" value="LOCAL-00140" />
+      <option name="project" value="LOCAL" />
+      <updated>1767655461489</updated>
+    </task>
+    <option name="localTasksCounter" value="141" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

@@ -433,14 +433,28 @@ public class InstructionTranslator {
         state.push(v1);
     }
 
+    /**
+     * dup_x2 - duplicate top value and insert two or three down:
+     * Form 1 (all category-1): ..., value3, value2, value1 → ..., value1, value3, value2, value1
+     * Form 2 (value2 is category-2): ..., value2, value1 → ..., value1, value2, value1
+     */
     private void translateDupX2(AbstractState state) {
         Value v1 = state.pop();
-        Value v2 = state.pop();
-        Value v3 = state.pop();
-        state.push(v1);
-        state.push(v3);
-        state.push(v2);
-        state.push(v1);
+        Value v2 = state.peek();
+
+        if (v2.getType() != null && v2.getType().isTwoSlot()) {
+            v2 = state.pop();
+            state.push(v1);
+            state.push(v2);
+            state.push(v1);
+        } else {
+            v2 = state.pop();
+            Value v3 = state.pop();
+            state.push(v1);
+            state.push(v3);
+            state.push(v2);
+            state.push(v1);
+        }
     }
 
     /**
