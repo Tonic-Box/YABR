@@ -134,6 +134,62 @@ SourceEmitterConfig config = SourceEmitterConfig.builder()
 String formatted = SourceEmitter.emit(statement, config);
 ```
 
+### Using ASTPrinter
+
+For debugging, `ASTPrinter` formats AST nodes as structured trees (similar to `IRPrinter` for SSA IR):
+
+```java
+import com.tonic.analysis.source.ast.ASTPrinter;
+
+// Format any AST node
+String tree = ASTPrinter.format(statement);
+System.out.println(tree);
+
+// Without type annotations (more compact)
+String compact = ASTPrinter.formatCompact(statement);
+
+// Explicit control over type display
+String withTypes = ASTPrinter.format(expression, true);
+String noTypes = ASTPrinter.format(expression, false);
+```
+
+**Example output:**
+
+```
+BinaryExpr(ADD) : int
+  left:
+    VarRefExpr(x) : int
+  right:
+    LiteralExpr(1) : int
+```
+
+**Complex example:**
+
+```
+IfStmt
+  condition:
+    BinaryExpr(LT) : boolean
+      left:
+        VarRefExpr(i) : int
+      right:
+        LiteralExpr(10) : int
+  thenBranch:
+    BlockStmt
+      statements: [1]
+        [0]:
+          ExprStmt
+            expression:
+              MethodCallExpr(println, static, owner=java/io/PrintStream) : void
+                arguments: [1]
+                  [0]:
+                    VarRefExpr(i) : int
+```
+
+The printer handles all node types:
+- **Expressions**: Shows operator/method names, type annotations, children
+- **Statements**: Shows control flow structure, labels, nested blocks
+- **Types**: Shows primitive, reference, array, generic types
+
 ### Mutating the AST
 
 AST nodes are mutable. You can traverse and modify them using traditional iteration or the built-in traversal API:
