@@ -27,6 +27,8 @@ public class CallGraphBuilder {
      * @param classPool the ClassPool containing all classes to analyze
      * @return the built CallGraph
      */
+    private static String currentMethod = null;
+
     public static CallGraph build(ClassPool classPool) {
         ClassHierarchy hierarchy = ClassHierarchyBuilder.build(classPool);
         CallGraph graph = new CallGraph(classPool, hierarchy);
@@ -57,11 +59,16 @@ public class CallGraphBuilder {
                         method.getDesc()
                 );
 
+                currentMethod = cf.getClassName() + "." + method.getName() + method.getDesc();
                 scanMethodForCalls(graph, callerRef, method, cf);
             }
         }
 
         return graph;
+    }
+
+    public static String getCurrentMethod() {
+        return currentMethod;
     }
 
     /**
@@ -87,6 +94,10 @@ public class CallGraphBuilder {
                 }
             }
         } catch (Exception e) {
+            // Silently skip methods that fail to analyze
+        } catch (StackOverflowError e) {
+            System.err.println("[CallGraph] StackOverflowError in method: " + currentMethod);
+            // Continue with next method
         }
     }
 

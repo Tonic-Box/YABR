@@ -8,9 +8,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- SSA docs updates">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- ASTPrinter">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/SSA.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/SSA.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/DominatorTree.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/DominatorTree.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/VariableRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/VariableRenamer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -228,14 +231,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00089" summary="- fingerprint api">
-      <option name="closed" value="true" />
-      <created>1766679608703</created>
-      <option name="number" value="00089" />
-      <option name="presentableId" value="LOCAL-00089" />
-      <option name="project" value="LOCAL" />
-      <updated>1766679608703</updated>
     </task>
     <task id="LOCAL-00090" summary="- exception flow support in execution api">
       <option name="closed" value="true" />
@@ -621,7 +616,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767510749337</updated>
     </task>
-    <option name="localTasksCounter" value="138" />
+    <task id="LOCAL-00138" summary="- ASTPrinter">
+      <option name="closed" value="true" />
+      <created>1767571309505</created>
+      <option name="number" value="00138" />
+      <option name="presentableId" value="LOCAL-00138" />
+      <option name="project" value="LOCAL" />
+      <updated>1767571309505</updated>
+    </task>
+    <option name="localTasksCounter" value="139" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -636,7 +639,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- execution-api fixes native handlers" />
     <MESSAGE value="- execution-api fixes: instruction trace" />
     <MESSAGE value="- execution-api fixes instruction trace" />
     <MESSAGE value="- execution-api fixes: null vs nullRef" />
@@ -661,7 +663,8 @@
     <MESSAGE value="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks" />
     <MESSAGE value="- AST api docs update" />
     <MESSAGE value="- SSA docs updates" />
-    <option name="LAST_COMMIT_MESSAGE" value="- SSA docs updates" />
+    <MESSAGE value="- ASTPrinter" />
+    <option name="LAST_COMMIT_MESSAGE" value="- ASTPrinter" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
