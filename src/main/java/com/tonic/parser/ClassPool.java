@@ -16,7 +16,6 @@ import java.util.stream.Stream;
  * Pool for storing and retrieving ClassFile objects by internal name.
  */
 public class ClassPool {
-    @Getter
     private static ClassPool Default;
 
     /**
