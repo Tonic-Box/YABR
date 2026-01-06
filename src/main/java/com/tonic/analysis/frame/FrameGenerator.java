@@ -230,7 +230,11 @@ public class FrameGenerator {
                     }
                 }
 
-                currentState = typeInference.apply(currentState, instr);
+                try {
+                    currentState = typeInference.apply(currentState, instr);
+                } catch (IllegalStateException e) {
+                    throw new IllegalStateException("Frame error at offset " + instrOffset + " for instruction " + instr + ": " + e.getMessage(), e);
+                }
 
                 int opcode = instr.getOpcode();
 

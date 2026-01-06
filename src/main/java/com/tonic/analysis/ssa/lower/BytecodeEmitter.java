@@ -1118,7 +1118,7 @@ public class BytecodeEmitter {
             emit(Opcode.NOP.getCode());
         }
 
-        pendingJumps.add(new PendingJump(currentOffset, instr.getDefaultTarget(), true));
+        pendingJumps.add(new PendingJump(currentOffset, instr.getDefaultTarget(), true, switchStart));
         emitInt(0);
 
         if (useTableSwitch) {
@@ -1126,14 +1126,14 @@ public class BytecodeEmitter {
             emitInt(high);
             for (int key = low; key <= high; key++) {
                 IRBlock target = cases.getOrDefault(key, instr.getDefaultTarget());
-                pendingJumps.add(new PendingJump(currentOffset, target, true));
+                pendingJumps.add(new PendingJump(currentOffset, target, true, switchStart));
                 emitInt(0);
             }
         } else {
             emitInt(keys.size());
             for (int key : keys) {
                 emitInt(key);
-                pendingJumps.add(new PendingJump(currentOffset, cases.get(key), true));
+                pendingJumps.add(new PendingJump(currentOffset, cases.get(key), true, switchStart));
                 emitInt(0);
             }
         }
@@ -1150,7 +1150,6 @@ public class BytecodeEmitter {
         for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
             for (CopyInfo copyInfo : entry.getValue()) {
                 if (copyInfo.copyValue().equals(copyValue)) {
-                    // This is a phi copy - return the phi result's register
                     return regAlloc.getRegister(entry.getKey());
                 }
             }
@@ -1161,7 +1160,6 @@ public class BytecodeEmitter {
     private void emitCopy(CopyInstruction instr) throws IOException {
         Value source = instr.getSource();
 
-        // For phi copies, the destination should be the phi result's slot, not the copy's slot
         int dstReg = getPhiCopyDestination(instr.getResult());
         if (dstReg < 0) {
             dstReg = regAlloc.getRegister(instr.getResult());
@@ -1320,8 +1318,7 @@ public class BytecodeEmitter {
         byte[] code = bytecode.toByteArray();
         for (PendingJump jump : pendingJumps) {
             int targetOffset = blockOffsets.getOrDefault(jump.target(), 0);
-            int opcodeOffset = jump.offset() - 1;
-            int relativeOffset = targetOffset - opcodeOffset;
+            int relativeOffset = targetOffset - jump.baseOffset();
 
             if (jump.isWide()) {
                 code[jump.offset()] = (byte) (relativeOffset >> 24);
@@ -1366,11 +1363,20 @@ public class BytecodeEmitter {
         private final int offset;
         private final IRBlock target;
         private final boolean isWide;
+        private final int baseOffset;
 
         public PendingJump(int offset, IRBlock target, boolean isWide) {
             this.offset = offset;
             this.target = target;
             this.isWide = isWide;
+            this.baseOffset = offset - 1;
+        }
+
+        public PendingJump(int offset, IRBlock target, boolean isWide, int baseOffset) {
+            this.offset = offset;
+            this.target = target;
+            this.isWide = isWide;
+            this.baseOffset = baseOffset;
         }
 
         public int offset() {
@@ -1383,6 +1389,10 @@ public class BytecodeEmitter {
 
         public boolean isWide() {
             return isWide;
+        }
+
+        public int baseOffset() {
+            return baseOffset;
         }
 
         @Override

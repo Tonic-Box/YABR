@@ -463,18 +463,58 @@ public class BytecodeLifter {
 
     /**
      * Post-processing pass to fix up PHI uses.
-     * For each PHI instruction, ensures all instructions in the block
-     * use the PHI result instead of any of the incoming values.
+     * For each PHI instruction, ensures all instructions in the block AND all
+     * reachable successor blocks use the PHI result instead of any incoming values.
+     * This is necessary because successor blocks may have been processed before
+     * the phi was created (when only one predecessor had been seen).
      */
     private void fixupPhiUses(IRMethod method) {
         for (IRBlock block : method.getBlocks()) {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 SSAValue phiResult = phi.getResult();
-                // Replace uses of any incoming value with the PHI result
                 for (Value incomingValue : phi.getOperands()) {
-                    for (IRInstruction instr : block.getInstructions()) {
-                        instr.replaceOperand(incomingValue, phiResult);
+                    replaceValueInBlockAndSuccessors(block, incomingValue, phiResult);
+                }
+            }
+        }
+    }
+
+    /**
+     * Replaces all uses of oldValue with newValue in the given block and all
+     * reachable successor blocks. Uses a worklist to avoid infinite loops
+     * in cyclic control flow. Also updates phi incoming values in successor blocks
+     * where the edge comes from a visited block.
+     */
+    private void replaceValueInBlockAndSuccessors(IRBlock startBlock, Value oldValue, Value newValue) {
+        Set<IRBlock> visited = new HashSet<>();
+        Deque<IRBlock> worklist = new ArrayDeque<>();
+        worklist.add(startBlock);
+
+        while (!worklist.isEmpty()) {
+            IRBlock block = worklist.poll();
+            if (visited.contains(block)) {
+                continue;
+            }
+            visited.add(block);
+
+            for (IRInstruction instr : block.getInstructions()) {
+                if (!instr.isPhi()) {
+                    instr.replaceOperand(oldValue, newValue);
+                }
+            }
+
+            for (IRBlock succ : block.getSuccessors()) {
+                // Update phi incoming values for edges from this block to successor
+                for (PhiInstruction phi : succ.getPhiInstructions()) {
+                    Value incoming = phi.getIncoming(block);
+                    if (incoming != null && incoming.equals(oldValue)) {
+                        phi.removeIncoming(block);
+                        phi.addIncoming(newValue, block);
                     }
+                }
+
+                if (!visited.contains(succ)) {
+                    worklist.add(succ);
                 }
             }
         }

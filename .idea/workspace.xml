@@ -8,9 +8,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- oopsie">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- cleanup">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -198,14 +200,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00094" summary="- execution api init fixes">
-      <option name="closed" value="true" />
-      <created>1766724352467</created>
-      <option name="number" value="00094" />
-      <option name="presentableId" value="LOCAL-00094" />
-      <option name="project" value="LOCAL" />
-      <updated>1766724352467</updated>
     </task>
     <task id="LOCAL-00095" summary="- execution api init fixes">
       <option name="closed" value="true" />
@@ -591,7 +585,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767657653673</updated>
     </task>
-    <option name="localTasksCounter" value="143" />
+    <task id="LOCAL-00143" summary="- cleanup">
+      <option name="closed" value="true" />
+      <created>1767658214158</created>
+      <option name="number" value="00143" />
+      <option name="presentableId" value="LOCAL-00143" />
+      <option name="project" value="LOCAL" />
+      <updated>1767658214158</updated>
+    </task>
+    <option name="localTasksCounter" value="144" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -622,7 +624,6 @@
     <MESSAGE value="  - Variables with default initializers are moved closer to first use&#10;  - When first use is an assignment, the value is inlined into the declaration&#10;  - Accumulator patterns (x = x + ...) correctly keep declaration separate&#10;  - Variables used inside conditionals/loops stay at appropriate outer scope" />
     <MESSAGE value="- better local inlining in decompile." />
     <MESSAGE value="- better local inlining in decompile.&#10;- cleanup" />
-    <MESSAGE value="- cleanup" />
     <MESSAGE value="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks" />
     <MESSAGE value="- AST api docs update" />
     <MESSAGE value="- SSA docs updates" />
@@ -631,7 +632,8 @@
     <MESSAGE value="- CPG" />
     <MESSAGE value="- Fixed translateDupX2 in InstructionTranslator" />
     <MESSAGE value="- oopsie" />
-    <option name="LAST_COMMIT_MESSAGE" value="- oopsie" />
+    <MESSAGE value="- cleanup" />
+    <option name="LAST_COMMIT_MESSAGE" value="- cleanup" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
