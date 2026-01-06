@@ -8,10 +8,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- CPG">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- oopsie">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/lift/BytecodeLifterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/lift/BytecodeLifterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,7 +82,7 @@
     "settings.editor.selected.configurable": "reference.settingsdialog.project.gradle"
   }
 }]]></component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Application.Decompile">
     <configuration name="Decompile" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ast.Decompile" />
       <module name="YABR.main" />
@@ -91,32 +90,6 @@
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.tonic.demo.ast.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="YABRApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.tonic.ui.app.YABRApplication" />
-      <module name="YABR.main" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.tonic.ui.app.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="YABRStudio" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.tonic.ui.YABRStudio" />
-      <module name="YABR.main" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.tonic.ui.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -205,8 +178,6 @@
     </configuration>
     <list>
       <item itemvalue="Application.Decompile" />
-      <item itemvalue="Application.YABRApplication" />
-      <item itemvalue="Application.YABRStudio" />
       <item itemvalue="Gradle.YABR-fixed [build]" />
       <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
       <item itemvalue="Gradle.YABR-fixed [test]" />
@@ -216,8 +187,6 @@
         <item itemvalue="Gradle.YABR-fixed [build]" />
         <item itemvalue="Gradle.YABR-fixed [test]" />
         <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
-        <item itemvalue="Application.YABRStudio" />
-        <item itemvalue="Application.YABRApplication" />
       </list>
     </recent_temporary>
   </component>
@@ -229,22 +198,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00092" summary="- exception api heap/object allocation support">
-      <option name="closed" value="true" />
-      <created>1766706164256</created>
-      <option name="number" value="00092" />
-      <option name="presentableId" value="LOCAL-00092" />
-      <option name="project" value="LOCAL" />
-      <updated>1766706164256</updated>
-    </task>
-    <task id="LOCAL-00093" summary="- execution api init fixes">
-      <option name="closed" value="true" />
-      <created>1766721970259</created>
-      <option name="number" value="00093" />
-      <option name="presentableId" value="LOCAL-00093" />
-      <option name="project" value="LOCAL" />
-      <updated>1766721970259</updated>
     </task>
     <task id="LOCAL-00094" summary="- execution api init fixes">
       <option name="closed" value="true" />
@@ -622,7 +575,23 @@
       <option name="project" value="LOCAL" />
       <updated>1767655461489</updated>
     </task>
-    <option name="localTasksCounter" value="141" />
+    <task id="LOCAL-00141" summary="- Fixed translateDupX2 in InstructionTranslator">
+      <option name="closed" value="true" />
+      <created>1767657378028</created>
+      <option name="number" value="00141" />
+      <option name="presentableId" value="LOCAL-00141" />
+      <option name="project" value="LOCAL" />
+      <updated>1767657378028</updated>
+    </task>
+    <task id="LOCAL-00142" summary="- oopsie">
+      <option name="closed" value="true" />
+      <created>1767657653673</created>
+      <option name="number" value="00142" />
+      <option name="presentableId" value="LOCAL-00142" />
+      <option name="project" value="LOCAL" />
+      <updated>1767657653673</updated>
+    </task>
+    <option name="localTasksCounter" value="143" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -637,8 +606,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- execution-api fixes: null vs nullRef" />
-    <MESSAGE value="- execution-api cleanup" />
     <MESSAGE value="- execution-api: native handlers" />
     <MESSAGE value="- execution api: native handlers" />
     <MESSAGE value="- execution api native handlers" />
@@ -662,7 +629,9 @@
     <MESSAGE value="- ASTPrinter" />
     <MESSAGE value="- Error reporting in @CallGraphBuilder" />
     <MESSAGE value="- CPG" />
-    <option name="LAST_COMMIT_MESSAGE" value="- CPG" />
+    <MESSAGE value="- Fixed translateDupX2 in InstructionTranslator" />
+    <MESSAGE value="- oopsie" />
+    <option name="LAST_COMMIT_MESSAGE" value="- oopsie" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

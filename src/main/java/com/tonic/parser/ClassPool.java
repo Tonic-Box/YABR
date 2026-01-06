@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 /**
  * Pool for storing and retrieving ClassFile objects by internal name.
  */
+@Getter
 public class ClassPool {
     private static ClassPool Default;
 
@@ -34,7 +35,6 @@ public class ClassPool {
         return Default;
     }
 
-    @Getter
     private final List<ClassFile> classes = new ArrayList<>();
 
     public ClassPool() throws IOException {
