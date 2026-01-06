@@ -8,11 +8,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- cleanup">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Switch case offsets must be relative to the switch opcode position">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -200,14 +197,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00095" summary="- execution api init fixes">
-      <option name="closed" value="true" />
-      <created>1766725175292</created>
-      <option name="number" value="00095" />
-      <option name="presentableId" value="LOCAL-00095" />
-      <option name="project" value="LOCAL" />
-      <updated>1766725175292</updated>
     </task>
     <task id="LOCAL-00096" summary="- execution api init fixes">
       <option name="closed" value="true" />
@@ -593,7 +582,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767658214158</updated>
     </task>
-    <option name="localTasksCounter" value="144" />
+    <task id="LOCAL-00144" summary="- Switch case offsets must be relative to the switch opcode position">
+      <option name="closed" value="true" />
+      <created>1767684216237</created>
+      <option name="number" value="00144" />
+      <option name="presentableId" value="LOCAL-00144" />
+      <option name="project" value="LOCAL" />
+      <updated>1767684216237</updated>
+    </task>
+    <option name="localTasksCounter" value="145" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -608,7 +605,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- execution-api: native handlers" />
     <MESSAGE value="- execution api: native handlers" />
     <MESSAGE value="- execution api native handlers" />
     <MESSAGE value="- native handlers modularization" />
@@ -633,7 +629,8 @@
     <MESSAGE value="- Fixed translateDupX2 in InstructionTranslator" />
     <MESSAGE value="- oopsie" />
     <MESSAGE value="- cleanup" />
-    <option name="LAST_COMMIT_MESSAGE" value="- cleanup" />
+    <MESSAGE value="- Switch case offsets must be relative to the switch opcode position" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Switch case offsets must be relative to the switch opcode position" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

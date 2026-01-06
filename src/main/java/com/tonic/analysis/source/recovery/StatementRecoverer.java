@@ -1656,8 +1656,21 @@ public class StatementRecoverer {
                     com.tonic.analysis.source.ast.expr.BinaryOperator.ASSIGN, target, value, fieldType));
             }
             if (fieldAccess.isLoad() && fieldAccess.getResult() != null) {
+                SSAValue result = fieldAccess.getResult();
                 Expression value = exprRecoverer.recover(instr);
-                context.getExpressionContext().cacheExpression(instr.getResult(), value);
+                context.getExpressionContext().cacheExpression(result, value);
+                PhiInstruction targetPhi = getPhiUsingValue(result);
+                if (targetPhi != null && targetPhi.getResult() != null) {
+                    String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
+                    if (phiVarName != null) {
+                        SourceType type = value.getType();
+                        if (type == null) {
+                            type = typeRecoverer.recoverType(result);
+                        }
+                        VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
+                        return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
+                    }
+                }
             }
             return null;
         }
@@ -1961,7 +1974,18 @@ public class StatementRecoverer {
             stopBlocks.add(info.getMergeBlock());
         }
 
-        List<Statement> thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
+        SSAValue conditionValue = getConditionValue(header);
+        Set<SSAValue> knownFalse = new HashSet<>();
+        if (info.isConditionNegated() && conditionValue != null) {
+            knownFalse.add(conditionValue);
+        }
+        context.pushKnownFalseValues(knownFalse);
+        List<Statement> thenStmts;
+        try {
+            thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
+        } finally {
+            context.popKnownFalseValues();
+        }
         BlockStmt thenBlock = new BlockStmt(thenStmts);
 
         IfStmt ifStmt = new IfStmt(condition, thenBlock, null);
@@ -1977,6 +2001,28 @@ public class StatementRecoverer {
 
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
+        SSAValue conditionValue = getConditionValue(header);
+        CompareOp conditionOp = getConditionOp(header);
+
+        if (conditionValue != null && context.isKnownFalse(conditionValue)) {
+            if (conditionOp == CompareOp.IFNE) {
+                Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
+                if (info.getMergeBlock() != null) {
+                    stopBlocks.add(info.getMergeBlock());
+                }
+                List<Statement> elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
+                if (!headerStmts.isEmpty()) {
+                    context.addPendingStatements(headerStmts);
+                }
+                if (elseStmts.isEmpty()) {
+                    return null;
+                } else if (elseStmts.size() == 1) {
+                    return elseStmts.get(0);
+                } else {
+                    return new BlockStmt(elseStmts);
+                }
+            }
+        }
 
         Expression condition = recoverCondition(header, info.isConditionNegated());
         Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
@@ -1984,8 +2030,30 @@ public class StatementRecoverer {
             stopBlocks.add(info.getMergeBlock());
         }
 
-        List<Statement> thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
-        List<Statement> elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
+        SSAValue condValue = getConditionValue(header);
+        List<Statement> thenStmts;
+        List<Statement> elseStmts;
+        Set<SSAValue> knownFalseForThen = new HashSet<>();
+        Set<SSAValue> knownFalseForElse = new HashSet<>();
+        if (condValue != null) {
+            if (info.isConditionNegated()) {
+                knownFalseForThen.add(condValue);
+            } else {
+                knownFalseForElse.add(condValue);
+            }
+        }
+        context.pushKnownFalseValues(knownFalseForThen);
+        try {
+            thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
+        } finally {
+            context.popKnownFalseValues();
+        }
+        context.pushKnownFalseValues(knownFalseForElse);
+        try {
+            elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
+        } finally {
+            context.popKnownFalseValues();
+        }
 
         if (isBooleanReturnPattern(thenStmts, elseStmts)) {
             Statement booleanReturn = collapseToBooleanReturn(condition, thenStmts, elseStmts);
@@ -2167,9 +2235,9 @@ public class StatementRecoverer {
         List<SwitchCase> cases = new ArrayList<>();
 
         IRBlock mergeBlock = findSwitchMerge(info);
-        Set<IRBlock> stopBlocks = new HashSet<>();
+        Set<IRBlock> baseStopBlocks = new HashSet<>();
         if (mergeBlock != null) {
-            stopBlocks.add(mergeBlock);
+            baseStopBlocks.add(mergeBlock);
         }
 
         Map<IRBlock, List<Integer>> targetToCases = new LinkedHashMap<>();
@@ -2177,11 +2245,29 @@ public class StatementRecoverer {
             targetToCases.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
         }
 
+        Set<IRBlock> allCaseTargets = new HashSet<>(targetToCases.keySet());
+        if (info.getDefaultTarget() != null) {
+            allCaseTargets.add(info.getDefaultTarget());
+        }
+
         for (Map.Entry<IRBlock, List<Integer>> entry : targetToCases.entrySet()) {
             IRBlock target = entry.getKey();
             List<Integer> labels = entry.getValue();
 
-            List<Statement> caseStmts = recoverBlockSequence(target, stopBlocks);
+            Set<IRBlock> stopBlocks = new HashSet<>(baseStopBlocks);
+            for (IRBlock otherTarget : allCaseTargets) {
+                if (otherTarget != target) {
+                    stopBlocks.add(otherTarget);
+                }
+            }
+
+            context.pushStopBlocks(stopBlocks);
+            List<Statement> caseStmts;
+            try {
+                caseStmts = recoverBlockSequence(target, stopBlocks);
+            } finally {
+                context.popStopBlocks();
+            }
 
             if (enumInfo != null && enumInfo.enumClassName != null) {
                 List<Expression> enumLabels = new ArrayList<>();
@@ -2203,7 +2289,19 @@ public class StatementRecoverer {
         }
 
         if (info.getDefaultTarget() != null) {
-            List<Statement> defaultStmts = recoverBlockSequence(info.getDefaultTarget(), stopBlocks);
+            Set<IRBlock> defaultStopBlocks = new HashSet<>(baseStopBlocks);
+            for (IRBlock otherTarget : allCaseTargets) {
+                if (otherTarget != info.getDefaultTarget()) {
+                    defaultStopBlocks.add(otherTarget);
+                }
+            }
+            context.pushStopBlocks(defaultStopBlocks);
+            List<Statement> defaultStmts;
+            try {
+                defaultStmts = recoverBlockSequence(info.getDefaultTarget(), defaultStopBlocks);
+            } finally {
+                context.popStopBlocks();
+            }
             cases.add(SwitchCase.defaultCase(defaultStmts));
         }
 
@@ -2454,6 +2552,27 @@ public class StatementRecoverer {
 
     private Expression recoverCondition(IRBlock block) {
         return recoverCondition(block, false);
+    }
+
+    private SSAValue getConditionValue(IRBlock block) {
+        IRInstruction terminator = block.getTerminator();
+        if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) terminator;
+            Value left = branch.getLeft();
+            if (left instanceof SSAValue) {
+                return (SSAValue) left;
+            }
+        }
+        return null;
+    }
+
+    private CompareOp getConditionOp(IRBlock block) {
+        IRInstruction terminator = block.getTerminator();
+        if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) terminator;
+            return branch.getCondition();
+        }
+        return null;
     }
 
     private com.tonic.analysis.source.ast.expr.BinaryOperator negateOperator(

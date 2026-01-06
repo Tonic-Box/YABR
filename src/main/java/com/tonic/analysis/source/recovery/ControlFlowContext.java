@@ -5,6 +5,7 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.value.SSAValue;
 import lombok.Getter;
 
 import java.util.*;
@@ -37,6 +38,9 @@ public class ControlFlowContext {
 
     /** Stack of stop blocks from outer control structures (e.g., loop exits) */
     private final Deque<Set<IRBlock>> stopBlocksStack = new ArrayDeque<>();
+
+    /** Stack of SSAValues known to be false/zero in current context */
+    private final Deque<Set<SSAValue>> knownFalseValuesStack = new ArrayDeque<>();
 
     private int labelCounter = 0;
 
@@ -133,6 +137,35 @@ public class ControlFlowContext {
             combined.addAll(stopBlocks);
         }
         return combined;
+    }
+
+    /**
+     * Pushes SSAValues that are known to be false/zero in the current context.
+     * Used when entering the "then" branch of if(!condition).
+     */
+    public void pushKnownFalseValues(Set<SSAValue> values) {
+        knownFalseValuesStack.push(values);
+    }
+
+    /**
+     * Pops the current known false values from the stack.
+     */
+    public void popKnownFalseValues() {
+        if (!knownFalseValuesStack.isEmpty()) {
+            knownFalseValuesStack.pop();
+        }
+    }
+
+    /**
+     * Checks if an SSAValue is known to be false/zero in the current context.
+     */
+    public boolean isKnownFalse(SSAValue value) {
+        for (Set<SSAValue> falseValues : knownFalseValuesStack) {
+            if (falseValues.contains(value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
