@@ -7,13 +7,14 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
+import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.ir.CompareOp;
+import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
@@ -52,18 +53,9 @@ public class StatementRecoverer {
         }
 
         List<String> paramTypes = parseParameterTypes(descriptor);
-        int slot = method.isStatic() ? 0 : 1; // Skip 'this' for instance methods
-
         for (int i = 0; i < paramTypes.size(); i++) {
             String paramName = "arg" + i;
             context.getExpressionContext().markDeclared(paramName);
-
-            String paramType = paramTypes.get(i);
-            slot++;
-            // Long and double take 2 slots
-            if ("J".equals(paramType) || "D".equals(paramType)) {
-                slot++;
-            }
         }
     }
 
@@ -83,6 +75,7 @@ public class StatementRecoverer {
         List<Statement> statements = new ArrayList<>();
 
         collectTernaryPhis(method);
+        detectSelfStorePhis(method);
 
         emitPhiDeclarations(method, statements);
 
@@ -498,7 +491,7 @@ public class StatementRecoverer {
             return null;
         }
 
-        SourceType exceptionType;
+        ReferenceSourceType exceptionType;
         if (handler.isCatchAll()) {
             exceptionType = new ReferenceSourceType("java/lang/Throwable", Collections.emptyList());
         } else {
@@ -509,13 +502,8 @@ public class StatementRecoverer {
         String exceptionVarName = findExceptionVariableName(handlerBlock);
         if (exceptionVarName == null) {
             String simpleName;
-            if (exceptionType instanceof ReferenceSourceType) {
-                ReferenceSourceType refType = (ReferenceSourceType) exceptionType;
-                simpleName = refType.getSimpleName().toLowerCase();
-            } else {
-                simpleName = "ex";
-            }
-            exceptionVarName = simpleName.substring(0, 1) + "_ex";
+            simpleName = exceptionType.getSimpleName().toLowerCase();
+            exceptionVarName = simpleName.charAt(0) + "_ex";
         }
 
         registerExceptionVariables(handlerBlock, exceptionVarName);
@@ -631,18 +619,14 @@ public class StatementRecoverer {
                 SimpleInstruction simple = (SimpleInstruction) terminator;
                 Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
                 Statement throwStmt = new ThrowStmt(exception);
-                if (throwStmt != null) {
-                    stmts.add(throwStmt);
-                }
+                stmts.add(throwStmt);
                 continue;
             }
 
             if (isReturn) {
                 ReturnInstruction ret = (ReturnInstruction) terminator;
                 Statement returnStmt = recoverReturn(ret);
-                if (returnStmt != null) {
-                    stmts.add(returnStmt);
-                }
+                stmts.add(returnStmt);
                 continue;
             }
 
@@ -1084,10 +1068,10 @@ public class StatementRecoverer {
     }
 
     /** Map from local slot name to unified type (computed from all assignments) */
-    private Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
+    private final Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
 
     /** Maps slot index to (typeCategory -> variableName) for consistent naming of reused slots */
-    private Map<Integer, Map<String, String>> slotTypeCategoryToName = new HashMap<>();
+    private final Map<Integer, Map<String, String>> slotTypeCategoryToName = new HashMap<>();
 
     /**
      * Emits declarations for phi variables at method scope.
@@ -1208,6 +1192,10 @@ public class StatementRecoverer {
         if (phi == null) return;
         SSAValue result = phi.getResult();
         if (result == null) return;
+
+        if (selfStorePhis.contains(phi)) {
+            return;
+        }
 
         String name = context.getExpressionContext().getVariableName(result);
         if (name == null) {
@@ -1421,11 +1409,122 @@ public class StatementRecoverer {
         java.util.List<IRInstruction> uses = value.getUses();
         for (IRInstruction use : uses) {
             if (use instanceof PhiInstruction) {
-                PhiInstruction phi = (PhiInstruction) use;
-                return phi;
+                return (PhiInstruction) use;
             }
         }
         return null;
+    }
+
+    private final Set<PhiInstruction> selfStorePhis = new HashSet<>();
+
+    private void detectSelfStorePhis(IRMethod method) {
+        selfStorePhis.clear();
+        for (IRBlock block : method.getBlocks()) {
+            for (PhiInstruction phi : block.getPhiInstructions()) {
+                if (isSelfStorePhiPattern(phi)) {
+                    selfStorePhis.add(phi);
+                    markSelfStorePhiChain(phi);
+                }
+            }
+        }
+    }
+
+    private void markSelfStorePhiChain(PhiInstruction phi) {
+        FieldAccessInstruction fieldLoad = findFieldLoadInPhiChain(phi, new HashSet<>());
+        if (fieldLoad == null) return;
+
+        SourceType fieldType = typeRecoverer.recoverType(fieldLoad.getDescriptor());
+        Expression fieldExpr = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
+            null, fieldLoad.getName(), fieldLoad.getOwner(), fieldLoad.isStatic(), fieldType);
+
+        Set<PhiInstruction> visited = new HashSet<>();
+        cacheFieldExprForPhiChain(phi, fieldExpr, visited);
+    }
+
+    private void cacheFieldExprForPhiChain(PhiInstruction phi, Expression fieldExpr, Set<PhiInstruction> visited) {
+        if (phi == null || visited.contains(phi)) return;
+        visited.add(phi);
+
+        if (phi.getResult() != null) {
+            context.getExpressionContext().cacheExpression(phi.getResult(), fieldExpr);
+        }
+
+        for (Value operand : phi.getOperands()) {
+            if (operand instanceof SSAValue) {
+                SSAValue ssaOp = (SSAValue) operand;
+                IRInstruction def = ssaOp.getDefinition();
+                if (def instanceof PhiInstruction) {
+                    PhiInstruction nestedPhi = (PhiInstruction) def;
+                    selfStorePhis.add(nestedPhi);
+                    cacheFieldExprForPhiChain(nestedPhi, fieldExpr, visited);
+                }
+            }
+        }
+    }
+
+    private boolean isSelfStorePhiPattern(PhiInstruction phi) {
+        if (phi == null || phi.getResult() == null) return false;
+
+        FieldAccessInstruction fieldLoad = findFieldLoadInPhiChain(phi, new HashSet<>());
+        if (fieldLoad == null) {
+            return false;
+        }
+
+        String fieldOwner = fieldLoad.getOwner();
+        String fieldName = fieldLoad.getName();
+
+        return hasFieldStoreInPhiUseChain(phi, fieldOwner, fieldName, new HashSet<>());
+    }
+
+    private boolean hasFieldStoreInPhiUseChain(PhiInstruction phi, String fieldOwner, String fieldName, Set<PhiInstruction> visited) {
+        if (phi == null || visited.contains(phi)) return false;
+        visited.add(phi);
+
+        SSAValue phiResult = phi.getResult();
+        if (phiResult == null) return false;
+
+        java.util.List<IRInstruction> uses = phiResult.getUses();
+        for (IRInstruction use : uses) {
+            if (use instanceof FieldAccessInstruction) {
+                FieldAccessInstruction fai = (FieldAccessInstruction) use;
+                if (fai.isStore() && fieldOwner.equals(fai.getOwner()) && fieldName.equals(fai.getName())) {
+                    return true;
+                }
+            } else if (use instanceof PhiInstruction) {
+                if (hasFieldStoreInPhiUseChain((PhiInstruction) use, fieldOwner, fieldName, visited)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private FieldAccessInstruction findFieldLoadInPhiChain(PhiInstruction phi, Set<PhiInstruction> visited) {
+        if (phi == null || visited.contains(phi)) return null;
+        visited.add(phi);
+
+        for (Value operand : phi.getOperands()) {
+            if (operand instanceof SSAValue) {
+                SSAValue ssaOp = (SSAValue) operand;
+                IRInstruction def = ssaOp.getDefinition();
+                if (def instanceof FieldAccessInstruction) {
+                    FieldAccessInstruction fai = (FieldAccessInstruction) def;
+                    if (fai.isLoad()) {
+                        return fai;
+                    }
+                } else if (def instanceof PhiInstruction) {
+                    FieldAccessInstruction nested = findFieldLoadInPhiChain((PhiInstruction) def, visited);
+                    if (nested != null) {
+                        return nested;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private FieldAccessInstruction getSelfStoreFieldInfo(PhiInstruction phi) {
+        return findFieldLoadInPhiChain(phi, new HashSet<>());
     }
 
     /**
@@ -1449,11 +1548,8 @@ public class StatementRecoverer {
         return LiteralExpr.ofNull();
     }
 
-    /**
-     * Recovers statements starting from a block, following control flow.
-     */
     /** Tracks try handlers that have already been processed to avoid infinite loops */
-    private Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
+    private final Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
 
     public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks) {
         List<Statement> result = new ArrayList<>();
@@ -1500,10 +1596,23 @@ public class StatementRecoverer {
                 case IF_THEN: {
                     Statement ifStmt = recoverIfThen(current, info);
                     result.addAll(context.collectPendingStatements());
-                    result.add(ifStmt);
+                    if (ifStmt != null) {
+                        result.add(ifStmt);
+                        if (isTerminatingStatement(ifStmt)) {
+                            current = null;
+                            break;
+                        }
+                    }
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
-                        current = merge;
+                        if (stopBlocks.contains(merge) && isReturnBlock(merge)) {
+                            List<Statement> returnStmts = recoverSimpleBlock(merge);
+                            result.addAll(returnStmts);
+                            context.markProcessed(merge);
+                            current = null;
+                        } else {
+                            current = merge;
+                        }
                     } else {
                         current = findNextUnprocessedBlock(current, visited, stopBlocks);
                     }
@@ -1514,6 +1623,10 @@ public class StatementRecoverer {
                     result.addAll(context.collectPendingStatements());
                     if (ifStmt != null) {
                         result.add(ifStmt);
+                        if (isTerminatingStatement(ifStmt)) {
+                            current = null;
+                            break;
+                        }
                     }
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
@@ -1612,13 +1725,6 @@ public class StatementRecoverer {
     private List<Statement> recoverSimpleBlock(IRBlock block) {
         List<Statement> statements = new ArrayList<>();
 
-        for (PhiInstruction phi : block.getPhiInstructions()) {
-            Statement stmt = recoverPhiAssignment(phi);
-            if (stmt != null) {
-                statements.add(stmt);
-            }
-        }
-
         for (IRInstruction instr : block.getInstructions()) {
             Statement stmt = recoverInstruction(instr);
             if (stmt != null) {
@@ -1627,10 +1733,6 @@ public class StatementRecoverer {
         }
 
         return statements;
-    }
-
-    private Statement recoverPhiAssignment(PhiInstruction phi) {
-        return null;
     }
 
     private Statement recoverInstruction(IRInstruction instr) {
@@ -1646,6 +1748,14 @@ public class StatementRecoverer {
         if (instr instanceof FieldAccessInstruction) {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
             if (fieldAccess.isStore()) {
+                Value storedValue = fieldAccess.getValue();
+                if (storedValue instanceof SSAValue) {
+                    SSAValue ssaStored = (SSAValue) storedValue;
+                    IRInstruction def = ssaStored.getDefinition();
+                    if (def instanceof PhiInstruction && selfStorePhis.contains((PhiInstruction) def)) {
+                        return null;
+                    }
+                }
                 Expression receiver = fieldAccess.isStatic() ? null :
                     exprRecoverer.recoverOperand(fieldAccess.getObjectRef());
                 SourceType fieldType = typeRecoverer.recoverType(fieldAccess.getDescriptor());
@@ -1661,6 +1771,9 @@ public class StatementRecoverer {
                 context.getExpressionContext().cacheExpression(result, value);
                 PhiInstruction targetPhi = getPhiUsingValue(result);
                 if (targetPhi != null && targetPhi.getResult() != null) {
+                    if (selfStorePhis.contains(targetPhi)) {
+                        return null;
+                    }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                     if (phiVarName != null) {
                         SourceType type = value.getType();
@@ -1709,21 +1822,21 @@ public class StatementRecoverer {
                 return new ExprStmt(expr);
             }
             SSAValue result = invoke.getResult();
-            if (result != null && isUsedByStoreLocal(result)) {
+            if (isUsedByStoreLocal(result)) {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
             }
-            if (result != null && result.getUses().isEmpty()) {
+            if (result.getUses().isEmpty()) {
                 Expression expr = exprRecoverer.recover(invoke);
                 return new ExprStmt(expr);
             }
-            if (result != null && isIntermediateValue(result)) {
+            if (isIntermediateValue(result)) {
                 exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, exprRecoverer.recover(invoke));
                 return null;
             }
-            if (result != null && isSingleUsePutField(result)) {
+            if (isSingleUsePutField(result)) {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
@@ -1789,6 +1902,16 @@ public class StatementRecoverer {
             if (result != null) {
                 PhiInstruction targetPhi = getPhiUsingValue(result);
                 if (targetPhi != null && targetPhi.getResult() != null) {
+                    if (selfStorePhis.contains(targetPhi)) {
+                        FieldAccessInstruction fieldInfo = getSelfStoreFieldInfo(targetPhi);
+                        if (fieldInfo != null) {
+                            Expression value = exprRecoverer.recover(constInstr);
+                            SourceType fieldType = typeRecoverer.recoverType(fieldInfo.getDescriptor());
+                            Expression fieldTarget = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
+                                null, fieldInfo.getName(), fieldInfo.getOwner(), fieldInfo.isStatic(), fieldType);
+                            return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, fieldTarget, value, fieldType));
+                        }
+                    }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                     if (phiVarName != null) {
                         Expression value = exprRecoverer.recover(constInstr);
@@ -1851,7 +1974,7 @@ public class StatementRecoverer {
         Expression value = exprRecoverer.recoverOperand(storeValue);
 
         // Re-materialize after recovery
-        if (wasMaterialized && storeValue instanceof SSAValue) {
+        if (wasMaterialized) {
             context.getExpressionContext().markMaterialized((SSAValue) storeValue);
         }
 
@@ -1968,22 +2091,59 @@ public class StatementRecoverer {
 
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
+        SSAValue conditionValue = getConditionValue(header);
+        CompareOp conditionOp = getConditionOp(header);
+
+        if (info.isConditionNegated() && isConditionKnownFalse(conditionValue)) {
+            if (conditionOp == CompareOp.IFNE) {
+                Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
+                if (info.getMergeBlock() != null) {
+                    stopBlocks.add(info.getMergeBlock());
+                }
+                context.pushStopBlocks(stopBlocks);
+                List<Statement> thenStmts;
+                try {
+                    thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
+                } finally {
+                    context.popStopBlocks();
+                }
+                if (!headerStmts.isEmpty()) {
+                    context.addPendingStatements(headerStmts);
+                }
+                if (thenStmts.isEmpty()) {
+                    return null;
+                } else if (thenStmts.size() == 1) {
+                    return thenStmts.get(0);
+                } else {
+                    return new BlockStmt(thenStmts);
+                }
+            }
+        }
+
         Expression condition = recoverCondition(header, info.isConditionNegated());
         Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
         }
 
-        SSAValue conditionValue = getConditionValue(header);
         Set<SSAValue> knownFalse = new HashSet<>();
+        Set<FieldKey> knownFalseFields = new HashSet<>();
         if (info.isConditionNegated() && conditionValue != null) {
             knownFalse.add(conditionValue);
+            FieldKey fieldKey = extractFieldKey(conditionValue);
+            if (fieldKey != null) {
+                knownFalseFields.add(fieldKey);
+            }
         }
         context.pushKnownFalseValues(knownFalse);
+        context.pushKnownFalseFields(knownFalseFields);
+        context.pushStopBlocks(stopBlocks);
         List<Statement> thenStmts;
         try {
             thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
         } finally {
+            context.popStopBlocks();
+            context.popKnownFalseFields();
             context.popKnownFalseValues();
         }
         BlockStmt thenBlock = new BlockStmt(thenStmts);
@@ -2004,13 +2164,19 @@ public class StatementRecoverer {
         SSAValue conditionValue = getConditionValue(header);
         CompareOp conditionOp = getConditionOp(header);
 
-        if (conditionValue != null && context.isKnownFalse(conditionValue)) {
+        if (isConditionKnownFalse(conditionValue)) {
             if (conditionOp == CompareOp.IFNE) {
                 Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
                 if (info.getMergeBlock() != null) {
                     stopBlocks.add(info.getMergeBlock());
                 }
-                List<Statement> elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
+                context.pushStopBlocks(stopBlocks);
+                List<Statement> elseStmts;
+                try {
+                    elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
+                } finally {
+                    context.popStopBlocks();
+                }
                 if (!headerStmts.isEmpty()) {
                     context.addPendingStatements(headerStmts);
                 }
@@ -2035,24 +2201,39 @@ public class StatementRecoverer {
         List<Statement> elseStmts;
         Set<SSAValue> knownFalseForThen = new HashSet<>();
         Set<SSAValue> knownFalseForElse = new HashSet<>();
+        Set<FieldKey> knownFalseFieldsForThen = new HashSet<>();
+        Set<FieldKey> knownFalseFieldsForElse = new HashSet<>();
         if (condValue != null) {
+            FieldKey fieldKey = extractFieldKey(condValue);
             if (info.isConditionNegated()) {
                 knownFalseForThen.add(condValue);
+                if (fieldKey != null) {
+                    knownFalseFieldsForThen.add(fieldKey);
+                }
             } else {
                 knownFalseForElse.add(condValue);
+                if (fieldKey != null) {
+                    knownFalseFieldsForElse.add(fieldKey);
+                }
             }
         }
+        context.pushStopBlocks(stopBlocks);
         context.pushKnownFalseValues(knownFalseForThen);
+        context.pushKnownFalseFields(knownFalseFieldsForThen);
         try {
             thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
         } finally {
+            context.popKnownFalseFields();
             context.popKnownFalseValues();
         }
         context.pushKnownFalseValues(knownFalseForElse);
+        context.pushKnownFalseFields(knownFalseFieldsForElse);
         try {
             elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
         } finally {
+            context.popKnownFalseFields();
             context.popKnownFalseValues();
+            context.popStopBlocks();
         }
 
         if (isBooleanReturnPattern(thenStmts, elseStmts)) {
@@ -2124,13 +2305,6 @@ public class StatementRecoverer {
      */
     private List<Statement> recoverBlockInstructions(IRBlock block) {
         List<Statement> statements = new ArrayList<>();
-
-        for (PhiInstruction phi : block.getPhiInstructions()) {
-            Statement stmt = recoverPhiAssignment(phi);
-            if (stmt != null) {
-                statements.add(stmt);
-            }
-        }
 
         for (IRInstruction instr : block.getInstructions()) {
             if (instr.isTerminator()) {
@@ -2473,9 +2647,7 @@ public class StatementRecoverer {
             com.tonic.analysis.ssa.ir.IRInstruction def = ssaValue.getDefinition();
             if (def instanceof TypeCheckInstruction) {
                 TypeCheckInstruction typeCheck = (TypeCheckInstruction) def;
-                if (typeCheck.isInstanceOf()) {
-                    return true;
-                }
+                return typeCheck.isInstanceOf();
             }
         }
         return false;
@@ -2575,6 +2747,34 @@ public class StatementRecoverer {
         return null;
     }
 
+    private FieldKey extractFieldKey(SSAValue value) {
+        if (value == null) {
+            return null;
+        }
+        IRInstruction def = value.getDefinition();
+        if (def instanceof FieldAccessInstruction) {
+            FieldAccessInstruction fai = (FieldAccessInstruction) def;
+            if (fai.isLoad()) {
+                return new FieldKey(fai.getOwner(), fai.getName());
+            }
+        }
+        return null;
+    }
+
+    private boolean isConditionKnownFalse(SSAValue value) {
+        if (value == null) {
+            return false;
+        }
+        if (context.isKnownFalse(value)) {
+            return true;
+        }
+        FieldKey fieldKey = extractFieldKey(value);
+        if (fieldKey != null) {
+            return context.isFieldKnownFalse(fieldKey.getOwner(), fieldKey.getFieldName());
+        }
+        return false;
+    }
+
     private com.tonic.analysis.source.ast.expr.BinaryOperator negateOperator(
             com.tonic.analysis.source.ast.expr.BinaryOperator op) {
         if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.EQ) {
@@ -2599,6 +2799,12 @@ public class StatementRecoverer {
             return block.getSuccessors().get(0);
         }
         return null;
+    }
+
+    private boolean isReturnBlock(IRBlock block) {
+        if (block == null) return false;
+        IRInstruction terminator = block.getTerminator();
+        return terminator instanceof ReturnInstruction;
     }
 
     /**
@@ -2705,7 +2911,7 @@ public class StatementRecoverer {
                 return true;
             }
             if (val instanceof Integer) {
-                Integer i = (Integer) val;
+                int i = (Integer) val;
                 return i == 0 || i == 1;
             }
         }
@@ -2720,8 +2926,7 @@ public class StatementRecoverer {
             LiteralExpr lit = (LiteralExpr) expr;
             Object val = lit.getValue();
             if (val instanceof Boolean) {
-                Boolean b = (Boolean) val;
-                return b;
+                return (Boolean) val;
             }
             if (val instanceof Integer) {
                 Integer i = (Integer) val;
@@ -2925,8 +3130,7 @@ public class StatementRecoverer {
             }
 
             if (isOrConditionChain(thenStmts, nestedElse)) {
-                Statement furtherMerged = mergeOrConditions(merged, thenStmts, nestedElse);
-                return furtherMerged;
+                return mergeOrConditions(merged, thenStmts, nestedElse);
             }
             finalElseStmts = nestedElse;
         }
@@ -2967,12 +3171,12 @@ public class StatementRecoverer {
     /**
      * Finds a PHI instruction that is assigned boolean constants (0/1) from the then/else branches.
      * Works at the IR level by examining the blocks directly rather than recovered statements.
-     *
+     * <p>
      * Pattern in IR:
      *   B_then: v1 = const 0; goto B_merge
      *   B_else: v2 = const 1; goto B_merge
      *   B_merge: PHI = phi [v1, B_then], [v2, B_else]
-     *
+     * <p>
      * This is how bytecode represents boolean expressions like !method() when used in larger expressions.
      *
      * @param header The header block containing the branch
@@ -3022,8 +3226,7 @@ public class StatementRecoverer {
         ConstantInstruction constInstr = null;
         for (IRInstruction instr : instructions) {
             if (instr instanceof ConstantInstruction) {
-                ConstantInstruction ci = (ConstantInstruction) instr;
-                constInstr = ci;
+                constInstr = (ConstantInstruction) instr;
             } else if (instr instanceof SimpleInstruction) {
                 SimpleInstruction simple = (SimpleInstruction) instr;
                 if (simple.getOp() != SimpleOp.GOTO) {
@@ -3170,7 +3373,7 @@ public class StatementRecoverer {
      * Detects a general ternary pattern where then/else blocks each produce a single value
      * that feeds into a PHI in the merge block. This pattern occurs with code like:
      * x == null ? "" : x
-     *
+     * <p>
      * The bytecode pattern is:
      * - if(cond) goto thenBlock else elseBlock
      * - thenBlock: load value1, goto mergeBlock
@@ -3266,11 +3469,7 @@ public class StatementRecoverer {
         if (phiValue == blockValue) {
             return true;
         }
-        if (phiValue instanceof SSAValue) {
-            SSAValue ssaPhiValue = (SSAValue) phiValue;
-            return ssaPhiValue == blockValue;
-        }
-        if (phiValue instanceof com.tonic.analysis.ssa.value.Constant) {
+        if (phiValue instanceof Constant) {
             if (blockValue != null && blockValue.getDefinition() instanceof ConstantInstruction) {
                 ConstantInstruction ci = (ConstantInstruction) blockValue.getDefinition();
                 return ci.getConstant().equals(phiValue);
@@ -3314,11 +3513,9 @@ public class StatementRecoverer {
             return "this";
         }
 
-        // Check if this is a parameter slot
-        int paramSlots = computeParameterSlots();
-        if (localIndex < paramSlots) {
-            int argIndex = isStatic ? localIndex : localIndex - 1;
-            return "arg" + argIndex;
+        int paramIndex = getParamIndexForSlot(localIndex);
+        if (paramIndex >= 0) {
+            return "arg" + paramIndex;
         }
 
         return "local" + localIndex;
@@ -3330,10 +3527,9 @@ public class StatementRecoverer {
             return "this";
         }
 
-        int paramSlots = computeParameterSlots();
-        if (localIndex < paramSlots) {
-            int argIndex = isStatic ? localIndex : localIndex - 1;
-            return "arg" + argIndex;
+        int paramIndex = getParamIndexForSlot(localIndex);
+        if (paramIndex >= 0) {
+            return "arg" + paramIndex;
         }
 
         String typeCategory = getTypeCategory(valueType);
@@ -3353,6 +3549,43 @@ public class StatementRecoverer {
         String name = "local" + localIndex + "_" + suffix;
         categoryMap.put(typeCategory, name);
         return name;
+    }
+
+    /**
+     * Gets the parameter index for a given local slot.
+     * Accounts for long/double parameters taking 2 slots.
+     * Returns -1 if the slot is not a parameter slot (either 'this' or a local variable).
+     */
+    private int getParamIndexForSlot(int slot) {
+        IRMethod method = context.getIrMethod();
+        boolean isStatic = method.isStatic();
+
+        if (!isStatic && slot == 0) {
+            return -1;
+        }
+
+        String descriptor = method.getDescriptor();
+        if (descriptor == null) {
+            return isStatic ? slot : slot - 1;
+        }
+
+        List<String> paramTypes = parseParameterTypes(descriptor);
+        int currentSlot = isStatic ? 0 : 1;
+
+        for (int paramIndex = 0; paramIndex < paramTypes.size(); paramIndex++) {
+            String paramType = paramTypes.get(paramIndex);
+            int slotsForParam = 1;
+            if ("J".equals(paramType) || "D".equals(paramType)) {
+                slotsForParam = 2;
+            }
+
+            if (slot >= currentSlot && slot < currentSlot + slotsForParam) {
+                return paramIndex;
+            }
+            currentSlot += slotsForParam;
+        }
+
+        return -1;
     }
 
     private String getTypeCategory(SourceType type) {

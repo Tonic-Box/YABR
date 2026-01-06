@@ -42,6 +42,9 @@ public class ControlFlowContext {
     /** Stack of SSAValues known to be false/zero in current context */
     private final Deque<Set<SSAValue>> knownFalseValuesStack = new ArrayDeque<>();
 
+    /** Stack of fields (by owner+name) known to be false/zero in current context */
+    private final Deque<Set<FieldKey>> knownFalseFieldsStack = new ArrayDeque<>();
+
     private int labelCounter = 0;
 
     public ControlFlowContext(IRMethod irMethod, DominatorTree dominatorTree,
@@ -166,6 +169,70 @@ public class ControlFlowContext {
             }
         }
         return false;
+    }
+
+    /**
+     * Pushes fields (by owner+name) that are known to be false/zero in the current context.
+     * Used alongside pushKnownFalseValues for semantic field tracking.
+     */
+    public void pushKnownFalseFields(Set<FieldKey> fields) {
+        knownFalseFieldsStack.push(fields);
+    }
+
+    /**
+     * Pops the current known false fields from the stack.
+     */
+    public void popKnownFalseFields() {
+        if (!knownFalseFieldsStack.isEmpty()) {
+            knownFalseFieldsStack.pop();
+        }
+    }
+
+    /**
+     * Checks if a field (by owner+name) is known to be false/zero in the current context.
+     */
+    public boolean isFieldKnownFalse(String owner, String fieldName) {
+        FieldKey key = new FieldKey(owner, fieldName);
+        for (Set<FieldKey> falseFields : knownFalseFieldsStack) {
+            if (falseFields.contains(key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Represents a field by its owner class and field name.
+     * Used for semantic identity tracking across SSAValues.
+     */
+    @Getter
+    public static class FieldKey {
+        private final String owner;
+        private final String fieldName;
+
+        public FieldKey(String owner, String fieldName) {
+            this.owner = owner;
+            this.fieldName = fieldName;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            FieldKey fieldKey = (FieldKey) o;
+            return Objects.equals(owner, fieldKey.owner) &&
+                   Objects.equals(fieldName, fieldKey.fieldName);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(owner, fieldName);
+        }
+
+        @Override
+        public String toString() {
+            return owner + "." + fieldName;
+        }
     }
 
     /**

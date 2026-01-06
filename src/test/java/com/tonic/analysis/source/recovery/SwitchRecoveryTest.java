@@ -741,6 +741,45 @@ class SwitchRecoveryTest {
         }
     }
 
+    // ========== Self-Store PHI Pattern Tests ==========
+
+    @Nested
+    class SelfStorePhiPatternTests {
+
+        @Test
+        void selfStorePhiWithConditionalWrite() throws IOException {
+            BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SelfStoreTest")
+                .publicStaticMethod("conditionalFieldUpdate", "()V");
+
+            Label skipWrite = mb.newLabel();
+            Label end = mb.newLabel();
+
+            mb.getstatic("com/test/SelfStoreTest", "value", "I")
+                .iconst(2)
+                .if_icmpeq(skipWrite)
+                .iconst(1)
+                .putstatic("com/test/SelfStoreTest", "value", "I")
+                .goto_(end)
+                .label(skipWrite)
+                .label(end)
+                .vreturn();
+
+            ClassFile cf = mb.build();
+            MethodEntry method = findMethod(cf, "conditionalFieldUpdate");
+            IRMethod ir = TestUtils.liftMethod(method);
+
+            StatementRecoverer recoverer = createRecoverer(ir, method);
+            BlockStmt body = recoverer.recoverMethod();
+            String source = SourceEmitter.emit(body);
+
+            assertNotNull(body);
+            assertTrue(source.contains("value") || source.contains("if"),
+                "Should contain field reference or conditional: " + source);
+            assertFalse(source.contains("i0") || source.contains("i1") || source.contains("i2"),
+                "Should not have spurious local variables: " + source);
+        }
+    }
+
     // ========== Edge Cases ==========
 
     @Nested

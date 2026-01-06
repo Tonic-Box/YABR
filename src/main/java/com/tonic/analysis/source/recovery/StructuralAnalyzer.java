@@ -190,7 +190,7 @@ public class StructuralAnalyzer {
 
         // Try to find an immediate merge point - a block that both branches reach quickly
         // This handles cases where the post-dominator is far away but there's a closer merge
-        IRBlock immediateMerge = findImmediateMergePoint(trueTarget, falseTarget, mergePoint);
+        IRBlock immediateMerge = findImmediateMergePoint(trueTarget, falseTarget);
         if (immediateMerge != null && immediateMerge != mergePoint) {
             mergePoint = immediateMerge;
         }
@@ -238,7 +238,6 @@ public class StructuralAnalyzer {
         // that target is actually a merge point, not a separate branch
         Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
         if (reachableFromFalse.contains(trueTarget) && trueTarget.getPredecessors().size() > 1) {
-            // trueTarget is reached from both branches - it's the merge point
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(falseTarget);
             info.setMergeBlock(trueTarget);
@@ -248,7 +247,6 @@ public class StructuralAnalyzer {
 
         Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
         if (reachableFromTrue.contains(falseTarget) && falseTarget.getPredecessors().size() > 1) {
-            // falseTarget is reached from both branches - it's the merge point
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(trueTarget);
             info.setMergeBlock(falseTarget);
@@ -278,11 +276,11 @@ public class StructuralAnalyzer {
      * Checks if a block is an early exit block (contains only return or throw).
      * Early exit blocks are simple blocks that immediately exit the method
      * without any other control flow.
-     *
+     * <p>
      * IMPORTANT: An early exit block must NOT be a merge point (multiple predecessors),
      * because a merge point represents a common destination that should be visited
      * after either branch, not skipped as an "early" exit.
-     *
+     * <p>
      * Also handles blocks that GOTO to a shared exit block (common in obfuscated code
      * where all returns go through a single block).
      */
@@ -313,9 +311,7 @@ public class StructuralAnalyzer {
             if (successors.size() == 1) {
                 IRBlock target = successors.get(0);
                 if (isExitBlock(target)) {
-                    if (!hasNonTrivialInstructions(block)) {
-                        return true;
-                    }
+                    return !hasNonTrivialInstructions(block);
                 }
             }
         }
@@ -343,7 +339,7 @@ public class StructuralAnalyzer {
      * Finds an alternative merge point when the post-dominator is an exit block.
      * Looks for a block that is reachable from both branches and has multiple predecessors,
      * indicating it's a true merge point where multiple paths converge.
-     *
+     * <p>
      * Example: if (a) { B } else { C; if (d) return; E } F
      * Post-dominator might be the inner return, but F is the real merge for paths that don't return.
      */
@@ -413,21 +409,20 @@ public class StructuralAnalyzer {
     /**
      * Finds the immediate merge point for an if-then-else by looking at where both branches
      * actually converge, rather than relying solely on post-dominator analysis.
-     *
+     * <p>
      * This handles cases where:
      * - True branch: A → B → C
      * - False branch: D → E → C
      * Both reach C, so C is the immediate merge point.
-     *
+     * <p>
      * The post-dominator might find a block much further downstream if there are
      * multiple exit paths (e.g., shared return blocks).
      *
      * @param trueTarget the true branch target
      * @param falseTarget the false branch target
-     * @param postDomMerge the merge point from post-dominator analysis (for reference)
      * @return the immediate merge point, or null if not found
      */
-    private IRBlock findImmediateMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock postDomMerge) {
+    private IRBlock findImmediateMergePoint(IRBlock trueTarget, IRBlock falseTarget) {
         Set<IRBlock> reachableFromTrue = new HashSet<>();
         Set<IRBlock> reachableFromFalse = new HashSet<>();
         Queue<IRBlock> trueQueue = new LinkedList<>();
@@ -510,11 +505,8 @@ public class StructuralAnalyzer {
         if (dominatorTree.dominates(trueTarget, block) && trueTarget != block) {
             return false;
         }
-        if (dominatorTree.dominates(falseTarget, block) && falseTarget != block) {
-            return false;
-        }
 
-        return true;
+        return !dominatorTree.dominates(falseTarget, block) || falseTarget == block;
     }
 
     /**
@@ -570,7 +562,7 @@ public class StructuralAnalyzer {
     /**
      * Detects a flat if-chain pattern where sequential if-statements check the same variable
      * against different constants. In bytecode, this appears as:
-     *
+     * <p>
      *   if (var != const1) goto L2
      *   ... action for const1 ...
      *   goto merge
@@ -580,7 +572,7 @@ public class StructuralAnalyzer {
      *   goto merge
      * L3:
      *   ...
-     *
+     * <p>
      * The key insight is that the false target (L2) is the NEXT sequential check,
      * not an else branch. The true branch doesn't fall through to L2.
      *
@@ -624,13 +616,9 @@ public class StructuralAnalyzer {
         // The true branch should NOT directly reach the false target
         // (i.e., it should go elsewhere - to a merge point or return)
         Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
-        if (reachableFromTrue.contains(falseTarget)) {
-            // If true branch can reach false target, it might be a fall-through pattern,
-            // not a flat if-chain
-            return false;
-        }
-
-        return true;
+        // If true branch can reach false target, it might be a fall-through pattern,
+        // not a flat if-chain
+        return !reachableFromTrue.contains(falseTarget);
     }
 
     /**
@@ -691,11 +679,7 @@ public class StructuralAnalyzer {
         // Check if they have the same name (e.g., both are "local17")
         String name1 = v1.getName();
         String name2 = v2.getName();
-        if (name1 != null && name1.equals(name2)) {
-            return true;
-        }
-
-        return false;
+        return name1 != null && name1.equals(name2);
     }
 
     /**
