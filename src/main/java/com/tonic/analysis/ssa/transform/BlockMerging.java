@@ -49,12 +49,12 @@ public class BlockMerging implements IRTransform {
      * Checks if a block can be merged with its successor.
      */
     private boolean canMergeWithSuccessor(IRBlock block) {
-        List<IRBlock> successors = block.getSuccessors();
+        Set<IRBlock> successors = block.getSuccessors();
         if (successors.size() != 1) {
             return false;
         }
 
-        IRBlock successor = successors.get(0);
+        IRBlock successor = successors.iterator().next();
 
         if (successor == block) {
             return false;
@@ -82,8 +82,8 @@ public class BlockMerging implements IRTransform {
      * Gets the single successor of a block.
      */
     private IRBlock getSingleSuccessor(IRBlock block) {
-        List<IRBlock> successors = block.getSuccessors();
-        return successors.size() == 1 ? successors.get(0) : null;
+        Set<IRBlock> successors = block.getSuccessors();
+        return successors.size() == 1 ? successors.iterator().next() : null;
     }
 
     /**

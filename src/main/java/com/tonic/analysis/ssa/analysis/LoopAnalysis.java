@@ -88,12 +88,24 @@ public class LoopAnalysis {
     }
 
     private void computeLoopNesting() {
-        for (Loop outer : loops) {
-            for (Loop inner : loops) {
-                if (outer != inner && outer.getBlocks().containsAll(inner.getBlocks())) {
-                    if (inner.getParent() == null ||
-                            inner.getParent().getBlocks().size() > outer.getBlocks().size()) {
-                        inner.setParent(outer);
+        if (loops.isEmpty()) {
+            return;
+        }
+
+        Map<IRBlock, List<Loop>> headerToLoops = new HashMap<>();
+        for (Loop loop : loops) {
+            headerToLoops.computeIfAbsent(loop.getHeader(), k -> new ArrayList<>()).add(loop);
+        }
+
+        for (Loop inner : loops) {
+            IRBlock header = inner.getHeader();
+            for (Loop outer : loops) {
+                if (outer != inner && outer.getBlocks().contains(header)) {
+                    if (outer.getBlocks().size() > inner.getBlocks().size()) {
+                        if (inner.getParent() == null ||
+                                inner.getParent().getBlocks().size() > outer.getBlocks().size()) {
+                            inner.setParent(outer);
+                        }
                     }
                 }
             }

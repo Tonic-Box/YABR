@@ -37,11 +37,12 @@ public class LivenessAnalysis {
             liveOut.put(block, new HashSet<>());
         }
 
+        List<IRBlock> postOrder = method.getPostOrder();
+
         boolean changed = true;
         while (changed) {
             changed = false;
 
-            List<IRBlock> postOrder = method.getPostOrder();
             for (IRBlock block : postOrder) {
                 Set<SSAValue> newLiveOut = new HashSet<>();
                 for (IRBlock succ : block.getSuccessors()) {

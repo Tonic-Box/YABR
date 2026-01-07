@@ -95,7 +95,7 @@ public class ControlFlowReducibility implements IRTransform {
     }
 
     private boolean hasIrreduciblePredecessors(IRBlock block, DominatorTree domTree) {
-        List<IRBlock> preds = block.getPredecessors();
+        Set<IRBlock> preds = block.getPredecessors();
         if (preds.size() < 2) return false;
 
         for (IRBlock pred : preds) {

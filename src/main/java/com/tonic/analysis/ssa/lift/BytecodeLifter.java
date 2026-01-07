@@ -22,6 +22,7 @@ import static com.tonic.utill.Opcode.*;
 public class BytecodeLifter {
 
     private final ConstPool constPool;
+    private Map<IRBlock, Map<Integer, PhiInstruction>> stackPhiIndex;
 
     /**
      * Creates a new bytecode lifter.
@@ -42,6 +43,7 @@ public class BytecodeLifter {
         SSAValue.resetIdCounter();
         IRBlock.resetIdCounter();
         IRInstruction.resetIdCounter();
+        stackPhiIndex = new HashMap<>();
 
         CodeAttribute codeAttr = method.getCodeAttribute();
         if (codeAttr == null) {
@@ -442,6 +444,7 @@ public class BytecodeLifter {
                 phi.addIncoming(existingVal, firstSourceBlock);
                 phi.addIncoming(incomingVal, incomingBlock);
                 targetBlock.addPhi(phi);
+                registerStackPhi(targetBlock, i, phi);
 
                 // Update the existing state to use the PHI value
                 existingState.getStackValues().set(i, phiResult);
@@ -463,58 +466,48 @@ public class BytecodeLifter {
 
     /**
      * Post-processing pass to fix up PHI uses.
-     * For each PHI instruction, ensures all instructions in the block AND all
-     * reachable successor blocks use the PHI result instead of any incoming values.
-     * This is necessary because successor blocks may have been processed before
-     * the phi was created (when only one predecessor had been seen).
+     * Collects all PHI replacements and applies them in a single pass for efficiency.
+     * This avoids O(P*V*B) graph traversals by doing O(B*I) single-pass replacement.
      */
     private void fixupPhiUses(IRMethod method) {
+        Map<Value, Value> replacements = new IdentityHashMap<>();
         for (IRBlock block : method.getBlocks()) {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 SSAValue phiResult = phi.getResult();
                 for (Value incomingValue : phi.getOperands()) {
-                    replaceValueInBlockAndSuccessors(block, incomingValue, phiResult);
+                    if (incomingValue != phiResult) {
+                        replacements.put(incomingValue, phiResult);
+                    }
                 }
             }
         }
-    }
 
-    /**
-     * Replaces all uses of oldValue with newValue in the given block and all
-     * reachable successor blocks. Uses a worklist to avoid infinite loops
-     * in cyclic control flow. Also updates phi incoming values in successor blocks
-     * where the edge comes from a visited block.
-     */
-    private void replaceValueInBlockAndSuccessors(IRBlock startBlock, Value oldValue, Value newValue) {
-        Set<IRBlock> visited = new HashSet<>();
-        Deque<IRBlock> worklist = new ArrayDeque<>();
-        worklist.add(startBlock);
+        if (replacements.isEmpty()) {
+            return;
+        }
 
-        while (!worklist.isEmpty()) {
-            IRBlock block = worklist.poll();
-            if (visited.contains(block)) {
-                continue;
-            }
-            visited.add(block);
-
+        for (IRBlock block : method.getBlocks()) {
             for (IRInstruction instr : block.getInstructions()) {
                 if (!instr.isPhi()) {
-                    instr.replaceOperand(oldValue, newValue);
+                    for (Value oldVal : new ArrayList<>(instr.getOperands())) {
+                        Value replacement = replacements.get(oldVal);
+                        if (replacement != null) {
+                            instr.replaceOperand(oldVal, replacement);
+                        }
+                    }
                 }
             }
 
             for (IRBlock succ : block.getSuccessors()) {
-                // Update phi incoming values for edges from this block to successor
                 for (PhiInstruction phi : succ.getPhiInstructions()) {
                     Value incoming = phi.getIncoming(block);
-                    if (incoming != null && incoming.equals(oldValue)) {
-                        phi.removeIncoming(block);
-                        phi.addIncoming(newValue, block);
+                    if (incoming != null) {
+                        Value replacement = replacements.get(incoming);
+                        if (replacement != null) {
+                            phi.removeIncoming(block);
+                            phi.addIncoming(replacement, block);
+                        }
                     }
-                }
-
-                if (!visited.contains(succ)) {
-                    worklist.add(succ);
                 }
             }
         }
@@ -524,12 +517,15 @@ public class BytecodeLifter {
      * Finds an existing PHI instruction for a specific stack slot.
      */
     private PhiInstruction findStackPhi(IRBlock block, int stackSlot) {
-        for (PhiInstruction phi : block.getPhiInstructions()) {
-            if (phi.getResult().getName().equals("stack_phi_" + stackSlot)) {
-                return phi;
-            }
-        }
-        return null;
+        Map<Integer, PhiInstruction> blockPhis = stackPhiIndex.get(block);
+        return blockPhis != null ? blockPhis.get(stackSlot) : null;
+    }
+
+    /**
+     * Registers a stack PHI in the index for fast lookup.
+     */
+    private void registerStackPhi(IRBlock block, int stackSlot, PhiInstruction phi) {
+        stackPhiIndex.computeIfAbsent(block, k -> new HashMap<>()).put(stackSlot, phi);
     }
 
     private void connectBlocks(IRMethod irMethod, Map<Integer, IRBlock> offsetToBlock, List<Instruction> instructions) {
@@ -607,6 +603,11 @@ public class BytecodeLifter {
     }
 
     private IRBlock findBlockContaining(Map<Integer, IRBlock> offsetToBlock, int offset) {
+        if (offsetToBlock instanceof TreeMap) {
+            TreeMap<Integer, IRBlock> treeMap = (TreeMap<Integer, IRBlock>) offsetToBlock;
+            Map.Entry<Integer, IRBlock> entry = treeMap.floorEntry(offset);
+            return entry != null ? entry.getValue() : null;
+        }
         IRBlock result = null;
         for (Map.Entry<Integer, IRBlock> entry : offsetToBlock.entrySet()) {
             if (entry.getKey() <= offset) {

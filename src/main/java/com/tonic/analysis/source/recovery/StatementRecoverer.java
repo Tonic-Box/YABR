@@ -588,7 +588,7 @@ public class StatementRecoverer {
      * IMPORTANT: A GotoInstruction in a catch handler typically means "exit the catch and continue",
      * so we should NOT follow goto targets - they are the merge point, not part of the catch body.
      */
-    private void recoverHandlerBlocks(List<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts) {
+    private void recoverHandlerBlocks(Collection<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts) {
         for (IRBlock block : successors) {
             if (visited.contains(block)) continue;
             visited.add(block);
@@ -2804,7 +2804,7 @@ public class StatementRecoverer {
 
     private IRBlock getNextSequentialBlock(IRBlock block) {
         if (block.getSuccessors().size() == 1) {
-            return block.getSuccessors().get(0);
+            return block.getSuccessors().iterator().next();
         }
         return null;
     }

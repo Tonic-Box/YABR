@@ -309,9 +309,9 @@ public class StructuralAnalyzer {
                          ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO;
 
         if (isGoto) {
-            List<IRBlock> successors = block.getSuccessors();
+            Set<IRBlock> successors = block.getSuccessors();
             if (successors.size() == 1) {
-                IRBlock target = successors.get(0);
+                IRBlock target = successors.iterator().next();
                 if (isExitBlock(target)) {
                     return !hasNonTrivialInstructions(block);
                 }
@@ -497,8 +497,8 @@ public class StructuralAnalyzer {
             boolean isGotoInstr = instr instanceof SimpleInstruction &&
                                   ((SimpleInstruction) instr).getOp() == SimpleOp.GOTO;
             if (isGotoInstr) {
-                List<IRBlock> succs = block.getSuccessors();
-                if (succs.size() == 1 && isExitBlock(succs.get(0))) {
+                Set<IRBlock> succs = block.getSuccessors();
+                if (succs.size() == 1 && isExitBlock(succs.iterator().next())) {
                     return false;
                 }
             }

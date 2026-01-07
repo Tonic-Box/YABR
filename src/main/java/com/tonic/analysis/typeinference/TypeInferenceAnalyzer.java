@@ -99,7 +99,7 @@ public class TypeInferenceAnalyzer {
     private Map<SSAValue, TypeState> computeBlockEntryState(IRBlock block) {
         Map<SSAValue, TypeState> entryState = new HashMap<>();
 
-        List<IRBlock> preds = block.getPredecessors();
+        Set<IRBlock> preds = block.getPredecessors();
         if (preds.isEmpty()) {
             // Entry block - use parameter types
             entryState.putAll(valueTypes);

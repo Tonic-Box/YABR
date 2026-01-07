@@ -8,11 +8,15 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Renames variables to complete SSA conversion by walking the dominator tree.
  */
 public class VariableRenamer {
+
+    private static final Pattern VAR_PATTERN = Pattern.compile("v(\\d+)(?:_(\\d+))?");
 
     private final DominatorTree dominatorTree;
     private Map<Integer, Deque<SSAValue>> varStacks;
@@ -80,7 +84,7 @@ public class VariableRenamer {
         for (IRBlock succ : block.getSuccessors()) {
             for (PhiInstruction phi : succ.getPhiInstructions()) {
                 String name = phi.getResult().getName();
-                if (name.startsWith("phi_") || name.matches("v\\d+(_\\d+)?")) {
+                if (name.startsWith("phi_") || VAR_PATTERN.matcher(name).matches()) {
                     int varIndex = extractVarIndex(phi);
                     if (varIndex >= 0) {
                         SSAValue currentVal = getCurrentValue(varIndex);
@@ -136,10 +140,10 @@ public class VariableRenamer {
                 return -1;
             }
         }
-        if (name.matches("v\\d+_\\d+")) {
+        Matcher m = VAR_PATTERN.matcher(name);
+        if (m.matches()) {
             try {
-                int underscorePos = name.indexOf('_');
-                return Integer.parseInt(name.substring(1, underscorePos));
+                return Integer.parseInt(m.group(1));
             } catch (NumberFormatException e) {
                 return -1;
             }

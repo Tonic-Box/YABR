@@ -24,8 +24,8 @@ public class IRBlock {
     private final List<PhiInstruction> phiInstructions;
     private final List<IRInstruction> instructions;
 
-    private final List<IRBlock> predecessors;
-    private final List<IRBlock> successors;
+    private final Set<IRBlock> predecessors;
+    private final Set<IRBlock> successors;
     private final Map<IRBlock, EdgeType> successorEdgeTypes;
 
     private final List<ExceptionHandler> exceptionHandlers;
@@ -41,8 +41,8 @@ public class IRBlock {
         this.name = "B" + id;
         this.phiInstructions = new ArrayList<>();
         this.instructions = new ArrayList<>();
-        this.predecessors = new ArrayList<>();
-        this.successors = new ArrayList<>();
+        this.predecessors = new LinkedHashSet<>();
+        this.successors = new LinkedHashSet<>();
         this.successorEdgeTypes = new HashMap<>();
         this.exceptionHandlers = new ArrayList<>();
         this.bytecodeOffset = -1;
@@ -132,8 +132,7 @@ public class IRBlock {
      * @param edgeType the type of edge
      */
     public void addSuccessor(IRBlock successor, EdgeType edgeType) {
-        if (!successors.contains(successor)) {
-            successors.add(successor);
+        if (successors.add(successor)) {
             successorEdgeTypes.put(successor, edgeType);
             successor.predecessors.add(this);
         }
@@ -202,9 +201,7 @@ public class IRBlock {
      * @param pred the predecessor block
      */
     public void addPredecessor(IRBlock pred) {
-        if (!predecessors.contains(pred)) {
-            predecessors.add(pred);
-        }
+        predecessors.add(pred);
     }
 
     /**
