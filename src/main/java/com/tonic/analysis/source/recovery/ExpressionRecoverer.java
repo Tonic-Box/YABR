@@ -156,10 +156,7 @@ public class ExpressionRecoverer {
             // This ensures that local variables like 'c' in 'GridBagConstraints c = new GridBagConstraints()'
             // are properly referenced as 'c.fill' instead of being re-inlined as 'new GridBagConstraints().fill'
             SSAValue result = instr.getResult();
-            if (result != null && context.isMaterialized(result)) {
-                return false;
-            }
-            return true;
+            return result == null || !context.isMaterialized(result);
         }
 
         if (instr instanceof PhiInstruction) {
@@ -169,9 +166,7 @@ public class ExpressionRecoverer {
         SSAValue result = instr.getResult();
         if (result != null) {
             int useCount = result.getUses().size();
-            if (useCount <= 1) {
-                return true;
-            }
+            return useCount <= 1;
         }
 
         return false;
@@ -442,7 +437,6 @@ public class ExpressionRecoverer {
         public Expression visitUnaryOp(UnaryOpInstruction instr) {
             Expression operand = recoverOperand(instr.getOperand());
             if (OperatorMapper.isTypeConversion(instr.getOp())) {
-                String desc = OperatorMapper.getConversionTargetType(instr.getOp());
                 SourceType target = typeRecoverer.recoverType(instr.getResult());
                 return new CastExpr(target, operand);
             }
@@ -870,8 +864,7 @@ public class ExpressionRecoverer {
                 BootstrapMethodsAttribute bsmAttr = null;
                 for (Attribute attr : classFile.getClassAttributes()) {
                     if (attr instanceof BootstrapMethodsAttribute) {
-                        BootstrapMethodsAttribute bma = (BootstrapMethodsAttribute) attr;
-                        bsmAttr = bma;
+                        bsmAttr = (BootstrapMethodsAttribute) attr;
                         break;
                     }
                 }
@@ -953,11 +946,9 @@ public class ExpressionRecoverer {
                 MethodHandleConstant implHandle = (MethodHandleConstant) args.get(1);
                 String implOwner = implHandle.getOwner();
                 String implName = implHandle.getName();
-                String implDesc = implHandle.getDescriptor();
-                int refKind = implHandle.getReferenceKind();
 
                 String samDescriptor = null;
-                if (args.size() >= 1 && args.get(0) instanceof MethodTypeConstant) {
+                if (args.get(0) instanceof MethodTypeConstant) {
                     MethodTypeConstant samType = (MethodTypeConstant) args.get(0);
                     samDescriptor = samType.getDescriptor();
                 }
@@ -1086,7 +1077,7 @@ public class ExpressionRecoverer {
                         return decompileLambdaMethod(lambdaMethod, instr, params, handle, samDescriptor);
                     }
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
 
             boolean isVoidReturn = samDescriptor != null && samDescriptor.endsWith(")V");
@@ -1169,7 +1160,7 @@ public class ExpressionRecoverer {
                     return body;
                 }
 
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
 
             boolean isVoidReturn = samDescriptor != null && samDescriptor.endsWith(")V");
@@ -1257,7 +1248,9 @@ public class ExpressionRecoverer {
                         if (ssaForSlot != null) {
                             if (capturedExpr instanceof VarRefExpr) {
                                 VarRefExpr varRef = (VarRefExpr) capturedExpr;
-                                recoverer.getRecoveryContext().setVariableName(ssaForSlot, varRef.getName());
+                                String capturedName = varRef.getName();
+                                recoverer.getRecoveryContext().setVariableName(ssaForSlot, capturedName);
+                                recoverer.getRecoveryContext().markDeclared(capturedName);
                             } else if (capturedExpr instanceof ThisExpr) {
                                 recoverer.getRecoveryContext().setVariableName(ssaForSlot, "this");
                             }
@@ -1277,7 +1270,7 @@ public class ExpressionRecoverer {
                     if (body != null && !body.getStatements().isEmpty()) {
                         return simplifyLambdaBody(body);
                     }
-                } catch (Exception e) {
+                } catch (Exception ignored) {
                 }
                 return new BlockStmt(Collections.emptyList());
             }
@@ -1322,7 +1315,7 @@ public class ExpressionRecoverer {
                                 if (capturedMapping.containsKey(slot)) {
                                     return capturedMapping.get(slot);
                                 }
-                            } catch (NumberFormatException e) {
+                            } catch (NumberFormatException ignored) {
                             }
                         }
                         int slot = findSlotForParameter(lambdaIR, ssa);

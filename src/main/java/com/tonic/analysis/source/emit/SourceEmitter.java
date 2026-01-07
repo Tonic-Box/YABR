@@ -5,6 +5,7 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.utill.ClassNameUtil;
+import lombok.Getter;
 
 import java.util.HashSet;
 import java.util.List;
@@ -18,6 +19,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     private final IndentingWriter writer;
     private final SourceEmitterConfig config;
     private final IdentifierNormalizer normalizer;
+    @Getter
     private final Set<String> usedTypes = new HashSet<>();
 
     public SourceEmitter(IndentingWriter writer) {
@@ -28,10 +30,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
         this.writer = writer;
         this.config = config;
         this.normalizer = new IdentifierNormalizer(config.getIdentifierMode());
-    }
-
-    public Set<String> getUsedTypes() {
-        return usedTypes;
     }
 
     public void clearUsedTypes() {
@@ -214,8 +212,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.indent();
 
         List<SwitchCase> cases = stmt.getCases();
-        for (int i = 0; i < cases.size(); i++) {
-            SwitchCase switchCase = cases.get(i);
+        for (SwitchCase switchCase : cases) {
             if (switchCase.isDefault()) {
                 writer.writeLine("default:");
             } else if (switchCase.hasExpressionLabels()) {
@@ -618,7 +615,15 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.write("(");
         writer.write(expr.getTargetType().toJavaSource());
         writer.write(") ");
-        expr.getExpression().accept(this);
+        Expression inner = expr.getExpression();
+        boolean needsParens = inner instanceof BinaryExpr || inner instanceof TernaryExpr;
+        if (needsParens) {
+            writer.write("(");
+        }
+        inner.accept(this);
+        if (needsParens) {
+            writer.write(")");
+        }
         return null;
     }
 

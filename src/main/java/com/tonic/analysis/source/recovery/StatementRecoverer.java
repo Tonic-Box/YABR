@@ -2265,7 +2265,7 @@ public class StatementRecoverer {
             }
         }
 
-        PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(header, info);
+        PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(info);
         if (booleanPhi != null) {
             collapseToBooleanPhiExpressionIR(condition, booleanPhi, info.getThenBlock());
             context.markProcessed(info.getThenBlock());
@@ -2277,7 +2277,7 @@ public class StatementRecoverer {
             return null;
         }
 
-        PhiInstruction ternaryPhi = findTernaryPhiPattern(header, info);
+        PhiInstruction ternaryPhi = findTernaryPhiPattern(info);
         if (ternaryPhi != null) {
             collapseToTernaryPhiExpression(condition, ternaryPhi, info.getThenBlock(), info.getElseBlock());
             context.markProcessed(info.getThenBlock());
@@ -2390,6 +2390,8 @@ public class StatementRecoverer {
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
         context.markProcessed(header);
 
+        List<Statement> headerStmts = recoverBlockInstructions(header);
+
         IRInstruction terminator = header.getTerminator();
         if (!(terminator instanceof SwitchInstruction)) {
             return new IRRegionStmt(List.of(header));
@@ -2479,7 +2481,13 @@ public class StatementRecoverer {
             cases.add(SwitchCase.defaultCase(defaultStmts));
         }
 
-        return new SwitchStmt(selector, cases);
+        Statement switchStmt = new SwitchStmt(selector, cases);
+        if (!headerStmts.isEmpty()) {
+            List<Statement> combined = new ArrayList<>(headerStmts);
+            combined.add(switchStmt);
+            return new BlockStmt(combined);
+        }
+        return switchStmt;
     }
 
     private static class EnumSwitchInfo {
@@ -3013,7 +3021,7 @@ public class StatementRecoverer {
             return null;
         }
 
-        if (val0 == val1) {
+        if (val0.equals(val1)) {
             return null;
         }
 
@@ -3179,11 +3187,10 @@ public class StatementRecoverer {
      * <p>
      * This is how bytecode represents boolean expressions like !method() when used in larger expressions.
      *
-     * @param header The header block containing the branch
      * @param info Region info with then/else/merge block information
      * @return The PHI instruction if this pattern is detected, null otherwise
      */
-    private PhiInstruction findBooleanPhiAssignmentPatternIR(IRBlock header, RegionInfo info) {
+    private PhiInstruction findBooleanPhiAssignmentPatternIR(RegionInfo info) {
         IRBlock thenBlock = info.getThenBlock();
         IRBlock elseBlock = info.getElseBlock();
         IRBlock mergeBlock = info.getMergeBlock();
@@ -3327,7 +3334,7 @@ public class StatementRecoverer {
                 continue;
             }
 
-            PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(block, info);
+            PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(info);
             if (booleanPhi != null && booleanPhi.getResult() != null) {
                 ternaryPhiValues.add(booleanPhi.getResult());
                 continue;
@@ -3380,7 +3387,7 @@ public class StatementRecoverer {
      * - elseBlock: load value2, goto mergeBlock
      * - mergeBlock: PHI(value1, value2), use PHI in method call/assignment
      */
-    private PhiInstruction findTernaryPhiPattern(IRBlock header, RegionInfo info) {
+    private PhiInstruction findTernaryPhiPattern(RegionInfo info) {
         IRBlock thenBlock = info.getThenBlock();
         IRBlock elseBlock = info.getElseBlock();
         IRBlock mergeBlock = info.getMergeBlock();
@@ -3541,14 +3548,31 @@ public class StatementRecoverer {
 
         if (categoryMap.isEmpty()) {
             String name = "local" + localIndex;
+            if (context.getExpressionContext().isDeclared(name)) {
+                name = generateUniqueLocalName(localIndex);
+            }
             categoryMap.put(typeCategory, name);
             return name;
         }
 
         int suffix = categoryMap.size();
         String name = "local" + localIndex + "_" + suffix;
+        if (context.getExpressionContext().isDeclared(name)) {
+            name = generateUniqueLocalName(localIndex);
+        }
         categoryMap.put(typeCategory, name);
         return name;
+    }
+
+    private String generateUniqueLocalName(int baseIndex) {
+        String baseName = "local" + baseIndex;
+        int suffix = 2;
+        String candidate = baseName + "_" + suffix;
+        while (context.getExpressionContext().isDeclared(candidate)) {
+            suffix++;
+            candidate = baseName + "_" + suffix;
+        }
+        return candidate;
     }
 
     /**
