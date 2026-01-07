@@ -8,12 +8,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Fixed source emmission issues">
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/decompile/ArithmeticPrecedenceTest.java" afterDir="false" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Fixed source emission issues">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart1Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart2Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart2Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart3Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart3Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart4Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart4Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart5Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart5Test.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -201,14 +203,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00098" summary="- execution api fixes">
-      <option name="closed" value="true" />
-      <created>1766729691769</created>
-      <option name="number" value="00098" />
-      <option name="presentableId" value="LOCAL-00098" />
-      <option name="project" value="LOCAL" />
-      <updated>1766729691769</updated>
     </task>
     <task id="LOCAL-00099" summary="- execution api fixes: was mistakenly handling invokespecial with virtual dispatch resolution">
       <option name="closed" value="true" />
@@ -594,7 +588,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767739334893</updated>
     </task>
-    <option name="localTasksCounter" value="147" />
+    <task id="LOCAL-00147" summary="Fixed source emission issues">
+      <option name="closed" value="true" />
+      <created>1767748704891</created>
+      <option name="number" value="00147" />
+      <option name="presentableId" value="LOCAL-00147" />
+      <option name="project" value="LOCAL" />
+      <updated>1767748704891</updated>
+    </task>
+    <option name="localTasksCounter" value="148" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -609,7 +611,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- debugger edit stack &amp; local values" />
     <MESSAGE value="- execution api docs update" />
     <MESSAGE value="- Tracing listener infrastructure" />
     <MESSAGE value="- CDS Native handlers" />
@@ -634,7 +635,8 @@
     <MESSAGE value="Detect and optimize the &quot;self-store PHI pattern&quot; where:&#10;1. A PHI has an operand from getstatic field.x&#10;2. The PHI result is used in putstatic field.x (same field)&#10;3. This pattern represents conditional field updates" />
     <MESSAGE value="- Detect and optimize the &quot;self-store PHI pattern&quot; where:&#10;1. A PHI has an operand from getstatic field.x&#10;2. The PHI result is used in putstatic field.x (same field)&#10;3. This pattern represents conditional field updates&#10;- Removed the unused slot variable from preDeclareParameters() and fixed getNameForLocalSlot() to correctly compute parameter indices by iterating through parameter types to account for long/double taking 2 slots, rather than using the incorrect slot - 1 formula." />
     <MESSAGE value="Fixed source emmission issues" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed source emmission issues" />
+    <MESSAGE value="Fixed source emission issues" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed source emission issues" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

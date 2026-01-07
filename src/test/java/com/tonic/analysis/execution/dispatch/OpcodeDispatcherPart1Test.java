@@ -6,6 +6,7 @@ import com.tonic.analysis.execution.state.ConcreteLocals;
 import com.tonic.analysis.execution.state.ConcreteStack;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.*;
+import com.tonic.testutil.StubDispatchContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,170 +17,7 @@ class OpcodeDispatcherPart1Test {
     private OpcodeDispatcher dispatcher;
     private ConcreteStack stack;
     private ConcreteLocals locals;
-    private TestDispatchContext context;
-
-    private static class TestDispatchContext implements DispatchContext {
-        private int lastIntConstant;
-        private long lastLongConstant;
-        private float lastFloatConstant;
-        private double lastDoubleConstant;
-        private String lastStringConstant;
-        private ObjectInstance lastClassConstant;
-        private int branchTarget;
-
-        @Override
-        public int resolveIntConstant(int index) {
-            return lastIntConstant;
-        }
-
-        @Override
-        public long resolveLongConstant(int index) {
-            return lastLongConstant;
-        }
-
-        @Override
-        public float resolveFloatConstant(int index) {
-            return lastFloatConstant;
-        }
-
-        @Override
-        public double resolveDoubleConstant(int index) {
-            return lastDoubleConstant;
-        }
-
-        @Override
-        public String resolveStringConstant(int index) {
-            return lastStringConstant;
-        }
-
-        @Override
-        public ObjectInstance resolveStringObject(int index) { return null; }
-
-        @Override
-        public ObjectInstance resolveClassConstant(int index) {
-            return lastClassConstant;
-        }
-
-        @Override
-        public ArrayInstance getArray(ObjectInstance ref) {
-            return (ArrayInstance) ref;
-        }
-
-        @Override
-        public void checkArrayBounds(ArrayInstance array, int index) {
-            if (index < 0 || index >= array.getLength()) {
-                throw new ArrayIndexOutOfBoundsException("Index: " + index + ", Length: " + array.getLength());
-            }
-        }
-
-        @Override
-        public void checkNullReference(ObjectInstance ref, String operation) {
-            if (ref == null) {
-                throw new NullPointerException(operation);
-            }
-        }
-
-        @Override
-        public FieldInfo resolveField(int cpIndex) {
-            return null;
-        }
-
-        @Override
-        public MethodInfo resolveMethod(int cpIndex) {
-            return null;
-        }
-
-        @Override
-        public boolean isInstanceOf(ObjectInstance obj, String className) {
-            return obj.isInstanceOf(className);
-        }
-
-        @Override
-        public void checkCast(ObjectInstance obj, String className) {
-        }
-
-        @Override
-        public MethodInfo getPendingInvoke() {
-            return null;
-        }
-
-        @Override
-        public FieldInfo getPendingFieldAccess() {
-            return null;
-        }
-
-        @Override
-        public String getPendingNewClass() {
-            return null;
-        }
-
-        @Override
-        public int[] getPendingArrayDimensions() {
-            return null;
-        }
-
-        @Override
-        public void setPendingInvoke(MethodInfo methodInfo) {
-        }
-
-        @Override
-        public void setPendingFieldAccess(FieldInfo fieldInfo) {
-        }
-
-        @Override
-        public void setPendingNewClass(String className) {
-        }
-
-        @Override
-        public void setPendingArrayDimensions(int[] dimensions) {
-        }
-
-        @Override
-        public void setBranchTarget(int target) {
-            this.branchTarget = target;
-        }
-
-        @Override
-        public int getBranchTarget() {
-            return branchTarget;
-        }
-
-        @Override
-        public void setPendingInvokeDynamic(InvokeDynamicInfo info) {
-        }
-
-        @Override
-        public InvokeDynamicInfo getPendingInvokeDynamic() {
-            return null;
-        }
-
-        @Override
-        public void setPendingMethodHandle(MethodHandleInfo info) {
-        }
-
-        @Override
-        public MethodHandleInfo getPendingMethodHandle() {
-            return null;
-        }
-
-        @Override
-        public void setPendingMethodType(MethodTypeInfo info) {
-        }
-
-        @Override
-        public MethodTypeInfo getPendingMethodType() {
-            return null;
-        }
-
-        @Override
-        public void setPendingConstantDynamic(ConstantDynamicInfo info) {
-        }
-
-        @Override
-        public ConstantDynamicInfo getPendingConstantDynamic() {
-            return null;
-        }
-    }
+    private StubDispatchContext context;
 
     private static class SimpleInstruction extends Instruction {
         public SimpleInstruction(int opcode, int offset, int length) {
@@ -245,7 +83,7 @@ class OpcodeDispatcherPart1Test {
         dispatcher = new OpcodeDispatcher();
         stack = new ConcreteStack(100);
         locals = new ConcreteLocals(10);
-        context = new TestDispatchContext();
+        context = new StubDispatchContext();
     }
 
     private OpcodeDispatcher.DispatchResult dispatchSimple(Instruction instr) {
