@@ -8,6 +8,7 @@ import com.tonic.analysis.ssa.transform.*;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +19,15 @@ import java.util.List;
  */
 public class SSA {
 
+    private static final int EXPENSIVE_TRANSFORM_THRESHOLD = 200;
+
+    /**
+     * -- GETTER --
+     *  Gets the constant pool associated with this SSA processor.
+     *
+     * @return the constant pool
+     */
+    @Getter
     private final ConstPool constPool;
     private final List<IRTransform> transforms;
     private final List<ClassTransform> classTransforms;
@@ -31,15 +41,6 @@ public class SSA {
         this.constPool = constPool;
         this.transforms = new ArrayList<>();
         this.classTransforms = new ArrayList<>();
-    }
-
-    /**
-     * Gets the constant pool associated with this SSA processor.
-     *
-     * @return the constant pool
-     */
-    public ConstPool getConstPool() {
-        return constPool;
     }
 
     /**
@@ -401,17 +402,28 @@ public class SSA {
     public void runTransforms(IRMethod method) {
         boolean changed = true;
         int iterations = 0;
-        int maxIterations = 10;
+        int maxIterations = 3;
+
+        int blockCount = method.getBlocks().size();
+        boolean skipExpensive = blockCount > EXPENSIVE_TRANSFORM_THRESHOLD;
 
         while (changed && iterations < maxIterations) {
             changed = false;
             for (IRTransform transform : transforms) {
+                if (skipExpensive && isExpensiveTransform(transform)) {
+                    continue;
+                }
                 if (transform.run(method)) {
                     changed = true;
                 }
             }
             iterations++;
         }
+    }
+
+    private boolean isExpensiveTransform(IRTransform transform) {
+        String name = transform.getName();
+        return "DuplicateBlockMerging".equals(name) || "ControlFlowReducibility".equals(name);
     }
 
     /**

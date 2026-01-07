@@ -26,6 +26,8 @@ public class StructuralAnalyzer {
     private final LoopAnalysis loopAnalysis;
     private PostDominatorTree postDominatorTree;
 
+    private final Map<IRBlock, Set<IRBlock>> reachabilityCache = new HashMap<>();
+
     /** Analysis results */
     private final Map<IRBlock, RegionInfo> regionInfos = new HashMap<>();
 
@@ -541,6 +543,16 @@ public class StructuralAnalyzer {
     }
 
     private Set<IRBlock> getReachableBlocks(IRBlock start) {
+        Set<IRBlock> cached = reachabilityCache.get(start);
+        if (cached != null) {
+            return new HashSet<>(cached);
+        }
+        Set<IRBlock> reachable = computeReachableBlocks(start);
+        reachabilityCache.put(start, reachable);
+        return new HashSet<>(reachable);
+    }
+
+    private Set<IRBlock> computeReachableBlocks(IRBlock start) {
         Set<IRBlock> reachable = new HashSet<>();
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(start);

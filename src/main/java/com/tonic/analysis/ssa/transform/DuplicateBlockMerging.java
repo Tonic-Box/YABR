@@ -7,7 +7,6 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import com.tonic.analysis.ssa.value.*;
 
 import java.util.*;
 
@@ -15,6 +14,8 @@ import java.util.*;
  * Merges duplicate blocks created by node splitting while preserving reducibility.
  */
 public class DuplicateBlockMerging implements IRTransform {
+
+    private static final int MAX_MERGES = 50;
 
     private final boolean aggressive;
 
@@ -35,8 +36,13 @@ public class DuplicateBlockMerging implements IRTransform {
     public boolean run(IRMethod method) {
         boolean changed = false;
         boolean merged;
+        int mergeCount = 0;
 
         do {
+            if (mergeCount >= MAX_MERGES) {
+                break;
+            }
+
             merged = false;
             DominatorTree domTree = new DominatorTree(method);
             domTree.compute();
@@ -54,6 +60,7 @@ public class DuplicateBlockMerging implements IRTransform {
                             mergeBlocks(group.get(i), group.get(j), method);
                             merged = true;
                             changed = true;
+                            mergeCount++;
                             break outer;
                         }
                     }

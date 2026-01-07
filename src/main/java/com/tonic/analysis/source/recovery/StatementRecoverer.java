@@ -2842,6 +2842,14 @@ public class StatementRecoverer {
     }
 
     private IRBlock findSwitchMerge(RegionInfo info) {
+        var postDomTree = analyzer.getPostDominatorTree();
+        if (postDomTree != null) {
+            IRBlock ipdom = postDomTree.getImmediatePostDominator(info.getHeader());
+            if (ipdom != null) {
+                return ipdom;
+            }
+        }
+
         Set<IRBlock> allTargets = new HashSet<>(info.getSwitchCases().values());
         if (info.getDefaultTarget() != null) {
             allTargets.add(info.getDefaultTarget());

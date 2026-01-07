@@ -16,6 +16,8 @@ import java.util.*;
  */
 public class ControlFlowReducibility implements IRTransform {
 
+    private static final int MAX_BLOCKS_CREATED = 100;
+
     @Override
     public String getName() {
         return "ControlFlowReducibility";
@@ -26,8 +28,9 @@ public class ControlFlowReducibility implements IRTransform {
         boolean changed = false;
         int iterations = 0;
         int maxIterations = 5;
+        int blocksCreated = 0;
 
-        while (iterations < maxIterations) {
+        while (iterations < maxIterations && blocksCreated < MAX_BLOCKS_CREATED) {
             DominatorTree domTree = new DominatorTree(method);
             domTree.compute();
 
@@ -42,6 +45,7 @@ public class ControlFlowReducibility implements IRTransform {
             IRBlock toSplit = multiEntryBlocks.iterator().next();
             if (splitBlock(method, toSplit, domTree, loops)) {
                 changed = true;
+                blocksCreated++;
             } else {
                 break;
             }
@@ -143,9 +147,6 @@ public class ControlFlowReducibility implements IRTransform {
         }
 
         IRBlock duplicate = duplicateBlock(block, method);
-        if (duplicate == null) {
-            return false;
-        }
 
         for (IRBlock pred : group2) {
             redirectEdge(pred, block, duplicate);
