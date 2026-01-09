@@ -49,15 +49,19 @@ public class FieldRenamer {
      * Renames a single field.
      */
     private void renameField(FieldMapping mapping) {
+        // Get the new class name (after class renaming) for the mapping owner
+        String mappedOwner = context.getMappings().getClassMapping(mapping.getOwner());
+        String currentOwner = mappedOwner != null ? mappedOwner : mapping.getOwner();
+
         // Find and rename the declaration
-        ClassFile ownerClass = context.getClass(mapping.getOwner());
+        ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
             renameFieldDeclaration(ownerClass, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
         }
 
-        // Update all access sites across all classes
+        // Update all access sites across all classes using the current (possibly renamed) owner
         for (ClassFile cf : context.getAllClasses()) {
-            updateFieldAccessSites(cf, mapping.getOwner(), mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+            updateFieldAccessSites(cf, currentOwner, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
         }
     }
 
