@@ -206,7 +206,7 @@ String source = SourceEmitter.emit(ast);
 
 **ASTLowerer** - Converts AST back to SSA IR:
 ```java
-new ASTLowerer(constPool).lower(ast, irMethod, methodEntry);
+new ASTLowerer(constPool).replaceBody(ast, irMethod);
 ```
 
 The AST system enables:

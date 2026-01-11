@@ -9,7 +9,9 @@ import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Lowers AST Statement nodes to IR instructions and blocks.
@@ -138,36 +140,40 @@ public class StatementLowerer {
     }
 
     private void lowerIf(IfStmt ifStmt) {
-        Value cond = exprLowerer.lower(ifStmt.getCondition());
-
         IRBlock thenBlock = ctx.createBlock();
         IRBlock elseBlock = ifStmt.getElseBranch() != null ? ctx.createBlock() : null;
         IRBlock mergeBlock = ctx.createBlock();
 
         IRBlock falseTarget = elseBlock != null ? elseBlock : mergeBlock;
-        BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, cond, thenBlock, falseTarget);
-        ctx.getCurrentBlock().addInstruction(branch);
-
-        ctx.getCurrentBlock().addSuccessor(thenBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        exprLowerer.lowerCondition(ifStmt.getCondition(), thenBlock, falseTarget);
 
         ctx.setCurrentBlock(thenBlock);
         lower(ifStmt.getThenBranch());
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        boolean thenFallsThrough = ctx.getCurrentBlock().getTerminator() == null;
+        if (thenFallsThrough) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
             ctx.getCurrentBlock().addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
+        IRBlock thenEndBlock = ctx.getCurrentBlock();
 
+        boolean elseFallsThrough;
         if (elseBlock != null) {
             ctx.setCurrentBlock(elseBlock);
             lower(ifStmt.getElseBranch());
-            if (ctx.getCurrentBlock().getTerminator() == null) {
+            elseFallsThrough = ctx.getCurrentBlock().getTerminator() == null;
+            if (elseFallsThrough) {
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
                 ctx.getCurrentBlock().addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
             }
+        } else {
+            elseFallsThrough = true;
         }
 
-        ctx.setCurrentBlock(mergeBlock);
+        if (thenFallsThrough || elseFallsThrough) {
+            ctx.setCurrentBlock(mergeBlock);
+        } else {
+            ctx.setCurrentBlock(thenEndBlock);
+        }
     }
 
     private void lowerWhile(WhileStmt whileStmt) {
@@ -179,11 +185,7 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
-        Value cond = exprLowerer.lower(whileStmt.getCondition());
-        BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, cond, bodyBlock, exitBlock);
-        ctx.getCurrentBlock().addInstruction(branch);
-        condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        condBlock.addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        exprLowerer.lowerCondition(whileStmt.getCondition(), bodyBlock, exitBlock);
 
         ctx.pushLoop(whileStmt.getLabel(), condBlock, exitBlock);
 
@@ -216,11 +218,7 @@ public class StatementLowerer {
         }
 
         ctx.setCurrentBlock(condBlock);
-        Value cond = exprLowerer.lower(doWhile.getCondition());
-        BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, cond, bodyBlock, exitBlock);
-        ctx.getCurrentBlock().addInstruction(branch);
-        condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        condBlock.addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        exprLowerer.lowerCondition(doWhile.getCondition(), bodyBlock, exitBlock);
 
         ctx.popLoop();
         ctx.setCurrentBlock(exitBlock);
@@ -242,11 +240,7 @@ public class StatementLowerer {
         ctx.setCurrentBlock(condBlock);
         Expression cond = forStmt.getCondition();
         if (cond != null) {
-            Value condVal = exprLowerer.lower(cond);
-            BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, condVal, bodyBlock, exitBlock);
-            ctx.getCurrentBlock().addInstruction(branch);
-            condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-            condBlock.addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            exprLowerer.lowerCondition(cond, bodyBlock, exitBlock);
         } else {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(bodyBlock));
             condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
@@ -477,5 +471,47 @@ public class StatementLowerer {
     }
 
     private void lowerIRRegion(IRRegionStmt irRegion) {
+        List<IRBlock> blocks = irRegion.getBlocks();
+        if (blocks.isEmpty()) {
+            return;
+        }
+
+        Set<IRBlock> regionBlocks = new HashSet<>(blocks);
+
+        for (IRBlock block : blocks) {
+            for (IRBlock succ : block.getSuccessors()) {
+                if (!regionBlocks.contains(succ) && !ctx.getIrMethod().getBlocks().contains(succ)) {
+                    throw new LoweringException(
+                        "IRRegion has external successor not in method: " + succ.getName());
+                }
+            }
+        }
+
+        for (IRBlock block : blocks) {
+            if (!ctx.getIrMethod().getBlocks().contains(block)) {
+                ctx.getIrMethod().addBlock(block);
+            }
+        }
+
+        IRBlock entry = irRegion.getEntryBlock();
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(entry));
+        ctx.getCurrentBlock().addSuccessor(entry, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+
+        IRBlock exitBlock = null;
+        for (IRBlock block : blocks) {
+            for (IRBlock succ : block.getSuccessors()) {
+                if (!regionBlocks.contains(succ)) {
+                    exitBlock = succ;
+                    break;
+                }
+            }
+            if (exitBlock != null) break;
+        }
+
+        if (exitBlock != null) {
+            ctx.setCurrentBlock(exitBlock);
+        } else {
+            ctx.setCurrentBlock(blocks.get(blocks.size() - 1));
+        }
     }
 }

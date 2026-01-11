@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.visitor;
 
+import com.tonic.analysis.source.ast.decl.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.*;
@@ -11,6 +12,20 @@ import com.tonic.analysis.source.ast.type.*;
  * @param <T> the return type of visit methods
  */
 public interface SourceVisitor<T> {
+
+    // ==================== Declarations ====================
+
+    default T visitCompilationUnit(CompilationUnit cu) { return null; }
+    default T visitImportDecl(ImportDecl decl) { return null; }
+    default T visitClassDecl(ClassDecl decl) { return null; }
+    default T visitInterfaceDecl(InterfaceDecl decl) { return null; }
+    default T visitEnumDecl(EnumDecl decl) { return null; }
+    default T visitEnumConstantDecl(EnumConstantDecl decl) { return null; }
+    default T visitMethodDecl(MethodDecl decl) { return null; }
+    default T visitConstructorDecl(ConstructorDecl decl) { return null; }
+    default T visitFieldDecl(FieldDecl decl) { return null; }
+    default T visitParameterDecl(ParameterDecl decl) { return null; }
+    default T visitAnnotationExpr(AnnotationExpr expr) { return null; }
 
     // ==================== Statements ====================
 

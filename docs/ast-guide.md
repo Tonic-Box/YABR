@@ -323,7 +323,7 @@ import com.tonic.analysis.source.lower.ASTLowerer;
 
 // After mutating the AST, lower back to IR
 ASTLowerer lowerer = new ASTLowerer(cf.getConstPool());
-lowerer.lower(ast, ir, method);
+lowerer.replaceBody(ast, ir);
 
 // Lower IR to bytecode
 ssa.lower(ir, method);
@@ -518,13 +518,10 @@ import com.tonic.analysis.source.lower.ASTLowerer;
 // Create lowerer
 ASTLowerer lowerer = new ASTLowerer(constPool);
 
-// Option 1: Lower into existing IRMethod
-lowerer.lower(bodyAst, existingIRMethod, methodEntry);
+// Option 1: Replace method body of existing IRMethod
+lowerer.replaceBody(bodyAst, existingIRMethod);
 
-// Option 2: Replace method body entirely
-lowerer.replaceBody(newBodyAst, existingIRMethod);
-
-// Option 3: Create new IRMethod from scratch
+// Option 2: Create new IRMethod from scratch
 IRMethod newMethod = ASTLowerer.lowerMethod(
     bodyAst,                    // BlockStmt
     "methodName",               // method name
@@ -646,7 +643,7 @@ public class ASTRoundtrip {
 
         // 5. Lower AST back to IR
         ASTLowerer lowerer = new ASTLowerer(constPool);
-        lowerer.lower(ast, ir, method);
+        lowerer.replaceBody(ast, ir);
 
         // 6. Lower IR to bytecode
         ssa.lower(ir, method);

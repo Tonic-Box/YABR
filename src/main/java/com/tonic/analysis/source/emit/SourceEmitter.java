@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.emit;
 
+import com.tonic.analysis.source.ast.decl.*;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
@@ -67,6 +68,390 @@ public class SourceEmitter implements SourceVisitor<Void> {
         SourceEmitter emitter = new SourceEmitter(writer);
         expr.accept(emitter);
         return writer.toString();
+    }
+
+    /**
+     * Emits a compilation unit to a string.
+     */
+    public static String emit(CompilationUnit cu) {
+        return emit(cu, SourceEmitterConfig.defaults());
+    }
+
+    /**
+     * Emits a compilation unit to a string with configuration.
+     */
+    public static String emit(CompilationUnit cu, SourceEmitterConfig config) {
+        IndentingWriter writer = IndentingWriter.toStringWriter();
+        SourceEmitter emitter = new SourceEmitter(writer, config);
+        emitter.visitCompilationUnit(cu);
+        return writer.toString();
+    }
+
+    @Override
+    public Void visitCompilationUnit(CompilationUnit cu) {
+        if (cu.hasPackage()) {
+            writer.write("package ");
+            writer.write(cu.getPackageName());
+            writer.writeLine(";");
+            writer.newLine();
+        }
+
+        for (ImportDecl imp : cu.getImports()) {
+            visitImportDecl(imp);
+        }
+        if (!cu.getImports().isEmpty()) {
+            writer.newLine();
+        }
+
+        for (TypeDecl type : cu.getTypes()) {
+            if (type instanceof ClassDecl) {
+                visitClassDecl((ClassDecl) type);
+            } else if (type instanceof InterfaceDecl) {
+                visitInterfaceDecl((InterfaceDecl) type);
+            } else if (type instanceof EnumDecl) {
+                visitEnumDecl((EnumDecl) type);
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitImportDecl(ImportDecl decl) {
+        writer.write("import ");
+        if (decl.isStatic()) {
+            writer.write("static ");
+        }
+        writer.write(decl.getName());
+        if (decl.isWildcard()) {
+            writer.write(".*");
+        }
+        writer.writeLine(";");
+        return null;
+    }
+
+    @Override
+    public Void visitClassDecl(ClassDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        emitModifiers(decl.getModifiers());
+        writer.write("class ");
+        writer.write(decl.getName());
+        emitTypeParameters(decl.getTypeParameters());
+
+        if (decl.getSuperclass() != null) {
+            writer.write(" extends ");
+            writer.write(decl.getSuperclass().toJavaSource());
+        }
+
+        if (!decl.getInterfaces().isEmpty()) {
+            writer.write(" implements ");
+            emitTypeList(decl.getInterfaces());
+        }
+
+        writer.writeLine(" {");
+        writer.indent();
+        writer.newLine();
+
+        for (FieldDecl field : decl.getFields()) {
+            visitFieldDecl(field);
+        }
+        if (!decl.getFields().isEmpty()) {
+            writer.newLine();
+        }
+
+        for (ConstructorDecl ctor : decl.getConstructors()) {
+            visitConstructorDecl(ctor);
+            writer.newLine();
+        }
+
+        for (MethodDecl method : decl.getMethods()) {
+            visitMethodDecl(method);
+            writer.newLine();
+        }
+
+        for (TypeDecl inner : decl.getInnerTypes()) {
+            if (inner instanceof ClassDecl) {
+                visitClassDecl((ClassDecl) inner);
+            } else if (inner instanceof InterfaceDecl) {
+                visitInterfaceDecl((InterfaceDecl) inner);
+            } else if (inner instanceof EnumDecl) {
+                visitEnumDecl((EnumDecl) inner);
+            }
+        }
+
+        writer.dedent();
+        writer.writeLine("}");
+        return null;
+    }
+
+    @Override
+    public Void visitInterfaceDecl(InterfaceDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        emitModifiers(decl.getModifiers());
+        writer.write("interface ");
+        writer.write(decl.getName());
+        emitTypeParameters(decl.getTypeParameters());
+
+        if (!decl.getExtendedInterfaces().isEmpty()) {
+            writer.write(" extends ");
+            emitTypeList(decl.getExtendedInterfaces());
+        }
+
+        writer.writeLine(" {");
+        writer.indent();
+        writer.newLine();
+
+        for (FieldDecl field : decl.getFields()) {
+            visitFieldDecl(field);
+        }
+        if (!decl.getFields().isEmpty()) {
+            writer.newLine();
+        }
+
+        for (MethodDecl method : decl.getMethods()) {
+            visitMethodDecl(method);
+            writer.newLine();
+        }
+
+        for (TypeDecl inner : decl.getInnerTypes()) {
+            if (inner instanceof ClassDecl) {
+                visitClassDecl((ClassDecl) inner);
+            } else if (inner instanceof InterfaceDecl) {
+                visitInterfaceDecl((InterfaceDecl) inner);
+            }
+        }
+
+        writer.dedent();
+        writer.writeLine("}");
+        return null;
+    }
+
+    @Override
+    public Void visitEnumDecl(EnumDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        emitModifiers(decl.getModifiers());
+        writer.write("enum ");
+        writer.write(decl.getName());
+
+        if (!decl.getInterfaces().isEmpty()) {
+            writer.write(" implements ");
+            emitTypeList(decl.getInterfaces());
+        }
+
+        writer.writeLine(" {");
+        writer.indent();
+
+        List<EnumConstantDecl> constants = decl.getConstants();
+        for (int i = 0; i < constants.size(); i++) {
+            visitEnumConstantDecl(constants.get(i));
+            if (i < constants.size() - 1) {
+                writer.writeLine(",");
+            } else if (!decl.getFields().isEmpty() || !decl.getMethods().isEmpty() || !decl.getConstructors().isEmpty()) {
+                writer.writeLine(";");
+            } else {
+                writer.newLine();
+            }
+        }
+
+        if (!decl.getFields().isEmpty() || !decl.getMethods().isEmpty() || !decl.getConstructors().isEmpty()) {
+            writer.newLine();
+
+            for (FieldDecl field : decl.getFields()) {
+                visitFieldDecl(field);
+            }
+            if (!decl.getFields().isEmpty()) {
+                writer.newLine();
+            }
+
+            for (ConstructorDecl ctor : decl.getConstructors()) {
+                visitConstructorDecl(ctor);
+                writer.newLine();
+            }
+
+            for (MethodDecl method : decl.getMethods()) {
+                visitMethodDecl(method);
+                writer.newLine();
+            }
+        }
+
+        writer.dedent();
+        writer.writeLine("}");
+        return null;
+    }
+
+    @Override
+    public Void visitEnumConstantDecl(EnumConstantDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        writer.write(decl.getName());
+
+        if (!decl.getArguments().isEmpty()) {
+            writer.write("(");
+            emitExpressionList(decl.getArguments());
+            writer.write(")");
+        }
+
+        if (decl.hasBody()) {
+            writer.writeLine(" {");
+            writer.indent();
+            for (FieldDecl field : decl.getFields()) {
+                visitFieldDecl(field);
+            }
+            for (MethodDecl method : decl.getMethods()) {
+                visitMethodDecl(method);
+            }
+            writer.dedent();
+            writer.write("}");
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitMethodDecl(MethodDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        emitModifiers(decl.getModifiers());
+        emitTypeParameters(decl.getTypeParameters());
+
+        writer.write(decl.getReturnType().toJavaSource());
+        writer.write(" ");
+        writer.write(decl.getName());
+        writer.write("(");
+        emitParameters(decl.getParameters());
+        writer.write(")");
+
+        if (!decl.getThrowsTypes().isEmpty()) {
+            writer.write(" throws ");
+            emitTypeList(decl.getThrowsTypes());
+        }
+
+        if (decl.getBody() != null) {
+            writer.write(" ");
+            decl.getBody().accept(this);
+        } else {
+            writer.writeLine(";");
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitConstructorDecl(ConstructorDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        emitModifiers(decl.getModifiers());
+        emitTypeParameters(decl.getTypeParameters());
+
+        writer.write(decl.getName());
+        writer.write("(");
+        emitParameters(decl.getParameters());
+        writer.write(")");
+
+        if (!decl.getThrowsTypes().isEmpty()) {
+            writer.write(" throws ");
+            emitTypeList(decl.getThrowsTypes());
+        }
+
+        writer.write(" ");
+        decl.getBody().accept(this);
+
+        return null;
+    }
+
+    @Override
+    public Void visitFieldDecl(FieldDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        emitModifiers(decl.getModifiers());
+        writer.write(decl.getType().toJavaSource());
+        writer.write(" ");
+        writer.write(decl.getName());
+
+        if (decl.getInitializer() != null) {
+            writer.write(" = ");
+            decl.getInitializer().accept(this);
+        }
+
+        writer.writeLine(";");
+        return null;
+    }
+
+    @Override
+    public Void visitParameterDecl(ParameterDecl decl) {
+        emitAnnotations(decl.getAnnotations());
+        if (decl.isFinal()) {
+            writer.write("final ");
+        }
+        writer.write(decl.getType().toJavaSource());
+        if (decl.isVarArgs()) {
+            writer.write("...");
+        }
+        writer.write(" ");
+        writer.write(decl.getName());
+        return null;
+    }
+
+    @Override
+    public Void visitAnnotationExpr(AnnotationExpr expr) {
+        writer.write("@");
+        writer.write(expr.getAnnotationType().toJavaSource());
+
+        if (!expr.getValues().isEmpty()) {
+            writer.write("(");
+            List<AnnotationValue> values = expr.getValues();
+            if (values.size() == 1 && "value".equals(values.get(0).getName())) {
+                values.get(0).getValue().accept(this);
+            } else {
+                for (int i = 0; i < values.size(); i++) {
+                    if (i > 0) writer.write(", ");
+                    AnnotationValue av = values.get(i);
+                    writer.write(av.getName());
+                    writer.write(" = ");
+                    av.getValue().accept(this);
+                }
+            }
+            writer.write(")");
+        }
+
+        return null;
+    }
+
+    private void emitAnnotations(List<AnnotationExpr> annotations) {
+        for (AnnotationExpr ann : annotations) {
+            visitAnnotationExpr(ann);
+            writer.newLine();
+        }
+    }
+
+    private void emitModifiers(Set<Modifier> modifiers) {
+        for (Modifier mod : Modifier.values()) {
+            if (modifiers.contains(mod)) {
+                writer.write(mod.getKeyword());
+                writer.write(" ");
+            }
+        }
+    }
+
+    private void emitTypeParameters(List<SourceType> typeParams) {
+        if (!typeParams.isEmpty()) {
+            writer.write("<");
+            for (int i = 0; i < typeParams.size(); i++) {
+                if (i > 0) writer.write(", ");
+                writer.write(typeParams.get(i).toJavaSource());
+            }
+            writer.write(">");
+        }
+    }
+
+    private void emitTypeList(List<SourceType> types) {
+        for (int i = 0; i < types.size(); i++) {
+            if (i > 0) writer.write(", ");
+            writer.write(types.get(i).toJavaSource());
+        }
+    }
+
+    private void emitParameters(List<ParameterDecl> params) {
+        for (int i = 0; i < params.size(); i++) {
+            if (i > 0) writer.write(", ");
+            visitParameterDecl(params.get(i));
+        }
     }
 
     @Override

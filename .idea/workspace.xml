@@ -8,9 +8,50 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Optimized SSA (Fix)">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Source -&gt; AST IR lowering (Compiler functionality)">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/parser-api.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/AnnotationExpr.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/AnnotationValue.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/ClassDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/CompilationUnit.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/ConstructorDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/EnumConstantDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/EnumDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/FieldDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/ImportDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/InterfaceDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/MethodDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/Modifier.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/ParameterDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/decl/TypeDecl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoopDetector.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/JavaParser.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Lexer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/ParseErrorListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/ParseException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Precedence.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/SourcePosition.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Token.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/TokenType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/parser/JavaParserTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/parser/LexerTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/FieldRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/FieldRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/architecture.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/visitor/SourceVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/visitor/SourceVisitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/CopyInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/CopyInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/PhiEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/PhiEliminator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ASTMutationDemo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ASTMutationDemo.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -198,14 +239,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00103" summary="- execution-api fixes: clinit">
-      <option name="closed" value="true" />
-      <created>1766766080639</created>
-      <option name="number" value="00103" />
-      <option name="presentableId" value="LOCAL-00103" />
-      <option name="project" value="LOCAL" />
-      <updated>1766766080639</updated>
     </task>
     <task id="LOCAL-00104" summary="- execution-api fixes: events">
       <option name="closed" value="true" />
@@ -591,7 +624,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767952905537</updated>
     </task>
-    <option name="localTasksCounter" value="152" />
+    <task id="LOCAL-00152" summary="- Field renamer fix for clinit block ref sites">
+      <option name="closed" value="true" />
+      <created>1767984317870</created>
+      <option name="number" value="00152" />
+      <option name="presentableId" value="LOCAL-00152" />
+      <option name="project" value="LOCAL" />
+      <updated>1767984317870</updated>
+    </task>
+    <option name="localTasksCounter" value="153" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -606,8 +647,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- SQL" />
-    <MESSAGE value="- Cleanup" />
     <MESSAGE value="- SSA IR rewrite" />
     <MESSAGE value="# Decompiler issues fixes&#10;1. Removed redundant return; at end of void methods&#10;2. Removed redundant super(); in constructors&#10;3. Fixed switch selector variable&#10;4. Fixed boolean returns&#10;5. Fixed inner class names&#10;6. Removed unused imports&#10;- Added two-pass code emission in ClassDecompiler (emit body first, collect types, then emit imports)&#10;- Added type tracking in SourceEmitter and ClassDecompiler&#10;- Fixed EnumSwitchMapRegistry.parseEnumClassFromFieldName to correctly handle inner class separators ($ vs /)&#10;7. Fixed raw generic types&#10;- Added SignatureParser inner class to TypeRecoverer for parsing generic signatures&#10;- Added recoverGenericType() method to parse JVM generic signatures&#10;- Updated ClassDecompiler to check for SignatureAttribute on fields and methods&#10;- Fields like List&lt;AuthenticationAttempt&gt; and method return types now show generics&#10;8. Fixed unreachable code after try-catch&#10;- Added isTerminatingTryCatch(), isTerminatingBlock(), isTerminatingBranch(), and isTerminatingStatement()" />
     <MESSAGE value="  - Variables with default initializers are moved closer to first use&#10;  - When first use is an assignment, the value is inlined into the declaration&#10;  - Accumulator patterns (x = x + ...) correctly keep declaration separate&#10;  - Variables used inside conditionals/loops stay at appropriate outer scope" />
@@ -631,7 +670,9 @@
     <MESSAGE value="- Optimized tests" />
     <MESSAGE value="- Optimized SSA" />
     <MESSAGE value="- Optimized SSA (Fix)" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Optimized SSA (Fix)" />
+    <MESSAGE value="- Field renamer fix for clinit block ref sites" />
+    <MESSAGE value="- Source -&gt; AST IR lowering (Compiler functionality)" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Source -&gt; AST IR lowering (Compiler functionality)" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

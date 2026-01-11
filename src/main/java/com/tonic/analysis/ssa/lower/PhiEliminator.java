@@ -11,6 +11,11 @@ import java.util.*;
 /**
  * Eliminates phi functions by inserting copies at predecessor blocks.
  * May split critical edges if necessary.
+ * <p>
+ * For phi nodes that have fewer incoming values than predecessors (incomplete phis),
+ * this class inserts default-value initialization copies on the missing paths. This
+ * ensures all local variable slots are properly initialized on all control flow paths,
+ * which is required by the JVM verifier.
  */
 public class PhiEliminator {
 
@@ -98,13 +103,12 @@ public class PhiEliminator {
                 SSAValue phiResult = phi.getResult();
                 if (phiResult == null) continue;
 
+                Set<IRBlock> predecessorsWithIncoming = new HashSet<>(phi.getIncomingValues().keySet());
+
                 for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
                     IRBlock pred = entry.getKey();
                     Value incoming = entry.getValue();
 
-                    // Create a FRESH SSAValue for this specific copy to maintain proper SSA semantics
-                    // This prevents the bug where multiple copies to the same value causes
-                    // incorrect live interval computation in RegisterAllocator
                     SSAValue copyResult = new SSAValue(
                         phiResult.getType(),
                         phiResult.getName() + "_copy" + copyId++
@@ -120,15 +124,57 @@ public class PhiEliminator {
                         pred.addInstruction(copy);
                     }
 
-                    // Track this copy for register coalescing
                     phiCopies.computeIfAbsent(phiResult, k -> new ArrayList<>())
                         .add(new CopyInfo(copyResult, pred));
+                }
+
+                for (IRBlock pred : block.getPredecessors()) {
+                    if (!predecessorsWithIncoming.contains(pred)) {
+                        SSAValue copyResult = new SSAValue(
+                            phiResult.getType(),
+                            phiResult.getName() + "_init" + copyId++
+                        );
+
+                        Value defaultValue = getDefaultValue(phiResult.getType());
+                        CopyInstruction copy = new CopyInstruction(copyResult, defaultValue);
+
+                        IRInstruction terminator = pred.getTerminator();
+                        if (terminator != null) {
+                            int index = pred.getInstructions().indexOf(terminator);
+                            pred.insertInstruction(index, copy);
+                        } else {
+                            pred.addInstruction(copy);
+                        }
+
+                        phiCopies.computeIfAbsent(phiResult, k -> new ArrayList<>())
+                            .add(new CopyInfo(copyResult, pred));
+                    }
                 }
             }
         }
 
-        // Store copy mapping for RegisterAllocator to use during coalescing
         method.setPhiCopyMapping(phiCopies);
+    }
+
+    private Value getDefaultValue(com.tonic.analysis.ssa.type.IRType type) {
+        if (type instanceof com.tonic.analysis.ssa.type.PrimitiveType) {
+            com.tonic.analysis.ssa.type.PrimitiveType prim = (com.tonic.analysis.ssa.type.PrimitiveType) type;
+            switch (prim) {
+                case INT:
+                case BOOLEAN:
+                case BYTE:
+                case CHAR:
+                case SHORT:
+                    return com.tonic.analysis.ssa.value.IntConstant.ZERO;
+                case LONG:
+                    return new com.tonic.analysis.ssa.value.LongConstant(0L);
+                case FLOAT:
+                    return new com.tonic.analysis.ssa.value.FloatConstant(0.0f);
+                case DOUBLE:
+                    return new com.tonic.analysis.ssa.value.DoubleConstant(0.0);
+            }
+        }
+        return com.tonic.analysis.ssa.value.NullConstant.INSTANCE;
     }
 
     private void removePhis(IRMethod method) {
@@ -141,39 +187,12 @@ public class PhiEliminator {
         private final IRBlock from;
         private final IRBlock to;
 
-        public EdgeToSplit(IRBlock from, IRBlock to) {
+        EdgeToSplit(IRBlock from, IRBlock to) {
             this.from = from;
             this.to = to;
         }
 
-        public IRBlock from() {
-            return from;
-        }
-
-        public IRBlock to() {
-            return to;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null || getClass() != obj.getClass()) return false;
-            EdgeToSplit that = (EdgeToSplit) obj;
-            return Objects.equals(from, that.from) &&
-                   Objects.equals(to, that.to);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(from, to);
-        }
-
-        @Override
-        public String toString() {
-            return "EdgeToSplit{" +
-                   "from=" + from +
-                   ", to=" + to +
-                   '}';
-        }
+        IRBlock from() { return from; }
+        IRBlock to() { return to; }
     }
 }

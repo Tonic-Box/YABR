@@ -3,6 +3,7 @@ package com.tonic.analysis.ssa.lower;
 import com.tonic.analysis.ssa.analysis.LivenessAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
@@ -20,7 +21,7 @@ public class RegisterAllocator {
 
     private final IRMethod method;
     private final LivenessAnalysis liveness;
-    private Map<SSAValue, Integer> allocation;
+    private final Map<SSAValue, Integer> allocation;
     private int maxLocals;
     private int reservedSlotCount; // Slots reserved for parameters, never released
 
@@ -33,12 +34,7 @@ public class RegisterAllocator {
 
     public void allocate() {
         List<LiveInterval> intervals = buildIntervals();
-        Collections.sort(intervals, Comparator.comparingInt(a -> a.start));
-
-        // Build coalescing groups from phi copies
-        Map<SSAValue, SSAValue> coalesceTarget = buildCoalesceGroups();
-        Map<SSAValue, LiveInterval> intervalMap = intervals.stream()
-            .collect(Collectors.toMap(i -> i.value, i -> i, (a, b) -> a));
+        intervals.sort(Comparator.comparingInt(a -> a.start));
 
         List<LiveInterval> active = new ArrayList<>();
         Set<Integer> freeRegs = new TreeSet<>();
@@ -58,24 +54,16 @@ public class RegisterAllocator {
         reservedSlotCount = slotIndex;
         maxLocals = slotIndex;
 
-        // Pre-allocate phi results FIRST so copies can coalesce to them
-        // This is necessary because phi results are defined at merge points which
-        // come AFTER predecessor blocks in program order, but copies in predecessors
-        // need to write to the phi result's register
-        preAllocatePhiResults(intervals, freeRegs);
+        preAllocatePhiResults(freeRegs);
+        assignPhiCopiesToPhiResultSlots();
 
         for (LiveInterval interval : intervals) {
             SSAValue value = interval.value;
-
-            // Skip values that already have registers (like parameters or phi results)
             if (allocation.containsKey(value)) {
                 continue;
             }
 
             expireOldIntervals(active, freeRegs, interval.start);
-
-            // Don't coalesce phi copies - they need their own slots to avoid conflicts
-            // The BytecodeEmitter will handle the load from copy slot and store to phi slot
 
             int reg;
             if (!freeRegs.isEmpty()) {
@@ -86,8 +74,6 @@ public class RegisterAllocator {
             }
 
             if (interval.value.getType().isTwoSlot()) {
-                // For two-slot values, try to find consecutive free registers
-                // or allocate new ones at the end
                 boolean foundConsecutive = false;
                 for (int candidate : new ArrayList<>(freeRegs)) {
                     if (freeRegs.contains(candidate + 1)) {
@@ -97,7 +83,6 @@ public class RegisterAllocator {
                     }
                 }
                 if (!foundConsecutive) {
-                    // No consecutive free registers, allocate at end
                     reg = maxLocals;
                     maxLocals += 2;
                 }
@@ -114,45 +99,122 @@ public class RegisterAllocator {
 
     /**
      * Pre-allocates registers for phi results before the main allocation loop.
-     * This ensures that when phi copy values are processed, they can be coalesced
-     * to the phi result's register.
+     * For nested phis (where an outer phi's incoming value is an inner phi result),
+     * we coalesce them to the same slot to prevent type inconsistencies at merge points.
+     * <p>
+     * Uses Union-Find to handle cycles correctly (e.g., nested loops where inner and
+     * outer count phis reference each other).
      */
-    private void preAllocatePhiResults(List<LiveInterval> intervals, Set<Integer> freeRegs) {
+    private void preAllocatePhiResults(Set<Integer> freeRegs) {
         Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
         if (phiCopies == null) return;
 
-        // Allocate a register for each phi result
-        for (SSAValue phiResult : phiCopies.keySet()) {
-            if (allocation.containsKey(phiResult)) continue;
+        Set<SSAValue> allPhiResults = phiCopies.keySet();
+        Map<SSAValue, SSAValue> coalescingMap = buildPhiCoalescingMap(allPhiResults);
 
-            int reg;
-            if (!freeRegs.isEmpty()) {
-                reg = freeRegs.iterator().next();
-                freeRegs.remove(reg);
+        Map<SSAValue, SSAValue> parent = new HashMap<>();
+        for (SSAValue phi : allPhiResults) {
+            parent.put(phi, phi);
+        }
+
+        for (Map.Entry<SSAValue, SSAValue> entry : coalescingMap.entrySet()) {
+            union(parent, entry.getKey(), entry.getValue());
+        }
+
+        Map<SSAValue, Integer> representativeSlots = new HashMap<>();
+        for (SSAValue phiResult : allPhiResults) {
+            SSAValue representative = find(parent, phiResult);
+
+            if (representativeSlots.containsKey(representative)) {
+                allocation.put(phiResult, representativeSlots.get(representative));
             } else {
-                reg = maxLocals++;
+                int reg = allocateSlot(phiResult.getType().isTwoSlot(), freeRegs);
+                representativeSlots.put(representative, reg);
+                allocation.put(phiResult, reg);
             }
+        }
+    }
 
-            if (phiResult.getType().isTwoSlot()) {
-                boolean foundConsecutive = false;
-                for (int candidate : new ArrayList<>(freeRegs)) {
-                    if (freeRegs.contains(candidate + 1)) {
-                        reg = candidate;
-                        foundConsecutive = true;
-                        break;
+    private SSAValue find(Map<SSAValue, SSAValue> parent, SSAValue x) {
+        if (!parent.get(x).equals(x)) {
+            parent.put(x, find(parent, parent.get(x)));
+        }
+        return parent.get(x);
+    }
+
+    private void union(Map<SSAValue, SSAValue> parent, SSAValue x, SSAValue y) {
+        SSAValue rootX = find(parent, x);
+        SSAValue rootY = find(parent, y);
+        if (!rootX.equals(rootY)) {
+            parent.put(rootX, rootY);
+        }
+    }
+
+    private void assignPhiCopiesToPhiResultSlots() {
+        Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
+        if (phiCopies == null) return;
+
+        for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
+            SSAValue phiResult = entry.getKey();
+            Integer phiSlot = allocation.get(phiResult);
+            if (phiSlot == null) continue;
+
+            for (CopyInfo copyInfo : entry.getValue()) {
+                allocation.put(copyInfo.copyValue(), phiSlot);
+            }
+        }
+    }
+
+    private Map<SSAValue, SSAValue> buildPhiCoalescingMap(Set<SSAValue> allPhiResults) {
+        Map<SSAValue, SSAValue> coalescingMap = new HashMap<>();
+        Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
+        if (phiCopies == null) return coalescingMap;
+
+        for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
+            SSAValue phiResult = entry.getKey();
+            for (CopyInfo copyInfo : entry.getValue()) {
+                for (IRInstruction instr : copyInfo.block().getInstructions()) {
+                    if (instr instanceof CopyInstruction) {
+                        CopyInstruction copy = (CopyInstruction) instr;
+                        if (copy.getResult().equals(copyInfo.copyValue())) {
+                            com.tonic.analysis.ssa.value.Value source = copy.getSource();
+                            if (source instanceof SSAValue && allPhiResults.contains(source)) {
+                                coalescingMap.put(phiResult, (SSAValue) source);
+                            }
+                        }
                     }
                 }
-                if (!foundConsecutive) {
-                    reg = maxLocals;
-                    maxLocals += 2;
-                }
-                freeRegs.remove(reg);
-                freeRegs.remove(reg + 1);
-                maxLocals = Math.max(maxLocals, reg + 2);
             }
-
-            allocation.put(phiResult, reg);
         }
+
+        return coalescingMap;
+    }
+
+    private int allocateSlot(boolean twoSlot, Set<Integer> freeRegs) {
+        int reg;
+        if (!freeRegs.isEmpty() && !twoSlot) {
+            reg = freeRegs.iterator().next();
+            freeRegs.remove(reg);
+        } else if (twoSlot) {
+            boolean foundConsecutive = false;
+            reg = maxLocals;
+            for (int candidate : new ArrayList<>(freeRegs)) {
+                if (freeRegs.contains(candidate + 1)) {
+                    reg = candidate;
+                    foundConsecutive = true;
+                    break;
+                }
+            }
+            if (!foundConsecutive) {
+                maxLocals += 2;
+            }
+            freeRegs.remove(reg);
+            freeRegs.remove(reg + 1);
+            maxLocals = Math.max(maxLocals, reg + 2);
+        } else {
+            reg = maxLocals++;
+        }
+        return reg;
     }
 
     /**
@@ -174,36 +236,6 @@ public class RegisterAllocator {
         }
 
         return coalesce;
-    }
-
-    /**
-     * Checks if a value can be coalesced into a specific register.
-     * Coalescing is safe if the register is not live during this interval.
-     */
-    private boolean canCoalesce(LiveInterval interval, int reg, List<LiveInterval> active,
-                                Map<SSAValue, LiveInterval> intervalMap) {
-        // Check if any active interval with this register overlaps
-        for (LiveInterval other : active) {
-            Integer otherReg = allocation.get(other.value);
-            if (otherReg != null && otherReg == reg) {
-                // Both using the same register - check for overlap
-                if (intervalsOverlap(interval, other)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Checks if two intervals overlap.
-     */
-    private boolean intervalsOverlap(LiveInterval a, LiveInterval b) {
-        return !(a.end < b.start || b.end < a.start);
-    }
-
-    private boolean isConsecutiveFree(Set<Integer> freeRegs, int reg) {
-        return freeRegs.contains(reg) && freeRegs.contains(reg + 1);
     }
 
     private void expireOldIntervals(List<LiveInterval> active, Set<Integer> freeRegs, int currentPos) {

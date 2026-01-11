@@ -2,6 +2,8 @@ package com.tonic.analysis.source.lower;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
+import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ConstPool;
@@ -30,6 +32,16 @@ public class LoweringContext {
     /** Map from variable names to their current SSA values */
     private final Map<String, SSAValue> variableMap = new HashMap<>();
 
+    /** Map from variable names to their local slot indices */
+    private final Map<String, Integer> variableLocalIndices = new HashMap<>();
+
+    /** Next available local slot index */
+    private int nextLocalIndex = 0;
+
+    /** Whether to emit Load/Store instructions for variables (needed for loops) */
+    @Setter
+    private boolean emitLocalInstructions = false;
+
     /** Stack of loop targets for break/continue */
     private final Deque<LoopTargets> loopStack = new ArrayDeque<>();
 
@@ -38,9 +50,6 @@ public class LoweringContext {
 
     /** Map from switch labels to their target blocks */
     private final Map<String, IRBlock> switchLabelMap = new HashMap<>();
-
-    /** Counter for generating unique block names */
-    private int blockCounter = 0;
 
     /** Counter for generating temporary variable names */
     private int tempCounter = 0;
@@ -51,6 +60,29 @@ public class LoweringContext {
     public LoweringContext(IRMethod irMethod, ConstPool constPool) {
         this.irMethod = irMethod;
         this.constPool = constPool;
+    }
+
+    /**
+     * Initializes local slot indices starting after parameters.
+     */
+    public void initializeLocalSlots(int parameterSlotCount) {
+        this.nextLocalIndex = parameterSlotCount;
+    }
+
+    /**
+     * Registers a parameter with its local slot index without emitting StoreLocal.
+     * Parameters are already at their slots from the method call.
+     */
+    public void registerParameter(String name, int localIndex, SSAValue value) {
+        variableMap.put(name, value);
+        variableLocalIndices.put(name, localIndex);
+    }
+
+    /**
+     * Gets or allocates a local slot index for a variable.
+     */
+    public int getOrAllocateLocalIndex(String name) {
+        return variableLocalIndices.computeIfAbsent(name, k -> nextLocalIndex++);
     }
 
     /**
@@ -66,26 +98,43 @@ public class LoweringContext {
      * Creates a new basic block with a specific name prefix.
      */
     public IRBlock createBlock(String prefix) {
-        IRBlock block = new IRBlock();
+        IRBlock block = new IRBlock(prefix);
         irMethod.addBlock(block);
         return block;
     }
 
     /**
      * Sets or updates a variable's SSA value.
+     * When emitLocalInstructions is enabled, also emits a StoreLocalInstruction.
      */
     public void setVariable(String name, SSAValue value) {
         variableMap.put(name, value);
+
+        if (emitLocalInstructions && currentBlock != null) {
+            int localIndex = getOrAllocateLocalIndex(name);
+            StoreLocalInstruction store = new StoreLocalInstruction(localIndex, value);
+            currentBlock.addInstruction(store);
+        }
     }
 
     /**
      * Gets a variable's current SSA value.
+     * When emitLocalInstructions is enabled, also emits a LoadLocalInstruction.
      */
     public SSAValue getVariable(String name) {
         SSAValue value = variableMap.get(name);
         if (value == null) {
             throw new LoweringException("Undefined variable: " + name);
         }
+
+        if (emitLocalInstructions && currentBlock != null) {
+            int localIndex = getOrAllocateLocalIndex(name);
+            SSAValue loadedValue = newValue(value.getType());
+            LoadLocalInstruction load = new LoadLocalInstruction(loadedValue, localIndex);
+            currentBlock.addInstruction(load);
+            return loadedValue;
+        }
+
         return value;
     }
 
@@ -214,34 +263,7 @@ public class LoweringContext {
             this.breakTarget = breakTarget;
         }
 
-        public IRBlock continueTarget() {
-            return continueTarget;
-        }
-
-        public IRBlock breakTarget() {
-            return breakTarget;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null || getClass() != obj.getClass()) return false;
-            LoopTargets that = (LoopTargets) obj;
-            return Objects.equals(continueTarget, that.continueTarget) &&
-                   Objects.equals(breakTarget, that.breakTarget);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(continueTarget, breakTarget);
-        }
-
-        @Override
-        public String toString() {
-            return "LoopTargets{" +
-                   "continueTarget=" + continueTarget +
-                   ", breakTarget=" + breakTarget +
-                   '}';
-        }
+        public IRBlock continueTarget() { return continueTarget; }
+        public IRBlock breakTarget() { return breakTarget; }
     }
 }

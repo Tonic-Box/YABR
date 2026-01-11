@@ -3,7 +3,6 @@ package com.tonic.demo;
 import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
-import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.lower.ASTLowerer;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
@@ -111,7 +110,7 @@ public class ASTMutationDemo {
         // Step 4: Lower AST back to IR
         System.out.println("Step 4: Lower AST back to IR");
         ASTLowerer astLowerer = new ASTLowerer(constPool);
-        astLowerer.lower(mutatedAst, irMethod, method);
+        astLowerer.replaceBody(mutatedAst, irMethod);
         System.out.println("  New IR blocks: " + irMethod.getBlocks().size());
         System.out.println();
 
@@ -259,7 +258,7 @@ public class ASTMutationDemo {
 
             // Verify the mutation worked
             if (result instanceof Integer) {
-                Integer intResult = (Integer) result;
+                int intResult = (int) result;
                 // Original: (10 + 20) * 2 - 10 = 50
                 // After mutation (10->100): (100 + 20) * 2 - 100 = 140
                 System.out.println();

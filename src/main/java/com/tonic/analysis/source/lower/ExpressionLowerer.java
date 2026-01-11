@@ -32,6 +32,73 @@ public class ExpressionLowerer {
     }
 
     /**
+     * Lowers a condition expression for control flow (if/while/for).
+     * Creates a branch instruction directly without creating extra blocks.
+     *
+     * @param condition the condition expression
+     * @param trueTarget block to branch to if condition is true
+     * @param falseTarget block to branch to if condition is false
+     */
+    public void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget) {
+        if (condition instanceof BinaryExpr) {
+            BinaryExpr bin = (BinaryExpr) condition;
+            if (bin.getOperator().isComparison()) {
+                lowerComparisonForControlFlow(bin, trueTarget, falseTarget);
+                return;
+            }
+        }
+
+        Value cond = lower(condition);
+        BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, cond, trueTarget, falseTarget);
+        ctx.getCurrentBlock().addInstruction(branch);
+        ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+    }
+
+    private void lowerComparisonForControlFlow(BinaryExpr bin, IRBlock trueTarget, IRBlock falseTarget) {
+        Value left = lower(bin.getLeft());
+        Value right = lower(bin.getRight());
+
+        CompareOp cmpOp = ReverseOperatorMapper.toCompareOp(bin.getOperator());
+        IRBlock currentBlock = ctx.getCurrentBlock();
+
+        SourceType leftType = bin.getLeft().getType();
+        if (leftType == PrimitiveSourceType.LONG) {
+            SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
+            BinaryOpInstruction lcmp = new BinaryOpInstruction(cmpResult, BinaryOp.LCMP, left, right);
+            currentBlock.addInstruction(lcmp);
+
+            CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
+            BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
+            currentBlock.addInstruction(branch);
+        } else if (leftType == PrimitiveSourceType.FLOAT) {
+            SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
+            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
+            currentBlock.addInstruction(fcmpInstr);
+
+            CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
+            BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
+            currentBlock.addInstruction(branch);
+        } else if (leftType == PrimitiveSourceType.DOUBLE) {
+            SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
+            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
+            currentBlock.addInstruction(dcmpInstr);
+
+            CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
+            BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
+            currentBlock.addInstruction(branch);
+        } else {
+            BranchInstruction branch = new BranchInstruction(cmpOp, left, right, trueTarget, falseTarget);
+            currentBlock.addInstruction(branch);
+        }
+
+        currentBlock.addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        currentBlock.addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+    }
+
+    /**
      * Lowers an expression and returns the SSAValue result.
      */
     public Value lower(Expression expr) {
@@ -60,7 +127,7 @@ public class ExpressionLowerer {
         } else if (expr instanceof InstanceOfExpr) {
             return lowerInstanceOf((InstanceOfExpr) expr);
         } else if (expr instanceof ThisExpr) {
-            return lowerThis((ThisExpr) expr);
+            return lowerThis();
         } else if (expr instanceof ArrayInitExpr) {
             return lowerArrayInit((ArrayInitExpr) expr);
         } else {
@@ -142,6 +209,9 @@ public class ExpressionLowerer {
         }
 
         IRType resultType = bin.getType().toIRType();
+        left = widenIfNeeded(left, resultType);
+        right = widenIfNeeded(right, resultType);
+
         SSAValue result = ctx.newValue(resultType);
         BinaryOpInstruction instr = new BinaryOpInstruction(result, irOp, left, right);
         ctx.getCurrentBlock().addInstruction(instr);
@@ -198,33 +268,35 @@ public class ExpressionLowerer {
 
         Value left = lower(bin.getLeft());
 
+        IRBlock shortCircuitBlock = ctx.createBlock();
         IRBlock evalRight = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
 
+        IRBlock currentBlock = ctx.getCurrentBlock();
         CompareOp cmp = isAnd ? CompareOp.IFEQ : CompareOp.IFNE;
-        BranchInstruction branch;
-        if (isAnd) {
-            branch = new BranchInstruction(cmp, left, mergeBlock, evalRight);
-        } else {
-            branch = new BranchInstruction(cmp, left, mergeBlock, evalRight);
-        }
+        BranchInstruction branch = new BranchInstruction(cmp, left, shortCircuitBlock, evalRight);
+        currentBlock.addInstruction(branch);
+        currentBlock.addSuccessor(shortCircuitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        currentBlock.addSuccessor(evalRight, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
-        ctx.getCurrentBlock().addInstruction(branch);
+        ctx.setCurrentBlock(shortCircuitBlock);
+        IntConstant shortCircuitValue = isAnd ? IntConstant.ZERO : IntConstant.ONE;
+        SSAValue shortCircuitResult = ctx.newValue(PrimitiveType.INT);
+        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(shortCircuitResult, shortCircuitValue));
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        shortCircuitBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(evalRight);
         Value right = lower(bin.getRight());
         IRBlock rightEndBlock = ctx.getCurrentBlock();
-        SimpleInstruction gotoInstr = SimpleInstruction.createGoto(mergeBlock);
-        ctx.getCurrentBlock().addInstruction(gotoInstr);
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        rightEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
         PhiInstruction phi = new PhiInstruction(result);
-
-        IntConstant shortCircuitValue = isAnd ? IntConstant.ZERO : IntConstant.ONE;
-        phi.addIncoming(shortCircuitValue, ctx.getCurrentBlock());
+        phi.addIncoming(shortCircuitResult, shortCircuitBlock);
         phi.addIncoming(right, rightEndBlock);
-
         mergeBlock.addPhi(phi);
 
         return result;
@@ -239,48 +311,54 @@ public class ExpressionLowerer {
         IRBlock mergeBlock = ctx.createBlock();
 
         CompareOp cmpOp = ReverseOperatorMapper.toCompareOp(bin.getOperator());
+        IRBlock currentBlock = ctx.getCurrentBlock();
 
         SourceType leftType = bin.getLeft().getType();
         if (leftType == PrimitiveSourceType.LONG) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOpInstruction lcmp = new BinaryOpInstruction(cmpResult, BinaryOp.LCMP, left, right);
-            ctx.getCurrentBlock().addInstruction(lcmp);
+            currentBlock.addInstruction(lcmp);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
-            ctx.getCurrentBlock().addInstruction(branch);
+            currentBlock.addInstruction(branch);
         } else if (leftType == PrimitiveSourceType.FLOAT) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
             BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
-            ctx.getCurrentBlock().addInstruction(fcmpInstr);
+            currentBlock.addInstruction(fcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
-            ctx.getCurrentBlock().addInstruction(branch);
+            currentBlock.addInstruction(branch);
         } else if (leftType == PrimitiveSourceType.DOUBLE) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
             BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
-            ctx.getCurrentBlock().addInstruction(dcmpInstr);
+            currentBlock.addInstruction(dcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
-            ctx.getCurrentBlock().addInstruction(branch);
+            currentBlock.addInstruction(branch);
         } else {
             BranchInstruction branch = new BranchInstruction(cmpOp, left, right, trueBlock, falseBlock);
-            ctx.getCurrentBlock().addInstruction(branch);
+            currentBlock.addInstruction(branch);
         }
+
+        currentBlock.addSuccessor(trueBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        currentBlock.addSuccessor(falseBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(trueBlock);
         SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(falseBlock);
         SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -317,18 +395,23 @@ public class ExpressionLowerer {
             IRBlock falseBlock = ctx.createBlock();
             IRBlock mergeBlock = ctx.createBlock();
 
+            IRBlock currentBlock = ctx.getCurrentBlock();
             BranchInstruction branch = new BranchInstruction(CompareOp.IFEQ, operand, trueBlock, falseBlock);
-            ctx.getCurrentBlock().addInstruction(branch);
+            currentBlock.addInstruction(branch);
+            currentBlock.addSuccessor(trueBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            currentBlock.addSuccessor(falseBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
             ctx.setCurrentBlock(trueBlock);
             SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+            trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
             ctx.setCurrentBlock(falseBlock);
             SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+            falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
             ctx.setCurrentBlock(mergeBlock);
             SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -557,7 +640,6 @@ public class ExpressionLowerer {
         }
 
         if (toType instanceof ReferenceSourceType) {
-            ReferenceSourceType refType = (ReferenceSourceType) toType;
             IRType resultType = toType.toIRType();
             SSAValue result = ctx.newValue(resultType);
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, operand, resultType);
@@ -569,24 +651,23 @@ public class ExpressionLowerer {
     }
 
     private Value lowerTernary(TernaryExpr ternary) {
-        Value condition = lower(ternary.getCondition());
-
         IRBlock thenBlock = ctx.createBlock();
         IRBlock elseBlock = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
 
-        BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, condition, thenBlock, elseBlock);
-        ctx.getCurrentBlock().addInstruction(branch);
+        lowerCondition(ternary.getCondition(), thenBlock, elseBlock);
 
         ctx.setCurrentBlock(thenBlock);
         Value thenVal = lower(ternary.getThenExpr());
         IRBlock thenEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        thenEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(elseBlock);
         Value elseVal = lower(ternary.getElseExpr());
         IRBlock elseEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        elseEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         IRType resultType = ternary.getType().toIRType();
@@ -616,7 +697,7 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerThis(ThisExpr thisExpr) {
+    private Value lowerThis() {
         return ctx.getVariable("this");
     }
 
@@ -643,5 +724,49 @@ public class ExpressionLowerer {
         }
 
         return result;
+    }
+
+    private Value widenIfNeeded(Value value, IRType targetType) {
+        if (!(value instanceof SSAValue)) {
+            return value;
+        }
+
+        SSAValue ssaValue = (SSAValue) value;
+        IRType sourceType = ssaValue.getType();
+
+        if (sourceType.equals(targetType)) {
+            return value;
+        }
+
+        if (!(sourceType instanceof PrimitiveType) || !(targetType instanceof PrimitiveType)) {
+            return value;
+        }
+
+        PrimitiveType srcPrim = (PrimitiveType) sourceType;
+        PrimitiveType tgtPrim = (PrimitiveType) targetType;
+
+        UnaryOp conversionOp = getWideningOp(srcPrim, tgtPrim);
+        if (conversionOp == null) {
+            return value;
+        }
+
+        SSAValue widened = ctx.newValue(targetType);
+        UnaryOpInstruction instr = new UnaryOpInstruction(widened, conversionOp, value);
+        ctx.getCurrentBlock().addInstruction(instr);
+        return widened;
+    }
+
+    private UnaryOp getWideningOp(PrimitiveType from, PrimitiveType to) {
+        if (from == PrimitiveType.INT) {
+            if (to == PrimitiveType.LONG) return UnaryOp.I2L;
+            if (to == PrimitiveType.FLOAT) return UnaryOp.I2F;
+            if (to == PrimitiveType.DOUBLE) return UnaryOp.I2D;
+        } else if (from == PrimitiveType.LONG) {
+            if (to == PrimitiveType.FLOAT) return UnaryOp.L2F;
+            if (to == PrimitiveType.DOUBLE) return UnaryOp.L2D;
+        } else if (from == PrimitiveType.FLOAT) {
+            if (to == PrimitiveType.DOUBLE) return UnaryOp.F2D;
+        }
+        return null;
     }
 }

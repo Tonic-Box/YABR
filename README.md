@@ -128,7 +128,7 @@ System.out.println(SourceEmitter.emit(ast));  // Print as Java source
 
 // Mutate and recompile
 ast.getStatements().forEach(stmt -> { /* modify */ });
-new ASTLowerer(constPool).lower(ast, irMethod, method);
+new ASTLowerer(constPool).replaceBody(ast, irMethod);
 ssa.lower(irMethod, method);
 ```
 
