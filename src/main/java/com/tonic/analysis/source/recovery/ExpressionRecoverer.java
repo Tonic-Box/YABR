@@ -308,54 +308,6 @@ public class ExpressionRecoverer {
     }
 
     /**
-     * Parses parameter types from a method descriptor.
-     * E.g., "(ZILjava/lang/String;)V" returns ["Z", "I", "Ljava/lang/String;"]
-     */
-    private List<String> parseParameterTypes(String desc) {
-        List<String> types = new ArrayList<>();
-        if (desc == null || !desc.startsWith("(")) return types;
-
-        int idx = 1;
-        while (idx < desc.length() && desc.charAt(idx) != ')') {
-            int start = idx;
-            char c = desc.charAt(idx);
-            if (c == 'L') {
-                int end = desc.indexOf(';', idx);
-                if (end > 0) {
-                    types.add(desc.substring(start, end + 1));
-                    idx = end + 1;
-                } else {
-                    break;
-                }
-            } else if (c == '[') {
-                StringBuilder arrayDesc = new StringBuilder();
-                while (idx < desc.length() && desc.charAt(idx) == '[') {
-                    arrayDesc.append('[');
-                    idx++;
-                }
-                if (idx < desc.length()) {
-                    char elemType = desc.charAt(idx);
-                    if (elemType == 'L') {
-                        int end = desc.indexOf(';', idx);
-                        if (end > 0) {
-                            arrayDesc.append(desc, idx, end + 1);
-                            idx = end + 1;
-                        }
-                    } else {
-                        arrayDesc.append(elemType);
-                        idx++;
-                    }
-                }
-                types.add(arrayDesc.toString());
-            } else {
-                types.add(String.valueOf(c));
-                idx++;
-            }
-        }
-        return types;
-    }
-
-    /**
      * Attempts to collapse a StringBuilder chain into a string concatenation expression.
      * Pattern: new StringBuilder().append(a).append(b).toString() → a + b
      */
@@ -1060,7 +1012,6 @@ public class ExpressionRecoverer {
                 String samDescriptor) {
 
             String implName = handle.getName();
-            String implOwner = handle.getOwner();
 
             try {
                 ClassFile classFile = context.getSourceMethod().getClassFile();
@@ -1301,7 +1252,7 @@ public class ExpressionRecoverer {
 
                     if (def == null) {
                         if ("this".equals(ssaName)) {
-                            return new ThisExpr(null);
+                            return new ThisExpr(ReferenceSourceType.OBJECT);
                         }
                         if (ssaName != null && ssaName.startsWith("p")) {
                             try {
@@ -1329,7 +1280,7 @@ public class ExpressionRecoverer {
                                 return new VarRefExpr(paramName, type != null ? type : ReferenceSourceType.OBJECT, null);
                             }
                             if (slot == 0 && !lambdaIR.isStatic()) {
-                                return new ThisExpr(null);
+                                return new ThisExpr(ReferenceSourceType.OBJECT);
                             }
                         }
                     }

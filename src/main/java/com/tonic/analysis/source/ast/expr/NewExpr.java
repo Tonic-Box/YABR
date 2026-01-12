@@ -14,11 +14,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a new object expression: new Type(args)
+ * Represents a new object expression: new Type(args) or outer.new Inner(args)
  */
 @Getter
 public final class NewExpr implements Expression {
 
+    /**
+     * The enclosing instance for inner class creation (e.g., outer.new Inner()).
+     * Null for regular class instantiation.
+     */
+    @Setter
+    private Expression enclosingInstance;
     /**
      * The class being instantiated (in internal format).
      */
@@ -29,15 +35,24 @@ public final class NewExpr implements Expression {
     @Setter
     private ASTNode parent;
 
-    public NewExpr(String className, List<Expression> arguments, SourceType type, SourceLocation location) {
+    public NewExpr(Expression enclosingInstance, String className, List<Expression> arguments,
+                   SourceType type, SourceLocation location) {
         this.arguments = new NodeList<>(this);
+        this.enclosingInstance = enclosingInstance;
         this.className = Objects.requireNonNull(className, "className cannot be null");
         this.type = type != null ? type : new ReferenceSourceType(className);
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
+        if (enclosingInstance != null) {
+            enclosingInstance.setParent(this);
+        }
         if (arguments != null) {
             this.arguments.addAll(arguments);
         }
+    }
+
+    public NewExpr(String className, List<Expression> arguments, SourceType type, SourceLocation location) {
+        this(null, className, arguments, type, location);
     }
 
     public NewExpr(String className, List<Expression> arguments, SourceType type) {
@@ -73,9 +88,26 @@ public final class NewExpr implements Expression {
         return ClassNameUtil.getSimpleNameWithInnerClasses(className);
     }
 
+    /**
+     * Returns true if this is an inner class creation with an enclosing instance.
+     */
+    public boolean isInnerClassCreation() {
+        return enclosingInstance != null;
+    }
+
+    public NewExpr withEnclosingInstance(Expression enclosingInstance) {
+        if (this.enclosingInstance != null) this.enclosingInstance.setParent(null);
+        this.enclosingInstance = enclosingInstance;
+        if (enclosingInstance != null) enclosingInstance.setParent(this);
+        return this;
+    }
+
     @Override
     public java.util.List<ASTNode> getChildren() {
-        return new java.util.ArrayList<>(arguments);
+        java.util.List<ASTNode> children = new java.util.ArrayList<>();
+        if (enclosingInstance != null) children.add(enclosingInstance);
+        children.addAll(arguments);
+        return children;
     }
 
     @Override
@@ -86,6 +118,9 @@ public final class NewExpr implements Expression {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        if (enclosingInstance != null) {
+            sb.append(enclosingInstance).append(".");
+        }
         sb.append("new ").append(getSimpleName()).append("(");
         for (int i = 0; i < arguments.size(); i++) {
             if (i > 0) sb.append(", ");

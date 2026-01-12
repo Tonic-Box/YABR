@@ -8,12 +8,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Source -&gt; AST IR lowering (Compiler functionality)">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="Fixed bugs in source lowering:&#10;- this/super null type: Parser passed null to ThisExpr/SuperExpr constructors -&gt; changed to ReferenceSourceType.OBJECT&#10;- Field access null owner: FieldAccessExpr was created with null ownerClass -&gt; added deriveOwnerClass() helper that extracts owner from expression type&#10;- ExpressionRecoverer same issue: Lambda recovery code also passed null to ThisExpr -&gt; same fix with ReferenceSourceType.OBJECT">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/PhiConstantPropagation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/PhiConstantPropagation.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/value/SSAValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/value/SSAValue.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/PhiConstantPropagationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/PhiConstantPropagationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/NewExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/NewExpr.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/parser/JavaParserTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/parser/JavaParserTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -201,22 +201,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00105" summary="- execution-api fixes: invoke slots counting">
-      <option name="closed" value="true" />
-      <created>1766798314855</created>
-      <option name="number" value="00105" />
-      <option name="presentableId" value="LOCAL-00105" />
-      <option name="project" value="LOCAL" />
-      <updated>1766798314855</updated>
-    </task>
-    <task id="LOCAL-00106" summary="- execution-api fixes: abstract resolution">
-      <option name="closed" value="true" />
-      <created>1766802296659</created>
-      <option name="number" value="00106" />
-      <option name="presentableId" value="LOCAL-00106" />
-      <option name="project" value="LOCAL" />
-      <updated>1766802296659</updated>
     </task>
     <task id="LOCAL-00107" summary="- execution-api fixes: native handlers for LocalDateTime">
       <option name="closed" value="true" />
@@ -594,7 +578,23 @@
       <option name="project" value="LOCAL" />
       <updated>1768115404617</updated>
     </task>
-    <option name="localTasksCounter" value="154" />
+    <task id="LOCAL-00154" summary="- Changed PhiConstantPropagation to use replaceAllUsesWith() instead of creating new instructions&#10;- ssaValue.isConstant() returns true if its definition is a ConstantInstruction now">
+      <option name="closed" value="true" />
+      <created>1768188286413</created>
+      <option name="number" value="00154" />
+      <option name="presentableId" value="LOCAL-00154" />
+      <option name="project" value="LOCAL" />
+      <updated>1768188286413</updated>
+    </task>
+    <task id="LOCAL-00155" summary="- Changed PhiConstantPropagation to use replaceAllUsesWith() instead of creating new instructions&#10;- ssaValue.isConstant() returns true if its definition is a ConstantInstruction now">
+      <option name="closed" value="true" />
+      <created>1768188631733</created>
+      <option name="number" value="00155" />
+      <option name="presentableId" value="LOCAL-00155" />
+      <option name="project" value="LOCAL" />
+      <updated>1768188631733</updated>
+    </task>
+    <option name="localTasksCounter" value="156" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -609,8 +609,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- SSA IR rewrite" />
-    <MESSAGE value="# Decompiler issues fixes&#10;1. Removed redundant return; at end of void methods&#10;2. Removed redundant super(); in constructors&#10;3. Fixed switch selector variable&#10;4. Fixed boolean returns&#10;5. Fixed inner class names&#10;6. Removed unused imports&#10;- Added two-pass code emission in ClassDecompiler (emit body first, collect types, then emit imports)&#10;- Added type tracking in SourceEmitter and ClassDecompiler&#10;- Fixed EnumSwitchMapRegistry.parseEnumClassFromFieldName to correctly handle inner class separators ($ vs /)&#10;7. Fixed raw generic types&#10;- Added SignatureParser inner class to TypeRecoverer for parsing generic signatures&#10;- Added recoverGenericType() method to parse JVM generic signatures&#10;- Updated ClassDecompiler to check for SignatureAttribute on fields and methods&#10;- Fields like List&lt;AuthenticationAttempt&gt; and method return types now show generics&#10;8. Fixed unreachable code after try-catch&#10;- Added isTerminatingTryCatch(), isTerminatingBlock(), isTerminatingBranch(), and isTerminatingStatement()" />
     <MESSAGE value="  - Variables with default initializers are moved closer to first use&#10;  - When first use is an assignment, the value is inlined into the declaration&#10;  - Accumulator patterns (x = x + ...) correctly keep declaration separate&#10;  - Variables used inside conditionals/loops stay at appropriate outer scope" />
     <MESSAGE value="- better local inlining in decompile." />
     <MESSAGE value="- better local inlining in decompile.&#10;- cleanup" />
@@ -634,7 +632,9 @@
     <MESSAGE value="- Optimized SSA (Fix)" />
     <MESSAGE value="- Field renamer fix for clinit block ref sites" />
     <MESSAGE value="- Source -&gt; AST IR lowering (Compiler functionality)" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Source -&gt; AST IR lowering (Compiler functionality)" />
+    <MESSAGE value="- Changed PhiConstantPropagation to use replaceAllUsesWith() instead of creating new instructions&#10;- ssaValue.isConstant() returns true if its definition is a ConstantInstruction now" />
+    <MESSAGE value="Fixed bugs in source lowering:&#10;- this/super null type: Parser passed null to ThisExpr/SuperExpr constructors -&gt; changed to ReferenceSourceType.OBJECT&#10;- Field access null owner: FieldAccessExpr was created with null ownerClass -&gt; added deriveOwnerClass() helper that extracts owner from expression type&#10;- ExpressionRecoverer same issue: Lambda recovery code also passed null to ThisExpr -&gt; same fix with ReferenceSourceType.OBJECT" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed bugs in source lowering:&#10;- this/super null type: Parser passed null to ThisExpr/SuperExpr constructors -&gt; changed to ReferenceSourceType.OBJECT&#10;- Field access null owner: FieldAccessExpr was created with null ownerClass -&gt; added deriveOwnerClass() helper that extracts owner from expression type&#10;- ExpressionRecoverer same issue: Lambda recovery code also passed null to ThisExpr -&gt; same fix with ReferenceSourceType.OBJECT" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

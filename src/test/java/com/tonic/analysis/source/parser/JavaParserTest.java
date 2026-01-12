@@ -286,6 +286,54 @@ class JavaParserTest {
         }
 
         @Nested
+        class ThisAndSuperTests {
+            @Test
+            void parsesThisExpression() {
+                Expression expr = parser.parseExpression("this");
+                assertInstanceOf(ThisExpr.class, expr);
+            }
+
+            @Test
+            void parsesSuperExpression() {
+                Expression expr = parser.parseExpression("super");
+                assertInstanceOf(SuperExpr.class, expr);
+            }
+
+            @Test
+            void parsesThisFieldAccess() {
+                Expression expr = parser.parseExpression("this.field");
+                assertInstanceOf(FieldAccessExpr.class, expr);
+                FieldAccessExpr access = (FieldAccessExpr) expr;
+                assertInstanceOf(ThisExpr.class, access.getReceiver());
+                assertEquals("field", access.getFieldName());
+            }
+
+            @Test
+            void parsesSuperMethodCall() {
+                Expression expr = parser.parseExpression("super.method()");
+                assertInstanceOf(MethodCallExpr.class, expr);
+                MethodCallExpr call = (MethodCallExpr) expr;
+                assertInstanceOf(SuperExpr.class, call.getReceiver());
+                assertEquals("method", call.getMethodName());
+            }
+
+            @Test
+            void parsesClassWithThisAssignment() {
+                String source = "package osrs.dev.auth;\n" +
+                    "public class HelloWorld {\n" +
+                    "    private String message;\n" +
+                    "    public HelloWorld() {\n" +
+                    "        this.message = \"Hello!\";\n" +
+                    "    }\n" +
+                    "}";
+                CompilationUnit cu = parser.parse(source);
+                assertEquals("osrs.dev.auth", cu.getPackageName());
+                ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+                assertEquals("HelloWorld", cls.getName());
+            }
+        }
+
+        @Nested
         class LambdaExpressionTests {
             @Test
             void parsesSingleParamLambda() {

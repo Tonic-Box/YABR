@@ -319,13 +319,13 @@ public class Parser {
         if (match(TokenType.SEMICOLON)) return;
 
         if (check(TokenType.LBRACE)) {
-            parseInitializerBlock(owner);
+            parseInitializerBlock();
             return;
         }
 
         if (check(TokenType.STATIC) && checkNext(TokenType.LBRACE)) {
             advance();
-            parseInitializerBlock(owner);
+            parseInitializerBlock();
             return;
         }
 
@@ -404,7 +404,7 @@ public class Parser {
         }
     }
 
-    private void parseInitializerBlock(TypeDecl owner) {
+    private void parseInitializerBlock() {
         consume(TokenType.LBRACE, "Expected '{'");
         int depth = 1;
         while (!isAtEnd() && depth > 0) {
@@ -1133,7 +1133,8 @@ public class Parser {
                     if (check(TokenType.LPAREN)) {
                         expr = parseMethodCall(expr, name, loc);
                     } else {
-                        expr = new FieldAccessExpr(expr, name, null, false, ReferenceSourceType.OBJECT, loc);
+                        String ownerClass = deriveOwnerClass(expr);
+                        expr = new FieldAccessExpr(expr, name, ownerClass, false, ReferenceSourceType.OBJECT, loc);
                     }
                 }
             } else if (match(TokenType.LBRACKET)) {
@@ -1162,6 +1163,20 @@ public class Parser {
             return new ReferenceSourceType(((FieldAccessExpr) expr).getFieldName());
         }
         return ReferenceSourceType.OBJECT;
+    }
+
+    private String deriveOwnerClass(Expression expr) {
+        if (expr == null) {
+            return "java/lang/Object";
+        }
+        SourceType type = expr.getType();
+        if (type instanceof ReferenceSourceType) {
+            return ((ReferenceSourceType) type).getInternalName();
+        }
+        if (type instanceof GenericSourceType) {
+            return ((GenericSourceType) type).getRawType().getInternalName();
+        }
+        return "java/lang/Object";
     }
 
     private Expression parsePrimaryExpression() {
@@ -1202,10 +1217,10 @@ public class Parser {
         }
 
         if (match(TokenType.THIS)) {
-            return new ThisExpr(null, loc);
+            return new ThisExpr(ReferenceSourceType.OBJECT, loc);
         }
         if (match(TokenType.SUPER)) {
-            return new SuperExpr(null, loc);
+            return new SuperExpr(ReferenceSourceType.OBJECT, loc);
         }
 
         if (check(TokenType.NEW)) {
@@ -1481,7 +1496,7 @@ public class Parser {
             parseAnonymousClassBody();
         }
 
-        return new NewExpr(className, args, type, loc);
+        return new NewExpr(outer, className, args, type, loc);
     }
 
     private MethodCallExpr parseMethodCall(Expression receiver, String name, SourceLocation loc) {
