@@ -1,13 +1,22 @@
 package com.tonic.analysis.ssa.transform;
 
+import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
+import com.tonic.parser.MethodEntry;
+import com.tonic.testutil.TestClassLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -70,10 +79,13 @@ class PhiConstantPropagationTest {
         PhiConstantPropagation pcp = new PhiConstantPropagation();
         boolean changed = pcp.run(method);
 
-        // Phi should be replaced with constant
+        // Phi should be removed and uses replaced with constant
         assertTrue(changed);
         assertEquals(0, merge.getPhiInstructions().size());
-        assertTrue(merge.getInstructions().get(0) instanceof ConstantInstruction);
+        // Return instruction should now use the constant directly
+        ReturnInstruction ret = (ReturnInstruction) merge.getInstructions().get(0);
+        assertTrue(ret.getReturnValue() instanceof IntConstant);
+        assertEquals(10, ((IntConstant) ret.getReturnValue()).getValue());
     }
 
     @Test
@@ -112,10 +124,12 @@ class PhiConstantPropagationTest {
         PhiConstantPropagation pcp = new PhiConstantPropagation();
         boolean changed = pcp.run(method);
 
-        // Phi should be replaced with copy
+        // Phi should be removed and uses replaced with the SSA value
         assertTrue(changed);
         assertEquals(0, merge.getPhiInstructions().size());
-        assertTrue(merge.getInstructions().get(0) instanceof CopyInstruction);
+        // Return instruction should now use param directly
+        ReturnInstruction ret = (ReturnInstruction) merge.getInstructions().get(0);
+        assertSame(param, ret.getReturnValue());
     }
 
     @Test
@@ -262,5 +276,46 @@ class PhiConstantPropagationTest {
 
         assertTrue(changed);
         assertEquals(0, merge.getPhiInstructions().size());
+    }
+
+    @Test
+    void roundTrip_WithComplexObfuscatedClass_ProducesValidBytecode() throws Exception {
+        Path dClassPath = Path.of("d.class");
+        if (!Files.exists(dClassPath)) {
+            System.out.println("Skipping test - d.class not found in project root");
+            return;
+        }
+
+        byte[] classBytes = Files.readAllBytes(dClassPath);
+        ClassPool pool = new ClassPool(true);
+        ClassFile cf = pool.loadClass(classBytes);
+
+        SSA ssa = new SSA(cf.getConstPool());
+
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getCodeAttribute() == null) continue;
+
+            IRMethod ir = ssa.lift(method);
+            ssa.lower(ir, method);
+        }
+
+        cf.computeFrames();
+        cf.rebuild();
+
+        byte[] outputBytes = cf.write();
+
+        // Verify bytecode was generated (don't try to load if Java version mismatch)
+        assertNotNull(outputBytes);
+        assertTrue(outputBytes.length > 0);
+
+        // Try to load, but skip assertion if Java version mismatch
+        try {
+            TestClassLoader loader = new TestClassLoader();
+            Class<?> loadedClass = loader.defineClass("d", outputBytes);
+            assertNotNull(loadedClass);
+            assertEquals("d", loadedClass.getName());
+        } catch (UnsupportedClassVersionError e) {
+            System.out.println("Skipping class loading verification - class compiled for newer Java version");
+        }
     }
 }

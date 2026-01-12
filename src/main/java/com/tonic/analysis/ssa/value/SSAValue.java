@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.value;
 
+import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import lombok.Getter;
@@ -52,7 +53,7 @@ public class SSAValue implements Value {
 
     @Override
     public boolean isConstant() {
-        return false;
+        return definition instanceof ConstantInstruction;
     }
 
     /**

@@ -766,7 +766,10 @@ public class ClassDecompiler {
         if (type instanceof com.tonic.analysis.source.ast.type.ReferenceSourceType) {
             com.tonic.analysis.source.ast.type.ReferenceSourceType refType =
                 (com.tonic.analysis.source.ast.type.ReferenceSourceType) type;
-            usedTypes.add(refType.getInternalName());
+            String internalName = refType.getInternalName();
+            if (internalName.contains("/")) {
+                usedTypes.add(internalName);
+            }
             for (com.tonic.analysis.source.ast.type.SourceType typeArg : refType.getTypeArguments()) {
                 recordTypeFromSourceType(typeArg);
             }

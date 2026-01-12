@@ -29,10 +29,12 @@ public class PhiConstantPropagation implements IRTransform {
             List<PhiInstruction> phis = new ArrayList<>(block.getPhiInstructions());
 
             for (PhiInstruction phi : phis) {
-                IRInstruction replacement = trySimplifyPhi(phi);
-                if (replacement != null) {
-                    replacement.setBlock(block);
-                    block.insertInstruction(0, replacement);
+                Value replacementValue = trySimplifyPhi(phi);
+                if (replacementValue != null) {
+                    SSAValue phiResult = phi.getResult();
+                    if (phiResult != null) {
+                        phiResult.replaceAllUsesWith(replacementValue);
+                    }
                     block.removePhi(phi);
                     changed = true;
                 }
@@ -42,7 +44,7 @@ public class PhiConstantPropagation implements IRTransform {
         return changed;
     }
 
-    private IRInstruction trySimplifyPhi(PhiInstruction phi) {
+    private Value trySimplifyPhi(PhiInstruction phi) {
         Collection<Value> incomingValues = phi.getIncomingValues().values();
 
         if (incomingValues.isEmpty()) {
@@ -51,29 +53,13 @@ public class PhiConstantPropagation implements IRTransform {
 
         Value firstValue = incomingValues.iterator().next();
 
-        boolean allSame = true;
         for (Value value : incomingValues) {
             if (!areSameValue(firstValue, value)) {
-                allSame = false;
-                break;
+                return null;
             }
         }
 
-        if (!allSame) {
-            return null;
-        }
-
-        SSAValue result = phi.getResult();
-
-        if (firstValue instanceof Constant) {
-            Constant constant = (Constant) firstValue;
-            return new ConstantInstruction(result, constant);
-        } else if (firstValue instanceof SSAValue) {
-            SSAValue ssaValue = (SSAValue) firstValue;
-            return new CopyInstruction(result, ssaValue);
-        }
-
-        return null;
+        return firstValue;
     }
 
     private boolean areSameValue(Value a, Value b) {
