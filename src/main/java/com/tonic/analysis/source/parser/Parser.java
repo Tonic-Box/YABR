@@ -681,7 +681,50 @@ public class Parser {
     private boolean isLocalVariableDeclaration() {
         if (check(TokenType.FINAL)) return true;
         if (check(TokenType.VAR)) return true;
-        return current.isPrimitiveType();
+        if (current.isPrimitiveType()) return true;
+
+        if (check(TokenType.IDENTIFIER)) {
+            return looksLikeTypeDeclaration();
+        }
+        return false;
+    }
+
+    private boolean looksLikeTypeDeclaration() {
+        int offset = 0;
+
+        if (lexer.peekAhead(offset).getType() == TokenType.DOT) {
+            offset++;
+            while (lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER) {
+                offset++;
+                if (lexer.peekAhead(offset).getType() != TokenType.DOT) break;
+                offset++;
+            }
+        }
+
+        if (lexer.peekAhead(offset).getType() == TokenType.LT) {
+            int depth = 1;
+            offset++;
+            while (lexer.peekAhead(offset).getType() != TokenType.EOF) {
+                TokenType t = lexer.peekAhead(offset).getType();
+                if (t == TokenType.LT) depth++;
+                else if (t == TokenType.GT) depth--;
+                else if (t == TokenType.GT_GT) depth -= 2;
+                else if (t == TokenType.GT_GT_GT) depth -= 3;
+                offset++;
+                if (depth <= 0) break;
+            }
+        }
+
+        while (lexer.peekAhead(offset).getType() == TokenType.LBRACKET) {
+            offset++;
+            if (lexer.peekAhead(offset).getType() == TokenType.RBRACKET) {
+                offset++;
+            } else {
+                return false;
+            }
+        }
+
+        return lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER;
     }
 
     private IfStmt parseIf() {

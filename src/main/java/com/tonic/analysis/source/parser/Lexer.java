@@ -1,6 +1,8 @@
 package com.tonic.analysis.source.parser;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class Lexer {
@@ -13,7 +15,7 @@ public final class Lexer {
     private int tokenStartColumn;
 
     private Token current;
-    private Token peeked;
+    private final List<Token> lookaheadBuffer = new ArrayList<>();
 
     private static final Map<String, TokenType> KEYWORDS = new HashMap<>();
 
@@ -82,9 +84,8 @@ public final class Lexer {
     }
 
     public Token nextToken() {
-        if (peeked != null) {
-            current = peeked;
-            peeked = null;
+        if (!lookaheadBuffer.isEmpty()) {
+            current = lookaheadBuffer.remove(0);
             return current;
         }
         current = scanToken();
@@ -92,10 +93,14 @@ public final class Lexer {
     }
 
     public Token peek() {
-        if (peeked == null) {
-            peeked = scanToken();
+        return peekAhead(0);
+    }
+
+    public Token peekAhead(int offset) {
+        while (lookaheadBuffer.size() <= offset) {
+            lookaheadBuffer.add(scanToken());
         }
-        return peeked;
+        return lookaheadBuffer.get(offset);
     }
 
     public Token current() {
