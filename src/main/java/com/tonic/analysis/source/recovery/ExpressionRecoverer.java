@@ -467,7 +467,10 @@ public class ExpressionRecoverer {
                 }
                 args.add(recoverOperand(instr.getArguments().get(i), typeHint));
             }
-            SourceType retType = typeRecoverer.recoverType(instr.getResult());
+            SourceType retType = parseReturnType(instr.getDescriptor());
+            if (retType == null || retType.isVoid()) {
+                retType = typeRecoverer.recoverType(instr.getResult());
+            }
             boolean isStatic = instr.getInvokeType() == InvokeType.STATIC;
             MethodCallExpr call = new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType);
 
@@ -1433,6 +1436,14 @@ public class ExpressionRecoverer {
                 }
             }
             return types;
+        }
+
+        private SourceType parseReturnType(String desc) {
+            if (desc == null) return null;
+            int closeIdx = desc.indexOf(')');
+            if (closeIdx < 0 || closeIdx + 1 >= desc.length()) return null;
+            String returnTypeDesc = desc.substring(closeIdx + 1);
+            return typeRecoverer.recoverType(returnTypeDesc);
         }
 
         @Override

@@ -644,6 +644,35 @@ public class ExpressionLowerer {
                 return ((ReferenceSourceType) fieldType).getInternalName();
             }
         }
+        if (receiver instanceof MethodCallExpr) {
+            MethodCallExpr methodCall = (MethodCallExpr) receiver;
+            String methodOwner = methodCall.getOwnerClass();
+            if (methodOwner == null || methodOwner.isEmpty()) {
+                Expression methodReceiver = methodCall.getReceiver();
+                if (methodReceiver instanceof VarRefExpr) {
+                    VarRefExpr varRef = (VarRefExpr) methodReceiver;
+                    if (!ctx.hasVariable(varRef.getName())) {
+                        methodOwner = resolveClassName(varRef.getName());
+                    }
+                } else if (methodReceiver != null) {
+                    methodOwner = resolveReceiverOwnerClass(methodReceiver);
+                }
+            }
+            if (methodOwner != null && !methodOwner.isEmpty()) {
+                List<SourceType> argTypes = new ArrayList<>();
+                for (Expression arg : methodCall.getArguments()) {
+                    argTypes.add(arg.getType() != null ? arg.getType() : ReferenceSourceType.OBJECT);
+                }
+                SourceType returnType = ctx.getTypeResolver().resolveMethodReturnType(
+                    methodOwner, methodCall.getMethodName(), argTypes);
+                if (returnType instanceof ReferenceSourceType) {
+                    String internalName = ((ReferenceSourceType) returnType).getInternalName();
+                    if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object")) {
+                        return internalName;
+                    }
+                }
+            }
+        }
         SourceType type = receiver.getType();
         if (type instanceof ReferenceSourceType) {
             String internalName = ((ReferenceSourceType) type).getInternalName();

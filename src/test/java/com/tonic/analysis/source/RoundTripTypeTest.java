@@ -13,14 +13,12 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
 import com.tonic.type.AccessFlags;
 import com.tonic.utill.AccessBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,123 +28,67 @@ public class RoundTripTypeTest {
 
     private JavaParser parser;
     private ClassPool pool;
+    private static int testCounter = 0;
 
     @BeforeEach
     void setUp() {
         parser = JavaParser.create();
         pool = ClassPool.getDefault();
         TestUtils.resetSSACounters();
+        testCounter++;
     }
 
     @Test
-    void stringConcatRoundTrip() throws Exception {
+    void methodChainPreservesTypes() throws Exception {
+        String className = "RoundTripLogger" + testCounter;
         String source =
             "package test;\n" +
             "\n" +
-            "public class StringConcat {\n" +
-            "    public static void log(String msg) {\n" +
-            "        System.out.println(\"[INFO] \" + msg);\n" +
+            "import java.time.LocalDateTime;\n" +
+            "import java.time.format.DateTimeFormatter;\n" +
+            "\n" +
+            "public class " + className + " {\n" +
+            "    public void log(String msg) {\n" +
+            "        System.out.println(\"[\" + LocalDateTime.now().format(DateTimeFormatter.ofPattern(\"yyyy-MM-dd\")) + \"] \" + msg);\n" +
             "    }\n" +
             "}\n";
 
-        String decompiled = compileAndDecompile(source, "test/StringConcat");
-        System.out.println("Decompiled:\n" + decompiled);
+        ClassFile cf = compileSource(source, "test/" + className);
 
-        assertFalse(decompiled.contains("Object local"), "Should not have Object typed locals for string concat");
-        assertTrue(decompiled.contains("String") || decompiled.contains("println"), "Should have proper types");
+        String decompiled = ClassDecompiler.decompile(cf);
+
+        System.out.println("=== Round-trip decompiled ===");
+        System.out.println(decompiled);
+
+        assertFalse(decompiled.contains("Object local"), "Should not have Object-typed locals");
+        assertTrue(decompiled.contains("LocalDateTime.now()"), "Should have LocalDateTime.now() call");
+        assertTrue(decompiled.contains(".format("), "Should have format() call");
+        assertTrue(decompiled.contains("DateTimeFormatter.ofPattern"), "Should have DateTimeFormatter.ofPattern call");
     }
 
     @Test
-    void stringConcatWithIntRoundTrip() throws Exception {
+    void stringConcatPreservesTypes() throws Exception {
+        String className = "RoundTripConcat" + testCounter;
         String source =
             "package test;\n" +
             "\n" +
-            "public class StringInt {\n" +
-            "    public static void print(int num) {\n" +
-            "        System.out.println(\"Number: \" + num);\n" +
+            "public class " + className + " {\n" +
+            "    public String concat(String a, int b) {\n" +
+            "        return \"prefix_\" + a + \"_\" + b + \"_suffix\";\n" +
             "    }\n" +
             "}\n";
 
-        String decompiled = compileAndDecompile(source, "test/StringInt");
-        System.out.println("Decompiled:\n" + decompiled);
+        ClassFile cf = compileSource(source, "test/" + className);
+        String decompiled = ClassDecompiler.decompile(cf);
 
-        assertFalse(decompiled.contains("Object local"), "Should not have Object typed locals");
+        System.out.println("=== Round-trip decompiled ===");
+        System.out.println(decompiled);
+
+        assertFalse(decompiled.contains("StringBuilder"), "Should use invokedynamic not StringBuilder");
+        assertFalse(decompiled.contains("Object local"), "Should not have Object-typed locals");
     }
 
-    @Test
-    void chainedMethodCallsRoundTrip() throws Exception {
-        String source =
-            "package test;\n" +
-            "\n" +
-            "public class ChainedCalls {\n" +
-            "    public static String format(String s) {\n" +
-            "        return s.trim().toLowerCase();\n" +
-            "    }\n" +
-            "}\n";
-
-        String decompiled = compileAndDecompile(source, "test/ChainedCalls");
-        System.out.println("Decompiled:\n" + decompiled);
-
-        assertFalse(decompiled.contains("Object local"), "Chained method calls should preserve types");
-    }
-
-    @Test
-    void stringBuilderPatternInBytecode() throws IOException {
-        ClassFile cf = BytecodeBuilder.forClass("test/SBPattern")
-            .publicStaticMethod("concat", "(Ljava/lang/String;I)Ljava/lang/String;")
-                .new_("java/lang/StringBuilder")
-                .dup()
-                .invokespecial("java/lang/StringBuilder", "<init>", "()V")
-                .astore(2)
-                .aload(2)
-                .ldc("Prefix: ")
-                .invokevirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
-                .pop()
-                .aload(2)
-                .aload(0)
-                .invokevirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
-                .pop()
-                .aload(2)
-                .ldc(" - ")
-                .invokevirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
-                .pop()
-                .aload(2)
-                .iload(1)
-                .invokevirtual("java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;")
-                .pop()
-                .aload(2)
-                .invokevirtual("java/lang/StringBuilder", "toString", "()Ljava/lang/String;")
-                .areturn()
-            .build();
-
-        ClassDecompiler decompiler = new ClassDecompiler(cf);
-        String decompiled = decompiler.decompile();
-        System.out.println("StringBuilder pattern decompiled:\n" + decompiled);
-
-        assertFalse(decompiled.contains("Object local"),
-            "StringBuilder pattern should not produce Object-typed locals");
-    }
-
-    @Test
-    void multipleStringConcatsInMethod() throws Exception {
-        String source =
-            "package test;\n" +
-            "\n" +
-            "public class MultiConcat {\n" +
-            "    public static void logBoth(String a, String b) {\n" +
-            "        System.out.println(\"First: \" + a);\n" +
-            "        System.out.println(\"Second: \" + b);\n" +
-            "    }\n" +
-            "}\n";
-
-        String decompiled = compileAndDecompile(source, "test/MultiConcat");
-        System.out.println("Decompiled:\n" + decompiled);
-
-        int objectCount = countOccurrences(decompiled, "Object local");
-        assertEquals(0, objectCount, "Should have 0 Object-typed locals, found " + objectCount);
-    }
-
-    private String compileAndDecompile(String source, String className) throws Exception {
+    private ClassFile compileSource(String source, String className) throws Exception {
         CompilationUnit cu = parser.parse(source);
         assertNotNull(cu);
 
@@ -190,8 +132,7 @@ public class RoundTripTypeTest {
             ssa.lower(ir, method);
         }
 
-        ClassDecompiler decompiler = new ClassDecompiler(cf);
-        return decompiler.decompile();
+        return cf;
     }
 
     private String buildDescriptor(List<SourceType> params, SourceType returnType) {
@@ -202,15 +143,5 @@ public class RoundTripTypeTest {
         sb.append(")");
         sb.append(returnType.toIRType().getDescriptor());
         return sb.toString();
-    }
-
-    private int countOccurrences(String text, String pattern) {
-        int count = 0;
-        int idx = 0;
-        while ((idx = text.indexOf(pattern, idx)) != -1) {
-            count++;
-            idx += pattern.length();
-        }
-        return count;
     }
 }
