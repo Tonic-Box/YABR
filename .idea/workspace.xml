@@ -8,11 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Fixed type lexing issues">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-    </list>
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Fixed source lifting issue" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -199,14 +195,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00110" summary="- execution-api fixes: native handlers">
-      <option name="closed" value="true" />
-      <created>1766817657245</created>
-      <option name="number" value="00110" />
-      <option name="presentableId" value="LOCAL-00110" />
-      <option name="project" value="LOCAL" />
-      <updated>1766817657245</updated>
     </task>
     <task id="LOCAL-00111" summary="- execution-api fixes native handlers">
       <option name="closed" value="true" />
@@ -592,7 +580,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768280919993</updated>
     </task>
-    <option name="localTasksCounter" value="159" />
+    <task id="LOCAL-00159" summary="- Fixed source lifting issue">
+      <option name="closed" value="true" />
+      <created>1768289945611</created>
+      <option name="number" value="00159" />
+      <option name="presentableId" value="LOCAL-00159" />
+      <option name="project" value="LOCAL" />
+      <updated>1768289945611</updated>
+    </task>
+    <option name="localTasksCounter" value="160" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -607,7 +603,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- better local inlining in decompile." />
     <MESSAGE value="- better local inlining in decompile.&#10;- cleanup" />
     <MESSAGE value="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks" />
     <MESSAGE value="- AST api docs update" />
@@ -632,7 +627,8 @@
     <MESSAGE value="- Changed PhiConstantPropagation to use replaceAllUsesWith() instead of creating new instructions&#10;- ssaValue.isConstant() returns true if its definition is a ConstantInstruction now" />
     <MESSAGE value="Fixed bugs in source lowering:&#10;- this/super null type: Parser passed null to ThisExpr/SuperExpr constructors -&gt; changed to ReferenceSourceType.OBJECT&#10;- Field access null owner: FieldAccessExpr was created with null ownerClass -&gt; added deriveOwnerClass() helper that extracts owner from expression type&#10;- ExpressionRecoverer same issue: Lambda recovery code also passed null to ThisExpr -&gt; same fix with ReferenceSourceType.OBJECT" />
     <MESSAGE value="- Fixed type lexing issues" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixed type lexing issues" />
+    <MESSAGE value="- Fixed source lifting issue" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fixed source lifting issue" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

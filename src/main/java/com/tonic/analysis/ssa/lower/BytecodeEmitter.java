@@ -5,7 +5,10 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.type.AccessFlags;
 import com.tonic.utill.Opcode;
 import lombok.Getter;
@@ -876,9 +879,14 @@ public class BytecodeEmitter {
                 emit(opcode);
                 emitShort((short) cpIndex);
                 emitShort((short) 0);
+            } else if (instr.getBootstrapInfo() != null) {
+                cpIndex = createInvokeDynamicEntry(instr);
+                emit(opcode);
+                emitShort((short) cpIndex);
+                emitShort((short) 0);
             } else {
                 throw new UnsupportedOperationException(
-                    "Cannot emit INVOKEDYNAMIC without original constant pool index. " +
+                    "Cannot emit INVOKEDYNAMIC without original constant pool index or bootstrap info. " +
                     "Method: " + instr.getName() + instr.getDescriptor());
             }
             return;
@@ -1312,6 +1320,82 @@ public class BytecodeEmitter {
             }
         }
         return Opcode.ASTORE_0.getCode();
+    }
+
+    private int createInvokeDynamicEntry(InvokeInstruction instr) {
+        BootstrapMethodInfo bsInfo = instr.getBootstrapInfo();
+        if (bsInfo == null) {
+            throw new IllegalStateException("No bootstrap info for INVOKEDYNAMIC: " + instr.getName());
+        }
+
+        ClassFile classFile = constPool.getClassFile();
+        if (classFile == null) {
+            throw new IllegalStateException("No ClassFile available for creating INVOKEDYNAMIC entry");
+        }
+
+        BootstrapMethodsAttribute bsmAttr = findOrCreateBootstrapMethodsAttribute(classFile);
+
+        MethodHandleConstant mh = bsInfo.getBootstrapMethod();
+        int methodHandleIndex = constPool.findOrAddMethodHandle(
+            mh.getReferenceKind(),
+            mh.getOwner(),
+            mh.getName(),
+            mh.getDescriptor()
+        ).getIndex(constPool);
+
+        List<Integer> bsArgIndices = new ArrayList<>();
+        for (Constant arg : bsInfo.getBootstrapArguments()) {
+            int argIndex = addConstantToPool(arg);
+            bsArgIndices.add(argIndex);
+        }
+
+        bsmAttr.addBootstrapMethod(methodHandleIndex, bsArgIndices);
+        int bootstrapMethodIndex = bsmAttr.getBootstrapMethods().size() - 1;
+
+        int nameAndTypeIndex = constPool.addNameAndType(instr.getName(), instr.getDescriptor());
+
+        int cpIndex = constPool.addInvokeDynamic(bootstrapMethodIndex, nameAndTypeIndex);
+        return cpIndex;
+    }
+
+    private BootstrapMethodsAttribute findOrCreateBootstrapMethodsAttribute(ClassFile classFile) {
+        for (Attribute attr : classFile.getClassAttributes()) {
+            if (attr instanceof BootstrapMethodsAttribute) {
+                return (BootstrapMethodsAttribute) attr;
+            }
+        }
+        BootstrapMethodsAttribute bsmAttr = new BootstrapMethodsAttribute(constPool);
+        classFile.getClassAttributes().add(bsmAttr);
+        return bsmAttr;
+    }
+
+    private int addConstantToPool(Constant constant) {
+        if (constant instanceof StringConstant) {
+            return constPool.findOrAddString(((StringConstant) constant).getValue()).getIndex(constPool);
+        } else if (constant instanceof IntConstant) {
+            return constPool.findOrAddInteger(((IntConstant) constant).getValue()).getIndex(constPool);
+        } else if (constant instanceof LongConstant) {
+            return constPool.findOrAddLong(((LongConstant) constant).getValue()).getIndex(constPool);
+        } else if (constant instanceof FloatConstant) {
+            return constPool.findOrAddFloat(((FloatConstant) constant).getValue()).getIndex(constPool);
+        } else if (constant instanceof DoubleConstant) {
+            return constPool.findOrAddDouble(((DoubleConstant) constant).getValue()).getIndex(constPool);
+        } else if (constant instanceof MethodHandleConstant) {
+            MethodHandleConstant mh = (MethodHandleConstant) constant;
+            return constPool.findOrAddMethodHandle(
+                mh.getReferenceKind(),
+                mh.getOwner(),
+                mh.getName(),
+                mh.getDescriptor()
+            ).getIndex(constPool);
+        } else if (constant instanceof MethodTypeConstant) {
+            MethodTypeConstant mt = (MethodTypeConstant) constant;
+            return constPool.addMethodType(mt.getDescriptor());
+        } else if (constant instanceof ClassConstant) {
+            return constPool.findOrAddClass(((ClassConstant) constant).getClassName()).getIndex(constPool);
+        } else {
+            throw new IllegalArgumentException("Unsupported bootstrap argument type: " + constant.getClass().getName());
+        }
     }
 
     private void fixupJumps() {

@@ -234,65 +234,89 @@ public class ExpressionLowerer {
     }
 
     private Value lowerStringConcat(Expression leftExpr, Expression rightExpr) {
-        Value left = lower(leftExpr);
-        Value right = lower(rightExpr);
+        List<Object> parts = new ArrayList<>();
+        collectConcatParts(leftExpr, parts);
+        collectConcatParts(rightExpr, parts);
 
-        ReferenceType sbType = new ReferenceType("java/lang/StringBuilder");
-        SSAValue sb = ctx.newValue(sbType);
-        ctx.getCurrentBlock().addInstruction(new NewInstruction(sb, "java/lang/StringBuilder"));
+        StringBuilder recipe = new StringBuilder();
+        StringBuilder descriptor = new StringBuilder("(");
+        List<Value> dynamicArgs = new ArrayList<>();
 
-        List<Value> initArgs = new ArrayList<>();
-        initArgs.add(sb);
-        ctx.getCurrentBlock().addInstruction(new InvokeInstruction(
-            null, InvokeType.SPECIAL, "java/lang/StringBuilder", "<init>", "()V", initArgs));
+        for (Object part : parts) {
+            if (part instanceof String) {
+                recipe.append((String) part);
+            } else if (part instanceof Value) {
+                recipe.append('\u0001');
+                Value v = (Value) part;
+                dynamicArgs.add(v);
+                descriptor.append(getDescriptorForValue(v));
+            }
+        }
+        descriptor.append(")Ljava/lang/String;");
 
-        appendToStringBuilder(sb, left);
-        appendToStringBuilder(sb, right);
+        MethodHandleConstant bsm = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            "java/lang/invoke/StringConcatFactory",
+            "makeConcatWithConstants",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;"
+        );
+
+        List<Constant> bsArgs = new ArrayList<>();
+        bsArgs.add(new StringConstant(recipe.toString()));
+
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
 
         ReferenceType stringType = new ReferenceType("java/lang/String");
         SSAValue result = ctx.newValue(stringType);
-        List<Value> toStringArgs = new ArrayList<>();
-        toStringArgs.add(sb);
-        ctx.getCurrentBlock().addInstruction(new InvokeInstruction(
-            result, InvokeType.VIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", toStringArgs));
+
+        InvokeInstruction indy = new InvokeInstruction(
+            result,
+            InvokeType.DYNAMIC,
+            null,
+            "makeConcatWithConstants",
+            descriptor.toString(),
+            dynamicArgs,
+            0,
+            bsInfo
+        );
+        ctx.getCurrentBlock().addInstruction(indy);
 
         return result;
     }
 
-    private void appendToStringBuilder(SSAValue sb, Value value) {
-        String appendDesc = getAppendDescriptor(value);
-        List<Value> appendArgs = new ArrayList<>();
-        appendArgs.add(sb);
-        appendArgs.add(value);
-        ReferenceType sbType = new ReferenceType("java/lang/StringBuilder");
-        SSAValue appendResult = ctx.newValue(sbType);
-        ctx.getCurrentBlock().addInstruction(new InvokeInstruction(
-            appendResult, InvokeType.VIRTUAL, "java/lang/StringBuilder", "append", appendDesc, appendArgs));
+    private void collectConcatParts(Expression expr, List<Object> parts) {
+        if (expr instanceof BinaryExpr) {
+            BinaryExpr bin = (BinaryExpr) expr;
+            if (bin.getOperator() == BinaryOperator.ADD && isStringType(bin.getType())) {
+                collectConcatParts(bin.getLeft(), parts);
+                collectConcatParts(bin.getRight(), parts);
+                return;
+            }
+        }
+        if (expr instanceof LiteralExpr) {
+            LiteralExpr lit = (LiteralExpr) expr;
+            if (lit.getValue() instanceof String) {
+                parts.add((String) lit.getValue());
+                return;
+            }
+        }
+        parts.add(lower(expr));
     }
 
-    private String getAppendDescriptor(Value value) {
-        if (value instanceof SSAValue) {
-            IRType type = value.getType();
-            if (type == PrimitiveType.INT) return "(I)Ljava/lang/StringBuilder;";
-            if (type == PrimitiveType.LONG) return "(J)Ljava/lang/StringBuilder;";
-            if (type == PrimitiveType.FLOAT) return "(F)Ljava/lang/StringBuilder;";
-            if (type == PrimitiveType.DOUBLE) return "(D)Ljava/lang/StringBuilder;";
-            if (type == PrimitiveType.BOOLEAN) return "(Z)Ljava/lang/StringBuilder;";
-            if (type == PrimitiveType.CHAR) return "(C)Ljava/lang/StringBuilder;";
-            if (type instanceof ReferenceType) {
-                String name = ((ReferenceType) type).getInternalName();
-                if ("java/lang/String".equals(name)) {
-                    return "(Ljava/lang/String;)Ljava/lang/StringBuilder;";
-                }
-            }
-        } else if (value instanceof StringConstant) {
-            return "(Ljava/lang/String;)Ljava/lang/StringBuilder;";
-        } else if (value instanceof IntConstant) {
-            return "(I)Ljava/lang/StringBuilder;";
-        } else if (value instanceof LongConstant) {
-            return "(J)Ljava/lang/StringBuilder;";
+    private String getDescriptorForValue(Value value) {
+        IRType type = value.getType();
+        if (type == PrimitiveType.INT) return "I";
+        if (type == PrimitiveType.LONG) return "J";
+        if (type == PrimitiveType.FLOAT) return "F";
+        if (type == PrimitiveType.DOUBLE) return "D";
+        if (type == PrimitiveType.BOOLEAN) return "Z";
+        if (type == PrimitiveType.CHAR) return "C";
+        if (type == PrimitiveType.BYTE) return "B";
+        if (type == PrimitiveType.SHORT) return "S";
+        if (type instanceof ReferenceType) {
+            return "L" + ((ReferenceType) type).getInternalName() + ";";
         }
-        return "(Ljava/lang/Object;)Ljava/lang/StringBuilder;";
+        return "Ljava/lang/Object;";
     }
 
     private Value lowerAssignment(BinaryExpr bin) {
