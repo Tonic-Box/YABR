@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.lower;
 
 import com.tonic.analysis.source.ast.decl.ClassDecl;
+import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
@@ -32,6 +33,8 @@ public class ASTLowerer {
     private final ClassPool classPool;
     @Setter
     private ClassDecl currentClassDecl;
+    @Setter
+    private List<ImportDecl> imports = new ArrayList<>();
 
     /**
      * Lowers an AST method body to a new IRMethod.
@@ -53,6 +56,7 @@ public class ASTLowerer {
 
         TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
         typeResolver.setCurrentClassDecl(currentClassDecl);
+        typeResolver.setImports(imports);
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
 
         IRBlock entryBlock = ctx.createBlock();
@@ -108,6 +112,7 @@ public class ASTLowerer {
 
         TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
         typeResolver.setCurrentClassDecl(currentClassDecl);
+        typeResolver.setImports(imports);
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
 
         boolean hasLoops = containsLoops(body);
@@ -195,6 +200,7 @@ public class ASTLowerer {
     public void replaceBody(BlockStmt body, IRMethod irMethod) {
         TypeResolver typeResolver = new TypeResolver(classPool, irMethod.getOwnerClass());
         typeResolver.setCurrentClassDecl(currentClassDecl);
+        typeResolver.setImports(imports);
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
 
         irMethod.getBlocks().clear();

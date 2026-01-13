@@ -2,6 +2,7 @@ package com.tonic.analysis.source.lower;
 
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.FieldDecl;
+import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
 import com.tonic.analysis.source.ast.type.*;
@@ -13,6 +14,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -23,6 +25,8 @@ public class TypeResolver {
     private final String currentClass;
     @Setter
     private ClassDecl currentClassDecl;
+    @Setter
+    private List<ImportDecl> imports = new ArrayList<>();
 
     public SourceType resolveFieldType(String ownerClass, String fieldName) {
         if (currentClassDecl != null && isCurrentClass(ownerClass)) {
@@ -185,5 +189,62 @@ public class TypeResolver {
             default:
                 throw new LoweringException("Unknown descriptor character: " + c);
         }
+    }
+
+    public String resolveClassName(String simpleName) {
+        if (simpleName.contains("/")) {
+            return simpleName;
+        }
+        if (simpleName.contains(".")) {
+            return simpleName.replace('.', '/');
+        }
+
+        for (ImportDecl imp : imports) {
+            if (!imp.isStatic() && !imp.isWildcard()) {
+                String importName = imp.getName();
+                String simpleImport = imp.getSimpleName();
+                if (simpleImport.equals(simpleName)) {
+                    return importName.replace('.', '/');
+                }
+            }
+        }
+
+        for (ImportDecl imp : imports) {
+            if (!imp.isStatic() && imp.isWildcard()) {
+                String packageName = imp.getName().replace('.', '/');
+                String candidate = packageName + "/" + simpleName;
+                if (classPool.get(candidate) != null) {
+                    return candidate;
+                }
+            }
+        }
+
+        if (simpleName.equals("System")) return "java/lang/System";
+        if (simpleName.equals("Math")) return "java/lang/Math";
+        if (simpleName.equals("String")) return "java/lang/String";
+        if (simpleName.equals("Object")) return "java/lang/Object";
+        if (simpleName.equals("Integer")) return "java/lang/Integer";
+        if (simpleName.equals("Long")) return "java/lang/Long";
+        if (simpleName.equals("Double")) return "java/lang/Double";
+        if (simpleName.equals("Float")) return "java/lang/Float";
+        if (simpleName.equals("Boolean")) return "java/lang/Boolean";
+        if (simpleName.equals("Character")) return "java/lang/Character";
+        if (simpleName.equals("Byte")) return "java/lang/Byte";
+        if (simpleName.equals("Short")) return "java/lang/Short";
+        if (simpleName.equals("Class")) return "java/lang/Class";
+        if (simpleName.equals("StringBuilder")) return "java/lang/StringBuilder";
+        if (simpleName.equals("Thread")) return "java/lang/Thread";
+        if (simpleName.equals("Throwable")) return "java/lang/Throwable";
+        if (simpleName.equals("Exception")) return "java/lang/Exception";
+        if (simpleName.equals("RuntimeException")) return "java/lang/RuntimeException";
+
+        String ownerSimpleName = currentClass.contains("/")
+            ? currentClass.substring(currentClass.lastIndexOf('/') + 1)
+            : currentClass;
+        if (simpleName.equals(ownerSimpleName)) {
+            return currentClass;
+        }
+
+        return simpleName;
     }
 }

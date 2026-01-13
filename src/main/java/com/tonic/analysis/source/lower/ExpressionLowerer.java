@@ -730,32 +730,7 @@ public class ExpressionLowerer {
     }
 
     private String resolveClassName(String simpleName) {
-        if (simpleName.equals("System")) return "java/lang/System";
-        if (simpleName.equals("Math")) return "java/lang/Math";
-        if (simpleName.equals("String")) return "java/lang/String";
-        if (simpleName.equals("Object")) return "java/lang/Object";
-        if (simpleName.equals("Integer")) return "java/lang/Integer";
-        if (simpleName.equals("Long")) return "java/lang/Long";
-        if (simpleName.equals("Double")) return "java/lang/Double";
-        if (simpleName.equals("Float")) return "java/lang/Float";
-        if (simpleName.equals("Boolean")) return "java/lang/Boolean";
-        if (simpleName.equals("Character")) return "java/lang/Character";
-        if (simpleName.equals("Byte")) return "java/lang/Byte";
-        if (simpleName.equals("Short")) return "java/lang/Short";
-        if (simpleName.equals("Class")) return "java/lang/Class";
-        if (simpleName.equals("StringBuilder")) return "java/lang/StringBuilder";
-        if (simpleName.equals("Thread")) return "java/lang/Thread";
-        if (simpleName.equals("Throwable")) return "java/lang/Throwable";
-        if (simpleName.equals("Exception")) return "java/lang/Exception";
-        if (simpleName.equals("RuntimeException")) return "java/lang/RuntimeException";
-        String ownerClass = ctx.getIrMethod().getOwnerClass();
-        String ownerSimpleName = ownerClass.contains("/")
-            ? ownerClass.substring(ownerClass.lastIndexOf('/') + 1)
-            : ownerClass;
-        if (simpleName.equals(ownerSimpleName)) {
-            return ownerClass;
-        }
-        return simpleName.replace('.', '/');
+        return ctx.getTypeResolver().resolveClassName(simpleName);
     }
 
     private Value lowerFieldStore(FieldAccessExpr field, Value value) {

@@ -157,6 +157,7 @@ public class RoundTripTypeTest {
 
         ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
         lowerer.setCurrentClassDecl(classDecl);
+        lowerer.setImports(cu.getImports());
 
         for (MethodDecl methodDecl : classDecl.getMethods()) {
             if (methodDecl.getBody() == null) {
