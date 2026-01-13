@@ -34,6 +34,9 @@ public class RecoveryContext {
     /** Pending NewInstruction results waiting for <init> call */
     private final Map<SSAValue, String> pendingNewInstructions = new HashMap<>();
 
+    /** Local slots that contain pending new values (slot index -> class name) */
+    private final Map<Integer, String> pendingNewLocalSlots = new HashMap<>();
+
     /** Declared variable names in current scope */
     private final Set<String> declaredVariables = new HashSet<>();
 
@@ -97,6 +100,20 @@ public class RecoveryContext {
      */
     public String consumePendingNew(SSAValue value) {
         return pendingNewInstructions.remove(value);
+    }
+
+    /**
+     * Registers a local slot as containing a pending new value.
+     */
+    public void registerPendingNewLocalSlot(int localIndex, String className) {
+        pendingNewLocalSlots.put(localIndex, className);
+    }
+
+    /**
+     * Checks if a local slot contains a pending new value and returns the class name.
+     */
+    public String consumePendingNewLocalSlot(int localIndex) {
+        return pendingNewLocalSlots.remove(localIndex);
     }
 
     /**

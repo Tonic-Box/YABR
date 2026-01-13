@@ -5,6 +5,7 @@ import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
@@ -59,6 +60,20 @@ public class StatementRecoverer {
         }
     }
 
+    private void registerPendingNewInstructions(IRMethod method) {
+        for (IRBlock block : method.getBlocks()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (instr instanceof NewInstruction) {
+                    NewInstruction newInstr = (NewInstruction) instr;
+                    if (newInstr.getResult() != null) {
+                        context.getExpressionContext().registerPendingNew(
+                            newInstr.getResult(), newInstr.getClassName());
+                    }
+                }
+            }
+        }
+    }
+
     private final Set<SSAValue> ternaryPhiValues = new HashSet<>();
 
     /**
@@ -77,6 +92,7 @@ public class StatementRecoverer {
         collectTernaryPhis(method);
         detectSelfStorePhis(method);
 
+        registerPendingNewInstructions(method);
         emitPhiDeclarations(method, statements);
 
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
@@ -1102,6 +1118,12 @@ public class StatementRecoverer {
                         // Mark as materialized so recoverOperand returns a VarRefExpr instead of
                         // re-recovering the instruction (which would create duplicate new expressions)
                         context.getExpressionContext().markMaterialized(loadLocal.getResult());
+
+                        // Propagate pending-new status from local slot to loaded value
+                        String pendingNewClass = context.getExpressionContext().consumePendingNewLocalSlot(localIndex);
+                        if (pendingNewClass != null) {
+                            context.getExpressionContext().registerPendingNew(loadLocal.getResult(), pendingNewClass);
+                        }
                     }
                 } else if (instr instanceof StoreLocalInstruction) {
                     StoreLocalInstruction storeLocal = (StoreLocalInstruction) instr;
@@ -1134,6 +1156,12 @@ public class StatementRecoverer {
                         if (shouldOverwrite) {
                             context.getExpressionContext().setVariableName(sourceValue, localName);
                             context.getExpressionContext().markMaterialized(sourceValue);
+                        }
+
+                        // Propagate pending-new status to local slot
+                        if (context.getExpressionContext().isPendingNew(sourceValue)) {
+                            String className = context.getExpressionContext().consumePendingNew(sourceValue);
+                            context.getExpressionContext().registerPendingNewLocalSlot(localIndex, className);
                         }
                     }
                 }
@@ -1804,6 +1832,8 @@ public class StatementRecoverer {
         if (instr instanceof InvokeInstruction) {
             InvokeInstruction invoke = (InvokeInstruction) instr;
             if ("<init>".equals(invoke.getName())) {
+                Value receiver = invoke.getArguments().isEmpty() ? null : invoke.getArguments().get(0);
+                SSAValue ssaReceiver = (receiver instanceof SSAValue) ? (SSAValue) receiver : null;
                 Expression expr = exprRecoverer.recover(invoke);
                 if (expr instanceof MethodCallExpr) {
                     MethodCallExpr mce = (MethodCallExpr) expr;
@@ -1813,6 +1843,16 @@ public class StatementRecoverer {
                     }
                 }
                 if (expr instanceof NewExpr) {
+                    if (ssaReceiver != null) {
+                        String varName = context.getExpressionContext().getVariableName(ssaReceiver);
+                        if (varName != null && !varName.equals("this") && !varName.startsWith("arg")) {
+                            SourceType type = expr.getType();
+                            if (!context.getExpressionContext().isDeclared(varName)) {
+                                context.getExpressionContext().markDeclared(varName);
+                                return new VarDeclStmt(type, varName, expr);
+                            }
+                        }
+                    }
                     return null;
                 }
                 return new ExprStmt(expr);
@@ -1957,11 +1997,20 @@ public class StatementRecoverer {
     }
 
     private Statement recoverStoreLocal(StoreLocalInstruction store) {
+        Value storeValue = store.getValue();
+
+        if (storeValue instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) storeValue;
+            IRInstruction def = ssaValue.getDefinition();
+            if (def instanceof NewInstruction) {
+                return null;
+            }
+        }
+
         // When recovering the initialization value for a variable declaration,
         // we need to recover the actual expression (e.g., "new GridBagConstraints()"),
         // not a variable reference (e.g., "local1"). So we temporarily un-materialize
         // the value during recovery, then re-materialize it after.
-        Value storeValue = store.getValue();
         boolean wasMaterialized = false;
         if (storeValue instanceof SSAValue) {
             SSAValue ssaValue = (SSAValue) storeValue;
@@ -3624,7 +3673,17 @@ public class StatementRecoverer {
         if (type == null) {
             return "unknown";
         }
-        return type.isPrimitive() ? "primitive" : "reference";
+        if (type.isPrimitive()) {
+            return "primitive";
+        }
+        if (type instanceof ReferenceSourceType) {
+            ReferenceSourceType refType = (ReferenceSourceType) type;
+            return refType.getInternalName();
+        }
+        if (type instanceof ArraySourceType) {
+            return "array";
+        }
+        return "reference";
     }
 
     /**
