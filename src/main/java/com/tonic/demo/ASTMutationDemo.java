@@ -75,11 +75,11 @@ public class ASTMutationDemo {
             }
 
             // Run the full mutation pipeline
-            demonstrateMutation(targetMethod, constPool, classFile);
+            demonstrateMutation(targetMethod, constPool, classFile, classPool);
         }
     }
 
-    private static void demonstrateMutation(MethodEntry method, ConstPool constPool, ClassFile classFile) throws Exception {
+    private static void demonstrateMutation(MethodEntry method, ConstPool constPool, ClassFile classFile, ClassPool classPool) throws Exception {
         System.out.println("--- Method: " + method.getName() + method.getDesc() + " ---");
         System.out.println();
 
@@ -109,7 +109,7 @@ public class ASTMutationDemo {
 
         // Step 4: Lower AST back to IR
         System.out.println("Step 4: Lower AST back to IR");
-        ASTLowerer astLowerer = new ASTLowerer(constPool);
+        ASTLowerer astLowerer = new ASTLowerer(constPool, classPool);
         astLowerer.replaceBody(mutatedAst, irMethod);
         System.out.println("  New IR blocks: " + irMethod.getBlocks().size());
         System.out.println();

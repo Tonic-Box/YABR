@@ -56,7 +56,7 @@ class ASTLowererTest {
     void lowerEmptyMethodBody() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "emptyMethod",
@@ -78,7 +78,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt(LiteralExpr.ofInt(42)));
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "returnInt",
@@ -99,7 +99,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "voidMethod",
@@ -117,7 +117,7 @@ class ASTLowererTest {
     void lowerStaticMethodHasNoThisParameter() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "staticMethod",
@@ -134,7 +134,7 @@ class ASTLowererTest {
     void lowerInstanceMethodHasThisParameter() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "instanceMethod",
@@ -156,7 +156,7 @@ class ASTLowererTest {
         List<SourceType> params = new ArrayList<>();
         params.add(PrimitiveSourceType.INT);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "withParam",
@@ -177,7 +177,7 @@ class ASTLowererTest {
         params.add(PrimitiveSourceType.LONG);
         params.add(PrimitiveSourceType.FLOAT);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "multiParam",
@@ -196,7 +196,7 @@ class ASTLowererTest {
         List<SourceType> params = new ArrayList<>();
         params.add(PrimitiveSourceType.INT);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "instanceWithParam",
@@ -218,7 +218,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "declareVar",
@@ -239,7 +239,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "declareAndInit",
@@ -270,7 +270,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "assignVar",
@@ -297,7 +297,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt(addition));
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "addNumbers",
@@ -317,7 +317,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt(LiteralExpr.ofInt(123)));
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "returnLiteral",
@@ -337,7 +337,7 @@ class ASTLowererTest {
     void lowerMethodBuildsCorrectDescriptorForNoParams() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "noParams",
@@ -354,7 +354,7 @@ class ASTLowererTest {
     void lowerMethodBuildsCorrectDescriptorWithIntReturn() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "returnInt",
@@ -374,7 +374,7 @@ class ASTLowererTest {
         params.add(PrimitiveSourceType.INT);
         params.add(PrimitiveSourceType.LONG);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "withParams",
@@ -393,7 +393,7 @@ class ASTLowererTest {
     void lowerMethodCreatesEntryBlock() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "hasEntry",
@@ -410,7 +410,7 @@ class ASTLowererTest {
     void lowerMethodEntryBlockIsInBlockList() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "entryInList",
@@ -429,7 +429,7 @@ class ASTLowererTest {
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)));
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "implicitReturn",
@@ -455,7 +455,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         lowerer.replaceBody(body, irMethod);
 
         assertNotNull(irMethod.getEntryBlock());
@@ -469,7 +469,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         lowerer.replaceBody(body, irMethod);
 
         assertNotNull(irMethod.getEntryBlock());
@@ -488,7 +488,8 @@ class ASTLowererTest {
             true,
             List.of(),
             VoidSourceType.INSTANCE,
-            constPool
+            constPool,
+            pool
         );
 
         assertNotNull(irMethod);
@@ -512,7 +513,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt(sum));
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "sumTwoVars",
@@ -541,7 +542,7 @@ class ASTLowererTest {
         stmts.add(new ReturnStmt(new VarRefExpr("var0", PrimitiveSourceType.INT)));
         BlockStmt body = new BlockStmt(stmts);
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
 
         assertDoesNotThrow(() -> lowerer.lower(
             body,
@@ -557,7 +558,7 @@ class ASTLowererTest {
     void lowerMethodPreservesMethodName() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "mySpecialMethod",
@@ -574,7 +575,7 @@ class ASTLowererTest {
     void lowerMethodPreservesOwnerClass() {
         BlockStmt body = new BlockStmt();
 
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+        ASTLowerer lowerer = new ASTLowerer(constPool, pool);
         IRMethod irMethod = lowerer.lower(
             body,
             "test",

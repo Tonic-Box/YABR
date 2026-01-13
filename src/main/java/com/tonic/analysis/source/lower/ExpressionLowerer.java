@@ -1,9 +1,11 @@
 package com.tonic.analysis.source.lower;
 
 import com.tonic.analysis.source.ast.expr.*;
+import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.IRType;
@@ -200,6 +202,10 @@ public class ExpressionLowerer {
             return lowerComparison(bin);
         }
 
+        if (op == BinaryOperator.ADD && isStringType(bin.getType())) {
+            return lowerStringConcat(bin.getLeft(), bin.getRight());
+        }
+
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
@@ -217,6 +223,76 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
+    }
+
+    private boolean isStringType(SourceType type) {
+        if (type instanceof ReferenceSourceType) {
+            String name = ((ReferenceSourceType) type).getInternalName();
+            return "java/lang/String".equals(name);
+        }
+        return false;
+    }
+
+    private Value lowerStringConcat(Expression leftExpr, Expression rightExpr) {
+        Value left = lower(leftExpr);
+        Value right = lower(rightExpr);
+
+        ReferenceType sbType = new ReferenceType("java/lang/StringBuilder");
+        SSAValue sb = ctx.newValue(sbType);
+        ctx.getCurrentBlock().addInstruction(new NewInstruction(sb, "java/lang/StringBuilder"));
+
+        List<Value> initArgs = new ArrayList<>();
+        initArgs.add(sb);
+        ctx.getCurrentBlock().addInstruction(new InvokeInstruction(
+            null, InvokeType.SPECIAL, "java/lang/StringBuilder", "<init>", "()V", initArgs));
+
+        appendToStringBuilder(sb, left);
+        appendToStringBuilder(sb, right);
+
+        ReferenceType stringType = new ReferenceType("java/lang/String");
+        SSAValue result = ctx.newValue(stringType);
+        List<Value> toStringArgs = new ArrayList<>();
+        toStringArgs.add(sb);
+        ctx.getCurrentBlock().addInstruction(new InvokeInstruction(
+            result, InvokeType.VIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", toStringArgs));
+
+        return result;
+    }
+
+    private void appendToStringBuilder(SSAValue sb, Value value) {
+        String appendDesc = getAppendDescriptor(value);
+        List<Value> appendArgs = new ArrayList<>();
+        appendArgs.add(sb);
+        appendArgs.add(value);
+        ReferenceType sbType = new ReferenceType("java/lang/StringBuilder");
+        SSAValue appendResult = ctx.newValue(sbType);
+        ctx.getCurrentBlock().addInstruction(new InvokeInstruction(
+            appendResult, InvokeType.VIRTUAL, "java/lang/StringBuilder", "append", appendDesc, appendArgs));
+    }
+
+    private String getAppendDescriptor(Value value) {
+        if (value instanceof SSAValue) {
+            IRType type = value.getType();
+            if (type == PrimitiveType.INT) return "(I)Ljava/lang/StringBuilder;";
+            if (type == PrimitiveType.LONG) return "(J)Ljava/lang/StringBuilder;";
+            if (type == PrimitiveType.FLOAT) return "(F)Ljava/lang/StringBuilder;";
+            if (type == PrimitiveType.DOUBLE) return "(D)Ljava/lang/StringBuilder;";
+            if (type == PrimitiveType.BOOLEAN) return "(Z)Ljava/lang/StringBuilder;";
+            if (type == PrimitiveType.CHAR) return "(C)Ljava/lang/StringBuilder;";
+            if (type instanceof ReferenceType) {
+                String name = ((ReferenceType) type).getInternalName();
+                if ("java/lang/String".equals(name)) {
+                    return "(Ljava/lang/String;)Ljava/lang/StringBuilder;";
+                }
+            }
+        } else if (value instanceof StringConstant) {
+            return "(Ljava/lang/String;)Ljava/lang/StringBuilder;";
+        } else if (value instanceof IntConstant) {
+            return "(I)Ljava/lang/StringBuilder;";
+        } else if (value instanceof LongConstant) {
+            return "(J)Ljava/lang/StringBuilder;";
+        }
+        return "(Ljava/lang/Object;)Ljava/lang/StringBuilder;";
     }
 
     private Value lowerAssignment(BinaryExpr bin) {
@@ -459,34 +535,59 @@ public class ExpressionLowerer {
     private Value lowerMethodCall(MethodCallExpr call) {
         InvokeType invokeType;
         List<Value> args = new ArrayList<>();
+        String ownerClass = call.getOwnerClass();
 
         if (call.isStatic()) {
             invokeType = InvokeType.STATIC;
         } else {
             Expression receiver = call.getReceiver();
-            if (receiver != null) {
+            if (receiver instanceof VarRefExpr) {
+                VarRefExpr varRef = (VarRefExpr) receiver;
+                if (!ctx.hasVariable(varRef.getName())) {
+                    invokeType = InvokeType.STATIC;
+                    ownerClass = resolveClassName(varRef.getName());
+                } else {
+                    args.add(lower(receiver));
+                    invokeType = InvokeType.VIRTUAL;
+                }
+            } else if (receiver != null) {
                 args.add(lower(receiver));
+                invokeType = InvokeType.VIRTUAL;
+                if (ownerClass == null || ownerClass.isEmpty()) {
+                    ownerClass = resolveReceiverOwnerClass(receiver);
+                }
             } else {
                 args.add(ctx.getVariable("this"));
+                invokeType = InvokeType.VIRTUAL;
             }
-            invokeType = InvokeType.VIRTUAL;
         }
 
+        List<Value> loweredArgs = new ArrayList<>();
         for (Expression arg : call.getArguments()) {
-            args.add(lower(arg));
+            loweredArgs.add(lower(arg));
+        }
+        args.addAll(loweredArgs);
+
+        List<SourceType> argTypes = new ArrayList<>();
+        for (Value arg : loweredArgs) {
+            if (arg instanceof SSAValue) {
+                argTypes.add(irTypeToSourceType(arg.getType()));
+            } else {
+                argTypes.add(ReferenceSourceType.OBJECT);
+            }
         }
 
-        String descriptor = buildMethodDescriptor(call);
+        SourceType returnType = resolveMethodReturnType(call, ownerClass, argTypes);
+        String descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);
 
-        IRType returnType = call.getType().toIRType();
         SSAValue result = null;
-        if (!(call.getType() instanceof com.tonic.analysis.source.ast.type.VoidSourceType)) {
-            result = ctx.newValue(returnType);
+        if (!(returnType instanceof VoidSourceType)) {
+            result = ctx.newValue(returnType.toIRType());
         }
 
         InvokeInstruction instr = new InvokeInstruction(
             result, invokeType,
-            call.getOwnerClass(),
+            ownerClass,
             call.getMethodName(),
             descriptor,
             args
@@ -494,6 +595,60 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result != null ? result : NullConstant.INSTANCE;
+    }
+
+    private String resolveReceiverOwnerClass(Expression receiver) {
+        if (receiver instanceof FieldAccessExpr) {
+            FieldAccessExpr field = (FieldAccessExpr) receiver;
+            Expression fieldReceiver = field.getReceiver();
+            String fieldOwner;
+            if (fieldReceiver instanceof VarRefExpr) {
+                VarRefExpr varRef = (VarRefExpr) fieldReceiver;
+                if (!ctx.hasVariable(varRef.getName())) {
+                    fieldOwner = resolveClassName(varRef.getName());
+                } else {
+                    return "java/lang/Object";
+                }
+            } else {
+                fieldOwner = field.getOwnerClass();
+                if (fieldOwner == null || fieldOwner.isEmpty()) {
+                    return "java/lang/Object";
+                }
+            }
+            SourceType fieldType = ctx.getTypeResolver().resolveFieldType(fieldOwner, field.getFieldName());
+            if (fieldType instanceof ReferenceSourceType) {
+                return ((ReferenceSourceType) fieldType).getInternalName();
+            }
+        }
+        SourceType type = receiver.getType();
+        if (type instanceof ReferenceSourceType) {
+            String internalName = ((ReferenceSourceType) type).getInternalName();
+            if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object")) {
+                return internalName;
+            }
+        }
+        return "java/lang/Object";
+    }
+
+    private SourceType resolveMethodReturnType(MethodCallExpr call, String ownerClass, List<SourceType> argTypes) {
+        SourceType declaredType = call.getType();
+        if (declaredType == ReferenceSourceType.OBJECT || declaredType == null) {
+            SourceType resolved = ctx.getTypeResolver().resolveMethodReturnType(ownerClass, call.getMethodName(), argTypes);
+            if (resolved != null) {
+                return resolved;
+            }
+        }
+        return declaredType != null ? declaredType : ReferenceSourceType.OBJECT;
+    }
+
+    private String buildMethodDescriptorWithReturn(List<SourceType> argTypes, SourceType returnType) {
+        StringBuilder sb = new StringBuilder("(");
+        for (SourceType t : argTypes) {
+            sb.append(t.toIRType().getDescriptor());
+        }
+        sb.append(")");
+        sb.append(returnType.toIRType().getDescriptor());
+        return sb.toString();
     }
 
     private String buildMethodDescriptor(MethodCallExpr call) {
@@ -507,41 +662,106 @@ public class ExpressionLowerer {
     }
 
     private Value lowerFieldAccess(FieldAccessExpr field) {
-        IRType fieldType = field.getType().toIRType();
+        String ownerClass;
+        boolean isStatic = field.isStatic();
+        Expression receiver = field.getReceiver();
+
+        if (isStatic) {
+            ownerClass = field.getOwnerClass();
+        } else if (receiver instanceof VarRefExpr) {
+            VarRefExpr varRef = (VarRefExpr) receiver;
+            if (!ctx.hasVariable(varRef.getName())) {
+                ownerClass = resolveClassName(varRef.getName());
+                isStatic = true;
+            } else {
+                ownerClass = field.getOwnerClass();
+            }
+        } else {
+            ownerClass = field.getOwnerClass();
+        }
+
+        IRType fieldType = resolveFieldType(field, ownerClass);
         SSAValue result = ctx.newValue(fieldType);
         String descriptor = fieldType.getDescriptor();
 
         FieldAccessInstruction instr;
-        if (field.isStatic()) {
-            instr = FieldAccessInstruction.createStaticLoad(
-                result, field.getOwnerClass(), field.getFieldName(), descriptor
-            );
+        if (isStatic) {
+            instr = FieldAccessInstruction.createStaticLoad(result, ownerClass, field.getFieldName(), descriptor);
         } else {
-            Expression receiver = field.getReceiver();
             Value receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            instr = FieldAccessInstruction.createLoad(
-                result, field.getOwnerClass(), field.getFieldName(), descriptor, receiverVal
-            );
+            instr = FieldAccessInstruction.createLoad(result, ownerClass, field.getFieldName(), descriptor, receiverVal);
         }
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
     }
 
+    private IRType resolveFieldType(FieldAccessExpr field, String ownerClass) {
+        SourceType declaredType = field.getType();
+        if (declaredType == ReferenceSourceType.OBJECT || declaredType == null) {
+            SourceType resolved = ctx.getTypeResolver().resolveFieldType(ownerClass, field.getFieldName());
+            return resolved.toIRType();
+        }
+        return declaredType.toIRType();
+    }
+
+    private String resolveClassName(String simpleName) {
+        if (simpleName.equals("System")) return "java/lang/System";
+        if (simpleName.equals("Math")) return "java/lang/Math";
+        if (simpleName.equals("String")) return "java/lang/String";
+        if (simpleName.equals("Object")) return "java/lang/Object";
+        if (simpleName.equals("Integer")) return "java/lang/Integer";
+        if (simpleName.equals("Long")) return "java/lang/Long";
+        if (simpleName.equals("Double")) return "java/lang/Double";
+        if (simpleName.equals("Float")) return "java/lang/Float";
+        if (simpleName.equals("Boolean")) return "java/lang/Boolean";
+        if (simpleName.equals("Character")) return "java/lang/Character";
+        if (simpleName.equals("Byte")) return "java/lang/Byte";
+        if (simpleName.equals("Short")) return "java/lang/Short";
+        if (simpleName.equals("Class")) return "java/lang/Class";
+        if (simpleName.equals("StringBuilder")) return "java/lang/StringBuilder";
+        if (simpleName.equals("Thread")) return "java/lang/Thread";
+        if (simpleName.equals("Throwable")) return "java/lang/Throwable";
+        if (simpleName.equals("Exception")) return "java/lang/Exception";
+        if (simpleName.equals("RuntimeException")) return "java/lang/RuntimeException";
+        String ownerClass = ctx.getIrMethod().getOwnerClass();
+        String ownerSimpleName = ownerClass.contains("/")
+            ? ownerClass.substring(ownerClass.lastIndexOf('/') + 1)
+            : ownerClass;
+        if (simpleName.equals(ownerSimpleName)) {
+            return ownerClass;
+        }
+        return simpleName.replace('.', '/');
+    }
+
     private Value lowerFieldStore(FieldAccessExpr field, Value value) {
-        String descriptor = field.getType().toIRType().getDescriptor();
+        String ownerClass;
+        boolean isStatic = field.isStatic();
+        Expression receiver = field.getReceiver();
+
+        if (isStatic) {
+            ownerClass = field.getOwnerClass();
+        } else if (receiver instanceof VarRefExpr) {
+            VarRefExpr varRef = (VarRefExpr) receiver;
+            if (!ctx.hasVariable(varRef.getName())) {
+                ownerClass = resolveClassName(varRef.getName());
+                isStatic = true;
+            } else {
+                ownerClass = field.getOwnerClass();
+            }
+        } else {
+            ownerClass = field.getOwnerClass();
+        }
+
+        IRType fieldType = resolveFieldType(field, ownerClass);
+        String descriptor = fieldType.getDescriptor();
 
         FieldAccessInstruction instr;
-        if (field.isStatic()) {
-            instr = FieldAccessInstruction.createStaticStore(
-                field.getOwnerClass(), field.getFieldName(), descriptor, value
-            );
+        if (isStatic) {
+            instr = FieldAccessInstruction.createStaticStore(ownerClass, field.getFieldName(), descriptor, value);
         } else {
-            Expression receiver = field.getReceiver();
             Value receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            instr = FieldAccessInstruction.createStore(
-                field.getOwnerClass(), field.getFieldName(), descriptor, receiverVal, value
-            );
+            instr = FieldAccessInstruction.createStore(ownerClass, field.getFieldName(), descriptor, receiverVal, value);
         }
         ctx.getCurrentBlock().addInstruction(instr);
 
@@ -552,13 +772,82 @@ public class ExpressionLowerer {
         Value array = lower(arr.getArray());
         Value index = lower(arr.getIndex());
 
-        IRType elementType = arr.getType().toIRType();
+        SourceType declaredType = arr.getType();
+        IRType elementType;
+
+        if (declaredType == ReferenceSourceType.OBJECT || declaredType == null) {
+            SourceType arrayType = resolveArrayType(arr.getArray());
+            if (arrayType instanceof ArraySourceType) {
+                elementType = ((ArraySourceType) arrayType).getElementType().toIRType();
+            } else {
+                elementType = declaredType.toIRType();
+            }
+        } else {
+            elementType = declaredType.toIRType();
+        }
+
         SSAValue result = ctx.newValue(elementType);
 
         ArrayAccessInstruction instr = ArrayAccessInstruction.createLoad(result, array, index);
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
+    }
+
+    private SourceType resolveArrayType(Expression arrayExpr) {
+        if (arrayExpr instanceof FieldAccessExpr) {
+            FieldAccessExpr field = (FieldAccessExpr) arrayExpr;
+            String ownerClass = field.getOwnerClass();
+            if (ownerClass == null || ownerClass.isEmpty() || ownerClass.equals("java/lang/Object")) {
+                Expression receiver = field.getReceiver();
+                if (receiver instanceof VarRefExpr) {
+                    VarRefExpr varRef = (VarRefExpr) receiver;
+                    if (!ctx.hasVariable(varRef.getName())) {
+                        ownerClass = resolveClassName(varRef.getName());
+                    }
+                }
+            }
+            if (ownerClass != null && !ownerClass.isEmpty()) {
+                SourceType resolved = ctx.getTypeResolver().resolveFieldType(ownerClass, field.getFieldName());
+                if (resolved != null) {
+                    return resolved;
+                }
+            }
+        } else if (arrayExpr instanceof VarRefExpr) {
+            VarRefExpr varRef = (VarRefExpr) arrayExpr;
+            SSAValue val = ctx.getVariable(varRef.getName());
+            if (val != null) {
+                IRType irType = val.getType();
+                if (irType instanceof com.tonic.analysis.ssa.type.ArrayType) {
+                    com.tonic.analysis.ssa.type.ArrayType arrType = (com.tonic.analysis.ssa.type.ArrayType) irType;
+                    return new ArraySourceType(irTypeToSourceType(arrType.getElementType()));
+                }
+            }
+        }
+        return arrayExpr.getType();
+    }
+
+    private SourceType irTypeToSourceType(IRType irType) {
+        if (irType == com.tonic.analysis.ssa.type.PrimitiveType.INT) {
+            return PrimitiveSourceType.INT;
+        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.LONG) {
+            return PrimitiveSourceType.LONG;
+        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.FLOAT) {
+            return PrimitiveSourceType.FLOAT;
+        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.DOUBLE) {
+            return PrimitiveSourceType.DOUBLE;
+        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.BOOLEAN) {
+            return PrimitiveSourceType.BOOLEAN;
+        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.BYTE) {
+            return PrimitiveSourceType.BYTE;
+        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.CHAR) {
+            return PrimitiveSourceType.CHAR;
+        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.SHORT) {
+            return PrimitiveSourceType.SHORT;
+        } else if (irType instanceof com.tonic.analysis.ssa.type.ReferenceType) {
+            return new ReferenceSourceType(((com.tonic.analysis.ssa.type.ReferenceType) irType).getInternalName());
+        }
+        return ReferenceSourceType.OBJECT;
     }
 
     private Value lowerArrayStore(ArrayAccessExpr arr, Value value) {

@@ -16,6 +16,38 @@ public class Parser {
     private Token current;
     private final Deque<Map<String, SourceType>> scopes = new ArrayDeque<>();
 
+    private static final Map<String, String> JAVA_LANG_TYPES = Map.ofEntries(
+        Map.entry("Object", "java/lang/Object"),
+        Map.entry("String", "java/lang/String"),
+        Map.entry("Class", "java/lang/Class"),
+        Map.entry("Integer", "java/lang/Integer"),
+        Map.entry("Long", "java/lang/Long"),
+        Map.entry("Double", "java/lang/Double"),
+        Map.entry("Float", "java/lang/Float"),
+        Map.entry("Boolean", "java/lang/Boolean"),
+        Map.entry("Byte", "java/lang/Byte"),
+        Map.entry("Short", "java/lang/Short"),
+        Map.entry("Character", "java/lang/Character"),
+        Map.entry("Number", "java/lang/Number"),
+        Map.entry("Void", "java/lang/Void"),
+        Map.entry("Throwable", "java/lang/Throwable"),
+        Map.entry("Exception", "java/lang/Exception"),
+        Map.entry("RuntimeException", "java/lang/RuntimeException"),
+        Map.entry("Error", "java/lang/Error"),
+        Map.entry("Thread", "java/lang/Thread"),
+        Map.entry("Runnable", "java/lang/Runnable"),
+        Map.entry("StringBuilder", "java/lang/StringBuilder"),
+        Map.entry("StringBuffer", "java/lang/StringBuffer"),
+        Map.entry("System", "java/lang/System"),
+        Map.entry("Math", "java/lang/Math"),
+        Map.entry("Comparable", "java/lang/Comparable"),
+        Map.entry("Iterable", "java/lang/Iterable"),
+        Map.entry("Enum", "java/lang/Enum"),
+        Map.entry("Override", "java/lang/Override"),
+        Map.entry("Deprecated", "java/lang/Deprecated"),
+        Map.entry("SuppressWarnings", "java/lang/SuppressWarnings")
+    );
+
     public Parser(Lexer lexer, String source, ParseErrorListener errorListener) {
         this.lexer = lexer;
         this.source = source;
@@ -319,13 +351,19 @@ public class Parser {
         if (match(TokenType.SEMICOLON)) return;
 
         if (check(TokenType.LBRACE)) {
-            parseInitializerBlock();
+            BlockStmt block = parseInitializerBlock();
+            if (owner instanceof ClassDecl) {
+                ((ClassDecl) owner).addInstanceInitializer(block);
+            }
             return;
         }
 
         if (check(TokenType.STATIC) && checkNext(TokenType.LBRACE)) {
             advance();
-            parseInitializerBlock();
+            BlockStmt block = parseInitializerBlock();
+            if (owner instanceof ClassDecl) {
+                ((ClassDecl) owner).addStaticInitializer(block);
+            }
             return;
         }
 
@@ -404,14 +442,8 @@ public class Parser {
         }
     }
 
-    private void parseInitializerBlock() {
-        consume(TokenType.LBRACE, "Expected '{'");
-        int depth = 1;
-        while (!isAtEnd() && depth > 0) {
-            if (check(TokenType.LBRACE)) depth++;
-            if (check(TokenType.RBRACE)) depth--;
-            advance();
-        }
+    private BlockStmt parseInitializerBlock() {
+        return parseBlock();
     }
 
     private MethodDecl parseMethod(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
@@ -1183,7 +1215,12 @@ public class Parser {
             } else if (match(TokenType.LBRACKET)) {
                 Expression index = parseExpression();
                 consume(TokenType.RBRACKET, "Expected ']'");
-                expr = new ArrayAccessExpr(expr, index, ReferenceSourceType.OBJECT, loc);
+                SourceType elementType = ReferenceSourceType.OBJECT;
+                SourceType arrayType = expr.getType();
+                if (arrayType instanceof ArraySourceType) {
+                    elementType = ((ArraySourceType) arrayType).getElementType();
+                }
+                expr = new ArrayAccessExpr(expr, index, elementType, loc);
             } else if (match(TokenType.PLUS_PLUS)) {
                 expr = new UnaryExpr(UnaryOperator.POST_INC, expr, expr.getType(), loc);
             } else if (match(TokenType.MINUS_MINUS)) {
@@ -1628,6 +1665,11 @@ public class Parser {
         }
         SourceType leftType = left.getType();
         SourceType rightType = right.getType();
+        if (op == BinaryOperator.ADD) {
+            if (isString(leftType) || isString(rightType)) {
+                return ReferenceSourceType.STRING;
+            }
+        }
         if (leftType instanceof PrimitiveSourceType && rightType instanceof PrimitiveSourceType) {
             PrimitiveSourceType lp = (PrimitiveSourceType) leftType;
             PrimitiveSourceType rp = (PrimitiveSourceType) rightType;
@@ -1638,11 +1680,6 @@ public class Parser {
         }
         if (rightType instanceof PrimitiveSourceType) {
             return rightType;
-        }
-        if (op == BinaryOperator.ADD) {
-            if (isString(leftType) || isString(rightType)) {
-                return ReferenceSourceType.STRING;
-            }
         }
         return leftType;
     }
@@ -1741,6 +1778,13 @@ public class Parser {
         }
 
         String name = sb.toString();
+
+        if (!name.contains("/")) {
+            String resolved = JAVA_LANG_TYPES.get(name);
+            if (resolved != null) {
+                name = resolved;
+            }
+        }
 
         if (match(TokenType.LT)) {
             List<SourceType> typeArgs = parseTypeArguments();

@@ -4,7 +4,6 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
-import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -30,17 +29,15 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ExpressionLowererTest {
 
-    private ClassPool pool;
-    private ConstPool constPool;
     private LoweringContext ctx;
     private ExpressionLowerer lowerer;
 
     @BeforeEach
     void setUp() throws IOException {
-        pool = TestUtils.emptyPool();
+        ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = pool.createNewClass("com/test/ExpressionLowererTest", access);
-        constPool = classFile.getConstPool();
+        ConstPool constPool = classFile.getConstPool();
 
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
@@ -50,7 +47,8 @@ class ExpressionLowererTest {
         irMethod.addBlock(entryBlock);
         irMethod.setEntryBlock(entryBlock);
 
-        ctx = new LoweringContext(irMethod, constPool);
+        TypeResolver typeResolver = new TypeResolver(pool, "com/test/Test");
+        ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setCurrentBlock(entryBlock);
         lowerer = new ExpressionLowerer(ctx);
     }
@@ -64,7 +62,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(result instanceof SSAValue);
-        assertEquals(PrimitiveType.INT, ((SSAValue) result).getType());
+        assertEquals(PrimitiveType.INT, result.getType());
 
         IRBlock block = ctx.getCurrentBlock();
         assertEquals(1, block.getInstructions().size());
@@ -81,7 +79,7 @@ class ExpressionLowererTest {
 
         assertNotNull(result);
         assertTrue(result instanceof SSAValue);
-        assertEquals(PrimitiveType.LONG, ((SSAValue) result).getType());
+        assertEquals(PrimitiveType.LONG, result.getType());
 
         ConstantInstruction instr = (ConstantInstruction) ctx.getCurrentBlock().getInstructions().get(0);
         assertTrue(instr.getConstant() instanceof LongConstant);
@@ -94,7 +92,7 @@ class ExpressionLowererTest {
         Value result = lowerer.lower(lit);
 
         assertNotNull(result);
-        assertEquals(PrimitiveType.FLOAT, ((SSAValue) result).getType());
+        assertEquals(PrimitiveType.FLOAT, result.getType());
 
         ConstantInstruction instr = (ConstantInstruction) ctx.getCurrentBlock().getInstructions().get(0);
         assertTrue(instr.getConstant() instanceof FloatConstant);
@@ -107,7 +105,7 @@ class ExpressionLowererTest {
         Value result = lowerer.lower(lit);
 
         assertNotNull(result);
-        assertEquals(PrimitiveType.DOUBLE, ((SSAValue) result).getType());
+        assertEquals(PrimitiveType.DOUBLE, result.getType());
 
         ConstantInstruction instr = (ConstantInstruction) ctx.getCurrentBlock().getInstructions().get(0);
         assertTrue(instr.getConstant() instanceof DoubleConstant);

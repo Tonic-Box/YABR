@@ -8,12 +8,10 @@ import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -34,20 +32,17 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class StatementLowererTest {
 
-    private ClassPool pool;
-    private ConstPool constPool;
     private LoweringContext ctx;
-    private ExpressionLowerer exprLowerer;
     private StatementLowerer lowerer;
     private IRMethod irMethod;
     private IRBlock entryBlock;
 
     @BeforeEach
     void setUp() throws IOException {
-        pool = TestUtils.emptyPool();
+        ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = pool.createNewClass("com/test/StatementLowererTest", access);
-        constPool = classFile.getConstPool();
+        ConstPool constPool = classFile.getConstPool();
 
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
@@ -57,10 +52,11 @@ class StatementLowererTest {
         irMethod.addBlock(entryBlock);
         irMethod.setEntryBlock(entryBlock);
 
-        ctx = new LoweringContext(irMethod, constPool);
+        TypeResolver typeResolver = new TypeResolver(pool, "com/test/Test");
+        ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setCurrentBlock(entryBlock);
 
-        exprLowerer = new ExpressionLowerer(ctx);
+        ExpressionLowerer exprLowerer = new ExpressionLowerer(ctx);
         lowerer = new StatementLowerer(ctx, exprLowerer);
     }
 

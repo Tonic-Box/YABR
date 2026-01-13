@@ -635,7 +635,7 @@ public class ClassFile extends AbstractParser {
         return constPool.getItems().size();
     }
 
-    private String resolveClassName(int classIndex) {
+    public String resolveClassName(int classIndex) {
         try {
             ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
             return classRef.getClassName();

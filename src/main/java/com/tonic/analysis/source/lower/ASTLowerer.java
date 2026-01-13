@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.lower;
 
+import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
@@ -12,7 +13,10 @@ import com.tonic.analysis.ssa.lift.PhiInserter;
 import com.tonic.analysis.ssa.lift.VariableRenamer;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,18 +25,13 @@ import java.util.List;
  * Main facade for lowering AST back to IR.
  * Converts source-level AST statements into SSA IR that can be lowered to bytecode.
  */
+@RequiredArgsConstructor
 public class ASTLowerer {
 
     private final ConstPool constPool;
-
-    /**
-     * Creates a new AST lowerer.
-     *
-     * @param constPool the constant pool for references
-     */
-    public ASTLowerer(ConstPool constPool) {
-        this.constPool = constPool;
-    }
+    private final ClassPool classPool;
+    @Setter
+    private ClassDecl currentClassDecl;
 
     /**
      * Lowers an AST method body to a new IRMethod.
@@ -52,7 +51,9 @@ public class ASTLowerer {
         String descriptor = buildDescriptor(parameters, returnType);
         IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
 
-        LoweringContext ctx = new LoweringContext(irMethod, constPool);
+        TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
+        typeResolver.setCurrentClassDecl(currentClassDecl);
+        LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
 
         IRBlock entryBlock = ctx.createBlock();
         irMethod.setEntryBlock(entryBlock);
@@ -105,7 +106,9 @@ public class ASTLowerer {
         String descriptor = buildDescriptor(parameters, returnType);
         IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
 
-        LoweringContext ctx = new LoweringContext(irMethod, constPool);
+        TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
+        typeResolver.setCurrentClassDecl(currentClassDecl);
+        LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
 
         boolean hasLoops = containsLoops(body);
         if (hasLoops) {
@@ -190,7 +193,9 @@ public class ASTLowerer {
      * @param irMethod the existing IRMethod
      */
     public void replaceBody(BlockStmt body, IRMethod irMethod) {
-        LoweringContext ctx = new LoweringContext(irMethod, constPool);
+        TypeResolver typeResolver = new TypeResolver(classPool, irMethod.getOwnerClass());
+        typeResolver.setCurrentClassDecl(currentClassDecl);
+        LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
 
         irMethod.getBlocks().clear();
 
@@ -234,8 +239,8 @@ public class ASTLowerer {
      */
     public static IRMethod lowerMethod(BlockStmt body, String methodName, String ownerClass,
                                        boolean isStatic, List<SourceType> parameters,
-                                       SourceType returnType, ConstPool constPool) {
-        ASTLowerer lowerer = new ASTLowerer(constPool);
+                                       SourceType returnType, ConstPool constPool, ClassPool classPool) {
+        ASTLowerer lowerer = new ASTLowerer(constPool, classPool);
         return lowerer.lower(body, methodName, ownerClass, isStatic, parameters, returnType);
     }
 }

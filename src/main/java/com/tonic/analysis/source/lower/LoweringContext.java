@@ -25,6 +25,9 @@ public class LoweringContext {
     /** Constant pool for creating constants and references */
     private final ConstPool constPool;
 
+    /** Type resolver for looking up field/method types from ClassPool */
+    private final TypeResolver typeResolver;
+
     /** Current block where instructions are being emitted */
     @Setter
     private IRBlock currentBlock;
@@ -57,9 +60,10 @@ public class LoweringContext {
     /**
      * Creates a new lowering context.
      */
-    public LoweringContext(IRMethod irMethod, ConstPool constPool) {
+    public LoweringContext(IRMethod irMethod, ConstPool constPool, TypeResolver typeResolver) {
         this.irMethod = irMethod;
         this.constPool = constPool;
+        this.typeResolver = typeResolver;
     }
 
     /**

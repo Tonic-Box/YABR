@@ -61,7 +61,7 @@ public class SourceToBytecodeIntegrationTest {
         ClassFile cf = createClassWithMethod(ownerClass, methodName, descriptor, isStatic);
         MethodEntry method = findMethod(cf, methodName);
 
-        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool());
+        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
         IRMethod ir = lowerer.lower(body, methodName, ownerClass, isStatic, params, returnType);
 
         SSA ssa = new SSA(cf.getConstPool());
@@ -83,7 +83,7 @@ public class SourceToBytecodeIntegrationTest {
         ClassFile cf = createClassWithMethod(ownerClass, methodName, descriptor, isStatic);
         MethodEntry method = findMethod(cf, methodName);
 
-        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool());
+        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
         IRMethod ir = lowerer.lower(methodDecl, ownerClass);
 
         SSA ssa = new SSA(cf.getConstPool());
@@ -171,7 +171,7 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(body, "test", className, true, List.of(), PrimitiveSourceType.BOOLEAN);
 
             Method m = clazz.getMethod("test");
-            assertEquals(true, (boolean) m.invoke(null));
+            assertTrue((boolean) m.invoke(null));
         }
 
         @Test
@@ -186,7 +186,7 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(body, "test", className, true, List.of(), PrimitiveSourceType.BOOLEAN);
 
             Method m = clazz.getMethod("test");
-            assertEquals(false, (boolean) m.invoke(null));
+            assertFalse((boolean) m.invoke(null));
         }
     }
 
@@ -421,9 +421,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("lt", int.class, int.class);
-            assertEquals(true, (boolean) m.invoke(null, 5, 10));
-            assertEquals(false, (boolean) m.invoke(null, 10, 5));
-            assertEquals(false, (boolean) m.invoke(null, 5, 5));
+            assertTrue((boolean) m.invoke(null, 5, 10));
+            assertFalse((boolean) m.invoke(null, 10, 5));
+            assertFalse((boolean) m.invoke(null, 5, 5));
         }
 
         @Test
@@ -437,9 +437,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("le", int.class, int.class);
-            assertEquals(true, (boolean) m.invoke(null, 5, 10));
-            assertEquals(false, (boolean) m.invoke(null, 10, 5));
-            assertEquals(true, (boolean) m.invoke(null, 5, 5));
+            assertTrue((boolean) m.invoke(null, 5, 10));
+            assertFalse((boolean) m.invoke(null, 10, 5));
+            assertTrue((boolean) m.invoke(null, 5, 5));
         }
 
         @Test
@@ -453,9 +453,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("gt", int.class, int.class);
-            assertEquals(false, (boolean) m.invoke(null, 5, 10));
-            assertEquals(true, (boolean) m.invoke(null, 10, 5));
-            assertEquals(false, (boolean) m.invoke(null, 5, 5));
+            assertFalse((boolean) m.invoke(null, 5, 10));
+            assertTrue((boolean) m.invoke(null, 10, 5));
+            assertFalse((boolean) m.invoke(null, 5, 5));
         }
 
         @Test
@@ -469,9 +469,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("ge", int.class, int.class);
-            assertEquals(false, (boolean) m.invoke(null, 5, 10));
-            assertEquals(true, (boolean) m.invoke(null, 10, 5));
-            assertEquals(true, (boolean) m.invoke(null, 5, 5));
+            assertFalse((boolean) m.invoke(null, 5, 10));
+            assertTrue((boolean) m.invoke(null, 10, 5));
+            assertTrue((boolean) m.invoke(null, 5, 5));
         }
 
         @Test
@@ -485,8 +485,8 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("eq", int.class, int.class);
-            assertEquals(false, (boolean) m.invoke(null, 5, 10));
-            assertEquals(true, (boolean) m.invoke(null, 5, 5));
+            assertFalse((boolean) m.invoke(null, 5, 10));
+            assertTrue((boolean) m.invoke(null, 5, 5));
         }
 
         @Test
@@ -500,8 +500,8 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("ne", int.class, int.class);
-            assertEquals(true, (boolean) m.invoke(null, 5, 10));
-            assertEquals(false, (boolean) m.invoke(null, 5, 5));
+            assertTrue((boolean) m.invoke(null, 5, 10));
+            assertFalse((boolean) m.invoke(null, 5, 5));
         }
     }
 
@@ -519,8 +519,8 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("not", boolean.class);
-            assertEquals(false, (boolean) m.invoke(null, true));
-            assertEquals(true, (boolean) m.invoke(null, false));
+            assertFalse((boolean) m.invoke(null, true));
+            assertTrue((boolean) m.invoke(null, false));
         }
     }
 
@@ -903,10 +903,10 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("test", boolean.class, boolean.class);
-            assertEquals(true, (boolean) m.invoke(null, true, true));
-            assertEquals(false, (boolean) m.invoke(null, true, false));
-            assertEquals(false, (boolean) m.invoke(null, false, true));
-            assertEquals(false, (boolean) m.invoke(null, false, false));
+            assertTrue((boolean) m.invoke(null, true, true));
+            assertFalse((boolean) m.invoke(null, true, false));
+            assertFalse((boolean) m.invoke(null, false, true));
+            assertFalse((boolean) m.invoke(null, false, false));
         }
 
         @Test
@@ -920,10 +920,10 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("test", boolean.class, boolean.class);
-            assertEquals(true, (boolean) m.invoke(null, true, true));
-            assertEquals(true, (boolean) m.invoke(null, true, false));
-            assertEquals(true, (boolean) m.invoke(null, false, true));
-            assertEquals(false, (boolean) m.invoke(null, false, false));
+            assertTrue((boolean) m.invoke(null, true, true));
+            assertTrue((boolean) m.invoke(null, true, false));
+            assertTrue((boolean) m.invoke(null, false, true));
+            assertFalse((boolean) m.invoke(null, false, false));
         }
     }
 
@@ -941,9 +941,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("test", int.class, int.class);
-            assertEquals(true, (boolean) m.invoke(null, 5, 3));
-            assertEquals(false, (boolean) m.invoke(null, 3, 5));
-            assertEquals(false, (boolean) m.invoke(null, 4, 4));
+            assertTrue((boolean) m.invoke(null, 5, 3));
+            assertFalse((boolean) m.invoke(null, 3, 5));
+            assertFalse((boolean) m.invoke(null, 4, 4));
         }
 
         @Test
@@ -957,9 +957,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("test", int.class, int.class);
-            assertEquals(false, (boolean) m.invoke(null, 5, 3));
-            assertEquals(true, (boolean) m.invoke(null, 3, 5));
-            assertEquals(false, (boolean) m.invoke(null, 4, 4));
+            assertFalse((boolean) m.invoke(null, 5, 3));
+            assertTrue((boolean) m.invoke(null, 3, 5));
+            assertFalse((boolean) m.invoke(null, 4, 4));
         }
 
         @Test
@@ -973,9 +973,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("test", int.class, int.class);
-            assertEquals(false, (boolean) m.invoke(null, 5, 3));
-            assertEquals(false, (boolean) m.invoke(null, 3, 5));
-            assertEquals(true, (boolean) m.invoke(null, 4, 4));
+            assertFalse((boolean) m.invoke(null, 5, 3));
+            assertFalse((boolean) m.invoke(null, 3, 5));
+            assertTrue((boolean) m.invoke(null, 4, 4));
         }
 
         @Test
@@ -989,9 +989,9 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileAndLoad(method, className);
 
             Method m = clazz.getMethod("test", int.class, int.class);
-            assertEquals(true, (boolean) m.invoke(null, 5, 3));
-            assertEquals(true, (boolean) m.invoke(null, 3, 5));
-            assertEquals(false, (boolean) m.invoke(null, 4, 4));
+            assertTrue((boolean) m.invoke(null, 5, 3));
+            assertTrue((boolean) m.invoke(null, 3, 5));
+            assertFalse((boolean) m.invoke(null, 4, 4));
         }
     }
 

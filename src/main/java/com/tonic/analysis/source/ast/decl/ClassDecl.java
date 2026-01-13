@@ -3,6 +3,7 @@ package com.tonic.analysis.source.ast.decl;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
+import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import lombok.Getter;
@@ -28,6 +29,8 @@ public final class ClassDecl implements TypeDecl {
     private final NodeList<MethodDecl> methods;
     private final NodeList<ConstructorDecl> constructors;
     private final NodeList<TypeDecl> innerTypes;
+    private final List<BlockStmt> staticInitializers;
+    private final List<BlockStmt> instanceInitializers;
     private final SourceLocation location;
     @Setter
     private ASTNode parent;
@@ -42,6 +45,8 @@ public final class ClassDecl implements TypeDecl {
         this.methods = new NodeList<>(this);
         this.constructors = new NodeList<>(this);
         this.innerTypes = new NodeList<>(this);
+        this.staticInitializers = new ArrayList<>();
+        this.instanceInitializers = new ArrayList<>();
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
@@ -105,6 +110,16 @@ public final class ClassDecl implements TypeDecl {
         return this;
     }
 
+    public ClassDecl addStaticInitializer(BlockStmt block) {
+        staticInitializers.add(block);
+        return this;
+    }
+
+    public ClassDecl addInstanceInitializer(BlockStmt block) {
+        instanceInitializers.add(block);
+        return this;
+    }
+
     public ConstructorDecl getConstructor(SourceType... paramTypes) {
         outer:
         for (ConstructorDecl ctor : constructors) {
@@ -153,6 +168,8 @@ public final class ClassDecl implements TypeDecl {
             }
         }
         children.addAll(fields);
+        children.addAll(staticInitializers);
+        children.addAll(instanceInitializers);
         children.addAll(constructors);
         children.addAll(methods);
         children.addAll(innerTypes);
