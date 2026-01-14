@@ -58,6 +58,8 @@ public class ASTLowerer {
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
+        ctx.setOwnerClass(ownerClass);
+        ctx.setCurrentMethodName(methodName);
 
         IRBlock entryBlock = ctx.createBlock();
         irMethod.setEntryBlock(entryBlock);
@@ -114,6 +116,8 @@ public class ASTLowerer {
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
+        ctx.setOwnerClass(ownerClass);
+        ctx.setCurrentMethodName(methodName);
 
         boolean hasLoops = containsLoops(body);
         if (hasLoops) {

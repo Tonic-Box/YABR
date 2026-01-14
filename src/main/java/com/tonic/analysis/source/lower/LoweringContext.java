@@ -57,6 +57,20 @@ public class LoweringContext {
     /** Counter for generating temporary variable names */
     private int tempCounter = 0;
 
+    /** Synthetic lambda methods generated during lowering */
+    private final List<SyntheticLambdaMethod> syntheticMethods = new ArrayList<>();
+
+    /** Counter for generating unique lambda method names */
+    private int lambdaCounter = 0;
+
+    /** The name of the current method being lowered */
+    @Setter
+    private String currentMethodName = "method";
+
+    /** The owner class of the current method */
+    @Setter
+    private String ownerClass;
+
     /**
      * Creates a new lowering context.
      */
@@ -253,6 +267,34 @@ public class LoweringContext {
     public void restoreVariables(Map<String, SSAValue> snapshot) {
         variableMap.clear();
         variableMap.putAll(snapshot);
+    }
+
+    /**
+     * Generates a unique name for a synthetic lambda method.
+     */
+    public String generateLambdaMethodName() {
+        return "lambda$" + currentMethodName + "$" + (lambdaCounter++);
+    }
+
+    /**
+     * Registers a synthetic lambda method for later generation.
+     */
+    public void registerSyntheticMethod(SyntheticLambdaMethod method) {
+        syntheticMethods.add(method);
+    }
+
+    /**
+     * Gets all registered synthetic methods.
+     */
+    public List<SyntheticLambdaMethod> getSyntheticMethods() {
+        return new ArrayList<>(syntheticMethods);
+    }
+
+    /**
+     * Clears synthetic methods after they have been processed.
+     */
+    public void clearSyntheticMethods() {
+        syntheticMethods.clear();
     }
 
     /**

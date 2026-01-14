@@ -8,9 +8,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Fixed import resolution in source lowering">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="-  lambda expression lowering implementation for source -&gt; AST">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/SyntheticLambdaMethod.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/LambdaLoweringTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -198,14 +204,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00113" summary="- execution-api fixes native handlers">
-      <option name="closed" value="true" />
-      <created>1766821730836</created>
-      <option name="number" value="00113" />
-      <option name="presentableId" value="LOCAL-00113" />
-      <option name="project" value="LOCAL" />
-      <updated>1766821730836</updated>
     </task>
     <task id="LOCAL-00114" summary="- execution-api fixes: instruction trace">
       <option name="closed" value="true" />
@@ -591,7 +589,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768296285261</updated>
     </task>
-    <option name="localTasksCounter" value="162" />
+    <task id="LOCAL-00162" summary="-  Added parseReturnType() method that extracts the actual return type from the method descriptor">
+      <option name="closed" value="true" />
+      <created>1768322174717</created>
+      <option name="number" value="00162" />
+      <option name="presentableId" value="LOCAL-00162" />
+      <option name="project" value="LOCAL" />
+      <updated>1768322174717</updated>
+    </task>
+    <option name="localTasksCounter" value="163" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -606,8 +612,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks" />
-    <MESSAGE value="- AST api docs update" />
     <MESSAGE value="- SSA docs updates" />
     <MESSAGE value="- ASTPrinter" />
     <MESSAGE value="- Error reporting in @CallGraphBuilder" />
@@ -631,7 +635,9 @@
     <MESSAGE value="- Fixed type lexing issues" />
     <MESSAGE value="- Fixed source lifting issue" />
     <MESSAGE value="- Fixed import resolution in source lowering" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixed import resolution in source lowering" />
+    <MESSAGE value="-  Added parseReturnType() method that extracts the actual return type from the method descriptor" />
+    <MESSAGE value="-  lambda expression lowering implementation for source -&gt; AST" />
+    <option name="LAST_COMMIT_MESSAGE" value="-  lambda expression lowering implementation for source -&gt; AST" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

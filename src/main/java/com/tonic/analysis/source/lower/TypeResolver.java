@@ -191,6 +191,153 @@ public class TypeResolver {
         }
     }
 
+    public String resolveMethodDescriptor(String ownerClass, String methodName, int expectedParamCount) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return null;
+        }
+
+        List<String> candidates = new ArrayList<>();
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                candidates.add(method.getDesc());
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            String superClass = cf.getSuperClassName();
+            if (superClass != null && !superClass.equals("java/lang/Object")) {
+                String result = resolveMethodDescriptor(superClass, methodName, expectedParamCount);
+                if (result != null) {
+                    return result;
+                }
+            }
+            for (int ifaceIdx : cf.getInterfaces()) {
+                String iface = cf.resolveClassName(ifaceIdx);
+                String result = resolveMethodDescriptor(iface, methodName, expectedParamCount);
+                if (result != null) {
+                    return result;
+                }
+            }
+            return null;
+        }
+
+        if (candidates.size() == 1) {
+            return candidates.get(0);
+        }
+
+        if (expectedParamCount >= 0) {
+            for (String desc : candidates) {
+                if (countParams(desc) == expectedParamCount) {
+                    return desc;
+                }
+            }
+        }
+
+        return candidates.get(0);
+    }
+
+    public String resolveConstructorDescriptor(String ownerClass, int expectedParamCount) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return "()V";
+        }
+
+        List<String> candidates = new ArrayList<>();
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getName().equals("<init>")) {
+                candidates.add(method.getDesc());
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return "()V";
+        }
+
+        if (candidates.size() == 1) {
+            return candidates.get(0);
+        }
+
+        if (expectedParamCount >= 0) {
+            for (String desc : candidates) {
+                if (countParams(desc) == expectedParamCount) {
+                    return desc;
+                }
+            }
+        }
+
+        for (String desc : candidates) {
+            if (desc.equals("()V")) {
+                return desc;
+            }
+        }
+
+        return candidates.get(0);
+    }
+
+    public List<String> findAllMethodDescriptors(String ownerClass, String methodName) {
+        List<String> results = new ArrayList<>();
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return results;
+        }
+
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                results.add(method.getDesc());
+            }
+        }
+
+        if (results.isEmpty()) {
+            String superClass = cf.getSuperClassName();
+            if (superClass != null && !superClass.equals("java/lang/Object")) {
+                results.addAll(findAllMethodDescriptors(superClass, methodName));
+            }
+            for (int ifaceIdx : cf.getInterfaces()) {
+                String iface = cf.resolveClassName(ifaceIdx);
+                results.addAll(findAllMethodDescriptors(iface, methodName));
+            }
+        }
+
+        return results;
+    }
+
+    public boolean isStaticMethod(String ownerClass, String methodName, String descriptor) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return false;
+        }
+
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getName().equals(methodName) && method.getDesc().equals(descriptor)) {
+                return (method.getAccess() & 0x0008) != 0;
+            }
+        }
+
+        return false;
+    }
+
+    private int countParams(String descriptor) {
+        int count = 0;
+        int i = 1;
+        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+            char c = descriptor.charAt(i);
+            if (c == 'L') {
+                while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                    i++;
+                }
+                i++;
+                count++;
+            } else if (c == '[') {
+                i++;
+            } else {
+                i++;
+                count++;
+            }
+        }
+        return count;
+    }
+
     public String resolveClassName(String simpleName) {
         if (simpleName.contains("/")) {
             return simpleName;

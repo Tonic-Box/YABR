@@ -1,11 +1,16 @@
 package com.tonic.analysis.source.lower;
 
+import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.*;
+import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
+import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.IRType;
@@ -14,7 +19,9 @@ import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Lowers AST Expression nodes to IR instructions.
@@ -132,6 +139,10 @@ public class ExpressionLowerer {
             return lowerThis();
         } else if (expr instanceof ArrayInitExpr) {
             return lowerArrayInit((ArrayInitExpr) expr);
+        } else if (expr instanceof LambdaExpr) {
+            return lowerLambda((LambdaExpr) expr);
+        } else if (expr instanceof MethodRefExpr) {
+            return lowerMethodRef((MethodRefExpr) expr);
         } else {
             throw new LoweringException("Unsupported expression type: " + expr.getClass().getSimpleName());
         }
@@ -296,7 +307,7 @@ public class ExpressionLowerer {
         if (expr instanceof LiteralExpr) {
             LiteralExpr lit = (LiteralExpr) expr;
             if (lit.getValue() instanceof String) {
-                parts.add((String) lit.getValue());
+                parts.add(lit.getValue());
                 return;
             }
         }
@@ -1085,5 +1096,397 @@ public class ExpressionLowerer {
             if (to == PrimitiveType.DOUBLE) return UnaryOp.F2D;
         }
         return null;
+    }
+
+    private Value lowerLambda(LambdaExpr lambda) {
+        List<SyntheticLambdaMethod.CapturedVariable> captures = collectCaptures(lambda);
+        String lambdaMethodName = ctx.generateLambdaMethodName();
+        String ownerClass = ctx.getOwnerClass();
+        if (ownerClass == null) {
+            ownerClass = "UnknownClass";
+        }
+
+        SourceType returnType = inferLambdaReturnType(lambda);
+        String syntheticDescriptor = buildSyntheticMethodDescriptor(captures, lambda.getParameters(), returnType);
+        boolean isStatic = !capturesThis(captures);
+
+        SyntheticLambdaMethod synthetic = new SyntheticLambdaMethod(
+            lambdaMethodName, syntheticDescriptor, isStatic,
+            captures, lambda.getBody(), lambda.getParameters(), returnType
+        );
+        ctx.registerSyntheticMethod(synthetic);
+
+        SourceType lambdaType = lambda.getType();
+        String samInterfaceName = extractInterfaceName(lambdaType);
+        String samMethodName = extractSamMethodName(samInterfaceName);
+        String samDescriptor = extractSamDescriptor(lambda.getParameters(), returnType);
+
+        MethodHandleConstant bsm = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            "java/lang/invoke/LambdaMetafactory",
+            "metafactory",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;" +
+            "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)" +
+            "Ljava/lang/invoke/CallSite;"
+        );
+
+        int implRefKind = isStatic ? MethodHandleConstant.REF_invokeStatic : MethodHandleConstant.REF_invokeSpecial;
+        MethodHandleConstant implHandle = new MethodHandleConstant(
+            implRefKind, ownerClass, lambdaMethodName, syntheticDescriptor
+        );
+
+        List<Constant> bsArgs = new ArrayList<>();
+        bsArgs.add(new MethodTypeConstant(samDescriptor));
+        bsArgs.add(implHandle);
+        bsArgs.add(new MethodTypeConstant(samDescriptor));
+
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
+
+        List<Value> dynArgs = new ArrayList<>();
+        for (SyntheticLambdaMethod.CapturedVariable capture : captures) {
+            if ("this".equals(capture.getName())) {
+                dynArgs.add(ctx.getVariable("this"));
+            } else {
+                dynArgs.add(ctx.getVariable(capture.getName()));
+            }
+        }
+
+        String callSiteDescriptor = buildCallSiteDescriptor(captures, lambdaType);
+        IRType resultType = lambdaType.toIRType();
+        SSAValue result = ctx.newValue(resultType);
+
+        InvokeInstruction indy = new InvokeInstruction(
+            result, InvokeType.DYNAMIC, null, samMethodName, callSiteDescriptor, dynArgs, 0, bsInfo
+        );
+        ctx.getCurrentBlock().addInstruction(indy);
+
+        return result;
+    }
+
+    private Value lowerMethodRef(MethodRefExpr methodRef) {
+        String ownerClass = methodRef.getOwnerClass();
+        String methodName = methodRef.getMethodName();
+        MethodRefKind kind = methodRef.getKind();
+        SourceType returnType = methodRef.getType();
+
+        String samInterfaceName = extractInterfaceName(returnType);
+        String samMethodName = extractSamMethodName(samInterfaceName);
+
+        int refKind;
+        String implDescriptor;
+        boolean hasBoundReceiver = false;
+        Value boundReceiver = null;
+
+        switch (kind) {
+            case STATIC:
+                refKind = MethodHandleConstant.REF_invokeStatic;
+                implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
+                break;
+            case INSTANCE:
+                refKind = MethodHandleConstant.REF_invokeVirtual;
+                implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
+                break;
+            case BOUND:
+                refKind = MethodHandleConstant.REF_invokeVirtual;
+                implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
+                if (methodRef.getReceiver() != null) {
+                    boundReceiver = lower(methodRef.getReceiver());
+                    hasBoundReceiver = true;
+                }
+                break;
+            case CONSTRUCTOR:
+                refKind = MethodHandleConstant.REF_newInvokeSpecial;
+                methodName = "<init>";
+                implDescriptor = inferConstructorDescriptor(ownerClass, returnType);
+                break;
+            case ARRAY_CONSTRUCTOR:
+                return lowerArrayConstructorRef(methodRef);
+            default:
+                throw new LoweringException("Unsupported method reference kind: " + kind);
+        }
+
+        MethodHandleConstant bsm = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            "java/lang/invoke/LambdaMetafactory",
+            "metafactory",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;" +
+            "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)" +
+            "Ljava/lang/invoke/CallSite;"
+        );
+
+        MethodHandleConstant implHandle = new MethodHandleConstant(refKind, ownerClass, methodName, implDescriptor);
+
+        String samDescriptor = inferSamDescriptorFromMethodRef(methodRef, implDescriptor, kind);
+
+        List<Constant> bsArgs = new ArrayList<>();
+        bsArgs.add(new MethodTypeConstant(samDescriptor));
+        bsArgs.add(implHandle);
+        bsArgs.add(new MethodTypeConstant(samDescriptor));
+
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
+
+        List<Value> dynArgs = new ArrayList<>();
+        if (hasBoundReceiver && boundReceiver != null) {
+            dynArgs.add(boundReceiver);
+        }
+
+        String callSiteDescriptor = buildMethodRefCallSiteDescriptor(methodRef, hasBoundReceiver);
+        IRType resultType = returnType.toIRType();
+        SSAValue result = ctx.newValue(resultType);
+
+        InvokeInstruction indy = new InvokeInstruction(
+            result, InvokeType.DYNAMIC, null, samMethodName, callSiteDescriptor, dynArgs, 0, bsInfo
+        );
+        ctx.getCurrentBlock().addInstruction(indy);
+
+        return result;
+    }
+
+    private Value lowerArrayConstructorRef(MethodRefExpr methodRef) {
+        SourceType returnType = methodRef.getType();
+        String samInterfaceName = extractInterfaceName(returnType);
+        String samMethodName = extractSamMethodName(samInterfaceName);
+
+        IRType resultType = returnType.toIRType();
+        SSAValue result = ctx.newValue(resultType);
+
+        String arrayTypeName = methodRef.getOwnerClass();
+        String callSiteDescriptor = "()" + returnType.toIRType().getDescriptor();
+
+        MethodHandleConstant bsm = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            "java/lang/invoke/LambdaMetafactory",
+            "metafactory",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;" +
+            "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)" +
+            "Ljava/lang/invoke/CallSite;"
+        );
+
+        MethodHandleConstant implHandle = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            "java/lang/reflect/Array",
+            "newInstance",
+            "(Ljava/lang/Class;I)Ljava/lang/Object;"
+        );
+
+        List<Constant> bsArgs = new ArrayList<>();
+        bsArgs.add(new MethodTypeConstant("(I)Ljava/lang/Object;"));
+        bsArgs.add(implHandle);
+        bsArgs.add(new MethodTypeConstant("(I)Ljava/lang/Object;"));
+
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
+
+        InvokeInstruction indy = new InvokeInstruction(
+            result, InvokeType.DYNAMIC, null, samMethodName, callSiteDescriptor, new ArrayList<>(), 0, bsInfo
+        );
+        ctx.getCurrentBlock().addInstruction(indy);
+
+        return result;
+    }
+
+    private List<SyntheticLambdaMethod.CapturedVariable> collectCaptures(LambdaExpr lambda) {
+        Set<String> paramNames = new HashSet<>();
+        for (LambdaParameter param : lambda.getParameters()) {
+            paramNames.add(param.name());
+        }
+
+        Set<String> capturedNames = new HashSet<>();
+        List<SyntheticLambdaMethod.CapturedVariable> captures = new ArrayList<>();
+
+        CaptureCollector collector = new CaptureCollector(paramNames, capturedNames);
+        if (lambda.getBody() instanceof Expression) {
+            ((Expression) lambda.getBody()).accept(collector);
+        } else if (lambda.getBody() instanceof BlockStmt) {
+            collectCapturesFromBlock((BlockStmt) lambda.getBody(), collector);
+        }
+
+        for (String name : capturedNames) {
+            if (ctx.hasVariable(name)) {
+                SSAValue val = ctx.getVariable(name);
+                SourceType type = irTypeToSourceType(val.getType());
+                captures.add(new SyntheticLambdaMethod.CapturedVariable(name, type));
+            }
+        }
+
+        return captures;
+    }
+
+    private void collectCapturesFromBlock(BlockStmt block, CaptureCollector collector) {
+        for (Statement stmt : block.getStatements()) {
+            if (stmt instanceof ExprStmt) {
+                Expression expr = ((ExprStmt) stmt).getExpression();
+                if (expr != null) {
+                    expr.accept(collector);
+                }
+            }
+        }
+    }
+
+    private boolean capturesThis(List<SyntheticLambdaMethod.CapturedVariable> captures) {
+        for (SyntheticLambdaMethod.CapturedVariable c : captures) {
+            if ("this".equals(c.getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private SourceType inferLambdaReturnType(LambdaExpr lambda) {
+        ASTNode body = lambda.getBody();
+        if (body instanceof Expression) {
+            return ((Expression) body).getType();
+        }
+        return ReferenceSourceType.OBJECT;
+    }
+
+    private String buildSyntheticMethodDescriptor(List<SyntheticLambdaMethod.CapturedVariable> captures,
+                                                   List<LambdaParameter> params, SourceType returnType) {
+        StringBuilder sb = new StringBuilder("(");
+        for (SyntheticLambdaMethod.CapturedVariable c : captures) {
+            sb.append(c.getType().toIRType().getDescriptor());
+        }
+        for (LambdaParameter p : params) {
+            if (p.type() != null) {
+                sb.append(p.type().toIRType().getDescriptor());
+            } else {
+                sb.append("Ljava/lang/Object;");
+            }
+        }
+        sb.append(")");
+        if (returnType == null || returnType instanceof VoidSourceType) {
+            sb.append("V");
+        } else {
+            sb.append(returnType.toIRType().getDescriptor());
+        }
+        return sb.toString();
+    }
+
+    private String extractInterfaceName(SourceType type) {
+        if (type instanceof ReferenceSourceType) {
+            return ((ReferenceSourceType) type).getInternalName();
+        }
+        return "java/lang/Object";
+    }
+
+    private String extractSamMethodName(String interfaceName) {
+        if (interfaceName.endsWith("Supplier")) return "get";
+        if (interfaceName.endsWith("Consumer")) return "accept";
+        if (interfaceName.endsWith("Function")) return "apply";
+        if (interfaceName.endsWith("BiFunction")) return "apply";
+        if (interfaceName.endsWith("Predicate")) return "test";
+        if (interfaceName.endsWith("Runnable")) return "run";
+        if (interfaceName.endsWith("Callable")) return "call";
+        if (interfaceName.endsWith("Comparator")) return "compare";
+        return "apply";
+    }
+
+    private String extractSamDescriptor(List<LambdaParameter> params, SourceType returnType) {
+        StringBuilder sb = new StringBuilder("(");
+        for (LambdaParameter p : params) {
+            if (p.type() != null) {
+                sb.append(p.type().toIRType().getDescriptor());
+            } else {
+                sb.append("Ljava/lang/Object;");
+            }
+        }
+        sb.append(")");
+        if (returnType == null || returnType instanceof VoidSourceType) {
+            sb.append("V");
+        } else {
+            sb.append(returnType.toIRType().getDescriptor());
+        }
+        return sb.toString();
+    }
+
+    private String buildCallSiteDescriptor(List<SyntheticLambdaMethod.CapturedVariable> captures, SourceType lambdaType) {
+        StringBuilder sb = new StringBuilder("(");
+        for (SyntheticLambdaMethod.CapturedVariable c : captures) {
+            sb.append(c.getType().toIRType().getDescriptor());
+        }
+        sb.append(")");
+        sb.append(lambdaType.toIRType().getDescriptor());
+        return sb.toString();
+    }
+
+    private String inferMethodDescriptor(String ownerClass, String methodName, MethodRefKind kind, SourceType samType) {
+        int expectedParamCount = inferExpectedParamCount(samType, kind);
+        String descriptor = ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, methodName, expectedParamCount);
+        if (descriptor != null) {
+            return descriptor;
+        }
+        return "()Ljava/lang/Object;";
+    }
+
+    private String inferConstructorDescriptor(String ownerClass, SourceType samType) {
+        int expectedParamCount = inferExpectedParamCount(samType, MethodRefKind.CONSTRUCTOR);
+        String descriptor = ctx.getTypeResolver().resolveConstructorDescriptor(ownerClass, expectedParamCount);
+        if (descriptor != null) {
+            return descriptor;
+        }
+        return "()V";
+    }
+
+    private int inferExpectedParamCount(SourceType samType, MethodRefKind kind) {
+        if (samType == null) {
+            return -1;
+        }
+        String typeName = extractInterfaceName(samType);
+        int baseCount = getSamParamCount(typeName);
+        if (kind == MethodRefKind.INSTANCE && baseCount > 0) {
+            return baseCount - 1;
+        }
+        return baseCount;
+    }
+
+    private int getSamParamCount(String interfaceName) {
+        if (interfaceName.endsWith("Supplier") || interfaceName.endsWith("Callable")) return 0;
+        if (interfaceName.endsWith("Runnable")) return 0;
+        if (interfaceName.endsWith("Consumer") || interfaceName.endsWith("Function") ||
+            interfaceName.endsWith("Predicate") || interfaceName.endsWith("UnaryOperator")) return 1;
+        if (interfaceName.endsWith("BiConsumer") || interfaceName.endsWith("BiFunction") ||
+            interfaceName.endsWith("BiPredicate") || interfaceName.endsWith("BinaryOperator") ||
+            interfaceName.endsWith("Comparator")) return 2;
+        if (interfaceName.contains("IntFunction") || interfaceName.contains("LongFunction") ||
+            interfaceName.contains("DoubleFunction") || interfaceName.contains("ToIntFunction") ||
+            interfaceName.contains("ToLongFunction") || interfaceName.contains("ToDoubleFunction")) return 1;
+        return -1;
+    }
+
+    private String inferSamDescriptorFromMethodRef(MethodRefExpr methodRef, String implDescriptor, MethodRefKind kind) {
+        if (kind == MethodRefKind.INSTANCE) {
+            String returnDesc = implDescriptor.substring(implDescriptor.indexOf(')') + 1);
+            return "(Ljava/lang/Object;)" + returnDesc;
+        }
+        return implDescriptor;
+    }
+
+    private String buildMethodRefCallSiteDescriptor(MethodRefExpr methodRef, boolean hasBoundReceiver) {
+        StringBuilder sb = new StringBuilder("(");
+        if (hasBoundReceiver && methodRef.getReceiver() != null) {
+            SourceType receiverType = methodRef.getReceiver().getType();
+            sb.append(receiverType.toIRType().getDescriptor());
+        }
+        sb.append(")");
+        sb.append(methodRef.getType().toIRType().getDescriptor());
+        return sb.toString();
+    }
+
+    private static class CaptureCollector extends AbstractSourceVisitor<Void> {
+        private final Set<String> paramNames;
+        private final Set<String> capturedNames;
+
+        CaptureCollector(Set<String> paramNames, Set<String> capturedNames) {
+            this.paramNames = paramNames;
+            this.capturedNames = capturedNames;
+        }
+
+        @Override
+        public Void visitVarRef(VarRefExpr expr) {
+            String name = expr.getName();
+            if (!paramNames.contains(name)) {
+                capturedNames.add(name);
+            }
+            return null;
+        }
     }
 }
