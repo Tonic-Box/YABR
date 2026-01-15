@@ -68,11 +68,18 @@ public class ExpressionLowerer {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
+        SourceType leftType = bin.getLeft().getType();
+        SourceType rightType = bin.getRight().getType();
+        SourceType commonType = getCommonComparisonType(leftType, rightType);
+        IRType commonIRType = commonType.toIRType();
+
+        left = widenIfNeeded(left, commonIRType);
+        right = widenIfNeeded(right, commonIRType);
+
         CompareOp cmpOp = ReverseOperatorMapper.toCompareOp(bin.getOperator());
         IRBlock currentBlock = ctx.getCurrentBlock();
 
-        SourceType leftType = bin.getLeft().getType();
-        if (leftType == PrimitiveSourceType.LONG) {
+        if (commonType == PrimitiveSourceType.LONG) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOpInstruction lcmp = new BinaryOpInstruction(cmpResult, BinaryOp.LCMP, left, right);
             currentBlock.addInstruction(lcmp);
@@ -80,7 +87,7 @@ public class ExpressionLowerer {
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
-        } else if (leftType == PrimitiveSourceType.FLOAT) {
+        } else if (commonType == PrimitiveSourceType.FLOAT) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
             BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
@@ -89,7 +96,7 @@ public class ExpressionLowerer {
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
-        } else if (leftType == PrimitiveSourceType.DOUBLE) {
+        } else if (commonType == PrimitiveSourceType.DOUBLE) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
             BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
@@ -425,6 +432,14 @@ public class ExpressionLowerer {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
+        SourceType leftType = bin.getLeft().getType();
+        SourceType rightType = bin.getRight().getType();
+        SourceType commonType = getCommonComparisonType(leftType, rightType);
+        IRType commonIRType = commonType.toIRType();
+
+        left = widenIfNeeded(left, commonIRType);
+        right = widenIfNeeded(right, commonIRType);
+
         IRBlock trueBlock = ctx.createBlock();
         IRBlock falseBlock = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
@@ -432,8 +447,7 @@ public class ExpressionLowerer {
         CompareOp cmpOp = ReverseOperatorMapper.toCompareOp(bin.getOperator());
         IRBlock currentBlock = ctx.getCurrentBlock();
 
-        SourceType leftType = bin.getLeft().getType();
-        if (leftType == PrimitiveSourceType.LONG) {
+        if (commonType == PrimitiveSourceType.LONG) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOpInstruction lcmp = new BinaryOpInstruction(cmpResult, BinaryOp.LCMP, left, right);
             currentBlock.addInstruction(lcmp);
@@ -441,7 +455,7 @@ public class ExpressionLowerer {
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
-        } else if (leftType == PrimitiveSourceType.FLOAT) {
+        } else if (commonType == PrimitiveSourceType.FLOAT) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
             BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
@@ -450,7 +464,7 @@ public class ExpressionLowerer {
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
-        } else if (leftType == PrimitiveSourceType.DOUBLE) {
+        } else if (commonType == PrimitiveSourceType.DOUBLE) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
             BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
@@ -1166,6 +1180,19 @@ public class ExpressionLowerer {
             if (to == PrimitiveType.DOUBLE) return UnaryOp.F2D;
         }
         return null;
+    }
+
+    private SourceType getCommonComparisonType(SourceType left, SourceType right) {
+        if (left == PrimitiveSourceType.DOUBLE || right == PrimitiveSourceType.DOUBLE) {
+            return PrimitiveSourceType.DOUBLE;
+        }
+        if (left == PrimitiveSourceType.FLOAT || right == PrimitiveSourceType.FLOAT) {
+            return PrimitiveSourceType.FLOAT;
+        }
+        if (left == PrimitiveSourceType.LONG || right == PrimitiveSourceType.LONG) {
+            return PrimitiveSourceType.LONG;
+        }
+        return PrimitiveSourceType.INT;
     }
 
     private Value lowerLambda(LambdaExpr lambda) {
