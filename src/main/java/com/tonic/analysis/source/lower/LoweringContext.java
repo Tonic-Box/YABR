@@ -60,8 +60,14 @@ public class LoweringContext {
     /** Synthetic lambda methods generated during lowering */
     private final List<SyntheticLambdaMethod> syntheticMethods = new ArrayList<>();
 
+    /** Synthetic array constructor methods generated during lowering */
+    private final List<SyntheticArrayConstructor> arrayConstructors = new ArrayList<>();
+
     /** Counter for generating unique lambda method names */
     private int lambdaCounter = 0;
+
+    /** Counter for generating unique array constructor method names */
+    private int arrayConstructorCounter = 0;
 
     /** The name of the current method being lowered */
     @Setter
@@ -295,6 +301,34 @@ public class LoweringContext {
      */
     public void clearSyntheticMethods() {
         syntheticMethods.clear();
+    }
+
+    /**
+     * Generates a unique name for a synthetic array constructor method.
+     */
+    public String generateArrayConstructorMethodName() {
+        return "lambda$newArray$" + (arrayConstructorCounter++);
+    }
+
+    /**
+     * Registers a synthetic array constructor for later generation.
+     */
+    public void registerArrayConstructor(SyntheticArrayConstructor constructor) {
+        arrayConstructors.add(constructor);
+    }
+
+    /**
+     * Gets all registered array constructors.
+     */
+    public List<SyntheticArrayConstructor> getArrayConstructors() {
+        return new ArrayList<>(arrayConstructors);
+    }
+
+    /**
+     * Clears array constructors after they have been processed.
+     */
+    public void clearArrayConstructors() {
+        arrayConstructors.clear();
     }
 
     /**

@@ -153,7 +153,7 @@ public class ExpressionLowerer {
         } else if (expr instanceof ClassExpr) {
             return lowerClass((ClassExpr) expr);
         } else if (expr instanceof SuperExpr) {
-            return lowerSuper((SuperExpr) expr);
+            return lowerSuper();
         } else if (expr instanceof InvokeDynamicExpr) {
             return lowerInvokeDynamic((InvokeDynamicExpr) expr);
         } else if (expr instanceof DynamicConstantExpr) {
@@ -737,16 +737,6 @@ public class ExpressionLowerer {
         return sb.toString();
     }
 
-    private String buildMethodDescriptor(MethodCallExpr call) {
-        StringBuilder sb = new StringBuilder("(");
-        for (Expression arg : call.getArguments()) {
-            sb.append(arg.getType().toIRType().getDescriptor());
-        }
-        sb.append(")");
-        sb.append(call.getType().toIRType().getDescriptor());
-        return sb.toString();
-    }
-
     private Value lowerFieldAccess(FieldAccessExpr field) {
         String ownerClass;
         boolean isStatic = field.isStatic();
@@ -836,15 +826,13 @@ public class ExpressionLowerer {
         SourceType declaredType = arr.getType();
         IRType elementType;
 
-        if (declaredType == ReferenceSourceType.OBJECT || declaredType == null) {
-            SourceType arrayType = resolveArrayType(arr.getArray());
-            if (arrayType instanceof ArraySourceType) {
-                elementType = ((ArraySourceType) arrayType).getElementType().toIRType();
-            } else {
-                elementType = declaredType.toIRType();
-            }
-        } else {
+        SourceType arrayType = resolveArrayType(arr.getArray());
+        if (arrayType instanceof ArraySourceType) {
+            elementType = ((ArraySourceType) arrayType).getElementType().toIRType();
+        } else if (declaredType != null && declaredType != ReferenceSourceType.OBJECT) {
             elementType = declaredType.toIRType();
+        } else {
+            elementType = new ReferenceType("java/lang/Object");
         }
 
         SSAValue result = ctx.newValue(elementType);
@@ -1067,7 +1055,7 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerSuper(SuperExpr superExpr) {
+    private Value lowerSuper() {
         return ctx.getVariable("this");
     }
 
@@ -1351,11 +1339,22 @@ public class ExpressionLowerer {
         String samInterfaceName = extractInterfaceName(returnType);
         String samMethodName = extractSamMethodName(samInterfaceName);
 
-        IRType resultType = returnType.toIRType();
-        SSAValue result = ctx.newValue(resultType);
-
         String arrayTypeName = methodRef.getOwnerClass();
-        String callSiteDescriptor = "()" + returnType.toIRType().getDescriptor();
+        ArrayTypeInfo arrayInfo = parseArrayType(arrayTypeName);
+
+        String syntheticName = ctx.generateArrayConstructorMethodName();
+        String arrayDescriptor = arrayInfo.getArrayDescriptor();
+        String syntheticDescriptor = "(I)" + arrayDescriptor;
+
+        SyntheticArrayConstructor synthetic = new SyntheticArrayConstructor(
+            syntheticName, arrayInfo.elementType, arrayInfo.dimensions
+        );
+        ctx.registerArrayConstructor(synthetic);
+
+        String ownerClass = ctx.getOwnerClass();
+        if (ownerClass == null || ownerClass.isEmpty()) {
+            ownerClass = "UnknownClass";
+        }
 
         MethodHandleConstant bsm = new MethodHandleConstant(
             MethodHandleConstant.REF_invokeStatic,
@@ -1368,17 +1367,23 @@ public class ExpressionLowerer {
 
         MethodHandleConstant implHandle = new MethodHandleConstant(
             MethodHandleConstant.REF_invokeStatic,
-            "java/lang/reflect/Array",
-            "newInstance",
-            "(Ljava/lang/Class;I)Ljava/lang/Object;"
+            ownerClass,
+            syntheticName,
+            syntheticDescriptor
         );
 
+        String samDescErased = "(I)Ljava/lang/Object;";
+
         List<Constant> bsArgs = new ArrayList<>();
-        bsArgs.add(new MethodTypeConstant("(I)Ljava/lang/Object;"));
+        bsArgs.add(new MethodTypeConstant(samDescErased));
         bsArgs.add(implHandle);
-        bsArgs.add(new MethodTypeConstant("(I)Ljava/lang/Object;"));
+        bsArgs.add(new MethodTypeConstant(syntheticDescriptor));
 
         BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
+
+        String callSiteDescriptor = "()" + returnType.toIRType().getDescriptor();
+        IRType resultType = returnType.toIRType();
+        SSAValue result = ctx.newValue(resultType);
 
         InvokeInstruction indy = new InvokeInstruction(
             result, InvokeType.DYNAMIC, null, samMethodName, callSiteDescriptor, new ArrayList<>(), 0, bsInfo
@@ -1557,11 +1562,124 @@ public class ExpressionLowerer {
     }
 
     private String inferSamDescriptorFromMethodRef(MethodRefExpr methodRef, String implDescriptor, MethodRefKind kind) {
+        SourceType targetType = methodRef.getType();
+        if (targetType != null) {
+            String internalName = extractInterfaceName(targetType);
+            if (internalName != null) {
+                int lastSlash = internalName.lastIndexOf('/');
+                String simpleName = lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;
+                String samDescriptor = getSamDescriptor(simpleName, implDescriptor);
+                if (samDescriptor != null) {
+                    return samDescriptor;
+                }
+            }
+        }
+
         if (kind == MethodRefKind.INSTANCE) {
             String returnDesc = implDescriptor.substring(implDescriptor.indexOf(')') + 1);
             return "(Ljava/lang/Object;)" + returnDesc;
         }
         return implDescriptor;
+    }
+
+    private String getSamDescriptor(String interfaceName, String implDescriptor) {
+        String implReturn = implDescriptor.substring(implDescriptor.indexOf(')') + 1);
+
+        switch (interfaceName) {
+            case "Runnable":
+                return "()V";
+            case "Callable":
+            case "Supplier":
+                return "()" + implReturn;
+            case "BooleanSupplier":
+                return "()Z";
+            case "IntSupplier":
+                return "()I";
+            case "LongSupplier":
+                return "()J";
+            case "DoubleSupplier":
+                return "()D";
+            case "Consumer":
+                return "(Ljava/lang/Object;)V";
+            case "IntConsumer":
+                return "(I)V";
+            case "LongConsumer":
+                return "(J)V";
+            case "DoubleConsumer":
+                return "(D)V";
+            case "BiConsumer":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)V";
+            case "ObjIntConsumer":
+                return "(Ljava/lang/Object;I)V";
+            case "ObjLongConsumer":
+                return "(Ljava/lang/Object;J)V";
+            case "ObjDoubleConsumer":
+                return "(Ljava/lang/Object;D)V";
+            case "Predicate":
+                return "(Ljava/lang/Object;)Z";
+            case "IntPredicate":
+                return "(I)Z";
+            case "LongPredicate":
+                return "(J)Z";
+            case "DoublePredicate":
+                return "(D)Z";
+            case "BiPredicate":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)Z";
+            case "Function":
+                return "(Ljava/lang/Object;)" + implReturn;
+            case "IntFunction":
+                return "(I)" + implReturn;
+            case "LongFunction":
+                return "(J)" + implReturn;
+            case "DoubleFunction":
+                return "(D)" + implReturn;
+            case "ToIntFunction":
+                return "(Ljava/lang/Object;)I";
+            case "ToLongFunction":
+                return "(Ljava/lang/Object;)J";
+            case "ToDoubleFunction":
+                return "(Ljava/lang/Object;)D";
+            case "IntToLongFunction":
+                return "(I)J";
+            case "IntToDoubleFunction":
+                return "(I)D";
+            case "LongToIntFunction":
+                return "(J)I";
+            case "LongToDoubleFunction":
+                return "(J)D";
+            case "DoubleToIntFunction":
+                return "(D)I";
+            case "DoubleToLongFunction":
+                return "(D)J";
+            case "BiFunction":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)" + implReturn;
+            case "ToIntBiFunction":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)I";
+            case "ToLongBiFunction":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)J";
+            case "ToDoubleBiFunction":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)D";
+            case "UnaryOperator":
+                return "(Ljava/lang/Object;)Ljava/lang/Object;";
+            case "IntUnaryOperator":
+                return "(I)I";
+            case "LongUnaryOperator":
+                return "(J)J";
+            case "DoubleUnaryOperator":
+                return "(D)D";
+            case "BinaryOperator":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
+            case "IntBinaryOperator":
+                return "(II)I";
+            case "LongBinaryOperator":
+                return "(JJ)J";
+            case "DoubleBinaryOperator":
+                return "(DD)D";
+            case "Comparator":
+                return "(Ljava/lang/Object;Ljava/lang/Object;)I";
+            default:
+                return null;
+        }
     }
 
     private String buildMethodRefCallSiteDescriptor(MethodRefExpr methodRef, boolean hasBoundReceiver) {
@@ -1591,6 +1709,88 @@ public class ExpressionLowerer {
                 capturedNames.add(name);
             }
             return null;
+        }
+    }
+
+    private static class ArrayTypeInfo {
+        final SourceType elementType;
+        final int dimensions;
+
+        ArrayTypeInfo(SourceType elementType, int dimensions) {
+            this.elementType = elementType;
+            this.dimensions = dimensions;
+        }
+
+        String getArrayDescriptor() {
+            return "[".repeat(Math.max(0, dimensions)) +
+                    elementType.toIRType().getDescriptor();
+        }
+    }
+
+    private ArrayTypeInfo parseArrayType(String arrayTypeName) {
+        int dims = 0;
+        String baseName = arrayTypeName;
+
+        while (baseName.endsWith("[]")) {
+            dims++;
+            baseName = baseName.substring(0, baseName.length() - 2);
+        }
+
+        if (dims == 0) {
+            dims = countLeadingBrackets(arrayTypeName);
+            if (dims > 0) {
+                baseName = arrayTypeName.substring(dims);
+                if (baseName.startsWith("L") && baseName.endsWith(";")) {
+                    baseName = baseName.substring(1, baseName.length() - 1);
+                }
+            }
+        }
+
+        if (dims == 0) {
+            dims = 1;
+        }
+
+        SourceType elementType = parseElementType(baseName);
+        return new ArrayTypeInfo(elementType, dims);
+    }
+
+    private int countLeadingBrackets(String s) {
+        int count = 0;
+        for (int i = 0; i < s.length() && s.charAt(i) == '['; i++) {
+            count++;
+        }
+        return count;
+    }
+
+    private SourceType parseElementType(String typeName) {
+        switch (typeName) {
+            case "int":
+            case "I":
+                return PrimitiveSourceType.INT;
+            case "long":
+            case "J":
+                return PrimitiveSourceType.LONG;
+            case "double":
+            case "D":
+                return PrimitiveSourceType.DOUBLE;
+            case "float":
+            case "F":
+                return PrimitiveSourceType.FLOAT;
+            case "boolean":
+            case "Z":
+                return PrimitiveSourceType.BOOLEAN;
+            case "byte":
+            case "B":
+                return PrimitiveSourceType.BYTE;
+            case "char":
+            case "C":
+                return PrimitiveSourceType.CHAR;
+            case "short":
+            case "S":
+                return PrimitiveSourceType.SHORT;
+            default:
+                String internalName = typeName.replace('.', '/');
+                return new ReferenceSourceType(internalName);
         }
     }
 }

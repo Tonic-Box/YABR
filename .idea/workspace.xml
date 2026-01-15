@@ -8,7 +8,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Corrected type widening in comparisons for source lowering">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors">
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/SamDescriptorInferenceTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
     </list>
@@ -198,14 +199,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00117" summary="- execution-api cleanup">
-      <option name="closed" value="true" />
-      <created>1766851746688</created>
-      <option name="number" value="00117" />
-      <option name="presentableId" value="LOCAL-00117" />
-      <option name="project" value="LOCAL" />
-      <updated>1766851746688</updated>
     </task>
     <task id="LOCAL-00118" summary="- execution-api: native handlers">
       <option name="closed" value="true" />
@@ -591,7 +584,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768461006082</updated>
     </task>
-    <option name="localTasksCounter" value="166" />
+    <task id="LOCAL-00166" summary="- Now checks the actual IR type of the lowered operand and uses that to select the correct cast operation is source lowering">
+      <option name="closed" value="true" />
+      <created>1768466146303</created>
+      <option name="number" value="00166" />
+      <option name="presentableId" value="LOCAL-00166" />
+      <option name="project" value="LOCAL" />
+      <updated>1768466146303</updated>
+    </task>
+    <option name="localTasksCounter" value="167" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -606,8 +607,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Error reporting in @CallGraphBuilder" />
-    <MESSAGE value="- CPG" />
     <MESSAGE value="- Fixed translateDupX2 in InstructionTranslator" />
     <MESSAGE value="- oopsie" />
     <MESSAGE value="- cleanup" />
@@ -631,7 +630,9 @@
     <MESSAGE value="-  lambda expression lowering implementation for source -&gt; AST" />
     <MESSAGE value="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
     <MESSAGE value="- Corrected type widening in comparisons for source lowering" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Corrected type widening in comparisons for source lowering" />
+    <MESSAGE value="- Now checks the actual IR type of the lowered operand and uses that to select the correct cast operation is source lowering" />
+    <MESSAGE value="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
