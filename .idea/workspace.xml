@@ -8,7 +8,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Corrected type widening in comparisons for source lowering">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -195,14 +198,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00116" summary="- execution-api fixes: null vs nullRef">
-      <option name="closed" value="true" />
-      <created>1766847253240</created>
-      <option name="number" value="00116" />
-      <option name="presentableId" value="LOCAL-00116" />
-      <option name="project" value="LOCAL" />
-      <updated>1766847253240</updated>
     </task>
     <task id="LOCAL-00117" summary="- execution-api cleanup">
       <option name="closed" value="true" />
@@ -588,7 +583,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768459517746</updated>
     </task>
-    <option name="localTasksCounter" value="165" />
+    <task id="LOCAL-00165" summary="- Corrected type widening in comparisons for source lowering">
+      <option name="closed" value="true" />
+      <created>1768461006082</created>
+      <option name="number" value="00165" />
+      <option name="presentableId" value="LOCAL-00165" />
+      <option name="project" value="LOCAL" />
+      <updated>1768461006082</updated>
+    </task>
+    <option name="localTasksCounter" value="166" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -603,7 +606,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- ASTPrinter" />
     <MESSAGE value="- Error reporting in @CallGraphBuilder" />
     <MESSAGE value="- CPG" />
     <MESSAGE value="- Fixed translateDupX2 in InstructionTranslator" />
@@ -628,7 +630,8 @@
     <MESSAGE value="-  Added parseReturnType() method that extracts the actual return type from the method descriptor" />
     <MESSAGE value="-  lambda expression lowering implementation for source -&gt; AST" />
     <MESSAGE value="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
-    <option name="LAST_COMMIT_MESSAGE" value="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
+    <MESSAGE value="- Corrected type widening in comparisons for source lowering" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Corrected type widening in comparisons for source lowering" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

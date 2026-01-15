@@ -977,8 +977,15 @@ public class ExpressionLowerer {
 
     private Value lowerCast(CastExpr cast) {
         Value operand = lower(cast.getExpression());
-        SourceType fromType = cast.getExpression().getType();
         SourceType toType = cast.getTargetType();
+
+        SourceType fromType = cast.getExpression().getType();
+        if (operand instanceof SSAValue) {
+            SourceType actualType = irTypeToSourceType(operand.getType());
+            if (actualType != null) {
+                fromType = actualType;
+            }
+        }
 
         UnaryOp castOp = ReverseOperatorMapper.getCastOp(fromType, toType);
         if (castOp != null) {
