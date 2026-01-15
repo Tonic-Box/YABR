@@ -143,6 +143,14 @@ public class ExpressionLowerer {
             return lowerLambda((LambdaExpr) expr);
         } else if (expr instanceof MethodRefExpr) {
             return lowerMethodRef((MethodRefExpr) expr);
+        } else if (expr instanceof ClassExpr) {
+            return lowerClass((ClassExpr) expr);
+        } else if (expr instanceof SuperExpr) {
+            return lowerSuper((SuperExpr) expr);
+        } else if (expr instanceof InvokeDynamicExpr) {
+            return lowerInvokeDynamic((InvokeDynamicExpr) expr);
+        } else if (expr instanceof DynamicConstantExpr) {
+            return lowerDynamicConstant((DynamicConstantExpr) expr);
         } else {
             throw new LoweringException("Unsupported expression type: " + expr.getClass().getSimpleName());
         }
@@ -1029,6 +1037,68 @@ public class ExpressionLowerer {
         return ctx.getVariable("this");
     }
 
+    private Value lowerClass(ClassExpr classExpr) {
+        IRType classType = classExpr.getClassType().toIRType();
+        ClassConstant constant = new ClassConstant(classType);
+        SSAValue result = ctx.newValue(ReferenceType.CLASS);
+        ConstantInstruction instr = new ConstantInstruction(result, constant);
+        ctx.getCurrentBlock().addInstruction(instr);
+        return result;
+    }
+
+    private Value lowerSuper(SuperExpr superExpr) {
+        return ctx.getVariable("this");
+    }
+
+    private Value lowerInvokeDynamic(InvokeDynamicExpr expr) {
+        List<Value> args = new ArrayList<>();
+        for (Expression arg : expr.getArguments()) {
+            args.add(lower(arg));
+        }
+
+        String bsmDesc = "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;" +
+                         "Ljava/lang/invoke/MethodType;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;";
+
+        MethodHandleConstant bsm = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            expr.getBootstrapOwner(),
+            expr.getBootstrapName(),
+            bsmDesc
+        );
+
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, new ArrayList<>());
+
+        IRType returnType = expr.getType().toIRType();
+        SSAValue result = null;
+        if (!(returnType instanceof com.tonic.analysis.ssa.type.VoidType)) {
+            result = ctx.newValue(returnType);
+        }
+
+        InvokeInstruction indy = new InvokeInstruction(
+            result, InvokeType.DYNAMIC, null,
+            expr.getName(), expr.getDescriptor(),
+            args, 0, bsInfo
+        );
+        ctx.getCurrentBlock().addInstruction(indy);
+
+        return result != null ? result : NullConstant.INSTANCE;
+    }
+
+    private Value lowerDynamicConstant(DynamicConstantExpr expr) {
+        DynamicConstant dynConst = new DynamicConstant(
+            expr.getName(),
+            expr.getDescriptor(),
+            expr.getBootstrapMethodIndex(),
+            0
+        );
+
+        IRType resultType = expr.getType().toIRType();
+        SSAValue result = ctx.newValue(resultType);
+        ConstantInstruction instr = new ConstantInstruction(result, dynConst);
+        ctx.getCurrentBlock().addInstruction(instr);
+        return result;
+    }
+
     private Value lowerArrayInit(ArrayInitExpr arrInit) {
         int size = arrInit.getElements().size();
         IRType elementType = getElementType(arrInit.getType());
@@ -1295,7 +1365,7 @@ public class ExpressionLowerer {
 
         CaptureCollector collector = new CaptureCollector(paramNames, capturedNames);
         if (lambda.getBody() instanceof Expression) {
-            ((Expression) lambda.getBody()).accept(collector);
+            lambda.getBody().accept(collector);
         } else if (lambda.getBody() instanceof BlockStmt) {
             collectCapturesFromBlock((BlockStmt) lambda.getBody(), collector);
         }

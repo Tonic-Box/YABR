@@ -9,14 +9,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="-  lambda expression lowering implementation for source -&gt; AST">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/SyntheticLambdaMethod.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/LambdaLoweringTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -204,14 +198,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00114" summary="- execution-api fixes: instruction trace">
-      <option name="closed" value="true" />
-      <created>1766822414100</created>
-      <option name="number" value="00114" />
-      <option name="presentableId" value="LOCAL-00114" />
-      <option name="project" value="LOCAL" />
-      <updated>1766822414100</updated>
     </task>
     <task id="LOCAL-00115" summary="- execution-api fixes instruction trace">
       <option name="closed" value="true" />
@@ -597,7 +583,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768322174717</updated>
     </task>
-    <option name="localTasksCounter" value="163" />
+    <task id="LOCAL-00163" summary="-  lambda expression lowering implementation for source -&gt; AST">
+      <option name="closed" value="true" />
+      <created>1768428694830</created>
+      <option name="number" value="00163" />
+      <option name="presentableId" value="LOCAL-00163" />
+      <option name="project" value="LOCAL" />
+      <updated>1768428694830</updated>
+    </task>
+    <option name="localTasksCounter" value="164" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
