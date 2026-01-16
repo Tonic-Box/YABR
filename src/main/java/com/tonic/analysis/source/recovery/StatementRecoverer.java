@@ -709,7 +709,7 @@ public class StatementRecoverer {
      */
     private void registerExceptionVariables(IRBlock handlerBlock, String exceptionVarName) {
         Set<SSAValue> exceptionValuesSet = new HashSet<>();
-        findExceptionSSAValues(handlerBlock, exceptionValuesSet, new HashSet<>());
+        findExceptionSSAValues(handlerBlock, exceptionValuesSet);
 
         for (SSAValue excVal : exceptionValuesSet) {
             context.getExpressionContext().setVariableName(excVal, exceptionVarName);
@@ -720,7 +720,7 @@ public class StatementRecoverer {
      * Finds all SSA values that represent the caught exception.
      * Starts from values with "exc_" prefix and tracks through copies and local stores/loads.
      */
-    private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result, Set<IRBlock> visited) {
+    private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result) {
         Set<Integer> exceptionLocalSlots = new HashSet<>();
 
         findExceptionSSAValuesPass1(block, result, exceptionLocalSlots, new HashSet<>());
@@ -1673,7 +1673,7 @@ public class StatementRecoverer {
                     break;
                 }
                 case IRREDUCIBLE: {
-                    result.add(recoverIrreducible(current, info));
+                    result.add(recoverIrreducible(current));
                     current = null;
                     break;
                 }
@@ -2011,14 +2011,6 @@ public class StatementRecoverer {
 
     private Statement recoverStoreLocal(StoreLocalInstruction store) {
         Value storeValue = store.getValue();
-
-        if (storeValue instanceof SSAValue) {
-            SSAValue ssaValue = (SSAValue) storeValue;
-            IRInstruction def = ssaValue.getDefinition();
-            if (def instanceof NewInstruction) {
-                return null;
-            }
-        }
 
         // When recovering the initialization value for a variable declaration,
         // we need to recover the actual expression (e.g., "new GridBagConstraints()"),
@@ -2597,7 +2589,7 @@ public class StatementRecoverer {
         return info;
     }
 
-    private Statement recoverIrreducible(IRBlock header, RegionInfo info) {
+    private Statement recoverIrreducible(IRBlock header) {
         Set<IRBlock> blocks = new HashSet<>();
         collectReachableBlocks(header, blocks, new HashSet<>());
         return new IRRegionStmt(new ArrayList<>(blocks));
@@ -2790,10 +2782,6 @@ public class StatementRecoverer {
             }
         }
         return types;
-    }
-
-    private Expression recoverCondition(IRBlock block) {
-        return recoverCondition(block, false);
     }
 
     private SSAValue getConditionValue(IRBlock block) {
