@@ -1227,6 +1227,8 @@ public class Parser {
                 expr = new UnaryExpr(UnaryOperator.POST_DEC, expr, expr.getType(), loc);
             } else if (match(TokenType.DOUBLE_COLON)) {
                 expr = parseMethodReference(expr, loc);
+            } else if (check(TokenType.LPAREN) && (expr instanceof SuperExpr || expr instanceof ThisExpr)) {
+                expr = parseMethodCall(expr, "<init>", loc);
             } else {
                 break;
             }

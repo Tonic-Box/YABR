@@ -8,9 +8,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Undeclared local variables fix">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Better error reporting in source lowering for unresolved types">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -198,14 +198,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00123" summary="- debugger edit stack &amp; local values">
-      <option name="closed" value="true" />
-      <created>1766943914512</created>
-      <option name="number" value="00123" />
-      <option name="presentableId" value="LOCAL-00123" />
-      <option name="project" value="LOCAL" />
-      <updated>1766943914512</updated>
     </task>
     <task id="LOCAL-00124" summary="- execution api docs update">
       <option name="closed" value="true" />
@@ -591,7 +583,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768557604845</updated>
     </task>
-    <option name="localTasksCounter" value="172" />
+    <task id="LOCAL-00172" summary="- Better error reporting in source lowering for unresolved types">
+      <option name="closed" value="true" />
+      <created>1768604016929</created>
+      <option name="number" value="00172" />
+      <option name="presentableId" value="LOCAL-00172" />
+      <option name="project" value="LOCAL" />
+      <updated>1768604016929</updated>
+    </task>
+    <option name="localTasksCounter" value="173" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -606,7 +606,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Detect and optimize the &quot;self-store PHI pattern&quot; where:&#10;1. A PHI has an operand from getstatic field.x&#10;2. The PHI result is used in putstatic field.x (same field)&#10;3. This pattern represents conditional field updates&#10;- Removed the unused slot variable from preDeclareParameters() and fixed getNameForLocalSlot() to correctly compute parameter indices by iterating through parameter types to account for long/double taking 2 slots, rather than using the incorrect slot - 1 formula." />
     <MESSAGE value="Fixed source emmission issues" />
     <MESSAGE value="Fixed source emission issues" />
     <MESSAGE value="- Optimized tests" />
@@ -631,7 +630,8 @@
     <MESSAGE value="- Added a check in StatementRecoverer to skip creating VarDeclStmt when the receiver's definition is a NewInstruction.&#10;- Added some new tests&#10;- fixed `super()` in source emission&#10;- cleanup" />
     <MESSAGE value="Added Set&lt;SSAValue&gt; visited to both loops in:&#10;- ExpressionRecoverer&#10;- StatementRecoverer" />
     <MESSAGE value="- Undeclared local variables fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Undeclared local variables fix" />
+    <MESSAGE value="- Better error reporting in source lowering for unresolved types" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Better error reporting in source lowering for unresolved types" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
