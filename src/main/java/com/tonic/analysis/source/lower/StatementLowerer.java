@@ -6,6 +6,7 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
@@ -114,7 +115,7 @@ public class StatementLowerer {
             } else {
                 IRType irType = type.toIRType();
                 SSAValue ssaVal = ctx.newValue(irType);
-                ctx.getCurrentBlock().addInstruction(new ConstantInstruction(ssaVal, (com.tonic.analysis.ssa.value.Constant) value));
+                ctx.getCurrentBlock().addInstruction(new ConstantInstruction(ssaVal, (Constant) value));
                 ctx.setVariable(name, ssaVal);
             }
         } else {

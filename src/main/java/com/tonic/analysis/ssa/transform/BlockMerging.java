@@ -3,6 +3,7 @@ package com.tonic.analysis.ssa.transform;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
 
@@ -112,7 +113,7 @@ public class BlockMerging implements IRTransform {
             }
 
             for (PhiInstruction phi : bSucc.getPhiInstructions()) {
-                com.tonic.analysis.ssa.value.Value incoming = phi.getIncoming(b);
+                Value incoming = phi.getIncoming(b);
                 if (incoming != null) {
                     phi.removeIncoming(b);
                     phi.addIncoming(incoming, a);

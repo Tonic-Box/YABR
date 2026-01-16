@@ -1,6 +1,7 @@
 package com.tonic.demo;
 
 import com.tonic.analysis.pattern.*;
+import com.tonic.analysis.ssa.ir.NewInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 
@@ -137,8 +138,8 @@ public class PatternSearchDemo {
             Patterns.and(
                 Patterns.anyNew(),
                 (instr, method, sourceMethod, classFile) -> {
-                    if (!(instr instanceof com.tonic.analysis.ssa.ir.NewInstruction)) return false;
-                    String className = ((com.tonic.analysis.ssa.ir.NewInstruction) instr).getClassName();
+                    if (!(instr instanceof NewInstruction)) return false;
+                    String className = ((NewInstruction) instr).getClassName();
                     return className != null && className.contains("Exception");
                 }
             )

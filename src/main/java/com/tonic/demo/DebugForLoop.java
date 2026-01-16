@@ -39,7 +39,7 @@ public class DebugForLoop {
                 LoopAnalysis loopAnalysis = new LoopAnalysis(irMethod, domTree);
                 loopAnalysis.compute();
 
-                for (com.tonic.analysis.ssa.analysis.LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
                     IRBlock header = loop.getHeader();
                     System.out.println("\nLoop header: " + header.getName());
                     

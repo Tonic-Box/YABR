@@ -77,6 +77,10 @@ public class LoweringContext {
     @Setter
     private String ownerClass;
 
+    /** The superclass of the owner class */
+    @Setter
+    private String superClassName;
+
     /**
      * Creates a new lowering context.
      */

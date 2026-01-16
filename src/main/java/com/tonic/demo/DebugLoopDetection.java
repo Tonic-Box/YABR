@@ -37,7 +37,7 @@ public class DebugLoopDetection {
                 loopAnalysis.compute();
 
                 System.out.println("\n=== Loops ===");
-                for (com.tonic.analysis.ssa.analysis.LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
                     IRBlock header = loop.getHeader();
                     System.out.println("Loop header: " + header.getName());
                     System.out.println("  Blocks: " + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));

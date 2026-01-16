@@ -7,6 +7,7 @@ import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.typeinference.Nullability;
 import com.tonic.analysis.typeinference.TypeInferenceAnalyzer;
 import com.tonic.analysis.typeinference.TypeState;
@@ -365,9 +366,9 @@ public class PatternSearch {
                             InvokeInstruction invoke = (InvokeInstruction) instr;
                             if (invoke.getInvokeType() != InvokeType.STATIC) {
                                 var receiver = invoke.getReceiver();
-                                if (receiver instanceof com.tonic.analysis.ssa.value.SSAValue) {
+                                if (receiver instanceof SSAValue) {
                                     TypeState state = typeAnalyzer.getTypeState(
-                                        (com.tonic.analysis.ssa.value.SSAValue) receiver);
+                                        (SSAValue) receiver);
                                     if (state.getNullability() == Nullability.UNKNOWN ||
                                         state.getNullability() == Nullability.NULL) {
                                         results.add(new SearchResult(cf, method, instr, -1,
@@ -384,9 +385,9 @@ public class PatternSearch {
                             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
                             if (fieldAccess.isLoad()) {
                                 var obj = fieldAccess.getObjectRef();
-                                if (obj instanceof com.tonic.analysis.ssa.value.SSAValue) {
+                                if (obj instanceof SSAValue) {
                                     TypeState state = typeAnalyzer.getTypeState(
-                                        (com.tonic.analysis.ssa.value.SSAValue) obj);
+                                        (SSAValue) obj);
                                     if (state.getNullability() == Nullability.UNKNOWN ||
                                         state.getNullability() == Nullability.NULL) {
                                         results.add(new SearchResult(cf, method, instr, -1,

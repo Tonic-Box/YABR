@@ -1,6 +1,10 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.type.*;
+import com.tonic.analysis.ssa.ir.BinaryOp;
+import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
+import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.ir.TypeCheckInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.SSAValue;
@@ -56,22 +60,21 @@ public class TypeRecoverer {
             return VoidSourceType.INSTANCE;
         }
 
-        com.tonic.analysis.ssa.ir.IRInstruction def = ssa.getDefinition();
+        IRInstruction def = ssa.getDefinition();
 
-        if (def instanceof com.tonic.analysis.ssa.ir.TypeCheckInstruction) {
-            com.tonic.analysis.ssa.ir.TypeCheckInstruction typeCheck =
-                (com.tonic.analysis.ssa.ir.TypeCheckInstruction) def;
+        if (def instanceof TypeCheckInstruction) {
+            TypeCheckInstruction typeCheck = (TypeCheckInstruction) def;
             if (typeCheck.isInstanceOf()) {
                 return PrimitiveSourceType.BOOLEAN;
             }
         }
 
-        if (def instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction) {
-            com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp = (com.tonic.analysis.ssa.ir.BinaryOpInstruction) def;
-            com.tonic.analysis.ssa.ir.BinaryOp op = binOp.getOp();
-            if (op == com.tonic.analysis.ssa.ir.BinaryOp.AND ||
-                op == com.tonic.analysis.ssa.ir.BinaryOp.OR ||
-                op == com.tonic.analysis.ssa.ir.BinaryOp.XOR) {
+        if (def instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) def;
+            BinaryOp op = binOp.getOp();
+            if (op == BinaryOp.AND ||
+                op == BinaryOp.OR ||
+                op == BinaryOp.XOR) {
                 SourceType leftType = recoverTypeWithInstructionContext(binOp.getLeft());
                 SourceType rightType = recoverTypeWithInstructionContext(binOp.getRight());
                 if (leftType == PrimitiveSourceType.BOOLEAN || rightType == PrimitiveSourceType.BOOLEAN) {
@@ -86,7 +89,7 @@ public class TypeRecoverer {
     /**
      * Recovers type from a Value operand of a binary operation.
      */
-    private SourceType recoverTypeWithInstructionContext(com.tonic.analysis.ssa.value.Value value) {
+    private SourceType recoverTypeWithInstructionContext(Value value) {
         if (value instanceof SSAValue) {
             SSAValue ssa = (SSAValue) value;
             return recoverTypeWithInstructionContext(ssa);

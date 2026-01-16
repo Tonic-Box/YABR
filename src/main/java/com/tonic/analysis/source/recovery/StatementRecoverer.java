@@ -4,10 +4,7 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
-import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
-import com.tonic.analysis.source.ast.type.ArraySourceType;
-import com.tonic.analysis.source.ast.type.ReferenceSourceType;
-import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
@@ -15,7 +12,10 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.ir.CompareOp;
+import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.Constant;
+import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
@@ -477,18 +477,6 @@ public class StatementRecoverer {
             }
         }
         return null;
-    }
-
-    /**
-     * Groups exception handlers by their try region.
-     */
-    private Map<TryRegion, List<ExceptionHandler>> groupHandlersByTryRegion(List<ExceptionHandler> handlers) {
-        Map<TryRegion, List<ExceptionHandler>> grouped = new LinkedHashMap<>();
-        for (ExceptionHandler handler : handlers) {
-            TryRegion region = new TryRegion(handler.getTryStart(), handler.getTryEnd());
-            grouped.computeIfAbsent(region, k -> new ArrayList<>()).add(handler);
-        }
-        return grouped;
     }
 
     private TryRegion createTryRegion(ExceptionHandler handler) {
@@ -1336,7 +1324,7 @@ public class StatementRecoverer {
 
         IRInstruction def = value.getDefinition();
         if (def != null) {
-            for (com.tonic.analysis.ssa.value.Value operand : def.getOperands()) {
+            for (Value operand : def.getOperands()) {
                 if (operand instanceof SSAValue) {
                     SSAValue ssaDep = (SSAValue) operand;
                     if (allValues.contains(ssaDep)) {
@@ -1462,7 +1450,7 @@ public class StatementRecoverer {
         if (fieldLoad == null) return;
 
         SourceType fieldType = typeRecoverer.recoverType(fieldLoad.getDescriptor());
-        Expression fieldExpr = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
+        Expression fieldExpr = new FieldAccessExpr(
             null, fieldLoad.getName(), fieldLoad.getOwner(), fieldLoad.isStatic(), fieldType);
 
         Set<PhiInstruction> visited = new HashSet<>();
@@ -1559,15 +1547,15 @@ public class StatementRecoverer {
      * Gets a default value for the given type.
      */
     private Expression getDefaultValue(SourceType type) {
-        if (type instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType) {
-            com.tonic.analysis.source.ast.type.PrimitiveSourceType pst = (com.tonic.analysis.source.ast.type.PrimitiveSourceType) type;
-            if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
+        if (type instanceof PrimitiveSourceType) {
+            PrimitiveSourceType pst = (PrimitiveSourceType) type;
+            if (pst == PrimitiveSourceType.BOOLEAN) {
                 return LiteralExpr.ofBoolean(false);
-            } else if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.LONG) {
+            } else if (pst == PrimitiveSourceType.LONG) {
                 return LiteralExpr.ofLong(0L);
-            } else if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.FLOAT) {
+            } else if (pst == PrimitiveSourceType.FLOAT) {
                 return LiteralExpr.ofFloat(0.0f);
-            } else if (pst == com.tonic.analysis.source.ast.type.PrimitiveSourceType.DOUBLE) {
+            } else if (pst == PrimitiveSourceType.DOUBLE) {
                 return LiteralExpr.ofDouble(0.0);
             } else {
                 return LiteralExpr.ofInt(0);
@@ -1788,10 +1776,10 @@ public class StatementRecoverer {
                     exprRecoverer.recoverOperand(fieldAccess.getObjectRef());
                 SourceType fieldType = typeRecoverer.recoverType(fieldAccess.getDescriptor());
                 Expression value = exprRecoverer.recoverOperand(fieldAccess.getValue(), fieldType);
-                Expression target = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
+                Expression target = new FieldAccessExpr(
                     receiver, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), fieldType);
-                return new ExprStmt(new com.tonic.analysis.source.ast.expr.BinaryExpr(
-                    com.tonic.analysis.source.ast.expr.BinaryOperator.ASSIGN, target, value, fieldType));
+                return new ExprStmt(new BinaryExpr(
+                    BinaryOperator.ASSIGN, target, value, fieldType));
             }
             if (fieldAccess.isLoad() && fieldAccess.getResult() != null) {
                 SSAValue result = fieldAccess.getResult();
@@ -1823,9 +1811,9 @@ public class StatementRecoverer {
                 Expression index = exprRecoverer.recoverOperand(arrayAccess.getIndex());
                 Expression value = exprRecoverer.recoverOperand(arrayAccess.getValue());
                 SourceType elemType = value.getType();
-                Expression target = new com.tonic.analysis.source.ast.expr.ArrayAccessExpr(array, index, elemType);
-                return new ExprStmt(new com.tonic.analysis.source.ast.expr.BinaryExpr(
-                    com.tonic.analysis.source.ast.expr.BinaryOperator.ASSIGN, target, value, elemType));
+                Expression target = new ArrayAccessExpr(array, index, elemType);
+                return new ExprStmt(new BinaryExpr(
+                    BinaryOperator.ASSIGN, target, value, elemType));
             }
         }
 
@@ -1949,7 +1937,7 @@ public class StatementRecoverer {
             }
         }
 
-        if (instr instanceof com.tonic.analysis.ssa.ir.TypeCheckInstruction) {
+        if (instr instanceof TypeCheckInstruction) {
             if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
@@ -1968,7 +1956,7 @@ public class StatementRecoverer {
                         if (fieldInfo != null) {
                             Expression value = exprRecoverer.recover(constInstr);
                             SourceType fieldType = typeRecoverer.recoverType(fieldInfo.getDescriptor());
-                            Expression fieldTarget = new com.tonic.analysis.source.ast.expr.FieldAccessExpr(
+                            Expression fieldTarget = new FieldAccessExpr(
                                 null, fieldInfo.getName(), fieldInfo.getOwner(), fieldInfo.isStatic(), fieldType);
                             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, fieldTarget, value, fieldType));
                         }
@@ -2063,7 +2051,7 @@ public class StatementRecoverer {
             type = value.getType();
         }
         if (type == null) {
-            type = com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
+            type = VoidSourceType.INSTANCE;
         }
 
         // If the source value is an SSA value, mark it as materialized with the local's name.
@@ -2307,7 +2295,7 @@ public class StatementRecoverer {
         }
 
         if (isBooleanReturnPattern(thenStmts, elseStmts)) {
-            Statement booleanReturn = collapseToBooleanReturn(condition, thenStmts, elseStmts);
+            Statement booleanReturn = collapseToBooleanReturn(condition, thenStmts);
             if (!headerStmts.isEmpty()) {
                 context.addPendingStatements(headerStmts);
             }
@@ -2620,24 +2608,24 @@ public class StatementRecoverer {
 
             if (branch.getRight() != null) {
                 Expression right = exprRecoverer.recoverOperand(branch.getRight());
-                com.tonic.analysis.source.ast.expr.BinaryOperator op =
+                BinaryOperator op =
                     OperatorMapper.mapCompareOp(condition);
                 if (negate) {
                     op = negateOperator(op);
                 }
-                return new com.tonic.analysis.source.ast.expr.BinaryExpr(
-                    op, left, right, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+                return new BinaryExpr(
+                    op, left, right, PrimitiveSourceType.BOOLEAN);
             }
 
             if (OperatorMapper.isNullCheck(condition)) {
                 Expression nullExpr = LiteralExpr.ofNull();
-                com.tonic.analysis.source.ast.expr.BinaryOperator op =
+                BinaryOperator op =
                     OperatorMapper.mapCompareOp(condition);
                 if (negate) {
                     op = negateOperator(op);
                 }
-                return new com.tonic.analysis.source.ast.expr.BinaryExpr(
-                    op, left, nullExpr, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+                return new BinaryExpr(
+                    op, left, nullExpr, PrimitiveSourceType.BOOLEAN);
             }
 
             if (isBooleanExpression(left) || isBooleanSSAValue(branch.getLeft())) {
@@ -2649,18 +2637,18 @@ public class StatementRecoverer {
                     return left;
                 } else {
                     return new UnaryExpr(UnaryOperator.NOT, left,
-                        com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+                        PrimitiveSourceType.BOOLEAN);
                 }
             }
 
-            com.tonic.analysis.source.ast.expr.BinaryOperator op =
+            BinaryOperator op =
                 OperatorMapper.mapCompareOp(condition);
             if (negate) {
                 op = negateOperator(op);
             }
             Expression zero = LiteralExpr.ofInt(0);
-            return new com.tonic.analysis.source.ast.expr.BinaryExpr(
-                op, left, zero, com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+            return new BinaryExpr(
+                op, left, zero, PrimitiveSourceType.BOOLEAN);
         }
         return LiteralExpr.ofBoolean(!negate);
     }
@@ -2670,7 +2658,7 @@ public class StatementRecoverer {
      */
     private boolean isBooleanExpression(Expression expr) {
         SourceType type = expr.getType();
-        if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
+        if (type == PrimitiveSourceType.BOOLEAN) {
             return true;
         }
 
@@ -2689,7 +2677,7 @@ public class StatementRecoverer {
         if (expr instanceof FieldAccessExpr) {
             FieldAccessExpr fae = (FieldAccessExpr) expr;
             SourceType fieldType = fae.getType();
-            if (fieldType == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN) {
+            if (fieldType == PrimitiveSourceType.BOOLEAN) {
                 return true;
             }
         }
@@ -2715,14 +2703,14 @@ public class StatementRecoverer {
      * Checks if an SSAValue has boolean type directly from its IR type.
      * This is a fallback when the recovered expression type isn't detected as boolean.
      */
-    private boolean isBooleanSSAValue(com.tonic.analysis.ssa.value.Value value) {
-        if (value instanceof com.tonic.analysis.ssa.value.SSAValue) {
-            com.tonic.analysis.ssa.value.SSAValue ssaValue = (com.tonic.analysis.ssa.value.SSAValue) value;
-            com.tonic.analysis.ssa.type.IRType type = ssaValue.getType();
-            if (type == com.tonic.analysis.ssa.type.PrimitiveType.BOOLEAN) {
+    private boolean isBooleanSSAValue(Value value) {
+        if (value instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) value;
+            IRType type = ssaValue.getType();
+            if (type == PrimitiveType.BOOLEAN) {
                 return true;
             }
-            com.tonic.analysis.ssa.ir.IRInstruction def = ssaValue.getDefinition();
+            IRInstruction def = ssaValue.getDefinition();
             if (def instanceof TypeCheckInstruction) {
                 TypeCheckInstruction typeCheck = (TypeCheckInstruction) def;
                 return typeCheck.isInstanceOf();
@@ -2853,20 +2841,20 @@ public class StatementRecoverer {
         return false;
     }
 
-    private com.tonic.analysis.source.ast.expr.BinaryOperator negateOperator(
-            com.tonic.analysis.source.ast.expr.BinaryOperator op) {
-        if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.EQ) {
-            return com.tonic.analysis.source.ast.expr.BinaryOperator.NE;
-        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.NE) {
-            return com.tonic.analysis.source.ast.expr.BinaryOperator.EQ;
-        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.LT) {
-            return com.tonic.analysis.source.ast.expr.BinaryOperator.GE;
-        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.GE) {
-            return com.tonic.analysis.source.ast.expr.BinaryOperator.LT;
-        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.GT) {
-            return com.tonic.analysis.source.ast.expr.BinaryOperator.LE;
-        } else if (op == com.tonic.analysis.source.ast.expr.BinaryOperator.LE) {
-            return com.tonic.analysis.source.ast.expr.BinaryOperator.GT;
+    private BinaryOperator negateOperator(
+            BinaryOperator op) {
+        if (op == BinaryOperator.EQ) {
+            return BinaryOperator.NE;
+        } else if (op == BinaryOperator.NE) {
+            return BinaryOperator.EQ;
+        } else if (op == BinaryOperator.LT) {
+            return BinaryOperator.GE;
+        } else if (op == BinaryOperator.GE) {
+            return BinaryOperator.LT;
+        } else if (op == BinaryOperator.GT) {
+            return BinaryOperator.LE;
+        } else if (op == BinaryOperator.LE) {
+            return BinaryOperator.GT;
         } else {
             return op;
         }
@@ -3027,9 +3015,7 @@ public class StatementRecoverer {
      * if(cond) return true; else return false; -> return cond;
      * if(cond) return false; else return true; -> return !cond;
      */
-    private Statement collapseToBooleanReturn(Expression condition,
-                                               List<Statement> thenStmts,
-                                               List<Statement> elseStmts) {
+    private Statement collapseToBooleanReturn(Expression condition, List<Statement> thenStmts) {
         ReturnStmt thenRet = (ReturnStmt) thenStmts.get(0);
         boolean thenValue = getBooleanValue(thenRet.getValue());
 
@@ -3037,7 +3023,7 @@ public class StatementRecoverer {
             return new ReturnStmt(condition);
         } else {
             return new ReturnStmt(new UnaryExpr(UnaryOperator.NOT, condition,
-                    com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN));
+                    PrimitiveSourceType.BOOLEAN));
         }
     }
 
@@ -3065,7 +3051,7 @@ public class StatementRecoverer {
         }
 
         PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
-        for (com.tonic.analysis.ssa.value.Value val : phi.getOperands()) {
+        for (Value val : phi.getOperands()) {
             Integer boolValue = extractBooleanConstant(val);
             if (boolValue == null) {
                 return false;
@@ -3087,7 +3073,7 @@ public class StatementRecoverer {
 
         PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
 
-        List<com.tonic.analysis.ssa.value.Value> operands = phi.getOperands();
+        List<Value> operands = phi.getOperands();
         if (operands.size() != 2) {
             return null;
         }
@@ -3117,26 +3103,26 @@ public class StatementRecoverer {
      * For other expressions, wraps in NOT.
      */
     private Expression invertCondition(Expression condition) {
-        if (condition instanceof com.tonic.analysis.source.ast.expr.BinaryExpr) {
-            com.tonic.analysis.source.ast.expr.BinaryExpr binExpr = (com.tonic.analysis.source.ast.expr.BinaryExpr) condition;
+        if (condition instanceof BinaryExpr) {
+            BinaryExpr binExpr = (BinaryExpr) condition;
             BinaryOperator op = binExpr.getOperator();
             BinaryOperator inverted = negateOperator(op);
             if (inverted != op) {
-                return new com.tonic.analysis.source.ast.expr.BinaryExpr(
+                return new BinaryExpr(
                     inverted, binExpr.getLeft(), binExpr.getRight(), binExpr.getType());
             }
         }
         return new UnaryExpr(UnaryOperator.NOT, condition,
-                com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+                PrimitiveSourceType.BOOLEAN);
     }
 
     /**
      * Extracts a boolean constant value (0 or 1) from an IR Value.
      * Handles both direct IntConstants and SSAValues defined by ConstantInstructions.
      */
-    private Integer extractBooleanConstant(com.tonic.analysis.ssa.value.Value val) {
-        if (val instanceof com.tonic.analysis.ssa.value.IntConstant) {
-            com.tonic.analysis.ssa.value.IntConstant ic = (com.tonic.analysis.ssa.value.IntConstant) val;
+    private Integer extractBooleanConstant(Value val) {
+        if (val instanceof IntConstant) {
+            IntConstant ic = (IntConstant) val;
             int v = ic.getValue();
             if (v == 0 || v == 1) {
                 return v;
@@ -3144,14 +3130,14 @@ public class StatementRecoverer {
             return null;
         }
 
-        if (val instanceof com.tonic.analysis.ssa.value.SSAValue) {
-            com.tonic.analysis.ssa.value.SSAValue ssaVal = (com.tonic.analysis.ssa.value.SSAValue) val;
+        if (val instanceof SSAValue) {
+            SSAValue ssaVal = (SSAValue) val;
             IRInstruction def = ssaVal.getDefinition();
             if (def instanceof ConstantInstruction) {
                 ConstantInstruction constInstr = (ConstantInstruction) def;
-                com.tonic.analysis.ssa.value.Constant c = constInstr.getConstant();
-                if (c instanceof com.tonic.analysis.ssa.value.IntConstant) {
-                    com.tonic.analysis.ssa.value.IntConstant ic = (com.tonic.analysis.ssa.value.IntConstant) c;
+                Constant c = constInstr.getConstant();
+                if (c instanceof IntConstant) {
+                    IntConstant ic = (IntConstant) c;
                     int v = ic.getValue();
                     if (v == 0 || v == 1) {
                         return v;
@@ -3201,7 +3187,7 @@ public class StatementRecoverer {
         Expression cond2 = nestedIf.getCondition();
 
         Expression merged = new BinaryExpr(BinaryOperator.OR, cond1, cond2,
-                com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+                PrimitiveSourceType.BOOLEAN);
 
         Statement nestedElseBranch = nestedIf.getElseBranch();
         List<Statement> finalElseStmts = null;
@@ -3335,7 +3321,7 @@ public class StatementRecoverer {
      * Checks if a PHI instruction receives boolean constants from the then/else blocks.
      */
     private boolean phiReceivesBooleanConstants(PhiInstruction phi, IRBlock thenBlock, IRBlock elseBlock) {
-        List<com.tonic.analysis.ssa.value.Value> operands = phi.getOperands();
+        List<Value> operands = phi.getOperands();
         Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
 
         if (operands.size() != 2 || incomingBlocks.size() != 2) {
@@ -3349,7 +3335,7 @@ public class StatementRecoverer {
             return false;
         }
 
-        for (com.tonic.analysis.ssa.value.Value val : operands) {
+        for (Value val : operands) {
             Integer constVal = extractBooleanConstant(val);
             if (constVal == null) {
                 return false;
@@ -3363,7 +3349,7 @@ public class StatementRecoverer {
      * Gets the boolean constant value (0 or 1) that the then block contributes to a PHI.
      */
     private int getThenBlockBooleanValue(PhiInstruction phi, IRBlock thenBlock) {
-        List<com.tonic.analysis.ssa.value.Value> operands = phi.getOperands();
+        List<Value> operands = phi.getOperands();
         Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
 
         List<IRBlock> blockList = new ArrayList<>(incomingBlocks);
@@ -3705,30 +3691,5 @@ public class StatementRecoverer {
             return "array";
         }
         return "reference";
-    }
-
-    /**
-     * Computes the number of local variable slots used by parameters.
-     * Note: for instance methods, slot 0 is 'this', so parameters start at slot 1.
-     * Long and double types take 2 slots.
-     */
-    private int computeParameterSlots() {
-        IRMethod method = context.getIrMethod();
-        int slots = method.isStatic() ? 0 : 1; // 'this' takes slot 0 for instance methods
-
-        String descriptor = method.getDescriptor();
-        if (descriptor == null) {
-            return slots;
-        }
-
-        List<String> paramTypes = parseParameterTypes(descriptor);
-        for (String paramType : paramTypes) {
-            slots++;
-            // Long and double take 2 slots
-            if ("J".equals(paramType) || "D".equals(paramType)) {
-                slots++;
-            }
-        }
-        return slots;
     }
 }

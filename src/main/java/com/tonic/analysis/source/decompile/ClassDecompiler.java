@@ -2,17 +2,18 @@ package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
-import com.tonic.analysis.source.ast.expr.SuperExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
-import com.tonic.analysis.source.ast.transform.ASTTransform;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
 import com.tonic.analysis.source.ast.transform.DeclarationHoister;
 import com.tonic.analysis.source.ast.transform.SingleUseInliner;
+import com.tonic.analysis.source.ast.type.ArraySourceType;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
+import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
@@ -682,7 +683,7 @@ public class ClassDecompiler {
 
     private void emitBlockContents(IndentingWriter writer, BlockStmt block) {
         SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
-        for (com.tonic.analysis.source.ast.stmt.Statement stmt : block.getStatements()) {
+        for (Statement stmt : block.getStatements()) {
             stmt.accept(emitter);
         }
         usedTypes.addAll(emitter.getUsedTypes());
@@ -708,7 +709,7 @@ public class ClassDecompiler {
 
     private String resolveClassName(int classIndex) {
         try {
-            com.tonic.parser.constpool.ClassRefItem classRef = (com.tonic.parser.constpool.ClassRefItem) classFile.getConstPool().getItem(classIndex);
+            ClassRefItem classRef = (ClassRefItem) classFile.getConstPool().getItem(classIndex);
             return classRef.getClassName();
         } catch (Exception e) {
             return "Unknown";
@@ -757,25 +758,23 @@ public class ClassDecompiler {
         return -1;
     }
 
-    private String trackAndFormatType(com.tonic.analysis.source.ast.type.SourceType type) {
+    private String trackAndFormatType(SourceType type) {
         recordTypeFromSourceType(type);
         return type.toJavaSource();
     }
 
-    private void recordTypeFromSourceType(com.tonic.analysis.source.ast.type.SourceType type) {
-        if (type instanceof com.tonic.analysis.source.ast.type.ReferenceSourceType) {
-            com.tonic.analysis.source.ast.type.ReferenceSourceType refType =
-                (com.tonic.analysis.source.ast.type.ReferenceSourceType) type;
+    private void recordTypeFromSourceType(SourceType type) {
+        if (type instanceof ReferenceSourceType) {
+            ReferenceSourceType refType = (ReferenceSourceType) type;
             String internalName = refType.getInternalName();
             if (internalName.contains("/")) {
                 usedTypes.add(internalName);
             }
-            for (com.tonic.analysis.source.ast.type.SourceType typeArg : refType.getTypeArguments()) {
+            for (SourceType typeArg : refType.getTypeArguments()) {
                 recordTypeFromSourceType(typeArg);
             }
-        } else if (type instanceof com.tonic.analysis.source.ast.type.ArraySourceType) {
-            com.tonic.analysis.source.ast.type.ArraySourceType arrType =
-                (com.tonic.analysis.source.ast.type.ArraySourceType) type;
+        } else if (type instanceof ArraySourceType) {
+            ArraySourceType arrType = (ArraySourceType) type;
             recordTypeFromSourceType(arrType.getElementType());
         }
     }

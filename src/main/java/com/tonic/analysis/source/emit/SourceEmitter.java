@@ -980,7 +980,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitUnary(UnaryExpr expr) {
         if (expr.getOperator().isPrefix()) {
             writer.write(getUnaryOperatorSymbol(expr.getOperator()));
-            boolean needsParens = expr.getOperand() instanceof com.tonic.analysis.source.ast.expr.BinaryExpr;
+            boolean needsParens = expr.getOperand() instanceof BinaryExpr;
             if (needsParens) {
                 writer.write("(");
             }

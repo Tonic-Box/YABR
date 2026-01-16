@@ -2,6 +2,7 @@ package com.tonic.parser.attribute.anotation;
 
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Item;
+import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 /**
@@ -27,16 +28,16 @@ public class EnumConst {
 
     private String resolveTypeName() {
         Item<?> typeNameItem = constPool.getItem(typeNameIndex);
-        if (typeNameItem instanceof com.tonic.parser.constpool.Utf8Item) {
-            return ((com.tonic.parser.constpool.Utf8Item) typeNameItem).getValue().replace('/', '.');
+        if (typeNameItem instanceof Utf8Item) {
+            return ((Utf8Item) typeNameItem).getValue().replace('/', '.');
         }
         return "Unknown";
     }
 
     private String resolveConstName() {
         Item<?> constNameItem = constPool.getItem(constNameIndex);
-        if (constNameItem instanceof com.tonic.parser.constpool.Utf8Item) {
-            return ((com.tonic.parser.constpool.Utf8Item) constNameItem).getValue();
+        if (constNameItem instanceof Utf8Item) {
+            return ((Utf8Item) constNameItem).getValue();
         }
         return "Unknown";
     }

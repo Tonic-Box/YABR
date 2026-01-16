@@ -7,6 +7,7 @@ import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
 import lombok.Getter;
 
 import java.util.*;
@@ -177,7 +178,7 @@ public class RegisterAllocator {
                     if (instr instanceof CopyInstruction) {
                         CopyInstruction copy = (CopyInstruction) instr;
                         if (copy.getResult().equals(copyInfo.copyValue())) {
-                            com.tonic.analysis.ssa.value.Value source = copy.getSource();
+                            Value source = copy.getSource();
                             if (source instanceof SSAValue && allPhiResults.contains(source)) {
                                 coalescingMap.put(phiResult, (SSAValue) source);
                             }
@@ -279,7 +280,7 @@ public class RegisterAllocator {
                 if (instr.getResult() != null) {
                     updateInterval(intervals, instr.getResult(), pos);
                 }
-                for (com.tonic.analysis.ssa.value.Value operand : instr.getOperands()) {
+                for (Value operand : instr.getOperands()) {
                     if (operand instanceof SSAValue) {
                         SSAValue ssa = (SSAValue) operand;
                         updateInterval(intervals, ssa, pos);

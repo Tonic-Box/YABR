@@ -2,7 +2,10 @@ package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
+import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
@@ -40,10 +43,10 @@ class LambdaRecoveryTest {
         RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
         ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-        for (com.tonic.analysis.ssa.cfg.IRBlock block : ir.getBlocks()) {
-            for (com.tonic.analysis.ssa.ir.IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof com.tonic.analysis.ssa.ir.InvokeInstruction) {
-                    com.tonic.analysis.ssa.ir.InvokeInstruction invoke = (com.tonic.analysis.ssa.ir.InvokeInstruction) instr;
+        for (IRBlock block : ir.getBlocks()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (instr instanceof InvokeInstruction) {
+                    InvokeInstruction invoke = (InvokeInstruction) instr;
                     if (invoke.isDynamic()) {
                         return recoverer.recover(instr);
                     }

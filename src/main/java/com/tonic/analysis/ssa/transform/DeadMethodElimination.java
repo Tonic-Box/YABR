@@ -4,6 +4,7 @@ import com.tonic.analysis.ssa.SSA;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.constpool.*;
 
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -156,25 +157,25 @@ public class DeadMethodElimination implements ClassTransform {
     private String resolveMethodOwner(ClassFile classFile, int cpIndex) {
         try {
             var item = classFile.getConstPool().getItem(cpIndex);
-            if (item instanceof com.tonic.parser.constpool.MethodRefItem) {
-                com.tonic.parser.constpool.MethodRefItem mri = (com.tonic.parser.constpool.MethodRefItem) item;
+            if (item instanceof MethodRefItem) {
+                MethodRefItem mri = (MethodRefItem) item;
                 var classRef = classFile.getConstPool().getItem(mri.getValue().getClassIndex());
-                if (classRef instanceof com.tonic.parser.constpool.ClassRefItem) {
-                    com.tonic.parser.constpool.ClassRefItem cri = (com.tonic.parser.constpool.ClassRefItem) classRef;
+                if (classRef instanceof ClassRefItem) {
+                    ClassRefItem cri = (ClassRefItem) classRef;
                     var nameUtf8 = classFile.getConstPool().getItem(cri.getValue());
-                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
-                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) nameUtf8;
+                    if (nameUtf8 instanceof Utf8Item) {
+                        Utf8Item ui = (Utf8Item) nameUtf8;
                         return ui.getValue();
                     }
                 }
-            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem) {
-                com.tonic.parser.constpool.InterfaceRefItem imri = (com.tonic.parser.constpool.InterfaceRefItem) item;
+            } else if (item instanceof InterfaceRefItem) {
+                InterfaceRefItem imri = (InterfaceRefItem) item;
                 var classRef = classFile.getConstPool().getItem(imri.getValue().getClassIndex());
-                if (classRef instanceof com.tonic.parser.constpool.ClassRefItem) {
-                    com.tonic.parser.constpool.ClassRefItem cri = (com.tonic.parser.constpool.ClassRefItem) classRef;
+                if (classRef instanceof ClassRefItem) {
+                    ClassRefItem cri = (ClassRefItem) classRef;
                     var nameUtf8 = classFile.getConstPool().getItem(cri.getValue());
-                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
-                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) nameUtf8;
+                    if (nameUtf8 instanceof Utf8Item) {
+                        Utf8Item ui = (Utf8Item) nameUtf8;
                         return ui.getValue();
                     }
                 }
@@ -191,20 +192,20 @@ public class DeadMethodElimination implements ClassTransform {
         try {
             var item = classFile.getConstPool().getItem(cpIndex);
             int natIndex = -1;
-            if (item instanceof com.tonic.parser.constpool.MethodRefItem) {
-                com.tonic.parser.constpool.MethodRefItem mri = (com.tonic.parser.constpool.MethodRefItem) item;
+            if (item instanceof MethodRefItem) {
+                MethodRefItem mri = (MethodRefItem) item;
                 natIndex = mri.getValue().getNameAndTypeIndex();
-            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem) {
-                com.tonic.parser.constpool.InterfaceRefItem imri = (com.tonic.parser.constpool.InterfaceRefItem) item;
+            } else if (item instanceof InterfaceRefItem) {
+                InterfaceRefItem imri = (InterfaceRefItem) item;
                 natIndex = imri.getValue().getNameAndTypeIndex();
             }
             if (natIndex > 0) {
                 var nat = classFile.getConstPool().getItem(natIndex);
-                if (nat instanceof com.tonic.parser.constpool.NameAndTypeRefItem) {
-                    com.tonic.parser.constpool.NameAndTypeRefItem nati = (com.tonic.parser.constpool.NameAndTypeRefItem) nat;
+                if (nat instanceof NameAndTypeRefItem) {
+                    NameAndTypeRefItem nati = (NameAndTypeRefItem) nat;
                     var nameUtf8 = classFile.getConstPool().getItem(nati.getValue().getNameIndex());
-                    if (nameUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
-                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) nameUtf8;
+                    if (nameUtf8 instanceof Utf8Item) {
+                        Utf8Item ui = (Utf8Item) nameUtf8;
                         return ui.getValue();
                     }
                 }
@@ -221,20 +222,20 @@ public class DeadMethodElimination implements ClassTransform {
         try {
             var item = classFile.getConstPool().getItem(cpIndex);
             int natIndex = -1;
-            if (item instanceof com.tonic.parser.constpool.MethodRefItem) {
-                com.tonic.parser.constpool.MethodRefItem mri = (com.tonic.parser.constpool.MethodRefItem) item;
+            if (item instanceof MethodRefItem) {
+                MethodRefItem mri = (MethodRefItem) item;
                 natIndex = mri.getValue().getNameAndTypeIndex();
-            } else if (item instanceof com.tonic.parser.constpool.InterfaceRefItem) {
-                com.tonic.parser.constpool.InterfaceRefItem imri = (com.tonic.parser.constpool.InterfaceRefItem) item;
+            } else if (item instanceof InterfaceRefItem) {
+                InterfaceRefItem imri = (InterfaceRefItem) item;
                 natIndex = imri.getValue().getNameAndTypeIndex();
             }
             if (natIndex > 0) {
                 var nat = classFile.getConstPool().getItem(natIndex);
-                if (nat instanceof com.tonic.parser.constpool.NameAndTypeRefItem) {
-                    com.tonic.parser.constpool.NameAndTypeRefItem nati = (com.tonic.parser.constpool.NameAndTypeRefItem) nat;
+                if (nat instanceof NameAndTypeRefItem) {
+                    NameAndTypeRefItem nati = (NameAndTypeRefItem) nat;
                     var descUtf8 = classFile.getConstPool().getItem(nati.getValue().getDescriptorIndex());
-                    if (descUtf8 instanceof com.tonic.parser.constpool.Utf8Item) {
-                        com.tonic.parser.constpool.Utf8Item ui = (com.tonic.parser.constpool.Utf8Item) descUtf8;
+                    if (descUtf8 instanceof Utf8Item) {
+                        Utf8Item ui = (Utf8Item) descUtf8;
                         return ui.getValue();
                     }
                 }

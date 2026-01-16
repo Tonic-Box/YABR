@@ -8,6 +8,7 @@ import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.*;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
@@ -376,7 +377,7 @@ public class SourceASTDemo {
 
         test("Type from IR type conversion", () -> {
             // Test the fromIRType static method
-            com.tonic.analysis.ssa.type.PrimitiveType irInt = com.tonic.analysis.ssa.type.PrimitiveType.INT;
+            PrimitiveType irInt = com.tonic.analysis.ssa.type.PrimitiveType.INT;
             SourceType sourceType = SourceType.fromIRType(irInt);
             return sourceType == PrimitiveSourceType.INT;
         });

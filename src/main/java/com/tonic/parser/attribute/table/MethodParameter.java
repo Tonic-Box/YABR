@@ -2,6 +2,7 @@ package com.tonic.parser.attribute.table;
 
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Item;
+import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
 
 /**
@@ -36,8 +37,8 @@ public class MethodParameter {
             return "<unnamed>";
         }
         Item<?> utf8Item = constPool.getItem(nameIndex);
-        if (utf8Item instanceof com.tonic.parser.constpool.Utf8Item) {
-            return ((com.tonic.parser.constpool.Utf8Item) utf8Item).getValue();
+        if (utf8Item instanceof Utf8Item) {
+            return ((Utf8Item) utf8Item).getValue();
         }
         return "Unknown";
     }

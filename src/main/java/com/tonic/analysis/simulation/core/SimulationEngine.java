@@ -4,6 +4,7 @@ import com.tonic.analysis.simulation.listener.CompositeListener;
 import com.tonic.analysis.simulation.listener.SimulationListener;
 import com.tonic.analysis.simulation.state.LocalState;
 import com.tonic.analysis.simulation.state.SimValue;
+import com.tonic.analysis.simulation.state.StackState;
 import com.tonic.analysis.simulation.util.StateTransitions;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -301,7 +302,7 @@ public class SimulationEngine {
         }
 
         return SimulationState.of(
-            com.tonic.analysis.simulation.state.StackState.empty(),
+            StackState.empty(),
             locals
         ).atBlock(method.getEntryBlock());
     }

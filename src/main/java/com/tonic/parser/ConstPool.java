@@ -524,7 +524,7 @@ public class ConstPool {
             }
         }
         InterfaceRefItem newItem = new InterfaceRefItem();
-        newItem.setValue(new com.tonic.parser.constpool.structure.InterfaceRef(classIndex, nameAndTypeIndex));
+        newItem.setValue(new InterfaceRef(classIndex, nameAndTypeIndex));
         newItem.setConstPool(this);
         items.add(newItem);
         return newItem;

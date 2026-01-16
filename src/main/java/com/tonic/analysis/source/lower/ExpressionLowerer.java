@@ -13,9 +13,7 @@ import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.IRType;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.type.ReferenceType;
+import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
 
 import java.util.ArrayList;
@@ -607,6 +605,15 @@ public class ExpressionLowerer {
                     args.add(lower(receiver));
                     invokeType = InvokeType.VIRTUAL;
                 }
+            } else if (receiver instanceof SuperExpr) {
+                args.add(lower(receiver));
+                invokeType = InvokeType.SPECIAL;
+                if (ownerClass == null || ownerClass.isEmpty()) {
+                    ownerClass = ctx.getSuperClassName();
+                    if (ownerClass == null) {
+                        ownerClass = "java/lang/Object";
+                    }
+                }
             } else if (receiver != null) {
                 args.add(lower(receiver));
                 invokeType = InvokeType.VIRTUAL;
@@ -867,8 +874,8 @@ public class ExpressionLowerer {
             SSAValue val = ctx.getVariable(varRef.getName());
             if (val != null) {
                 IRType irType = val.getType();
-                if (irType instanceof com.tonic.analysis.ssa.type.ArrayType) {
-                    com.tonic.analysis.ssa.type.ArrayType arrType = (com.tonic.analysis.ssa.type.ArrayType) irType;
+                if (irType instanceof ArrayType) {
+                    ArrayType arrType = (ArrayType) irType;
                     return new ArraySourceType(irTypeToSourceType(arrType.getElementType()));
                 }
             }
@@ -877,24 +884,24 @@ public class ExpressionLowerer {
     }
 
     private SourceType irTypeToSourceType(IRType irType) {
-        if (irType == com.tonic.analysis.ssa.type.PrimitiveType.INT) {
+        if (irType == PrimitiveType.INT) {
             return PrimitiveSourceType.INT;
-        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.LONG) {
+        } else if (irType == PrimitiveType.LONG) {
             return PrimitiveSourceType.LONG;
-        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.FLOAT) {
+        } else if (irType == PrimitiveType.FLOAT) {
             return PrimitiveSourceType.FLOAT;
-        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.DOUBLE) {
+        } else if (irType == PrimitiveType.DOUBLE) {
             return PrimitiveSourceType.DOUBLE;
-        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.BOOLEAN) {
+        } else if (irType == PrimitiveType.BOOLEAN) {
             return PrimitiveSourceType.BOOLEAN;
-        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.BYTE) {
+        } else if (irType == PrimitiveType.BYTE) {
             return PrimitiveSourceType.BYTE;
-        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.CHAR) {
+        } else if (irType == PrimitiveType.CHAR) {
             return PrimitiveSourceType.CHAR;
-        } else if (irType == com.tonic.analysis.ssa.type.PrimitiveType.SHORT) {
+        } else if (irType == PrimitiveType.SHORT) {
             return PrimitiveSourceType.SHORT;
-        } else if (irType instanceof com.tonic.analysis.ssa.type.ReferenceType) {
-            return new ReferenceSourceType(((com.tonic.analysis.ssa.type.ReferenceType) irType).getInternalName());
+        } else if (irType instanceof ReferenceType) {
+            return new ReferenceSourceType(((ReferenceType) irType).getInternalName());
         }
         return ReferenceSourceType.OBJECT;
     }
@@ -955,9 +962,8 @@ public class ExpressionLowerer {
     }
 
     private IRType getElementType(SourceType arrayType) {
-        if (arrayType instanceof com.tonic.analysis.source.ast.type.ArraySourceType) {
-            com.tonic.analysis.source.ast.type.ArraySourceType arr =
-                (com.tonic.analysis.source.ast.type.ArraySourceType) arrayType;
+        if (arrayType instanceof ArraySourceType) {
+            ArraySourceType arr = (ArraySourceType) arrayType;
             return arr.getElementType().toIRType();
         }
         throw new LoweringException("Expected array type: " + arrayType);
@@ -1079,7 +1085,7 @@ public class ExpressionLowerer {
 
         IRType returnType = expr.getType().toIRType();
         SSAValue result = null;
-        if (!(returnType instanceof com.tonic.analysis.ssa.type.VoidType)) {
+        if (!(returnType instanceof VoidType)) {
             result = ctx.newValue(returnType);
         }
 

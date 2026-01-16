@@ -8,10 +8,56 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Proper impl for synthetic array type lowering from source">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Added a check in StatementRecoverer to skip creating VarDeclStmt when the receiver's definition is a NewInstruction.&#10;- Added some new tests&#10;- fixed `super()` in source emission&#10;- cleanup">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/CPGBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/cpg/CPGBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pattern/PatternSearch.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pattern/PatternSearch.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/PDGBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/PDGBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/node/PDGInstructionNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/node/PDGInstructionNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/slice/SliceResult.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/pdg/slice/SliceResult.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/simulation/core/SimulationEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/simulation/core/SimulationEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/EditorContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/EditorContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/matcher/StmtMatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/matcher/StmtMatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/LoweringContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/TypeRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/TypeRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/PostDominatorTree.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/PostDominatorTree.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/PhiEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/PhiEliminator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/DeadMethodElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/DeadMethodElimination.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/builder/CodeBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/builder/CodeBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugAnalyzeLoop.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugAnalyzeLoop.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugForLoop.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugForLoop.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugLoopDetection.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugLoopDetection.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugLoopMapping.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugLoopMapping.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugStructural.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/DebugStructural.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/PatternSearchDemo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/PatternSearchDemo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ast/SourceASTDemo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/demo/ast/SourceASTDemo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/anotation/EnumConst.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/anotation/EnumConst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/table/MethodParameter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/table/MethodParameter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/MethodRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/MethodRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/ExecutionIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/ExecutionIntegrationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart2Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/dispatch/OpcodeDispatcherPart2Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/frame/FrameGeneratorEdgeCasesTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/frame/FrameGeneratorEdgeCasesTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/ExpressionLoweringE2ETest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/ExpressionLoweringE2ETest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/LambdaRecoveryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/LambdaRecoveryTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/parser/AbstractParserTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/parser/AbstractParserTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -199,14 +245,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00119" summary="- execution api: native handlers">
-      <option name="closed" value="true" />
-      <created>1766869845584</created>
-      <option name="number" value="00119" />
-      <option name="presentableId" value="LOCAL-00119" />
-      <option name="project" value="LOCAL" />
-      <updated>1766869845584</updated>
     </task>
     <task id="LOCAL-00120" summary="- execution api native handlers">
       <option name="closed" value="true" />
@@ -592,7 +630,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768496388863</updated>
     </task>
-    <option name="localTasksCounter" value="168" />
+    <task id="LOCAL-00168" summary="- Added a check in StatementRecoverer to skip creating VarDeclStmt when the receiver's definition is a NewInstruction.">
+      <option name="closed" value="true" />
+      <created>1768523628768</created>
+      <option name="number" value="00168" />
+      <option name="presentableId" value="LOCAL-00168" />
+      <option name="project" value="LOCAL" />
+      <updated>1768523628768</updated>
+    </task>
+    <option name="localTasksCounter" value="169" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -607,9 +653,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- oopsie" />
-    <MESSAGE value="- cleanup" />
-    <MESSAGE value="- Switch case offsets must be relative to the switch opcode position" />
     <MESSAGE value="- Switch recovery bug fixes" />
     <MESSAGE value="Detect and optimize the &quot;self-store PHI pattern&quot; where:&#10;1. A PHI has an operand from getstatic field.x&#10;2. The PHI result is used in putstatic field.x (same field)&#10;3. This pattern represents conditional field updates" />
     <MESSAGE value="- Detect and optimize the &quot;self-store PHI pattern&quot; where:&#10;1. A PHI has an operand from getstatic field.x&#10;2. The PHI result is used in putstatic field.x (same field)&#10;3. This pattern represents conditional field updates&#10;- Removed the unused slot variable from preDeclareParameters() and fixed getNameForLocalSlot() to correctly compute parameter indices by iterating through parameter types to account for long/double taking 2 slots, rather than using the incorrect slot - 1 formula." />
@@ -632,7 +675,10 @@
     <MESSAGE value="- Now checks the actual IR type of the lowered operand and uses that to select the correct cast operation is source lowering" />
     <MESSAGE value="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors" />
     <MESSAGE value="- Proper impl for synthetic array type lowering from source" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Proper impl for synthetic array type lowering from source" />
+    <MESSAGE value="- Added a check in StatementRecoverer to skip creating VarDeclStmt when the receiver's definition is a NewInstruction." />
+    <MESSAGE value="- Added a check in StatementRecoverer to skip creating VarDeclStmt when the receiver's definition is a NewInstruction.&#10;- Added some new tests&#10;- fixed `super()` in source emission" />
+    <MESSAGE value="- Added a check in StatementRecoverer to skip creating VarDeclStmt when the receiver's definition is a NewInstruction.&#10;- Added some new tests&#10;- fixed `super()` in source emission&#10;- cleanup" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Added a check in StatementRecoverer to skip creating VarDeclStmt when the receiver's definition is a NewInstruction.&#10;- Added some new tests&#10;- fixed `super()` in source emission&#10;- cleanup" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -508,8 +508,7 @@ public class TypeInference {
         }
 
         if (instr instanceof com.tonic.analysis.instruction.GetFieldInstruction) {
-            com.tonic.analysis.instruction.GetFieldInstruction getField =
-                (com.tonic.analysis.instruction.GetFieldInstruction) instr;
+            GetFieldInstruction getField = (GetFieldInstruction) instr;
             int fieldIndex = getField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
             if (item instanceof FieldRefItem) {
@@ -526,9 +525,8 @@ public class TypeInference {
     }
 
     private TypeState applyPutField(TypeState state, Instruction instr, boolean isStatic) {
-        if (instr instanceof com.tonic.analysis.instruction.PutFieldInstruction) {
-            com.tonic.analysis.instruction.PutFieldInstruction putField =
-                (com.tonic.analysis.instruction.PutFieldInstruction) instr;
+        if (instr instanceof PutFieldInstruction) {
+            PutFieldInstruction putField = (PutFieldInstruction) instr;
             int fieldIndex = putField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
             if (item instanceof FieldRefItem) {

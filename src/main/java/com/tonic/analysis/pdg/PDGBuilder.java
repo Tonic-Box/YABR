@@ -13,6 +13,7 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.BranchInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
+import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import lombok.Getter;
@@ -75,7 +76,7 @@ public class PDGBuilder {
         Set<IRBlock> exits = new HashSet<>();
         for (IRBlock block : method.getBlocks()) {
             IRInstruction terminator = block.getTerminator();
-            if (terminator instanceof com.tonic.analysis.ssa.ir.ReturnInstruction) {
+            if (terminator instanceof ReturnInstruction) {
                 exits.add(block);
             } else if (block.getSuccessors().isEmpty()) {
                 exits.add(block);

@@ -13,6 +13,7 @@ import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.lift.PhiInserter;
 import com.tonic.analysis.ssa.lift.VariableRenamer;
 import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
@@ -66,7 +67,7 @@ public class ASTLowerer {
         ctx.setCurrentBlock(entryBlock);
 
         if (!isStatic) {
-            IRType thisType = new com.tonic.analysis.ssa.type.ReferenceType(ownerClass);
+            IRType thisType = new ReferenceType(ownerClass);
             SSAValue thisVal = ctx.newValue(thisType);
             irMethod.addParameter(thisVal);
             ctx.setVariable("this", thisVal);
@@ -138,7 +139,7 @@ public class ASTLowerer {
 
         int paramSlot = 0;
         if (!isStatic) {
-            IRType thisType = new com.tonic.analysis.ssa.type.ReferenceType(ownerClass);
+            IRType thisType = new ReferenceType(ownerClass);
             SSAValue thisVal = ctx.newValue(thisType);
             irMethod.addParameter(thisVal);
             if (hasLoops) {

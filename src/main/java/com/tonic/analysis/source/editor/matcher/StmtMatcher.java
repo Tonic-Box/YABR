@@ -1,5 +1,8 @@
 package com.tonic.analysis.source.editor.matcher;
 
+import com.tonic.analysis.source.ast.expr.BinaryExpr;
+import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 
 import java.util.Objects;
@@ -217,7 +220,7 @@ public class StmtMatcher {
     public static StmtMatcher methodCallStmt() {
         return new StmtMatcher(
             stmt -> stmt instanceof ExprStmt &&
-                    ((ExprStmt) stmt).getExpression() instanceof com.tonic.analysis.source.ast.expr.MethodCallExpr,
+                    ((ExprStmt) stmt).getExpression() instanceof MethodCallExpr,
             "methodCallStmt()"
         );
     }
@@ -229,9 +232,9 @@ public class StmtMatcher {
         return new StmtMatcher(
             stmt -> {
                 if (!(stmt instanceof ExprStmt)) return false;
-                com.tonic.analysis.source.ast.expr.Expression expr = ((ExprStmt) stmt).getExpression();
-                return expr instanceof com.tonic.analysis.source.ast.expr.BinaryExpr &&
-                       ((com.tonic.analysis.source.ast.expr.BinaryExpr) expr).isAssignment();
+                Expression expr = ((ExprStmt) stmt).getExpression();
+                return expr instanceof BinaryExpr &&
+                       ((BinaryExpr) expr).isAssignment();
             },
             "assignmentStmt()"
         );

@@ -5,6 +5,8 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.BinaryOp;
+import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
 import com.tonic.analysis.ssa.ir.BranchInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.parser.ClassFile;
@@ -102,10 +104,10 @@ public class DebugAnalyzeLoop {
                                     System.out.println("isForLoopPattern: " + block.getName() + " has back-edge to header");
                                     // Check for increment
                                     for (IRInstruction instr : block.getInstructions()) {
-                                        if (instr instanceof com.tonic.analysis.ssa.ir.BinaryOpInstruction) {
-                                            com.tonic.analysis.ssa.ir.BinaryOpInstruction binOp = (com.tonic.analysis.ssa.ir.BinaryOpInstruction) instr;
-                                            com.tonic.analysis.ssa.ir.BinaryOp op = binOp.getOp();
-                                            if (op == com.tonic.analysis.ssa.ir.BinaryOp.ADD || op == com.tonic.analysis.ssa.ir.BinaryOp.SUB) {
+                                        if (instr instanceof BinaryOpInstruction) {
+                                            BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
+                                            BinaryOp op = binOp.getOp();
+                                            if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
                                                 System.out.println("  Found increment: " + op);
                                                 isForLoop = true;
                                             }

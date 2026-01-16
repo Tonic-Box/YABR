@@ -7,6 +7,7 @@ import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
+import com.tonic.parser.constpool.structure.InterfaceRef;
 import com.tonic.parser.constpool.structure.MethodHandle;
 import com.tonic.renamer.hierarchy.ClassNode;
 import com.tonic.renamer.mapping.MethodMapping;
@@ -229,7 +230,7 @@ public class MethodRenamer {
             // A new NAT was created, update the interface ref to point to it
             // InterfaceRef is immutable, so create a new one
             int classIndex = ifaceRef.getValue().getClassIndex();
-            ifaceRef.setValue(new com.tonic.parser.constpool.structure.InterfaceRef(classIndex, newNatIndex));
+            ifaceRef.setValue(new InterfaceRef(classIndex, newNatIndex));
         }
     }
 

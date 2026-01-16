@@ -4,6 +4,7 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.stack.FullFrame;
 import com.tonic.parser.attribute.stack.StackMapFrame;
 import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
@@ -395,7 +396,7 @@ class FrameGeneratorEdgeCasesTest {
 
             assertNotNull(frames);
             if (!frames.isEmpty()) {
-                assertTrue(frames.get(0) instanceof com.tonic.parser.attribute.stack.FullFrame);
+                assertTrue(frames.get(0) instanceof FullFrame);
             }
         }
 

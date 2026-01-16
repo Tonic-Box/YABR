@@ -9,6 +9,7 @@ import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.parser.constpool.*;
 import com.tonic.type.MethodHandle;
+import com.tonic.type.TypeDescriptor;
 import com.tonic.utill.Opcode;
 import com.tonic.utill.ReturnType;
 
@@ -740,8 +741,8 @@ public class CodeBuilder {
                     argIndices.add(cp.findOrAddFloat((Float) arg).getIndex(cp));
                 } else if (arg instanceof Double) {
                     argIndices.add(cp.findOrAddDouble((Double) arg).getIndex(cp));
-                } else if (arg instanceof com.tonic.type.TypeDescriptor) {
-                    argIndices.add(cp.addMethodType(((com.tonic.type.TypeDescriptor) arg).getDescriptor()));
+                } else if (arg instanceof TypeDescriptor) {
+                    argIndices.add(cp.addMethodType(((TypeDescriptor) arg).getDescriptor()));
                 } else if (arg instanceof MethodHandle) {
                     MethodHandle mh = (MethodHandle) arg;
                     int ref = cp.addMethodRef(mh.getOwner(), mh.getName(), mh.getDescriptor());

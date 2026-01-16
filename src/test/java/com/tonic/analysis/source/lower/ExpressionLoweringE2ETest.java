@@ -269,4 +269,48 @@ public class ExpressionLoweringE2ETest {
             assertEquals(11, (int) m.invoke(null));
         }
     }
+
+    @Nested
+    class SuperExprTests {
+
+        @Test
+        void superHashCode() throws Exception {
+            String source = "class Test { " +
+                    "int getSuperHash() { " +
+                    "    return super.hashCode(); " +
+                    "} " +
+                    "}";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            MethodDecl method = cls.getMethods().get(0);
+
+            String className = uniqueClassName();
+            Class<?> clazz = compileAndLoad(method, className);
+
+            Object instance = clazz.getDeclaredConstructor().newInstance();
+            Method m = clazz.getMethod("getSuperHash");
+            int result = (int) m.invoke(instance);
+            assertEquals(System.identityHashCode(instance), result);
+        }
+
+        @Test
+        void superToString() throws Exception {
+            String source = "class Test { " +
+                    "String getSuperString() { " +
+                    "    return super.toString(); " +
+                    "} " +
+                    "}";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            MethodDecl method = cls.getMethods().get(0);
+
+            String className = uniqueClassName();
+            Class<?> clazz = compileAndLoad(method, className);
+
+            Object instance = clazz.getDeclaredConstructor().newInstance();
+            Method m = clazz.getMethod("getSuperString");
+            String result = (String) m.invoke(instance);
+            assertTrue(result.contains("@"), "Should return Object's toString format");
+        }
+    }
 }

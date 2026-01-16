@@ -38,7 +38,7 @@ public class DebugLoopMapping {
 
                 System.out.println("\n=== All loops in order ===");
                 int i = 0;
-                for (com.tonic.analysis.ssa.analysis.LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
                     System.out.println("Loop " + i++ + ": header=" + loop.getHeader().getName() +
                         " blocks=" + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                 }
@@ -54,7 +54,7 @@ public class DebugLoopMapping {
 
                 if (b82 != null) {
                     System.out.println("isLoopHeader(B82): " + loopAnalysis.isLoopHeader(b82));
-                    com.tonic.analysis.ssa.analysis.LoopAnalysis.Loop loop = loopAnalysis.getLoop(b82);
+                    LoopAnalysis.Loop loop = loopAnalysis.getLoop(b82);
                     if (loop != null) {
                         System.out.println("getLoop(B82) returns: header=" + loop.getHeader().getName() +
                             " blocks=" + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));

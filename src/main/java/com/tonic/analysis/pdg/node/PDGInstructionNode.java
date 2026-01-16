@@ -2,6 +2,7 @@ package com.tonic.analysis.pdg.node;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import lombok.Getter;
@@ -21,7 +22,7 @@ public class PDGInstructionNode extends PDGNode {
     }
 
     private static PDGNodeType determineNodeType(IRInstruction instruction) {
-        if (instruction instanceof com.tonic.analysis.ssa.ir.PhiInstruction) {
+        if (instruction instanceof PhiInstruction) {
             return PDGNodeType.PHI;
         }
         return PDGNodeType.INSTRUCTION;
@@ -47,7 +48,7 @@ public class PDGInstructionNode extends PDGNode {
     }
 
     public boolean isPhi() {
-        return instruction instanceof com.tonic.analysis.ssa.ir.PhiInstruction;
+        return instruction instanceof PhiInstruction;
     }
 
     public boolean isTerminator() {

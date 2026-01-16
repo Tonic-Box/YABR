@@ -2,6 +2,7 @@ package com.tonic.analysis.ssa.analysis;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import lombok.Getter;
 
 import java.util.*;
@@ -61,7 +62,7 @@ public class PostDominatorTree {
         if (block == null || block.getInstructions().isEmpty()) return false;
         var terminator = block.getTerminator();
         if (terminator == null) return false;
-        return terminator instanceof com.tonic.analysis.ssa.ir.ReturnInstruction;
+        return terminator instanceof ReturnInstruction;
     }
 
     private void findExitBlocks() {

@@ -1,6 +1,7 @@
 package com.tonic.analysis.pdg.slice;
 
 import com.tonic.analysis.pdg.edge.PDGEdge;
+import com.tonic.analysis.pdg.node.PDGInstructionNode;
 import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.IRInstruction;
@@ -59,9 +60,9 @@ public class SliceResult {
 
     public boolean containsInstruction(IRInstruction instruction) {
         for (PDGNode node : nodes) {
-            if (node instanceof com.tonic.analysis.pdg.node.PDGInstructionNode) {
-                com.tonic.analysis.pdg.node.PDGInstructionNode instrNode =
-                    (com.tonic.analysis.pdg.node.PDGInstructionNode) node;
+            if (node instanceof PDGInstructionNode) {
+                PDGInstructionNode instrNode =
+                    (PDGInstructionNode) node;
                 if (instrNode.getInstruction() == instruction) {
                     return true;
                 }
@@ -84,9 +85,9 @@ public class SliceResult {
     public Set<IRInstruction> getInstructions() {
         Set<IRInstruction> instructions = new LinkedHashSet<>();
         for (PDGNode node : nodes) {
-            if (node instanceof com.tonic.analysis.pdg.node.PDGInstructionNode) {
-                com.tonic.analysis.pdg.node.PDGInstructionNode instrNode =
-                    (com.tonic.analysis.pdg.node.PDGInstructionNode) node;
+            if (node instanceof PDGInstructionNode) {
+                PDGInstructionNode instrNode =
+                    (PDGInstructionNode) node;
                 instructions.add(instrNode.getInstruction());
             }
         }

@@ -4,6 +4,7 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
 
@@ -38,7 +39,7 @@ public class DeadCodeElimination implements IRTransform {
 
         while (!worklist.isEmpty()) {
             IRInstruction instr = worklist.poll();
-            for (com.tonic.analysis.ssa.value.Value operand : instr.getOperands()) {
+            for (Value operand : instr.getOperands()) {
                 if (operand instanceof SSAValue) {
                     SSAValue ssa = (SSAValue) operand;
                     IRInstruction def = ssa.getDefinition();

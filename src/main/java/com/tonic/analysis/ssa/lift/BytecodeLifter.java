@@ -120,8 +120,8 @@ public class BytecodeLifter {
                 int fallthrough = offset + branch.getLength();
                 blockStarts.add(target);
                 blockStarts.add(fallthrough);
-            } else if (instr instanceof com.tonic.analysis.instruction.GotoInstruction) {
-                com.tonic.analysis.instruction.GotoInstruction gotoInstr = (com.tonic.analysis.instruction.GotoInstruction) instr;
+            } else if (instr instanceof GotoInstruction) {
+                GotoInstruction gotoInstr = (GotoInstruction) instr;
                 int target = offset + gotoInstr.getBranchOffset();
                 blockStarts.add(target);
                 int fallthrough = offset + gotoInstr.getLength();

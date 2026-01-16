@@ -3,8 +3,9 @@ package com.tonic.analysis.ssa.lower;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.value.SSAValue;
-import com.tonic.analysis.ssa.value.Value;
+import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.type.PrimitiveType;
+import com.tonic.analysis.ssa.value.*;
 
 import java.util.*;
 
@@ -156,25 +157,25 @@ public class PhiEliminator {
         method.setPhiCopyMapping(phiCopies);
     }
 
-    private Value getDefaultValue(com.tonic.analysis.ssa.type.IRType type) {
-        if (type instanceof com.tonic.analysis.ssa.type.PrimitiveType) {
-            com.tonic.analysis.ssa.type.PrimitiveType prim = (com.tonic.analysis.ssa.type.PrimitiveType) type;
+    private Value getDefaultValue(IRType type) {
+        if (type instanceof PrimitiveType) {
+            PrimitiveType prim = (PrimitiveType) type;
             switch (prim) {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
                 case CHAR:
                 case SHORT:
-                    return com.tonic.analysis.ssa.value.IntConstant.ZERO;
+                    return IntConstant.ZERO;
                 case LONG:
-                    return new com.tonic.analysis.ssa.value.LongConstant(0L);
+                    return new LongConstant(0L);
                 case FLOAT:
-                    return new com.tonic.analysis.ssa.value.FloatConstant(0.0f);
+                    return new FloatConstant(0.0f);
                 case DOUBLE:
-                    return new com.tonic.analysis.ssa.value.DoubleConstant(0.0);
+                    return new DoubleConstant(0.0);
             }
         }
-        return com.tonic.analysis.ssa.value.NullConstant.INSTANCE;
+        return NullConstant.INSTANCE;
     }
 
     private void removePhis(IRMethod method) {

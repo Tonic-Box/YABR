@@ -388,7 +388,7 @@ class AbstractParserTest {
             super(bytes, false);
             staticVerifyResult = verifyResult;
             if (parse && !verify()) {
-                throw new com.tonic.exception.IncorrectFormatException();
+                throw new IncorrectFormatException();
             }
             if (parse) {
                 process();

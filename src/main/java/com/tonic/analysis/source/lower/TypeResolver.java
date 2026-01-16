@@ -78,6 +78,10 @@ public class TypeResolver {
 
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
+            SourceType jdkType = resolveJdkMethodReturnType(ownerClass, methodName, argTypes);
+            if (jdkType != null) {
+                return jdkType;
+            }
             return null;
         }
 
@@ -111,6 +115,63 @@ public class TypeResolver {
             }
         }
 
+        return null;
+    }
+
+    private SourceType resolveJdkMethodReturnType(String ownerClass, String methodName, List<SourceType> argTypes) {
+        if ("java/lang/Object".equals(ownerClass)) {
+            switch (methodName) {
+                case "hashCode":
+                    if (argTypes.isEmpty()) return PrimitiveSourceType.INT;
+                    break;
+                case "equals":
+                    if (argTypes.size() == 1) return PrimitiveSourceType.BOOLEAN;
+                    break;
+                case "toString":
+                    if (argTypes.isEmpty()) return ReferenceSourceType.STRING;
+                    break;
+                case "getClass":
+                    if (argTypes.isEmpty()) return new ReferenceSourceType("java/lang/Class");
+                    break;
+                case "clone":
+                    if (argTypes.isEmpty()) return ReferenceSourceType.OBJECT;
+                    break;
+                case "notify":
+                case "notifyAll":
+                case "wait":
+                    return VoidSourceType.INSTANCE;
+            }
+        } else if ("java/lang/String".equals(ownerClass)) {
+            switch (methodName) {
+                case "length":
+                    if (argTypes.isEmpty()) return PrimitiveSourceType.INT;
+                    break;
+                case "charAt":
+                    if (argTypes.size() == 1) return PrimitiveSourceType.CHAR;
+                    break;
+                case "substring":
+                    return ReferenceSourceType.STRING;
+                case "equals":
+                case "equalsIgnoreCase":
+                case "startsWith":
+                case "endsWith":
+                case "contains":
+                case "isEmpty":
+                    return PrimitiveSourceType.BOOLEAN;
+                case "toLowerCase":
+                case "toUpperCase":
+                case "trim":
+                case "concat":
+                case "replace":
+                case "valueOf":
+                    return ReferenceSourceType.STRING;
+                case "indexOf":
+                case "lastIndexOf":
+                case "compareTo":
+                case "compareToIgnoreCase":
+                    return PrimitiveSourceType.INT;
+            }
+        }
         return null;
     }
 

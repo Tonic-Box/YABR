@@ -1,6 +1,7 @@
 package com.tonic.analysis.execution;
 
 import com.tonic.analysis.execution.core.*;
+import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.SimpleHeapManager;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
@@ -572,8 +573,7 @@ class ExecutionIntegrationTest {
         }
 
         private ConcreteValue createIntArray(int[] data) {
-            com.tonic.analysis.execution.heap.ArrayInstance array =
-                context.getHeapManager().newArray("I", data.length);
+            ArrayInstance array = context.getHeapManager().newArray("I", data.length);
             for (int i = 0; i < data.length; i++) {
                 array.setInt(i, data[i]);
             }

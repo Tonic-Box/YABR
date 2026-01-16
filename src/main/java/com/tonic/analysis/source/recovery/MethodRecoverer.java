@@ -14,6 +14,8 @@ import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.MethodEntry;
 import lombok.Getter;
 
+import java.util.Map;
+
 /**
  * Facade for recovering source-level AST from an IR method.
  * Coordinates expression recovery, control flow analysis, and statement recovery.
@@ -232,10 +234,10 @@ public class MethodRecoverer {
             }
             recoveryContext.setVariableName(param, name);
             slot++;
-            if (param.getType() instanceof com.tonic.analysis.ssa.type.PrimitiveType) {
-                com.tonic.analysis.ssa.type.PrimitiveType p = (com.tonic.analysis.ssa.type.PrimitiveType) param.getType();
-                if (p == com.tonic.analysis.ssa.type.PrimitiveType.LONG ||
-                    p == com.tonic.analysis.ssa.type.PrimitiveType.DOUBLE) {
+            if (param.getType() instanceof PrimitiveType) {
+                PrimitiveType p = (PrimitiveType) param.getType();
+                if (p == PrimitiveType.LONG ||
+                    p == PrimitiveType.DOUBLE) {
                     slot++;
                 }
             }
@@ -248,9 +250,9 @@ public class MethodRecoverer {
      * When a slot is reused with incompatible types, assigns a unique name.
      */
     private String recoverNameForInstruction(IRInstruction instr,
-                                              java.util.Map<Integer, String> localSlotNames,
-                                              java.util.Map<Integer, IRType> localSlotTypes,
-                                              java.util.Map<Integer, Integer> slotReuseCounter) {
+                                              Map<Integer, String> localSlotNames,
+                                              Map<Integer, IRType> localSlotTypes,
+                                              Map<Integer, Integer> slotReuseCounter) {
         if (instr instanceof LoadLocalInstruction) {
             LoadLocalInstruction load = (LoadLocalInstruction) instr;
             int localIndex = load.getLocalIndex();
@@ -292,10 +294,10 @@ public class MethodRecoverer {
         int slots = 0;
         for (var param : irMethod.getParameters()) {
             slots++;
-            if (param.getType() instanceof com.tonic.analysis.ssa.type.PrimitiveType) {
-                com.tonic.analysis.ssa.type.PrimitiveType p = (com.tonic.analysis.ssa.type.PrimitiveType) param.getType();
-                if (p == com.tonic.analysis.ssa.type.PrimitiveType.LONG ||
-                    p == com.tonic.analysis.ssa.type.PrimitiveType.DOUBLE) {
+            if (param.getType() instanceof PrimitiveType) {
+                PrimitiveType p = (PrimitiveType) param.getType();
+                if (p == PrimitiveType.LONG ||
+                    p == PrimitiveType.DOUBLE) {
                     slots++;
                 }
             }

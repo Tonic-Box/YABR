@@ -11,6 +11,7 @@ import com.tonic.analysis.pdg.node.PDGInstructionNode;
 import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.pdg.sdg.SDG;
 import com.tonic.analysis.pdg.sdg.SDGBuilder;
+import com.tonic.analysis.ssa.ir.BranchInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
@@ -236,9 +237,9 @@ public class CPGBuilder {
         }
 
         IRInstruction terminator = source.getTerminator();
-        if (terminator instanceof com.tonic.analysis.ssa.ir.BranchInstruction) {
-            com.tonic.analysis.ssa.ir.BranchInstruction branch =
-                (com.tonic.analysis.ssa.ir.BranchInstruction) terminator;
+        if (terminator instanceof BranchInstruction) {
+            BranchInstruction branch =
+                (BranchInstruction) terminator;
             if (target == branch.getTrueTarget()) {
                 return CPGEdgeType.CFG_TRUE;
             } else {

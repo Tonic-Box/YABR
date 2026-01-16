@@ -2,6 +2,7 @@ package com.tonic.analysis.source.editor;
 
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.editor.util.ASTFactory;
 
@@ -250,8 +251,8 @@ public class EditorContext {
         if (expr == null) {
             return null;
         }
-        if (expr instanceof com.tonic.analysis.source.ast.expr.VarRefExpr) {
-            return ((com.tonic.analysis.source.ast.expr.VarRefExpr) expr).getName();
+        if (expr instanceof VarRefExpr) {
+            return ((VarRefExpr) expr).getName();
         }
         return null;
     }

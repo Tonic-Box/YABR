@@ -11,6 +11,8 @@ import com.tonic.analysis.frame.FrameGenerator;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.LineNumberTableAttribute;
+import com.tonic.parser.attribute.LocalVariableTableAttribute;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -61,8 +63,8 @@ public class BytecodeLowerer {
 
             // Remove stale debug attributes - they reference old offsets/slots
             codeAttr.getAttributes().removeIf(attr ->
-                attr instanceof com.tonic.parser.attribute.LocalVariableTableAttribute ||
-                attr instanceof com.tonic.parser.attribute.LineNumberTableAttribute);
+                attr instanceof LocalVariableTableAttribute ||
+                attr instanceof LineNumberTableAttribute);
 
             codeAttr.updateLength();
 

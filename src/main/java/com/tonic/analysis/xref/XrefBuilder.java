@@ -9,6 +9,7 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.constpool.ClassRefItem;
 
 import java.util.function.Consumer;
 
@@ -233,8 +234,8 @@ public class XrefBuilder {
     private String resolveClassName(ClassFile cf, int classIndex) {
         try {
             var classRef = cf.getConstPool().getItem(classIndex);
-            if (classRef instanceof com.tonic.parser.constpool.ClassRefItem) {
-                return ((com.tonic.parser.constpool.ClassRefItem) classRef).getClassName();
+            if (classRef instanceof ClassRefItem) {
+                return ((ClassRefItem) classRef).getClassName();
             }
         } catch (Exception e) {
             // Ignore
