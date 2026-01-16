@@ -29,8 +29,10 @@ import com.tonic.parser.constpool.structure.MethodHandle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Converts SSA IR instructions to source Expression trees.
@@ -507,7 +509,8 @@ public class ExpressionRecoverer {
                     }
 
                     SSAValue actualReceiver = ssaReceiver;
-                    while (!context.isPendingNew(actualReceiver)) {
+                    Set<SSAValue> visited = new HashSet<>();
+                    while (!context.isPendingNew(actualReceiver) && visited.add(actualReceiver)) {
                         IRInstruction def = actualReceiver.getDefinition();
                         if (def instanceof CopyInstruction) {
                             Value source = ((CopyInstruction) def).getSource();

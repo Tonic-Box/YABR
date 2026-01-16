@@ -1885,8 +1885,12 @@ public class StatementRecoverer {
         if (instr instanceof CopyInstruction) {
             CopyInstruction copy = (CopyInstruction) instr;
             Value source = copy.getSource();
+            Set<SSAValue> visited = new HashSet<>();
             while (source instanceof SSAValue) {
                 SSAValue ssaSource = (SSAValue) source;
+                if (!visited.add(ssaSource)) {
+                    break;
+                }
                 if (context.getExpressionContext().isPendingNew(ssaSource)) {
                     return null;
                 }
