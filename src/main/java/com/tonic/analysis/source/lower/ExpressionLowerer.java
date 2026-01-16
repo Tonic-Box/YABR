@@ -783,6 +783,11 @@ public class ExpressionLowerer {
         SourceType declaredType = field.getType();
         if (declaredType == ReferenceSourceType.OBJECT || declaredType == null) {
             SourceType resolved = ctx.getTypeResolver().resolveFieldType(ownerClass, field.getFieldName());
+            if (resolved == null) {
+                String fieldRef = (ownerClass != null ? ownerClass.replace('/', '.') : "<unknown>")
+                    + "." + field.getFieldName();
+                throw new LoweringException("Unable to resolve field type: " + fieldRef);
+            }
             return resolved.toIRType();
         }
         return declaredType.toIRType();
