@@ -506,13 +506,29 @@ public class ExpressionRecoverer {
                         }
                     }
 
-                    if (context.isPendingNew(ssaReceiver)) {
-                        String className = context.consumePendingNew(ssaReceiver);
+                    SSAValue actualReceiver = ssaReceiver;
+                    while (!context.isPendingNew(actualReceiver)) {
+                        IRInstruction def = actualReceiver.getDefinition();
+                        if (def instanceof CopyInstruction) {
+                            Value source = ((CopyInstruction) def).getSource();
+                            if (source instanceof SSAValue) {
+                                actualReceiver = (SSAValue) source;
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+
+                    if (context.isPendingNew(actualReceiver)) {
+                        String className = context.consumePendingNew(actualReceiver);
                         NewExpr newExpr = new NewExpr(className);
                         for (Expression arg : args) {
                             newExpr.addArgument(arg);
                         }
-                        context.cacheExpression(ssaReceiver, newExpr);
+                        context.cacheExpression(actualReceiver, newExpr);
+                        if (actualReceiver != ssaReceiver) {
+                            context.cacheExpression(ssaReceiver, newExpr);
+                        }
                         return newExpr;
                     }
                 }

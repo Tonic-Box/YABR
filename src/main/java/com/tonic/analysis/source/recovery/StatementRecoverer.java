@@ -1844,6 +1844,10 @@ public class StatementRecoverer {
                 }
                 if (expr instanceof NewExpr) {
                     if (ssaReceiver != null) {
+                        IRInstruction receiverDef = ssaReceiver.getDefinition();
+                        if (receiverDef instanceof NewInstruction) {
+                            return null;
+                        }
                         String varName = context.getExpressionContext().getVariableName(ssaReceiver);
                         if (varName != null && !varName.equals("this") && !varName.startsWith("arg")) {
                             SourceType type = expr.getType();
@@ -1888,6 +1892,23 @@ public class StatementRecoverer {
                 exprRecoverer.recover(instr);
             }
             return null;
+        }
+
+        if (instr instanceof CopyInstruction) {
+            CopyInstruction copy = (CopyInstruction) instr;
+            Value source = copy.getSource();
+            while (source instanceof SSAValue) {
+                SSAValue ssaSource = (SSAValue) source;
+                if (context.getExpressionContext().isPendingNew(ssaSource)) {
+                    return null;
+                }
+                IRInstruction def = ssaSource.getDefinition();
+                if (def instanceof CopyInstruction) {
+                    source = ((CopyInstruction) def).getSource();
+                    continue;
+                }
+                break;
+            }
         }
 
         if (instr instanceof SimpleInstruction) {

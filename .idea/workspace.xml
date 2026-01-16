@@ -8,10 +8,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors">
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/SamDescriptorInferenceTest.java" afterDir="false" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Proper impl for synthetic array type lowering from source">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -199,14 +199,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00118" summary="- execution-api: native handlers">
-      <option name="closed" value="true" />
-      <created>1766857510495</created>
-      <option name="number" value="00118" />
-      <option name="presentableId" value="LOCAL-00118" />
-      <option name="project" value="LOCAL" />
-      <updated>1766857510495</updated>
     </task>
     <task id="LOCAL-00119" summary="- execution api: native handlers">
       <option name="closed" value="true" />
@@ -592,7 +584,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768466146303</updated>
     </task>
-    <option name="localTasksCounter" value="167" />
+    <task id="LOCAL-00167" summary="- Proper impl for synthetic array type lowering from source">
+      <option name="closed" value="true" />
+      <created>1768496388863</created>
+      <option name="number" value="00167" />
+      <option name="presentableId" value="LOCAL-00167" />
+      <option name="project" value="LOCAL" />
+      <updated>1768496388863</updated>
+    </task>
+    <option name="localTasksCounter" value="168" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -607,7 +607,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fixed translateDupX2 in InstructionTranslator" />
     <MESSAGE value="- oopsie" />
     <MESSAGE value="- cleanup" />
     <MESSAGE value="- Switch case offsets must be relative to the switch opcode position" />
@@ -632,7 +631,8 @@
     <MESSAGE value="- Corrected type widening in comparisons for source lowering" />
     <MESSAGE value="- Now checks the actual IR type of the lowered operand and uses that to select the correct cast operation is source lowering" />
     <MESSAGE value="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors" />
+    <MESSAGE value="- Proper impl for synthetic array type lowering from source" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Proper impl for synthetic array type lowering from source" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
