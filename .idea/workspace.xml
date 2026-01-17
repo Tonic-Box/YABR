@@ -8,11 +8,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Fixed knownFalse tracking to only apply to IFNE/IFEQ conditions, preventing incorrect branch elimination in methods like analyze&#10;- Fixed shared return blocks not being emitted when merge point is already processed&#10;- Added isAllPathsTerminating() helper to properly handle IF_THEN regions with early-exit merge blocks">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- InvokeInstruction.getBootstrapInfo() returns non-null for INVOKEDYNAMIC instructions, enabling CallGraphBuilder to properly traverse into lambda callsites">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Lexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Lexer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,7 +83,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
   }
 }</component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [test]">
+  <component name="RunManager" selected="Gradle.YABR-fixed [compileJava]">
     <configuration name="Decompile" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ast.Decompile" />
       <module name="YABR.main" />
@@ -111,6 +110,28 @@
         <option name="taskNames">
           <list>
             <option value="build" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <configuration name="YABR-fixed [compileJava]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="compileJava" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -180,12 +201,14 @@
     </configuration>
     <list>
       <item itemvalue="Application.Decompile" />
+      <item itemvalue="Gradle.YABR-fixed [compileJava]" />
       <item itemvalue="Gradle.YABR-fixed [build]" />
       <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
       <item itemvalue="Gradle.YABR-fixed [test]" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.YABR-fixed [compileJava]" />
         <item itemvalue="Gradle.YABR-fixed [test]" />
         <item itemvalue="Gradle.YABR-fixed [build]" />
         <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
@@ -608,8 +631,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Optimized SSA (Fix)" />
-    <MESSAGE value="- Field renamer fix for clinit block ref sites" />
     <MESSAGE value="- Source -&gt; AST IR lowering (Compiler functionality)" />
     <MESSAGE value="- Changed PhiConstantPropagation to use replaceAllUsesWith() instead of creating new instructions&#10;- ssaValue.isConstant() returns true if its definition is a ConstantInstruction now" />
     <MESSAGE value="Fixed bugs in source lowering:&#10;- this/super null type: Parser passed null to ThisExpr/SuperExpr constructors -&gt; changed to ReferenceSourceType.OBJECT&#10;- Field access null owner: FieldAccessExpr was created with null ownerClass -&gt; added deriveOwnerClass() helper that extracts owner from expression type&#10;- ExpressionRecoverer same issue: Lambda recovery code also passed null to ThisExpr -&gt; same fix with ReferenceSourceType.OBJECT" />
@@ -633,7 +654,9 @@
     <MESSAGE value="- Fixed field type resolution to use ctx.getOwnerClass() instead of falling back to java/lang/Object" />
     <MESSAGE value="- Lexer promotes overflowing integers to long, parser folds -2147483648L back to int" />
     <MESSAGE value="- Fixed knownFalse tracking to only apply to IFNE/IFEQ conditions, preventing incorrect branch elimination in methods like analyze&#10;- Fixed shared return blocks not being emitted when merge point is already processed&#10;- Added isAllPathsTerminating() helper to properly handle IF_THEN regions with early-exit merge blocks" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixed knownFalse tracking to only apply to IFNE/IFEQ conditions, preventing incorrect branch elimination in methods like analyze&#10;- Fixed shared return blocks not being emitted when merge point is already processed&#10;- Added isAllPathsTerminating() helper to properly handle IF_THEN regions with early-exit merge blocks" />
+    <MESSAGE value="- Fixed knownFalse tracking to only apply to IFNE/IFEQ conditions, preventing incorrect branch elimination in methods like analyze&#10;- Fixed shared return blocks not being emitted when merge point is already processed&#10;- Added isAllPathsTerminating() helper to properly handle IF_THEN regions with early-exit merge blocks&#10;- CallGraphBuilder now properly traverses into lambdas, standard dynamic call sites, and non-standard/obfuscated invokedynamic and constantdynamic patterns." />
+    <MESSAGE value="- InvokeInstruction.getBootstrapInfo() returns non-null for INVOKEDYNAMIC instructions, enabling CallGraphBuilder to properly traverse into lambda callsites" />
+    <option name="LAST_COMMIT_MESSAGE" value="- InvokeInstruction.getBootstrapInfo() returns non-null for INVOKEDYNAMIC instructions, enabling CallGraphBuilder to properly traverse into lambda callsites" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -641,7 +664,7 @@
         <line-breakpoint enabled="true" type="java-method">
           <url>file://$PROJECT_DIR$/src/main/java/com/tonic/utill/AccessBuilder.java</url>
           <line>38</line>
-          <properties class="com.tonic.utill.AccessBuilder" method="setPublic">
+          <properties class="com.tonic.utill.AccessBuilder">
             <option name="EMULATED" value="true" />
             <option name="WATCH_EXIT" value="false" />
           </properties>

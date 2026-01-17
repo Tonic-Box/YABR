@@ -6,8 +6,11 @@ import com.tonic.analysis.ssa.cfg.*;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.utill.Modifiers;
@@ -61,14 +64,16 @@ public class BytecodeLifter {
         Set<Integer> blockStarts = findBlockBoundaries(instructions, codeAttr);
         Map<Integer, IRBlock> offsetToBlock = createBlocks(irMethod, blockStarts);
 
-        InstructionTranslator translator = new InstructionTranslator(constPool);
+        ClassFile classFile = method.getClassFile();
+        BootstrapMethodsAttribute bsmAttr = findBootstrapMethodsAttribute(classFile);
+        InstructionTranslator translator = new InstructionTranslator(constPool, bsmAttr);
         for (Map.Entry<Integer, IRBlock> entry : offsetToBlock.entrySet()) {
             translator.registerBlock(entry.getKey(), entry.getValue());
         }
 
         initializeParameters(irMethod, method);
         translateInstructions(irMethod, instructions, offsetToBlock, translator, codeAttr);
-        connectBlocks(irMethod, offsetToBlock, instructions);
+        connectBlocks(irMethod);
         handleExceptionHandlers(irMethod, codeAttr, offsetToBlock);
 
         // Fix up PHI uses - ensure instructions use PHI values instead of raw incoming values
@@ -337,7 +342,7 @@ public class BytecodeLifter {
                 translator.translate(instr, state, currentBlock);
 
                 if (currentBlock.hasTerminator()) {
-                    propagateState(state, currentBlock, blockStates, worklist, offsetToBlock, stateSourceBlocks);
+                    propagateState(state, currentBlock, blockStates, worklist, stateSourceBlocks);
                     break;
                 }
             }
@@ -356,7 +361,7 @@ public class BytecodeLifter {
     }
 
     private void propagateState(AbstractState state, IRBlock block, Map<IRBlock, AbstractState> blockStates,
-                                Queue<IRBlock> worklist, Map<Integer, IRBlock> offsetToBlock,
+                                Queue<IRBlock> worklist,
                                 Map<IRBlock, IRBlock> stateSourceBlocks) {
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return;
@@ -537,7 +542,7 @@ public class BytecodeLifter {
         stackPhiIndex.computeIfAbsent(block, k -> new HashMap<>()).put(stackSlot, phi);
     }
 
-    private void connectBlocks(IRMethod irMethod, Map<Integer, IRBlock> offsetToBlock, List<Instruction> instructions) {
+    private void connectBlocks(IRMethod irMethod) {
         for (IRBlock block : irMethod.getBlocks()) {
             IRInstruction terminator = block.getTerminator();
             if (terminator == null) continue;
@@ -634,5 +639,17 @@ public class BytecodeLifter {
                 || opcode == JSR.getCode()
                 || opcode == RET.getCode()
                 || opcode == JSR_W.getCode();
+    }
+
+    private static BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile classFile) {
+        if (classFile == null) {
+            return null;
+        }
+        for (Attribute attr : classFile.getClassAttributes()) {
+            if (attr instanceof BootstrapMethodsAttribute) {
+                return (BootstrapMethodsAttribute) attr;
+            }
+        }
+        return null;
     }
 }

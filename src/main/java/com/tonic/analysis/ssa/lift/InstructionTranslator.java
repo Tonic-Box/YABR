@@ -9,6 +9,8 @@ import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.attribute.BootstrapMethodsAttribute;
+import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.parser.constpool.structure.MethodHandle;
 import lombok.Getter;
@@ -23,16 +25,17 @@ import static com.tonic.utill.Opcode.*;
 public class InstructionTranslator {
 
     private final ConstPool constPool;
+    private final BootstrapMethodsAttribute bsmAttr;
     @Getter
     private final Map<Integer, IRBlock> offsetToBlock;
 
-    /**
-     * Creates a new instruction translator.
-     *
-     * @param constPool the constant pool
-     */
     public InstructionTranslator(ConstPool constPool) {
+        this(constPool, null);
+    }
+
+    public InstructionTranslator(ConstPool constPool, BootstrapMethodsAttribute bsmAttr) {
         this.constPool = constPool;
+        this.bsmAttr = bsmAttr;
         this.offsetToBlock = new HashMap<>();
     }
 
@@ -235,10 +238,6 @@ public class InstructionTranslator {
         SSAValue result = new SSAValue(constant.getType());
         block.addInstruction(new ConstantInstruction(result, constant));
         state.push(result);
-    }
-
-    private Constant itemToConstant(Item<?> item) {
-        return itemToConstant(item, 0);
     }
 
     private Constant itemToConstant(Item<?> item, int cpIndex) {
@@ -901,15 +900,38 @@ public class InstructionTranslator {
             args.add(0, state.pop());
         }
 
+        int bsmIndex = item.getValue().getBootstrapMethodAttrIndex();
+        BootstrapMethodInfo bootstrapInfo = extractBootstrapInfo(bsmIndex);
+
         String returnDesc = desc.substring(desc.indexOf(')') + 1);
         if (returnDesc.equals("V")) {
-            block.addInstruction(new InvokeInstruction(InvokeType.DYNAMIC, "", name, desc, args, cpIndex));
+            block.addInstruction(new InvokeInstruction(InvokeType.DYNAMIC, "", name, desc, args, cpIndex, bootstrapInfo));
         } else {
             IRType returnType = IRType.fromDescriptor(returnDesc);
             SSAValue result = new SSAValue(returnType);
-            block.addInstruction(new InvokeInstruction(result, InvokeType.DYNAMIC, "", name, desc, args, cpIndex));
+            block.addInstruction(new InvokeInstruction(result, InvokeType.DYNAMIC, "", name, desc, args, cpIndex, bootstrapInfo));
             state.push(result);
         }
+    }
+
+    private BootstrapMethodInfo extractBootstrapInfo(int bsmIndex) {
+        if (bsmAttr == null || bsmIndex < 0 || bsmIndex >= bsmAttr.getBootstrapMethods().size()) {
+            return null;
+        }
+        BootstrapMethod bsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
+
+        Item<?> bsmItem = constPool.getItem(bsm.getBootstrapMethodRef());
+        if (!(bsmItem instanceof MethodHandleItem)) {
+            return null;
+        }
+        MethodHandleConstant bsmHandle = resolveMethodHandle((MethodHandleItem) bsmItem);
+
+        List<Constant> bsmArgs = new ArrayList<>();
+        for (Integer argIndex : bsm.getBootstrapArguments()) {
+            Item<?> argItem = constPool.getItem(argIndex);
+            bsmArgs.add(itemToConstant(argItem, argIndex));
+        }
+        return new BootstrapMethodInfo(bsmHandle, bsmArgs);
     }
 
     private void translateInvoke(InvokeType invokeType, String owner, String name, String desc,
