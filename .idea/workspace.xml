@@ -8,9 +8,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Better error reporting in source lowering for unresolved types">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Fixed bug with super() parsing in source lowering">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -198,14 +198,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00124" summary="- execution api docs update">
-      <option name="closed" value="true" />
-      <created>1766956032291</created>
-      <option name="number" value="00124" />
-      <option name="presentableId" value="LOCAL-00124" />
-      <option name="project" value="LOCAL" />
-      <updated>1766956032291</updated>
     </task>
     <task id="LOCAL-00125" summary="- Tracing listener infrastructure">
       <option name="closed" value="true" />
@@ -591,7 +583,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768604016929</updated>
     </task>
-    <option name="localTasksCounter" value="173" />
+    <task id="LOCAL-00173" summary="- Fixed bug with super() parsing in source lowering">
+      <option name="closed" value="true" />
+      <created>1768607066125</created>
+      <option name="number" value="00173" />
+      <option name="presentableId" value="LOCAL-00173" />
+      <option name="project" value="LOCAL" />
+      <updated>1768607066125</updated>
+    </task>
+    <option name="localTasksCounter" value="174" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -606,7 +606,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Fixed source emmission issues" />
     <MESSAGE value="Fixed source emission issues" />
     <MESSAGE value="- Optimized tests" />
     <MESSAGE value="- Optimized SSA" />
@@ -631,7 +630,8 @@
     <MESSAGE value="Added Set&lt;SSAValue&gt; visited to both loops in:&#10;- ExpressionRecoverer&#10;- StatementRecoverer" />
     <MESSAGE value="- Undeclared local variables fix" />
     <MESSAGE value="- Better error reporting in source lowering for unresolved types" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Better error reporting in source lowering for unresolved types" />
+    <MESSAGE value="- Fixed bug with super() parsing in source lowering" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fixed bug with super() parsing in source lowering" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

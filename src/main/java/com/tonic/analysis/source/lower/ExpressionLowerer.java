@@ -759,8 +759,18 @@ public class ExpressionLowerer {
             } else {
                 ownerClass = field.getOwnerClass();
             }
+        } else if (receiver instanceof ThisExpr) {
+            ownerClass = ctx.getOwnerClass();
+        } else if (receiver instanceof SuperExpr) {
+            ownerClass = ctx.getSuperClassName();
+            if (ownerClass == null || ownerClass.isEmpty()) {
+                ownerClass = "java/lang/Object";
+            }
         } else {
             ownerClass = field.getOwnerClass();
+            if (ownerClass == null || ownerClass.isEmpty()) {
+                ownerClass = ctx.getOwnerClass();
+            }
         }
 
         IRType fieldType = resolveFieldType(field, ownerClass);
@@ -812,8 +822,18 @@ public class ExpressionLowerer {
             } else {
                 ownerClass = field.getOwnerClass();
             }
+        } else if (receiver instanceof ThisExpr) {
+            ownerClass = ctx.getOwnerClass();
+        } else if (receiver instanceof SuperExpr) {
+            ownerClass = ctx.getSuperClassName();
+            if (ownerClass == null || ownerClass.isEmpty()) {
+                ownerClass = "java/lang/Object";
+            }
         } else {
             ownerClass = field.getOwnerClass();
+            if (ownerClass == null || ownerClass.isEmpty()) {
+                ownerClass = ctx.getOwnerClass();
+            }
         }
 
         IRType fieldType = resolveFieldType(field, ownerClass);
