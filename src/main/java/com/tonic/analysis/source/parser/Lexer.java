@@ -326,10 +326,16 @@ public final class Lexer {
         String cleaned = text.replace("_", "");
 
         Object value;
+        TokenType resultType = type;
         try {
             switch (type) {
                 case INTEGER_LITERAL:
-                    value = parseInteger(cleaned);
+                    try {
+                        value = parseInteger(cleaned);
+                    } catch (NumberFormatException intOverflow) {
+                        value = parseLong(cleaned);
+                        resultType = TokenType.LONG_LITERAL;
+                    }
                     break;
                 case LONG_LITERAL:
                     value = parseLong(cleaned);
@@ -347,7 +353,7 @@ public final class Lexer {
             return makeErrorToken("Invalid number format: " + text);
         }
 
-        return new Token(type, text, value, tokenStartPosition());
+        return new Token(resultType, text, value, tokenStartPosition());
     }
 
     private int parseInteger(String s) {

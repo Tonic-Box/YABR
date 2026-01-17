@@ -1116,6 +1116,30 @@ public class Parser {
         }
         if (match(TokenType.MINUS)) {
             Expression operand = parsePrefixExpression();
+            if (operand instanceof LiteralExpr) {
+                LiteralExpr lit = (LiteralExpr) operand;
+                Object val = lit.getValue();
+                if (val instanceof Long) {
+                    long lval = (Long) val;
+                    if (lval == 2147483648L) {
+                        return new LiteralExpr(Integer.MIN_VALUE, PrimitiveSourceType.INT, loc);
+                    }
+                    long negated = -lval;
+                    if (negated >= Integer.MIN_VALUE && negated <= Integer.MAX_VALUE) {
+                        return new LiteralExpr((int) negated, PrimitiveSourceType.INT, loc);
+                    }
+                    return new LiteralExpr(negated, PrimitiveSourceType.LONG, loc);
+                }
+                if (val instanceof Integer) {
+                    return new LiteralExpr(-((Integer) val), PrimitiveSourceType.INT, loc);
+                }
+                if (val instanceof Double) {
+                    return new LiteralExpr(-((Double) val), PrimitiveSourceType.DOUBLE, loc);
+                }
+                if (val instanceof Float) {
+                    return new LiteralExpr(-((Float) val), PrimitiveSourceType.FLOAT, loc);
+                }
+            }
             return new UnaryExpr(UnaryOperator.NEG, operand, operand.getType(), loc);
         }
         if (match(TokenType.PLUS)) {
