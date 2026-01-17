@@ -275,6 +275,7 @@ public final class Lexer {
         }
 
         char suffix = peek(0);
+
         if (suffix == 'l' || suffix == 'L') {
             isLong = true;
             advance();

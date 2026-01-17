@@ -1071,6 +1071,10 @@ public class StatementRecoverer {
         return isTerminatingStatement(branch);
     }
 
+    private boolean isAllPathsTerminating(IfStmt ifStmt) {
+        return isTerminatingBranch(ifStmt.getThenBranch());
+    }
+
     /** Map from local slot name to unified type (computed from all assignments) */
     private final Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
 
@@ -1626,6 +1630,14 @@ public class StatementRecoverer {
                             result.addAll(returnStmts);
                             context.markProcessed(merge);
                             current = null;
+                        } else if (context.isProcessed(merge) && isReturnBlock(merge) && ifStmt != null) {
+                            if (isAllPathsTerminating((IfStmt) ifStmt)) {
+                                List<Statement> returnStmts = recoverSimpleBlock(merge);
+                                result.addAll(returnStmts);
+                                current = null;
+                            } else {
+                                current = merge;
+                            }
                         } else {
                             current = merge;
                         }
@@ -2182,7 +2194,9 @@ public class StatementRecoverer {
 
         Set<SSAValue> knownFalse = new HashSet<>();
         Set<FieldKey> knownFalseFields = new HashSet<>();
-        if (info.isConditionNegated() && conditionValue != null) {
+        boolean canTrackKnownFalse = (conditionOp == CompareOp.IFNE && info.isConditionNegated())
+                                  || (conditionOp == CompareOp.IFEQ && !info.isConditionNegated());
+        if (canTrackKnownFalse && conditionValue != null) {
             knownFalse.add(conditionValue);
             FieldKey fieldKey = extractFieldKey(conditionValue);
             if (fieldKey != null) {
@@ -2259,12 +2273,17 @@ public class StatementRecoverer {
         Set<FieldKey> knownFalseFieldsForElse = new HashSet<>();
         if (condValue != null) {
             FieldKey fieldKey = extractFieldKey(condValue);
-            if (info.isConditionNegated()) {
+            boolean knownFalseThen = (conditionOp == CompareOp.IFNE && info.isConditionNegated())
+                                  || (conditionOp == CompareOp.IFEQ && !info.isConditionNegated());
+            boolean knownFalseElse = (conditionOp == CompareOp.IFNE && !info.isConditionNegated())
+                                  || (conditionOp == CompareOp.IFEQ && info.isConditionNegated());
+            if (knownFalseThen) {
                 knownFalseForThen.add(condValue);
                 if (fieldKey != null) {
                     knownFalseFieldsForThen.add(fieldKey);
                 }
-            } else {
+            }
+            if (knownFalseElse) {
                 knownFalseForElse.add(condValue);
                 if (fieldKey != null) {
                     knownFalseFieldsForElse.add(fieldKey);
@@ -2519,20 +2538,24 @@ public class StatementRecoverer {
         }
 
         if (info.getDefaultTarget() != null) {
-            Set<IRBlock> defaultStopBlocks = new HashSet<>(baseStopBlocks);
-            for (IRBlock otherTarget : allCaseTargets) {
-                if (otherTarget != info.getDefaultTarget()) {
-                    defaultStopBlocks.add(otherTarget);
+            if (mergeBlock != null && info.getDefaultTarget() == mergeBlock) {
+                cases.add(SwitchCase.defaultCase(Collections.emptyList()));
+            } else {
+                Set<IRBlock> defaultStopBlocks = new HashSet<>(baseStopBlocks);
+                for (IRBlock otherTarget : allCaseTargets) {
+                    if (otherTarget != info.getDefaultTarget()) {
+                        defaultStopBlocks.add(otherTarget);
+                    }
                 }
+                context.pushStopBlocks(defaultStopBlocks);
+                List<Statement> defaultStmts;
+                try {
+                    defaultStmts = recoverBlockSequence(info.getDefaultTarget(), defaultStopBlocks);
+                } finally {
+                    context.popStopBlocks();
+                }
+                cases.add(SwitchCase.defaultCase(defaultStmts));
             }
-            context.pushStopBlocks(defaultStopBlocks);
-            List<Statement> defaultStmts;
-            try {
-                defaultStmts = recoverBlockSequence(info.getDefaultTarget(), defaultStopBlocks);
-            } finally {
-                context.popStopBlocks();
-            }
-            cases.add(SwitchCase.defaultCase(defaultStmts));
         }
 
         Statement switchStmt = new SwitchStmt(selector, cases);
@@ -2892,17 +2915,18 @@ public class StatementRecoverer {
     }
 
     private IRBlock findSwitchMerge(RegionInfo info) {
+        Set<IRBlock> caseTargets = new HashSet<>(info.getSwitchCases().values());
+        Set<IRBlock> allTargets = new HashSet<>(caseTargets);
+        if (info.getDefaultTarget() != null) {
+            allTargets.add(info.getDefaultTarget());
+        }
+
         var postDomTree = analyzer.getPostDominatorTree();
         if (postDomTree != null) {
             IRBlock ipdom = postDomTree.getImmediatePostDominator(info.getHeader());
-            if (ipdom != null) {
+            if (ipdom != null && !caseTargets.contains(ipdom)) {
                 return ipdom;
             }
-        }
-
-        Set<IRBlock> allTargets = new HashSet<>(info.getSwitchCases().values());
-        if (info.getDefaultTarget() != null) {
-            allTargets.add(info.getDefaultTarget());
         }
 
         Set<IRBlock> commonSuccessors = null;
@@ -2923,7 +2947,11 @@ public class StatementRecoverer {
             return null;
         }
 
-        return commonSuccessors.iterator().next();
+        IRBlock merge = commonSuccessors.iterator().next();
+        if (caseTargets.contains(merge)) {
+            return null;
+        }
+        return merge;
     }
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result, Set<IRBlock> stopBlocks) {
