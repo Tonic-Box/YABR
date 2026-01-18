@@ -46,9 +46,9 @@ public class VariableRenamer {
         if (method.getEntryBlock() != null) {
             int blockCount = method.getBlockCount();
             if (blockCount > 500) {
-                System.err.println("[VariableRenamer] Processing large method: " +
-                    method.getOwnerClass() + "." + method.getName() + method.getDescriptor() +
-                    " with " + blockCount + " blocks");
+                //System.err.println("[VariableRenamer] Processing large method: " +
+                //    method.getOwnerClass() + "." + method.getName() + method.getDescriptor() +
+                //    " with " + blockCount + " blocks");
             }
             renameBlock(method.getEntryBlock());
         }
@@ -85,9 +85,9 @@ public class VariableRenamer {
             }
 
             if (!visited.add(block)) {
-                System.err.println("[VariableRenamer] CYCLE DETECTED: Block " + block.getId() + " already visited!");
-                System.err.println("  Block children: " + dominatorTree.getDominatorTreeChildren(block));
-                System.err.println("  Block idom: " + dominatorTree.getImmediateDominator(block));
+                //System.err.println("[VariableRenamer] CYCLE DETECTED: Block " + block.getId() + " already visited!");
+                //System.err.println("  Block children: " + dominatorTree.getDominatorTreeChildren(block));
+                //System.err.println("  Block idom: " + dominatorTree.getImmediateDominator(block));
                 continue;
             }
 

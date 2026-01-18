@@ -8,11 +8,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- better error logging on SOF errors in Call Graph builder">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- better cycle detection for dominator trees">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/DominatorTree.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/DominatorTree.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/VariableRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/VariableRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -224,14 +222,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00131" summary="  - Variables with default initializers are moved closer to first use&#10;  - When first use is an assignment, the value is inlined into the declaration&#10;  - Accumulator patterns (x = x + ...) correctly keep declaration separate&#10;  - Variables used inside conditionals/loops stay at appropriate outer scope">
-      <option name="closed" value="true" />
-      <created>1767398655934</created>
-      <option name="number" value="00131" />
-      <option name="presentableId" value="LOCAL-00131" />
-      <option name="project" value="LOCAL" />
-      <updated>1767398655934</updated>
     </task>
     <task id="LOCAL-00132" summary="- better local inlining in decompile.">
       <option name="closed" value="true" />
@@ -617,7 +607,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768703914631</updated>
     </task>
-    <option name="localTasksCounter" value="180" />
+    <task id="LOCAL-00180" summary="- better cycle detection for dominator trees">
+      <option name="closed" value="true" />
+      <created>1768710991618</created>
+      <option name="number" value="00180" />
+      <option name="presentableId" value="LOCAL-00180" />
+      <option name="project" value="LOCAL" />
+      <updated>1768710991618</updated>
+    </task>
+    <option name="localTasksCounter" value="181" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -632,7 +630,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Changed PhiConstantPropagation to use replaceAllUsesWith() instead of creating new instructions&#10;- ssaValue.isConstant() returns true if its definition is a ConstantInstruction now" />
     <MESSAGE value="Fixed bugs in source lowering:&#10;- this/super null type: Parser passed null to ThisExpr/SuperExpr constructors -&gt; changed to ReferenceSourceType.OBJECT&#10;- Field access null owner: FieldAccessExpr was created with null ownerClass -&gt; added deriveOwnerClass() helper that extracts owner from expression type&#10;- ExpressionRecoverer same issue: Lambda recovery code also passed null to ThisExpr -&gt; same fix with ReferenceSourceType.OBJECT" />
     <MESSAGE value="- Fixed type lexing issues" />
     <MESSAGE value="- Fixed source lifting issue" />
@@ -657,7 +654,8 @@
     <MESSAGE value="- Fixed knownFalse tracking to only apply to IFNE/IFEQ conditions, preventing incorrect branch elimination in methods like analyze&#10;- Fixed shared return blocks not being emitted when merge point is already processed&#10;- Added isAllPathsTerminating() helper to properly handle IF_THEN regions with early-exit merge blocks&#10;- CallGraphBuilder now properly traverses into lambdas, standard dynamic call sites, and non-standard/obfuscated invokedynamic and constantdynamic patterns." />
     <MESSAGE value="- InvokeInstruction.getBootstrapInfo() returns non-null for INVOKEDYNAMIC instructions, enabling CallGraphBuilder to properly traverse into lambda callsites" />
     <MESSAGE value="- better error logging on SOF errors in Call Graph builder" />
-    <option name="LAST_COMMIT_MESSAGE" value="- better error logging on SOF errors in Call Graph builder" />
+    <MESSAGE value="- better cycle detection for dominator trees" />
+    <option name="LAST_COMMIT_MESSAGE" value="- better cycle detection for dominator trees" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

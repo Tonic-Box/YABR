@@ -19,6 +19,7 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.table.BootstrapMethod;
+import com.tonic.parser.constpool.ConstantDynamicItem;
 import com.tonic.parser.constpool.InterfaceRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodHandleItem;
@@ -102,7 +103,8 @@ public class CallGraphBuilder {
             for (IRBlock block : irMethod.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
                     if (instr instanceof InvokeInstruction) {
-                        processInvokeInstruction(graph, callerNode, callerRef, (InvokeInstruction) instr);
+                        processInvokeInstruction(graph, callerNode, callerRef, (InvokeInstruction) instr,
+                                cf.getConstPool(), bsmAttr);
                     } else if (instr instanceof ConstantInstruction) {
                         processConstantInstruction(graph, callerNode, callerRef,
                                 (ConstantInstruction) instr, cf.getConstPool(), bsmAttr);
@@ -134,7 +136,8 @@ public class CallGraphBuilder {
      * Processes a single invoke instruction and adds edges to the graph.
      */
     private static void processInvokeInstruction(CallGraph graph, CallGraphNode callerNode,
-                                                  MethodReference callerRef, InvokeInstruction invoke) {
+                                                  MethodReference callerRef, InvokeInstruction invoke,
+                                                  ConstPool constPool, BootstrapMethodsAttribute bsmAttr) {
         InvokeType invokeType = invoke.getInvokeType();
         String targetOwner = invoke.getOwner();
         String targetName = invoke.getName();
@@ -146,7 +149,7 @@ public class CallGraphBuilder {
                 addCallEdge(graph, callerNode, callerRef, target, invokeType);
             }
         } else if (invokeType == InvokeType.DYNAMIC) {
-            processDynamicInvoke(graph, callerNode, callerRef, invoke, targetName, targetDesc);
+            processDynamicInvoke(graph, callerNode, callerRef, invoke, targetName, targetDesc, constPool, bsmAttr);
         } else {
             MethodReference target = new MethodReference(targetOwner, targetName, targetDesc);
             addCallEdge(graph, callerNode, callerRef, target, invokeType);
@@ -159,7 +162,8 @@ public class CallGraphBuilder {
      */
     private static void processDynamicInvoke(CallGraph graph, CallGraphNode callerNode,
                                               MethodReference callerRef, InvokeInstruction invoke,
-                                              String targetName, String targetDesc) {
+                                              String targetName, String targetDesc,
+                                              ConstPool constPool, BootstrapMethodsAttribute bsmAttr) {
         BootstrapMethodInfo bsmInfo = invoke.getBootstrapInfo();
 
         if (bsmInfo == null) {
@@ -194,19 +198,32 @@ public class CallGraphBuilder {
                     addCallEdge(graph, callerNode, callerRef, lambdaImpl, InvokeType.DYNAMIC);
                 }
             }
-        } else {
-            for (Constant arg : bsmArgs) {
-                if (arg instanceof MethodHandleConstant) {
-                    MethodHandleConstant mh = (MethodHandleConstant) arg;
-                    if (mh.isMethodReference()) {
-                        MethodReference target = new MethodReference(
-                                mh.getOwner(),
-                                mh.getName(),
-                                mh.getDescriptor()
-                        );
-                        addCallEdge(graph, callerNode, callerRef, target, InvokeType.DYNAMIC);
-                    }
-                }
+        }
+
+        for (Constant arg : bsmArgs) {
+            processBootstrapArgument(graph, callerNode, callerRef, arg, constPool, bsmAttr);
+        }
+    }
+
+    private static void processBootstrapArgument(CallGraph graph, CallGraphNode callerNode,
+                                                  MethodReference callerRef, Constant arg,
+                                                  ConstPool constPool, BootstrapMethodsAttribute bsmAttr) {
+        if (arg instanceof MethodHandleConstant) {
+            MethodHandleConstant mh = (MethodHandleConstant) arg;
+            if (mh.isMethodReference()) {
+                MethodReference target = new MethodReference(
+                        mh.getOwner(),
+                        mh.getName(),
+                        mh.getDescriptor()
+                );
+                addCallEdge(graph, callerNode, callerRef, target, InvokeType.DYNAMIC);
+            }
+        } else if (arg instanceof DynamicConstant) {
+            DynamicConstant dynConst = (DynamicConstant) arg;
+            int bsmIndex = dynConst.getBootstrapMethodIndex();
+            if (bsmAttr != null && bsmIndex >= 0 && bsmIndex < bsmAttr.getBootstrapMethods().size()) {
+                BootstrapMethod nestedBsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
+                processBootstrapMethod(graph, callerNode, callerRef, nestedBsm, constPool, bsmAttr);
             }
         }
     }
@@ -235,16 +252,16 @@ public class CallGraphBuilder {
         }
 
         BootstrapMethod bsm = bootstrapMethods.get(bsmIndex);
-        processBootstrapMethod(graph, callerNode, callerRef, bsm, constPool);
+        processBootstrapMethod(graph, callerNode, callerRef, bsm, constPool, bsmAttr);
     }
 
     /**
      * Processes a bootstrap method entry, extracting the bootstrap method handle
-     * and any method handles in the arguments.
+     * and any method handles in the arguments (including nested condys).
      */
     private static void processBootstrapMethod(CallGraph graph, CallGraphNode callerNode,
                                                 MethodReference callerRef, BootstrapMethod bsm,
-                                                ConstPool constPool) {
+                                                ConstPool constPool, BootstrapMethodsAttribute bsmAttr) {
         int bsmRef = bsm.getBootstrapMethodRef();
         Item<?> bsmItem = constPool.getItem(bsmRef);
         if (bsmItem instanceof MethodHandleItem) {
@@ -266,6 +283,13 @@ public class CallGraphBuilder {
                     if (argTarget != null) {
                         addCallEdge(graph, callerNode, callerRef, argTarget, InvokeType.DYNAMIC);
                     }
+                }
+            } else if (argItem instanceof ConstantDynamicItem) {
+                ConstantDynamicItem condyItem = (ConstantDynamicItem) argItem;
+                int nestedBsmIndex = condyItem.getBootstrapMethodAttrIndex();
+                if (bsmAttr != null && nestedBsmIndex >= 0 && nestedBsmIndex < bsmAttr.getBootstrapMethods().size()) {
+                    BootstrapMethod nestedBsm = bsmAttr.getBootstrapMethods().get(nestedBsmIndex);
+                    processBootstrapMethod(graph, callerNode, callerRef, nestedBsm, constPool, bsmAttr);
                 }
             }
         }
