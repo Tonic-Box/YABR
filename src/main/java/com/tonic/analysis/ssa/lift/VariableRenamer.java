@@ -8,6 +8,7 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
+import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,53 +59,80 @@ public class VariableRenamer {
         }
     }
 
-    private void renameBlock(IRBlock block) {
-        Map<Integer, Integer> savedStackSizes = new HashMap<>();
-        for (Map.Entry<Integer, Deque<SSAValue>> entry : varStacks.entrySet()) {
-            savedStackSizes.put(entry.getKey(), entry.getValue().size());
-        }
+    private void renameBlock(IRBlock startBlock) {
+        Deque<RenameWorkItem> workStack = new ArrayDeque<>();
+        workStack.push(new RenameWorkItem(startBlock, null, false));
 
-        for (PhiInstruction phi : block.getPhiInstructions()) {
-            String name = phi.getResult().getName();
-            if (name.startsWith("phi_")) {
-                int varIndex = Integer.parseInt(name.substring(4));
-                SSAValue newName = createNewName(varIndex, phi.getResult().getType());
-                phi.setResult(newName);
-                newName.setDefinition(phi);
-                pushVariable(varIndex, newName);
+        while (!workStack.isEmpty()) {
+            RenameWorkItem item = workStack.pop();
+            IRBlock block = item.block;
+
+            if (item.isPostProcess) {
+                for (Map.Entry<Integer, Integer> entry : item.savedStackSizes.entrySet()) {
+                    Deque<SSAValue> stack = varStacks.get(entry.getKey());
+                    while (stack != null && stack.size() > entry.getValue()) {
+                        stack.pop();
+                    }
+                }
+                continue;
             }
-        }
 
-        List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
-        for (IRInstruction instr : instructions) {
-            renameUses(instr);
-            renameDefinitions(instr, block);
-        }
+            Map<Integer, Integer> savedStackSizes = new HashMap<>();
+            for (Map.Entry<Integer, Deque<SSAValue>> entry : varStacks.entrySet()) {
+                savedStackSizes.put(entry.getKey(), entry.getValue().size());
+            }
 
-        for (IRBlock succ : block.getSuccessors()) {
-            for (PhiInstruction phi : succ.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions()) {
                 String name = phi.getResult().getName();
-                if (name.startsWith("phi_") || VAR_PATTERN.matcher(name).matches()) {
-                    int varIndex = extractVarIndex(phi);
-                    if (varIndex >= 0) {
-                        SSAValue currentVal = getCurrentValue(varIndex);
-                        if (currentVal != null) {
-                            phi.addIncoming(currentVal, block);
+                if (name.startsWith("phi_")) {
+                    int varIndex = Integer.parseInt(name.substring(4));
+                    SSAValue newName = createNewName(varIndex, phi.getResult().getType());
+                    phi.setResult(newName);
+                    newName.setDefinition(phi);
+                    pushVariable(varIndex, newName);
+                }
+            }
+
+            List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
+            for (IRInstruction instr : instructions) {
+                renameUses(instr);
+                renameDefinitions(instr, block);
+            }
+
+            for (IRBlock succ : block.getSuccessors()) {
+                for (PhiInstruction phi : succ.getPhiInstructions()) {
+                    String name = phi.getResult().getName();
+                    if (name.startsWith("phi_") || VAR_PATTERN.matcher(name).matches()) {
+                        int varIndex = extractVarIndex(phi);
+                        if (varIndex >= 0) {
+                            SSAValue currentVal = getCurrentValue(varIndex);
+                            if (currentVal != null) {
+                                phi.addIncoming(currentVal, block);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        for (IRBlock child : dominatorTree.getDominatorTreeChildren(block)) {
-            renameBlock(child);
-        }
+            workStack.push(new RenameWorkItem(block, savedStackSizes, true));
 
-        for (Map.Entry<Integer, Integer> entry : savedStackSizes.entrySet()) {
-            Deque<SSAValue> stack = varStacks.get(entry.getKey());
-            while (stack != null && stack.size() > entry.getValue()) {
-                stack.pop();
+            List<IRBlock> children = new ArrayList<>(dominatorTree.getDominatorTreeChildren(block));
+            Collections.reverse(children);
+            for (IRBlock child : children) {
+                workStack.push(new RenameWorkItem(child, null, false));
             }
+        }
+    }
+
+    private static class RenameWorkItem {
+        final IRBlock block;
+        final Map<Integer, Integer> savedStackSizes;
+        final boolean isPostProcess;
+
+        RenameWorkItem(IRBlock block, Map<Integer, Integer> savedStackSizes, boolean isPostProcess) {
+            this.block = block;
+            this.savedStackSizes = savedStackSizes;
+            this.isPostProcess = isPostProcess;
         }
     }
 
