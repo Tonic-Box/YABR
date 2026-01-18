@@ -13,11 +13,11 @@ import java.util.*;
 public class DominatorTree {
 
     private final IRMethod method;
-    private Map<IRBlock, IRBlock> immediateDominator;
-    private Map<IRBlock, Set<IRBlock>> dominatorTreeChildren;
-    private Map<IRBlock, Set<IRBlock>> dominanceFrontier;
-    private Map<IRBlock, Integer> preorder;
-    private Map<IRBlock, Integer> postorder;
+    private final Map<IRBlock, IRBlock> immediateDominator;
+    private final Map<IRBlock, Set<IRBlock>> dominatorTreeChildren;
+    private final Map<IRBlock, Set<IRBlock>> dominanceFrontier;
+    private final Map<IRBlock, Integer> preorder;
+    private final Map<IRBlock, Integer> postorder;
 
     public DominatorTree(IRMethod method) {
         this.method = method;
@@ -55,13 +55,42 @@ public class DominatorTree {
         }
     }
 
-    private void dfsPostorder(IRBlock block, Set<IRBlock> visited, List<IRBlock> result) {
-        if (visited.contains(block)) return;
-        visited.add(block);
-        for (IRBlock succ : block.getSuccessors()) {
-            dfsPostorder(succ, visited, result);
+    private void dfsPostorder(IRBlock startBlock, Set<IRBlock> visited, List<IRBlock> result) {
+        Deque<DfsWorkItem> stack = new ArrayDeque<>();
+        stack.push(new DfsWorkItem(startBlock, false));
+
+        while (!stack.isEmpty()) {
+            DfsWorkItem item = stack.pop();
+            IRBlock block = item.block;
+
+            if (item.childrenProcessed) {
+                result.add(block);
+                continue;
+            }
+
+            if (visited.contains(block)) {
+                continue;
+            }
+            visited.add(block);
+
+            stack.push(new DfsWorkItem(block, true));
+
+            for (IRBlock succ : block.getSuccessors()) {
+                if (!visited.contains(succ)) {
+                    stack.push(new DfsWorkItem(succ, false));
+                }
+            }
         }
-        result.add(block);
+    }
+
+    private static class DfsWorkItem {
+        final IRBlock block;
+        final boolean childrenProcessed;
+
+        DfsWorkItem(IRBlock block, boolean childrenProcessed) {
+            this.block = block;
+            this.childrenProcessed = childrenProcessed;
+        }
     }
 
     private void computeDominators() {
@@ -123,6 +152,52 @@ public class DominatorTree {
             IRBlock idom = immediateDominator.get(block);
             if (idom != null && idom != block) {
                 dominatorTreeChildren.computeIfAbsent(idom, k -> new HashSet<>()).add(block);
+            }
+        }
+
+        detectCycles();
+    }
+
+    private void detectCycles() {
+        IRBlock entry = method.getEntryBlock();
+        if (entry == null) return;
+
+        Set<IRBlock> visited = new HashSet<>();
+        Deque<IRBlock> stack = new ArrayDeque<>();
+        Map<IRBlock, IRBlock> parent = new HashMap<>();
+
+        stack.push(entry);
+        parent.put(entry, null);
+
+        while (!stack.isEmpty()) {
+            IRBlock block = stack.pop();
+
+            if (visited.contains(block)) {
+                continue;
+            }
+            visited.add(block);
+
+            Set<IRBlock> children = dominatorTreeChildren.get(block);
+            if (children != null) {
+                for (IRBlock child : children) {
+                    if (visited.contains(child)) {
+                        System.err.println("[DominatorTree] CYCLE DETECTED!");
+                        System.err.println("  Block " + block.getId() + " has child " + child.getId() + " which was already visited");
+                        System.err.println("  Child idom: " + immediateDominator.get(child));
+                        IRBlock runner = block;
+                        StringBuilder path = new StringBuilder("  Path: ");
+                        int pathLen = 0;
+                        while (runner != null && pathLen < 20) {
+                            path.append(runner.getId()).append(" <- ");
+                            runner = parent.get(runner);
+                            pathLen++;
+                        }
+                        System.err.println(path);
+                    } else {
+                        parent.put(child, block);
+                        stack.push(child);
+                    }
+                }
             }
         }
     }

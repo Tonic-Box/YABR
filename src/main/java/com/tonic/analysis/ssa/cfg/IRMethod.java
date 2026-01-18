@@ -1,7 +1,5 @@
 package com.tonic.analysis.ssa.cfg;
 
-import com.tonic.analysis.ssa.ir.IRInstruction;
-import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.lower.CopyInfo;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
@@ -150,13 +148,42 @@ public class IRMethod {
         return postOrder;
     }
 
-    private void postOrderDFS(IRBlock block, Set<IRBlock> visited, List<IRBlock> result) {
-        if (visited.contains(block)) return;
-        visited.add(block);
-        for (IRBlock succ : block.getSuccessors()) {
-            postOrderDFS(succ, visited, result);
+    private void postOrderDFS(IRBlock startBlock, Set<IRBlock> visited, List<IRBlock> result) {
+        Deque<PostOrderWorkItem> stack = new ArrayDeque<>();
+        stack.push(new PostOrderWorkItem(startBlock, false));
+
+        while (!stack.isEmpty()) {
+            PostOrderWorkItem item = stack.pop();
+            IRBlock block = item.block;
+
+            if (item.childrenProcessed) {
+                result.add(block);
+                continue;
+            }
+
+            if (visited.contains(block)) {
+                continue;
+            }
+            visited.add(block);
+
+            stack.push(new PostOrderWorkItem(block, true));
+
+            for (IRBlock succ : block.getSuccessors()) {
+                if (!visited.contains(succ)) {
+                    stack.push(new PostOrderWorkItem(succ, false));
+                }
+            }
         }
-        result.add(block);
+    }
+
+    private static class PostOrderWorkItem {
+        final IRBlock block;
+        final boolean childrenProcessed;
+
+        PostOrderWorkItem(IRBlock block, boolean childrenProcessed) {
+            this.block = block;
+            this.childrenProcessed = childrenProcessed;
+        }
     }
 
     /**

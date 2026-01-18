@@ -44,6 +44,12 @@ public class VariableRenamer {
         initializeParameters(method);
 
         if (method.getEntryBlock() != null) {
+            int blockCount = method.getBlockCount();
+            if (blockCount > 500) {
+                System.err.println("[VariableRenamer] Processing large method: " +
+                    method.getOwnerClass() + "." + method.getName() + method.getDescriptor() +
+                    " with " + blockCount + " blocks");
+            }
             renameBlock(method.getEntryBlock());
         }
     }
@@ -61,6 +67,7 @@ public class VariableRenamer {
 
     private void renameBlock(IRBlock startBlock) {
         Deque<RenameWorkItem> workStack = new ArrayDeque<>();
+        Set<IRBlock> visited = new HashSet<>();
         workStack.push(new RenameWorkItem(startBlock, null, false));
 
         while (!workStack.isEmpty()) {
@@ -74,6 +81,13 @@ public class VariableRenamer {
                         stack.pop();
                     }
                 }
+                continue;
+            }
+
+            if (!visited.add(block)) {
+                System.err.println("[VariableRenamer] CYCLE DETECTED: Block " + block.getId() + " already visited!");
+                System.err.println("  Block children: " + dominatorTree.getDominatorTreeChildren(block));
+                System.err.println("  Block idom: " + dominatorTree.getImmediateDominator(block));
                 continue;
             }
 
