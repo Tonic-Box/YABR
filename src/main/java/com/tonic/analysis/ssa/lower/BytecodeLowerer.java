@@ -2,6 +2,7 @@ package com.tonic.analysis.ssa.lower;
 
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LivenessAnalysis;
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
@@ -13,10 +14,12 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
+import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Lowers SSA-form IR back to JVM bytecode.
@@ -61,7 +64,10 @@ public class BytecodeLowerer {
             codeAttr.setMaxStack(scheduler.getMaxStack());
             codeAttr.setMaxLocals(regAlloc.getMaxLocals());
 
-            // Remove stale debug attributes - they reference old offsets/slots
+            List<ExceptionTableEntry> newExceptionTable = regenerateExceptionTable(irMethod, emitter);
+            codeAttr.getExceptionTable().clear();
+            codeAttr.getExceptionTable().addAll(newExceptionTable);
+
             codeAttr.getAttributes().removeIf(attr ->
                 attr instanceof LocalVariableTableAttribute ||
                 attr instanceof LineNumberTableAttribute);
@@ -73,16 +79,52 @@ public class BytecodeLowerer {
         }
     }
 
+    private List<ExceptionTableEntry> regenerateExceptionTable(IRMethod irMethod, BytecodeEmitter emitter) {
+        List<ExceptionTableEntry> entries = new ArrayList<>();
+        Map<IRBlock, Integer> offsets = emitter.getBlockOffsets();
+        Map<IRBlock, Integer> endOffsets = emitter.getBlockEndOffsets();
+
+        for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {
+            IRBlock tryStart = handler.getTryStart();
+            IRBlock tryEnd = handler.getTryEnd();
+            IRBlock handlerBlock = handler.getHandlerBlock();
+
+            if (!offsets.containsKey(tryStart) || !offsets.containsKey(handlerBlock)) {
+                continue;
+            }
+
+            int startPc = offsets.get(tryStart);
+            int endPc;
+            if (tryEnd != null && endOffsets.containsKey(tryEnd)) {
+                endPc = endOffsets.get(tryEnd);
+            } else {
+                endPc = endOffsets.getOrDefault(tryStart, startPc + 1);
+            }
+            int handlerPc = offsets.get(handlerBlock);
+
+            int catchType = 0;
+            if (handler.getCatchType() != null) {
+                catchType = constPool.findOrAddClass(handler.getCatchType().getInternalName()).getIndex(constPool);
+            }
+
+            if (startPc < endPc) {
+                entries.add(new ExceptionTableEntry(startPc, endPc, handlerPc, catchType));
+            }
+        }
+
+        return entries;
+    }
+
     /**
      * Removes LoadLocalInstruction and StoreLocalInstruction artifacts from the IR.
-     *
+     * <p>
      * After SSA lifting, these instructions are artifacts from the initial bytecode
      * conversion. The VariableRenamer replaces their results with actual SSA values,
      * making them dead. Keeping them causes incorrect bytecode because:
      * 1. LoadLocalInstruction references stale local indices from the original method
      * 2. StoreLocalInstruction stores to indices that may not exist in the current frame
      * 3. For inlined code, these indices reference the callee's frame, not the caller's
-     *
+     * <p>
      * In proper SSA form, all data flow is through SSAValue uses, not local variable slots.
      */
     private void removeLocalInstructionArtifacts(IRMethod method) {

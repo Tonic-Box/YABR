@@ -93,6 +93,14 @@ public class IRMethod {
         for (IRBlock succ : new ArrayList<>(block.getSuccessors())) {
             block.removeSuccessor(succ);
         }
+
+        exceptionHandlers.removeIf(h ->
+            h.getHandlerBlock() == block || h.getTryStart() == block);
+        for (ExceptionHandler h : exceptionHandlers) {
+            if (h.getTryEnd() == block) {
+                h.setTryEnd(null);
+            }
+        }
     }
 
     /**

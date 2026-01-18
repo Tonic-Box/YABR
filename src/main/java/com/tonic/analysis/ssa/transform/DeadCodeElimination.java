@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.transform;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -126,6 +127,12 @@ public class DeadCodeElimination implements IRTransform {
         Set<IRBlock> reachable = new HashSet<>();
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(method.getEntryBlock());
+
+        for (ExceptionHandler h : method.getExceptionHandlers()) {
+            if (h.getHandlerBlock() != null) {
+                worklist.add(h.getHandlerBlock());
+            }
+        }
 
         while (!worklist.isEmpty()) {
             IRBlock block = worklist.poll();

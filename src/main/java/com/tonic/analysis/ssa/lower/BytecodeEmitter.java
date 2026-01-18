@@ -32,6 +32,7 @@ public class BytecodeEmitter {
     private ByteArrayOutputStream bytecode;
     private DataOutputStream dos;
     private final Map<IRBlock, Integer> blockOffsets;
+    private final Map<IRBlock, Integer> blockEndOffsets;
     private final List<PendingJump> pendingJumps;
     private int currentOffset;
 
@@ -54,6 +55,7 @@ public class BytecodeEmitter {
         this.regAlloc = regAlloc;
         this.scheduler = scheduler;
         this.blockOffsets = new HashMap<>();
+        this.blockEndOffsets = new HashMap<>();
         this.pendingJumps = new ArrayList<>();
         this.stackResidentValues = new HashSet<>();
     }
@@ -218,6 +220,8 @@ public class BytecodeEmitter {
         for (IRInstruction instr : block.getInstructions()) {
             emitInstruction(instr);
         }
+
+        blockEndOffsets.put(block, currentOffset);
     }
 
     private void emitInstruction(IRInstruction instr) throws IOException {

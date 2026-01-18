@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.transform;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -10,7 +11,7 @@ import java.util.*;
 /**
  * Jump threading optimization.
  * Eliminates redundant jump chains by threading through empty goto blocks.
- *
+ * <p>
  * For example:
  *   goto A; A: goto B  ->  goto B
  *   if (cond) goto A; A: goto B  ->  if (cond) goto B
@@ -101,7 +102,7 @@ public class JumpThreading implements IRTransform {
 
     /**
      * Updates phi nodes at the ultimate target when threading through a bypassed block.
-     *
+     * <p>
      * When we thread from 'source' through 'bypassed' to 'ultimate', any phi at 'ultimate'
      * that has an incoming value from 'bypassed' needs to be updated to have that value
      * come from 'source' instead.
@@ -175,6 +176,12 @@ public class JumpThreading implements IRTransform {
         Set<IRBlock> reachable = new HashSet<>();
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(method.getEntryBlock());
+
+        for (ExceptionHandler h : method.getExceptionHandlers()) {
+            if (h.getHandlerBlock() != null) {
+                worklist.add(h.getHandlerBlock());
+            }
+        }
 
         while (!worklist.isEmpty()) {
             IRBlock block = worklist.poll();
