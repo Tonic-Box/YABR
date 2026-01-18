@@ -185,14 +185,11 @@ public class DominatorTree {
                         //System.err.println("  Block " + block.getId() + " has child " + child.getId() + " which was already visited");
                         //System.err.println("  Child idom: " + immediateDominator.get(child));
                         IRBlock runner = block;
-                        StringBuilder path = new StringBuilder("  Path: ");
                         int pathLen = 0;
                         while (runner != null && pathLen < 20) {
-                            path.append(runner.getId()).append(" <- ");
                             runner = parent.get(runner);
                             pathLen++;
                         }
-                        System.err.println(path);
                     } else {
                         parent.put(child, block);
                         stack.push(child);

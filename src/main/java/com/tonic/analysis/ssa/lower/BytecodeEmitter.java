@@ -31,11 +31,11 @@ public class BytecodeEmitter {
 
     private ByteArrayOutputStream bytecode;
     private DataOutputStream dos;
-    private Map<IRBlock, Integer> blockOffsets;
-    private List<PendingJump> pendingJumps;
+    private final Map<IRBlock, Integer> blockOffsets;
+    private final List<PendingJump> pendingJumps;
     private int currentOffset;
 
-    private Set<SSAValue> stackResidentValues;
+    private final Set<SSAValue> stackResidentValues;
 
     // For fall-through optimization
     private IRBlock nextBlock;
@@ -229,7 +229,6 @@ public class BytecodeEmitter {
         } else if (instr instanceof LoadLocalInstruction) {
             LoadLocalInstruction load = (LoadLocalInstruction) instr;
             emitLoad(load);
-        } else if (instr instanceof StoreLocalInstruction) {
         } else if (instr instanceof BinaryOpInstruction) {
             BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
             emitBinaryOp(binOp);
@@ -580,46 +579,6 @@ public class BytecodeEmitter {
             }
         } else {
             emitVarInsn(Opcode.ALOAD.getCode(), Opcode.ALOAD_0.getCode(), index);
-        }
-    }
-
-    private void emitStore(StoreLocalInstruction instr) throws IOException {
-        // For StoreLocal, we need to determine the destination slot.
-        // The original local index may be stale after transformations like method inlining.
-        // Try to use the allocator's slot for the value being stored.
-        Value value = instr.getValue();
-        int index = instr.getLocalIndex();
-        if (value instanceof SSAValue) {
-            SSAValue ssa = (SSAValue) value;
-            int allocIndex = regAlloc.getRegister(ssa);
-            if (allocIndex >= 0) {
-                index = allocIndex;
-            }
-        }
-        IRType type = value.getType();
-
-        if (type instanceof PrimitiveType) {
-            PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
-                case INT:
-                case BOOLEAN:
-                case BYTE:
-                case CHAR:
-                case SHORT:
-                    emitVarInsn(Opcode.ISTORE.getCode(), Opcode.ISTORE_0.getCode(), index);
-                    break;
-                case LONG:
-                    emitVarInsn(Opcode.LSTORE.getCode(), Opcode.LSTORE_0.getCode(), index);
-                    break;
-                case FLOAT:
-                    emitVarInsn(Opcode.FSTORE.getCode(), Opcode.FSTORE_0.getCode(), index);
-                    break;
-                case DOUBLE:
-                    emitVarInsn(Opcode.DSTORE.getCode(), Opcode.DSTORE_0.getCode(), index);
-                    break;
-            }
-        } else {
-            emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), index);
         }
     }
 
@@ -1113,7 +1072,8 @@ public class BytecodeEmitter {
 
         int low = keys.get(0);
         int high = keys.get(keys.size() - 1);
-        boolean useTableSwitch = (high - low + 1) <= keys.size() * 2;
+        long tableSize = (long) high - (long) low + 1;
+        boolean useTableSwitch = tableSize > 0 && tableSize <= keys.size() * 2L && tableSize <= 65536;
 
         int switchStart = currentOffset;
         if (useTableSwitch) {
@@ -1354,8 +1314,7 @@ public class BytecodeEmitter {
 
         int nameAndTypeIndex = constPool.addNameAndType(instr.getName(), instr.getDescriptor());
 
-        int cpIndex = constPool.addInvokeDynamic(bootstrapMethodIndex, nameAndTypeIndex);
-        return cpIndex;
+        return constPool.addInvokeDynamic(bootstrapMethodIndex, nameAndTypeIndex);
     }
 
     private BootstrapMethodsAttribute findOrCreateBootstrapMethodsAttribute(ClassFile classFile) {

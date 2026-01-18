@@ -8,9 +8,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- better cycle detection for dominator trees">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Added DominatorTree cycle detection&#10;- Removed ID-based equals()/hashCode() methods. Blocks now use reference equality like other IR classes.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/callgraph/CallGraphBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/DominatorTree.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/analysis/DominatorTree.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/cfg/IRBlock.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/cfg/IRBlock.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -222,14 +224,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00132" summary="- better local inlining in decompile.">
-      <option name="closed" value="true" />
-      <created>1767403282276</created>
-      <option name="number" value="00132" />
-      <option name="presentableId" value="LOCAL-00132" />
-      <option name="project" value="LOCAL" />
-      <updated>1767403282276</updated>
     </task>
     <task id="LOCAL-00133" summary="- better local inlining in decompile.&#10;- cleanup">
       <option name="closed" value="true" />
@@ -615,7 +609,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768710991618</updated>
     </task>
-    <option name="localTasksCounter" value="181" />
+    <task id="LOCAL-00181" summary="- CallGraph nested condy support">
+      <option name="closed" value="true" />
+      <created>1768712681804</created>
+      <option name="number" value="00181" />
+      <option name="presentableId" value="LOCAL-00181" />
+      <option name="project" value="LOCAL" />
+      <updated>1768712681804</updated>
+    </task>
+    <option name="localTasksCounter" value="182" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -630,8 +632,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Fixed bugs in source lowering:&#10;- this/super null type: Parser passed null to ThisExpr/SuperExpr constructors -&gt; changed to ReferenceSourceType.OBJECT&#10;- Field access null owner: FieldAccessExpr was created with null ownerClass -&gt; added deriveOwnerClass() helper that extracts owner from expression type&#10;- ExpressionRecoverer same issue: Lambda recovery code also passed null to ThisExpr -&gt; same fix with ReferenceSourceType.OBJECT" />
-    <MESSAGE value="- Fixed type lexing issues" />
     <MESSAGE value="- Fixed source lifting issue" />
     <MESSAGE value="- Fixed import resolution in source lowering" />
     <MESSAGE value="-  Added parseReturnType() method that extracts the actual return type from the method descriptor" />
@@ -655,7 +655,9 @@
     <MESSAGE value="- InvokeInstruction.getBootstrapInfo() returns non-null for INVOKEDYNAMIC instructions, enabling CallGraphBuilder to properly traverse into lambda callsites" />
     <MESSAGE value="- better error logging on SOF errors in Call Graph builder" />
     <MESSAGE value="- better cycle detection for dominator trees" />
-    <option name="LAST_COMMIT_MESSAGE" value="- better cycle detection for dominator trees" />
+    <MESSAGE value="- CallGraph nested condy support" />
+    <MESSAGE value="- Added DominatorTree cycle detection&#10;- Removed ID-based equals()/hashCode() methods. Blocks now use reference equality like other IR classes." />
+    <option name="LAST_COMMIT_MESSAGE" value="- Added DominatorTree cycle detection&#10;- Removed ID-based equals()/hashCode() methods. Blocks now use reference equality like other IR classes." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -284,16 +284,4 @@ public class IRBlock {
         return sb.toString();
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof IRBlock)) return false;
-        IRBlock irBlock = (IRBlock) o;
-        return id == irBlock.id;
-    }
-
-    @Override
-    public int hashCode() {
-        return id;
-    }
 }
