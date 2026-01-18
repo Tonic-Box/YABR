@@ -113,6 +113,7 @@ public class CallGraphBuilder {
             // Silently skip methods that fail to analyze
         } catch (StackOverflowError e) {
             System.err.println("[CallGraph] StackOverflowError in method: " + currentMethod);
+            e.printStackTrace();
             // Continue with next method
         }
     }
