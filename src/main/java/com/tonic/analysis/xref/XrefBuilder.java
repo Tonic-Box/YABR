@@ -152,6 +152,9 @@ public class XrefBuilder {
                 methodsProcessed++;
             }
         }
+
+        // Scan all bootstrap methods for method references (catches nested condy, etc.)
+        processAllBootstrapMethods(cf, className);
     }
 
     /**
@@ -340,6 +343,25 @@ public class XrefBuilder {
             processBootstrapMethodFromCP(cf, bsm, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
         } catch (Exception e) {
             // Ignore resolution failures
+        }
+    }
+
+    /**
+     * Scans all bootstrap methods in a class for method references.
+     * This catches references in unused or indirectly referenced bootstrap entries.
+     */
+    private void processAllBootstrapMethods(ClassFile cf, String sourceClass) {
+        try {
+            BootstrapMethodsAttribute bsmAttr = findBootstrapMethodsAttribute(cf);
+            if (bsmAttr == null || bsmAttr.getBootstrapMethods() == null) {
+                return;
+            }
+
+            for (BootstrapMethod bsm : bsmAttr.getBootstrapMethods()) {
+                processBootstrapMethodFromCP(cf, bsm, sourceClass, null, null, -1);
+            }
+        } catch (Exception e) {
+            // Ignore failures
         }
     }
 

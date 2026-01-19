@@ -8,10 +8,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- lifting/lowering/source emission handles finally{} blocks sanely now">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- xref now considders bootstrapo handles and nested bootstraps">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefType.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -238,14 +236,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00136" summary="- AST api docs update">
-      <option name="closed" value="true" />
-      <created>1767510307958</created>
-      <option name="number" value="00136" />
-      <option name="presentableId" value="LOCAL-00136" />
-      <option name="project" value="LOCAL" />
-      <updated>1767510307958</updated>
     </task>
     <task id="LOCAL-00137" summary="- SSA docs updates">
       <option name="closed" value="true" />
@@ -631,7 +621,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768788938744</updated>
     </task>
-    <option name="localTasksCounter" value="185" />
+    <task id="LOCAL-00185" summary="- xref now considders bootstrapo handles and nested bootstraps">
+      <option name="closed" value="true" />
+      <created>1768843997203</created>
+      <option name="number" value="00185" />
+      <option name="presentableId" value="LOCAL-00185" />
+      <option name="project" value="LOCAL" />
+      <updated>1768843997203</updated>
+    </task>
+    <option name="localTasksCounter" value="186" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -646,7 +644,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="-  Added parseReturnType() method that extracts the actual return type from the method descriptor" />
     <MESSAGE value="-  lambda expression lowering implementation for source -&gt; AST" />
     <MESSAGE value="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
     <MESSAGE value="- Corrected type widening in comparisons for source lowering" />
@@ -671,7 +668,8 @@
     <MESSAGE value="- Added DominatorTree cycle detection&#10;- Removed ID-based equals()/hashCode() methods. Blocks now use reference equality like other IR classes." />
     <MESSAGE value="- Exception table was never regenerated during lowering, now it is&#10;- Handler blocks were removed as &quot;unreachable&quot;, now they're preserved." />
     <MESSAGE value="- lifting/lowering/source emission handles finally{} blocks sanely now" />
-    <option name="LAST_COMMIT_MESSAGE" value="- lifting/lowering/source emission handles finally{} blocks sanely now" />
+    <MESSAGE value="- xref now considders bootstrapo handles and nested bootstraps" />
+    <option name="LAST_COMMIT_MESSAGE" value="- xref now considders bootstrapo handles and nested bootstraps" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
