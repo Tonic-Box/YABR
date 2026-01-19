@@ -8,8 +8,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- Exception table was never regenerated during lowering, now it is&#10;- Handler blocks were removed as &quot;unreachable&quot;, now they're preserved.">
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- lifting/lowering/source emission handles finally{} blocks sanely now">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefType.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -81,7 +83,20 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
   }
 }</component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [compileJava]">
+  <component name="RunManager" selected="Application.DebugDoAction">
+    <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
+      <module name="YABR.main" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tonic.demo.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Decompile" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.ast.Decompile" />
       <module name="YABR.main" />
@@ -199,6 +214,7 @@
     </configuration>
     <list>
       <item itemvalue="Application.Decompile" />
+      <item itemvalue="Application.DebugDoAction" />
       <item itemvalue="Gradle.YABR-fixed [compileJava]" />
       <item itemvalue="Gradle.YABR-fixed [build]" />
       <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
@@ -206,6 +222,7 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.DebugDoAction" />
         <item itemvalue="Gradle.YABR-fixed [compileJava]" />
         <item itemvalue="Gradle.YABR-fixed [test]" />
         <item itemvalue="Gradle.YABR-fixed [build]" />
@@ -221,14 +238,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00135" summary="  - Add withX() fluent setters to all Expression and Statement classes&#10;  - Create NodeList&lt;T&gt; with automatic parent-child management&#10;  - Add getChildren() to all AST node classes&#10;  - Add traversal methods: walk(), findFirst(), findAll(), stream(), findAncestor()&#10;  - Create ASTMutations with deepClone(), replace(), remove() operations&#10;  - Create ASTFactory with convenient node construction methods&#10;  - Add GenericSourceType for parameterized types (List&lt;String&gt;)&#10;  - Add WildcardSourceType for wildcards (?, ? extends T, ? super T)&#10;  - Add IntersectionSourceType for type bounds (A &amp; B)&#10;  - Add UnionSourceType for multi-catch (A | B)&#10;  - Add TypeUtils for boxing/unboxing and type utilities&#10;  - Create validation framework with ASTValidator and StructuralValidator&#10;  - Fix ClassNameUtil.getSimpleNameWithInnerClasses() incorrectly converting $ to .&#10;  - Fix SourceEmitter.visitBlock() not emitting {} for empty blocks">
-      <option name="closed" value="true" />
-      <created>1767506424425</created>
-      <option name="number" value="00135" />
-      <option name="presentableId" value="LOCAL-00135" />
-      <option name="project" value="LOCAL" />
-      <updated>1767506424425</updated>
     </task>
     <task id="LOCAL-00136" summary="- AST api docs update">
       <option name="closed" value="true" />
@@ -614,7 +623,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768776191850</updated>
     </task>
-    <option name="localTasksCounter" value="184" />
+    <task id="LOCAL-00184" summary="- lifting/lowering/source emission handles finally{} blocks sanely now">
+      <option name="closed" value="true" />
+      <created>1768788938744</created>
+      <option name="number" value="00184" />
+      <option name="presentableId" value="LOCAL-00184" />
+      <option name="project" value="LOCAL" />
+      <updated>1768788938744</updated>
+    </task>
+    <option name="localTasksCounter" value="185" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -629,7 +646,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fixed import resolution in source lowering" />
     <MESSAGE value="-  Added parseReturnType() method that extracts the actual return type from the method descriptor" />
     <MESSAGE value="-  lambda expression lowering implementation for source -&gt; AST" />
     <MESSAGE value="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
@@ -654,7 +670,8 @@
     <MESSAGE value="- CallGraph nested condy support" />
     <MESSAGE value="- Added DominatorTree cycle detection&#10;- Removed ID-based equals()/hashCode() methods. Blocks now use reference equality like other IR classes." />
     <MESSAGE value="- Exception table was never regenerated during lowering, now it is&#10;- Handler blocks were removed as &quot;unreachable&quot;, now they're preserved." />
-    <option name="LAST_COMMIT_MESSAGE" value="- Exception table was never regenerated during lowering, now it is&#10;- Handler blocks were removed as &quot;unreachable&quot;, now they're preserved." />
+    <MESSAGE value="- lifting/lowering/source emission handles finally{} blocks sanely now" />
+    <option name="LAST_COMMIT_MESSAGE" value="- lifting/lowering/source emission handles finally{} blocks sanely now" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

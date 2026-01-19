@@ -1,13 +1,19 @@
 package com.tonic.analysis.xref;
 
+import lombok.Getter;
+
 /**
  * Types of cross-references tracked in the xref database.
  * Each type represents a different kind of reference relationship.
  */
+@Getter
 public enum XrefType {
     // Method references
     METHOD_CALL("Method Call", "Direct method invocation"),
     METHOD_OVERRIDE("Method Override", "Method that overrides a parent method"),
+    BOOTSTRAP_METHOD("Bootstrap Method", "Bootstrap method for invokedynamic/condy"),
+    BOOTSTRAP_ARG_METHOD("Bootstrap Arg Method", "Method referenced in bootstrap arguments"),
+    BOOTSTRAP_ARG_FIELD("Bootstrap Arg Field", "Field referenced in bootstrap arguments"),
 
     // Field references
     FIELD_READ("Field Read", "Read access to a field"),
@@ -33,14 +39,6 @@ public enum XrefType {
     XrefType(String displayName, String description) {
         this.displayName = displayName;
         this.description = description;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public String getDescription() {
-        return description;
     }
 
     /**
