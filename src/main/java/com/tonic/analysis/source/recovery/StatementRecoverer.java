@@ -102,7 +102,112 @@ public class StatementRecoverer {
             statements.addAll(recoverBlockSequence(entry, new HashSet<>()));
         }
 
+        removeInlineFinallyDuplicates(statements);
+
         return new BlockStmt(statements);
+    }
+
+    /**
+     * Removes duplicate inline finally code that appears after try-catch-finally statements.
+     * The JVM inlines finally code for the normal execution path, creating duplicates.
+     */
+    private void removeInlineFinallyDuplicates(List<Statement> statements) {
+        for (int i = 0; i < statements.size(); i++) {
+            Statement stmt = statements.get(i);
+            if (stmt instanceof TryCatchStmt) {
+                TryCatchStmt tryCatch = (TryCatchStmt) stmt;
+                if (tryCatch.hasFinally() && tryCatch.getFinallyBlock() instanceof BlockStmt) {
+                    List<Statement> finallyStmts = ((BlockStmt) tryCatch.getFinallyBlock()).getStatements();
+                    if (!finallyStmts.isEmpty()) {
+                        int removed = removeMatchingStatements(statements, i + 1, finallyStmts);
+                        i -= removed;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes statements from the list that match the given pattern statements.
+     * Returns the number of statements removed.
+     */
+    private int removeMatchingStatements(List<Statement> statements, int startIndex, List<Statement> pattern) {
+        if (startIndex >= statements.size() || pattern.isEmpty()) {
+            return 0;
+        }
+
+        int matchCount = 0;
+        for (int i = 0; i < pattern.size() && startIndex + i < statements.size(); i++) {
+            Statement actual = statements.get(startIndex + i);
+            Statement expected = pattern.get(i);
+            if (statementsMatch(actual, expected)) {
+                matchCount++;
+            } else {
+                break;
+            }
+        }
+
+        if (matchCount == pattern.size()) {
+            for (int i = 0; i < matchCount; i++) {
+                statements.remove(startIndex);
+            }
+            return matchCount;
+        }
+        return 0;
+    }
+
+    /**
+     * Checks if two statements are semantically equivalent for finally duplicate detection.
+     */
+    private boolean statementsMatch(Statement a, Statement b) {
+        if (a == null || b == null) return false;
+        if (a.getClass() != b.getClass()) return false;
+
+        if (a instanceof ExprStmt && b instanceof ExprStmt) {
+            return expressionsMatch(((ExprStmt) a).getExpression(), ((ExprStmt) b).getExpression());
+        }
+        if (a instanceof VarDeclStmt && b instanceof VarDeclStmt) {
+            VarDeclStmt va = (VarDeclStmt) a;
+            VarDeclStmt vb = (VarDeclStmt) b;
+            if (va.getInitializer() == null && vb.getInitializer() == null) return true;
+            if (va.getInitializer() == null || vb.getInitializer() == null) return false;
+            return expressionsMatch(va.getInitializer(), vb.getInitializer());
+        }
+        if (a instanceof ReturnStmt && b instanceof ReturnStmt) {
+            Expression ea = ((ReturnStmt) a).getValue();
+            Expression eb = ((ReturnStmt) b).getValue();
+            if (ea == null && eb == null) return true;
+            if (ea == null || eb == null) return false;
+            return expressionsMatch(ea, eb);
+        }
+
+        return a.toString().equals(b.toString());
+    }
+
+    /**
+     * Checks if two expressions are semantically equivalent for finally duplicate detection.
+     */
+    private boolean expressionsMatch(Expression a, Expression b) {
+        if (a == null || b == null) return a == b;
+        if (a.getClass() != b.getClass()) return false;
+
+        if (a instanceof BinaryExpr && b instanceof BinaryExpr) {
+            BinaryExpr ba = (BinaryExpr) a;
+            BinaryExpr bb = (BinaryExpr) b;
+            return ba.getOperator() == bb.getOperator()
+                && expressionsMatch(ba.getLeft(), bb.getLeft())
+                && expressionsMatch(ba.getRight(), bb.getRight());
+        }
+        if (a instanceof VarRefExpr && b instanceof VarRefExpr) {
+            return ((VarRefExpr) a).getName().equals(((VarRefExpr) b).getName());
+        }
+        if (a instanceof LiteralExpr && b instanceof LiteralExpr) {
+            Object va = ((LiteralExpr) a).getValue();
+            Object vb = ((LiteralExpr) b).getValue();
+            return Objects.equals(va, vb);
+        }
+
+        return a.toString().equals(b.toString());
     }
 
     /**
@@ -158,7 +263,18 @@ public class StatementRecoverer {
             }
 
             if (!catchClauses.isEmpty()) {
-                TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, catchClauses);
+                BlockStmt finallyBlock = null;
+                List<CatchClause> filteredCatches = new ArrayList<>();
+
+                for (CatchClause clause : catchClauses) {
+                    if (isFinallyRethrowPattern(clause)) {
+                        finallyBlock = extractFinallyBody(clause);
+                    } else {
+                        filteredCatches.add(clause);
+                    }
+                }
+
+                TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
                 result.add(tryCatch);
             } else {
                 result.addAll(tryStmts);
@@ -334,7 +450,16 @@ public class StatementRecoverer {
                 }
 
                 if (!catchClauses.isEmpty()) {
-                    result.add(new TryCatchStmt(tryBlock, catchClauses));
+                    BlockStmt finallyBlock = null;
+                    List<CatchClause> filteredCatches = new ArrayList<>();
+                    for (CatchClause clause : catchClauses) {
+                        if (isFinallyRethrowPattern(clause)) {
+                            finallyBlock = extractFinallyBody(clause);
+                        } else {
+                            filteredCatches.add(clause);
+                        }
+                    }
+                    result.add(new TryCatchStmt(tryBlock, filteredCatches, finallyBlock));
                 } else {
                     result.addAll(tryStmts);
                 }
@@ -585,6 +710,59 @@ public class StatementRecoverer {
         BlockStmt handlerBody = new BlockStmt(filteredStmts.isEmpty() ? handlerStmts : filteredStmts);
 
         return CatchClause.of(exceptionType, exceptionVarName, handlerBody);
+    }
+
+    /**
+     * Checks if a catch clause represents a finally-rethrow pattern.
+     * A finally-rethrow pattern is a catch-all (Throwable) that ends with throwing the caught exception.
+     */
+    private boolean isFinallyRethrowPattern(CatchClause clause) {
+        if (clause == null) return false;
+
+        SourceType type = clause.getPrimaryType();
+        if (!(type instanceof ReferenceSourceType)) return false;
+
+        String typeName = ((ReferenceSourceType) type).getInternalName();
+        if (!typeName.equals("java/lang/Throwable") && !typeName.equals("Throwable")) {
+            return false;
+        }
+
+        Statement body = clause.body();
+        if (!(body instanceof BlockStmt)) return false;
+
+        List<Statement> stmts = ((BlockStmt) body).getStatements();
+        if (stmts.isEmpty()) return false;
+
+        Statement lastStmt = stmts.get(stmts.size() - 1);
+        if (!(lastStmt instanceof ThrowStmt)) return false;
+
+        ThrowStmt throwStmt = (ThrowStmt) lastStmt;
+        Expression thrown = throwStmt.getException();
+
+        if (thrown instanceof VarRefExpr) {
+            String thrownVar = ((VarRefExpr) thrown).getName();
+            return thrownVar.equals(clause.variableName());
+        }
+
+        return false;
+    }
+
+    /**
+     * Extracts the finally body from a finally-rethrow catch clause.
+     * The finally body is everything except the final throw statement.
+     */
+    private BlockStmt extractFinallyBody(CatchClause clause) {
+        if (clause == null || !(clause.body() instanceof BlockStmt)) {
+            return new BlockStmt(Collections.emptyList());
+        }
+
+        List<Statement> stmts = ((BlockStmt) clause.body()).getStatements();
+        if (stmts.isEmpty()) {
+            return new BlockStmt(Collections.emptyList());
+        }
+
+        List<Statement> finallyStmts = new ArrayList<>(stmts.subList(0, stmts.size() - 1));
+        return new BlockStmt(finallyStmts);
     }
 
     /**
@@ -903,7 +1081,7 @@ public class StatementRecoverer {
         if (mainHandler.getTryEnd() != null) {
             int tryEndOffset = mainHandler.getTryEnd().getBytecodeOffset();
             for (IRBlock block : irMethod.getBlocks()) {
-                if (block.getBytecodeOffset() > tryEndOffset) {
+                if (block.getBytecodeOffset() >= tryEndOffset) {
                     tryStopBlocks.add(block);
                 }
             }
@@ -924,7 +1102,17 @@ public class StatementRecoverer {
             return null;
         }
 
-        return new TryCatchStmt(tryBlock, catchClauses);
+        BlockStmt finallyBlock = null;
+        List<CatchClause> filteredCatches = new ArrayList<>();
+        for (CatchClause clause : catchClauses) {
+            if (isFinallyRethrowPattern(clause)) {
+                finallyBlock = extractFinallyBody(clause);
+            } else {
+                filteredCatches.add(clause);
+            }
+        }
+
+        return new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
     }
 
     /**

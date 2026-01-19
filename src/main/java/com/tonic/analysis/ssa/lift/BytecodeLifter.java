@@ -175,8 +175,9 @@ public class BytecodeLifter {
         }
 
         for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
-            blockStarts.add(entry.getHandlerPc());
             blockStarts.add(entry.getStartPc());
+            blockStarts.add(entry.getEndPc());
+            blockStarts.add(entry.getHandlerPc());
         }
 
         return blockStarts;
