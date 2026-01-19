@@ -45,7 +45,8 @@ public enum XrefType {
      * Check if this is a method-related reference.
      */
     public boolean isMethodRef() {
-        return this == METHOD_CALL || this == METHOD_OVERRIDE;
+        return this == METHOD_CALL || this == METHOD_OVERRIDE ||
+               this == BOOTSTRAP_METHOD || this == BOOTSTRAP_ARG_METHOD;
     }
 
     /**

@@ -8,9 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- xref now considders bootstrapo handles and nested bootstraps">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- xref now considers bootstrap handles and nested bootstraps" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -236,14 +234,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00137" summary="- SSA docs updates">
-      <option name="closed" value="true" />
-      <created>1767510749337</created>
-      <option name="number" value="00137" />
-      <option name="presentableId" value="LOCAL-00137" />
-      <option name="project" value="LOCAL" />
-      <updated>1767510749337</updated>
     </task>
     <task id="LOCAL-00138" summary="- ASTPrinter">
       <option name="closed" value="true" />
@@ -629,7 +619,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768843997203</updated>
     </task>
-    <option name="localTasksCounter" value="186" />
+    <task id="LOCAL-00186" summary="- xref now considers bootstrap handles and nested bootstraps">
+      <option name="closed" value="true" />
+      <created>1768848995283</created>
+      <option name="number" value="00186" />
+      <option name="presentableId" value="LOCAL-00186" />
+      <option name="project" value="LOCAL" />
+      <updated>1768848995283</updated>
+    </task>
+    <option name="localTasksCounter" value="187" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -644,7 +642,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="-  lambda expression lowering implementation for source -&gt; AST" />
     <MESSAGE value="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
     <MESSAGE value="- Corrected type widening in comparisons for source lowering" />
     <MESSAGE value="- Now checks the actual IR type of the lowered operand and uses that to select the correct cast operation is source lowering" />
@@ -669,7 +666,8 @@
     <MESSAGE value="- Exception table was never regenerated during lowering, now it is&#10;- Handler blocks were removed as &quot;unreachable&quot;, now they're preserved." />
     <MESSAGE value="- lifting/lowering/source emission handles finally{} blocks sanely now" />
     <MESSAGE value="- xref now considders bootstrapo handles and nested bootstraps" />
-    <option name="LAST_COMMIT_MESSAGE" value="- xref now considders bootstrapo handles and nested bootstraps" />
+    <MESSAGE value="- xref now considers bootstrap handles and nested bootstraps" />
+    <option name="LAST_COMMIT_MESSAGE" value="- xref now considers bootstrap handles and nested bootstraps" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
