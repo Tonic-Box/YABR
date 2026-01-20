@@ -157,7 +157,7 @@ public class ClassDecompiler {
      * Decompiles the entire class to a Java source string.
      */
     public String decompile() {
-        IndentingWriter writer = new IndentingWriter(new StringWriter());
+        IndentingWriter writer = new IndentingWriter(new StringWriter(), emitterConfig.getIndentString());
         decompile(writer);
         return writer.toString();
     }
@@ -172,8 +172,8 @@ public class ClassDecompiler {
         String className = classFile.getClassName();
         String packageName = ClassNameUtil.getPackageNameAsSource(className);
 
-        IndentingWriter bodyWriter = new IndentingWriter(new StringWriter());
-        emitClassBody(bodyWriter, className);
+        IndentingWriter bodyWriter = new IndentingWriter(new StringWriter(), emitterConfig.getIndentString());
+        emitClassBody(bodyWriter);
         String bodyContent = bodyWriter.toString();
 
         if (!packageName.isEmpty()) {
@@ -188,7 +188,7 @@ public class ClassDecompiler {
         writer.writeRaw(bodyContent);
     }
 
-    private void emitClassBody(IndentingWriter writer, String className) {
+    private void emitClassBody(IndentingWriter writer) {
         emitClassAnnotations(writer);
         emitClassDeclaration(writer);
         writer.writeLine(" {");
@@ -960,13 +960,14 @@ public class ClassDecompiler {
         if (attributes == null) return;
 
         for (Attribute attr : attributes) {
-            if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
-                RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
+            if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
+                RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
                 for (Annotation ann : annAttr.getAnnotations()) {
                     collectAnnotationTypeRefs(ann, types);
                 }
-            } else if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
-                RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
+            }
+            else if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
+                RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
                 for (Annotation ann : annAttr.getAnnotations()) {
                     collectAnnotationTypeRefs(ann, types);
                 }
@@ -1056,13 +1057,7 @@ public class ClassDecompiler {
     }
 
     private boolean isInternalJdkClass(String internalName) {
-        if (internalName.startsWith("java/lang/invoke/")) {
-            return true;
-        }
-        if (internalName.startsWith("sun/") || internalName.startsWith("jdk/internal/")) {
-            return true;
-        }
-        return false;
+        return internalName.startsWith("java/lang/invoke/") || internalName.startsWith("sun/") || internalName.startsWith("jdk/internal/");
     }
 
     private boolean isSyntheticLambdaMethod(String methodName) {
@@ -1117,13 +1112,13 @@ public class ClassDecompiler {
         if (attributes == null) return;
 
         for (Attribute attr : attributes) {
-            if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
-                RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
+            if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
+                RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
                 for (Annotation ann : annAttr.getAnnotations()) {
                     emitAnnotation(writer, ann);
                 }
-            } else if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
-                RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
+            } else if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
+                RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
                 for (Annotation ann : annAttr.getAnnotations()) {
                     emitAnnotation(writer, ann);
                 }

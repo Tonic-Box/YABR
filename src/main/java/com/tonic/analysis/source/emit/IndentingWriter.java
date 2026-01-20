@@ -15,7 +15,7 @@ public class IndentingWriter {
     private boolean atLineStart;
 
     public IndentingWriter(Writer writer) {
-        this(writer, "    ");
+        this(writer, "\t");
     }
 
     public IndentingWriter(Writer writer, String indentString) {

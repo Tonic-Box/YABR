@@ -22,9 +22,9 @@ public class SourceEmitterConfig {
     @Builder.Default
     private boolean includeLineNumbers = false;
 
-    /** Indent string (default 4 spaces) */
+    /** Indent string (default tab) */
     @Builder.Default
-    private String indentString = "    ";
+    private String indentString = "\t";
 
     /** Use braces for single-statement blocks */
     @Builder.Default

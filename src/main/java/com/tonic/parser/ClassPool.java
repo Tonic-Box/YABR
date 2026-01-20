@@ -99,6 +99,16 @@ public class ClassPool {
     }
 
     /**
+     * Removes a ClassFile from the pool by internal name.
+     *
+     * @param internalName internal name (e.g., "java/lang/Object")
+     * @return true if a class was removed, false otherwise
+     */
+    public boolean remove(String internalName) {
+        return classes.removeIf(cf -> cf.getClassName().equals(internalName));
+    }
+
+    /**
      * Retrieves ClassFile by internal name.
      *
      * @param internalName internal name (e.g., "java/lang/Object")

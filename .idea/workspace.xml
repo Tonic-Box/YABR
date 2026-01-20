@@ -8,7 +8,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- xref now considers bootstrap handles and nested bootstraps" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- fix to decompilation to respect indent config&#10;- helper for removing a class from the class pool">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/IndentingWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/IndentingWriter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitterConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitterConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassPool.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -234,14 +240,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737453972739</updated>
-    </task>
-    <task id="LOCAL-00138" summary="- ASTPrinter">
-      <option name="closed" value="true" />
-      <created>1767571309505</created>
-      <option name="number" value="00138" />
-      <option name="presentableId" value="LOCAL-00138" />
-      <option name="project" value="LOCAL" />
-      <updated>1767571309505</updated>
     </task>
     <task id="LOCAL-00139" summary="- Error reporting in @CallGraphBuilder">
       <option name="closed" value="true" />
@@ -627,7 +625,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768848995283</updated>
     </task>
-    <option name="localTasksCounter" value="187" />
+    <task id="LOCAL-00187" summary="- xref now considers bootstrap handles and nested bootstraps">
+      <option name="closed" value="true" />
+      <created>1768850855961</created>
+      <option name="number" value="00187" />
+      <option name="presentableId" value="LOCAL-00187" />
+      <option name="project" value="LOCAL" />
+      <updated>1768850855961</updated>
+    </task>
+    <option name="localTasksCounter" value="188" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -642,7 +648,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- SuperExpr, InvokeDynamicExpr, DynamicConstantExpr all implemented for source lowering" />
     <MESSAGE value="- Corrected type widening in comparisons for source lowering" />
     <MESSAGE value="- Now checks the actual IR type of the lowered operand and uses that to select the correct cast operation is source lowering" />
     <MESSAGE value="- Now extracts the functional interface name from methodRef.getType() for source lowering SAM descriptors" />
@@ -667,7 +672,8 @@
     <MESSAGE value="- lifting/lowering/source emission handles finally{} blocks sanely now" />
     <MESSAGE value="- xref now considders bootstrapo handles and nested bootstraps" />
     <MESSAGE value="- xref now considers bootstrap handles and nested bootstraps" />
-    <option name="LAST_COMMIT_MESSAGE" value="- xref now considers bootstrap handles and nested bootstraps" />
+    <MESSAGE value="- fix to decompilation to respect indent config&#10;- helper for removing a class from the class pool" />
+    <option name="LAST_COMMIT_MESSAGE" value="- fix to decompilation to respect indent config&#10;- helper for removing a class from the class pool" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
