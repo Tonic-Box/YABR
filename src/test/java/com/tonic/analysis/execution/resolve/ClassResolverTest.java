@@ -2,7 +2,6 @@ package com.tonic.analysis.execution.resolve;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
-import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.utill.AccessBuilder;
@@ -205,7 +204,7 @@ class ClassResolverTest {
                     "method", "V");
 
             ResolvedMethod result = resolver.resolveVirtualMethod("com/test/TestClass",
-                    "method", "()V", null);
+                    "method", "()V");
 
             assertNotNull(result);
             assertEquals("method", result.getMethod().getName());
@@ -219,9 +218,9 @@ class ClassResolverTest {
                     "method", "V");
 
             ResolvedMethod result1 = resolver.resolveVirtualMethod("com/test/TestClass",
-                    "method", "()V", null);
+                    "method", "()V");
             ResolvedMethod result2 = resolver.resolveVirtualMethod("com/test/TestClass",
-                    "method", "()V", null);
+                    "method", "()V");
 
             assertSame(result1, result2);
         }

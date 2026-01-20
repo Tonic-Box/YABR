@@ -7,8 +7,8 @@ import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteValue;
-import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,9 @@ public final class DebugSession {
     private final BreakpointManager breakpointManager;
     private final List<DebugEventListener> listeners;
 
+    @Getter
     private BytecodeEngine engine;
+    @Getter
     private DebugSessionState state;
     private StepMode currentStepMode;
     private int stepStartDepth;
@@ -160,10 +162,6 @@ public final class DebugSession {
         return executeStep();
     }
 
-    public DebugSessionState getState() {
-        return state;
-    }
-
     public boolean isRunning() {
         return state == DebugSessionState.RUNNING;
     }
@@ -208,10 +206,6 @@ public final class DebugSession {
             return new ArrayList<>();
         }
         return engine.getCallStack().snapshot();
-    }
-
-    public BytecodeEngine getEngine() {
-        return engine;
     }
 
     public void setLocalValue(int slot, ConcreteValue value) {
@@ -299,10 +293,6 @@ public final class DebugSession {
                     if (currentFrame == null) {
                         continue;
                     }
-                    continue;
-                }
-
-                if (currentFrame == null) {
                     continue;
                 }
 
@@ -452,22 +442,34 @@ public final class DebugSession {
     }
 
     private ObjectInstance wrapException(Exception e) {
-        try {
-            ObjectInstance wrapped = context.getHeapManager().newObject("java/lang/Exception");
-            if (wrapped != null) {
-                return wrapped;
-            }
-        } catch (Exception ignored) {
+        String exceptionClass = e.getClass().getName().replace('.', '/');
+        String message = e.getMessage();
+
+        ObjectInstance wrapped = tryCreateException(exceptionClass);
+        if (wrapped == null) {
+            wrapped = tryCreateException("java/lang/Exception");
         }
-        try {
-            ObjectInstance wrapped = context.getHeapManager().newObject("java/lang/Throwable");
-            if (wrapped != null) {
-                return wrapped;
-            }
-        } catch (Exception ignored) {
+        if (wrapped == null) {
+            wrapped = tryCreateException("java/lang/Throwable");
         }
+        if (wrapped == null) {
+            wrapped = tryCreateException("java/lang/Object");
+        }
+
+        if (wrapped != null && message != null) {
+            try {
+                ObjectInstance messageStr = context.getHeapManager().internString(message);
+                wrapped.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return wrapped;
+    }
+
+    private ObjectInstance tryCreateException(String className) {
         try {
-            return context.getHeapManager().newObject("java/lang/Object");
+            return context.getHeapManager().newObject(className);
         } catch (Exception ignored) {
             return null;
         }
@@ -551,13 +553,7 @@ public final class DebugSession {
         }
     }
 
-    private class DebugInterceptor implements BytecodeListener {
-        @Override
-        public void beforeInstruction(StackFrame frame, Instruction instruction) {
-        }
+    private static class DebugInterceptor implements BytecodeListener {
 
-        @Override
-        public void afterInstruction(StackFrame frame, Instruction instruction) {
-        }
     }
 }

@@ -9,13 +9,16 @@ import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 import com.tonic.renamer.hierarchy.ClassNode;
 import com.tonic.utill.DescriptorUtil;
 import com.tonic.utill.Modifiers;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ClassResolver {
 
+    @Getter
     private final ClassPool classPool;
+    @Getter
     private final ClassHierarchy hierarchy;
     private final ResolutionCache cache;
 
@@ -93,11 +96,9 @@ public class ClassResolver {
         });
     }
 
-    public ResolvedMethod resolveVirtualMethod(String staticType, String name, String desc, Object receiver) {
-        String key = "virtual:" + staticType + "." + name + desc;
-        return cache.getMethod(key, () -> {
-            return resolveConcreteMethod(staticType, name, desc);
-        });
+    public ResolvedMethod resolveVirtualMethod(String type, String name, String desc) {
+        String key = "virtual:" + type + "." + name + desc;
+        return cache.getMethod(key, () -> resolveConcreteMethod(type, name, desc));
     }
 
     private ResolvedMethod resolveConcreteMethod(String owner, String name, String descriptor) {
@@ -281,14 +282,6 @@ public class ClassResolver {
 
     public void invalidateCache() {
         cache.clear();
-    }
-
-    public ClassPool getClassPool() {
-        return classPool;
-    }
-
-    public ClassHierarchy getHierarchy() {
-        return hierarchy;
     }
 
     public boolean hasField(String className, String fieldName, String descriptor) {

@@ -8,10 +8,7 @@ import com.tonic.analysis.execution.resolve.ResolutionException;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.MethodEntry;
-import com.tonic.utill.DescriptorUtil;
 import com.tonic.utill.Modifiers;
-
-import java.util.List;
 
 public final class RecursiveHandler implements InvocationHandler {
 
@@ -73,8 +70,7 @@ public final class RecursiveHandler implements InvocationHandler {
             ResolvedMethod resolved = resolver.resolveVirtualMethod(
                 receiverType,
                 method.getName(),
-                method.getDesc(),
-                receiver
+                method.getDesc()
             );
             return resolved.getMethod();
         } catch (ResolutionException e) {

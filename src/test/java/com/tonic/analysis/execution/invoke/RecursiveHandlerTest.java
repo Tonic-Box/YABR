@@ -9,19 +9,13 @@ import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
-import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.util.ArrayList;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.ArgumentMatchers.*;
 
 class RecursiveHandlerTest {
 
@@ -60,16 +54,12 @@ class RecursiveHandlerTest {
 
     @Test
     void testConstructorWithNullResolver() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new RecursiveHandler(null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new RecursiveHandler(null));
     }
 
     @Test
     void testConstructorWithNullRegistry() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new RecursiveHandler(resolver, null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new RecursiveHandler(resolver, null));
     }
 
     @Test
@@ -89,7 +79,7 @@ class RecursiveHandlerTest {
         ObjectInstance receiver = new ObjectInstance(1, "TestClass");
         ConcreteValue[] args = new ConcreteValue[0];
 
-        when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString(), any()))
+        when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString()))
             .thenReturn(new ResolvedMethod(method, mock(ClassFile.class),
                 ResolvedMethod.InvokeKind.VIRTUAL));
 
@@ -110,7 +100,7 @@ class RecursiveHandlerTest {
             ConcreteValue.intValue(20)
         };
 
-        when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString(), any()))
+        when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString()))
             .thenReturn(new ResolvedMethod(method, mock(ClassFile.class),
                 ResolvedMethod.InvokeKind.VIRTUAL));
 
@@ -166,7 +156,7 @@ class RecursiveHandlerTest {
         MethodEntry derivedMethod = createTestMethod("DerivedClass", "method", "()V", 0x0001);
         ObjectInstance receiver = new ObjectInstance(1, "DerivedClass");
 
-        when(resolver.resolveVirtualMethod(eq("DerivedClass"), eq("method"), eq("()V"), eq(receiver)))
+        when(resolver.resolveVirtualMethod(eq("DerivedClass"), eq("method"), eq("()V")))
             .thenReturn(new ResolvedMethod(derivedMethod, mock(ClassFile.class),
                 ResolvedMethod.InvokeKind.VIRTUAL));
 
@@ -184,7 +174,7 @@ class RecursiveHandlerTest {
         InvocationResult result = handler.invoke(method, receiver, new ConcreteValue[0], context);
 
         assertTrue(result.isPushFrame());
-        verify(resolver, never()).resolveVirtualMethod(anyString(), anyString(), anyString(), any());
+        verify(resolver, never()).resolveVirtualMethod(anyString(), anyString(), anyString());
     }
 
     @Test
@@ -195,7 +185,7 @@ class RecursiveHandlerTest {
         InvocationResult result = handler.invoke(method, receiver, new ConcreteValue[0], context);
 
         assertTrue(result.isPushFrame());
-        verify(resolver, never()).resolveVirtualMethod(anyString(), anyString(), anyString(), any());
+        verify(resolver, never()).resolveVirtualMethod(anyString(), anyString(), anyString());
     }
 
     @Test
@@ -214,9 +204,7 @@ class RecursiveHandlerTest {
     void testNativeMethodWithoutHandler() {
         MethodEntry method = createTestMethod("TestClass", "nativeMethod", "()V", 0x0101);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            handler.invoke(method, null, new ConcreteValue[0], context);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> handler.invoke(method, null, new ConcreteValue[0], context));
     }
 
     @Test
@@ -240,7 +228,7 @@ class RecursiveHandlerTest {
         ObjectInstance receiver = new ObjectInstance(1, "TestClass");
         ConcreteValue[] args = new ConcreteValue[] { ConcreteValue.intValue(99) };
 
-        when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString(), any()))
+        when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString()))
             .thenReturn(new ResolvedMethod(method, mock(ClassFile.class),
                 ResolvedMethod.InvokeKind.VIRTUAL));
 

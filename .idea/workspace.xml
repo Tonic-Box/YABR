@@ -8,7 +8,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- fix to decompilation to respect indent config&#10;- helper for removing a class from the class pool" />
+    <list default="true" id="12bdb93a-eacd-445e-be31-1e765c04e7c0" name="Changes" comment="- fix to decompilation to respect indent config&#10;- helper for removing a class from the class pool">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/invoke/RecursiveHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/resolve/ClassResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/execution/resolve/ClassResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/invoke/RecursiveHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/invoke/RecursiveHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/resolve/ClassResolverTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/execution/resolve/ClassResolverTest.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -79,7 +86,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
   }
 }</component>
-  <component name="RunManager" selected="Application.DebugDoAction">
+  <component name="RunManager" selected="Gradle.YABR-fixed [compileTestJava]">
     <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
       <module name="YABR.main" />
@@ -151,7 +158,7 @@
       <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
-    <configuration name="YABR-fixed [publishLocal]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration name="YABR-fixed [compileTestJava]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -162,7 +169,7 @@
         </option>
         <option name="taskNames">
           <list>
-            <option value="publishLocal" />
+            <option value="compileTestJava" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -211,18 +218,18 @@
     <list>
       <item itemvalue="Application.Decompile" />
       <item itemvalue="Application.DebugDoAction" />
+      <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
       <item itemvalue="Gradle.YABR-fixed [compileJava]" />
       <item itemvalue="Gradle.YABR-fixed [build]" />
-      <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
       <item itemvalue="Gradle.YABR-fixed [test]" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.DebugDoAction" />
+        <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
         <item itemvalue="Gradle.YABR-fixed [compileJava]" />
+        <item itemvalue="Application.DebugDoAction" />
         <item itemvalue="Gradle.YABR-fixed [test]" />
         <item itemvalue="Gradle.YABR-fixed [build]" />
-        <item itemvalue="Gradle.YABR-fixed [publishLocal]" />
       </list>
     </recent_temporary>
   </component>
