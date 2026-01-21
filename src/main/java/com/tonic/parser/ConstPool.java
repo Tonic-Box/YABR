@@ -1,6 +1,7 @@
 package com.tonic.parser;
 
 import com.tonic.parser.constpool.*;
+import com.tonic.parser.constpool.structure.ConstantDynamic;
 import com.tonic.parser.constpool.structure.FieldRef;
 import com.tonic.parser.constpool.structure.InterfaceRef;
 import com.tonic.parser.constpool.structure.MethodHandle;
@@ -124,7 +125,7 @@ public class ConstPool {
         this.classFile = classFile;
         for (Item<?> item : items) {
             if (item instanceof MethodRefItem) {
-                ((MethodRefItem) item).setClassFile(classFile);
+                item.setClassFile(classFile);
             }
         }
     }
@@ -672,6 +673,29 @@ public class ConstPool {
         InvokeDynamicItem item = new InvokeDynamicItem(this, bootstrapMethodAttrIndex, nameAndTypeIndex);
         item.setClassFile(classFile);
         return addItem(item);
+    }
+
+    public ConstantDynamicItem findOrAddConstantDynamic(int bootstrapMethodAttrIndex, String name, String descriptor) {
+        NameAndTypeRefItem nameAndType = findOrAddNameAndType(name, descriptor);
+        int nameAndTypeIndex = getIndexOf(nameAndType);
+
+        for (Item<?> item : items) {
+            if (item instanceof ConstantDynamicItem) {
+                ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
+                ConstantDynamic value = cdItem.getValue();
+                if (value != null &&
+                    value.getBootstrapMethodAttrIndex() == bootstrapMethodAttrIndex &&
+                    value.getNameAndTypeIndex() == nameAndTypeIndex) {
+                    return cdItem;
+                }
+            }
+        }
+
+        ConstantDynamic value = new ConstantDynamic(bootstrapMethodAttrIndex, nameAndTypeIndex);
+        ConstantDynamicItem item = new ConstantDynamicItem(value);
+        item.setConstPool(this);
+        addItem(item);
+        return item;
     }
 
     /**

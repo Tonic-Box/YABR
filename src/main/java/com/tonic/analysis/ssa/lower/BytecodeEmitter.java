@@ -7,8 +7,11 @@ import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.BootstrapMethodsAttribute;
+import com.tonic.parser.attribute.table.BootstrapMethod;
+import com.tonic.parser.constpool.*;
 import com.tonic.type.AccessFlags;
 import com.tonic.utill.Opcode;
 import lombok.Getter;
@@ -518,18 +521,17 @@ public class BytecodeEmitter {
             emitLdc(index);
         } else if (constant instanceof DynamicConstant) {
             DynamicConstant dynConst = (DynamicConstant) constant;
-            int cpIndex = dynConst.getOriginalCpIndex();
-            if (cpIndex > 0) {
-                if (dynConst.getType().isTwoSlot()) {
-                    emit(Opcode.LDC2_W.getCode());
-                    emitShort((short) cpIndex);
-                } else {
-                    emitLdc(cpIndex);
-                }
+            int migratedBsmIndex = migrateBootstrapMethod(dynConst);
+            int cpIndex = constPool.findOrAddConstantDynamic(
+                    migratedBsmIndex,
+                    dynConst.getName(),
+                    dynConst.getDescriptor()
+            ).getIndex(constPool);
+            if (dynConst.getType().isTwoSlot()) {
+                emit(Opcode.LDC2_W.getCode());
+                emitShort((short) cpIndex);
             } else {
-                throw new UnsupportedOperationException(
-                        "Cannot emit DynamicConstant without original constant pool index. " +
-                        "Dynamic: " + dynConst.getName() + ":" + dynConst.getDescriptor());
+                emitLdc(cpIndex);
             }
         }
     }
@@ -1404,6 +1406,136 @@ public class BytecodeEmitter {
     private void emitInt(int i) throws IOException {
         dos.writeInt(i);
         currentOffset += 4;
+    }
+
+    private int migrateBootstrapMethod(DynamicConstant dynConst) {
+        MethodEntry sourceMethod = method.getSourceMethod();
+        if (sourceMethod == null) {
+            return dynConst.getBootstrapMethodIndex();
+        }
+
+        ClassFile sourceClass = sourceMethod.getClassFile();
+        if (sourceClass == null) {
+            return dynConst.getBootstrapMethodIndex();
+        }
+
+        ClassFile targetClass = constPool.getClassFile();
+        if (targetClass == null || sourceClass == targetClass) {
+            return dynConst.getBootstrapMethodIndex();
+        }
+
+        BootstrapMethodsAttribute sourceBsmAttr = findBootstrapMethodsAttribute(sourceClass);
+        if (sourceBsmAttr == null) {
+            return dynConst.getBootstrapMethodIndex();
+        }
+
+        List<BootstrapMethod> sourceBsms = sourceBsmAttr.getBootstrapMethods();
+        int bsmIndex = dynConst.getBootstrapMethodIndex();
+        if (bsmIndex < 0 || bsmIndex >= sourceBsms.size()) {
+            return bsmIndex;
+        }
+
+        BootstrapMethod sourceBsm = sourceBsms.get(bsmIndex);
+        ConstPool sourceCP = sourceClass.getConstPool();
+
+        int newMethodHandleIndex = migrateConstantPoolItem(sourceCP, sourceBsm.getBootstrapMethodRef());
+
+        List<Integer> newArguments = new ArrayList<>();
+        for (int argIndex : sourceBsm.getBootstrapArguments()) {
+            newArguments.add(migrateConstantPoolItem(sourceCP, argIndex));
+        }
+
+        BootstrapMethodsAttribute targetBsmAttr = findOrCreateBootstrapMethodsAttribute(targetClass);
+        targetBsmAttr.addBootstrapMethod(newMethodHandleIndex, newArguments);
+
+        return targetBsmAttr.getBootstrapMethods().size() - 1;
+    }
+
+    private int migrateConstantPoolItem(ConstPool sourceCP, int sourceIndex) {
+        Item<?> item = sourceCP.getItem(sourceIndex);
+        if (item == null) {
+            return sourceIndex;
+        }
+
+        if (item instanceof IntegerItem) {
+            int value = ((IntegerItem) item).getValue();
+            return constPool.findOrAddInteger(value).getIndex(constPool);
+        } else if (item instanceof LongItem) {
+            long value = ((LongItem) item).getValue();
+            return constPool.findOrAddLong(value).getIndex(constPool);
+        } else if (item instanceof FloatItem) {
+            float value = ((FloatItem) item).getValue();
+            return constPool.findOrAddFloat(value).getIndex(constPool);
+        } else if (item instanceof DoubleItem) {
+            double value = ((DoubleItem) item).getValue();
+            return constPool.findOrAddDouble(value).getIndex(constPool);
+        } else if (item instanceof StringRefItem) {
+            Utf8Item utf8 = (Utf8Item) sourceCP.getItem(((StringRefItem) item).getValue());
+            return constPool.findOrAddString(utf8.getValue()).getIndex(constPool);
+        } else if (item instanceof ClassRefItem) {
+            Utf8Item utf8 = (Utf8Item) sourceCP.getItem(((ClassRefItem) item).getValue());
+            return constPool.findOrAddClass(utf8.getValue()).getIndex(constPool);
+        } else if (item instanceof MethodTypeItem) {
+            int descIndex = ((MethodTypeItem) item).getValue();
+            Utf8Item descUtf8 = (Utf8Item) sourceCP.getItem(descIndex);
+            return constPool.findOrAddMethodType(descUtf8.getValue()).getIndex(constPool);
+        } else if (item instanceof MethodHandleItem) {
+            MethodHandleItem mhItem = (MethodHandleItem) item;
+            int refKind = mhItem.getValue().getReferenceKind();
+            int refIndex = mhItem.getValue().getReferenceIndex();
+            Item<?> refItem = sourceCP.getItem(refIndex);
+
+            String owner, name, desc;
+            if (refItem instanceof FieldRefItem) {
+                FieldRefItem fieldRef = (FieldRefItem) refItem;
+                owner = resolveClassName(sourceCP, fieldRef.getValue().getClassIndex());
+                int natIndex = fieldRef.getValue().getNameAndTypeIndex();
+                NameAndTypeRefItem nat = (NameAndTypeRefItem) sourceCP.getItem(natIndex);
+                name = ((Utf8Item) sourceCP.getItem(nat.getValue().getNameIndex())).getValue();
+                desc = ((Utf8Item) sourceCP.getItem(nat.getValue().getDescriptorIndex())).getValue();
+            } else if (refItem instanceof MethodRefItem) {
+                MethodRefItem methodRef = (MethodRefItem) refItem;
+                owner = resolveClassName(sourceCP, methodRef.getValue().getClassIndex());
+                int natIndex = methodRef.getValue().getNameAndTypeIndex();
+                NameAndTypeRefItem nat = (NameAndTypeRefItem) sourceCP.getItem(natIndex);
+                name = ((Utf8Item) sourceCP.getItem(nat.getValue().getNameIndex())).getValue();
+                desc = ((Utf8Item) sourceCP.getItem(nat.getValue().getDescriptorIndex())).getValue();
+            } else if (refItem instanceof InterfaceRefItem) {
+                InterfaceRefItem ifaceRef = (InterfaceRefItem) refItem;
+                owner = resolveClassName(sourceCP, ifaceRef.getValue().getClassIndex());
+                int natIndex = ifaceRef.getValue().getNameAndTypeIndex();
+                NameAndTypeRefItem nat = (NameAndTypeRefItem) sourceCP.getItem(natIndex);
+                name = ((Utf8Item) sourceCP.getItem(nat.getValue().getNameIndex())).getValue();
+                desc = ((Utf8Item) sourceCP.getItem(nat.getValue().getDescriptorIndex())).getValue();
+            } else {
+                return sourceIndex;
+            }
+
+            return constPool.findOrAddMethodHandle(refKind, owner, name, desc).getIndex(constPool);
+        } else if (item instanceof ConstantDynamicItem) {
+            ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
+            String name = cdItem.getName();
+            String desc = cdItem.getDescriptor();
+            int bsmIndex = cdItem.getBootstrapMethodAttrIndex();
+            return constPool.findOrAddConstantDynamic(bsmIndex, name, desc).getIndex(constPool);
+        }
+
+        return sourceIndex;
+    }
+
+    private String resolveClassName(ConstPool cp, int classIndex) {
+        ClassRefItem classRef = (ClassRefItem) cp.getItem(classIndex);
+        Utf8Item utf8 = (Utf8Item) cp.getItem(classRef.getValue());
+        return utf8.getValue();
+    }
+
+    private BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile classFile) {
+        for (Attribute attr : classFile.getClassAttributes()) {
+            if (attr instanceof BootstrapMethodsAttribute) {
+                return (BootstrapMethodsAttribute) attr;
+            }
+        }
+        return null;
     }
 
     private static final class PendingJump {
