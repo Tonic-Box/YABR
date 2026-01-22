@@ -43,6 +43,9 @@ public class RecoveryContext {
     /** SSA values that have been assigned to variables (should use var ref, not inline) */
     private final Set<SSAValue> materializedValues = new HashSet<>();
 
+    /** Stack of variables declared in for-loop init (scoped to loop body) */
+    private final Deque<Set<String>> forLoopScopedVariables = new ArrayDeque<>();
+
     public RecoveryContext(IRMethod irMethod, MethodEntry sourceMethod, DefUseChains defUseChains) {
         this.irMethod = irMethod;
         this.sourceMethod = sourceMethod;
@@ -158,5 +161,37 @@ public class RecoveryContext {
      */
     public void unmarkMaterialized(SSAValue value) {
         materializedValues.remove(value);
+    }
+
+    /**
+     * Pushes a new scope for for-loop variables.
+     * Variables declared in for-loop init will be tracked in this scope.
+     */
+    public void pushForLoopScope() {
+        forLoopScopedVariables.push(new HashSet<>());
+    }
+
+    /**
+     * Pops the current for-loop scope and removes its variables from declaredVariables.
+     * This allows the same variable name to be re-declared in subsequent for-loops.
+     */
+    public void popForLoopScope() {
+        if (!forLoopScopedVariables.isEmpty()) {
+            Set<String> loopVars = forLoopScopedVariables.pop();
+            for (String var : loopVars) {
+                declaredVariables.remove(var);
+            }
+        }
+    }
+
+    /**
+     * Marks a variable as declared in a for-loop init expression.
+     * The variable will be removed from declaredVariables when the loop scope is popped.
+     */
+    public void markDeclaredInForLoopInit(String name) {
+        declaredVariables.add(name);
+        if (!forLoopScopedVariables.isEmpty()) {
+            forLoopScopedVariables.peek().add(name);
+        }
     }
 }

@@ -2720,77 +2720,82 @@ public class StatementRecoverer {
             return recoverWhileLoopFallback(header, info);
         }
 
-        List<Statement> initStmts = new ArrayList<>();
+        context.getExpressionContext().pushForLoopScope();
+        try {
+            List<Statement> initStmts = new ArrayList<>();
 
-        for (IRBlock pred : header.getPredecessors()) {
-            if (info.getLoop() != null && info.getLoop().contains(pred)) {
-                continue;
-            }
+            for (IRBlock pred : header.getPredecessors()) {
+                if (info.getLoop() != null && info.getLoop().contains(pred)) {
+                    continue;
+                }
 
-            for (IRInstruction instr : pred.getInstructions()) {
-                if (instr instanceof StoreLocalInstruction) {
-                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                    if (store.getLocalIndex() == targetLocal) {
-                        Statement initStmt = recoverStoreLocalAsForInit(store);
-                        if (initStmt != null) {
-                            initStmts.add(initStmt);
+                for (IRInstruction instr : pred.getInstructions()) {
+                    if (instr instanceof StoreLocalInstruction) {
+                        StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                        if (store.getLocalIndex() == targetLocal) {
+                            Statement initStmt = recoverStoreLocalAsForInit(store);
+                            if (initStmt != null) {
+                                initStmts.add(initStmt);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Expression condition = recoverCondition(header, info.isConditionNegated());
+            Expression condition = recoverCondition(header, info.isConditionNegated());
 
-        List<Expression> updateExprs = new ArrayList<>();
-        Set<IRInstruction> incrementInstructions = new HashSet<>();
-        for (IRInstruction instr : incrementBlock.getInstructions()) {
-            if (instr.isTerminator()) continue;
+            List<Expression> updateExprs = new ArrayList<>();
+            Set<IRInstruction> incrementInstructions = new HashSet<>();
+            for (IRInstruction instr : incrementBlock.getInstructions()) {
+                if (instr.isTerminator()) continue;
 
-            if (instr instanceof StoreLocalInstruction) {
-                StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                if (store.getLocalIndex() == targetLocal) {
-                    Expression updateExpr = recoverUpdateExpression(store, targetLocal);
-                    if (updateExpr != null) {
-                        updateExprs.add(updateExpr);
-                        incrementInstructions.add(instr);
+                if (instr instanceof StoreLocalInstruction) {
+                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                    if (store.getLocalIndex() == targetLocal) {
+                        Expression updateExpr = recoverUpdateExpression(store, targetLocal);
+                        if (updateExpr != null) {
+                            updateExprs.add(updateExpr);
+                            incrementInstructions.add(instr);
+                        }
                     }
                 }
             }
-        }
 
-        Set<IRBlock> stopBlocks = new HashSet<>();
-        stopBlocks.add(header);
-        if (info.getLoopExit() != null) {
-            stopBlocks.add(info.getLoopExit());
-        } else if (info.getLoop() != null) {
-            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
-            for (IRBlock loopBlock : loopBlocks) {
-                for (IRBlock succ : loopBlock.getSuccessors()) {
-                    if (!loopBlocks.contains(succ)) {
-                        stopBlocks.add(succ);
+            Set<IRBlock> stopBlocks = new HashSet<>();
+            stopBlocks.add(header);
+            if (info.getLoopExit() != null) {
+                stopBlocks.add(info.getLoopExit());
+            } else if (info.getLoop() != null) {
+                Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+                for (IRBlock loopBlock : loopBlocks) {
+                    for (IRBlock succ : loopBlock.getSuccessors()) {
+                        if (!loopBlocks.contains(succ)) {
+                            stopBlocks.add(succ);
+                        }
                     }
                 }
             }
-        }
 
-        IRBlock bodyBlock = info.getLoopBody();
-        boolean bodyIsIncrement = bodyBlock == incrementBlock;
+            IRBlock bodyBlock = info.getLoopBody();
+            boolean bodyIsIncrement = bodyBlock == incrementBlock;
 
-        context.pushStopBlocks(stopBlocks);
-        context.pushSkipInstructions(incrementInstructions);
-        try {
-            if (!bodyIsIncrement) {
-                context.markProcessed(incrementBlock);
+            context.pushStopBlocks(stopBlocks);
+            context.pushSkipInstructions(incrementInstructions);
+            try {
+                if (!bodyIsIncrement) {
+                    context.markProcessed(incrementBlock);
+                }
+
+                List<Statement> bodyStmts = recoverBlockSequence(bodyBlock, stopBlocks);
+                BlockStmt body = new BlockStmt(bodyStmts);
+
+                return new ForStmt(initStmts, condition, updateExprs, body);
+            } finally {
+                context.popSkipInstructions();
+                context.popStopBlocks();
             }
-
-            List<Statement> bodyStmts = recoverBlockSequence(bodyBlock, stopBlocks);
-            BlockStmt body = new BlockStmt(bodyStmts);
-
-            return new ForStmt(initStmts, condition, updateExprs, body);
         } finally {
-            context.popSkipInstructions();
-            context.popStopBlocks();
+            context.getExpressionContext().popForLoopScope();
         }
     }
 
@@ -2854,7 +2859,7 @@ public class StatementRecoverer {
             VarRefExpr target = new VarRefExpr(localName, storedType, null);
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, valueExpr, storedType));
         } else {
-            context.getExpressionContext().markDeclared(localName);
+            context.getExpressionContext().markDeclaredInForLoopInit(localName);
             return new VarDeclStmt(storedType, localName, valueExpr);
         }
     }
