@@ -1452,10 +1452,7 @@ public class StatementRecoverer {
             return true;
         }
         int localIndex = getLocalIndexFromPhi(phi);
-        if (localIndex >= 0 && context.isForLoopInductionLocal(localIndex)) {
-            return true;
-        }
-        return false;
+        return localIndex >= 0 && context.isForLoopInductionLocal(localIndex);
     }
 
     private int getLocalIndexFromPhi(PhiInstruction phi) {
@@ -1466,7 +1463,7 @@ public class StatementRecoverer {
         if (varName != null && varName.startsWith("local")) {
             try {
                 return Integer.parseInt(varName.substring(5));
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException ignored) {
             }
         }
 
@@ -2734,9 +2731,7 @@ public class StatementRecoverer {
                         StoreLocalInstruction store = (StoreLocalInstruction) instr;
                         if (store.getLocalIndex() == targetLocal) {
                             Statement initStmt = recoverStoreLocalAsForInit(store);
-                            if (initStmt != null) {
-                                initStmts.add(initStmt);
-                            }
+                            initStmts.add(initStmt);
                         }
                     }
                 }
@@ -2752,11 +2747,9 @@ public class StatementRecoverer {
                 if (instr instanceof StoreLocalInstruction) {
                     StoreLocalInstruction store = (StoreLocalInstruction) instr;
                     if (store.getLocalIndex() == targetLocal) {
-                        Expression updateExpr = recoverUpdateExpression(store, targetLocal);
-                        if (updateExpr != null) {
-                            updateExprs.add(updateExpr);
-                            incrementInstructions.add(instr);
-                        }
+                        Expression updateExpr = recoverUpdateExpression(store);
+                        updateExprs.add(updateExpr);
+                        incrementInstructions.add(instr);
                     }
                 }
             }
@@ -2827,25 +2820,6 @@ public class StatementRecoverer {
         }
     }
 
-    private int getLocalIndexFromSSAValue(SSAValue value) {
-        IRInstruction def = value.getDefinition();
-        if (def instanceof LoadLocalInstruction) {
-            return ((LoadLocalInstruction) def).getLocalIndex();
-        }
-        if (def instanceof PhiInstruction) {
-            PhiInstruction phi = (PhiInstruction) def;
-            for (Value incoming : phi.getIncomingValues().values()) {
-                if (incoming instanceof SSAValue) {
-                    int idx = getLocalIndexFromSSAValue((SSAValue) incoming);
-                    if (idx >= 0) {
-                        return idx;
-                    }
-                }
-            }
-        }
-        return -1;
-    }
-
     private Statement recoverStoreLocalAsForInit(StoreLocalInstruction store) {
         int localIndex = store.getLocalIndex();
         Value storedValue = store.getValue();
@@ -2864,7 +2838,7 @@ public class StatementRecoverer {
         }
     }
 
-    private Expression recoverUpdateExpression(StoreLocalInstruction store, int targetLocal) {
+    private Expression recoverUpdateExpression(StoreLocalInstruction store) {
         int localIndex = store.getLocalIndex();
         Value storedValue = store.getValue();
 
@@ -2943,7 +2917,6 @@ public class StatementRecoverer {
 
     private BinaryOperator mapBinaryOp(BinaryOp op) {
         switch (op) {
-            case ADD: return BinaryOperator.ADD;
             case SUB: return BinaryOperator.SUB;
             case MUL: return BinaryOperator.MUL;
             case DIV: return BinaryOperator.DIV;
@@ -3978,9 +3951,7 @@ public class StatementRecoverer {
             if (left instanceof SSAValue && isValueFromLocal((SSAValue) left, localIndex)) {
                 return true;
             }
-            if (right instanceof SSAValue && isValueFromLocal((SSAValue) right, localIndex)) {
-                return true;
-            }
+            return right instanceof SSAValue && isValueFromLocal((SSAValue) right, localIndex);
         }
         return false;
     }
