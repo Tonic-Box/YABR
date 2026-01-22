@@ -124,12 +124,16 @@ public class StructuralAnalyzer {
             return info;
         }
 
-        if (isForLoopPattern(header, loop)) {
+        ForLoopInfo forLoopInfo = detectForLoopPattern(header, loop, branch);
+        if (forLoopInfo != null) {
             RegionInfo info = new RegionInfo(StructuredRegion.FOR_LOOP, header);
             info.setLoopBody(bodyBlock);
             info.setLoopExit(exitBlock);
             info.setLoop(loop);
             info.setConditionNegated(conditionNegated);
+            info.setInductionVariable(forLoopInfo.inductionVariable);
+            info.setIncrementBlock(forLoopInfo.incrementBlock);
+            info.setInductionLocalIndex(forLoopInfo.inductionLocalIndex);
             return info;
         }
 
@@ -150,7 +154,20 @@ public class StructuralAnalyzer {
         return true;
     }
 
-    private boolean isForLoopPattern(IRBlock header, LoopAnalysis.Loop loop) {
+    private static class ForLoopInfo {
+        final SSAValue inductionVariable;
+        final IRBlock incrementBlock;
+        final int inductionLocalIndex;
+
+        ForLoopInfo(SSAValue inductionVariable, IRBlock incrementBlock, int inductionLocalIndex) {
+            this.inductionVariable = inductionVariable;
+            this.incrementBlock = incrementBlock;
+            this.inductionLocalIndex = inductionLocalIndex;
+        }
+    }
+
+    private ForLoopInfo detectForLoopPattern(IRBlock header, LoopAnalysis.Loop loop, BranchInstruction branch) {
+        SSAValue conditionVar = extractConditionVariable(branch);
         Set<IRBlock> loopBlocks = loop.getBlocks();
 
         for (IRBlock block : loopBlocks) {
@@ -158,26 +175,111 @@ public class StructuralAnalyzer {
 
             for (IRBlock succ : block.getSuccessors()) {
                 if (succ == header) {
-                    if (hasIncrementPattern(block)) {
+                    List<IncrementInfo> allIncrements = findAllIncrementsInBlock(block);
+                    if (!allIncrements.isEmpty()) {
+                        if (conditionVar != null) {
+                            for (IncrementInfo incr : allIncrements) {
+                                if (usesLocal(conditionVar, incr.localIndex)) {
+                                    return new ForLoopInfo(conditionVar, block, incr.localIndex);
+                                }
+                            }
+                        }
+                        IncrementInfo lastIncrement = allIncrements.get(allIncrements.size() - 1);
+                        return new ForLoopInfo(conditionVar, block, lastIncrement.localIndex);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static class IncrementInfo {
+        final int localIndex;
+        final SSAValue incrementedValue;
+
+        IncrementInfo(int localIndex, SSAValue incrementedValue) {
+            this.localIndex = localIndex;
+            this.incrementedValue = incrementedValue;
+        }
+    }
+
+    private List<IncrementInfo> findAllIncrementsInBlock(IRBlock block) {
+        List<IncrementInfo> increments = new ArrayList<>();
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof StoreLocalInstruction) {
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                Value stored = store.getValue();
+                if (stored instanceof SSAValue) {
+                    IRInstruction storeDef = ((SSAValue) stored).getDefinition();
+                    if (storeDef instanceof BinaryOpInstruction) {
+                        BinaryOp op = ((BinaryOpInstruction) storeDef).getOp();
+                        if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
+                            increments.add(new IncrementInfo(store.getLocalIndex(), (SSAValue) stored));
+                        }
+                    }
+                }
+            } else if (instr instanceof BinaryOpInstruction) {
+                BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
+                BinaryOp op = binOp.getOp();
+                if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
+                    SSAValue result = binOp.getResult();
+                    increments.add(new IncrementInfo(-1, result));
+                }
+            }
+        }
+        return increments;
+    }
+
+    private boolean usesLocal(SSAValue value, int localIndex) {
+        return usesLocalRecursive(value, localIndex, new HashSet<>());
+    }
+
+    private boolean usesLocalRecursive(SSAValue value, int localIndex, Set<SSAValue> visited) {
+        if (visited.contains(value)) return false;
+        visited.add(value);
+
+        IRInstruction def = value.getDefinition();
+        if (def instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) def).getLocalIndex() == localIndex;
+        }
+        if (def instanceof PhiInstruction) {
+            PhiInstruction phi = (PhiInstruction) def;
+            for (Value incoming : phi.getIncomingValues().values()) {
+                if (incoming instanceof SSAValue) {
+                    if (usesLocalRecursive((SSAValue) incoming, localIndex, visited)) {
                         return true;
                     }
                 }
             }
         }
-        return false;
-    }
-
-    private boolean hasIncrementPattern(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof BinaryOpInstruction) {
-                BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                BinaryOp op = binOp.getOp();
-                if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
-                    return true;
-                }
+        if (def instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) def;
+            Value left = binOp.getLeft();
+            Value right = binOp.getRight();
+            if (left instanceof SSAValue && usesLocalRecursive((SSAValue) left, localIndex, visited)) {
+                return true;
+            }
+            if (right instanceof SSAValue && usesLocalRecursive((SSAValue) right, localIndex, visited)) {
+                return true;
             }
         }
         return false;
+    }
+
+    private SSAValue extractConditionVariable(BranchInstruction branch) {
+        Value left = branch.getLeft();
+        Value right = branch.getRight();
+
+        if (left instanceof SSAValue && (right == null || right instanceof Constant)) {
+            return (SSAValue) left;
+        }
+        if (right instanceof SSAValue && left instanceof Constant) {
+            return (SSAValue) right;
+        }
+        if (left instanceof SSAValue && right instanceof SSAValue) {
+            return (SSAValue) left;
+        }
+        return null;
     }
 
     private RegionInfo analyzeConditional(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
@@ -768,6 +870,19 @@ public class StructuralAnalyzer {
     }
 
     /**
+     * Gets all FOR_LOOP regions identified in the method.
+     */
+    public List<RegionInfo> getForLoopRegions() {
+        List<RegionInfo> forLoops = new ArrayList<>();
+        for (RegionInfo info : regionInfos.values()) {
+            if (info.getType() == StructuredRegion.FOR_LOOP) {
+                forLoops.add(info);
+            }
+        }
+        return forLoops;
+    }
+
+    /**
      * Information about a structured region.
      */
     @Getter
@@ -787,6 +902,10 @@ public class StructuralAnalyzer {
 
         private Map<Integer, IRBlock> switchCases;
         private IRBlock defaultTarget;
+
+        private SSAValue inductionVariable;
+        private IRBlock incrementBlock;
+        private int inductionLocalIndex = -1;
 
         public RegionInfo(StructuredRegion type, IRBlock header) {
             this.type = type;
@@ -831,6 +950,22 @@ public class StructuralAnalyzer {
 
         public void setConditionNegated(boolean conditionNegated) {
             this.conditionNegated = conditionNegated;
+        }
+
+        public void setInductionVariable(SSAValue inductionVariable) {
+            this.inductionVariable = inductionVariable;
+        }
+
+        public void setIncrementBlock(IRBlock incrementBlock) {
+            this.incrementBlock = incrementBlock;
+        }
+
+        public void setInductionLocalIndex(int inductionLocalIndex) {
+            this.inductionLocalIndex = inductionLocalIndex;
+        }
+
+        public int getInductionLocalIndex() {
+            return inductionLocalIndex;
         }
     }
 }

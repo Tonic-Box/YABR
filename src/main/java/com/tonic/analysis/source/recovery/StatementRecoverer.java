@@ -7,10 +7,12 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
+import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.ir.BinaryOp;
 import com.tonic.analysis.ssa.ir.CompareOp;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
@@ -91,6 +93,8 @@ public class StatementRecoverer {
 
         collectTernaryPhis(method);
         detectSelfStorePhis(method);
+
+        collectForLoopInitInstructions();
 
         registerPendingNewInstructions(method);
         emitPhiDeclarations(method, statements);
@@ -1405,6 +1409,10 @@ public class StatementRecoverer {
             return;
         }
 
+        if (isForLoopInductionPhi(phi)) {
+            return;
+        }
+
         String name = context.getExpressionContext().getVariableName(result);
         if (name == null) {
             name = "v" + result.getId();
@@ -1431,6 +1439,50 @@ public class StatementRecoverer {
 
         Expression initValue = getDefaultValue(type);
         statements.add(new VarDeclStmt(type, name, initValue));
+    }
+
+    /**
+     * Checks if a PHI instruction corresponds to a for-loop induction variable.
+     * Such PHIs should not have their declaration emitted early since the variable
+     * will be declared inline in the for-loop initialization.
+     */
+    private boolean isForLoopInductionPhi(PhiInstruction phi) {
+        SSAValue result = phi.getResult();
+        if (result != null && context.isForLoopInductionPhi(result)) {
+            return true;
+        }
+        int localIndex = getLocalIndexFromPhi(phi);
+        if (localIndex >= 0 && context.isForLoopInductionLocal(localIndex)) {
+            return true;
+        }
+        return false;
+    }
+
+    private int getLocalIndexFromPhi(PhiInstruction phi) {
+        SSAValue result = phi.getResult();
+        if (result == null) return -1;
+
+        String varName = context.getExpressionContext().getVariableName(result);
+        if (varName != null && varName.startsWith("local")) {
+            try {
+                return Integer.parseInt(varName.substring(5));
+            } catch (NumberFormatException e) {
+            }
+        }
+
+        for (Value incoming : phi.getOperands()) {
+            if (incoming instanceof SSAValue) {
+                SSAValue ssaVal = (SSAValue) incoming;
+                IRInstruction def = ssaVal.getDefinition();
+                if (def instanceof LoadLocalInstruction) {
+                    return ((LoadLocalInstruction) def).getLocalIndex();
+                }
+                if (def instanceof StoreLocalInstruction) {
+                    return ((StoreLocalInstruction) def).getLocalIndex();
+                }
+            }
+        }
+        return -1;
     }
 
     /**
@@ -1942,6 +1994,9 @@ public class StatementRecoverer {
         List<Statement> statements = new ArrayList<>();
 
         for (IRInstruction instr : block.getInstructions()) {
+            if (context.shouldSkipInstruction(instr)) {
+                continue;
+            }
             Statement stmt = recoverInstruction(instr);
             if (stmt != null) {
                 statements.add(stmt);
@@ -1988,6 +2043,9 @@ public class StatementRecoverer {
                 PhiInstruction targetPhi = getPhiUsingValue(result);
                 if (targetPhi != null && targetPhi.getResult() != null) {
                     if (selfStorePhis.contains(targetPhi)) {
+                        return null;
+                    }
+                    if (context.isForLoopInductionPhi(targetPhi.getResult())) {
                         return null;
                     }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
@@ -2164,6 +2222,11 @@ public class StatementRecoverer {
                                 null, fieldInfo.getName(), fieldInfo.getOwner(), fieldInfo.isStatic(), fieldType);
                             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, fieldTarget, value, fieldType));
                         }
+                    }
+                    if (context.isForLoopInductionPhi(targetPhi.getResult())) {
+                        Expression value = exprRecoverer.recover(constInstr);
+                        context.getExpressionContext().cacheExpression(result, value);
+                        return null;
                     }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                     if (phiVarName != null) {
@@ -2571,6 +2634,9 @@ public class StatementRecoverer {
             if (instr.isTerminator()) {
                 continue;
             }
+            if (context.shouldSkipInstruction(instr)) {
+                continue;
+            }
             Statement stmt = recoverInstruction(instr);
             if (stmt != null) {
                 statements.add(stmt);
@@ -2645,7 +2711,246 @@ public class StatementRecoverer {
     }
 
     private Statement recoverForLoop(IRBlock header, RegionInfo info) {
-        return recoverWhileLoop(header, info);
+        context.markProcessed(header);
+
+        IRBlock incrementBlock = info.getIncrementBlock();
+        int targetLocal = info.getInductionLocalIndex();
+
+        if (incrementBlock == null || targetLocal < 0) {
+            return recoverWhileLoopFallback(header, info);
+        }
+
+        List<Statement> initStmts = new ArrayList<>();
+
+        for (IRBlock pred : header.getPredecessors()) {
+            if (info.getLoop() != null && info.getLoop().contains(pred)) {
+                continue;
+            }
+
+            for (IRInstruction instr : pred.getInstructions()) {
+                if (instr instanceof StoreLocalInstruction) {
+                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                    if (store.getLocalIndex() == targetLocal) {
+                        Statement initStmt = recoverStoreLocalAsForInit(store);
+                        if (initStmt != null) {
+                            initStmts.add(initStmt);
+                        }
+                    }
+                }
+            }
+        }
+
+        Expression condition = recoverCondition(header, info.isConditionNegated());
+
+        List<Expression> updateExprs = new ArrayList<>();
+        Set<IRInstruction> incrementInstructions = new HashSet<>();
+        for (IRInstruction instr : incrementBlock.getInstructions()) {
+            if (instr.isTerminator()) continue;
+
+            if (instr instanceof StoreLocalInstruction) {
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                if (store.getLocalIndex() == targetLocal) {
+                    Expression updateExpr = recoverUpdateExpression(store, targetLocal);
+                    if (updateExpr != null) {
+                        updateExprs.add(updateExpr);
+                        incrementInstructions.add(instr);
+                    }
+                }
+            }
+        }
+
+        Set<IRBlock> stopBlocks = new HashSet<>();
+        stopBlocks.add(header);
+        if (info.getLoopExit() != null) {
+            stopBlocks.add(info.getLoopExit());
+        } else if (info.getLoop() != null) {
+            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+            for (IRBlock loopBlock : loopBlocks) {
+                for (IRBlock succ : loopBlock.getSuccessors()) {
+                    if (!loopBlocks.contains(succ)) {
+                        stopBlocks.add(succ);
+                    }
+                }
+            }
+        }
+
+        IRBlock bodyBlock = info.getLoopBody();
+        boolean bodyIsIncrement = bodyBlock == incrementBlock;
+
+        context.pushStopBlocks(stopBlocks);
+        context.pushSkipInstructions(incrementInstructions);
+        try {
+            if (!bodyIsIncrement) {
+                context.markProcessed(incrementBlock);
+            }
+
+            List<Statement> bodyStmts = recoverBlockSequence(bodyBlock, stopBlocks);
+            BlockStmt body = new BlockStmt(bodyStmts);
+
+            return new ForStmt(initStmts, condition, updateExprs, body);
+        } finally {
+            context.popSkipInstructions();
+            context.popStopBlocks();
+        }
+    }
+
+    private Statement recoverWhileLoopFallback(IRBlock header, RegionInfo info) {
+        Expression condition = recoverCondition(header, info.isConditionNegated());
+
+        Set<IRBlock> stopBlocks = new HashSet<>();
+        stopBlocks.add(header);
+        if (info.getLoopExit() != null) {
+            stopBlocks.add(info.getLoopExit());
+        } else if (info.getLoop() != null) {
+            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+            for (IRBlock loopBlock : loopBlocks) {
+                for (IRBlock succ : loopBlock.getSuccessors()) {
+                    if (!loopBlocks.contains(succ)) {
+                        stopBlocks.add(succ);
+                    }
+                }
+            }
+        }
+
+        context.pushStopBlocks(stopBlocks);
+        try {
+            List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
+            BlockStmt body = new BlockStmt(bodyStmts);
+            return new WhileStmt(condition, body);
+        } finally {
+            context.popStopBlocks();
+        }
+    }
+
+    private int getLocalIndexFromSSAValue(SSAValue value) {
+        IRInstruction def = value.getDefinition();
+        if (def instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) def).getLocalIndex();
+        }
+        if (def instanceof PhiInstruction) {
+            PhiInstruction phi = (PhiInstruction) def;
+            for (Value incoming : phi.getIncomingValues().values()) {
+                if (incoming instanceof SSAValue) {
+                    int idx = getLocalIndexFromSSAValue((SSAValue) incoming);
+                    if (idx >= 0) {
+                        return idx;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    private Statement recoverStoreLocalAsForInit(StoreLocalInstruction store) {
+        int localIndex = store.getLocalIndex();
+        Value storedValue = store.getValue();
+
+        SourceType storedType = typeRecoverer.recoverType(storedValue);
+        String localName = getNameForLocalSlotWithType(localIndex, storedType);
+
+        Expression valueExpr = recoverExpressionDirectly(storedValue, storedType);
+
+        if (context.getExpressionContext().isDeclared(localName)) {
+            VarRefExpr target = new VarRefExpr(localName, storedType, null);
+            return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, valueExpr, storedType));
+        } else {
+            context.getExpressionContext().markDeclared(localName);
+            return new VarDeclStmt(storedType, localName, valueExpr);
+        }
+    }
+
+    private Expression recoverUpdateExpression(StoreLocalInstruction store, int targetLocal) {
+        int localIndex = store.getLocalIndex();
+        Value storedValue = store.getValue();
+
+        SourceType storedType = typeRecoverer.recoverType(storedValue);
+        String localName = getNameForLocalSlotWithType(localIndex, storedType);
+
+        Expression valueExpr = recoverExpressionDirectly(storedValue, storedType);
+
+        VarRefExpr target = new VarRefExpr(localName, storedType, null);
+        return new BinaryExpr(BinaryOperator.ASSIGN, target, valueExpr, storedType);
+    }
+
+    private Expression recoverExpressionDirectly(Value value, SourceType typeHint) {
+        if (value instanceof Constant) {
+            return exprRecoverer.recoverConstant((Constant) value, typeHint);
+        }
+
+        SSAValue ssa = (SSAValue) value;
+        IRInstruction def = ssa.getDefinition();
+
+        if (def instanceof ConstantInstruction) {
+            return exprRecoverer.recoverConstant(((ConstantInstruction) def).getConstant(), typeHint);
+        }
+
+        if (def instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) def;
+            Expression left = recoverExpressionOrVarRef(binOp.getLeft());
+            Expression right = recoverExpressionOrVarRef(binOp.getRight());
+            BinaryOperator op = mapBinaryOp(binOp.getOp());
+            SourceType resultType = typeRecoverer.recoverType(ssa);
+            return new BinaryExpr(op, left, right, resultType);
+        }
+
+        return exprRecoverer.recoverOperand(value, typeHint);
+    }
+
+    private Expression recoverExpressionOrVarRef(Value value) {
+        if (value instanceof Constant) {
+            return exprRecoverer.recoverConstant((Constant) value, null);
+        }
+
+        SSAValue ssa = (SSAValue) value;
+        IRInstruction def = ssa.getDefinition();
+
+        if (def instanceof ConstantInstruction) {
+            return exprRecoverer.recoverConstant(((ConstantInstruction) def).getConstant(), null);
+        }
+
+        if (def instanceof LoadLocalInstruction) {
+            LoadLocalInstruction load = (LoadLocalInstruction) def;
+            int localIndex = load.getLocalIndex();
+            SourceType type = typeRecoverer.recoverType(ssa);
+            String name = getNameForLocalSlotWithType(localIndex, type);
+            return new VarRefExpr(name, type, ssa);
+        }
+
+        if (def instanceof PhiInstruction) {
+            PhiInstruction phi = (PhiInstruction) def;
+            for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+                Value incoming = entry.getValue();
+                if (incoming instanceof SSAValue) {
+                    SSAValue incomingSSA = (SSAValue) incoming;
+                    if (incomingSSA.getDefinition() instanceof LoadLocalInstruction) {
+                        LoadLocalInstruction load = (LoadLocalInstruction) incomingSSA.getDefinition();
+                        int localIndex = load.getLocalIndex();
+                        SourceType type = typeRecoverer.recoverType(incomingSSA);
+                        String name = getNameForLocalSlotWithType(localIndex, type);
+                        return new VarRefExpr(name, type, incomingSSA);
+                    }
+                }
+            }
+        }
+
+        return exprRecoverer.recoverOperand(value);
+    }
+
+    private BinaryOperator mapBinaryOp(BinaryOp op) {
+        switch (op) {
+            case ADD: return BinaryOperator.ADD;
+            case SUB: return BinaryOperator.SUB;
+            case MUL: return BinaryOperator.MUL;
+            case DIV: return BinaryOperator.DIV;
+            case REM: return BinaryOperator.MOD;
+            case AND: return BinaryOperator.BAND;
+            case OR: return BinaryOperator.BOR;
+            case XOR: return BinaryOperator.BXOR;
+            case SHL: return BinaryOperator.SHL;
+            case SHR: return BinaryOperator.SHR;
+            case USHR: return BinaryOperator.USHR;
+            default: return BinaryOperator.ADD;
+        }
     }
 
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
@@ -3591,6 +3896,88 @@ public class StatementRecoverer {
             context.getExpressionContext().cacheExpression(phiResult, booleanExpr);
             context.getExpressionContext().unmarkMaterialized(phiResult);
         }
+    }
+
+    /**
+     * Pre-pass to collect for-loop initializer instructions before block processing.
+     * This allows them to be inlined into the for-loop declaration instead of
+     * being emitted separately in predecessor blocks.
+     */
+    private void collectForLoopInitInstructions() {
+        for (RegionInfo info : analyzer.getForLoopRegions()) {
+            int targetLocal = info.getInductionLocalIndex();
+            if (targetLocal < 0) continue;
+
+            context.markAsForLoopInductionLocal(targetLocal);
+
+            IRBlock header = info.getHeader();
+            LoopAnalysis.Loop loop = info.getLoop();
+
+            for (PhiInstruction phi : header.getPhiInstructions()) {
+                if (isPhiForLocal(phi, targetLocal, loop)) {
+                    context.markAsForLoopInductionPhi(phi.getResult());
+                }
+            }
+
+            for (IRBlock pred : header.getPredecessors()) {
+                if (loop != null && loop.contains(pred)) {
+                    continue;
+                }
+
+                for (IRInstruction instr : pred.getInstructions()) {
+                    if (instr instanceof StoreLocalInstruction) {
+                        StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                        if (store.getLocalIndex() == targetLocal) {
+                            context.markAsForLoopInit(instr);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isPhiForLocal(PhiInstruction phi, int localIndex, LoopAnalysis.Loop loop) {
+        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+            IRBlock sourceBlock = entry.getKey();
+            Value incomingValue = entry.getValue();
+
+            boolean fromInsideLoop = loop != null && loop.contains(sourceBlock);
+            if (fromInsideLoop) {
+                if (incomingValue instanceof SSAValue) {
+                    SSAValue ssaVal = (SSAValue) incomingValue;
+                    IRInstruction def = ssaVal.getDefinition();
+                    if (def instanceof BinaryOpInstruction) {
+                        BinaryOpInstruction binOp = (BinaryOpInstruction) def;
+                        if (binOp.getOp() == BinaryOp.ADD || binOp.getOp() == BinaryOp.SUB) {
+                            return true;
+                        }
+                    }
+                    if (isValueFromLocal(ssaVal, localIndex)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isValueFromLocal(SSAValue value, int localIndex) {
+        IRInstruction def = value.getDefinition();
+        if (def instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) def).getLocalIndex() == localIndex;
+        }
+        if (def instanceof BinaryOpInstruction) {
+            BinaryOpInstruction binOp = (BinaryOpInstruction) def;
+            Value left = binOp.getLeft();
+            Value right = binOp.getRight();
+            if (left instanceof SSAValue && isValueFromLocal((SSAValue) left, localIndex)) {
+                return true;
+            }
+            if (right instanceof SSAValue && isValueFromLocal((SSAValue) right, localIndex)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

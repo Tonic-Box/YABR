@@ -5,6 +5,7 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import lombok.Getter;
 
@@ -44,6 +45,18 @@ public class ControlFlowContext {
 
     /** Stack of fields (by owner+name) known to be false/zero in current context */
     private final Deque<Set<FieldKey>> knownFalseFieldsStack = new ArrayDeque<>();
+
+    /** Stack of instructions to skip during recovery (e.g., for-loop increment) */
+    private final Deque<Set<IRInstruction>> skipInstructionsStack = new ArrayDeque<>();
+
+    /** Permanent set of instructions to skip (e.g., for-loop initializers claimed by for-loops) */
+    private final Set<IRInstruction> forLoopInitInstructions = new HashSet<>();
+
+    /** Local indices that are for-loop induction variables (their PHI declarations should be skipped) */
+    private final Set<Integer> forLoopInductionLocalIndices = new HashSet<>();
+
+    /** PHI results for for-loop induction variables (these should not be declared early) */
+    private final Set<SSAValue> forLoopInductionPhis = new HashSet<>();
 
     private int labelCounter = 0;
 
@@ -140,6 +153,84 @@ public class ControlFlowContext {
             combined.addAll(stopBlocks);
         }
         return combined;
+    }
+
+    /**
+     * Pushes a set of instructions to skip during recovery.
+     * Used for for-loop increment statements that are extracted to the update expression.
+     */
+    public void pushSkipInstructions(Set<IRInstruction> instructions) {
+        skipInstructionsStack.push(instructions);
+    }
+
+    /**
+     * Pops the current skip instructions from the stack.
+     */
+    public void popSkipInstructions() {
+        if (!skipInstructionsStack.isEmpty()) {
+            skipInstructionsStack.pop();
+        }
+    }
+
+    /**
+     * Checks if an instruction should be skipped during recovery.
+     */
+    public boolean shouldSkipInstruction(IRInstruction instruction) {
+        if (forLoopInitInstructions.contains(instruction)) {
+            return true;
+        }
+        for (Set<IRInstruction> skipInstructions : skipInstructionsStack) {
+            if (skipInstructions.contains(instruction)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Marks an instruction as a for-loop initializer that should be skipped
+     * when processing predecessor blocks (because it will be inlined into the for-loop).
+     */
+    public void markAsForLoopInit(IRInstruction instruction) {
+        forLoopInitInstructions.add(instruction);
+    }
+
+    /**
+     * Checks if an instruction has been claimed as a for-loop initializer.
+     */
+    public boolean isForLoopInit(IRInstruction instruction) {
+        return forLoopInitInstructions.contains(instruction);
+    }
+
+    /**
+     * Marks a local index as a for-loop induction variable.
+     * PHI declarations for this local should be skipped since the variable
+     * will be declared in the for-loop init.
+     */
+    public void markAsForLoopInductionLocal(int localIndex) {
+        forLoopInductionLocalIndices.add(localIndex);
+    }
+
+    /**
+     * Checks if a local index is a for-loop induction variable.
+     */
+    public boolean isForLoopInductionLocal(int localIndex) {
+        return forLoopInductionLocalIndices.contains(localIndex);
+    }
+
+    /**
+     * Marks a PHI result as a for-loop induction PHI.
+     * Such PHIs should not have their declaration emitted early.
+     */
+    public void markAsForLoopInductionPhi(SSAValue phiResult) {
+        forLoopInductionPhis.add(phiResult);
+    }
+
+    /**
+     * Checks if a PHI result is a for-loop induction PHI.
+     */
+    public boolean isForLoopInductionPhi(SSAValue phiResult) {
+        return forLoopInductionPhis.contains(phiResult);
     }
 
     /**
