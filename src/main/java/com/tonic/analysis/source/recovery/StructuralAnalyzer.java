@@ -259,9 +259,7 @@ public class StructuralAnalyzer {
             if (left instanceof SSAValue && usesLocalRecursive((SSAValue) left, localIndex, visited)) {
                 return true;
             }
-            if (right instanceof SSAValue && usesLocalRecursive((SSAValue) right, localIndex, visited)) {
-                return true;
-            }
+            return right instanceof SSAValue && usesLocalRecursive((SSAValue) right, localIndex, visited);
         }
         return false;
     }
@@ -304,6 +302,13 @@ public class StructuralAnalyzer {
             if (altMerge != null && altMerge != mergePoint) {
                 mergePoint = altMerge;
             }
+        }
+
+        // Check for guard clause chain pattern BEFORE standard if-then detection
+        // Guard clause: one branch is early-exit, other leads to another conditional
+        RegionInfo guardInfo = detectGuardClauseChain(block, trueTarget, falseTarget);
+        if (guardInfo != null) {
+            return guardInfo;
         }
 
         if (isEarlyExitBlock(falseTarget) && !isEarlyExitBlock(trueTarget)) {
@@ -437,6 +442,74 @@ public class StructuralAnalyzer {
             isExit = (simple.getOp() == SimpleOp.ATHROW);
         }
         return isExit && block.getSuccessors().isEmpty();
+    }
+
+    /**
+     * Detects guard clause chain pattern where one branch is an early exit
+     * and the other leads to another conditional that's also a guard.
+     * This enables flat recovery like: if (bad) return; if (bad2) return; main_logic
+     * instead of: if (good) { if (good2) { main_logic } return; } return;
+     */
+    private RegionInfo detectGuardClauseChain(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+        // Pattern 1: false branch is early-exit, true branch continues to another guard
+        if (isEarlyExitBlock(falseTarget) && !isEarlyExitBlock(trueTarget)) {
+            if (isConditionalBlock(trueTarget) && isGuardChainContinuation(trueTarget)) {
+                RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
+                info.setThenBlock(falseTarget);  // Early exit
+                info.setElseBlock(trueTarget);   // Next guard in chain
+                info.setConditionNegated(true);  // Negate to get: if (bad) exit;
+                return info;
+            }
+        }
+
+        // Pattern 2: true branch is early-exit, false branch continues to another guard
+        if (isEarlyExitBlock(trueTarget) && !isEarlyExitBlock(falseTarget)) {
+            if (isConditionalBlock(falseTarget) && isGuardChainContinuation(falseTarget)) {
+                RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
+                info.setThenBlock(trueTarget);   // Early exit
+                info.setElseBlock(falseTarget);  // Next guard in chain
+                info.setConditionNegated(false);
+                return info;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks if a block ends with a conditional branch.
+     */
+    private boolean isConditionalBlock(IRBlock block) {
+        if (block == null) return false;
+        IRInstruction terminator = block.getTerminator();
+        return terminator instanceof BranchInstruction;
+    }
+
+    /**
+     * Checks if a conditional block is part of a guard chain continuation.
+     * A guard chain continuation is a conditional where one branch is an early exit
+     * (forming another guard in the chain) OR leads to the main logic.
+     */
+    private boolean isGuardChainContinuation(IRBlock block) {
+        if (!isConditionalBlock(block)) return false;
+
+        BranchInstruction branch = (BranchInstruction) block.getTerminator();
+        IRBlock trueTarget = branch.getTrueTarget();
+        IRBlock falseTarget = branch.getFalseTarget();
+
+        // At least one branch should be an early exit for this to be another guard
+        // OR this is the last guard before main logic (neither branch is early exit)
+        boolean trueIsExit = isEarlyExitBlock(trueTarget);
+        boolean falseIsExit = isEarlyExitBlock(falseTarget);
+
+        // If at least one is early exit, it's a guard continuation
+        if (trueIsExit || falseIsExit) {
+            return true;
+        }
+
+        // If neither is early exit, check if the continuation is itself a conditional
+        // (could be the end of the guard chain leading to main logic)
+        return isConditionalBlock(trueTarget) || isConditionalBlock(falseTarget);
     }
 
     /**
@@ -905,6 +978,7 @@ public class StructuralAnalyzer {
 
         private SSAValue inductionVariable;
         private IRBlock incrementBlock;
+        @Getter
         private int inductionLocalIndex = -1;
 
         public RegionInfo(StructuredRegion type, IRBlock header) {
@@ -964,8 +1038,5 @@ public class StructuralAnalyzer {
             this.inductionLocalIndex = inductionLocalIndex;
         }
 
-        public int getInductionLocalIndex() {
-            return inductionLocalIndex;
-        }
     }
 }

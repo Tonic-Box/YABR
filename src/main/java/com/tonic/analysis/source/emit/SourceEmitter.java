@@ -464,7 +464,14 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.writeLine("{");
         writer.indent();
         for (Statement s : stmts) {
-            s.accept(this);
+            if (s instanceof BlockStmt) {
+                BlockStmt nestedBlock = (BlockStmt) s;
+                for (Statement nested : nestedBlock.getStatements()) {
+                    nested.accept(this);
+                }
+            } else {
+                s.accept(this);
+            }
         }
         writer.dedent();
         writer.writeLine("}");

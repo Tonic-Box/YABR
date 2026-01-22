@@ -570,6 +570,13 @@ public class StatementRecoverer {
                     current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
+                case GUARD_CLAUSE: {
+                    Statement guardStmt = recoverGuardClause(current, info);
+                    result.add(guardStmt);
+                    context.markProcessed(current);
+                    current = info.getElseBlock();
+                    break;
+                }
                 default: {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
                     result.addAll(blockStmts);
@@ -1173,6 +1180,13 @@ public class StatementRecoverer {
                 case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
                     current = findLoopExit(info, visited, new HashSet<>());
+                    break;
+                }
+                case GUARD_CLAUSE: {
+                    Statement guardStmt = recoverGuardClause(current, info);
+                    result.add(guardStmt);
+                    context.markProcessed(current);
+                    current = info.getElseBlock();
                     break;
                 }
                 default: {
@@ -1921,6 +1935,13 @@ public class StatementRecoverer {
                     current = findSwitchMerge(info);
                     break;
                 }
+                case GUARD_CLAUSE: {
+                    Statement guardStmt = recoverGuardClause(current, info);
+                    result.add(guardStmt);
+                    context.markProcessed(current);
+                    current = info.getElseBlock();
+                    break;
+                }
                 case IRREDUCIBLE: {
                     result.add(recoverIrreducible(current));
                     current = null;
@@ -2462,6 +2483,15 @@ public class StatementRecoverer {
             context.popKnownFalseFields();
             context.popKnownFalseValues();
         }
+
+        if (isAndConditionChain(thenStmts)) {
+            Statement mergedIf = mergeAndConditions(condition, thenStmts);
+            if (!headerStmts.isEmpty()) {
+                context.addPendingStatements(headerStmts);
+            }
+            return mergedIf;
+        }
+
         BlockStmt thenBlock = new BlockStmt(thenStmts);
 
         IfStmt ifStmt = new IfStmt(condition, thenBlock, null);
@@ -2470,6 +2500,33 @@ public class StatementRecoverer {
             context.addPendingStatements(headerStmts);
         }
         return ifStmt;
+    }
+
+    private Statement recoverGuardClause(IRBlock header, RegionInfo info) {
+        List<Statement> headerStmts = recoverBlockInstructions(header);
+
+        Expression condition = recoverCondition(header, !info.isConditionNegated());
+
+        IRBlock exitBlock = info.getThenBlock();
+        List<Statement> exitStmts = recoverSimpleBlock(exitBlock);
+        context.markProcessed(exitBlock);
+
+        Statement exitStmt;
+        if (exitStmts.isEmpty()) {
+            exitStmt = new BlockStmt(Collections.emptyList());
+        } else if (exitStmts.size() == 1) {
+            exitStmt = exitStmts.get(0);
+        } else {
+            exitStmt = new BlockStmt(exitStmts);
+        }
+
+        IfStmt guardStmt = new IfStmt(condition, exitStmt, null);
+
+        if (!headerStmts.isEmpty()) {
+            context.addPendingStatements(headerStmts);
+        }
+
+        return guardStmt;
     }
 
     private Statement recoverIfThenElse(IRBlock header, RegionInfo info) {
@@ -3729,6 +3786,79 @@ public class StatementRecoverer {
         if (a.getClass() != b.getClass()) return false;
 
         return a.toString().equals(b.toString());
+    }
+
+    /**
+     * Checks if the then statements form an AND condition chain pattern.
+     * Pattern: if(a) { if(b) { if(c) { body } } }
+     * This is how bytecode represents "if (a && b && c) { body }".
+     * The nested ifs must have no else branches for this pattern.
+     */
+    private boolean isAndConditionChain(List<Statement> thenStmts) {
+        if (thenStmts.size() != 1) {
+            return false;
+        }
+        if (!(thenStmts.get(0) instanceof IfStmt)) {
+            return false;
+        }
+        IfStmt nestedIf = (IfStmt) thenStmts.get(0);
+        return nestedIf.getElseBranch() == null;
+    }
+
+    /**
+     * Merges AND condition chains into a single if statement with AND conditions.
+     * if(a) { if(b) { if(c) { body } } }
+     * becomes: if(a && b && c) { body }
+     */
+    private Statement mergeAndConditions(Expression outerCondition, List<Statement> thenStmts) {
+        List<Expression> conditions = new ArrayList<>();
+        conditions.add(outerCondition);
+        Statement body = collectAndChainConditions(thenStmts, conditions);
+
+        Expression merged = conditions.get(0);
+        for (int i = 1; i < conditions.size(); i++) {
+            merged = new BinaryExpr(BinaryOperator.AND, merged, conditions.get(i),
+                    PrimitiveSourceType.BOOLEAN);
+        }
+
+        return new IfStmt(merged, body, null);
+    }
+
+    /**
+     * Recursively collects conditions from nested AND chain ifs.
+     * Returns the innermost body (the actual code to execute).
+     */
+    private Statement collectAndChainConditions(List<Statement> stmts, List<Expression> conditions) {
+        if (stmts.size() != 1 || !(stmts.get(0) instanceof IfStmt)) {
+            if (stmts.size() == 1) {
+                return stmts.get(0);
+            }
+            return new BlockStmt(stmts);
+        }
+
+        IfStmt ifStmt = (IfStmt) stmts.get(0);
+        if (ifStmt.getElseBranch() != null) {
+            return ifStmt;
+        }
+
+        conditions.add(ifStmt.getCondition());
+
+        Statement thenBranch = ifStmt.getThenBranch();
+        List<Statement> nestedStmts;
+        if (thenBranch instanceof BlockStmt) {
+            nestedStmts = ((BlockStmt) thenBranch).getStatements();
+        } else {
+            nestedStmts = List.of(thenBranch);
+        }
+
+        if (nestedStmts.size() == 1 && nestedStmts.get(0) instanceof IfStmt) {
+            IfStmt nested = (IfStmt) nestedStmts.get(0);
+            if (nested.getElseBranch() == null) {
+                return collectAndChainConditions(nestedStmts, conditions);
+            }
+        }
+
+        return thenBranch;
     }
 
     /**

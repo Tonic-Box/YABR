@@ -338,6 +338,7 @@ public class ControlFlowContext {
         SWITCH,
         TRY_CATCH,
         SEQUENCE,
-        IRREDUCIBLE
+        IRREDUCIBLE,
+        GUARD_CLAUSE
     }
 }
