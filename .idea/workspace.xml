@@ -4,12 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- fixed local scoping issues">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ControlFlowContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ControlFlowContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/StructuralAnalyzerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/StructuralAnalyzerTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,7 +35,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
-  <component name="RunManager">
+  <component name="RunManager" selected="Gradle.YABR-fixed [publishToMavenLocal]">
     <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
       <module name="YABR.main" />
@@ -49,8 +49,59 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="YABR-fixed [compileJava]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="compileJava" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <configuration name="YABR-fixed [publishToMavenLocal]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="publishToMavenLocal" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.DebugDoAction" />
+      <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
+      <item itemvalue="Gradle.YABR-fixed [compileJava]" />
+    </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
+        <item itemvalue="Gradle.YABR-fixed [compileJava]" />
         <item itemvalue="Application.DebugDoAction" />
       </list>
     </recent_temporary>
@@ -96,7 +147,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769107829935</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission">
+      <option name="closed" value="true" />
+      <created>1769124567174</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1769124567174</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -104,6 +163,7 @@
     <MESSAGE value="- cleanup" />
     <MESSAGE value="- fixed for look edge detection for AST IR and source emission" />
     <MESSAGE value="- fixed local scoping issues" />
-    <option name="LAST_COMMIT_MESSAGE" value="- fixed local scoping issues" />
+    <MESSAGE value="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission" />
   </component>
 </project>

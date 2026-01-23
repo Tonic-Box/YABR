@@ -451,8 +451,12 @@ public class StructuralAnalyzer {
      * instead of: if (good) { if (good2) { main_logic } return; } return;
      */
     private RegionInfo detectGuardClauseChain(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+        // Use isGuardExitBlock which allows multiple predecessors (multiple guards can share exit blocks)
+        boolean falseIsGuardExit = isGuardExitBlock(falseTarget);
+        boolean trueIsGuardExit = isGuardExitBlock(trueTarget);
+
         // Pattern 1: false branch is early-exit, true branch continues to another guard
-        if (isEarlyExitBlock(falseTarget) && !isEarlyExitBlock(trueTarget)) {
+        if (falseIsGuardExit && !trueIsGuardExit) {
             if (isConditionalBlock(trueTarget) && isGuardChainContinuation(trueTarget)) {
                 RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                 info.setThenBlock(falseTarget);  // Early exit
@@ -463,7 +467,7 @@ public class StructuralAnalyzer {
         }
 
         // Pattern 2: true branch is early-exit, false branch continues to another guard
-        if (isEarlyExitBlock(trueTarget) && !isEarlyExitBlock(falseTarget)) {
+        if (trueIsGuardExit && !falseIsGuardExit) {
             if (isConditionalBlock(falseTarget) && isGuardChainContinuation(falseTarget)) {
                 RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                 info.setThenBlock(trueTarget);   // Early exit
@@ -474,6 +478,67 @@ public class StructuralAnalyzer {
         }
 
         return null;
+    }
+
+    /**
+     * Checks if a block is a valid guard clause exit block.
+     * Unlike isEarlyExitBlock, this allows multiple predecessors because
+     * multiple guard conditions can share the same exit block (e.g., both
+     * x < 0 and x > 100 can jump to the same "return -1" block).
+     * <p>
+     * However, to distinguish from nested if merge points, we require that
+     * ALL predecessors of the exit block are conditional blocks (guards).
+     * If any predecessor is a non-conditional merge block, this is likely
+     * a nested if structure, not a guard clause chain.
+     */
+    private boolean isGuardExitBlock(IRBlock block) {
+        if (block == null) return false;
+
+        // Check if it's an exit block or goto to exit
+        IRBlock exitTarget = block;
+        if (!isExitBlock(block)) {
+            // Check if it's a simple goto to an exit block
+            IRInstruction terminator = block.getTerminator();
+            if (terminator instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) terminator;
+                if (simple.getOp() == SimpleOp.GOTO) {
+                    Set<IRBlock> successors = block.getSuccessors();
+                    if (successors.size() == 1) {
+                        IRBlock target = successors.iterator().next();
+                        if (isExitBlock(target)) {
+                            if (hasNonTrivialInstructions(block)) {
+                                return false;
+                            }
+                            exitTarget = target;
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        // For single predecessor, always allow (classic early exit)
+        if (exitTarget.getPredecessors().size() <= 1) {
+            return true;
+        }
+
+        // For multiple predecessors, verify ALL are conditional blocks
+        // This distinguishes guard clauses (all conditional predecessors)
+        // from nested if merge points (mixed conditional/merge predecessors)
+        for (IRBlock pred : exitTarget.getPredecessors()) {
+            if (!isConditionalBlock(pred)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -497,17 +562,18 @@ public class StructuralAnalyzer {
         IRBlock trueTarget = branch.getTrueTarget();
         IRBlock falseTarget = branch.getFalseTarget();
 
-        // At least one branch should be an early exit for this to be another guard
-        // OR this is the last guard before main logic (neither branch is early exit)
-        boolean trueIsExit = isEarlyExitBlock(trueTarget);
-        boolean falseIsExit = isEarlyExitBlock(falseTarget);
+        // At least one branch should be an exit for this to be another guard
+        // OR this is the last guard before main logic (neither branch is exit)
+        // Use isGuardExitBlock to allow shared exit blocks
+        boolean trueIsExit = isGuardExitBlock(trueTarget);
+        boolean falseIsExit = isGuardExitBlock(falseTarget);
 
-        // If at least one is early exit, it's a guard continuation
+        // If at least one is exit, it's a guard continuation
         if (trueIsExit || falseIsExit) {
             return true;
         }
 
-        // If neither is early exit, check if the continuation is itself a conditional
+        // If neither is exit, check if the continuation is itself a conditional
         // (could be the end of the guard chain leading to main logic)
         return isConditionalBlock(trueTarget) || isConditionalBlock(falseTarget);
     }

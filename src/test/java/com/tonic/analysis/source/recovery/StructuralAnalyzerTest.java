@@ -716,7 +716,7 @@ class StructuralAnalyzerTest {
             assertNotNull(info);
             // Note: Analyzer may classify do-while loops differently
             // The structure is valid, just verify it's recognized
-            if (info != null && info.getType() == StructuredRegion.DO_WHILE_LOOP) {
+            if (info.getType() == StructuredRegion.DO_WHILE_LOOP) {
                 assertEquals(header, info.getHeader());
             }
         }
@@ -1483,12 +1483,14 @@ class StructuralAnalyzerTest {
             StructuralAnalyzer analyzer = new StructuralAnalyzer(method, domTree, loopAnalysis);
             analyzer.analyze();
 
-            // sharedReturn has 2 predecessors, so should NOT be treated as early exit
+            // sharedReturn has 2 predecessors (both from conditional blocks),
+            // which is a valid guard clause pattern where multiple guards share an exit
             RegionInfo info1 = analyzer.getRegionInfo(if1);
             assertNotNull(info1);
-            // Should be IF_THEN_ELSE, not IF_THEN (since sharedReturn is not early exit)
+            // Can be IF_THEN_ELSE, IF_THEN, or GUARD_CLAUSE (since both predecessors are conditional)
             assertTrue(info1.getType() == StructuredRegion.IF_THEN_ELSE ||
-                      info1.getType() == StructuredRegion.IF_THEN);
+                      info1.getType() == StructuredRegion.IF_THEN ||
+                      info1.getType() == StructuredRegion.GUARD_CLAUSE);
         }
 
         @Test

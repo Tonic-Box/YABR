@@ -2505,7 +2505,9 @@ public class StatementRecoverer {
     private Statement recoverGuardClause(IRBlock header, RegionInfo info) {
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
-        Expression condition = recoverCondition(header, !info.isConditionNegated());
+        // For guard clauses, conditionNegated=true means we need to negate the bytecode condition
+        // to get the guard clause condition (the condition under which we exit early)
+        Expression condition = recoverCondition(header, info.isConditionNegated());
 
         IRBlock exitBlock = info.getThenBlock();
         List<Statement> exitStmts = recoverSimpleBlock(exitBlock);
