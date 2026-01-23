@@ -844,21 +844,112 @@ public class SourceEmitter implements SourceVisitor<Void> {
         }
         if (value instanceof Long) {
             Long l = (Long) value;
+            String symbolic = getSymbolicConstant(l, true);
+            if (symbolic != null) {
+                return symbolic;
+            }
             return l + "L";
         }
         if (value instanceof Float) {
             Float f = (Float) value;
+            String symbolic = getSymbolicFloatConstant(f);
+            if (symbolic != null) {
+                return symbolic;
+            }
             return f + "f";
         }
         if (value instanceof Double) {
             Double d = (Double) value;
+            String symbolic = getSymbolicDoubleConstant(d);
+            if (symbolic != null) {
+                return symbolic;
+            }
             return d + "d";
         }
         if (value instanceof Boolean) {
             Boolean b = (Boolean) value;
             return b.toString();
         }
+        if (value instanceof Integer) {
+            Integer i = (Integer) value;
+            String symbolic = getSymbolicConstant((long) i, false);
+            if (symbolic != null) {
+                return symbolic;
+            }
+        }
         return value.toString();
+    }
+
+    private String getSymbolicConstant(long value, boolean isLong) {
+        if (value == Long.MAX_VALUE) {
+            return "Long.MAX_VALUE";
+        }
+        if (value == Long.MIN_VALUE) {
+            return "Long.MIN_VALUE";
+        }
+        if (value == Integer.MAX_VALUE) {
+            return isLong ? "(long) Integer.MAX_VALUE" : "Integer.MAX_VALUE";
+        }
+        if (value == Integer.MIN_VALUE) {
+            return isLong ? "(long) Integer.MIN_VALUE" : "Integer.MIN_VALUE";
+        }
+        if (value == Short.MAX_VALUE) {
+            return isLong ? "(long) Short.MAX_VALUE" : "Short.MAX_VALUE";
+        }
+        if (value == Short.MIN_VALUE) {
+            return isLong ? "(long) Short.MIN_VALUE" : "Short.MIN_VALUE";
+        }
+        if (value == Byte.MAX_VALUE) {
+            return isLong ? "(long) Byte.MAX_VALUE" : "Byte.MAX_VALUE";
+        }
+        if (value == Byte.MIN_VALUE) {
+            return isLong ? "(long) Byte.MIN_VALUE" : "Byte.MIN_VALUE";
+        }
+        return null;
+    }
+
+    private String getSymbolicFloatConstant(float value) {
+        if (value == Float.MAX_VALUE) {
+            return "Float.MAX_VALUE";
+        }
+        if (value == Float.MIN_VALUE) {
+            return "Float.MIN_VALUE";
+        }
+        if (value == Float.MIN_NORMAL) {
+            return "Float.MIN_NORMAL";
+        }
+        if (Float.isNaN(value)) {
+            return "Float.NaN";
+        }
+        if (value == Float.POSITIVE_INFINITY) {
+            return "Float.POSITIVE_INFINITY";
+        }
+        if (value == Float.NEGATIVE_INFINITY) {
+            return "Float.NEGATIVE_INFINITY";
+        }
+        return null;
+    }
+
+    private String getSymbolicDoubleConstant(double value) {
+        if (value == Double.MAX_VALUE) {
+            return "Double.MAX_VALUE";
+        }
+        if (value == Double.MIN_VALUE) {
+            return "Double.MIN_VALUE";
+        }
+        if (value == Double.MIN_NORMAL) {
+            return "Double.MIN_NORMAL";
+        }
+        if (Double.isNaN(value)) {
+            return "Double.NaN";
+        }
+        if (value == Double.POSITIVE_INFINITY) {
+            return "Double.POSITIVE_INFINITY";
+        }
+        if (value == Double.NEGATIVE_INFINITY) {
+            return "Double.NEGATIVE_INFINITY";
+        }
+        return null;
     }
 
     private String escapeString(String s) {
@@ -970,6 +1061,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitBinary(BinaryExpr expr) {
+        if (tryEmitIncrementDecrement(expr)) {
+            return null;
+        }
+
         boolean needsParens = needsParentheses(expr);
         if (needsParens) writer.write("(");
 
@@ -981,6 +1076,89 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
         if (needsParens) writer.write(")");
         return null;
+    }
+
+    private boolean tryEmitIncrementDecrement(BinaryExpr expr) {
+        BinaryOperator op = expr.getOperator();
+        Expression left = expr.getLeft();
+        Expression right = expr.getRight();
+
+        if (op == BinaryOperator.ADD_ASSIGN && isLiteralOne(right)) {
+            left.accept(this);
+            writer.write("++");
+            return true;
+        }
+        if (op == BinaryOperator.SUB_ASSIGN && isLiteralOne(right)) {
+            left.accept(this);
+            writer.write("--");
+            return true;
+        }
+
+        if (op == BinaryOperator.ASSIGN && right instanceof BinaryExpr) {
+            BinaryExpr rightBinary = (BinaryExpr) right;
+            BinaryOperator rightOp = rightBinary.getOperator();
+            Expression rightLeft = rightBinary.getLeft();
+            Expression rightRight = rightBinary.getRight();
+
+            if (rightOp == BinaryOperator.ADD && expressionsEqual(left, rightLeft) && isLiteralOne(rightRight)) {
+                left.accept(this);
+                writer.write("++");
+                return true;
+            }
+            if (rightOp == BinaryOperator.SUB && expressionsEqual(left, rightLeft) && isLiteralOne(rightRight)) {
+                left.accept(this);
+                writer.write("--");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isLiteralOne(Expression expr) {
+        if (!(expr instanceof LiteralExpr)) {
+            return false;
+        }
+        Object value = ((LiteralExpr) expr).getValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue() == 1;
+        }
+        return false;
+    }
+
+    private boolean expressionsEqual(Expression a, Expression b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        if (a.getClass() != b.getClass()) {
+            return false;
+        }
+        if (a instanceof VarRefExpr && b instanceof VarRefExpr) {
+            return ((VarRefExpr) a).getName().equals(((VarRefExpr) b).getName());
+        }
+        if (a instanceof FieldAccessExpr && b instanceof FieldAccessExpr) {
+            FieldAccessExpr fa = (FieldAccessExpr) a;
+            FieldAccessExpr fb = (FieldAccessExpr) b;
+            if (!fa.getFieldName().equals(fb.getFieldName())) {
+                return false;
+            }
+            if (fa.isStatic() && fb.isStatic()) {
+                return fa.getOwnerClass().equals(fb.getOwnerClass());
+            }
+            return expressionsEqual(fa.getReceiver(), fb.getReceiver());
+        }
+        if (a instanceof ArrayAccessExpr && b instanceof ArrayAccessExpr) {
+            ArrayAccessExpr aa = (ArrayAccessExpr) a;
+            ArrayAccessExpr ab = (ArrayAccessExpr) b;
+            return expressionsEqual(aa.getArray(), ab.getArray()) &&
+                   expressionsEqual(aa.getIndex(), ab.getIndex());
+        }
+        if (a instanceof LiteralExpr && b instanceof LiteralExpr) {
+            Object va = ((LiteralExpr) a).getValue();
+            Object vb = ((LiteralExpr) b).getValue();
+            return va == null ? vb == null : va.equals(vb);
+        }
+        return false;
     }
 
     @Override
