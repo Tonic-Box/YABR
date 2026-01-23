@@ -58,6 +58,9 @@ public class ControlFlowContext {
     /** PHI results for for-loop induction variables (these should not be declared early) */
     private final Set<SSAValue> forLoopInductionPhis = new HashSet<>();
 
+    /** Blocks that are for-loop headers (used to scope local index checks) */
+    private final Set<IRBlock> forLoopHeaderBlocks = new HashSet<>();
+
     private int labelCounter = 0;
 
     public ControlFlowContext(IRMethod irMethod, DominatorTree dominatorTree,
@@ -231,6 +234,20 @@ public class ControlFlowContext {
      */
     public boolean isForLoopInductionPhi(SSAValue phiResult) {
         return forLoopInductionPhis.contains(phiResult);
+    }
+
+    /**
+     * Marks a block as a for-loop header.
+     */
+    public void markAsForLoopHeader(IRBlock block) {
+        forLoopHeaderBlocks.add(block);
+    }
+
+    /**
+     * Checks if a block is a for-loop header.
+     */
+    public boolean isForLoopHeader(IRBlock block) {
+        return forLoopHeaderBlocks.contains(block);
     }
 
     /**

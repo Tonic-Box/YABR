@@ -455,29 +455,61 @@ public class StructuralAnalyzer {
         boolean falseIsGuardExit = isGuardExitBlock(falseTarget);
         boolean trueIsGuardExit = isGuardExitBlock(trueTarget);
 
-        // Pattern 1: false branch is early-exit, true branch continues to another guard
+        // Pattern 1: false branch is early-exit, true branch continues
+        // This includes both "next guard in chain" AND "last guard before main logic"
         if (falseIsGuardExit && !trueIsGuardExit) {
-            if (isConditionalBlock(trueTarget) && isGuardChainContinuation(trueTarget)) {
+            // Check if continuation is another guard OR if this block is part of a guard chain
+            // (reached via single predecessor that's also a conditional)
+            if (isGuardChainCandidate(block, trueTarget)) {
                 RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                 info.setThenBlock(falseTarget);  // Early exit
-                info.setElseBlock(trueTarget);   // Next guard in chain
+                info.setElseBlock(trueTarget);   // Next guard or main logic
                 info.setConditionNegated(true);  // Negate to get: if (bad) exit;
                 return info;
             }
         }
 
-        // Pattern 2: true branch is early-exit, false branch continues to another guard
+        // Pattern 2: true branch is early-exit, false branch continues
         if (trueIsGuardExit && !falseIsGuardExit) {
-            if (isConditionalBlock(falseTarget) && isGuardChainContinuation(falseTarget)) {
+            if (isGuardChainCandidate(block, falseTarget)) {
                 RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                 info.setThenBlock(trueTarget);   // Early exit
-                info.setElseBlock(falseTarget);  // Next guard in chain
+                info.setElseBlock(falseTarget);  // Next guard or main logic
                 info.setConditionNegated(false);
                 return info;
             }
         }
 
         return null;
+    }
+
+    private boolean isGuardChainCandidate(IRBlock currentBlock, IRBlock continuationBlock) {
+        // Case 1: Continuation is another guard (conditional that leads to exit)
+        if (isConditionalBlock(continuationBlock) && isGuardChainContinuation(continuationBlock)) {
+            return true;
+        }
+
+        // Case 2: This block is part of a guard chain (predecessor was also a guard)
+        // This handles the "last guard" case where continuation is main logic, not a conditional
+        Set<IRBlock> preds = currentBlock.getPredecessors();
+        if (preds.size() == 1) {
+            IRBlock pred = preds.iterator().next();
+            if (isConditionalBlock(pred)) {
+                // Predecessor is a conditional - check if it looks like a guard
+                BranchInstruction predBranch = (BranchInstruction) pred.getTerminator();
+                IRBlock predTrue = predBranch.getTrueTarget();
+                IRBlock predFalse = predBranch.getFalseTarget();
+
+                // If predecessor has one exit branch and leads to us via the other, it's a guard chain
+                boolean predTrueIsExit = isGuardExitBlock(predTrue);
+                boolean predFalseIsExit = isGuardExitBlock(predFalse);
+
+                return (predTrueIsExit && predFalse == currentBlock) ||
+                        (predFalseIsExit && predTrue == currentBlock);
+            }
+        }
+
+        return false;
     }
 
     /**

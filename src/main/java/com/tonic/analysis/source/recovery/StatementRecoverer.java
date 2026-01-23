@@ -572,6 +572,8 @@ public class StatementRecoverer {
                 }
                 case GUARD_CLAUSE: {
                     Statement guardStmt = recoverGuardClause(current, info);
+                    // Collect pending statements (header computations) BEFORE the guard
+                    result.addAll(context.collectPendingStatements());
                     result.add(guardStmt);
                     context.markProcessed(current);
                     current = info.getElseBlock();
@@ -1184,6 +1186,7 @@ public class StatementRecoverer {
                 }
                 case GUARD_CLAUSE: {
                     Statement guardStmt = recoverGuardClause(current, info);
+                    result.addAll(context.collectPendingStatements());
                     result.add(guardStmt);
                     context.markProcessed(current);
                     current = info.getElseBlock();
@@ -1427,9 +1430,16 @@ public class StatementRecoverer {
             return;
         }
 
+        SourceType type = computePhiUnifiedType(phi);
+
         String name = context.getExpressionContext().getVariableName(result);
         if (name == null) {
-            name = "v" + result.getId();
+            int localIndex = getLocalIndexFromPhi(phi);
+            if (localIndex >= 0) {
+                name = getNameForLocalSlotWithType(localIndex, type);
+            } else {
+                name = "v" + result.getId();
+            }
         }
 
         if ("this".equals(name) || name.startsWith("arg")) {
@@ -1444,8 +1454,6 @@ public class StatementRecoverer {
             return;
         }
 
-        SourceType type = computePhiUnifiedType(phi);
-
         declaredNames.add(name);
         context.getExpressionContext().markDeclared(name);
         context.getExpressionContext().markMaterialized(result);
@@ -1459,14 +1467,24 @@ public class StatementRecoverer {
      * Checks if a PHI instruction corresponds to a for-loop induction variable.
      * Such PHIs should not have their declaration emitted early since the variable
      * will be declared inline in the for-loop initialization.
+     *
+     * Uses two checks:
+     * 1. Direct PHI result marking (always applies)
+     * 2. Local index check, but ONLY if the PHI is in a for-loop header block
+     *    (this prevents slot reuse bugs where a later PHI for the same slot
+     *    would be incorrectly skipped)
      */
     private boolean isForLoopInductionPhi(PhiInstruction phi) {
         SSAValue result = phi.getResult();
         if (result != null && context.isForLoopInductionPhi(result)) {
             return true;
         }
-        int localIndex = getLocalIndexFromPhi(phi);
-        return localIndex >= 0 && context.isForLoopInductionLocal(localIndex);
+        IRBlock phiBlock = phi.getBlock();
+        if (phiBlock != null && context.isForLoopHeader(phiBlock)) {
+            int localIndex = getLocalIndexFromPhi(phi);
+            return localIndex >= 0 && context.isForLoopInductionLocal(localIndex);
+        }
+        return false;
     }
 
     private int getLocalIndexFromPhi(PhiInstruction phi) {
@@ -1493,6 +1511,20 @@ public class StatementRecoverer {
                 }
             }
         }
+
+        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+            IRBlock predBlock = entry.getKey();
+            Value incomingValue = entry.getValue();
+            for (IRInstruction instr : predBlock.getInstructions()) {
+                if (instr instanceof StoreLocalInstruction) {
+                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                    if (store.getValue() == incomingValue) {
+                        return store.getLocalIndex();
+                    }
+                }
+            }
+        }
+
         return -1;
     }
 
@@ -1819,6 +1851,28 @@ public class StatementRecoverer {
         return LiteralExpr.ofNull();
     }
 
+    /**
+     * Checks if an expression is a default value (0, false, null, 0L, 0.0, etc.).
+     * Used to skip redundant assignments that re-initialize variables to their default values.
+     */
+    private boolean isDefaultValue(Expression expr) {
+        if (!(expr instanceof LiteralExpr)) {
+            return false;
+        }
+        LiteralExpr literal = (LiteralExpr) expr;
+        Object value = literal.getValue();
+        if (value == null) {
+            return true;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue() == 0.0;
+        }
+        if (value instanceof Boolean) {
+            return !((Boolean) value);
+        }
+        return false;
+    }
+
     /** Tracks try handlers that have already been processed to avoid infinite loops */
     private final Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
 
@@ -1937,6 +1991,7 @@ public class StatementRecoverer {
                 }
                 case GUARD_CLAUSE: {
                     Statement guardStmt = recoverGuardClause(current, info);
+                    result.addAll(context.collectPendingStatements());
                     result.add(guardStmt);
                     context.markProcessed(current);
                     current = info.getElseBlock();
@@ -2249,6 +2304,14 @@ public class StatementRecoverer {
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                     if (phiVarName != null) {
                         Expression value = exprRecoverer.recover(constInstr);
+                        if (!context.getExpressionContext().isDeclared(phiVarName)) {
+                            context.getExpressionContext().cacheExpression(result, value);
+                            return null;
+                        }
+                        if (isDefaultValue(value)) {
+                            context.getExpressionContext().cacheExpression(result, value);
+                            return null;
+                        }
                         SourceType type = value.getType();
                         if (type == null) {
                             type = typeRecoverer.recoverType(result);
@@ -2348,6 +2411,9 @@ public class StatementRecoverer {
         }
 
         if (context.getExpressionContext().isDeclared(name)) {
+            if (isDefaultValue(value)) {
+                return null;
+            }
             VarRefExpr target = new VarRefExpr(name, type, null);
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
         }
@@ -4021,6 +4087,7 @@ public class StatementRecoverer {
             context.markAsForLoopInductionLocal(targetLocal);
 
             IRBlock header = info.getHeader();
+            context.markAsForLoopHeader(header);
             LoopAnalysis.Loop loop = info.getLoop();
 
             for (PhiInstruction phi : header.getPhiInstructions()) {
