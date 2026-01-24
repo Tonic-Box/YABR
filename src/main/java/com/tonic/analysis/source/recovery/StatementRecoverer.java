@@ -2463,19 +2463,23 @@ public class StatementRecoverer {
     private Statement recoverStoreLocal(StoreLocalInstruction store) {
         Value storeValue = store.getValue();
 
-        // Early exit: if the value is already materialized with a name that matches
-        // the target local slot AND that name is already declared, the declaration
-        // was emitted earlier (e.g., by NewArrayInstruction). Skip to avoid duplicates.
+        // Early exit: if this is a NewArrayInstruction result that was already
+        // declared at the NewArray position (because it's used by array stores),
+        // skip to avoid duplicate declarations. This is a specific case handled
+        // in recoverInstruction for NewArrayInstruction.
         if (storeValue instanceof SSAValue) {
             SSAValue ssaValue = (SSAValue) storeValue;
-            if (context.getExpressionContext().isMaterialized(ssaValue)) {
-                String existingName = context.getExpressionContext().getVariableName(ssaValue);
-                if (existingName != null && context.getExpressionContext().isDeclared(existingName)) {
-                    int localIndex = store.getLocalIndex();
-                    SourceType valueType = typeRecoverer.recoverType(ssaValue);
-                    String expectedName = getNameForLocalSlotWithType(localIndex, valueType);
-                    if (existingName.equals(expectedName)) {
-                        return null;
+            IRInstruction def = ssaValue.getDefinition();
+            if (def instanceof NewArrayInstruction && isUsedByArrayStore(ssaValue)) {
+                if (context.getExpressionContext().isMaterialized(ssaValue)) {
+                    String existingName = context.getExpressionContext().getVariableName(ssaValue);
+                    if (existingName != null && context.getExpressionContext().isDeclared(existingName)) {
+                        int localIndex = store.getLocalIndex();
+                        SourceType valueType = typeRecoverer.recoverType(ssaValue);
+                        String expectedName = getNameForLocalSlotWithType(localIndex, valueType);
+                        if (existingName.equals(expectedName)) {
+                            return null;
+                        }
                     }
                 }
             }
