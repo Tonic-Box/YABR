@@ -11,11 +11,11 @@ import java.util.Set;
 
 /**
  * Removes unused variable declarations from the AST.
- *
+ * <p>
  * This transform identifies variable declarations where the variable is never read,
  * and either removes them (if side-effect free) or converts them to expression
  * statements (if the initializer has side effects).
- *
+ * <p>
  * Handles:
  * - VarDeclStmt with side-effect-free initializers that are never read
  * - Phi-generated declarations that are never used
@@ -33,6 +33,7 @@ public class DeadVariableEliminator implements ASTTransform {
     public boolean transform(BlockStmt block) {
         boolean changed = false;
         boolean madeProgress;
+
 
         // Iterate until fixed point to handle cascading dead variables
         // e.g., int a = 5; int b = a; where b is unused, then a becomes unused
@@ -99,13 +100,20 @@ public class DeadVariableEliminator implements ASTTransform {
             return super.visitVarRef(expr);
         }
 
+
         @Override
         public Void visitBinary(BinaryExpr expr) {
             if (expr.getOperator().isAssignment()) {
-                // For simple assignment (=), the LHS is a WRITE, not a READ
-                // For compound assignment (+=, -=, etc.), the LHS is both read and written
+                Expression left = expr.getLeft();
+                // For simple assignment (=), only visit LHS if it's an array access
+                // Array access like arr[i][j] = value still READS arr, i, j
                 if (expr.getOperator() != BinaryOperator.ASSIGN) {
-                    expr.getLeft().accept(this);
+                    // Compound assignment (+=, -=, etc.) - LHS is both read and written
+                    left.accept(this);
+                } else if (left instanceof ArrayAccessExpr) {
+                    // For array assignment, visit the array and index parts
+                    // (the target element is written, not read, but arr and indices are read)
+                    visitArrayAccessAsRead((ArrayAccessExpr) left);
                 }
                 // RHS is always read
                 expr.getRight().accept(this);
@@ -113,17 +121,29 @@ public class DeadVariableEliminator implements ASTTransform {
             }
             return super.visitBinary(expr);
         }
+
+        private void visitArrayAccessAsRead(ArrayAccessExpr expr) {
+            // Visit the array expression (could be another ArrayAccessExpr for 2D arrays)
+            Expression array = expr.getArray();
+            if (array instanceof ArrayAccessExpr) {
+                visitArrayAccessAsRead((ArrayAccessExpr) array);
+            } else {
+                array.accept(this);
+            }
+            // Visit the index expression
+            expr.getIndex().accept(this);
+        }
     }
 
     /**
      * Removes unused declarations and write-only assignments from the statement list.
-     *
+     * <p>
      * A variable is "unused" if it's never READ (not just written to).
      * For unused variables:
      * - Remove the declaration if initializer has no side effects
      * - Convert to expression statement if initializer has side effects
      * - Also remove any assignment statements to the variable
-     *
+     * <p>
      * For declarations of variables that ARE assigned later but never read,
      * we need to keep the declaration but can remove the assignments.
      */
@@ -142,7 +162,6 @@ public class DeadVariableEliminator implements ASTTransform {
                     // Variable is never read - it's dead code
                     // Even if there are assignments, we'll remove those too
                     Expression init = decl.getInitializer();
-
                     if (init == null || !hasSideEffects(init)) {
                         // Safe to remove entirely
                         stmts.remove(i);

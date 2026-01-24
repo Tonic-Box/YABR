@@ -395,7 +395,7 @@ public class ClassDecompiler {
             if (attr instanceof ConstantValueAttribute) {
                 ConstantValueAttribute cva = (ConstantValueAttribute) attr;
                 int cpIndex = cva.getConstantValueIndex();
-                Item item = classFile.getConstPool().getItem(cpIndex);
+                Item<?> item = classFile.getConstPool().getItem(cpIndex);
 
                 if (item instanceof IntegerItem) {
                     IntegerItem intItem = (IntegerItem) item;
@@ -512,10 +512,10 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
             astSimplifier.transform(body);
+            singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
-            singleUseInliner.transform(body);
             removeTrailingReturn(body); // Static initializers cannot have return statements
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -601,10 +601,10 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
             astSimplifier.transform(body);
+            singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
-            singleUseInliner.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
@@ -667,10 +667,10 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             astSimplifier.transform(body);
+            singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
-            singleUseInliner.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -879,56 +879,6 @@ public class ClassDecompiler {
 
     private boolean isInnerClassOf(String className, String outerClassName) {
         return className.startsWith(outerClassName + "$");
-    }
-
-    /**
-     * Collects all referenced class types from the constant pool and annotations.
-     */
-    private Set<String> collectReferencedTypes() {
-        Set<String> types = new TreeSet<>();
-
-        // Collect from constant pool
-        for (Item<?> item : classFile.getConstPool().getItems()) {
-            if (item instanceof ClassRefItem) {
-                ClassRefItem classRef = (ClassRefItem) item;
-                String className = classRef.getClassName();
-                if (className != null && !className.startsWith("[")) {
-                    types.add(className);
-                }
-            }
-        }
-
-        // Collect from field descriptors
-        for (FieldEntry field : classFile.getFields()) {
-            collectTypesFromDescriptor(field.getDesc(), types);
-            if (field.getAttributes() != null) {
-                collectAnnotationTypes(field.getAttributes(), types);
-            }
-        }
-
-        // Collect from method descriptors and annotations
-        for (MethodEntry method : classFile.getMethods()) {
-            String descriptor = method.getDesc();
-            for (TypeInfo argType : DescriptorParser.getArgumentTypes(descriptor)) {
-                String className = argType.getClassName();
-                if (className != null && !className.startsWith("[")) {
-                    types.add(className);
-                }
-            }
-            TypeInfo returnType = DescriptorParser.getReturnType(descriptor);
-            String returnClassName = returnType.getClassName();
-            if (returnClassName != null && !returnClassName.startsWith("[")) {
-                types.add(returnClassName);
-            }
-            if (method.getAttributes() != null) {
-                collectAnnotationTypes(method.getAttributes(), types);
-            }
-        }
-
-        // Collect from class annotations
-        collectAnnotationTypes(classFile.getClassAttributes(), types);
-
-        return types;
     }
 
     private void collectTypesFromDescriptor(String descriptor, Set<String> types) {

@@ -6,11 +6,20 @@
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixed issues with scope, guard recovery, and local inlining">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/NameRecovererTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/recovery/NameRecovererTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$">
+      <ProjectState />
+    </projectState>
   </component>
   <component name="ExternalProjectsManager">
     <system id="GRADLE">
@@ -27,16 +36,20 @@
       </state>
     </system>
   </component>
+  <component name="Git.Merge.Settings">
+    <option name="BRANCH" value="main" />
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="MIXED" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "git-widget-placeholder": "main"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;
   }
-}]]></component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [publishToMavenLocal]">
+}</component>
+  <component name="RunManager" selected="Gradle.YABR-fixed [compileJava]">
     <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
       <module name="YABR.main" />
@@ -72,6 +85,28 @@
       <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
+    <configuration name="YABR-fixed [compileTestJava]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="compileTestJava" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
     <configuration name="YABR-fixed [publishToMavenLocal]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -96,13 +131,15 @@
     </configuration>
     <list>
       <item itemvalue="Application.DebugDoAction" />
+      <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
       <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
       <item itemvalue="Gradle.YABR-fixed [compileJava]" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
         <item itemvalue="Gradle.YABR-fixed [compileJava]" />
+        <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
+        <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
         <item itemvalue="Application.DebugDoAction" />
       </list>
     </recent_temporary>

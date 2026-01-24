@@ -1346,8 +1346,23 @@ public class StatementRecoverer {
                     // After optimization: store_local 1, v14; putfield v14.fill
                     // Without this fix, v14 wouldn't have the variable name, causing:
                     // "new GridBagConstraints().fill = 2" instead of "c.fill = 2"
+                    //
+                    // EXCEPTION: If the value is used by an ArrayAccessInstruction store,
+                    // we should NOT pre-materialize it. The array store instructions appear
+                    // before the StoreLocal, so using the variable name would create:
+                    // "local7_1[0] = x; Object[] local7_1 = new Object[2];" (wrong order)
+                    // Instead, let recoverInstruction handle declaring it at the right position.
                     if (storedValue instanceof SSAValue) {
                         SSAValue sourceValue = (SSAValue) storedValue;
+                        // Skip pre-materialization if used by array store - declaration ordering issue
+                        if (isUsedByArrayStore(sourceValue)) {
+                            // Still propagate pending-new status to local slot
+                            if (context.getExpressionContext().isPendingNew(sourceValue)) {
+                                String className = context.getExpressionContext().consumePendingNew(sourceValue);
+                                context.getExpressionContext().registerPendingNewLocalSlot(localIndex, className);
+                            }
+                            continue;
+                        }
                         // Only preserve parameter names like "arg0", "this" - overwrite synthetic names
                         // like "v14" (default SSA name), "g8" (from NameRecoverer), etc.
                         String existingName = context.getExpressionContext().getVariableName(sourceValue);
@@ -1467,7 +1482,7 @@ public class StatementRecoverer {
      * Checks if a PHI instruction corresponds to a for-loop induction variable.
      * Such PHIs should not have their declaration emitted early since the variable
      * will be declared inline in the for-loop initialization.
-     *
+     * <p>
      * Uses two checks:
      * 1. Direct PHI result marking (always applies)
      * 2. Local index check, but ONLY if the PHI is in a for-loop header block
@@ -1713,6 +1728,46 @@ public class StatementRecoverer {
         for (IRInstruction use : uses) {
             if (use instanceof PhiInstruction) {
                 return (PhiInstruction) use;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Checks if an SSA value is used by an ArrayAccessInstruction store.
+     * Such values should not be pre-materialized because the array store
+     * instruction needs to use the actual expression or a synthetic variable,
+     * not the local variable name that will be declared later.
+     */
+    private boolean isUsedByArrayStore(SSAValue value) {
+        if (value == null) return false;
+
+        java.util.List<IRInstruction> uses = value.getUses();
+        for (IRInstruction use : uses) {
+            if (use instanceof ArrayAccessInstruction) {
+                ArrayAccessInstruction aa = (ArrayAccessInstruction) use;
+                if (aa.isStore() && aa.getArray() == value) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets the local variable name from the StoreLocalInstruction that stores this value.
+     * Used to emit array declarations at the right position with the correct name.
+     */
+    private String getLocalNameFromStoreLocal(SSAValue value) {
+        if (value == null) return null;
+
+        java.util.List<IRInstruction> uses = value.getUses();
+        for (IRInstruction use : uses) {
+            if (use instanceof StoreLocalInstruction) {
+                StoreLocalInstruction store = (StoreLocalInstruction) use;
+                int localIndex = store.getLocalIndex();
+                SourceType valueType = typeRecoverer.recoverType(value);
+                return getNameForLocalSlotWithType(localIndex, valueType);
             }
         }
         return null;
@@ -2145,6 +2200,13 @@ public class StatementRecoverer {
                 Expression target = new ArrayAccessExpr(array, index, elemType);
                 return new ExprStmt(new BinaryExpr(
                     BinaryOperator.ASSIGN, target, value, elemType));
+            } else {
+                SSAValue result = arrayAccess.getResult();
+                if (result != null) {
+                    Expression expr = exprRecoverer.recover(arrayAccess);
+                    context.getExpressionContext().cacheExpression(result, expr);
+                }
+                return null;
             }
         }
 
@@ -2207,8 +2269,53 @@ public class StatementRecoverer {
         }
 
         if (instr instanceof NewInstruction) {
-            if (instr.getResult() != null) {
-                exprRecoverer.recover(instr);
+            SSAValue result = instr.getResult();
+            if (result != null) {
+                if (isUsedByStoreLocal(result)) {
+                    Expression expr = exprRecoverer.recover(instr);
+                    context.getExpressionContext().cacheExpression(result, expr);
+                    return null;
+                }
+                if (result.getUses().isEmpty()) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        if (instr instanceof NewArrayInstruction) {
+            SSAValue result = instr.getResult();
+            if (result != null) {
+                boolean usedByStore = isUsedByStoreLocal(result);
+                boolean usedByArrayStore = isUsedByArrayStore(result);
+                boolean usesEmpty = result.getUses().isEmpty();
+
+                // If used by both array store and local store, emit declaration here
+                // so array stores can use the variable name correctly.
+                // Without this, array stores would appear before the declaration.
+                if (usedByArrayStore && usedByStore) {
+                    String varName = getLocalNameFromStoreLocal(result);
+                    if (varName != null) {
+                        SourceType type = typeRecoverer.recoverType(result);
+                        Expression value = exprRecoverer.recover(instr);
+                        context.getExpressionContext().cacheExpression(result, value);
+                        context.getExpressionContext().setVariableName(result, varName);
+                        context.getExpressionContext().markMaterialized(result);
+                        context.getExpressionContext().markDeclared(varName);
+                        return new VarDeclStmt(type, varName, value);
+                    }
+                }
+
+                if (usedByStore) {
+                    Expression expr = exprRecoverer.recover(instr);
+                    context.getExpressionContext().cacheExpression(result, expr);
+                    return null;
+                }
+                if (usesEmpty) {
+                    Expression expr = exprRecoverer.recover(instr);
+                    return new ExprStmt(expr);
+                }
+                return recoverVarDecl(instr);
             }
             return null;
         }
@@ -2356,6 +2463,24 @@ public class StatementRecoverer {
     private Statement recoverStoreLocal(StoreLocalInstruction store) {
         Value storeValue = store.getValue();
 
+        // Early exit: if the value is already materialized with a name that matches
+        // the target local slot AND that name is already declared, the declaration
+        // was emitted earlier (e.g., by NewArrayInstruction). Skip to avoid duplicates.
+        if (storeValue instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) storeValue;
+            if (context.getExpressionContext().isMaterialized(ssaValue)) {
+                String existingName = context.getExpressionContext().getVariableName(ssaValue);
+                if (existingName != null && context.getExpressionContext().isDeclared(existingName)) {
+                    int localIndex = store.getLocalIndex();
+                    SourceType valueType = typeRecoverer.recoverType(ssaValue);
+                    String expectedName = getNameForLocalSlotWithType(localIndex, valueType);
+                    if (existingName.equals(expectedName)) {
+                        return null;
+                    }
+                }
+            }
+        }
+
         // When recovering the initialization value for a variable declaration,
         // we need to recover the actual expression (e.g., "new GridBagConstraints()"),
         // not a variable reference (e.g., "local1"). So we temporarily un-materialize
@@ -2410,9 +2535,18 @@ public class StatementRecoverer {
             }
         }
 
-        if (context.getExpressionContext().isDeclared(name)) {
+        boolean isDeclared = context.getExpressionContext().isDeclared(name);
+        if (isDeclared) {
             if (isDefaultValue(value)) {
                 return null;
+            }
+            // Skip self-assignment when the value is already materialized with this name
+            // This happens when NewArrayInstruction emits the declaration early
+            if (value instanceof VarRefExpr) {
+                VarRefExpr varRef = (VarRefExpr) value;
+                if (name.equals(varRef.getName())) {
+                    return null;
+                }
             }
             VarRefExpr target = new VarRefExpr(name, type, null);
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
