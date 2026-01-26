@@ -22,6 +22,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     private final IdentifierNormalizer normalizer;
     @Getter
     private final Set<String> usedTypes = new HashSet<>();
+    private String currentClassName;
 
     public SourceEmitter(IndentingWriter writer) {
         this(writer, SourceEmitterConfig.defaults());
@@ -35,6 +36,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     public void clearUsedTypes() {
         usedTypes.clear();
+    }
+
+    public void setCurrentClassName(String className) {
+        this.currentClassName = className;
     }
 
     private void recordTypeUsage(String internalName) {
@@ -312,7 +317,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
         emitModifiers(decl.getModifiers());
         emitTypeParameters(decl.getTypeParameters());
 
-        writer.write(decl.getReturnType().toJavaSource());
+        decl.getReturnType().accept(this);
         writer.write(" ");
         writer.write(decl.getName());
         writer.write("(");
@@ -360,7 +365,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitFieldDecl(FieldDecl decl) {
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
-        writer.write(decl.getType().toJavaSource());
+        decl.getType().accept(this);
         writer.write(" ");
         writer.write(decl.getName());
 
@@ -379,7 +384,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
         if (decl.isFinal()) {
             writer.write("final ");
         }
-        writer.write(decl.getType().toJavaSource());
+        decl.getType().accept(this);
         if (decl.isVarArgs()) {
             writer.write("...");
         }
@@ -586,7 +591,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitForEach(ForEachStmt stmt) {
         writer.write("for (");
         VarDeclStmt var = stmt.getVariable();
-        writer.write(var.getType().toJavaSource());
+        var.getType().accept(this);
         writer.write(" ");
         writer.write(var.getName());
         writer.write(" : ");
@@ -672,7 +677,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             List<SourceType> types = catchClause.exceptionTypes();
             for (int i = 0; i < types.size(); i++) {
                 if (i > 0) writer.write(" | ");
-                writer.write(types.get(i).toJavaSource());
+                types.get(i).accept(this);
             }
             writer.write(" ");
             writer.write(catchClause.variableName());
@@ -741,7 +746,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
         if (stmt.isUseVarKeyword() && config.isUseVarKeyword()) {
             writer.write("var ");
         } else {
-            writer.write(stmt.getType().toJavaSource());
+            SourceType type = stmt.getType();
+            type.accept(this);
             writer.write(" ");
         }
 
@@ -988,11 +994,19 @@ public class SourceEmitter implements SourceVisitor<Void> {
     @Override
     public Void visitFieldAccess(FieldAccessExpr expr) {
         if (expr.isStatic()) {
-            writer.write(formatClassName(expr.getOwnerClass()));
+            String ownerClass = expr.getOwnerClass();
+            boolean isSelfReference = currentClassName != null &&
+                (currentClassName.equals(ownerClass) ||
+                 currentClassName.replace('/', '.').equals(ownerClass) ||
+                 currentClassName.equals(ownerClass.replace('.', '/')));
+            if (!isSelfReference) {
+                writer.write(formatClassName(ownerClass));
+                writer.write(".");
+            }
         } else if (expr.getReceiver() != null) {
             expr.getReceiver().accept(this);
+            writer.write(".");
         }
-        writer.write(".");
         writer.write(normalizer.normalize(expr.getFieldName(), IdentifierNormalizer.IdentifierType.FIELD));
         return null;
     }
@@ -1012,7 +1026,28 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.write(formatClassName(expr.getOwnerClass()));
             writer.write(".");
         } else if (expr.getReceiver() != null) {
-            expr.getReceiver().accept(this);
+            Expression receiver = expr.getReceiver();
+            SourceType receiverType = receiver.getType();
+            String ownerClass = expr.getOwnerClass();
+
+            boolean needsCast = false;
+            if (receiverType instanceof ReferenceSourceType && ownerClass != null) {
+                ReferenceSourceType refType = (ReferenceSourceType) receiverType;
+                String receiverClass = refType.getInternalName();
+                if (!ownerClass.equals(receiverClass) && !"java/lang/Object".equals(ownerClass)) {
+                    needsCast = true;
+                }
+            }
+
+            if (needsCast) {
+                writer.write("((");
+                writer.write(formatClassName(ownerClass));
+                writer.write(") ");
+                receiver.accept(this);
+                writer.write(")");
+            } else {
+                receiver.accept(this);
+            }
             writer.write(".");
         }
 
@@ -1036,7 +1071,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     @Override
     public Void visitNewArray(NewArrayExpr expr) {
         writer.write("new ");
-        writer.write(expr.getElementType().toJavaSource());
+        expr.getElementType().accept(this);
 
         if (expr.hasInitializer()) {
             writer.write("[] ");
@@ -1183,7 +1218,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     @Override
     public Void visitCast(CastExpr expr) {
         writer.write("(");
-        writer.write(expr.getTargetType().toJavaSource());
+        expr.getTargetType().accept(this);
         writer.write(") ");
         Expression inner = expr.getExpression();
         boolean needsParens = inner instanceof BinaryExpr || inner instanceof TernaryExpr;
@@ -1201,7 +1236,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitInstanceOf(InstanceOfExpr expr) {
         expr.getExpression().accept(this);
         writer.write(" instanceof ");
-        writer.write(expr.getCheckType().toJavaSource());
+        expr.getCheckType().accept(this);
         if (expr.getPatternVariable() != null) {
             writer.write(" ");
             writer.write(expr.getPatternVariable());
@@ -1411,7 +1446,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
         if (internalName == null) return "";
         recordTypeUsage(internalName);
         String formatted;
-        if (config.isUseFullyQualifiedNames()) {
+        if (config.isUseFullyQualifiedNames() || internalName.contains("$")) {
             formatted = ClassNameUtil.toSourceName(internalName);
         } else {
             formatted = ClassNameUtil.getSimpleNameWithInnerClasses(internalName);

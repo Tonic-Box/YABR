@@ -14,6 +14,7 @@ import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.MethodEntry;
 import lombok.Getter;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,6 +32,7 @@ public class MethodRecoverer {
     private LoopAnalysis loopAnalysis;
     private DefUseChains defUseChains;
 
+    @Getter
     private RecoveryContext recoveryContext;
     private ControlFlowContext controlFlowContext;
     private NameRecoverer nameRecoverer;
@@ -93,36 +95,34 @@ public class MethodRecoverer {
         java.util.Map<Integer, IRType> localSlotTypes = new java.util.HashMap<>();
         java.util.Map<Integer, Integer> slotReuseCounter = new java.util.HashMap<>();
 
-        irMethod.getBlocks().forEach(block -> {
-            block.getInstructions().forEach(instr -> {
-                if (instr instanceof LoadLocalInstruction) {
-                    LoadLocalInstruction load = (LoadLocalInstruction) instr;
-                    int localIndex = load.getLocalIndex();
-                    IRType valueType = load.getResult() != null ? load.getResult().getType() : null;
+        irMethod.getBlocks().forEach(block -> block.getInstructions().forEach(instr -> {
+            if (instr instanceof LoadLocalInstruction) {
+                LoadLocalInstruction load = (LoadLocalInstruction) instr;
+                int localIndex = load.getLocalIndex();
+                IRType valueType = load.getResult() != null ? load.getResult().getType() : null;
 
-                    if (!localSlotNames.containsKey(localIndex)) {
-                        if (!irMethod.isStatic() && localIndex == 0) {
-                            localSlotNames.put(localIndex, "this");
+                if (!localSlotNames.containsKey(localIndex)) {
+                    if (!irMethod.isStatic() && localIndex == 0) {
+                        localSlotNames.put(localIndex, "this");
+                    } else {
+                        int paramSlots = computeParameterSlots();
+                        if (localIndex < paramSlots) {
+                            int argIndex = getParamIndexForSlot(localIndex);
+                            localSlotNames.put(localIndex, "arg" + argIndex);
                         } else {
-                            int paramSlots = computeParameterSlots();
-                            if (localIndex < paramSlots) {
-                                int argIndex = irMethod.isStatic() ? localIndex : localIndex - 1;
-                                localSlotNames.put(localIndex, "arg" + argIndex);
-                            } else {
-                                localSlotNames.put(localIndex, "local" + localIndex);
-                            }
+                            localSlotNames.put(localIndex, "local" + localIndex);
                         }
-                        localSlotTypes.put(localIndex, valueType);
                     }
+                    localSlotTypes.put(localIndex, valueType);
                 }
-            });
-        });
+            }
+        }));
 
         irMethod.getBlocks().forEach(block -> {
             block.getPhiInstructions().forEach(phi -> {
                 if (phi.getResult() != null) {
                     Integer localSlot = findPhiLocalSlot(phi);
-                    IRType valueType = phi.getResult().getType();
+                    IRType valueType = computePhiType(phi);
                     String name;
                     if (localSlot != null && localSlotNames.containsKey(localSlot)) {
                         IRType existingType = localSlotTypes.get(localSlot);
@@ -136,7 +136,7 @@ public class MethodRecoverer {
                     } else if (localSlot != null) {
                         int paramSlots = computeParameterSlots();
                         if (localSlot < paramSlots) {
-                            int argIndex = irMethod.isStatic() ? localSlot : localSlot - 1;
+                            int argIndex = getParamIndexForSlot(localSlot);
                             name = "arg" + argIndex;
                         } else {
                             name = "local" + localSlot;
@@ -159,6 +159,18 @@ public class MethodRecoverer {
         });
     }
 
+    private IRType computePhiType(PhiInstruction phi) {
+        for (Value operand : phi.getOperands()) {
+            if (operand instanceof SSAValue) {
+                IRType opType = ((SSAValue) operand).getType();
+                if (opType != null && (opType instanceof ReferenceType || opType.isArray())) {
+                    return opType;
+                }
+            }
+        }
+        return phi.getResult().getType();
+    }
+
     private boolean areTypesCompatible(IRType type1, IRType type2) {
         if (type1 == null || type2 == null) {
             return true;
@@ -171,12 +183,14 @@ public class MethodRecoverer {
         if (type1Primitive && type2Primitive) {
             return true;
         }
-        boolean type1Reference = type1 instanceof ReferenceType || type1.isArray();
-        boolean type2Reference = type2 instanceof ReferenceType || type2.isArray();
-        if (type1Reference && type2Reference) {
-            return true;
+        boolean type1Array = type1.isArray();
+        boolean type2Array = type2.isArray();
+        if (type1Array != type2Array) {
+            return false;
         }
-        return false;
+        boolean type1Object = (type1 instanceof ReferenceType) || type1Array;
+        boolean type2Object = (type2 instanceof ReferenceType) || type2Array;
+        return type1Object && type2Object;
     }
 
     /**
@@ -223,24 +237,17 @@ public class MethodRecoverer {
      * For instance methods, the first parameter (slot 0) is 'this'.
      */
     private void assignParameterNames() {
-        int slot = 0;
+        int paramIndex = 0;
         for (var param : irMethod.getParameters()) {
             String name;
-            if (!irMethod.isStatic() && slot == 0) {
+            if (!irMethod.isStatic() && paramIndex == 0) {
                 name = "this";
             } else {
-                int argIndex = irMethod.isStatic() ? slot : slot - 1;
+                int argIndex = irMethod.isStatic() ? paramIndex : paramIndex - 1;
                 name = "arg" + argIndex;
             }
             recoveryContext.setVariableName(param, name);
-            slot++;
-            if (param.getType() instanceof PrimitiveType) {
-                PrimitiveType p = (PrimitiveType) param.getType();
-                if (p == PrimitiveType.LONG ||
-                    p == PrimitiveType.DOUBLE) {
-                    slot++;
-                }
-            }
+            paramIndex++;
         }
     }
 
@@ -263,7 +270,7 @@ public class MethodRecoverer {
             }
             int paramSlots = computeParameterSlots();
             if (localIndex < paramSlots) {
-                int argIndex = irMethod.isStatic() ? localIndex : localIndex - 1;
+                int argIndex = getParamIndexForSlot(localIndex);
                 return "arg" + argIndex;
             }
             if (localSlotNames.containsKey(localIndex)) {
@@ -284,6 +291,86 @@ public class MethodRecoverer {
             return name;
         }
         return nameRecoverer.generateSyntheticName(instr.getResult());
+    }
+
+    private int getParamIndexForSlot(int slot) {
+        boolean isStatic = irMethod.isStatic();
+
+        if (!isStatic && slot == 0) {
+            return -1;
+        }
+
+        String descriptor = irMethod.getDescriptor();
+        if (descriptor == null) {
+            return isStatic ? slot : slot - 1;
+        }
+
+        List<String> paramTypes = parseParameterTypes(descriptor);
+        int currentSlot = isStatic ? 0 : 1;
+
+        for (int paramIndex = 0; paramIndex < paramTypes.size(); paramIndex++) {
+            String paramType = paramTypes.get(paramIndex);
+            int slotsForParam = 1;
+            if ("J".equals(paramType) || "D".equals(paramType)) {
+                slotsForParam = 2;
+            }
+
+            if (slot >= currentSlot && slot < currentSlot + slotsForParam) {
+                return paramIndex;
+            }
+            currentSlot += slotsForParam;
+        }
+
+        return -1;
+    }
+
+    private List<String> parseParameterTypes(String descriptor) {
+        List<String> types = new java.util.ArrayList<>();
+        int start = descriptor.indexOf('(');
+        int end = descriptor.indexOf(')');
+        if (start < 0 || end < 0) {
+            return types;
+        }
+
+        String params = descriptor.substring(start + 1, end);
+        int i = 0;
+        while (i < params.length()) {
+            char c = params.charAt(i);
+            if (c == 'L') {
+                int semiPos = params.indexOf(';', i);
+                if (semiPos > i) {
+                    types.add(params.substring(i, semiPos + 1));
+                    i = semiPos + 1;
+                } else {
+                    break;
+                }
+            } else if (c == '[') {
+                int arrayStart = i;
+                while (i < params.length() && params.charAt(i) == '[') {
+                    i++;
+                }
+                if (i < params.length()) {
+                    char elementType = params.charAt(i);
+                    if (elementType == 'L') {
+                        int semiPos = params.indexOf(';', i);
+                        if (semiPos > i) {
+                            types.add(params.substring(arrayStart, semiPos + 1));
+                            i = semiPos + 1;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        types.add(params.substring(arrayStart, i + 1));
+                        i++;
+                    }
+                }
+            } else {
+                types.add(String.valueOf(c));
+                i++;
+            }
+        }
+
+        return types;
     }
 
     /**

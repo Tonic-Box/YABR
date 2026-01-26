@@ -32,6 +32,17 @@ public class InnerClassEntry {
         this.innerClassAccessFlags = innerClassAccessFlags;
     }
 
+    public String getOuterClassName() {
+        if (outerClassInfoIndex == 0) {
+            return null;
+        }
+        return resolveClassName(outerClassInfoIndex);
+    }
+
+    public String getInnerClassName() {
+        return resolveClassName(innerClassInfoIndex);
+    }
+
     @Override
     public String toString() {
         String innerClassName = resolveClassName(innerClassInfoIndex);

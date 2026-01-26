@@ -39,6 +39,67 @@ import java.util.Set;
  */
 public class ExpressionRecoverer {
 
+    private static final Map<String, List<String>> SAM_PARAMETER_NAMES = createSamParameterNames();
+
+    private static Map<String, List<String>> createSamParameterNames() {
+        Map<String, List<String>> map = new HashMap<>();
+        map.put("accept", List.of("t"));
+        map.put("apply", List.of("t"));
+        map.put("test", List.of("t"));
+        map.put("get", List.of());
+        map.put("run", List.of());
+        map.put("compare", List.of("o1", "o2"));
+        map.put("accept2", List.of("t", "u"));
+        map.put("apply2", List.of("t", "u"));
+        map.put("actionPerformed", List.of("e"));
+        map.put("itemStateChanged", List.of("e"));
+        map.put("mouseClicked", List.of("e"));
+        map.put("mousePressed", List.of("e"));
+        map.put("mouseReleased", List.of("e"));
+        map.put("mouseEntered", List.of("e"));
+        map.put("mouseExited", List.of("e"));
+        map.put("mouseDragged", List.of("e"));
+        map.put("mouseMoved", List.of("e"));
+        map.put("mouseWheelMoved", List.of("e"));
+        map.put("keyTyped", List.of("e"));
+        map.put("keyPressed", List.of("e"));
+        map.put("keyReleased", List.of("e"));
+        map.put("windowOpened", List.of("e"));
+        map.put("windowClosing", List.of("e"));
+        map.put("windowClosed", List.of("e"));
+        map.put("windowIconified", List.of("e"));
+        map.put("windowDeiconified", List.of("e"));
+        map.put("windowActivated", List.of("e"));
+        map.put("windowDeactivated", List.of("e"));
+        map.put("focusGained", List.of("e"));
+        map.put("focusLost", List.of("e"));
+        map.put("stateChanged", List.of("e"));
+        map.put("valueChanged", List.of("e"));
+        map.put("propertyChange", List.of("evt"));
+        map.put("caretUpdate", List.of("e"));
+        map.put("insertUpdate", List.of("e"));
+        map.put("removeUpdate", List.of("e"));
+        map.put("changedUpdate", List.of("e"));
+        map.put("componentResized", List.of("e"));
+        map.put("componentMoved", List.of("e"));
+        map.put("componentShown", List.of("e"));
+        map.put("componentHidden", List.of("e"));
+        map.put("componentAdded", List.of("e"));
+        map.put("componentRemoved", List.of("e"));
+        map.put("ancestorAdded", List.of("e"));
+        map.put("ancestorRemoved", List.of("e"));
+        map.put("ancestorMoved", List.of("e"));
+        map.put("hierarchyChanged", List.of("e"));
+        map.put("uncaughtException", List.of("t", "e"));
+        map.put("handle", List.of("request", "response"));
+        map.put("onNext", List.of("t"));
+        map.put("onError", List.of("e"));
+        map.put("onComplete", List.of());
+        map.put("onSubscribe", List.of("s"));
+        map.put("call", List.of());
+        return map;
+    }
+
     private final RecoveryContext context;
     private final TypeRecoverer typeRecoverer;
 
@@ -65,19 +126,22 @@ public class ExpressionRecoverer {
         }
         SSAValue ssa = (SSAValue) value;
 
+        IRInstruction def = ssa.getDefinition();
+
         if (context.isMaterialized(ssa)) {
-            String name = context.getVariableName(ssa);
-            if (name != null) {
-                SourceType type = typeRecoverer.recoverType(ssa);
-                if ("this".equals(name)) {
-                    return new ThisExpr(type);
+            if (!shouldForceInline(def, ssa)) {
+                String name = context.getVariableName(ssa);
+                if (name != null) {
+                    SourceType type = typeRecoverer.recoverType(ssa);
+                    if ("this".equals(name)) {
+                        return new ThisExpr(type);
+                    }
+                    return new VarRefExpr(name, type, ssa);
                 }
-                return new VarRefExpr(name, type, ssa);
             }
         }
-
-        IRInstruction def = ssa.getDefinition();
-        if (def != null && shouldInlineExpression(def)) {
+        boolean shouldInline = def != null && shouldInlineExpression(def);
+        if (shouldInline) {
             if (def instanceof ConstantInstruction) {
                 ConstantInstruction constInstr = (ConstantInstruction) def;
                 return recoverConstant(constInstr.getConstant(), typeHint);
@@ -93,6 +157,12 @@ public class ExpressionRecoverer {
                         SourceType type = typeRecoverer.recoverType(loadResult);
                         return new VarRefExpr(name, type, loadResult);
                     }
+                }
+
+                String slotName = context.getLocalSlotName(load.getLocalIndex());
+                if (slotName != null) {
+                    SourceType type = typeRecoverer.recoverType(loadResult);
+                    return new VarRefExpr(slotName, type, loadResult);
                 }
 
                 if (loadResult != null && context.isRecovered(loadResult)) {
@@ -171,6 +241,17 @@ public class ExpressionRecoverer {
             return useCount <= 1;
         }
 
+        return false;
+    }
+
+    private boolean shouldForceInline(IRInstruction def, SSAValue ssa) {
+        if (def == null) {
+            return false;
+        }
+        if (def instanceof InvokeInstruction) {
+            int useCount = ssa.getUses().size();
+            return useCount <= 1;
+        }
         return false;
     }
 
@@ -412,16 +493,25 @@ public class ExpressionRecoverer {
                 if (context.isRecovered(ssaSource)) {
                     return context.getCachedExpression(ssaSource);
                 }
-                String name = context.getVariableName(ssaSource);
-                if (name != null) {
-                    SourceType type = typeRecoverer.recoverType(ssaSource);
-                    return new VarRefExpr(name, type, ssaSource);
+                Expression cachedExpr = context.getCachedExpression(ssaSource);
+                if (cachedExpr != null) {
+                    return cachedExpr;
                 }
                 IRInstruction def = ssaSource.getDefinition();
                 if (def == null) break;
                 if (def instanceof CopyInstruction) {
                     source = ((CopyInstruction) def).getSource();
                     continue;
+                }
+                if (def instanceof NewInstruction || def instanceof NewArrayInstruction) {
+                    Expression expr = recover(def);
+                    context.cacheExpression(ssaSource, expr);
+                    return expr;
+                }
+                String name = context.getVariableName(ssaSource);
+                if (name != null && context.isMaterialized(ssaSource)) {
+                    SourceType type = typeRecoverer.recoverType(ssaSource);
+                    return new VarRefExpr(name, type, ssaSource);
                 }
                 Expression expr = recover(def);
                 context.cacheExpression(ssaSource, expr);
@@ -1000,19 +1090,11 @@ public class ExpressionRecoverer {
                 paramCount = paramTypes.size();
             }
 
-            if ("uncaughtException".equals(samMethodName)) {
-                params.add(new LambdaParameter("t", null, true));
-                params.add(new LambdaParameter("e", null, true));
-            } else if ("hierarchyChanged".equals(samMethodName)) {
-                params.add(new LambdaParameter("event", null, true));
-            } else if ("run".equals(samMethodName) && paramCount == 0) {
-            } else if ("accept".equals(samMethodName)) {
-                params.add(new LambdaParameter("t", null, true));
-            } else if ("apply".equals(samMethodName)) {
-                params.add(new LambdaParameter("t", null, true));
-            } else if ("test".equals(samMethodName)) {
-                params.add(new LambdaParameter("t", null, true));
-            } else if ("get".equals(samMethodName) && paramCount == 0) {
+            List<String> knownNames = SAM_PARAMETER_NAMES.get(samMethodName);
+            if (knownNames != null) {
+                for (String name : knownNames) {
+                    params.add(new LambdaParameter(name, null, true));
+                }
             } else {
                 for (int i = 0; i < paramCount; i++) {
                     String name = paramCount == 1 ? "arg" : "arg" + i;
@@ -1103,16 +1185,33 @@ public class ExpressionRecoverer {
 
                 Map<Integer, Expression> capturedMapping = new HashMap<>();
                 int slot = isInstanceMethod ? 1 : 0;
+                int startArg = isInstanceMethod ? 1 : 0;
 
-                for (int i = 0; i < capturedCount; i++) {
-                    Expression capturedExpr = recoverOperand(instr.getArguments().get(i));
+                for (int i = startArg; i < capturedCount; i++) {
+                    Value arg = instr.getArguments().get(i);
+                    Expression capturedExpr = recoverOperand(arg);
                     capturedMapping.put(slot, capturedExpr);
                     slot++;
+                    if (arg instanceof SSAValue) {
+                        IRType type = arg.getType();
+                        if (type != null && type.isTwoSlot()) {
+                            slot++;
+                        }
+                    }
                 }
 
+                List<String> samParamTypes = parseParameterTypes(samDescriptor);
                 Map<Integer, String> paramMapping = new HashMap<>();
+                int paramSlot = slot;
                 for (int i = 0; i < params.size(); i++) {
-                    paramMapping.put(slot + i, params.get(i).name());
+                    paramMapping.put(paramSlot, params.get(i).name());
+                    paramSlot++;
+                    if (i < samParamTypes.size()) {
+                        String typeDesc = samParamTypes.get(i);
+                        if ("J".equals(typeDesc) || "D".equals(typeDesc)) {
+                            paramSlot++;
+                        }
+                    }
                 }
 
                 if (isInstanceMethod) {
@@ -1467,8 +1566,13 @@ public class ExpressionRecoverer {
 
         @Override
         public Expression visitNew(NewInstruction instr) {
-            if (instr.getResult() != null) {
-                context.registerPendingNew(instr.getResult(), instr.getClassName());
+            SSAValue result = instr.getResult();
+            if (result != null) {
+                Expression cached = context.getCachedExpression(result);
+                if (cached instanceof NewExpr) {
+                    return cached;
+                }
+                context.registerPendingNew(result, instr.getClassName());
             }
             return new NewExpr(instr.getClassName());
         }
@@ -1504,6 +1608,9 @@ public class ExpressionRecoverer {
             }
 
             String name = context.getVariableName(instr.getResult());
+            if (name == null) {
+                name = context.getLocalSlotName(localIndex);
+            }
             if (name == null) {
                 name = "local" + localIndex;
             }

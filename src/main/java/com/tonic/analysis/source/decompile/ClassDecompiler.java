@@ -33,12 +33,13 @@ import com.tonic.parser.attribute.ConstantValueAttribute;
 import com.tonic.parser.attribute.RuntimeVisibleAnnotationsAttribute;
 import com.tonic.parser.attribute.RuntimeInvisibleAnnotationsAttribute;
 import com.tonic.parser.attribute.SignatureAttribute;
+import com.tonic.parser.attribute.InnerClassesAttribute;
+import com.tonic.parser.attribute.table.InnerClassEntry;
 import com.tonic.parser.attribute.anotation.Annotation;
 import com.tonic.parser.attribute.anotation.ElementValue;
 import com.tonic.parser.attribute.anotation.ElementValuePair;
 import com.tonic.parser.attribute.anotation.EnumConst;
 import com.tonic.parser.constpool.*;
-import com.tonic.parser.util.DescriptorParser;
 import com.tonic.parser.util.TypeInfo;
 import com.tonic.utill.ClassNameUtil;
 import com.tonic.utill.Modifiers;
@@ -68,6 +69,7 @@ public class ClassDecompiler {
     private final DeclarationHoister declarationHoister;
     private final SingleUseInliner singleUseInliner;
     private final Set<String> usedTypes = new TreeSet<>();
+    private final boolean hasInnerClasses;
 
     public ClassDecompiler(ClassFile classFile) {
         this(classFile, DecompilerConfig.defaults());
@@ -90,6 +92,27 @@ public class ClassDecompiler {
         this.deadStoreEliminator = new DeadStoreEliminator();
         this.declarationHoister = new DeclarationHoister();
         this.singleUseInliner = new SingleUseInliner();
+        this.hasInnerClasses = detectInnerClasses();
+    }
+
+    private boolean detectInnerClasses() {
+        String thisClassName = classFile.getClassName().replace('/', '.');
+        for (Attribute attr : classFile.getClassAttributes()) {
+            if (attr instanceof InnerClassesAttribute) {
+                InnerClassesAttribute innerAttr = (InnerClassesAttribute) attr;
+                for (InnerClassEntry entry : innerAttr.getClasses()) {
+                    String outerName = entry.getOuterClassName();
+                    String innerName = entry.getInnerClassName();
+                    if (thisClassName.equals(outerName)) {
+                        return true;
+                    }
+                    if (innerName != null && innerName.startsWith(thisClassName + "$")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -195,18 +218,33 @@ public class ClassDecompiler {
         writer.newLine();
         writer.indent();
 
+        boolean isEnum = Modifiers.isEnum(classFile.getAccess());
         List<FieldEntry> fields = classFile.getFields();
-        if (!fields.isEmpty()) {
-            for (FieldEntry field : fields) {
+
+        if (isEnum) {
+            emitEnumConstants(writer, fields);
+        }
+
+        List<FieldEntry> regularFields = isEnum ? getNonEnumConstantFields(fields) : fields;
+        List<FieldEntry> nonSyntheticFields = new ArrayList<>();
+        for (FieldEntry field : regularFields) {
+            if (!isEnum || !isSyntheticEnumField(field)) {
+                nonSyntheticFields.add(field);
+            }
+        }
+        if (!nonSyntheticFields.isEmpty()) {
+            for (FieldEntry field : nonSyntheticFields) {
                 emitField(writer, field);
             }
             writer.newLine();
         }
 
-        MethodEntry clinit = findMethod("<clinit>");
-        if (clinit != null && clinit.getCodeAttribute() != null) {
-            emitStaticInitializer(writer, clinit);
-            writer.newLine();
+        if (!isEnum) {
+            MethodEntry clinit = findMethod("<clinit>");
+            if (clinit != null && clinit.getCodeAttribute() != null) {
+                emitStaticInitializer(writer, clinit);
+                writer.newLine();
+            }
         }
 
         List<MethodEntry> constructors = new ArrayList<>();
@@ -217,8 +255,12 @@ public class ClassDecompiler {
             if (methodName.equals("<clinit>")) {
                 continue;
             } else if (methodName.equals("<init>")) {
-                constructors.add(method);
+                if (!isEnum) {
+                    constructors.add(method);
+                }
             } else if (isSyntheticLambdaMethod(methodName)) {
+                continue;
+            } else if (isEnum && isSyntheticEnumMethod(methodName)) {
                 continue;
             } else {
                 methods.add(method);
@@ -237,6 +279,54 @@ public class ClassDecompiler {
 
         writer.dedent();
         writer.writeLine("}");
+    }
+
+    private void emitEnumConstants(IndentingWriter writer, List<FieldEntry> fields) {
+        String enumType = "L" + classFile.getClassName() + ";";
+        List<String> enumConstantNames = new ArrayList<>();
+
+        for (FieldEntry field : fields) {
+            if (isEnumConstantField(field, enumType)) {
+                enumConstantNames.add(field.getName());
+            }
+        }
+
+        if (!enumConstantNames.isEmpty()) {
+            for (int i = 0; i < enumConstantNames.size(); i++) {
+                String suffix = (i < enumConstantNames.size() - 1) ? "," : ";";
+                writer.writeLine(enumConstantNames.get(i) + suffix);
+            }
+            writer.newLine();
+        }
+    }
+
+    private List<FieldEntry> getNonEnumConstantFields(List<FieldEntry> fields) {
+        String enumType = "L" + classFile.getClassName() + ";";
+        List<FieldEntry> result = new ArrayList<>();
+        for (FieldEntry field : fields) {
+            if (!isEnumConstantField(field, enumType)) {
+                result.add(field);
+            }
+        }
+        return result;
+    }
+
+    private boolean isEnumConstantField(FieldEntry field, String enumType) {
+        int access = field.getAccess();
+        boolean isPublicStaticFinalEnum = Modifiers.isPublic(access)
+                && Modifiers.isStatic(access)
+                && Modifiers.isFinal(access)
+                && Modifiers.isEnum(access);
+        return isPublicStaticFinalEnum && enumType.equals(field.getDesc());
+    }
+
+    private boolean isSyntheticEnumField(FieldEntry field) {
+        String name = field.getName();
+        return name != null && name.equals("$VALUES");
+    }
+
+    private boolean isSyntheticEnumMethod(String methodName) {
+        return "values".equals(methodName) || "valueOf".equals(methodName);
     }
 
     private void analyzeSwitchMaps() {
@@ -278,7 +368,7 @@ public class ClassDecompiler {
         if (Modifiers.isPrivate(access)) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
         if (Modifiers.isAbstract(access) && !Modifiers.isInterface(access)) sb.append("abstract ");
-        if (Modifiers.isFinal(access)) sb.append("final ");
+        if (Modifiers.isFinal(access) && !Modifiers.isEnum(access)) sb.append("final ");
 
         // Type keyword
         if (Modifiers.isAnnotation(access)) {
@@ -338,7 +428,7 @@ public class ClassDecompiler {
         StringBuilder sb = new StringBuilder();
 
         if (Modifiers.isPublic(access)) sb.append("public ");
-        if (Modifiers.isPrivate(access)) sb.append("private ");
+        if (Modifiers.isPrivate(access) && !hasInnerClasses) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
         if (Modifiers.isStatic(access)) sb.append("static ");
         if (Modifiers.isFinal(access)) sb.append("final ");
@@ -568,7 +658,7 @@ public class ClassDecompiler {
         // Modifiers
         StringBuilder sb = new StringBuilder();
         if (Modifiers.isPublic(access)) sb.append("public ");
-        if (Modifiers.isPrivate(access)) sb.append("private ");
+        if (Modifiers.isPrivate(access) && !hasInnerClasses) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
 
         String fullName = classFile.getClassName();
@@ -627,7 +717,7 @@ public class ClassDecompiler {
         // Modifiers - skip public/abstract for annotation type methods (they're implicit)
         StringBuilder sb = new StringBuilder();
         if (!isAnnotationType && Modifiers.isPublic(access)) sb.append("public ");
-        if (Modifiers.isPrivate(access)) sb.append("private ");
+        if (Modifiers.isPrivate(access) && !hasInnerClasses) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
         if (Modifiers.isStatic(access)) sb.append("static ");
         if (Modifiers.isFinal(access)) sb.append("final ");
@@ -683,6 +773,7 @@ public class ClassDecompiler {
 
     private void emitBlockContents(IndentingWriter writer, BlockStmt block) {
         SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
+        emitter.setCurrentClassName(classFile.getClassName());
         for (Statement stmt : block.getStatements()) {
             stmt.accept(emitter);
         }
@@ -865,7 +956,8 @@ public class ClassDecompiler {
                 .filter(name -> !getPackageName(name).equals(thisPackage))
                 .filter(name -> !name.equals(thisClassName))
                 .filter(name -> !isInnerClassOf(name, thisClassName))
-                .map(name -> name.replace('/', '.').replace('$', '.'))
+                .filter(name -> !name.contains("$"))
+                .map(name -> name.replace('/', '.'))
                 .sorted()
                 .collect(java.util.stream.Collectors.toList());
 
@@ -1085,6 +1177,13 @@ public class ClassDecompiler {
 
         // Get annotation type name
         String typeName = resolveAnnotationType(ann.getTypeIndex());
+
+        // Track the annotation type for imports
+        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+            String internalName = typeName.substring(1, typeName.length() - 1);
+            usedTypes.add(internalName);
+        }
+
         sb.append(formatAnnotationTypeName(typeName));
 
         // Emit element-value pairs if present
@@ -1271,9 +1370,11 @@ public class ClassDecompiler {
         String typeName = resolveUtf8(enumConst.getTypeNameIndex());
         String constName = resolveUtf8(enumConst.getConstNameIndex());
 
-        // Format type name (remove descriptor format)
+        // Track the enum type for imports
         if (typeName.startsWith("L") && typeName.endsWith(";")) {
-            typeName = typeName.substring(1, typeName.length() - 1);
+            String internalName = typeName.substring(1, typeName.length() - 1);
+            usedTypes.add(internalName);
+            typeName = internalName;
         }
         typeName = typeName.replace('/', '.');
 
@@ -1292,10 +1393,12 @@ public class ClassDecompiler {
      */
     private String formatClassConstant(int cpIndex) {
         String className = resolveUtf8(cpIndex);
+        String internalName = null;
 
         // Handle descriptor format
         if (className.startsWith("L") && className.endsWith(";")) {
-            className = className.substring(1, className.length() - 1);
+            internalName = className.substring(1, className.length() - 1);
+            className = internalName;
         }
 
         // Handle primitive type descriptors
@@ -1314,6 +1417,15 @@ public class ClassDecompiler {
         // Handle array types
         if (className.startsWith("[")) {
             return typeRecoverer.recoverType(className).toJavaSource() + ".class";
+        }
+
+        // Track the class type for imports
+        if (internalName != null) {
+            usedTypes.add(internalName);
+        } else if (!className.contains("/") && !className.contains(".")) {
+            // Not a fully qualified name, might be internal name without descriptor
+        } else {
+            usedTypes.add(className.replace('.', '/'));
         }
 
         className = className.replace('/', '.');
@@ -1335,6 +1447,11 @@ public class ClassDecompiler {
         sb.append("@");
 
         String typeName = resolveAnnotationType(ann.getTypeIndex());
+        // Track the nested annotation type for imports
+        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+            String internalName = typeName.substring(1, typeName.length() - 1);
+            usedTypes.add(internalName);
+        }
         sb.append(formatAnnotationTypeName(typeName));
 
         List<ElementValuePair> pairs = ann.getElementValuePairs();

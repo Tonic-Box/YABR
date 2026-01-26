@@ -311,7 +311,10 @@ public class StructuralAnalyzer {
             return guardInfo;
         }
 
-        if (isEarlyExitBlock(falseTarget) && !isEarlyExitBlock(trueTarget)) {
+        boolean falseIsEarlyExit = isEarlyExitBlock(falseTarget);
+        boolean trueIsEarlyExit = isEarlyExitBlock(trueTarget);
+
+        if (falseIsEarlyExit && !trueIsEarlyExit) {
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(falseTarget);
             info.setMergeBlock(trueTarget);
@@ -328,39 +331,52 @@ public class StructuralAnalyzer {
         }
 
         if (trueTarget == mergePoint) {
-            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
-            info.setThenBlock(falseTarget);
-            info.setMergeBlock(mergePoint);
-            info.setConditionNegated(true);
-            return info;
+            if (!isIndirectReturnBlock(trueTarget)) {
+                RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+                info.setThenBlock(falseTarget);
+                info.setMergeBlock(mergePoint);
+                info.setConditionNegated(true);
+                return info;
+            }
         }
 
         if (falseTarget == mergePoint) {
-            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
-            info.setThenBlock(trueTarget);
-            info.setMergeBlock(mergePoint);
-            info.setConditionNegated(false);
-            return info;
+            if (!isIndirectReturnBlock(falseTarget)) {
+                RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+                info.setThenBlock(trueTarget);
+                info.setMergeBlock(mergePoint);
+                info.setConditionNegated(false);
+                return info;
+            }
         }
 
         // Check if one branch target is reachable from the other - this means
-        // that target is actually a merge point, not a separate branch
+        // that target is actually a merge point, not a separate branch.
+        // IMPORTANT: A return/exit block should NOT be treated as a merge point,
+        // even if reachable from both branches. Multiple paths leading to the same
+        // return is an OR condition pattern, not a merge after conditional logic.
         Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
         if (reachableFromFalse.contains(trueTarget) && trueTarget.getPredecessors().size() > 1) {
-            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
-            info.setThenBlock(falseTarget);
-            info.setMergeBlock(trueTarget);
-            info.setConditionNegated(true);
-            return info;
+            boolean indirect = isIndirectReturnBlock(trueTarget);
+            boolean shortCircuit = isShortCircuitValueBlock(trueTarget);
+            if (!indirect && !shortCircuit) {
+                RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+                info.setThenBlock(falseTarget);
+                info.setMergeBlock(trueTarget);
+                info.setConditionNegated(true);
+                return info;
+            }
         }
 
         Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
         if (reachableFromTrue.contains(falseTarget) && falseTarget.getPredecessors().size() > 1) {
-            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
-            info.setThenBlock(trueTarget);
-            info.setMergeBlock(falseTarget);
-            info.setConditionNegated(false);
-            return info;
+            if (!isIndirectReturnBlock(falseTarget) && !isShortCircuitValueBlock(falseTarget)) {
+                RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
+                info.setThenBlock(trueTarget);
+                info.setMergeBlock(falseTarget);
+                info.setConditionNegated(false);
+                return info;
+            }
         }
 
         // Check for flat if-chain pattern (dispatch table pattern)
@@ -372,6 +388,24 @@ public class StructuralAnalyzer {
             info.setMergeBlock(falseTarget);  // The next if-check becomes the merge point
             info.setConditionNegated(false);
             return info;
+        }
+
+        Set<IRBlock> trueReachableNoLoop = getReachableBlocksExcluding(trueTarget, block);
+        Set<IRBlock> falseReachableNoLoop = getReachableBlocksExcluding(falseTarget, block);
+        boolean trueReachesMerge = trueTarget == mergePoint || trueReachableNoLoop.contains(mergePoint);
+        boolean falseReachesMerge = falseTarget == mergePoint || falseReachableNoLoop.contains(mergePoint);
+        if (!trueReachesMerge || !falseReachesMerge) {
+            mergePoint = null;
+        }
+
+        // If the merge point is the same as one of the branch targets AND is an
+        // indirect return block, don't use it as a merge point. This handles the case
+        // where both branches converge on a shared return statement (OR condition pattern).
+        // When this happens, using it as merge point causes the branch to be empty.
+        if (mergePoint != null && (mergePoint == trueTarget || mergePoint == falseTarget)) {
+            if (isIndirectReturnBlock(mergePoint)) {
+                mergePoint = null;
+            }
         }
 
         RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
@@ -480,7 +514,61 @@ public class StructuralAnalyzer {
             }
         }
 
+        // Pattern 3: Both branches are exit blocks, but one is shared (multiple predecessors)
+        // and one is exclusive (single predecessor). The shared one is the guard exit,
+        // the exclusive one is the "main logic" exit. This handles OR condition chains
+        // like: if (a == null) { return x; } if (a.isEmpty()) { return x; } return y;
+        // where both a==null and isEmpty share the same exit block for return x,
+        // but return y is exclusive to the isEmpty-false path.
+        if (trueIsGuardExit && falseIsGuardExit) {
+            int truePredCount = trueTarget.getPredecessors().size();
+            int falsePredCount = falseTarget.getPredecessors().size();
+
+            if (truePredCount > 1 && falsePredCount == 1) {
+                // True branch is shared guard exit, false is exclusive
+                // This block is part of guard chain - emit as: if (cond) { sharedExit }
+                if (isPartOfGuardChain(block)) {
+                    RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
+                    info.setThenBlock(trueTarget);   // Shared exit
+                    info.setElseBlock(falseTarget);  // Exclusive continuation
+                    info.setConditionNegated(false);
+                    return info;
+                }
+            }
+
+            if (falsePredCount > 1 && truePredCount == 1) {
+                // False branch is shared guard exit, true is exclusive
+                if (isPartOfGuardChain(block)) {
+                    RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
+                    info.setThenBlock(falseTarget);  // Shared exit
+                    info.setElseBlock(trueTarget);   // Exclusive continuation
+                    info.setConditionNegated(true);
+                    return info;
+                }
+            }
+        }
+
         return null;
+    }
+
+    private boolean isPartOfGuardChain(IRBlock block) {
+        Set<IRBlock> preds = block.getPredecessors();
+        if (preds.size() != 1) {
+            return false;
+        }
+        IRBlock pred = preds.iterator().next();
+        if (!isConditionalBlock(pred)) {
+            return false;
+        }
+        BranchInstruction predBranch = (BranchInstruction) pred.getTerminator();
+        IRBlock predTrue = predBranch.getTrueTarget();
+        IRBlock predFalse = predBranch.getFalseTarget();
+
+        boolean predTrueIsExit = isGuardExitBlock(predTrue);
+        boolean predFalseIsExit = isGuardExitBlock(predFalse);
+
+        return (predTrueIsExit && predFalse == block) ||
+               (predFalseIsExit && predTrue == block);
     }
 
     private boolean isGuardChainCandidate(IRBlock currentBlock, IRBlock continuationBlock) {
@@ -667,6 +755,66 @@ public class StructuralAnalyzer {
     }
 
     /**
+     * Checks if a block only has return-value setup instructions before a GOTO to a return block.
+     * In try-finally, return statements become: load value, store local, GOTO finally handler.
+     * We should treat these blocks as guard exits since they're effectively returns.
+     */
+    private boolean hasOnlyReturnSetupInstructions(IRBlock block) {
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr.isTerminator()) continue;
+            if (instr instanceof LoadLocalInstruction) continue;
+            if (instr instanceof StoreLocalInstruction) continue;
+            if (instr instanceof FieldAccessInstruction) continue;
+            if (instr instanceof ConstantInstruction) continue;
+            if (instr instanceof CopyInstruction) continue;
+            if (instr instanceof SimpleInstruction) {
+                SimpleInstruction simple = (SimpleInstruction) instr;
+                SimpleOp op = simple.getOp();
+                if (op == SimpleOp.GOTO) {
+                    continue;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Checks if a block is part of an indirect return pattern (in try-finally).
+     * An indirect return block sets up a return value and GOTOs to a shared handler.
+     */
+    private boolean isIndirectReturnBlock(IRBlock block) {
+        if (block == null) return false;
+        IRInstruction terminator = block.getTerminator();
+        if (!(terminator instanceof SimpleInstruction)) return false;
+        SimpleInstruction simple = (SimpleInstruction) terminator;
+        if (simple.getOp() != SimpleOp.GOTO) return false;
+        Set<IRBlock> successors = block.getSuccessors();
+        if (successors.size() != 1) return false;
+        IRBlock target = successors.iterator().next();
+        return isExitBlock(target) && hasOnlyReturnSetupInstructions(block);
+    }
+
+    private boolean isShortCircuitValueBlock(IRBlock block) {
+        if (block == null) return false;
+        boolean hasConstant = false;
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr.isTerminator()) continue;
+            if (instr instanceof ConstantInstruction) {
+                hasConstant = true;
+                continue;
+            }
+            if (instr instanceof CopyInstruction) continue;
+            return false;
+        }
+        if (!hasConstant) return false;
+        Set<IRBlock> successors = block.getSuccessors();
+        if (successors.size() != 1) return false;
+        IRBlock target = successors.iterator().next();
+        return !target.getPhiInstructions().isEmpty();
+    }
+
+    /**
      * Finds the merge point for a conditional branch using post-dominator analysis.
      * The merge point is the immediate post-dominator of the branch block -
      * the first block that all paths from the branch must pass through.
@@ -765,6 +913,10 @@ public class StructuralAnalyzer {
             return false;
         }
 
+        if (isShortCircuitValueBlock(block)) {
+            return false;
+        }
+
         if (block.getInstructions().size() == 1) {
             IRInstruction instr = block.getInstructions().get(0);
             boolean isGotoInstr = instr instanceof SimpleInstruction &&
@@ -837,6 +989,25 @@ public class StructuralAnalyzer {
 
             for (IRBlock succ : block.getSuccessors()) {
                 if (!reachable.contains(succ)) {
+                    worklist.add(succ);
+                }
+            }
+        }
+        return reachable;
+    }
+
+    private Set<IRBlock> getReachableBlocksExcluding(IRBlock start, IRBlock excluded) {
+        Set<IRBlock> reachable = new HashSet<>();
+        Queue<IRBlock> worklist = new LinkedList<>();
+        worklist.add(start);
+
+        while (!worklist.isEmpty()) {
+            IRBlock block = worklist.poll();
+            if (reachable.contains(block) || block == excluded) continue;
+            reachable.add(block);
+
+            for (IRBlock succ : block.getSuccessors()) {
+                if (!reachable.contains(succ) && succ != excluded) {
                     worklist.add(succ);
                 }
             }

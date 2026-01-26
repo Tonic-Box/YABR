@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixes to statement recovery">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixes to statement recovery p2">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -213,7 +213,23 @@
       <option name="project" value="LOCAL" />
       <updated>1769234649607</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="- Fixes to statement recovery p2">
+      <option name="closed" value="true" />
+      <created>1769236643843</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1769236643843</updated>
+    </task>
+    <task id="LOCAL-00011" summary="- Fixes to statement recovery p2">
+      <option name="closed" value="true" />
+      <created>1769236658926</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1769236658926</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -224,6 +240,7 @@
     <MESSAGE value="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission" />
     <MESSAGE value="- Fixed issues with scope, guard recovery, and local inlining" />
     <MESSAGE value="- Fixes to statement recovery" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixes to statement recovery" />
+    <MESSAGE value="- Fixes to statement recovery p2" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fixes to statement recovery p2" />
   </component>
 </project>

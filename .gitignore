@@ -55,3 +55,14 @@ bin/
 /ConstPoolItemTest-Summary.md
 /DemoJar.jar
 /decompiled-output/
+/src/test/java/com/tonic/analysis/source/DebugDoubleInvocationTest.java
+/src/test/java/com/tonic/analysis/source/DecompileVerificationTest.java
+/src/test/resources/DemoJar.jar
+/src/test/java/com/tonic/analysis/source/HeapAnalysisDebugTest.java
+/src/test/java/com/tonic/analysis/source/decompile/HeapAnalysisDecompileTest.java
+/src/test/java/com/tonic/analysis/source/IRDumpTest.java
+/src/test/java/com/tonic/analysis/source/PasswordHasherIRDumpTest.java
+/src/test/java/com/tonic/analysis/source/RecoveryTraceTest.java
+/src/test/java/com/tonic/analysis/source/SymbolicExecValidationTest.java
+/TestDecompile.java
+/ISSUES.md

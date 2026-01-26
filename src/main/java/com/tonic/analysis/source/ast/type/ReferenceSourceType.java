@@ -59,9 +59,10 @@ public final class ReferenceSourceType implements SourceType {
 
     /**
      * Gets the simple class name (e.g., "String").
+     * For inner classes, preserves the outer$inner format (e.g., "SessionManager$Session").
      */
     public String getSimpleName() {
-        return ClassNameUtil.getSimpleName(internalName);
+        return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
     }
 
     /**
@@ -88,15 +89,30 @@ public final class ReferenceSourceType implements SourceType {
     @Override
     public String toJavaSource() {
         StringBuilder sb = new StringBuilder();
-        sb.append(useSimpleName ? getSimpleName() : getFullyQualifiedName());
+        boolean useFullyQualified = !useSimpleName || internalName.contains("$");
+        sb.append(useFullyQualified ? getFullyQualifiedName() : getSimpleName());
 
         if (!typeArguments.isEmpty()) {
-            sb.append("<");
-            for (int i = 0; i < typeArguments.size(); i++) {
-                if (i > 0) sb.append(", ");
-                sb.append(typeArguments.get(i).toJavaSource());
+            boolean skipTypeArgs = false;
+            if ("java/lang/Class".equals(internalName) && typeArguments.size() == 1) {
+                SourceType arg = typeArguments.get(0);
+                if (arg instanceof ReferenceSourceType) {
+                    ReferenceSourceType refArg = (ReferenceSourceType) arg;
+                    if ("java/lang/Object".equals(refArg.getInternalName()) &&
+                        !refArg.hasTypeArguments()) {
+                        skipTypeArgs = true;
+                    }
+                }
             }
-            sb.append(">");
+
+            if (!skipTypeArgs) {
+                sb.append("<");
+                for (int i = 0; i < typeArguments.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(typeArguments.get(i).toJavaSource());
+                }
+                sb.append(">");
+            }
         }
 
         return sb.toString();
