@@ -6,8 +6,10 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.StackMapTableAttribute;
+import com.tonic.parser.attribute.stack.*;
 import com.tonic.analysis.instruction.*;
 import com.tonic.utill.Logger;
 import com.tonic.utill.ReturnType;
@@ -245,11 +247,103 @@ public class CodeWriter {
         instructions.clear();
         instructions.putAll(updatedInstructions);
 
+        int insertLen = newInstr.getLength();
+        for (com.tonic.parser.attribute.table.ExceptionTableEntry ex : codeAttribute.getExceptionTable()) {
+            if (ex.getStartPc() >= offset) {
+                ex.setStartPc(ex.getStartPc() + insertLen);
+            }
+            if (ex.getEndPc() > offset) {
+                ex.setEndPc(ex.getEndPc() + insertLen);
+            }
+            if (ex.getHandlerPc() >= offset) {
+                ex.setHandlerPc(ex.getHandlerPc() + insertLen);
+            }
+        }
+
+        shiftStackMapTable(offset, insertLen);
+
         rebuildBytecode();
 
         parseBytecode();
     }
 
+
+    private void shiftStackMapTable(int insertionOffset, int insertLength) {
+        StackMapTableAttribute smt = null;
+        for (Attribute attr : codeAttribute.getAttributes()) {
+            if (attr instanceof StackMapTableAttribute) {
+                smt = (StackMapTableAttribute) attr;
+                break;
+            }
+        }
+        if (smt == null || smt.getFrames().isEmpty()) return;
+
+        List<StackMapFrame> oldFrames = smt.getFrames();
+        List<StackMapFrame> newFrames = new ArrayList<>(oldFrames.size());
+
+        int prevOldAbsBci = -1;
+        int prevNewAbsBci = -1;
+
+        for (StackMapFrame frame : oldFrames) {
+            int delta = frame.getOffsetDelta();
+            int oldAbsBci = (prevOldAbsBci == -1) ? delta : prevOldAbsBci + delta + 1;
+
+            int newAbsBci = oldAbsBci;
+            if (oldAbsBci >= insertionOffset) {
+                newAbsBci = oldAbsBci + insertLength;
+            }
+
+            int newDelta = (prevNewAbsBci == -1) ? newAbsBci : newAbsBci - prevNewAbsBci - 1;
+
+            StackMapFrame newFrame = createAdjustedFrame(frame, newDelta);
+            newFrames.add(newFrame);
+
+            prevOldAbsBci = oldAbsBci;
+            prevNewAbsBci = newAbsBci;
+        }
+
+        smt.setFrames(newFrames);
+        smt.updateLength();
+    }
+
+    private static StackMapFrame createAdjustedFrame(StackMapFrame original, int newDelta) {
+        if (original instanceof SameFrame) {
+            if (newDelta <= 63) {
+                return new SameFrame(newDelta);
+            }
+            return new SameFrameExtended(newDelta);
+        }
+        if (original instanceof SameLocals1StackItemFrame) {
+            VerificationTypeInfo stackItem = ((SameLocals1StackItemFrame) original).getStack();
+            if (newDelta <= 63) {
+                return new SameLocals1StackItemFrame(newDelta, stackItem);
+            }
+            return new SameLocals1StackItemFrameExtended(newDelta, stackItem);
+        }
+        if (original instanceof SameLocals1StackItemFrameExtended) {
+            VerificationTypeInfo stackItem = ((SameLocals1StackItemFrameExtended) original).getStack();
+            if (newDelta <= 63) {
+                return new SameLocals1StackItemFrame(newDelta, stackItem);
+            }
+            return new SameLocals1StackItemFrameExtended(newDelta, stackItem);
+        }
+        if (original instanceof SameFrameExtended) {
+            if (newDelta <= 63) {
+                return new SameFrame(newDelta);
+            }
+            return new SameFrameExtended(newDelta);
+        }
+        if (original instanceof ChopFrame) {
+            return new ChopFrame(original.getFrameType(), newDelta);
+        }
+        if (original instanceof AppendFrame) {
+            return new AppendFrame(original.getFrameType(), newDelta, ((AppendFrame) original).getLocals());
+        }
+        if (original instanceof FullFrame) {
+            return new FullFrame(newDelta, ((FullFrame) original).getLocals(), ((FullFrame) original).getStack());
+        }
+        throw new IllegalArgumentException("Unknown frame type: " + original.getClass());
+    }
 
     /**
      * Rebuilds the bytecode array from the current instructions.

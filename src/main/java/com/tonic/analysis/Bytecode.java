@@ -495,6 +495,10 @@ public class Bytecode {
         switch (desc)
         {
             case "I":
+            case "Z":
+            case "B":
+            case "C":
+            case "S":
                 addILoad(i);
                 break;
             case "J":

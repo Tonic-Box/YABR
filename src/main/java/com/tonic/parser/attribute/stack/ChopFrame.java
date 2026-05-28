@@ -15,16 +15,19 @@ import java.io.IOException;
 public class ChopFrame extends StackMapFrame {
     private final int offsetDelta;
 
-    /**
-     * Constructs a ChopFrame by reading from a class file.
-     *
-     * @param frameType the frame type identifier
-     * @param classFile the class file to read from
-     * @param constPool the constant pool for resolving references
-     */
     public ChopFrame(int frameType, ClassFile classFile, ConstPool constPool) {
         super(frameType);
         this.offsetDelta = classFile.readUnsignedShort();
+    }
+
+    public ChopFrame(int frameType, int offsetDelta) {
+        super(frameType);
+        this.offsetDelta = offsetDelta;
+    }
+
+    @Override
+    public int getOffsetDelta() {
+        return offsetDelta;
     }
 
     @Override

@@ -54,6 +54,11 @@ public class FullFrame extends StackMapFrame {
     }
 
     @Override
+    public int getOffsetDelta() {
+        return offsetDelta;
+    }
+
+    @Override
     protected void writeFrameData(DataOutputStream dos) throws IOException {
         dos.writeShort(offsetDelta);
         dos.writeShort(locals.size());

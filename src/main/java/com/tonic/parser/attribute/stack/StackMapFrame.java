@@ -90,6 +90,8 @@ public abstract class StackMapFrame {
      */
     public abstract int getLength();
 
+    public abstract int getOffsetDelta();
+
     @Override
     public String toString() {
         return "StackMapFrame{frameType=" + frameType + "}";

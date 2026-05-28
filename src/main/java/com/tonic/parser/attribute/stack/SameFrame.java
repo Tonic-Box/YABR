@@ -22,6 +22,11 @@ public class SameFrame extends StackMapFrame {
     }
 
     @Override
+    public int getOffsetDelta() {
+        return frameType;
+    }
+
+    @Override
     public int getLength() {
         return 1;
     }

@@ -105,6 +105,19 @@ public class TypeInference {
         if (opcode == AALOAD.getCode()) {
             VerificationType arrayType = state.peek(1);
             state = state.pop(2);
+            if (arrayType.getTag() == VerificationType.TAG_OBJECT) {
+                VerificationType.ObjectType objType = (VerificationType.ObjectType) arrayType;
+                int arrayClassIndex = objType.getClassIndex();
+                Item<?> item = constPool.getItem(arrayClassIndex);
+                if (item instanceof ClassRefItem) {
+                    String className = ((ClassRefItem) item).getClassName();
+                    if (className != null && className.startsWith("[")) {
+                        String elementDesc = className.substring(1);
+                        VerificationType elemType = descriptorToType(elementDesc);
+                        return state.push(elemType);
+                    }
+                }
+            }
             return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
@@ -398,11 +411,31 @@ public class TypeInference {
         }
 
         if (opcode == NEWARRAY.getCode()) {
-            return state.pop().push(VerificationType.object(getObjectClassIndex()));
+            state = state.pop();
+            if (instr instanceof NewArrayInstruction) {
+                NewArrayInstruction newArray = (NewArrayInstruction) instr;
+                String arrayDesc = newArrayTypeDescriptor(newArray.getArrayType());
+                int classIndex = constPool.findOrAddClass(arrayDesc).getIndex(constPool);
+                return state.push(VerificationType.object(classIndex));
+            }
+            return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
         if (opcode == ANEWARRAY.getCode()) {
-            return state.pop().push(VerificationType.object(getObjectClassIndex()));
+            state = state.pop();
+            if (instr instanceof ANewArrayInstruction) {
+                ANewArrayInstruction anewArray = (ANewArrayInstruction) instr;
+                String elementClass = anewArray.resolveClass();
+                String arrayDesc;
+                if (elementClass.startsWith("[")) {
+                    arrayDesc = "[" + elementClass;
+                } else {
+                    arrayDesc = "[L" + elementClass + ";";
+                }
+                int classIndex = constPool.findOrAddClass(arrayDesc).getIndex(constPool);
+                return state.push(VerificationType.object(classIndex));
+            }
+            return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
         if (opcode == ARRAYLENGTH.getCode()) {
@@ -624,6 +657,12 @@ public class TypeInference {
             if (isSpecial && "<init>".equals(methodName)) {
                 VerificationType objectRef = state.peek();
                 state = state.pop();
+                if (objectRef instanceof VerificationType.UninitializedType
+                        || objectRef.equals(VerificationType.UNINITIALIZED_THIS)) {
+                    int classIndex = getInitClassIndex(instr);
+                    VerificationType initializedType = VerificationType.object(classIndex);
+                    state = state.replaceType(objectRef, initializedType);
+                }
             } else {
                 state = state.pop();
             }
@@ -806,7 +845,33 @@ public class TypeInference {
      *
      * @return constant pool index for Object class
      */
+    private int getInitClassIndex(Instruction instr) {
+        if (instr instanceof InvokeSpecialInstruction) {
+            InvokeSpecialInstruction invoke = (InvokeSpecialInstruction) instr;
+            int methodIndex = invoke.getMethodIndex();
+            Item<?> item = constPool.getItem(methodIndex);
+            if (item instanceof MethodRefItem) {
+                return ((MethodRefItem) item).getValue().getClassIndex();
+            }
+        }
+        return getObjectClassIndex();
+    }
+
     private int getObjectClassIndex() {
         return constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
+    }
+
+    private String newArrayTypeDescriptor(NewArrayInstruction.ArrayType arrayType) {
+        switch (arrayType) {
+            case T_BOOLEAN: return "[Z";
+            case T_CHAR:    return "[C";
+            case T_FLOAT:   return "[F";
+            case T_DOUBLE:  return "[D";
+            case T_BYTE:    return "[B";
+            case T_SHORT:   return "[S";
+            case T_INT:     return "[I";
+            case T_LONG:    return "[J";
+            default:        return "[Ljava/lang/Object;";
+        }
     }
 }

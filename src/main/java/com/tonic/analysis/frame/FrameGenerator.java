@@ -170,11 +170,6 @@ public class FrameGenerator {
 
         TypeState initialState = TypeState.fromMethodEntry(method, constPool);
 
-        Map<Integer, Integer> handlerCatchTypes = new HashMap<>();
-        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
-            handlerCatchTypes.put(entry.getHandlerPc(), entry.getCatchType());
-        }
-
         CodeWriter codeWriter = new CodeWriter(method);
         List<Instruction> instructionList = new ArrayList<>();
         for (Instruction instr : codeWriter.getInstructions()) {
@@ -191,102 +186,41 @@ public class FrameGenerator {
         Queue<WorkItem> worklist = new LinkedList<>();
         worklist.add(new WorkItem(0, initialState));
 
-        while (!worklist.isEmpty()) {
-            WorkItem item = worklist.poll();
-            int offset = item.offset;
-            currentState = item.state;
-
-            if (visitedStates.containsKey(offset)) {
-                TypeState existing = visitedStates.get(offset);
-                TypeState merged = existing.merge(currentState);
-                if (merged.equals(existing)) {
-                    continue;
-                }
-                visitedStates.put(offset, merged);
-                currentState = merged;
-                if (frameTargets.contains(offset)) {
-                    states.put(offset, merged);
-                }
-            } else {
-                visitedStates.put(offset, currentState);
-            }
-
-            Integer index = offsetToIndex.get(offset);
-            if (index == null) {
-                continue;
-            }
-
-            for (int i = index; i < instructionList.size(); i++) {
-                Instruction instr = instructionList.get(i);
-                int instrOffset = instr.getOffset();
-
-                if (frameTargets.contains(instrOffset) && !states.containsKey(instrOffset)) {
-                    if (handlerCatchTypes.containsKey(instrOffset)) {
-                        int catchType = handlerCatchTypes.get(instrOffset);
-                        TypeState handlerState = createExceptionHandlerState(currentState, catchType);
-                        states.put(instrOffset, handlerState);
-                    } else {
-                        states.put(instrOffset, currentState);
-                    }
-                }
-
-                try {
-                    currentState = typeInference.apply(currentState, instr);
-                } catch (IllegalStateException e) {
-                    throw new IllegalStateException("Frame error at offset " + instrOffset + " for instruction " + instr + ": " + e.getMessage(), e);
-                }
-
-                int opcode = instr.getOpcode();
-
-                if (isUnconditionalJump(opcode)) {
-                    int target = getJumpTarget(instr);
-                    if (target >= 0) {
-                        worklist.add(new WorkItem(target, currentState));
-                    }
-                    break;
-                }
-
-                if (isTerminator(opcode)) {
-                    break;
-                }
-
-                if (instr instanceof ConditionalBranchInstruction) {
-                    ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
-                    int target = instrOffset + branch.getBranchOffset();
-                    worklist.add(new WorkItem(target, currentState));
-                }
-
-                if (instr instanceof TableSwitchInstruction) {
-                    TableSwitchInstruction tableSwitch = (TableSwitchInstruction) instr;
-                    for (int jumpOffset : tableSwitch.getJumpOffsets().values()) {
-                        int target = instrOffset + jumpOffset;
-                        worklist.add(new WorkItem(target, currentState));
-                    }
-                    int defaultTarget = instrOffset + tableSwitch.getDefaultOffset();
-                    worklist.add(new WorkItem(defaultTarget, currentState));
-                    break;
-                }
-
-                if (instr instanceof LookupSwitchInstruction) {
-                    LookupSwitchInstruction lookupSwitch = (LookupSwitchInstruction) instr;
-                    for (int jumpOffset : lookupSwitch.getMatchOffsets().values()) {
-                        int target = instrOffset + jumpOffset;
-                        worklist.add(new WorkItem(target, currentState));
-                    }
-                    int defaultTarget = instrOffset + lookupSwitch.getDefaultOffset();
-                    worklist.add(new WorkItem(defaultTarget, currentState));
-                    break;
-                }
-            }
+        Set<Integer> handlerPcSet = new HashSet<>();
+        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
+            handlerPcSet.add(entry.getHandlerPc());
         }
+
+        processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
+                instructionList, offsetToIndex, constPool);
 
         for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
             int handlerPc = entry.getHandlerPc();
-            if (!states.containsKey(handlerPc)) {
-                TypeState handlerState = createExceptionHandlerState(initialState, entry.getCatchType());
+
+            TypeState baseLocals;
+            if (states.containsKey(handlerPc)) {
+                baseLocals = states.get(handlerPc);
+            } else {
+                baseLocals = initialState;
+                for (Map.Entry<Integer, TypeState> vs : visitedStates.entrySet()) {
+                    int visitedOffset = vs.getKey();
+                    if (visitedOffset >= entry.getStartPc() && visitedOffset < entry.getEndPc()) {
+                        baseLocals = baseLocals.merge(vs.getValue(), constPool);
+                    }
+                }
+            }
+
+            TypeState handlerState = createExceptionHandlerState(baseLocals, entry.getCatchType());
+            if (states.containsKey(handlerPc)) {
+                states.put(handlerPc, states.get(handlerPc).merge(handlerState, constPool));
+            } else {
                 states.put(handlerPc, handlerState);
             }
+            worklist.add(new WorkItem(handlerPc, handlerState));
         }
+
+        processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
+                instructionList, offsetToIndex, constPool);
 
         return states;
     }
@@ -364,6 +298,117 @@ public class FrameGenerator {
             return instr.getOffset() + jsrInstr.getBranchOffset();
         }
         return -1;
+    }
+
+    private void processWorklist(
+            Queue<WorkItem> worklist,
+            Map<Integer, TypeState> visitedStates,
+            Map<Integer, TypeState> states,
+            Set<Integer> frameTargets,
+            Set<Integer> handlerPcSet,
+            List<Instruction> instructionList,
+            Map<Integer, Integer> offsetToIndex,
+            ConstPool constPool) {
+
+        while (!worklist.isEmpty()) {
+            WorkItem item = worklist.poll();
+            int offset = item.offset;
+            TypeState currentState = item.state;
+
+            if (visitedStates.containsKey(offset)) {
+                TypeState existing = visitedStates.get(offset);
+                TypeState merged = existing.merge(currentState, constPool);
+                if (merged.equals(existing)) {
+                    continue;
+                }
+                visitedStates.put(offset, merged);
+                currentState = merged;
+                if (frameTargets.contains(offset)) {
+                    if (states.containsKey(offset)) {
+                        states.put(offset, states.get(offset).merge(merged, constPool));
+                    } else {
+                        states.put(offset, merged);
+                    }
+                }
+            } else {
+                visitedStates.put(offset, currentState);
+                if (frameTargets.contains(offset) && states.containsKey(offset)) {
+                    states.put(offset, states.get(offset).merge(currentState, constPool));
+                }
+            }
+
+            Integer index = offsetToIndex.get(offset);
+            if (index == null) {
+                continue;
+            }
+
+            for (int i = index; i < instructionList.size(); i++) {
+                Instruction instr = instructionList.get(i);
+                int instrOffset = instr.getOffset();
+
+                if (frameTargets.contains(instrOffset)) {
+                    TypeState stateToRecord = currentState;
+                    if (states.containsKey(instrOffset)) {
+                        stateToRecord = states.get(instrOffset).merge(stateToRecord, constPool);
+                    }
+                    states.put(instrOffset, stateToRecord);
+                }
+
+                if (i > index && handlerPcSet.contains(instrOffset)) {
+                    break;
+                }
+
+                try {
+                    currentState = typeInference.apply(currentState, instr);
+                } catch (IllegalStateException e) {
+                    throw new IllegalStateException(
+                            "Frame error at offset " + instrOffset + " for instruction "
+                                    + instr + ": " + e.getMessage(), e);
+                }
+
+                int opcode = instr.getOpcode();
+
+                if (isUnconditionalJump(opcode)) {
+                    int target = getJumpTarget(instr);
+                    if (target >= 0) {
+                        worklist.add(new WorkItem(target, currentState));
+                    }
+                    break;
+                }
+
+                if (isTerminator(opcode)) {
+                    break;
+                }
+
+                if (instr instanceof ConditionalBranchInstruction) {
+                    ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
+                    int target = instrOffset + branch.getBranchOffset();
+                    worklist.add(new WorkItem(target, currentState));
+                }
+
+                if (instr instanceof TableSwitchInstruction) {
+                    TableSwitchInstruction tableSwitch = (TableSwitchInstruction) instr;
+                    for (int jumpOffset : tableSwitch.getJumpOffsets().values()) {
+                        int target = instrOffset + jumpOffset;
+                        worklist.add(new WorkItem(target, currentState));
+                    }
+                    int defaultTarget = instrOffset + tableSwitch.getDefaultOffset();
+                    worklist.add(new WorkItem(defaultTarget, currentState));
+                    break;
+                }
+
+                if (instr instanceof LookupSwitchInstruction) {
+                    LookupSwitchInstruction lookupSwitch = (LookupSwitchInstruction) instr;
+                    for (int jumpOffset : lookupSwitch.getMatchOffsets().values()) {
+                        int target = instrOffset + jumpOffset;
+                        worklist.add(new WorkItem(target, currentState));
+                    }
+                    int defaultTarget = instrOffset + lookupSwitch.getDefaultOffset();
+                    worklist.add(new WorkItem(defaultTarget, currentState));
+                    break;
+                }
+            }
+        }
     }
 
     /**

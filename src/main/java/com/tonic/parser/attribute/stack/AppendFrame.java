@@ -18,13 +18,6 @@ public class AppendFrame extends StackMapFrame {
     private final int offsetDelta;
     private final List<VerificationTypeInfo> locals;
 
-    /**
-     * Constructs an AppendFrame by reading from a class file.
-     *
-     * @param frameType the frame type identifier
-     * @param classFile the class file to read from
-     * @param constPool the constant pool for resolving references
-     */
     public AppendFrame(int frameType, ClassFile classFile, ConstPool constPool) {
         super(frameType);
         int numberOfLocals = frameType - 251;
@@ -34,6 +27,17 @@ public class AppendFrame extends StackMapFrame {
             VerificationTypeInfo local = VerificationTypeInfo.readVerificationTypeInfo(classFile, constPool);
             locals.add(local);
         }
+    }
+
+    public AppendFrame(int frameType, int offsetDelta, List<VerificationTypeInfo> locals) {
+        super(frameType);
+        this.offsetDelta = offsetDelta;
+        this.locals = new ArrayList<>(locals);
+    }
+
+    @Override
+    public int getOffsetDelta() {
+        return offsetDelta;
     }
 
     @Override

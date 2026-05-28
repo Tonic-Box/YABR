@@ -15,16 +15,19 @@ import java.io.IOException;
 public class SameFrameExtended extends StackMapFrame {
     private final int offsetDelta;
 
-    /**
-     * Constructs a SameFrameExtended by reading from a class file.
-     *
-     * @param frameType the frame type identifier
-     * @param classFile the class file to read from
-     * @param constPool the constant pool for resolving references
-     */
     public SameFrameExtended(int frameType, ClassFile classFile, ConstPool constPool) {
         super(frameType);
         this.offsetDelta = classFile.readUnsignedShort();
+    }
+
+    public SameFrameExtended(int offsetDelta) {
+        super(251);
+        this.offsetDelta = offsetDelta;
+    }
+
+    @Override
+    public int getOffsetDelta() {
+        return offsetDelta;
     }
 
     @Override

@@ -17,17 +17,21 @@ public class SameLocals1StackItemFrameExtended extends StackMapFrame {
     private final int offsetDelta;
     private final VerificationTypeInfo stack;
 
-    /**
-     * Constructs a SameLocals1StackItemFrameExtended by reading from a class file.
-     *
-     * @param frameType the frame type identifier
-     * @param classFile the class file to read from
-     * @param constPool the constant pool for resolving references
-     */
     public SameLocals1StackItemFrameExtended(int frameType, ClassFile classFile, ConstPool constPool) {
         super(frameType);
         this.offsetDelta = classFile.readUnsignedShort();
         this.stack = VerificationTypeInfo.readVerificationTypeInfo(classFile, constPool);
+    }
+
+    public SameLocals1StackItemFrameExtended(int offsetDelta, VerificationTypeInfo stack) {
+        super(247);
+        this.offsetDelta = offsetDelta;
+        this.stack = stack;
+    }
+
+    @Override
+    public int getOffsetDelta() {
+        return offsetDelta;
     }
 
     @Override

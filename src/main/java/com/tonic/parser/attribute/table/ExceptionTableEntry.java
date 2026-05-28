@@ -5,9 +5,9 @@ package com.tonic.parser.attribute.table;
  * Describes a try-catch block with handler location and exception type.
  */
 public class ExceptionTableEntry {
-    private final int startPc;
-    private final int endPc;
-    private final int handlerPc;
+    private int startPc;
+    private int endPc;
+    private int handlerPc;
     private final int catchType;
 
     /**
@@ -34,6 +34,10 @@ public class ExceptionTableEntry {
         return startPc;
     }
 
+    public void setStartPc(int startPc) {
+        this.startPc = startPc;
+    }
+
     /**
      * Returns the end offset of the try block.
      *
@@ -43,6 +47,10 @@ public class ExceptionTableEntry {
         return endPc;
     }
 
+    public void setEndPc(int endPc) {
+        this.endPc = endPc;
+    }
+
     /**
      * Returns the start offset of the exception handler.
      *
@@ -50,6 +58,10 @@ public class ExceptionTableEntry {
      */
     public int getHandlerPc() {
         return handlerPc;
+    }
+
+    public void setHandlerPc(int handlerPc) {
+        this.handlerPc = handlerPc;
     }
 
     /**

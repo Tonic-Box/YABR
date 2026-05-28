@@ -6,10 +6,8 @@ import com.tonic.parser.attribute.stack.VerificationTypeInfo;
 import com.tonic.utill.Modifiers;
 import lombok.Getter;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * Immutable representation of the type state at a specific point in bytecode execution.
@@ -17,6 +15,12 @@ import java.util.Objects;
  */
 @Getter
 public final class TypeState {
+    private static Function<String, String> superclassResolver;
+
+    public static void setSuperclassResolver(Function<String, String> resolver) {
+        superclassResolver = resolver;
+    }
+
     private final List<VerificationType> locals;
     private final List<VerificationType> stack;
 
@@ -270,6 +274,18 @@ public final class TypeState {
         return new TypeState(locals, List.of());
     }
 
+    public TypeState replaceType(VerificationType oldType, VerificationType newType) {
+        List<VerificationType> newLocals = new ArrayList<>(locals.size());
+        for (VerificationType local : locals) {
+            newLocals.add(local.equals(oldType) ? newType : local);
+        }
+        List<VerificationType> newStack = new ArrayList<>(stack.size());
+        for (VerificationType stackEntry : stack) {
+            newStack.add(stackEntry.equals(oldType) ? newType : stackEntry);
+        }
+        return new TypeState(newLocals, newStack);
+    }
+
     /**
      * Sets a local variable at the given index.
      *
@@ -341,9 +357,7 @@ public final class TypeState {
      * @return list of VerificationTypeInfo for locals
      */
     public List<VerificationTypeInfo> localsToVerificationTypeInfo() {
-        return locals.stream()
-                .map(VerificationType::toVerificationTypeInfo)
-                .collect(java.util.stream.Collectors.toList());
+        return stripTwoSlotCompanions(locals);
     }
 
     /**
@@ -352,9 +366,20 @@ public final class TypeState {
      * @return list of VerificationTypeInfo for stack
      */
     public List<VerificationTypeInfo> stackToVerificationTypeInfo() {
-        return stack.stream()
-                .map(VerificationType::toVerificationTypeInfo)
-                .collect(java.util.stream.Collectors.toList());
+        return stripTwoSlotCompanions(stack);
+    }
+
+    private static List<VerificationTypeInfo> stripTwoSlotCompanions(List<VerificationType> types) {
+        List<VerificationTypeInfo> result = new ArrayList<>();
+        for (int i = 0; i < types.size(); i++) {
+            VerificationType type = types.get(i);
+            result.add(type.toVerificationTypeInfo());
+            if (type.isTwoSlot() && i + 1 < types.size()
+                    && types.get(i + 1).equals(VerificationType.TOP)) {
+                i++;
+            }
+        }
+        return result;
     }
 
     /**
@@ -377,37 +402,99 @@ public final class TypeState {
         return new TypeState(newLocals, stack);
     }
 
-    /**
-     * Merges this TypeState with another for control flow convergence.
-     *
-     * @param other the other state to merge with
-     * @return merged state valid for both paths
-     */
     public TypeState merge(TypeState other) {
+        return merge(other, null);
+    }
+
+    public TypeState merge(TypeState other, ConstPool constPool) {
         int maxLocals = Math.max(locals.size(), other.locals.size());
         List<VerificationType> mergedLocals = new ArrayList<>(maxLocals);
 
         for (int i = 0; i < maxLocals; i++) {
             VerificationType a = (i < locals.size()) ? locals.get(i) : VerificationType.TOP;
             VerificationType b = (i < other.locals.size()) ? other.locals.get(i) : VerificationType.TOP;
-
-            if (a.equals(b)) {
-                mergedLocals.add(a);
-            } else {
-                mergedLocals.add(VerificationType.TOP);
-            }
+            mergedLocals.add(mergeTypes(a, b, constPool));
         }
 
         List<VerificationType> mergedStack;
         if (stack.equals(other.stack)) {
             mergedStack = stack;
-        } else if (stack.isEmpty() || other.stack.isEmpty()) {
-            mergedStack = List.of();
+        } else if (stack.size() == other.stack.size()) {
+            mergedStack = new ArrayList<>(stack.size());
+            for (int i = 0; i < stack.size(); i++) {
+                mergedStack.add(mergeTypes(stack.get(i), other.stack.get(i), constPool));
+            }
+        } else if (stack.isEmpty()) {
+            mergedStack = new ArrayList<>(other.stack);
+        } else if (other.stack.isEmpty()) {
+            mergedStack = new ArrayList<>(stack);
         } else {
-            mergedStack = List.of();
+            int minSize = Math.min(stack.size(), other.stack.size());
+            mergedStack = new ArrayList<>(minSize);
+            for (int i = 0; i < minSize; i++) {
+                mergedStack.add(mergeTypes(stack.get(i), other.stack.get(i), constPool));
+            }
         }
 
         return new TypeState(mergedLocals, mergedStack);
+    }
+
+    private static VerificationType mergeTypes(VerificationType a, VerificationType b, ConstPool constPool) {
+        if (a.equals(b)) {
+            return a;
+        }
+        boolean aIsRef = isReferenceType(a);
+        boolean bIsRef = isReferenceType(b);
+        if (aIsRef && b.equals(VerificationType.NULL)) return a;
+        if (bIsRef && a.equals(VerificationType.NULL)) return b;
+        if (aIsRef && bIsRef && constPool != null) {
+            String aName = resolveTypeName(a, constPool);
+            String bName = resolveTypeName(b, constPool);
+            if (aName != null && bName != null && superclassResolver != null) {
+                String common = findCommonSuperclass(aName, bName);
+                int classIndex = constPool.findOrAddClass(common).getIndex(constPool);
+                return VerificationType.object(classIndex);
+            }
+            int objectIndex = constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
+            return VerificationType.object(objectIndex);
+        }
+        return VerificationType.TOP;
+    }
+
+    private static String resolveTypeName(VerificationType type, ConstPool constPool) {
+        if (type.getTag() == VerificationType.TAG_OBJECT) {
+            VerificationType.ObjectType obj = (VerificationType.ObjectType) type;
+            return constPool.getClassName(obj.getClassIndex());
+        }
+        return null;
+    }
+
+    private static String findCommonSuperclass(String a, String b) {
+        if (a.equals(b)) return a;
+        if (superclassResolver == null) return "java/lang/Object";
+
+        Set<String> aAncestors = new LinkedHashSet<>();
+        String current = a;
+        while (current != null && !current.isEmpty() && aAncestors.add(current)) {
+            current = superclassResolver.apply(current);
+        }
+
+        current = b;
+        while (current != null && !current.isEmpty()) {
+            if (aAncestors.contains(current)) {
+                return current;
+            }
+            current = superclassResolver.apply(current);
+        }
+
+        return "java/lang/Object";
+    }
+
+    private static boolean isReferenceType(VerificationType type) {
+        return type.getTag() == VerificationType.TAG_OBJECT
+                || type.getTag() == VerificationType.TAG_NULL
+                || type.getTag() == VerificationType.TAG_UNINITIALIZED
+                || type.getTag() == VerificationType.TAG_UNINITIALIZED_THIS;
     }
 
     @Override
