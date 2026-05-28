@@ -204,7 +204,10 @@ class TypeStateEdgeCasesTest {
 
             TypeState merged = state1.merge(state2);
 
-            assertEquals(0, merged.getStackSize());
+            // Mismatched stack DEPTHS have no JVM-defined merge; the implementation
+            // keeps the non-empty predecessor's stack as a best effort.
+            assertEquals(1, merged.getStackSize());
+            assertEquals(VerificationType.FLOAT, merged.peek());
         }
 
         @Test
@@ -216,7 +219,9 @@ class TypeStateEdgeCasesTest {
 
             TypeState merged = state1.merge(state2);
 
-            assertEquals(0, merged.getStackSize());
+            // Mismatched stack DEPTHS: the non-empty predecessor's stack is kept.
+            assertEquals(1, merged.getStackSize());
+            assertEquals(VerificationType.INTEGER, merged.peek());
         }
 
         @Test
@@ -231,8 +236,10 @@ class TypeStateEdgeCasesTest {
 
             TypeState merged = state1.merge(state2);
 
+            // Equal-depth stacks merge element-wise: incompatible primitives -> TOP.
             assertEquals(VerificationType.INTEGER, merged.getLocal(0));
-            assertEquals(0, merged.getStackSize());
+            assertEquals(1, merged.getStackSize());
+            assertEquals(VerificationType.TOP, merged.peek());
         }
 
         @Test
@@ -395,7 +402,9 @@ class TypeStateEdgeCasesTest {
 
             var infos = state.localsToVerificationTypeInfo();
 
-            assertEquals(4, infos.size());
+            // StackMapTable encodes a long/double as a SINGLE verification_type_info
+            // (the companion TOP slot is implicit), so two two-slot locals -> two entries.
+            assertEquals(2, infos.size());
         }
 
         @Test
@@ -406,7 +415,8 @@ class TypeStateEdgeCasesTest {
 
             var infos = state.stackToVerificationTypeInfo();
 
-            assertEquals(4, infos.size());
+            // long/double each contribute one verification_type_info entry.
+            assertEquals(2, infos.size());
         }
 
         @Test

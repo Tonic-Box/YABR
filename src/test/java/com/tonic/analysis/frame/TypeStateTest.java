@@ -355,7 +355,7 @@ class TypeStateTest {
     }
 
     @Test
-    void mergeUnequalStacksToEmpty() {
+    void mergeEqualDepthIncompatibleStacksToTop() {
         TypeState state1 = TypeState.empty()
                 .push(VerificationType.INTEGER);
 
@@ -364,8 +364,10 @@ class TypeStateTest {
 
         TypeState merged = state1.merge(state2);
 
-        // Different stack contents should merge to empty
-        assertTrue(merged.getStackSize() == 0);
+        // The JVM merge of two equal-depth stacks is element-wise; incompatible
+        // primitives merge to TOP. Stack depth is preserved.
+        assertEquals(1, merged.getStackSize());
+        assertEquals(VerificationType.TOP, merged.peek());
     }
 
     @Test
