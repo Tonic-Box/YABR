@@ -2326,6 +2326,21 @@ public class StatementRecoverer {
     }
 
     /**
+     * True if {@code value} is consumed solely as the stored value of a single array
+     * store ({@code arr[i] = value}). Such a value should be inlined into that store
+     * rather than also emitted as a standalone (result-discarding) statement.
+     */
+    private boolean isSingleUseArrayStoreValue(SSAValue value) {
+        if (value == null || value.getUses().size() != 1) return false;
+        IRInstruction use = value.getUses().get(0);
+        if (use instanceof ArrayAccessInstruction) {
+            ArrayAccessInstruction aa = (ArrayAccessInstruction) use;
+            return aa.isStore() && aa.getValue() == value;
+        }
+        return false;
+    }
+
+    /**
      * Gets the local variable name from the StoreLocalInstruction that stores this value.
      * Used to emit array declarations at the right position with the correct name.
      */
@@ -2804,7 +2819,11 @@ public class StatementRecoverer {
                 Expression array = exprRecoverer.recoverOperand(arrayAccess.getArray());
                 Expression index = exprRecoverer.recoverOperand(arrayAccess.getIndex());
                 Expression value = exprRecoverer.recoverOperand(arrayAccess.getValue());
-                SourceType elemType = value.getType();
+                SourceType arrayType = array.getType();
+                SourceType elemType = (arrayType instanceof ArraySourceType)
+                    ? ((ArraySourceType) arrayType).getElementType()
+                    : value.getType();
+                value = coerceForStore(value, elemType);
                 Expression target = new ArrayAccessExpr(array, index, elemType);
                 return new ExprStmt(new BinaryExpr(
                     BinaryOperator.ASSIGN, target, value, elemType));
@@ -2898,6 +2917,11 @@ public class StatementRecoverer {
             }
             boolean usedByStoreLocal = isUsedByStoreLocal(result);
             if (usedByStoreLocal) {
+                Expression expr = exprRecoverer.recover(invoke);
+                context.getExpressionContext().cacheExpression(result, expr);
+                return null;
+            }
+            if (isSingleUseArrayStoreValue(result)) {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
@@ -3195,6 +3219,8 @@ public class StatementRecoverer {
         if (shouldUnmaterialize) {
             context.getExpressionContext().markMaterialized((SSAValue) storeValue);
         }
+
+        value = stripDoubleNot(value);
 
         SourceType valueType = value.getType();
         if (valueType == null) {
@@ -4610,6 +4636,51 @@ public class StatementRecoverer {
     }
 
     /**
+     * Coerces a value to the slot type it is being stored into when the source-level
+     * types disagree but the JVM treats them identically (a boolean is stored as an int).
+     * Storing a boolean into an integral slot becomes {@code value ? 1 : 0}; storing an
+     * integral value into a boolean slot becomes {@code value != 0}. Otherwise the value
+     * is returned unchanged. {@code !!x} collapses to {@code x} first so the result is clean.
+     */
+    private Expression coerceForStore(Expression value, SourceType target) {
+        if (target == null) {
+            return value;
+        }
+        value = stripDoubleNot(value);
+        boolean targetBool = target == PrimitiveSourceType.BOOLEAN;
+        boolean valueBool = value.getType() == PrimitiveSourceType.BOOLEAN;
+        if (targetBool == valueBool) {
+            return value;
+        }
+        if (!targetBool && isIntegralType(target) && valueBool) {
+            return new TernaryExpr(value, LiteralExpr.ofInt(1), LiteralExpr.ofInt(0), target);
+        }
+        if (targetBool && isIntegralType(value.getType())) {
+            return new BinaryExpr(BinaryOperator.NE, value, LiteralExpr.ofInt(0),
+                    PrimitiveSourceType.BOOLEAN);
+        }
+        return value;
+    }
+
+    private boolean isIntegralType(SourceType t) {
+        return t == PrimitiveSourceType.INT || t == PrimitiveSourceType.SHORT
+            || t == PrimitiveSourceType.BYTE || t == PrimitiveSourceType.CHAR;
+    }
+
+    /** Collapses {@code !!x} to {@code x}. */
+    private Expression stripDoubleNot(Expression e) {
+        while (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator() == UnaryOperator.NOT) {
+            Expression inner = ((UnaryExpr) e).getOperand();
+            if (inner instanceof UnaryExpr && ((UnaryExpr) inner).getOperator() == UnaryOperator.NOT) {
+                e = ((UnaryExpr) inner).getOperand();
+            } else {
+                break;
+            }
+        }
+        return e;
+    }
+
+    /**
      * Extracts a boolean constant value (0 or 1) from an IR Value.
      * Handles both direct IntConstants and SSAValues defined by ConstantInstructions.
      */
@@ -5344,7 +5415,14 @@ public class StatementRecoverer {
             return "unknown";
         }
         if (type.isPrimitive()) {
-            return "primitive";
+            // Distinguish by JVM verification width so a slot reused as int vs long
+            // (genuinely distinct source variables) is not merged under one name.
+            switch (((PrimitiveSourceType) type).getKind()) {
+                case LONG:   return "primitive:long";
+                case FLOAT:  return "primitive:float";
+                case DOUBLE: return "primitive:double";
+                default:     return "primitive:int";
+            }
         }
         if (type instanceof ArraySourceType) {
             return "array";
@@ -5405,7 +5483,16 @@ public class StatementRecoverer {
             return "unknown";
         }
         if (type.isPrimitive()) {
-            return "primitive";
+            // Split primitives by JVM verification type so a slot reused across
+            // incompatible widths (e.g. int vs long) gets distinct source variables.
+            // boolean/byte/char/short/int share the "int" verification type and stay
+            // grouped (preserving int<->boolean handling).
+            switch (((PrimitiveSourceType) type).getKind()) {
+                case LONG:   return "primitive:long";
+                case FLOAT:  return "primitive:float";
+                case DOUBLE: return "primitive:double";
+                default:     return "primitive:int";
+            }
         }
         if (type instanceof ArraySourceType) {
             return "array";

@@ -15,10 +15,12 @@ public class DecompilerConfig {
 
     private final SourceEmitterConfig emitterConfig;
     private final List<IRTransform> additionalTransforms;
+    private final boolean reconstructSwitches;
 
     private DecompilerConfig(Builder builder) {
         this.emitterConfig = builder.emitterConfig;
         this.additionalTransforms = Collections.unmodifiableList(new ArrayList<>(builder.transforms));
+        this.reconstructSwitches = builder.reconstructSwitches;
     }
 
     /**
@@ -34,6 +36,14 @@ public class DecompilerConfig {
      */
     public List<IRTransform> getAdditionalTransforms() {
         return additionalTransforms;
+    }
+
+    /**
+     * Whether to reconstruct {@code switch} statements from equality-cascade if-chains.
+     * Enabled by default.
+     */
+    public boolean isReconstructSwitches() {
+        return reconstructSwitches;
     }
 
     /**
@@ -56,8 +66,18 @@ public class DecompilerConfig {
     public static class Builder {
         private SourceEmitterConfig emitterConfig = SourceEmitterConfig.defaults();
         private final List<IRTransform> transforms = new ArrayList<>();
+        private boolean reconstructSwitches = true;
 
         private Builder() {}
+
+        /**
+         * Enables or disables switch reconstruction from equality-cascade if-chains.
+         * Enabled by default.
+         */
+        public Builder reconstructSwitches(boolean enabled) {
+            this.reconstructSwitches = enabled;
+            return this;
+        }
 
         /**
          * Sets the source emitter configuration.

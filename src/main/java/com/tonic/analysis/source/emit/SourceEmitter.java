@@ -991,6 +991,28 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
+    /**
+     * Whether an expression must be parenthesized when used as the receiver of a
+     * {@code .}/{@code []} (or similar postfix) operation. Casts, binary ops,
+     * {@code instanceof}, ternaries, and prefix unaries all bind looser than the
+     * postfix operator, so {@code (Foo) x.bar()} would otherwise mis-parse as
+     * {@code (Foo) (x.bar())}.
+     */
+    private boolean needsParensAsReceiver(Expression e) {
+        return e instanceof CastExpr
+            || e instanceof BinaryExpr
+            || e instanceof InstanceOfExpr
+            || e instanceof TernaryExpr
+            || (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator().isPrefix());
+    }
+
+    private void emitReceiver(Expression e) {
+        boolean parens = needsParensAsReceiver(e);
+        if (parens) writer.write("(");
+        e.accept(this);
+        if (parens) writer.write(")");
+    }
+
     @Override
     public Void visitFieldAccess(FieldAccessExpr expr) {
         if (expr.isStatic()) {
@@ -1004,7 +1026,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 writer.write(".");
             }
         } else if (expr.getReceiver() != null) {
-            expr.getReceiver().accept(this);
+            emitReceiver(expr.getReceiver());
             writer.write(".");
         }
         writer.write(normalizer.normalize(expr.getFieldName(), IdentifierNormalizer.IdentifierType.FIELD));
@@ -1013,7 +1035,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitArrayAccess(ArrayAccessExpr expr) {
-        expr.getArray().accept(this);
+        emitReceiver(expr.getArray());
         writer.write("[");
         expr.getIndex().accept(this);
         writer.write("]");
@@ -1046,7 +1068,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 receiver.accept(this);
                 writer.write(")");
             } else {
-                receiver.accept(this);
+                emitReceiver(receiver);
             }
             writer.write(".");
         }
@@ -1200,7 +1222,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
     public Void visitUnary(UnaryExpr expr) {
         if (expr.getOperator().isPrefix()) {
             writer.write(getUnaryOperatorSymbol(expr.getOperator()));
-            boolean needsParens = expr.getOperand() instanceof BinaryExpr;
+            Expression operand = expr.getOperand();
+            boolean needsParens = operand instanceof BinaryExpr
+                || operand instanceof InstanceOfExpr
+                || operand instanceof TernaryExpr;
             if (needsParens) {
                 writer.write("(");
             }

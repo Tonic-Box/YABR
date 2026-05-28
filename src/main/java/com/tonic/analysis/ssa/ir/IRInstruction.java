@@ -104,6 +104,22 @@ public abstract class IRInstruction {
     }
 
     /**
+     * Identity by {@code id}. Each instruction gets a unique id from the counter
+     * (reset per lift in {@link com.tonic.analysis.ssa.lift.BytecodeLifter}; copies
+     * receive fresh ids), so this matches object identity in every collection scope
+     * while giving deterministic hashing/iteration order across runs.
+     */
+    @Override
+    public boolean equals(Object o) {
+        return this == o || (o instanceof IRInstruction && ((IRInstruction) o).id == id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
+    }
+
+    /**
      * Creates a copy of this instruction with new result and operands.
      * Subclasses should override for proper deep copying.
      *

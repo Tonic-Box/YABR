@@ -111,6 +111,22 @@ public class SSAValue implements Value {
         nextId = 0;
     }
 
+    /**
+     * Identity by {@code id}. Ids are unique within a method (the counter is reset
+     * per lift in {@link com.tonic.analysis.ssa.lift.BytecodeLifter}), so this is
+     * equivalent to object identity in every collection scope, while giving
+     * deterministic hashing/iteration order across runs.
+     */
+    @Override
+    public boolean equals(Object o) {
+        return this == o || (o instanceof SSAValue && ((SSAValue) o).id == id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
+    }
+
     @Override
     public String toString() {
         return name;
