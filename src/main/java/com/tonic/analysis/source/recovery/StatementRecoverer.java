@@ -76,8 +76,6 @@ public class StatementRecoverer {
         }
     }
 
-    private final Set<SSAValue> ternaryPhiValues = new HashSet<>();
-
     /**
      * Recovers statements for the entire method.
      */
@@ -91,7 +89,6 @@ public class StatementRecoverer {
 
         List<Statement> statements = new ArrayList<>();
 
-        collectTernaryPhis(method);
         detectSelfStorePhis(method);
 
         collectForLoopInitInstructions();
@@ -3949,13 +3946,16 @@ public class StatementRecoverer {
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
         IRInstruction terminator = header.getTerminator();
-        if (!(terminator instanceof SwitchInstruction)) {
+        Expression selector;
+        if (terminator instanceof SwitchInstruction) {
+            selector = exprRecoverer.recoverOperand(((SwitchInstruction) terminator).getKey());
+        } else if (info.getSwitchSelector() != null) {
+            // Comparison-chain switch synthesized by StructuralAnalyzer: the header's
+            // terminator is a branch, and the selector is carried on the region.
+            selector = exprRecoverer.recoverOperand(info.getSwitchSelector());
+        } else {
             return new IRRegionStmt(List.of(header));
         }
-
-        SwitchInstruction sw = (SwitchInstruction) terminator;
-
-        Expression selector = exprRecoverer.recoverOperand(sw.getKey());
 
         // Detect and simplify enum switch map pattern:
         // SwitchMapClass.$SwitchMap$pkg$EnumName[enumVar.ordinal()] -> enumVar
@@ -3970,6 +3970,11 @@ public class StatementRecoverer {
         Set<IRBlock> baseStopBlocks = new HashSet<>();
         if (mergeBlock != null) {
             baseStopBlocks.add(mergeBlock);
+        }
+        // For a synthesized comparison-chain switch, the dispatch spine blocks are not
+        // case bodies; stop there so a fall-through case body cannot bleed into the chain.
+        if (info.getSwitchSpineBlocks() != null) {
+            baseStopBlocks.addAll(info.getSwitchSpineBlocks());
         }
 
         Map<IRBlock, List<Integer>> targetToCases = new LinkedHashMap<>();
@@ -5158,61 +5163,6 @@ public class StatementRecoverer {
             return right instanceof SSAValue && isValueFromLocal((SSAValue) right, localIndex);
         }
         return false;
-    }
-
-    /**
-     * Pre-pass to collect PHI values that will be collapsed into ternary expressions.
-     * This allows us to skip declaring variables for these PHIs.
-     */
-    private void collectTernaryPhis(IRMethod method) {
-        ternaryPhiValues.clear();
-
-        for (IRBlock block : method.getBlocks()) {
-            RegionInfo info = analyzer.getRegionInfo(block);
-            if (info == null || info.getType() != ControlFlowContext.StructuredRegion.IF_THEN_ELSE) {
-                continue;
-            }
-
-            PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(info);
-            if (booleanPhi != null && booleanPhi.getResult() != null) {
-                ternaryPhiValues.add(booleanPhi.getResult());
-                continue;
-            }
-
-            PhiInstruction ternaryPhi = findTernaryPhiPatternForPrepass(info);
-            if (ternaryPhi != null && ternaryPhi.getResult() != null) {
-                ternaryPhiValues.add(ternaryPhi.getResult());
-            }
-        }
-    }
-
-    /**
-     * Simplified version of findTernaryPhiPattern for the pre-pass.
-     * Doesn't require header block since we just need to check the pattern.
-     */
-    private PhiInstruction findTernaryPhiPatternForPrepass(RegionInfo info) {
-        IRBlock thenBlock = info.getThenBlock();
-        IRBlock elseBlock = info.getElseBlock();
-        IRBlock mergeBlock = info.getMergeBlock();
-
-        if (thenBlock == null || elseBlock == null || mergeBlock == null) {
-            return null;
-        }
-
-        SSAValue thenValue = extractSingleProducedValue(thenBlock);
-        SSAValue elseValue = extractSingleProducedValue(elseBlock);
-
-        if (thenValue == null || elseValue == null) {
-            return null;
-        }
-
-        for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
-            if (phiReceivesValues(phi, thenBlock, elseBlock, thenValue, elseValue)) {
-                return phi;
-            }
-        }
-
-        return null;
     }
 
     /**

@@ -7,6 +7,7 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.Constant;
+import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
@@ -281,6 +282,14 @@ public class StructuralAnalyzer {
     }
 
     private RegionInfo analyzeConditional(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+        // A chain of equality comparisons on one value against constants is a switch,
+        // regardless of how it would otherwise be structured. Detect it here so it
+        // lowers through the existing switch-region recovery.
+        RegionInfo chainSwitch = detectComparisonChainSwitch(block);
+        if (chainSwitch != null) {
+            return chainSwitch;
+        }
+
         IRBlock mergePoint = findMergePoint(block);
 
         if (mergePoint == null || mergePoint == block) {
@@ -1077,6 +1086,162 @@ public class StructuralAnalyzer {
         return !reachableFromTrue.contains(falseTarget);
     }
 
+    /** Minimum distinct case constants before a comparison chain is folded into a switch. */
+    private static final int MIN_SWITCH_CASES = 3;
+
+    /**
+     * Detects a comparison-chain switch: a chain of blocks each branching on
+     * {@code selector == const} / {@code selector != const} against the same value,
+     * and lowers it into a SWITCH region (case const -&gt; handler, plus default).
+     * Handles every source encoding (nested-else, no-else guards, sequential guards)
+     * uniformly because it works on the CFG. Returns null when the structure is not a
+     * clean dispatch, so the caller falls back to ordinary conditional analysis.
+     */
+    private RegionInfo detectComparisonChainSwitch(IRBlock header) {
+        SwitchStep first = matchSwitchStep(header);
+        if (first == null) {
+            return null;
+        }
+        SSAValue selector = first.selector;
+
+        Map<Integer, IRBlock> cases = new LinkedHashMap<>();
+        Set<IRBlock> spine = new HashSet<>();
+        IRBlock current = header;
+        IRBlock defaultTarget;
+
+        while (true) {
+            SwitchStep step = (current == header) ? first : matchSwitchStep(current);
+            // The chain continues only while the SAME SSA value is compared (strict
+            // identity guarantees the selector is not redefined between comparisons,
+            // which precisely excludes value-mutating sequential chains), and any
+            // intermediate spine block does no real work (it is bypassed on lowering).
+            if (step == null || step.selector != selector
+                    || (current != header && !isPureComparisonBlock(current))) {
+                defaultTarget = current;
+                break;
+            }
+            if (cases.containsKey(step.constant)) {
+                return null; // duplicate label -> not a clean switch
+            }
+            cases.put(step.constant, step.handler);
+            spine.add(current);
+            if (spine.contains(step.continuation)) {
+                return null; // cycle in the dispatch spine
+            }
+            current = step.continuation;
+        }
+
+        if (cases.size() < MIN_SWITCH_CASES) {
+            return null;
+        }
+        for (IRBlock handler : cases.values()) {
+            if (spine.contains(handler)) {
+                return null; // a case body is part of the dispatch spine
+            }
+        }
+
+        RegionInfo info = new RegionInfo(StructuredRegion.SWITCH, header);
+        info.setSwitchCases(cases);
+        info.setDefaultTarget(defaultTarget);
+        info.setSwitchSelector(selector);
+        info.setSwitchSpineBlocks(spine);
+        return info;
+    }
+
+    /** One comparison in a chain: {@code selector == constant} dispatching to handler/continuation. */
+    private static final class SwitchStep {
+        final SSAValue selector;
+        final int constant;
+        final IRBlock handler;       // taken when selector == constant
+        final IRBlock continuation;  // taken when selector != constant
+
+        SwitchStep(SSAValue selector, int constant, IRBlock handler, IRBlock continuation) {
+            this.selector = selector;
+            this.constant = constant;
+            this.handler = handler;
+            this.continuation = continuation;
+        }
+    }
+
+    /**
+     * Matches a block whose terminator branches on {@code selector == const} /
+     * {@code selector != const} (one operand an SSA value, the other an int constant,
+     * including constants materialized by a {@link ConstantInstruction}). Returns null
+     * if the block is not such a comparison.
+     */
+    private SwitchStep matchSwitchStep(IRBlock block) {
+        IRInstruction term = block.getTerminator();
+        if (!(term instanceof BranchInstruction)) {
+            return null;
+        }
+        BranchInstruction br = (BranchInstruction) term;
+        CompareOp op = br.getCondition();
+        if (op != CompareOp.EQ && op != CompareOp.NE) {
+            return null;
+        }
+        Value left = br.getLeft();
+        Value right = br.getRight();
+        if (right == null) {
+            return null;
+        }
+        Integer leftConst = asIntConstant(left);
+        Integer rightConst = asIntConstant(right);
+
+        SSAValue selector;
+        int constant;
+        if (leftConst != null && rightConst == null && right instanceof SSAValue) {
+            selector = (SSAValue) right;
+            constant = leftConst;
+        } else if (rightConst != null && leftConst == null && left instanceof SSAValue) {
+            selector = (SSAValue) left;
+            constant = rightConst;
+        } else {
+            return null; // both/neither constant -> not a dispatch comparison
+        }
+
+        boolean isEq = op == CompareOp.EQ;
+        IRBlock handler = isEq ? br.getTrueTarget() : br.getFalseTarget();
+        IRBlock continuation = isEq ? br.getFalseTarget() : br.getTrueTarget();
+        return new SwitchStep(selector, constant, handler, continuation);
+    }
+
+    /** The int value of a Value that is an int constant — inline or produced by a ConstantInstruction. */
+    private Integer asIntConstant(Value v) {
+        if (v instanceof IntConstant) {
+            return ((IntConstant) v).getValue();
+        }
+        if (v instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) v).getDefinition();
+            if (def instanceof ConstantInstruction) {
+                Constant c = ((ConstantInstruction) def).getConstant();
+                if (c instanceof IntConstant) {
+                    return ((IntConstant) c).getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * True if the block does no work beyond evaluating its comparison — i.e. its only
+     * non-terminator instructions are local loads / constant materializations. Such
+     * intermediate dispatch blocks can be safely bypassed when lowering to a switch.
+     */
+    private boolean isPureComparisonBlock(IRBlock block) {
+        if (!block.getPhiInstructions().isEmpty()) {
+            return false;
+        }
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr == block.getTerminator()) {
+                continue;
+            }
+            if (!(instr instanceof LoadLocalInstruction) && !(instr instanceof ConstantInstruction)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * Extracts the variable being compared in a branch instruction.
      * For comparisons like (var == const) or (const == var), returns the variable.
@@ -1244,6 +1409,10 @@ public class StructuralAnalyzer {
 
         private Map<Integer, IRBlock> switchCases;
         private IRBlock defaultTarget;
+        /** Selector for a comparison-chain switch (header terminator is a branch, not a SwitchInstruction). */
+        private SSAValue switchSelector;
+        /** Comparison blocks forming the dispatch spine; used as stop blocks so case bodies cannot bleed into them. */
+        private Set<IRBlock> switchSpineBlocks;
 
         private SSAValue inductionVariable;
         private IRBlock incrementBlock;
@@ -1289,6 +1458,14 @@ public class StructuralAnalyzer {
 
         public void setDefaultTarget(IRBlock defaultTarget) {
             this.defaultTarget = defaultTarget;
+        }
+
+        public void setSwitchSelector(SSAValue switchSelector) {
+            this.switchSelector = switchSelector;
+        }
+
+        public void setSwitchSpineBlocks(Set<IRBlock> switchSpineBlocks) {
+            this.switchSpineBlocks = switchSpineBlocks;
         }
 
         public void setConditionNegated(boolean conditionNegated) {

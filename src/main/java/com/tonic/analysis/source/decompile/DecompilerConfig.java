@@ -2,6 +2,7 @@ package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.ssa.transform.IRTransform;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,39 +12,24 @@ import java.util.List;
  * Configuration for the ClassDecompiler.
  * Combines source emission settings with transform pipeline configuration.
  */
+@Getter
 public class DecompilerConfig {
 
+    /**
+     * -- GETTER --
+     *  Returns the source emitter configuration.
+     */
     private final SourceEmitterConfig emitterConfig;
+    /**
+     * -- GETTER --
+     *  Returns the list of additional transforms to apply after baseline transforms.
+     *  The returned list is unmodifiable.
+     */
     private final List<IRTransform> additionalTransforms;
-    private final boolean reconstructSwitches;
 
     private DecompilerConfig(Builder builder) {
         this.emitterConfig = builder.emitterConfig;
         this.additionalTransforms = Collections.unmodifiableList(new ArrayList<>(builder.transforms));
-        this.reconstructSwitches = builder.reconstructSwitches;
-    }
-
-    /**
-     * Returns the source emitter configuration.
-     */
-    public SourceEmitterConfig getEmitterConfig() {
-        return emitterConfig;
-    }
-
-    /**
-     * Returns the list of additional transforms to apply after baseline transforms.
-     * The returned list is unmodifiable.
-     */
-    public List<IRTransform> getAdditionalTransforms() {
-        return additionalTransforms;
-    }
-
-    /**
-     * Whether to reconstruct {@code switch} statements from equality-cascade if-chains.
-     * Enabled by default.
-     */
-    public boolean isReconstructSwitches() {
-        return reconstructSwitches;
     }
 
     /**
@@ -66,18 +52,8 @@ public class DecompilerConfig {
     public static class Builder {
         private SourceEmitterConfig emitterConfig = SourceEmitterConfig.defaults();
         private final List<IRTransform> transforms = new ArrayList<>();
-        private boolean reconstructSwitches = true;
 
         private Builder() {}
-
-        /**
-         * Enables or disables switch reconstruction from equality-cascade if-chains.
-         * Enabled by default.
-         */
-        public Builder reconstructSwitches(boolean enabled) {
-            this.reconstructSwitches = enabled;
-            return this;
-        }
 
         /**
          * Sets the source emitter configuration.
