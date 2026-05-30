@@ -3,15 +3,20 @@ package com.tonic.analysis.source.recovery;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.ssa.ir.BinaryOp;
 import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
+import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.ir.InvokeInstruction;
+import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.ir.TypeCheckInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.Constant;
+import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -83,7 +88,65 @@ public class TypeRecoverer {
             }
         }
 
+        // A PHI that merges only int 0/1 is the JVM encoding of a boolean value
+        // (cond ? 1 : 0); type it boolean so declarations, stores, and uses agree.
+        if (def instanceof PhiInstruction && isBooleanPhi((PhiInstruction) def)) {
+            return PrimitiveSourceType.BOOLEAN;
+        }
+
+        // A method whose descriptor returns Z yields a boolean value.
+        if (def instanceof InvokeInstruction
+                && "Z".equals(returnTypeDescriptor(((InvokeInstruction) def).getDescriptor()))) {
+            return PrimitiveSourceType.BOOLEAN;
+        }
+
         return SourceType.fromIRType(ssa.getType());
+    }
+
+    /** True if every operand of the phi is an int constant 0 or 1 (inline or via a ConstantInstruction). */
+    private boolean isBooleanPhi(PhiInstruction phi) {
+        List<Value> operands = phi.getOperands();
+        if (operands.isEmpty()) {
+            return false;
+        }
+        for (Value v : operands) {
+            if (intConstantZeroOrOne(v) == null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Integer intConstantZeroOrOne(Value v) {
+        IntConstant ic = null;
+        if (v instanceof IntConstant) {
+            ic = (IntConstant) v;
+        } else if (v instanceof SSAValue) {
+            IRInstruction d = ((SSAValue) v).getDefinition();
+            if (d instanceof ConstantInstruction) {
+                Constant c = ((ConstantInstruction) d).getConstant();
+                if (c instanceof IntConstant) {
+                    ic = (IntConstant) c;
+                }
+            }
+        }
+        if (ic == null) {
+            return null;
+        }
+        int val = ic.getValue();
+        return (val == 0 || val == 1) ? val : null;
+    }
+
+    /** The return-type descriptor of a method descriptor (the part after ')'), or null. */
+    private String returnTypeDescriptor(String methodDescriptor) {
+        if (methodDescriptor == null) {
+            return null;
+        }
+        int close = methodDescriptor.indexOf(')');
+        if (close < 0 || close + 1 >= methodDescriptor.length()) {
+            return null;
+        }
+        return methodDescriptor.substring(close + 1);
     }
 
     /**
@@ -162,21 +225,21 @@ public class TypeRecoverer {
      * Computes the widest primitive type using Java numeric promotion rules.
      */
     private SourceType computeWidestPrimitive(Set<SourceType> types) {
-        boolean hasBoolean = types.stream()
-                .anyMatch(t -> t == PrimitiveSourceType.BOOLEAN);
         boolean hasNumeric = types.stream()
                 .anyMatch(t -> t != PrimitiveSourceType.BOOLEAN);
 
-        if (hasBoolean && hasNumeric) {
-            return ReferenceSourceType.OBJECT;
-        }
-
-        if (hasBoolean) {
+        // All-boolean slot stays boolean. A slot mixing boolean with a numeric type
+        // unifies to the widest numeric type: boolean values are JVM ints, and boolean
+        // stores into the slot are coerced to 0/1 at the store site (coerceForStore).
+        if (!hasNumeric) {
             return PrimitiveSourceType.BOOLEAN;
         }
 
         int maxRank = 0;
         for (SourceType type : types) {
+            if (type == PrimitiveSourceType.BOOLEAN) {
+                continue;
+            }
             maxRank = Math.max(maxRank, getPrimitiveRank((PrimitiveSourceType) type));
         }
         return getPrimitiveByRank(maxRank);

@@ -576,13 +576,15 @@ class TypeRecovererTest {
         }
 
         @Test
-        void computeCommonType_booleanAndInt_returnsObject() {
+        void computeCommonType_booleanAndInt_returnsInt() {
+            // A slot used as both boolean and int is int at the JVM level; it unifies to
+            // int (not Object), with boolean stores coerced to 0/1 at the store site.
             Collection<SourceType> types = Arrays.asList(
                 PrimitiveSourceType.BOOLEAN,
                 PrimitiveSourceType.INT
             );
             SourceType result = recoverer.computeCommonType(types);
-            assertEquals(ReferenceSourceType.OBJECT, result);
+            assertEquals(PrimitiveSourceType.INT, result);
         }
 
         @Test

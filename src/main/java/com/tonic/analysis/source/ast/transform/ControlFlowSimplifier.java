@@ -298,8 +298,36 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (tc.getFinallyBlock() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) tc.getFinallyBlock());
             }
+        } else if (stmt instanceof SwitchStmt) {
+            changed |= simplifySwitchCases((SwitchStmt) stmt);
         }
 
+        return changed;
+    }
+
+    /**
+     * Recurses into each switch case body so the same simplifications (empty-if
+     * inversion, etc.) apply inside reconstructed switch cases. Case bodies are
+     * immutable lists, so each is transformed via a temporary block and the case is
+     * rebuilt in place.
+     */
+    private boolean simplifySwitchCases(SwitchStmt sw) {
+        boolean changed = false;
+        List<SwitchCase> cases = sw.getCases();
+        for (int i = 0; i < cases.size(); i++) {
+            SwitchCase c = cases.get(i);
+            BlockStmt body = new BlockStmt(new java.util.ArrayList<>(c.statements()));
+            if (transform(body)) {
+                List<Statement> newBody = new java.util.ArrayList<>(body.getStatements());
+                SwitchCase rebuilt = c.isDefault()
+                        ? SwitchCase.defaultCase(newBody)
+                        : c.hasExpressionLabels()
+                            ? SwitchCase.ofExpressions(c.expressionLabels(), newBody)
+                            : SwitchCase.of(c.labels(), newBody);
+                cases.set(i, rebuilt);
+                changed = true;
+            }
+        }
         return changed;
     }
 

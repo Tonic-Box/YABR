@@ -1848,6 +1848,13 @@ public class StatementRecoverer {
         SSAValue result = phi.getResult();
         if (result == null) return;
 
+        // A phi whose result is never used is dead: declaring it serves no purpose and can
+        // mis-type a slot (e.g. a phi merging an int and a reference unifies to Object even
+        // though the value is unused). Leave the slot to be declared by its actual stores.
+        if (result.getUses().isEmpty()) {
+            return;
+        }
+
         if (selfStorePhis.contains(phi)) {
             return;
         }
