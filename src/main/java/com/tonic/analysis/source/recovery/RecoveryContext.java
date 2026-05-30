@@ -19,6 +19,10 @@ public class RecoveryContext {
     private final MethodEntry sourceMethod;
     private final DefUseChains defUseChains;
 
+    /** Reaching-definition partition of local slots into source variables. */
+    @lombok.Setter
+    private SlotVariablePartition slotPartition;
+
     /** Recovered expressions keyed by SSA value */
     private final Map<SSAValue, Expression> recoveredExpressions = new HashMap<>();
 

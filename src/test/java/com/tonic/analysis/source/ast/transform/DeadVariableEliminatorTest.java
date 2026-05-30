@@ -167,6 +167,69 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
+    void writeOnlyAssignmentInsideSwitchCaseRemoved() {
+        BinaryExpr deadAssign = new BinaryExpr(
+            BinaryOperator.ASSIGN,
+            new VarRefExpr("dead", PrimitiveSourceType.INT),
+            LiteralExpr.ofInt(7),
+            PrimitiveSourceType.INT
+        );
+        List<Statement> caseBody = new ArrayList<>();
+        caseBody.add(new ExprStmt(deadAssign));
+        caseBody.add(new ReturnStmt());
+        SwitchCase singleCase = SwitchCase.of(1, caseBody);
+
+        List<SwitchCase> cases = new ArrayList<>();
+        cases.add(singleCase);
+        SwitchStmt sw = new SwitchStmt(new VarRefExpr("sel", PrimitiveSourceType.INT), cases);
+
+        List<Statement> stmts = new ArrayList<>();
+        stmts.add(sw);
+        BlockStmt block = new BlockStmt(stmts);
+
+        boolean changed = eliminator.transform(block);
+
+        assertTrue(changed, "dead write-only assignment inside a switch case should be removed");
+        SwitchStmt result = (SwitchStmt) block.getStatements().get(0);
+        List<Statement> body = result.getCases().get(0).statements();
+        assertEquals(1, body.size());
+        assertTrue(body.get(0) instanceof ReturnStmt);
+    }
+
+    @Test
+    void fieldStoreReceiverIsNotTreatedAsDead() {
+        VarDeclStmt decl = new VarDeclStmt(
+            new com.tonic.analysis.source.ast.type.ReferenceSourceType("Holder"),
+            "h",
+            LiteralExpr.ofNull()
+        );
+        FieldAccessExpr field = FieldAccessExpr.instanceField(
+            new VarRefExpr("h", new com.tonic.analysis.source.ast.type.ReferenceSourceType("Holder")),
+            "value",
+            "Holder",
+            PrimitiveSourceType.INT
+        );
+        BinaryExpr fieldStore = new BinaryExpr(
+            BinaryOperator.ASSIGN,
+            field,
+            LiteralExpr.ofInt(5),
+            PrimitiveSourceType.INT
+        );
+
+        List<Statement> stmts = new ArrayList<>();
+        stmts.add(decl);
+        stmts.add(new ExprStmt(fieldStore));
+        stmts.add(new ReturnStmt());
+        BlockStmt block = new BlockStmt(stmts);
+
+        eliminator.transform(block);
+
+        boolean declKept = block.getStatements().stream()
+            .anyMatch(s -> s instanceof VarDeclStmt && "h".equals(((VarDeclStmt) s).getName()));
+        assertTrue(declKept, "a variable used as a field-store receiver must keep its declaration");
+    }
+
+    @Test
     void preserveSideEffectsInInitializer() {
         MethodCallExpr sideEffect = new MethodCallExpr(
             null,

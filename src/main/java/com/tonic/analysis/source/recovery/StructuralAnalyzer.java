@@ -488,6 +488,47 @@ public class StructuralAnalyzer {
     }
 
     /**
+     * Checks if a block is a PURE exit: a throw, a void return, or a trivial goto to such a
+     * block. A pure exit is terminal and carries no merged value, so it can never be a
+     * control-flow join and must not be adopted as a region's merge block — doing so makes
+     * inner branches that jump to it collapse to empty and silently vanish.
+     * <p>
+     * A value-returning return is NOT a pure exit: its (possibly phi-merged) value must still
+     * be emitted once at a real merge point, so such blocks remain valid merges.
+     */
+    public boolean isPureExitBlock(IRBlock block) {
+        return isPureExitBlock(block, new HashSet<>());
+    }
+
+    private boolean isPureExitBlock(IRBlock block, Set<IRBlock> visited) {
+        if (block == null || !visited.add(block)) {
+            return false;
+        }
+        IRInstruction terminator = block.getTerminator();
+        if (terminator == null) {
+            return false;
+        }
+        if (block.getSuccessors().isEmpty()) {
+            if (terminator instanceof SimpleInstruction
+                    && ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW) {
+                return true;
+            }
+            return terminator instanceof ReturnInstruction
+                    && ((ReturnInstruction) terminator).isVoidReturn();
+        }
+        // A trivial goto whose sole successor is itself a pure exit (e.g. a block that just
+        // jumps to a shared throw). Value-setup gotos (try-finally returns) have non-trivial
+        // instructions and are therefore excluded.
+        if (terminator instanceof SimpleInstruction
+                && ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO
+                && block.getSuccessors().size() == 1
+                && !hasNonTrivialInstructions(block)) {
+            return isPureExitBlock(block.getSuccessors().iterator().next(), visited);
+        }
+        return false;
+    }
+
+    /**
      * Detects guard clause chain pattern where one branch is an early exit
      * and the other leads to another conditional that's also a guard.
      * This enables flat recovery like: if (bad) return; if (bad2) return; main_logic

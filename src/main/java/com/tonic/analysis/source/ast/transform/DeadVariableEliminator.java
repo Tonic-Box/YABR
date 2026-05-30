@@ -5,6 +5,7 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -114,6 +115,14 @@ public class DeadVariableEliminator implements ASTTransform {
                     // For array assignment, visit the array and index parts
                     // (the target element is written, not read, but arr and indices are read)
                     visitArrayAccessAsRead((ArrayAccessExpr) left);
+                } else if (left instanceof FieldAccessExpr) {
+                    // For a field store (obj.field = x), the field is written but the receiver
+                    // is READ; missing this wrongly marks the receiver dead and drops its
+                    // declaration, leaving an orphan store on an undeclared variable.
+                    Expression receiver = ((FieldAccessExpr) left).getReceiver();
+                    if (receiver != null) {
+                        receiver.accept(this);
+                    }
                 }
                 // RHS is always read
                 expr.getRight().accept(this);
@@ -260,10 +269,24 @@ public class DeadVariableEliminator implements ASTTransform {
                     }
                 }
             } else if (stmt instanceof SwitchStmt) {
+                // SwitchCase.statements() is unmodifiable, so dead code is removed from a mutable
+                // copy of each case body and the case is rebuilt. Without this, write-only
+                // assignments inside switch cases (common in dispatch methods) survive — including
+                // orphan phi-resolution copies to variables that are never declared or read.
                 SwitchStmt switchStmt = (SwitchStmt) stmt;
-                for (SwitchCase caseStmt : switchStmt.getCases()) {
-                    // Note: SwitchCase.statements() returns unmodifiable list, need to handle differently
-                    // For now, skip removal in switch cases (less common dead variable scenario)
+                List<SwitchCase> cases = switchStmt.getCases();
+                for (int c = 0; c < cases.size(); c++) {
+                    SwitchCase caseStmt = cases.get(c);
+                    List<Statement> caseBody = new ArrayList<>(caseStmt.statements());
+                    if (removeUnusedCode(caseBody, readVariables, assignedVariables)) {
+                        SwitchCase rebuilt = caseStmt.isDefault()
+                                ? SwitchCase.defaultCase(caseBody)
+                                : caseStmt.hasExpressionLabels()
+                                    ? SwitchCase.ofExpressions(caseStmt.expressionLabels(), caseBody)
+                                    : SwitchCase.of(caseStmt.labels(), caseBody);
+                        cases.set(c, rebuilt);
+                        changed = true;
+                    }
                 }
             } else if (stmt instanceof SynchronizedStmt) {
                 SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;

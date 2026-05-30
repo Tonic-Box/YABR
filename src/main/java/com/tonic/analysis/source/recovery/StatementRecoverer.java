@@ -18,6 +18,7 @@ import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.IntConstant;
+import com.tonic.analysis.ssa.value.NullConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
@@ -1712,10 +1713,13 @@ public class StatementRecoverer {
                     Value storedValue = storeLocal.getValue();
                     SourceType storedType = typeRecoverer.recoverType(storedValue);
 
-                    String localName = getNameForLocalSlotWithType(localIndex, storedType);
+                    String localName = partitionName(storeLocal);
+                    if (localName == null) {
+                        localName = getNameForLocalSlotWithType(localIndex, storedType);
+                    }
                     context.getExpressionContext().setLocalSlotName(localIndex, localName);
 
-                    if (storedType != null && !storedType.isVoid()) {
+                    if (storedType != null && !storedType.isVoid() && !isNullValue(storedValue)) {
                         localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
                     }
 
@@ -1768,7 +1772,10 @@ public class StatementRecoverer {
                     if (loadLocal.getResult() != null) {
                         int localIndex = loadLocal.getLocalIndex();
                         SourceType valueType = typeRecoverer.recoverType(loadLocal.getResult());
-                        String localName = getNameForLocalSlotWithType(localIndex, valueType);
+                        String localName = partitionName(loadLocal);
+                        if (localName == null) {
+                            localName = getNameForLocalSlotWithType(localIndex, valueType);
+                        }
                         context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                         context.getExpressionContext().markMaterialized(loadLocal.getResult());
 
@@ -1848,10 +1855,13 @@ public class StatementRecoverer {
         SSAValue result = phi.getResult();
         if (result == null) return;
 
-        // A phi whose result is never used is dead: declaring it serves no purpose and can
-        // mis-type a slot (e.g. a phi merging an int and a reference unifies to Object even
-        // though the value is unused). Leave the slot to be declared by its actual stores.
-        if (result.getUses().isEmpty()) {
+        // A phi that merges a primitive with a reference is a type-pun across a reused JVM
+        // slot; it is only verifier-legal because its result is dead. Declaring it would
+        // unify the operands to Object and mis-type the slot (e.g. Object local5 = null while
+        // the slot is really an int). Skip it so the slot is declared by its actual stores.
+        // Coherent dead phis (all-reference or all-primitive) still declare normally, since
+        // they carry the slot's correct unified type.
+        if (isTypePunDeadPhi(phi)) {
             return;
         }
 
@@ -1863,25 +1873,21 @@ public class StatementRecoverer {
             return;
         }
 
-        SourceType type = computePhiUnifiedType(phi);
+        SourceType phiType = computePhiUnifiedType(phi);
 
-        boolean upgradedToBoolean = false;
-        if (type == PrimitiveSourceType.INT && phiReceivesBooleanConstantsOnly(phi)) {
-            type = PrimitiveSourceType.BOOLEAN;
-            upgradedToBoolean = true;
-        }
-
+        String name = partitionName(phi);
         String nameFromMethodRecoverer = context.getExpressionContext().getVariableName(result);
-        String name = null;
-        if (nameFromMethodRecoverer != null && nameFromMethodRecoverer.startsWith("local")) {
-            name = nameFromMethodRecoverer;
-        } else {
-            int localIndex = getLocalIndexFromPhi(phi);
-            if (localIndex >= 0) {
-                name = getNameForLocalSlotWithType(localIndex, type);
-            }
-            if (name == null) {
+        if (name == null) {
+            if (nameFromMethodRecoverer != null && nameFromMethodRecoverer.startsWith("local")) {
                 name = nameFromMethodRecoverer;
+            } else {
+                int localIndex = getLocalIndexFromPhi(phi);
+                if (localIndex >= 0) {
+                    name = getNameForLocalSlotWithType(localIndex, phiType);
+                }
+                if (name == null) {
+                    name = nameFromMethodRecoverer;
+                }
             }
         }
         if (name == null) {
@@ -1890,6 +1896,17 @@ public class StatementRecoverer {
 
         if ("this".equals(name) || name.startsWith("arg")) {
             return;
+        }
+
+        // The declared type must match the variable this phi shares a name with: prefer the
+        // unified type of the stores carrying this name (the partition component) so a phi the
+        // SSA bridges across a heterogeneous merge does not mistype an unrelated slot variable.
+        SourceType type = localSlotUnifiedTypes.getOrDefault(name, phiType);
+
+        boolean upgradedToBoolean = false;
+        if (type == PrimitiveSourceType.INT && phiReceivesBooleanConstantsOnly(phi)) {
+            type = PrimitiveSourceType.BOOLEAN;
+            upgradedToBoolean = true;
         }
 
         if (declaredNames.contains(name) || context.getExpressionContext().isDeclared(name)) {
@@ -1978,11 +1995,41 @@ public class StatementRecoverer {
      * Computes a unified type for a phi instruction by examining all incoming values.
      * For incompatible types (e.g., Insets and Graphics), returns their common supertype (Object).
      */
+    /**
+     * Detects a dead phi whose operands mix primitive and reference types. Such a phi is a
+     * type-pun over a JVM slot reused for unrelated values; it is only verifier-legal because
+     * its result is never read. Declaring it would unify the operands to Object and mis-type
+     * the slot, so it must not drive the slot's declaration.
+     */
+    private boolean isTypePunDeadPhi(PhiInstruction phi) {
+        SSAValue result = phi.getResult();
+        if (result == null || !result.getUses().isEmpty()) {
+            return false;
+        }
+        boolean hasPrimitive = false;
+        boolean hasReference = false;
+        for (Value value : phi.getOperands()) {
+            SourceType type = typeRecoverer.recoverType(value);
+            if (type == null || type.isVoid()) {
+                continue;
+            }
+            if (type.isPrimitive()) {
+                hasPrimitive = true;
+            } else {
+                hasReference = true;
+            }
+        }
+        return hasPrimitive && hasReference;
+    }
+
     private SourceType computePhiUnifiedType(PhiInstruction phi) {
         SSAValue result = phi.getResult();
 
         List<SourceType> incomingTypes = new ArrayList<>();
         for (Value value : phi.getOperands()) {
+            if (isNullValue(value)) {
+                continue;
+            }
             SourceType valueType = typeRecoverer.recoverType(value);
             if (valueType != null && !valueType.isVoid()) {
                 incomingTypes.add(valueType);
@@ -2357,7 +2404,10 @@ public class StatementRecoverer {
                 StoreLocalInstruction store = (StoreLocalInstruction) use;
                 int localIndex = store.getLocalIndex();
                 SourceType valueType = typeRecoverer.recoverType(value);
-                String name = getNameForLocalSlotWithType(localIndex, valueType);
+                String name = partitionName(store);
+                if (name == null) {
+                    name = getNameForLocalSlotWithType(localIndex, valueType);
+                }
                 if (name != null && context.getExpressionContext().isDeclared(name)) {
                     SourceType declaredType = context.getExpressionContext().getDeclaredType(name);
                     if (declaredType != null && !typesAreCompatibleForDeclaration(declaredType, valueType)) {
@@ -3187,7 +3237,10 @@ public class StatementRecoverer {
                     if (existingName != null && context.getExpressionContext().isDeclared(existingName)) {
                         int localIndex = store.getLocalIndex();
                         SourceType valueType = typeRecoverer.recoverType(ssaValue);
-                        String expectedName = getNameForLocalSlotWithType(localIndex, valueType);
+                        String expectedName = partitionName(store);
+                        if (expectedName == null) {
+                            expectedName = getNameForLocalSlotWithType(localIndex, valueType);
+                        }
                         if (existingName.equals(expectedName)) {
                             return null;
                         }
@@ -3231,9 +3284,12 @@ public class StatementRecoverer {
             valueType = typeRecoverer.recoverType(store.getValue());
         }
 
-        // Use type-specific naming to ensure consistent names between stores and loads.
-        // getNameForLocalSlotWithType uses category-based lookup which matches what PASS 2 uses.
-        String name = getNameForLocalSlotWithType(localIndex, valueType);
+        // Name the store via the reaching-definition partition so this slot's variable
+        // matches the loads that read it; fall back to category naming if unplaced.
+        String name = partitionName(store);
+        if (name == null) {
+            name = getNameForLocalSlotWithType(localIndex, valueType);
+        }
 
         // Check if this specific variable name is already declared
         boolean useExistingVar = context.getExpressionContext().isDeclared(name);
@@ -3371,6 +3427,37 @@ public class StatementRecoverer {
         return new VarDeclStmt(type, name, value);
     }
 
+    /**
+     * Rescues a branch whose body recovered to empty because its only path is a goto into a
+     * pure-exit block (throw / void-return) that an enclosing region adopted as its merge/stop
+     * block. Without this, such a branch collapses to {@code if (cond) {}} and the exit silently
+     * vanishes (e.g. the second guard of a shared-throw bounds check). The exit block is recovered
+     * and cached so the enclosing region's own emission of that block stays consistent.
+     */
+    private List<Statement> emitExitIfBranchVanished(List<Statement> branchStmts, IRBlock branchTarget) {
+        if (!branchStmts.isEmpty() || branchTarget == null || !analyzer.isPureExitBlock(branchTarget)) {
+            return branchStmts;
+        }
+        IRBlock exit = branchTarget;
+        Set<IRBlock> seen = new HashSet<>();
+        while (exit != null && seen.add(exit) && !exit.getSuccessors().isEmpty()) {
+            exit = exit.getSuccessors().iterator().next();
+        }
+        if (exit == null) {
+            return branchStmts;
+        }
+        if (context.isProcessed(exit)) {
+            return new ArrayList<>(context.getStatements(exit));
+        }
+        List<Statement> exitStmts = recoverSimpleBlock(exit);
+        if (exitStmts.isEmpty()) {
+            return branchStmts;
+        }
+        context.setStatements(exit, exitStmts);
+        context.markProcessed(exit);
+        return exitStmts;
+    }
+
     private Statement recoverIfThen(IRBlock header, RegionInfo info) {
         context.markProcessed(header);
 
@@ -3437,6 +3524,8 @@ public class StatementRecoverer {
             context.popKnownFalseFields();
             context.popKnownFalseValues();
         }
+
+        thenStmts = emitExitIfBranchVanished(thenStmts, info.getThenBlock());
 
         if (isAndConditionChain(thenStmts)) {
             Statement mergedIf = mergeAndConditions(condition, thenStmts);
@@ -3841,7 +3930,10 @@ public class StatementRecoverer {
         Value storedValue = store.getValue();
 
         SourceType storedType = typeRecoverer.recoverType(storedValue);
-        String localName = getNameForLocalSlotWithType(localIndex, storedType);
+        String localName = partitionName(store);
+        if (localName == null) {
+            localName = getNameForLocalSlotWithType(localIndex, storedType);
+        }
 
         Expression valueExpr = recoverExpressionDirectly(storedValue, storedType);
 
@@ -3859,7 +3951,10 @@ public class StatementRecoverer {
         Value storedValue = store.getValue();
 
         SourceType storedType = typeRecoverer.recoverType(storedValue);
-        String localName = getNameForLocalSlotWithType(localIndex, storedType);
+        String localName = partitionName(store);
+        if (localName == null) {
+            localName = getNameForLocalSlotWithType(localIndex, storedType);
+        }
 
         Expression valueExpr = recoverExpressionDirectly(storedValue, storedType);
 
@@ -3907,7 +4002,10 @@ public class StatementRecoverer {
             LoadLocalInstruction load = (LoadLocalInstruction) def;
             int localIndex = load.getLocalIndex();
             SourceType type = typeRecoverer.recoverType(ssa);
-            String name = getNameForLocalSlotWithType(localIndex, type);
+            String name = partitionName(load);
+            if (name == null) {
+                name = getNameForLocalSlotWithType(localIndex, type);
+            }
             return new VarRefExpr(name, type, ssa);
         }
 
@@ -3921,7 +4019,10 @@ public class StatementRecoverer {
                         LoadLocalInstruction load = (LoadLocalInstruction) incomingSSA.getDefinition();
                         int localIndex = load.getLocalIndex();
                         SourceType type = typeRecoverer.recoverType(incomingSSA);
-                        String name = getNameForLocalSlotWithType(localIndex, type);
+                        String name = partitionName(load);
+                        if (name == null) {
+                            name = getNameForLocalSlotWithType(localIndex, type);
+                        }
                         return new VarRefExpr(name, type, incomingSSA);
                     }
                 }
@@ -5326,6 +5427,44 @@ public class StatementRecoverer {
         }
 
         return "local" + localIndex;
+    }
+
+    /**
+     * True if the value is the null reference (directly or via a constant instruction). Null is
+     * assignable to any reference type, so it must not widen a slot's unified type to Object.
+     */
+    private boolean isNullValue(Value value) {
+        if (value instanceof NullConstant) {
+            return true;
+        }
+        if (value instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) value).getDefinition();
+            if (def instanceof ConstantInstruction) {
+                return ((ConstantInstruction) def).getConstant() instanceof NullConstant;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Resolves a local load/store/phi to its source-variable name via the reaching-definition
+     * slot partition, or null when the partition could not place the instruction.
+     */
+    private String partitionName(IRInstruction instr) {
+        SlotVariablePartition partition = context.getExpressionContext().getSlotPartition();
+        if (partition == null) {
+            return null;
+        }
+        if (instr instanceof StoreLocalInstruction) {
+            return partition.nameForStore((StoreLocalInstruction) instr);
+        }
+        if (instr instanceof LoadLocalInstruction) {
+            return partition.nameForLoad((LoadLocalInstruction) instr);
+        }
+        if (instr instanceof PhiInstruction) {
+            return partition.nameForPhi((PhiInstruction) instr);
+        }
+        return null;
     }
 
     private String getNameForLocalSlotWithType(int localIndex, SourceType valueType) {

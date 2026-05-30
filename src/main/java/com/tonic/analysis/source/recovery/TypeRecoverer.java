@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.type.*;
+import com.tonic.analysis.ssa.ir.ArrayAccessInstruction;
 import com.tonic.analysis.ssa.ir.BinaryOp;
 import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
 import com.tonic.analysis.ssa.ir.ConstantInstruction;
@@ -100,7 +101,30 @@ public class TypeRecoverer {
             return PrimitiveSourceType.BOOLEAN;
         }
 
+        // The JVM types an array load (aaload) result conservatively (e.g. Object). The
+        // precise element type follows from the array operand, so derive it from there
+        // when the array recovers to an array type.
+        if (def instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) def).isLoad()) {
+            SourceType elementType = arrayElementType(((ArrayAccessInstruction) def).getArray());
+            if (elementType != null && !elementType.isVoid()) {
+                return elementType;
+            }
+        }
+
         return SourceType.fromIRType(ssa.getType());
+    }
+
+    /** The element type of an array operand: the component type after removing one dimension, or null. */
+    private SourceType arrayElementType(Value array) {
+        SourceType arrayType = recoverType(array);
+        if (!(arrayType instanceof ArraySourceType)) {
+            return null;
+        }
+        ArraySourceType at = (ArraySourceType) arrayType;
+        if (at.getDimensions() > 1) {
+            return new ArraySourceType(at.getComponentType(), at.getDimensions() - 1);
+        }
+        return at.getComponentType();
     }
 
     /** True if every operand of the phi is an int constant 0 or 1 (inline or via a ConstantInstruction). */
