@@ -84,7 +84,7 @@ final class FunctionLifter {
     // ---- pass 1: allocate ---------------------------------------------------
 
     private void passOne() {
-        // Allocate blocks
+        // Allocate blocks in textual order so their auto-assigned IDs match the B<id> labels.
         for (ParsedFunction.ParsedBlock pb : pf.blocks) {
             IRBlock block = new IRBlock(pb.label);
             blockMap.put(pb.label, block);
@@ -94,7 +94,25 @@ final class FunctionLifter {
             method.setEntryBlock(blockMap.values().iterator().next());
         }
 
-        // Collect all %v<id> assignments to pre-allocate SSAValues with correct types
+        // Register parameters FIRST — they appear as %v0, %v1, … in the define signature, so
+        // creating them in order guarantees they get auto-IDs 0, 1, … matching the LLVM names.
+        for (String param : pf.params) {
+            param = param.trim();
+            if (param.isEmpty()) {
+                continue;
+            }
+            int sp = param.lastIndexOf(' ');
+            String typeStr = sp > 0 ? param.substring(0, sp) : param;
+            String regStr = sp > 0 ? param.substring(sp + 1) : "";
+            IRType type = tryParseType(typeStr.trim());
+            SSAValue pv = new SSAValue(type);
+            vMap.put(regStr.trim(), pv);
+            method.addParameter(pv);
+        }
+
+        // Collect all %v<id> body-value assignments, sorted by numeric id, so each SSAValue is
+        // created in the right counter slot and will re-lower with the same %v<id> name.
+        TreeMap<Integer, String[]> byId = new TreeMap<>();
         for (ParsedFunction.ParsedBlock pb : pf.blocks) {
             for (String line : pb.lines) {
                 Matcher m = VALUE_ASSIGN.matcher(line);
@@ -104,26 +122,17 @@ final class FunctionLifter {
                 String reg = m.group(1);
                 String rhs = m.group(2);
                 if (reg.startsWith("%v")) {
-                    IRType type = inferType(rhs);
-                    SSAValue sv = new SSAValue(type);
-                    vMap.put(reg, sv);
+                    int numId = Integer.parseInt(reg.substring(2));
+                    byId.put(numId, new String[]{reg, rhs});
                 }
-                // %t<n> temps are handled during pass 2
             }
         }
-
-        // Register parameters
-        for (String param : pf.params) {
-            param = param.trim();
-            if (param.isEmpty()) {
-                continue;
+        for (Map.Entry<Integer, String[]> e : byId.entrySet()) {
+            String reg = e.getValue()[0];
+            if (!vMap.containsKey(reg)) {
+                IRType type = inferType(e.getValue()[1]);
+                vMap.put(reg, new SSAValue(type));
             }
-            int sp = param.lastIndexOf(' ');
-            String typeStr = sp > 0 ? param.substring(0, sp) : param;
-            String regStr = sp > 0 ? param.substring(sp + 1) : "";
-            IRType type = TypeParser.parse(typeStr.trim());
-            SSAValue pv = vMap.computeIfAbsent(regStr.trim(), k -> new SSAValue(type));
-            method.addParameter(pv);
         }
     }
 
