@@ -15,6 +15,7 @@ final class LlvmFunctionBuilder {
 
     private final List<String> lines = new ArrayList<>();
     private int tempCounter = 0;
+    private int labelCounter = 0;
 
     /** Emits a block label line, e.g. {@code B3:}. */
     void label(String blockLabel) {
@@ -29,6 +30,15 @@ final class LlvmFunctionBuilder {
     /** A fresh synthesized temporary register name, e.g. {@code %t0}. */
     String freshTemp() {
         return "%t" + (tempCounter++);
+    }
+
+    /**
+     * A fresh synthesized block label name, e.g. {@code L0} (referenced as {@code %L0}). Used for
+     * {@code invoke} normal-destination continuations and landingpad blocks — disjoint from the
+     * {@code B{id}} labels minted from IR block ids.
+     */
+    String freshLabel() {
+        return "L" + (labelCounter++);
     }
 
     List<String> lines() {

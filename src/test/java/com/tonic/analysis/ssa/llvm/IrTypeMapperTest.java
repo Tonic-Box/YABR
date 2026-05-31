@@ -1,11 +1,13 @@
 package com.tonic.analysis.ssa.llvm;
 
+import com.tonic.analysis.ssa.type.ArrayType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.type.VoidType;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,13 +36,13 @@ class IrTypeMapperTest {
     }
 
     @Test
-    void rejectsReferenceAndArrayTypes() {
-        UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class,
-            () -> IrTypeMapper.map(ReferenceType.OBJECT));
-        assertTrue(e.getMessage().startsWith("LLVM lowering:"), e.getMessage());
-        assertThrows(UnsupportedOperationException.class,
-            () -> IrTypeMapper.mapParams("(Ljava/lang/String;)V"));
-        assertThrows(UnsupportedOperationException.class,
-            () -> IrTypeMapper.mapReturn("()Ljava/lang/Object;"));
+    void mapsReferencesAndArraysToPtr() {
+        assertEquals(LlvmType.PTR, IrTypeMapper.map(ReferenceType.OBJECT));
+        assertEquals(LlvmType.PTR, IrTypeMapper.map(ArrayType.fromDescriptor("[I")));
+        assertEquals(List.of(LlvmType.PTR), IrTypeMapper.mapParams("(Ljava/lang/String;)V"));
+        assertEquals(LlvmType.PTR, IrTypeMapper.mapReturn("()Ljava/lang/Object;"));
+        assertEquals(Arrays.asList(LlvmType.I32, LlvmType.PTR, LlvmType.PTR),
+            IrTypeMapper.mapParams("(I[ILjava/lang/String;)V"));
+        assertEquals(LlvmType.PTR, IrTypeMapper.mapReturn("()[Ljava/lang/String;"));
     }
 }

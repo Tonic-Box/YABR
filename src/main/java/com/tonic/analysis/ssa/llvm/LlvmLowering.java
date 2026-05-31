@@ -41,16 +41,22 @@ public final class LlvmLowering {
     public String lowerToModule(List<IRMethod> methods) {
         LlvmModule module = new LlvmModule(config);
         DeclareCollector declares = new DeclareCollector();
+        GlobalCollector globals = new GlobalCollector();
+        CStringPool strings = new CStringPool();
         Set<String> definedSymbols = new HashSet<>();
+        Set<String> definedOwnerClasses = new HashSet<>();
         List<String> defines = new ArrayList<>();
 
         for (IRMethod method : methods) {
             LlvmFunctionBuilder fb = new LlvmFunctionBuilder();
-            SsaToLlvmLowerer lowerer = new SsaToLlvmLowerer(method, fb, declares, config);
+            SsaToLlvmLowerer lowerer = new SsaToLlvmLowerer(method, fb, declares, globals, strings, config);
             defines.add(lowerer.lowerFunction());
             definedSymbols.add(lowerer.definedSymbol());
+            definedOwnerClasses.add(method.getOwnerClass());
         }
 
+        module.addConstants(strings.renderConstants());
+        module.addGlobals(globals.renderGlobals(definedOwnerClasses));
         module.addDeclares(declares.renderDeclares(definedSymbols));
         for (String define : defines) {
             module.addFunction(define);

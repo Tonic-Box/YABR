@@ -8,12 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Maps YABR {@link IRType}s to {@link LlvmType}s for the computational subset.
+ * Maps YABR {@link IRType}s to {@link LlvmType}s.
  *
  * <p>All integral JVM types (boolean/byte/char/short/int) collapse to {@code i32}: the JVM computes
- * them as int on the operand stack, and v1 has no heap/field storage where the narrow widths would
- * matter. Narrow integer widths (i8/i16) are deferred to the future reference/heap layer. Reference
- * and array types route to {@link UnsupportedLowering}.
+ * them as int on the operand stack. {@code long}→{@code i64}, {@code float}/{@code double} direct.
+ * Reference and array types map to the opaque pointer {@code ptr} — the lowering is type-lattice
+ * agnostic; whether object operations are actually emitted (vs rejected) is gated by the
+ * {@link LlvmLoweringConfig.ObjectModel} in {@code SsaToLlvmLowerer}.
  */
 final class IrTypeMapper {
 
@@ -37,7 +38,35 @@ final class IrTypeMapper {
             }
             return LlvmType.I32;
         }
+        if (type != null && type.isReference()) {
+            return LlvmType.PTR;
+        }
         throw UnsupportedLowering.reject("type " + (type == null ? "null" : type.getDescriptor()));
+    }
+
+    /** Maps a single JVM type descriptor (field type / array element), e.g. {@code I}, {@code Ljava/lang/String;}, {@code [I}. */
+    static LlvmType mapDescriptor(String descriptor) {
+        switch (descriptor.charAt(0)) {
+            case 'V':
+                return LlvmType.VOID;
+            case 'J':
+                return LlvmType.I64;
+            case 'F':
+                return LlvmType.FLOAT;
+            case 'D':
+                return LlvmType.DOUBLE;
+            case 'Z':
+            case 'B':
+            case 'C':
+            case 'S':
+            case 'I':
+                return LlvmType.I32;
+            case 'L':
+            case '[':
+                return LlvmType.PTR;
+            default:
+                throw UnsupportedLowering.reject("descriptor '" + descriptor + "'");
+        }
     }
 
     /** Parameter LLVM types parsed from a JVM method descriptor, e.g. {@code (IJDF)V}. */
@@ -69,9 +98,21 @@ final class IrTypeMapper {
                     i++;
                     break;
                 case 'L':
-                    throw UnsupportedLowering.reject("reference parameter");
+                    params.add(LlvmType.PTR);
+                    i = descriptor.indexOf(';', i) + 1;
+                    break;
                 case '[':
-                    throw UnsupportedLowering.reject("array parameter");
+                    params.add(LlvmType.PTR);
+                    i++;
+                    while (i < end && descriptor.charAt(i) == '[') {
+                        i++;
+                    }
+                    if (i < end && descriptor.charAt(i) == 'L') {
+                        i = descriptor.indexOf(';', i) + 1;
+                    } else {
+                        i++;
+                    }
+                    break;
                 default:
                     throw UnsupportedLowering.reject("descriptor char '" + c + "'");
             }
@@ -98,6 +139,9 @@ final class IrTypeMapper {
             case "I":
                 return LlvmType.I32;
             default:
+                if (ret.startsWith("L") || ret.startsWith("[")) {
+                    return LlvmType.PTR;
+                }
                 throw UnsupportedLowering.reject("return type " + ret);
         }
     }

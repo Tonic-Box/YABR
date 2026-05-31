@@ -10,11 +10,21 @@ import java.util.List;
 final class LlvmModule {
 
     private final LlvmLoweringConfig config;
+    private final List<String> constants = new ArrayList<>();
+    private final List<String> globals = new ArrayList<>();
     private final List<String> declares = new ArrayList<>();
     private final List<String> functions = new ArrayList<>();
 
     LlvmModule(LlvmLoweringConfig config) {
         this.config = config;
+    }
+
+    void addConstants(List<String> constantLines) {
+        constants.addAll(constantLines);
+    }
+
+    void addGlobals(List<String> globalLines) {
+        globals.addAll(globalLines);
     }
 
     void addDeclares(List<String> declareLines) {
@@ -34,6 +44,18 @@ final class LlvmModule {
             sb.append("target datalayout = \"").append(config.getDataLayout()).append("\"\n");
         }
         if (sb.length() > 0) {
+            sb.append('\n');
+        }
+        for (String constant : constants) {
+            sb.append(constant).append('\n');
+        }
+        if (!constants.isEmpty()) {
+            sb.append('\n');
+        }
+        for (String global : globals) {
+            sb.append(global).append('\n');
+        }
+        if (!globals.isEmpty()) {
             sb.append('\n');
         }
         for (String declare : declares) {

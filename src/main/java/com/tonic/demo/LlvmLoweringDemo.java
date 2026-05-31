@@ -3,6 +3,7 @@ package com.tonic.demo;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.llvm.LlvmLowering;
+import com.tonic.analysis.ssa.llvm.LlvmLoweringConfig;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
@@ -10,8 +11,9 @@ import com.tonic.parser.MethodEntry;
 import java.io.FileInputStream;
 
 /**
- * Demo: lift each method of a class to SSA and lower it to LLVM IR. Methods outside the
- * computational subset are reported as skipped (their unsupported construct named).
+ * Demo: lift each method of a class to SSA and lower it to LLVM IR using the full object/runtime
+ * model (the {@code jvm_*} runtime ABI). Any method that still cannot be lowered is reported as
+ * skipped (its unsupported construct named).
  *
  * <p>Usage: {@code LlvmLoweringDemo <path-to-class-file>}
  */
@@ -23,7 +25,7 @@ public final class LlvmLoweringDemo {
             return;
         }
         ClassFile cf = ClassPool.getDefault().loadClass(new FileInputStream(args[0]));
-        LlvmLowering llvm = new LlvmLowering();
+        LlvmLowering llvm = new LlvmLowering(LlvmLoweringConfig.fullObjectModel());
 
         for (MethodEntry method : cf.getMethods()) {
             if (method.getCodeAttribute() == null) {
