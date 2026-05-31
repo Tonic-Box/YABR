@@ -160,6 +160,55 @@ class DeadCodeEliminationTest {
     }
 
     @Test
+    void keepsLoopIncrementFeedingPhi() {
+        // entry: i0 = 0; goto header
+        // header: i = phi(i0[entry], iNext[body]); if (i != 0) -> body else exit
+        // body: use(i); iNext = i + 1; goto header
+        // exit: return
+        IRBlock header = new IRBlock("header");
+        IRBlock body = new IRBlock("body");
+        IRBlock exit = new IRBlock("exit");
+        method.addBlock(header);
+        method.addBlock(body);
+        method.addBlock(exit);
+
+        SSAValue i0 = new SSAValue(PrimitiveType.INT);
+        SSAValue i = new SSAValue(PrimitiveType.INT);
+        SSAValue iNext = new SSAValue(PrimitiveType.INT);
+        SSAValue used = new SSAValue(PrimitiveType.INT);
+
+        block.addInstruction(new ConstantInstruction(i0, IntConstant.of(0)));
+        block.addInstruction(SimpleInstruction.createGoto(header));
+
+        PhiInstruction phi = new PhiInstruction(i);
+        phi.addIncoming(i0, block);
+        phi.addIncoming(iNext, body);
+        header.addPhi(phi);
+        header.addInstruction(new BranchInstruction(CompareOp.IFNE, i, body, exit));
+
+        body.addInstruction(new InvokeInstruction(used, InvokeType.STATIC,
+            "com/test/Test", "use", "(I)I", List.of(i)));
+        BinaryOpInstruction inc = new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(1));
+        body.addInstruction(inc);
+        body.addInstruction(SimpleInstruction.createGoto(header));
+
+        exit.addInstruction(new ReturnInstruction());
+
+        block.addSuccessor(header);
+        header.addSuccessor(body);
+        header.addSuccessor(exit);
+        body.addSuccessor(header);
+
+        DeadCodeElimination transform = new DeadCodeElimination();
+        transform.run(method);
+
+        assertTrue(body.getInstructions().contains(inc),
+            "loop increment feeding the phi must not be removed");
+        assertTrue(header.getPhiInstructions().contains(phi),
+            "live loop phi must not be removed");
+    }
+
+    @Test
     void removesMultipleUnusedInstructions() {
         // v0 = const 1 (unused)
         // v1 = const 2 (unused)

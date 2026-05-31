@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -163,6 +162,90 @@ class ControlFlowSimplifierBranchCoverageTest {
 
             boolean changed = simplifier.transform(block);
             assertTrue(changed);
+        }
+    }
+
+    @Nested
+    class EmptyIfTests {
+
+        @Test
+        void emptyThenNoElseSideEffectFreeRemoved() {
+            // if (x != 3) {}  -> removed entirely (condition has no side effects)
+            IfStmt ifStmt = new IfStmt(
+                new BinaryExpr(BinaryOperator.NE,
+                    new VarRefExpr("x", PrimitiveSourceType.INT),
+                    LiteralExpr.ofInt(3), PrimitiveSourceType.BOOLEAN),
+                new BlockStmt(new ArrayList<>()));
+
+            List<Statement> stmts = new ArrayList<>();
+            stmts.add(ifStmt);
+            stmts.add(new ReturnStmt());
+            BlockStmt block = new BlockStmt(stmts);
+
+            assertTrue(simplifier.transform(block));
+            assertEquals(1, block.size());
+            assertTrue(block.getStatements().get(0) instanceof ReturnStmt);
+        }
+
+        @Test
+        void emptyThenSideEffectingComparisonKeptAsIf() {
+            // if (foo() != 0) {}  -> kept as an empty if: the condition is side-effecting (call)
+            // but a bare comparison is not a legal Java statement.
+            MethodCallExpr call = MethodCallExpr.staticCall(
+                "com/test/T", "foo", new ArrayList<>(), PrimitiveSourceType.INT);
+            IfStmt ifStmt = new IfStmt(
+                new BinaryExpr(BinaryOperator.NE, call, LiteralExpr.ofInt(0), PrimitiveSourceType.BOOLEAN),
+                new BlockStmt(new ArrayList<>()));
+
+            List<Statement> stmts = new ArrayList<>();
+            stmts.add(ifStmt);
+            stmts.add(new ReturnStmt());
+            BlockStmt block = new BlockStmt(stmts);
+
+            simplifier.transform(block);
+            assertEquals(2, block.size());
+            assertTrue(block.getStatements().get(0) instanceof IfStmt,
+                "side-effecting non-statement condition must remain an if, not a bare expression");
+        }
+
+        @Test
+        void emptyThenBareCallConditionLoweredToStatement() {
+            // if (foo()) {}  -> foo();  (the call is itself a valid statement expression)
+            MethodCallExpr call = MethodCallExpr.staticCall(
+                "com/test/T", "foo", new ArrayList<>(), PrimitiveSourceType.BOOLEAN);
+            IfStmt ifStmt = new IfStmt(call, new BlockStmt(new ArrayList<>()));
+
+            List<Statement> stmts = new ArrayList<>();
+            stmts.add(ifStmt);
+            stmts.add(new ReturnStmt());
+            BlockStmt block = new BlockStmt(stmts);
+
+            assertTrue(simplifier.transform(block));
+            assertTrue(block.getStatements().get(0) instanceof ExprStmt,
+                "a bare call condition should lower to an expression statement");
+        }
+
+        @Test
+        void emptyThenWithElseInverted() {
+            // if (x) {} else { y = 1; }  -> if (!x) { y = 1; }
+            BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN,
+                new VarRefExpr("y", PrimitiveSourceType.INT), LiteralExpr.ofInt(1), PrimitiveSourceType.INT);
+            List<Statement> elseStmts = new ArrayList<>();
+            elseStmts.add(new ExprStmt(assign));
+
+            IfStmt ifStmt = new IfStmt(
+                new VarRefExpr("x", PrimitiveSourceType.BOOLEAN),
+                new BlockStmt(new ArrayList<>()),
+                new BlockStmt(elseStmts));
+
+            List<Statement> stmts = new ArrayList<>();
+            stmts.add(ifStmt);
+            BlockStmt block = new BlockStmt(stmts);
+
+            assertTrue(simplifier.transform(block));
+            IfStmt result = (IfStmt) block.getStatements().get(0);
+            assertFalse(result.hasElse(), "else should be folded into an inverted then");
+            assertFalse(((BlockStmt) result.getThenBranch()).isEmpty(), "then should carry the former else body");
         }
     }
 }

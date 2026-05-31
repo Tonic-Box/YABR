@@ -181,4 +181,53 @@ class DuplicateBlockMergingTest {
         DuplicateBlockMerging aggressiveTransform = new DuplicateBlockMerging(true);
         assertEquals("DuplicateBlockMerging", aggressiveTransform.getName());
     }
+
+    /**
+     * Regression: merging a duplicate must repair its successors' predecessor lists so no
+     * surviving block references the removed block (the dangling edge that crashed
+     * SlotVariablePartition). After a merge every predecessor/successor reference must point
+     * to a block still in the method.
+     */
+    @Test
+    void mergeRepairsSuccessorPredecessorInvariant() {
+        IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
+        IRBlock entry = new IRBlock("entry");
+        IRBlock b1 = new IRBlock("b1");
+        IRBlock b2 = new IRBlock("b2");
+        IRBlock exit = new IRBlock("exit");
+
+        method.addBlock(entry);
+        method.addBlock(b1);
+        method.addBlock(b2);
+        method.addBlock(exit);
+        method.setEntryBlock(entry);
+
+        SSAValue v1 = new SSAValue(PrimitiveType.INT);
+        SSAValue v2 = new SSAValue(PrimitiveType.INT);
+        b1.addInstruction(new ConstantInstruction(v1, new IntConstant(42)));
+        b2.addInstruction(new ConstantInstruction(v2, new IntConstant(42)));
+
+        entry.addInstruction(SimpleInstruction.createGoto(b1));
+        b1.addInstruction(SimpleInstruction.createGoto(exit));
+        b2.addInstruction(SimpleInstruction.createGoto(exit));
+        exit.addInstruction(new ReturnInstruction(v1));
+
+        entry.addSuccessor(b1);
+        b1.addSuccessor(exit);
+        b2.addSuccessor(exit);
+
+        boolean changed = transform.run(method);
+
+        assertTrue(changed);
+        for (IRBlock block : method.getBlocks()) {
+            for (IRBlock pred : block.getPredecessors()) {
+                assertTrue(method.getBlocks().contains(pred),
+                    "dangling predecessor " + pred.getName() + " on " + block.getName());
+            }
+            for (IRBlock succ : block.getSuccessors()) {
+                assertTrue(method.getBlocks().contains(succ),
+                    "dangling successor " + succ.getName() + " on " + block.getName());
+            }
+        }
+    }
 }

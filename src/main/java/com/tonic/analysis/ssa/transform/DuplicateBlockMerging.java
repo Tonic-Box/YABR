@@ -2,6 +2,7 @@ package com.tonic.analysis.ssa.transform;
 
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
+import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -194,21 +195,18 @@ public class DuplicateBlockMerging implements IRTransform {
     }
 
     private void mergeBlocks(IRBlock survivor, IRBlock duplicate, IRMethod method) {
+        if (survivor == duplicate) return;
+
         Map<Value, Value> valueMap = buildValueMapping(survivor, duplicate);
 
         for (IRBlock pred : new ArrayList<>(duplicate.getPredecessors())) {
+            EdgeType edgeType = pred.getEdgeType(duplicate);
             IRInstruction term = pred.getTerminator();
             if (term != null) {
                 term.replaceTarget(duplicate, survivor);
             }
-            pred.getSuccessors().remove(duplicate);
-            if (!pred.getSuccessors().contains(survivor)) {
-                pred.getSuccessors().add(survivor);
-            }
-            duplicate.getPredecessors().remove(pred);
-            if (!survivor.getPredecessors().contains(pred)) {
-                survivor.getPredecessors().add(pred);
-            }
+            pred.removeSuccessor(duplicate);
+            pred.addSuccessor(survivor, edgeType);
         }
 
         updatePhisForMerge(survivor, duplicate, valueMap);
@@ -230,7 +228,7 @@ public class DuplicateBlockMerging implements IRTransform {
             }
         }
 
-        method.getBlocks().remove(duplicate);
+        method.removeBlock(duplicate);
     }
 
     private Map<Value, Value> buildValueMapping(IRBlock survivor, IRBlock duplicate) {

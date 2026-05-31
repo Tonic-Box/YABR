@@ -23,6 +23,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
     @Getter
     private final Set<String> usedTypes = new HashSet<>();
     private String currentClassName;
+    /** Declared type of each local variable name, recorded as declarations are emitted, so member
+     *  accesses cast against the DECLARED type (e.g. a merged Object slot) rather than the
+     *  expression's narrowed type. */
+    private final java.util.Map<String, SourceType> declaredLocalTypes = new java.util.HashMap<>();
 
     public SourceEmitter(IndentingWriter writer) {
         this(writer, SourceEmitterConfig.defaults());
@@ -752,11 +756,29 @@ public class SourceEmitter implements SourceVisitor<Void> {
         }
 
         writer.write(normalizer.normalize(stmt.getName(), IdentifierNormalizer.IdentifierType.VARIABLE));
+        if (stmt.getName() != null && stmt.getType() != null) {
+            declaredLocalTypes.put(stmt.getName(), stmt.getType());
+        }
 
         if (stmt.getInitializer() != null) {
             writer.write(" = ");
             stmt.getInitializer().accept(this);
         }
+    }
+
+    /**
+     * The type to use when deciding whether a member access on this receiver needs a downcast: the
+     * variable's DECLARED type when the receiver is a known local (so a merged {@code Object} slot
+     * is cast at each narrowed use), otherwise the receiver expression's own type.
+     */
+    private SourceType castReceiverType(Expression receiver) {
+        if (receiver instanceof VarRefExpr) {
+            SourceType declared = declaredLocalTypes.get(((VarRefExpr) receiver).getName());
+            if (declared != null) {
+                return declared;
+            }
+        }
+        return receiver.getType();
     }
 
     @Override
@@ -1026,7 +1048,30 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 writer.write(".");
             }
         } else if (expr.getReceiver() != null) {
-            emitReceiver(expr.getReceiver());
+            Expression receiver = expr.getReceiver();
+            SourceType receiverType = castReceiverType(receiver);
+            String ownerClass = expr.getOwnerClass();
+
+            // A field declared on a subtype, accessed through a wider-typed receiver (e.g. an
+            // Object-typed local that the verifier narrowed elsewhere), needs a downcast just like
+            // a method call does (visitMethodCall). Without it the field access does not compile.
+            boolean needsCast = false;
+            if (receiverType instanceof ReferenceSourceType && ownerClass != null) {
+                String receiverClass = ((ReferenceSourceType) receiverType).getInternalName();
+                if (!ownerClass.equals(receiverClass) && !"java/lang/Object".equals(ownerClass)) {
+                    needsCast = true;
+                }
+            }
+
+            if (needsCast) {
+                writer.write("((");
+                writer.write(formatClassName(ownerClass));
+                writer.write(") ");
+                receiver.accept(this);
+                writer.write(")");
+            } else {
+                emitReceiver(receiver);
+            }
             writer.write(".");
         }
         writer.write(normalizer.normalize(expr.getFieldName(), IdentifierNormalizer.IdentifierType.FIELD));
@@ -1049,7 +1094,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             writer.write(".");
         } else if (expr.getReceiver() != null) {
             Expression receiver = expr.getReceiver();
-            SourceType receiverType = receiver.getType();
+            SourceType receiverType = castReceiverType(receiver);
             String ownerClass = expr.getOwnerClass();
 
             boolean needsCast = false;

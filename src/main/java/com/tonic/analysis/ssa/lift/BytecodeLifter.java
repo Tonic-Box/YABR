@@ -82,6 +82,61 @@ public class BytecodeLifter {
         return irMethod;
     }
 
+    /**
+     * Re-types phi results to the common type of their incoming values when every non-null
+     * incoming is the same primitive type. Iterates to a fixpoint so corrections propagate
+     * through chained phis. Conservative: leaves reference phis and mixed-type (genuine pun)
+     * phis untouched. Run after SSA renaming, once local-slot phis and their operands exist:
+     * a slot reused for an Iterator then an int loop counter otherwise leaves the counter phi
+     * typed by the slot's stale reference type, propagating an Object type-pun into the source.
+     */
+    public static void refinePhiTypes(IRMethod method) {
+        boolean changed = true;
+        int guard = 0;
+        while (changed && guard++ < 16) {
+            changed = false;
+            for (IRBlock block : method.getBlocks()) {
+                for (PhiInstruction phi : new ArrayList<>(block.getPhiInstructions())) {
+                    SSAValue result = phi.getResult();
+                    if (result == null) {
+                        continue;
+                    }
+                    IRType unified = uniformPrimitiveIncomingType(phi);
+                    if (unified != null && !unified.equals(result.getType())) {
+                        SSAValue retyped = new SSAValue(unified, result.getName());
+                        result.replaceAllUsesWith(retyped);
+                        phi.setResult(retyped);
+                        retyped.setDefinition(phi);
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the shared primitive type of all non-null phi incomings, or null if any incoming
+     * is non-primitive or the incomings disagree.
+     */
+    private static IRType uniformPrimitiveIncomingType(PhiInstruction phi) {
+        PrimitiveType common = null;
+        for (Value v : phi.getOperands()) {
+            if (v == null) {
+                continue;
+            }
+            IRType t = v.getType();
+            if (!(t instanceof PrimitiveType)) {
+                return null;
+            }
+            if (common == null) {
+                common = (PrimitiveType) t;
+            } else if (common != t) {
+                return null;
+            }
+        }
+        return common;
+    }
+
     private IRMethod createEmptyMethod(MethodEntry method) {
         return new IRMethod(
                 method.getOwnerName(),

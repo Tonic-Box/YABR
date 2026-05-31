@@ -1,6 +1,5 @@
 package com.tonic.analysis.source.ast.transform;
 
-import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
@@ -46,8 +45,7 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         boolean passChanged;
         do {
-            passChanged = false;
-            passChanged |= removeRedundantStatements(stmts);
+            passChanged = removeRedundantStatements(stmts);
             passChanged |= moveDeclarationsToFirstUse(stmts);
             changed |= passChanged;
         } while (passChanged);
@@ -80,8 +78,49 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
+    /**
+     * Reports whether an expression may legally stand alone as a Java statement (a method/
+     * dynamic invocation, object/array creation, assignment, or pre/post increment-decrement).
+     * Comparisons and other pure expressions are not statement expressions.
+     */
+    private static boolean isStatementExpression(Expression e) {
+        if (e instanceof MethodCallExpr || e instanceof NewExpr
+                || e instanceof NewArrayExpr || e instanceof InvokeDynamicExpr) {
+            return true;
+        }
+        if (e instanceof BinaryExpr) {
+            return ((BinaryExpr) e).getOperator().isAssignment();
+        }
+        if (e instanceof UnaryExpr) {
+            UnaryOperator op = ((UnaryExpr) e).getOperator();
+            return op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
+                    || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC;
+        }
+        return false;
+    }
+
     private boolean transformIf(IfStmt ifStmt, List<Statement> parentList, int index) {
         boolean changed = false;
+
+        // An if with an empty then-branch and no else is dead. If the condition is side-effect
+        // free, drop it entirely. If it is itself a valid statement expression (a call/new/
+        // assignment/increment), lower it to that statement. Otherwise (e.g. an opaque-predicate
+        // comparison wrapping a call) keep the empty if: a bare comparison is not a legal Java
+        // statement, and extracting the call would break short-circuit semantics.
+        if (isEmptyBlock(ifStmt.getThenBranch()) && !ifStmt.hasElse()) {
+            Expression cond = ifStmt.getCondition();
+            boolean sideEffecting = Boolean.TRUE.equals(
+                    cond.accept(DeadStoreEliminator.SideEffectDetector.INSTANCE));
+            if (!sideEffecting) {
+                parentList.remove(index);
+                return true;
+            }
+            if (isStatementExpression(cond)) {
+                parentList.set(index, new ExprStmt(cond));
+                return true;
+            }
+            return false;
+        }
 
         if (isEmptyBlock(ifStmt.getThenBranch()) && ifStmt.hasElse()) {
             invertCondition(ifStmt);

@@ -170,7 +170,12 @@ public class SlotVariablePartition {
                     mergeInto(in, blockIn.get(entry));
                 }
                 for (IRBlock pred : block.getPredecessors()) {
-                    mergeInto(in, blockOut.get(pred));
+                    // A predecessor may be absent from blockOut if a CFG transform left a dangling
+                    // predecessor edge to a block no longer in method.getBlocks(); skip it.
+                    Map<Integer, Set<Node>> predOut = blockOut.get(pred);
+                    if (predOut != null) {
+                        mergeInto(in, predOut);
+                    }
                 }
                 Map<Integer, Set<Node>> out = transfer(in, blockDefs.get(block));
                 if (!out.equals(blockOut.get(block))) {
@@ -182,7 +187,7 @@ public class SlotVariablePartition {
         }
 
         for (IRBlock block : blocks) {
-            Map<Integer, Set<Node>> reaching = deepCopy(blockIn.get(block));
+            Map<Integer, Set<Node>> reaching = deepCopy(blockIn.getOrDefault(block, new HashMap<>()));
             // Phis sit at block entry and are transparent: record the value(s) reaching the
             // merge so the phi result can be named, but neither union nor redefine the slot.
             for (PhiInstruction phi : block.getPhiInstructions()) {

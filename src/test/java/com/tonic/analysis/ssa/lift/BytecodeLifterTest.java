@@ -50,6 +50,70 @@ class BytecodeLifterTest {
         throw new IllegalArgumentException("Method not found: " + name);
     }
 
+    // ========== Phi Type Refinement Tests ==========
+
+    @Nested
+    class PhiTypeRefinementTests {
+
+        @Test
+        void retypesUniformPrimitivePhiMistypedAsReference() {
+            IRMethod m = new IRMethod("com/test/T", "f", "()V", true);
+            IRBlock entry = new IRBlock("entry");
+            IRBlock p1 = new IRBlock("p1");
+            IRBlock p2 = new IRBlock("p2");
+            IRBlock merge = new IRBlock("merge");
+            m.addBlock(entry);
+            m.addBlock(p1);
+            m.addBlock(p2);
+            m.addBlock(merge);
+            m.setEntryBlock(entry);
+
+            SSAValue a = new SSAValue(PrimitiveType.INT);
+            SSAValue b = new SSAValue(PrimitiveType.INT);
+            PhiInstruction phi = new PhiInstruction(new SSAValue(ReferenceType.OBJECT, "phi_5"));
+            phi.addIncoming(a, p1);
+            phi.addIncoming(b, p2);
+            merge.addPhi(phi);
+            merge.addInstruction(new ReturnInstruction());
+            p1.addSuccessor(merge);
+            p2.addSuccessor(merge);
+
+            BytecodeLifter.refinePhiTypes(m);
+
+            assertEquals(PrimitiveType.INT, phi.getResult().getType(),
+                "a phi whose incomings are all int must be typed int, not the slot's stale reference type");
+        }
+
+        @Test
+        void leavesMixedPrimitiveReferencePhiUntouched() {
+            IRMethod m = new IRMethod("com/test/T", "g", "()V", true);
+            IRBlock entry = new IRBlock("entry");
+            IRBlock p1 = new IRBlock("p1");
+            IRBlock p2 = new IRBlock("p2");
+            IRBlock merge = new IRBlock("merge");
+            m.addBlock(entry);
+            m.addBlock(p1);
+            m.addBlock(p2);
+            m.addBlock(merge);
+            m.setEntryBlock(entry);
+
+            SSAValue prim = new SSAValue(PrimitiveType.INT);
+            SSAValue ref = new SSAValue(ReferenceType.OBJECT);
+            PhiInstruction phi = new PhiInstruction(new SSAValue(ReferenceType.OBJECT, "phi_6"));
+            phi.addIncoming(prim, p1);
+            phi.addIncoming(ref, p2);
+            merge.addPhi(phi);
+            merge.addInstruction(new ReturnInstruction());
+            p1.addSuccessor(merge);
+            p2.addSuccessor(merge);
+
+            BytecodeLifter.refinePhiTypes(m);
+
+            assertEquals(ReferenceType.OBJECT, phi.getResult().getType(),
+                "a genuine primitive+reference type-pun phi must be left untouched");
+        }
+    }
+
     // ========== Simple Method Lifting Tests ==========
 
     @Nested

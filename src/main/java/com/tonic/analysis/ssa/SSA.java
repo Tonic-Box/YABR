@@ -62,6 +62,8 @@ public class SSA {
 
             VariableRenamer renamer = new VariableRenamer(domTree);
             renamer.rename(irMethod);
+
+            BytecodeLifter.refinePhiTypes(irMethod);
         }
 
         return irMethod;

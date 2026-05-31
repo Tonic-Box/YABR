@@ -1,10 +1,8 @@
 package com.tonic.analysis.source.ast.transform;
 
-import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -300,7 +298,7 @@ public class DeadStoreEliminator implements ASTTransform {
     /**
      * Visitor that detects side effects in expressions.
      */
-    private static class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
+    static class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
         static final SideEffectDetector INSTANCE = new SideEffectDetector();
 
         @Override

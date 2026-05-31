@@ -760,6 +760,10 @@ public class ClassDecompiler {
             singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            // Re-simplify: the eliminators above can empty a then-branch (leaving
+            // `if (c) {} else { ... }`), which the first pass could not see. A second pass
+            // inverts/cleans those.
+            astSimplifier.transform(body);
             declarationHoister.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);

@@ -4,6 +4,7 @@ import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
@@ -271,7 +272,21 @@ public class MethodRecoverer {
             initializeRecovery();
         }
 
-        return statementRecoverer.recoverMethod();
+        BlockStmt body = statementRecoverer.recoverMethod();
+
+        // Completeness guarantee: if any observable operation reachable in the bytecode is absent
+        // from the recovered source (a dropped block, by any mechanism), re-recover the whole
+        // method as a faithful dispatch loop on a FRESH context (the first pass mutated
+        // materialization/declaration state). Skipped for methods with exception handlers, where a
+        // flat dispatch loop cannot model the try/catch regions.
+        List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
+        boolean noHandlers = handlers == null || handlers.isEmpty();
+        if (noHandlers && !Boolean.getBoolean("dispatch.off")
+                && statementRecoverer.hasDroppedOperations(body)) {
+            initializeRecovery();
+            body = statementRecoverer.recoverMethodAsDispatch();
+        }
+        return body;
     }
 
     /**

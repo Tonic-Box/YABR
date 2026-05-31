@@ -4214,6 +4214,288 @@ public class StatementRecoverer {
         return new IRRegionStmt(new ArrayList<>(blocks));
     }
 
+    private static final String DISPATCH_LABEL = "$dispatch$";
+
+    /** Invoke names that legitimately have no MethodCallExpr in faithful output because the
+     * recovery folds them into syntax (string concat -> +, boxing, for-each, constructors -> new). */
+    private static final Set<String> FOLDED_CALL_NAMES = new HashSet<>(Arrays.asList(
+        "<init>", "<clinit>", "append", "toString", "valueOf",
+        "intValue", "longValue", "doubleValue", "floatValue", "booleanValue",
+        "byteValue", "shortValue", "charValue",
+        "iterator", "hasNext", "next", "makeConcatWithConstants"));
+
+    /**
+     * Completeness invariant: reports whether any observable operation reachable from the entry in
+     * the bytecode is absent from the recovered source AST. This is the authoritative signal that
+     * the structured recovery dropped an operation — by any mechanism (never-visited block,
+     * irreducible region, or a block recovered then discarded during region assembly). Compares the
+     * set of reachable IR method calls (keyed owner.name, excluding folded-into-syntax calls)
+     * against the calls actually present in {@code body}.
+     */
+    public boolean hasDroppedOperations(BlockStmt body) {
+        IRMethod method = context.getIrMethod();
+        IRBlock entry = method.getEntryBlock();
+        if (entry == null) {
+            return false;
+        }
+        Set<IRBlock> reachable = new HashSet<>();
+        collectReachableBlocks(entry, reachable);
+
+        Set<String> irCalls = new HashSet<>();
+        for (IRBlock block : reachable) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (instr instanceof InvokeInstruction) {
+                    InvokeInstruction inv = (InvokeInstruction) instr;
+                    if (FOLDED_CALL_NAMES.contains(inv.getName())) {
+                        continue;
+                    }
+                    irCalls.add(simpleName(inv.getOwner()) + "." + inv.getName());
+                }
+            }
+        }
+        if (irCalls.isEmpty()) {
+            return false;
+        }
+
+        Set<String> astCalls = new HashSet<>();
+        body.walk(node -> {
+            if (node instanceof MethodCallExpr) {
+                MethodCallExpr call = (MethodCallExpr) node;
+                astCalls.add(simpleName(call.getOwnerClass()) + "." + call.getMethodName());
+            }
+        });
+
+        for (String key : irCalls) {
+            if (!astCalls.contains(key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String simpleName(String owner) {
+        if (owner == null) {
+            return "";
+        }
+        int slash = owner.lastIndexOf('/');
+        int dot = owner.lastIndexOf('.');
+        int cut = Math.max(slash, dot);
+        return cut >= 0 ? owner.substring(cut + 1) : owner;
+    }
+
+    /**
+     * Recovers the whole method as a structured dispatch loop
+     * ({@code int $pc$ = entry; $dispatch$: while(true){ switch($pc$){ case L: ...; $pc$ = T; break; } }}),
+     * which is complete and faithful for any (reducible or irreducible) CFG. Used as the fallback
+     * when {@link #hasDroppedOperations(BlockStmt)} is true; must run on a fresh context.
+     */
+    public BlockStmt recoverMethodAsDispatch() {
+        IRMethod method = context.getIrMethod();
+        IRBlock entry = method.getEntryBlock();
+        if (entry == null) {
+            return new BlockStmt(Collections.emptyList());
+        }
+        List<Statement> statements = new ArrayList<>();
+        detectSelfStorePhis(method);
+        collectForLoopInitInstructions();
+        registerPendingNewInstructions(method);
+        emitPhiDeclarations(method, statements);
+
+        Set<IRBlock> reachable = new HashSet<>();
+        collectReachableBlocks(entry, reachable);
+        List<IRBlock> ordered = new ArrayList<>();
+        for (IRBlock block : method.getBlocksInOrder()) {
+            if (reachable.contains(block)) {
+                ordered.add(block);
+            }
+        }
+        hoistDispatchLocals(ordered, statements);
+        statements.addAll(buildDispatchLoop(ordered, entry));
+        return new BlockStmt(statements);
+    }
+
+    /**
+     * Pre-declares, at method scope, every non-phi local stored within the dispatch block set so a
+     * declaration inside one switch case is neither out of scope nor "might not be initialized" in
+     * a sibling case. Mirrors recoverStoreLocal's naming so subsequent stores become assignments
+     * (the decl-vs-assign decision keys on isDeclared).
+     */
+    private void hoistDispatchLocals(List<IRBlock> blocks, List<Statement> statements) {
+        Set<String> done = new HashSet<>();
+        for (IRBlock block : blocks) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (!(instr instanceof StoreLocalInstruction)) {
+                    continue;
+                }
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                String name = partitionName(store);
+                if (name == null) {
+                    name = getNameForLocalSlotWithType(store.getLocalIndex(),
+                        typeRecoverer.recoverType(store.getValue()));
+                }
+                if (name == null || name.equals("this") || name.startsWith("arg")) {
+                    continue;
+                }
+                if (!done.add(name) || context.getExpressionContext().isDeclared(name)) {
+                    continue;
+                }
+                SourceType type = getLocalSlotUnifiedType(name);
+                if (type == null) {
+                    type = typeRecoverer.recoverType(store.getValue());
+                }
+                if (type == null) {
+                    type = PrimitiveSourceType.INT;
+                }
+                statements.add(new VarDeclStmt(type, name, getDefaultValue(type)));
+                context.getExpressionContext().markDeclaredWithType(name, type);
+            }
+        }
+    }
+
+    private List<Statement> buildDispatchLoop(List<IRBlock> ordered, IRBlock entry) {
+        Map<IRBlock, Integer> pc = new LinkedHashMap<>();
+        int next = 0;
+        for (IRBlock block : ordered) {
+            pc.put(block, next++);
+        }
+        String pcName = "$pc$";
+        while (context.getExpressionContext().isDeclared(pcName)) {
+            pcName = pcName + "$";
+        }
+
+        List<Statement> out = new ArrayList<>();
+        out.add(new VarDeclStmt(PrimitiveSourceType.INT, pcName,
+            LiteralExpr.ofInt(pc.getOrDefault(entry, 0))));
+
+        List<SwitchCase> cases = new ArrayList<>();
+        for (IRBlock block : ordered) {
+            List<Statement> body = new ArrayList<>(recoverSimpleBlock(block));
+            body.addAll(dispatchCaseTail(block, pc, pcName));
+            context.markProcessed(block);
+            cases.add(SwitchCase.of(pc.get(block), body));
+        }
+        List<Statement> def = new ArrayList<>();
+        def.add(new BreakStmt(DISPATCH_LABEL));
+        cases.add(SwitchCase.defaultCase(def));
+
+        SwitchStmt sw = new SwitchStmt(new VarRefExpr(pcName, PrimitiveSourceType.INT), cases);
+        List<Statement> loopBody = new ArrayList<>();
+        loopBody.add(sw);
+        WhileStmt loop = new WhileStmt(LiteralExpr.ofBoolean(true), new BlockStmt(loopBody));
+        out.add(new LabeledStmt(DISPATCH_LABEL, loop));
+        return out;
+    }
+
+    private Statement assignPc(String pcName, Map<IRBlock, Integer> pc, IRBlock target) {
+        int label = pc.getOrDefault(target, -1);
+        return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+            new VarRefExpr(pcName, PrimitiveSourceType.INT),
+            LiteralExpr.ofInt(label), PrimitiveSourceType.INT));
+    }
+
+    /**
+     * Translates a block's terminator into the dispatch-loop case tail: phi copies on the taken
+     * edge, the {@code $pc$ = target} assignment, then a break. Return/throw blocks are already
+     * emitted by recoverSimpleBlock and need no tail.
+     */
+    private List<Statement> dispatchCaseTail(IRBlock block, Map<IRBlock, Integer> pc, String pcName) {
+        List<Statement> tail = new ArrayList<>();
+        IRInstruction term = block.getTerminator();
+
+        if (term instanceof ReturnInstruction) {
+            return tail;
+        }
+        if (term instanceof SimpleInstruction) {
+            SimpleInstruction simple = (SimpleInstruction) term;
+            if (simple.getOp() == SimpleOp.ATHROW) {
+                return tail;
+            }
+            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() != null) {
+                IRBlock t = simple.getTarget();
+                tail.addAll(lowerPhisOnEdge(block, t));
+                tail.add(assignPc(pcName, pc, t));
+                tail.add(new BreakStmt());
+                return tail;
+            }
+        }
+        if (term instanceof BranchInstruction) {
+            BranchInstruction branch = (BranchInstruction) term;
+            IRBlock t = branch.getTrueTarget();
+            IRBlock f = branch.getFalseTarget();
+            Expression cond = recoverCondition(block, false);
+            List<Statement> thenS = new ArrayList<>(lowerPhisOnEdge(block, t));
+            thenS.add(assignPc(pcName, pc, t));
+            List<Statement> elseS = new ArrayList<>(lowerPhisOnEdge(block, f));
+            elseS.add(assignPc(pcName, pc, f));
+            tail.add(new IfStmt(cond, new BlockStmt(thenS), new BlockStmt(elseS)));
+            tail.add(new BreakStmt());
+            return tail;
+        }
+        if (term instanceof SwitchInstruction) {
+            SwitchInstruction switchInstr = (SwitchInstruction) term;
+            Expression key = exprRecoverer.recoverOperand(switchInstr.getKey());
+            List<SwitchCase> inner = new ArrayList<>();
+            for (Map.Entry<Integer, IRBlock> e : switchInstr.getCases().entrySet()) {
+                List<Statement> cs = new ArrayList<>(lowerPhisOnEdge(block, e.getValue()));
+                cs.add(assignPc(pcName, pc, e.getValue()));
+                cs.add(new BreakStmt());
+                inner.add(SwitchCase.of(e.getKey(), cs));
+            }
+            List<Statement> ds = new ArrayList<>(lowerPhisOnEdge(block, switchInstr.getDefaultTarget()));
+            ds.add(assignPc(pcName, pc, switchInstr.getDefaultTarget()));
+            ds.add(new BreakStmt());
+            inner.add(SwitchCase.defaultCase(ds));
+            tail.add(new SwitchStmt(key, inner));
+            tail.add(new BreakStmt());
+            return tail;
+        }
+
+        Set<IRBlock> succs = block.getSuccessors();
+        if (succs.size() == 1) {
+            IRBlock s = succs.iterator().next();
+            tail.addAll(lowerPhisOnEdge(block, s));
+            tail.add(assignPc(pcName, pc, s));
+            tail.add(new BreakStmt());
+        } else {
+            tail.add(new BreakStmt(DISPATCH_LABEL));
+        }
+        return tail;
+    }
+
+    /**
+     * SSA destruction on a CFG edge: for each phi at {@code succ}, assign the phi variable the
+     * value coming from {@code pred}, placed before the {@code $pc$} update so it runs when the
+     * edge is taken. Reuses the phi result's already-bound name and method-scope declaration.
+     */
+    private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ) {
+        List<Statement> copies = new ArrayList<>();
+        for (PhiInstruction phi : succ.getPhiInstructions()) {
+            SSAValue result = phi.getResult();
+            if (result == null) {
+                continue;
+            }
+            String target = context.getExpressionContext().getVariableName(result);
+            if (target == null || target.equals("this") || target.startsWith("arg")) {
+                continue;
+            }
+            Value incoming = phi.getIncoming(pred);
+            if (incoming == null) {
+                continue;
+            }
+            SourceType type = getLocalSlotUnifiedType(target);
+            if (type == null) {
+                type = typeRecoverer.recoverType(result);
+            }
+            Expression rhs = exprRecoverer.recoverOperand(incoming, type);
+            if (rhs instanceof VarRefExpr && target.equals(((VarRefExpr) rhs).getName())) {
+                continue;
+            }
+            copies.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                new VarRefExpr(target, type), rhs, type)));
+        }
+        return copies;
+    }
+
     private Expression recoverCondition(IRBlock block, boolean negate) {
         IRInstruction terminator = block.getTerminator();
         if (terminator instanceof BranchInstruction) {
