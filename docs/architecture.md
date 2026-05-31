@@ -43,6 +43,7 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.ssa.lift` | Bytecode to SSA lifting |
 | `com.tonic.analysis.ssa.lower` | SSA to bytecode lowering |
 | `com.tonic.analysis.ssa.llvm` | SSA to LLVM IR lowering (leaf backend) |
+| `com.tonic.analysis.ssa.llvm.lift` | LLVM IR to SSA lifting (optimizer round-trip) |
 | `com.tonic.analysis.ssa.transform` | IR optimizations |
 | `com.tonic.analysis.ssa.analysis` | Analysis passes (dominators, liveness) |
 | `com.tonic.analysis.source.ast` | Source-level AST node definitions |
@@ -314,6 +315,7 @@ The debugging system enables:
 - [Visitors](visitors.md) - Traversal and transformation patterns
 - [SSA Guide](ssa-guide.md) - SSA IR system in depth
 - [LLVM Lowering](llvm-lowering.md) - Lower SSA IR to textual LLVM IR
+- [LLVM Lifting](llvm-lifting.md) - Lift LLVM IR back to SSA (optimizer round-trip)
 - [AST Guide](ast-guide.md) - Source-level AST recovery, mutation, and emission
 - [AST Editor](ast-editor.md) - ExprEditor-style AST transformations
 - [Analysis APIs](analysis-apis.md) - Call graph, xrefs, data flow, simulation, execution, and more

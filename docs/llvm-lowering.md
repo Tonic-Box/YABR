@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [SSA Transforms](ssa-transforms.md) | [Migration Guide](SSA_IR_MIGRATION.md)
+[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [SSA Transforms](ssa-transforms.md) | [LLVM Lifting ->](llvm-lifting.md) | [Migration Guide](SSA_IR_MIGRATION.md)
 
 # LLVM IR Lowering
 
@@ -249,10 +249,11 @@ Adding object/heap/dispatch support is localized to the ~12 `UnsupportedLowering
 
 ## Next Steps
 
+- [LLVM Lifting](llvm-lifting.md) - lift LLVM IR back to SSA for the optimizer round-trip
 - [SSA Guide](ssa-guide.md) - the IR this backend consumes
 - [SSA Transforms](ssa-transforms.md) - optimizations to run before lowering
 - [Architecture](architecture.md) - where the LLVM backend fits in the system
 
 ---
 
-[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [SSA Transforms](ssa-transforms.md) | [Migration Guide](SSA_IR_MIGRATION.md)
+[<- Back to README](../README.md) | [SSA Guide](ssa-guide.md) | [SSA Transforms](ssa-transforms.md) | [LLVM Lifting ->](llvm-lifting.md) | [Migration Guide](SSA_IR_MIGRATION.md)

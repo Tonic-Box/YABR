@@ -50,6 +50,7 @@ byte[] bytes = newClass.write();
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
 | [LLVM Lowering](docs/llvm-lowering.md) | Lower SSA IR to textual LLVM IR (`.ll`) |
+| [LLVM Lifting](docs/llvm-lifting.md) | Lift LLVM IR back to SSA (optimizer round-trip) |
 | [SSA IR Migration](docs/SSA_IR_MIGRATION.md) | API changes from SSA IR redesign |
 | [Analysis APIs](docs/analysis-apis.md) | High-level code analysis and semantic queries |
 | [PDG API](docs/pdg-api.md) | Program Dependence Graph with slicing |
@@ -69,6 +70,7 @@ Runnable examples are in [`src/main/java/com/tonic/demo/`](src/main/java/com/ton
 - `TestClassCreation.java` - Creating classes programmatically
 - `TestSSADemo.java` - Complete SSA transformation
 - `LlvmLoweringDemo.java` - Lower SSA IR to LLVM IR
+- `LlvmRoundTripDemo.java` - LLVM IR round-trip (lower → lift → re-lower, or via opt -O2)
 - `ASTMutationDemo.java` - AST recovery, mutation, and recompilation
 - `SourceASTDemo.java` - AST node construction and source emission
 - `ast/Decompile.java` - Command-line class decompiler
@@ -121,10 +123,17 @@ SSA ssa = new SSA(constPool)
 ssa.transform(method);  // Lift, optimize, and lower
 ```
 
-The IR can also be lowered to **textual LLVM IR** (`.ll`) instead of bytecode — the first piece of a Java -> native / WebAssembly pipeline. See [LLVM Lowering](docs/llvm-lowering.md).
+The IR can also be lowered to **textual LLVM IR** (`.ll`) and lifted back, enabling an LLVM optimizer round-trip. See [LLVM Lowering](docs/llvm-lowering.md) and [LLVM Lifting](docs/llvm-lifting.md).
 
 ```java
+// Lower to LLVM IR
 String ll = new LlvmLowering().lower(ssa.lift(method));
+
+// Optionally run: opt -O2 -S on ll
+
+// Lift back to SSA and lower to bytecode
+IRMethod lifted = new LlvmLifter().lift(ll);
+ssa.lower(lifted, method);
 ```
 
 The AST path enables source-level transformations:
