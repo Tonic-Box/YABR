@@ -42,6 +42,7 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.ssa.cfg` | Control flow graph (IRMethod, IRBlock) |
 | `com.tonic.analysis.ssa.lift` | Bytecode to SSA lifting |
 | `com.tonic.analysis.ssa.lower` | SSA to bytecode lowering |
+| `com.tonic.analysis.ssa.llvm` | SSA to LLVM IR lowering (leaf backend) |
 | `com.tonic.analysis.ssa.transform` | IR optimizations |
 | `com.tonic.analysis.ssa.analysis` | Analysis passes (dominators, liveness) |
 | `com.tonic.analysis.source.ast` | Source-level AST node definitions |
@@ -118,6 +119,14 @@ The SSA pipeline:
 **IRBlock** - Basic block with phi instructions and regular instructions
 
 **IRInstruction** - 29 instruction types representing all JVM operations
+
+**LLVM Backend** - An alternative leaf backend lowers SSA IR to textual LLVM IR (`.ll`) instead of bytecode, covering the computational subset (arithmetic, conversions, control flow, phis, static calls). It is the first building block of a Java -> native / WebAssembly pipeline:
+
+```java
+String ll = new LlvmLowering().lower(ssa.lift(method));
+```
+
+See [LLVM Lowering](llvm-lowering.md) for the supported subset, semantics, and extension seams.
 
 ## Data Flow
 
@@ -304,6 +313,7 @@ The debugging system enables:
 - [Bytecode API](bytecode-api.md) - Bytecode and CodeWriter usage
 - [Visitors](visitors.md) - Traversal and transformation patterns
 - [SSA Guide](ssa-guide.md) - SSA IR system in depth
+- [LLVM Lowering](llvm-lowering.md) - Lower SSA IR to textual LLVM IR
 - [AST Guide](ast-guide.md) - Source-level AST recovery, mutation, and emission
 - [AST Editor](ast-editor.md) - ExprEditor-style AST transformations
 - [Analysis APIs](analysis-apis.md) - Call graph, xrefs, data flow, simulation, execution, and more

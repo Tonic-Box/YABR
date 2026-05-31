@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [Migration Guide](SSA_IR_MIGRATION.md)
+[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [LLVM Lowering](llvm-lowering.md) | [Migration Guide](SSA_IR_MIGRATION.md)
 
 # SSA Guide
 
@@ -432,9 +432,10 @@ analyzer.printStats();
 ## Next Steps
 
 - [SSA Transforms](ssa-transforms.md) - Optimization passes
+- [LLVM Lowering](llvm-lowering.md) - Lower SSA IR to textual LLVM IR
 - [Analysis APIs](analysis-apis.md) - Call graph, dependency analysis, type inference, pattern search
 - [SSA IR Migration Guide](SSA_IR_MIGRATION.md) - API changes from the SSA IR redesign
 
 ---
 
-[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [Migration Guide](SSA_IR_MIGRATION.md)
+[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [LLVM Lowering](llvm-lowering.md) | [Migration Guide](SSA_IR_MIGRATION.md)

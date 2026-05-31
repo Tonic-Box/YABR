@@ -81,6 +81,17 @@ public class SSA {
     }
 
     /**
+     * Lowers an SSA-form IR method to textual LLVM IR (computational subset). Convenience delegate
+     * to {@link com.tonic.analysis.ssa.llvm.LlvmLowering}.
+     *
+     * @param irMethod the IR method to lower
+     * @return the LLVM IR module text
+     */
+    public String toLlvm(IRMethod irMethod) {
+        return new com.tonic.analysis.ssa.llvm.LlvmLowering().lower(irMethod);
+    }
+
+    /**
      * Adds an optimization transform to be applied.
      *
      * @param transform the transform to add
