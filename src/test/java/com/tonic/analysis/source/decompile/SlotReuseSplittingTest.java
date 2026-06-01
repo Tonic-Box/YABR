@@ -91,6 +91,61 @@ class SlotReuseSplittingTest {
         assertRecompiles("ManyReuse", out);
     }
 
+    @Test
+    void tryCatchFinallyWithSideEffectCoalescesAndRecompiles() throws Exception {
+        // javac inlines the finally body (num += 2) onto every exit path (normal try completion,
+        // catch completion, and a synthetic catch-all rethrow). The recovery must coalesce those
+        // copies into one finally clause and keep `num` as a single variable. Previously the slot
+        // fragmented across the exception handler blocks (which have no normal predecessors), which
+        // folded the finally into the try, emitted an empty finally, and duplicated the update.
+        String src =
+            "public class FinallyFx {\n" +
+            "  static int m() {\n" +
+            "    int num = 0;\n" +
+            "    try { num = Integer.parseInt(\"123\"); }\n" +
+            "    catch (Exception ex) { ex.printStackTrace(); }\n" +
+            "    finally { num += 2; }\n" +
+            "    return num;\n" +
+            "  }\n" +
+            "}\n";
+        String out = roundTrip("FinallyFx", src);
+        assertRecompiles("FinallyFx", out);
+        assertFalse(out.contains("$pc$") || out.contains("$dispatch$"),
+            "a flat try/catch/finally must not become a dispatch loop:\n" + out);
+        assertFalse(out.matches("(?s).*finally\\s*\\{\\s*\\}.*"),
+            "the finally clause must not be empty (the update was lost):\n" + out);
+        int plusTwo = countOccurrences(out, "+ 2");
+        assertEquals(1, plusTwo, "the finally update must appear exactly once, was " + plusTwo + ":\n" + out);
+    }
+
+    @Test
+    void readModifyWriteStaysOneVariableAndRecompiles() throws Exception {
+        // A read-modify-write chain (n = n + 2; n += 3) is one source variable. The slot partition
+        // must not fragment it into separate def-use webs (which would emit out-of-scope references
+        // like `n_1 = n + 2`).
+        String src =
+            "public class Rmw {\n" +
+            "  static int m(int x) {\n" +
+            "    int n = x;\n" +
+            "    n = n + 2;\n" +
+            "    n += 3;\n" +
+            "    return n;\n" +
+            "  }\n" +
+            "}\n";
+        String out = roundTrip("Rmw", src);
+        assertRecompiles("Rmw", out);
+    }
+
+    private int countOccurrences(String text, String pattern) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(pattern, index)) != -1) {
+            count++;
+            index += pattern.length();
+        }
+        return count;
+    }
+
     private String roundTrip(String className, String src) throws Exception {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeCompiler(compiler);

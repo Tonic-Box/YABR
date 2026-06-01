@@ -1,11 +1,15 @@
 package com.tonic.analysis.source.recovery;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
+import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
+import com.tonic.analysis.ssa.ir.UnaryOpInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 
 import java.util.ArrayList;
@@ -161,6 +165,32 @@ public class SlotVariablePartition {
             }
         }
 
+        // Exception edges are not normal CFG edges, so handler blocks have no predecessors and would
+        // otherwise receive no reaching definitions — fragmenting a slot that is really one variable
+        // shared between the try body and the handler/finally (e.g. `num` in a try/catch/finally).
+        // Build, per handler block, the set of try-region blocks it protects; an exception can be
+        // thrown at any point in that region, so the handler's reaching-in includes every definition
+        // reaching anywhere in the region (its blocks' IN plus their own stores).
+        Map<IRBlock, Set<IRBlock>> protectedByHandler = new HashMap<>();
+        List<ExceptionHandler> handlers = method.getExceptionHandlers();
+        if (handlers != null) {
+            for (ExceptionHandler h : handlers) {
+                IRBlock hb = h.getHandlerBlock();
+                if (hb == null || h.getTryStart() == null) {
+                    continue;
+                }
+                int startOff = h.getTryStart().getBytecodeOffset();
+                int endOff = h.getTryEnd() != null ? h.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
+                Set<IRBlock> region = protectedByHandler.computeIfAbsent(hb, k -> new HashSet<>());
+                for (IRBlock b : blocks) {
+                    int off = b.getBytecodeOffset();
+                    if (off >= startOff && off < endOff) {
+                        region.add(b);
+                    }
+                }
+            }
+        }
+
         boolean changed = true;
         while (changed) {
             changed = false;
@@ -175,6 +205,18 @@ public class SlotVariablePartition {
                     Map<Integer, Set<Node>> predOut = blockOut.get(pred);
                     if (predOut != null) {
                         mergeInto(in, predOut);
+                    }
+                }
+                Set<IRBlock> protectedRegion = protectedByHandler.get(block);
+                if (protectedRegion != null) {
+                    for (IRBlock b : protectedRegion) {
+                        Map<Integer, Set<Node>> bIn = blockIn.get(b);
+                        if (bIn != null) {
+                            mergeInto(in, bIn);
+                        }
+                        for (SlotDef d : blockDefs.get(b)) {
+                            in.computeIfAbsent(d.slot, k -> new HashSet<>()).add(d.node);
+                        }
                     }
                 }
                 Map<Integer, Set<Node>> out = transfer(in, blockDefs.get(block));
@@ -220,8 +262,22 @@ public class SlotVariablePartition {
                         loadReaching.put((LoadLocalInstruction) instr, rep);
                     }
                 } else if (instr instanceof StoreLocalInstruction) {
-                    int slot = ((StoreLocalInstruction) instr).getLocalIndex();
+                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                    int slot = store.getLocalIndex();
                     Node node = defNode.get(instr);
+                    // Read-modify-write: when the stored value reads the same slot (e.g. `x = x + 2`,
+                    // `x++`), this store continues the same source variable, not a new one. Union it
+                    // with the definitions reaching the read so the def-use webs (the value being read
+                    // vs. the value being written) collapse into one variable instead of fragmenting.
+                    Set<Node> priorDefs = reaching.get(slot);
+                    if (priorDefs != null && !priorDefs.isEmpty()
+                            && storeValueReadsSlot(store, slot)) {
+                        int rep = minId(priorDefs);
+                        union(rep, node.id);
+                        for (Node d : priorDefs) {
+                            union(rep, d.id);
+                        }
+                    }
                     Set<Node> set = new HashSet<>();
                     set.add(node);
                     reaching.put(slot, set);
@@ -230,6 +286,40 @@ public class SlotVariablePartition {
         }
 
         assignNames();
+    }
+
+    /** True if the value stored by {@code store} transitively reads a load of the same slot (read-modify-write). */
+    private boolean storeValueReadsSlot(StoreLocalInstruction store, int slot) {
+        return valueReadsSlot(store.getValue(), slot, new HashSet<>());
+    }
+
+    private boolean valueReadsSlot(com.tonic.analysis.ssa.value.Value v, int slot, Set<SSAValue> seen) {
+        if (!(v instanceof SSAValue)) {
+            return false;
+        }
+        SSAValue ssa = (SSAValue) v;
+        if (!seen.add(ssa)) {
+            return false;
+        }
+        IRInstruction def = ssa.getDefinition();
+        if (def == null) {
+            return false;
+        }
+        if (def instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) def).getLocalIndex() == slot;
+        }
+        // Trace through pure value-producing instructions (arithmetic, conversions, copies); stop at
+        // stores/calls/field/array ops, which would make this a genuinely new value rather than an
+        // in-place update of the slot.
+        if (def instanceof BinaryOpInstruction || def instanceof UnaryOpInstruction
+                || def instanceof CopyInstruction) {
+            for (com.tonic.analysis.ssa.value.Value operand : def.getOperands()) {
+                if (valueReadsSlot(operand, slot, seen)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static int minId(Set<Node> defs) {
