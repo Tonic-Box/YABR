@@ -284,6 +284,14 @@ final class SsaToLlvmLowerer extends AbstractIRVisitor<Void> {
                 + strings.intern(((ClassConstant) c).getClassName()) + ")");
             return null;
         }
+        if (c instanceof DynamicConstant) {
+            DynamicConstant dc = (DynamicConstant) c;
+            LlvmType retTy = IrTypeMapper.mapDescriptor(dc.getDescriptor());
+            String sym = SymbolMangler.mangleCondy(dc.getName(), dc.getDescriptor(), dc.getBootstrapMethodIndex());
+            declares.note(sym, retTy, java.util.Collections.emptyList());
+            fb.emit(reg(constant) + " = call " + retTy.render() + " " + sym + "()");
+            return null;
+        }
         throw UnsupportedLowering.reject("constant " + c.getClass().getSimpleName());
     }
 

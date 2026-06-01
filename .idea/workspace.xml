@@ -4,22 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixes to statement recovery p2">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- params need to be created before body values">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/Bytecode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/Bytecode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeState.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/AppendFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/AppendFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/ChopFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/ChopFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/FullFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/FullFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameFrameExtended.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameFrameExtended.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrameExtended.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrameExtended.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/StackMapFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/stack/StackMapFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/table/ExceptionTableEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/table/ExceptionTableEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SymbolMangler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SymbolMangler.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,9 +61,9 @@
     &quot;git-widget-placeholder&quot;: &quot;main&quot;
   }
 }</component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [compileJava]">
-    <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
+  <component name="RunManager" selected="Application.LlvmRoundTripDemo">
+    <configuration name="LlvmRoundTripDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.LlvmRoundTripDemo" />
       <module name="YABR.main" />
       <extension name="coverage">
         <pattern>
@@ -86,6 +74,28 @@
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
+    </configuration>
+    <configuration name="YABR-fixed [build]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="build" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
     </configuration>
     <configuration name="YABR-fixed [compileJava]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
@@ -154,17 +164,19 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Application.DebugDoAction" />
+      <item itemvalue="Application.LlvmRoundTripDemo" />
+      <item itemvalue="Gradle.YABR-fixed [build]" />
       <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
       <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
       <item itemvalue="Gradle.YABR-fixed [compileJava]" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.LlvmRoundTripDemo" />
+        <item itemvalue="Gradle.YABR-fixed [build]" />
         <item itemvalue="Gradle.YABR-fixed [compileJava]" />
         <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
         <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
-        <item itemvalue="Application.DebugDoAction" />
       </list>
     </recent_temporary>
   </component>
@@ -265,7 +277,31 @@
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="- Expand SSA-&gt;LLVM backend to full Java construct set via runtime ABI">
+      <option name="closed" value="true" />
+      <created>1780242900981</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1780242900981</updated>
+    </task>
+    <task id="LOCAL-00013" summary="-  Add LLVM IR -&gt; SSA lifter for round-trip optimizer integration">
+      <option name="closed" value="true" />
+      <created>1780248993490</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1780248993490</updated>
+    </task>
+    <task id="LOCAL-00014" summary="- params need to be created before body values">
+      <option name="closed" value="true" />
+      <created>1780250285130</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1780250285130</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -277,6 +313,9 @@
     <MESSAGE value="- Fixed issues with scope, guard recovery, and local inlining" />
     <MESSAGE value="- Fixes to statement recovery" />
     <MESSAGE value="- Fixes to statement recovery p2" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixes to statement recovery p2" />
+    <MESSAGE value="- Expand SSA-&gt;LLVM backend to full Java construct set via runtime ABI" />
+    <MESSAGE value="-  Add LLVM IR -&gt; SSA lifter for round-trip optimizer integration" />
+    <MESSAGE value="- params need to be created before body values" />
+    <option name="LAST_COMMIT_MESSAGE" value="- params need to be created before body values" />
   </component>
 </project>

@@ -34,6 +34,11 @@ final class SymbolMangler {
             + " #" + bootstrapIndex);
     }
 
+    /** ConstantDynamic bootstrap symbol, e.g. {@code @"jvm.condy name desc #bsm"}. */
+    static String mangleCondy(String name, String descriptor, int bootstrapIndex) {
+        return quote("jvm.condy " + (name == null ? "" : name) + " " + descriptor + " #" + bootstrapIndex);
+    }
+
     private static String quote(String raw) {
         return "@\"" + raw.replace("\\", "\\5C").replace("\"", "\\22") + "\"";
     }
