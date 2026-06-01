@@ -2293,6 +2293,12 @@ public class StatementRecoverer {
         java.util.List<IRInstruction> uses = value.getUses();
         for (IRInstruction use : uses) {
             if (use instanceof PhiInstruction) {
+                // A degenerate phi (all incoming values identical) carries no merge information and
+                // must not drive an assignment statement: doing so duplicates the store that already
+                // materializes the value (e.g. spurious phi(B:v, C:v) on a local written in one branch).
+                if (isDegeneratePhi((PhiInstruction) use)) {
+                    continue;
+                }
                 return (PhiInstruction) use;
             }
             if (use instanceof CopyInstruction) {
@@ -2306,6 +2312,25 @@ public class StatementRecoverer {
             }
         }
         return null;
+    }
+
+    /**
+     * A phi is degenerate when all its incoming values are the same {@link Value} (or it has a
+     * single incoming). Such a phi is redundant — it is not a genuine control-flow merge of
+     * distinct definitions — and must not be treated as a variable that needs its own assignment.
+     */
+    private static boolean isDegeneratePhi(PhiInstruction phi) {
+        Value common = null;
+        boolean first = true;
+        for (Value incoming : phi.getIncomingValues().values()) {
+            if (first) {
+                common = incoming;
+                first = false;
+            } else if (incoming != common) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private PhiInstruction getPhiThroughStoreChain(SSAValue value) {
@@ -4222,7 +4247,9 @@ public class StatementRecoverer {
         "<init>", "<clinit>", "append", "toString", "valueOf",
         "intValue", "longValue", "doubleValue", "floatValue", "booleanValue",
         "byteValue", "shortValue", "charValue",
-        "iterator", "hasNext", "next", "makeConcatWithConstants"));
+        "iterator", "hasNext", "next", "makeConcatWithConstants",
+        // ordinal() is folded into switch(enumVar) syntax by the $SwitchMap$ enum-switch idiom
+        "ordinal"));
 
     /**
      * Completeness invariant: reports whether any observable operation reachable from the entry in
@@ -4247,6 +4274,9 @@ public class StatementRecoverer {
                 if (instr instanceof InvokeInstruction) {
                     InvokeInstruction inv = (InvokeInstruction) instr;
                     if (FOLDED_CALL_NAMES.contains(inv.getName())) {
+                        continue;
+                    }
+                    if (inv.isDynamic()) {
                         continue;
                     }
                     irCalls.add(simpleName(inv.getOwner()) + "." + inv.getName());

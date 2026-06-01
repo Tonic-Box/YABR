@@ -1311,6 +1311,20 @@ public class ExpressionRecoverer {
 
                     MethodRecoverer recoverer = new MethodRecoverer(lambdaIR, lambdaMethod);
                     recoverer.analyze();
+
+                    // Pre-compute captured names and reserve them so the slot partition never
+                    // assigns the same name to an inner local, preventing "local1 = local1.foo()"
+                    // collisions where both the captured param and the result share a name.
+                    Set<String> preCapturedNames = new HashSet<>();
+                    for (Expression capturedExpr : capturedMapping.values()) {
+                        if (capturedExpr instanceof VarRefExpr) {
+                            preCapturedNames.add(((VarRefExpr) capturedExpr).getName());
+                        }
+                    }
+                    if (!preCapturedNames.isEmpty()) {
+                        recoverer.reserveNames(preCapturedNames);
+                    }
+
                     recoverer.initializeRecovery();
 
                     for (Map.Entry<Integer, Expression> entry : capturedMapping.entrySet()) {

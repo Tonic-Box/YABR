@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- params need to be created before body values">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Add DynamicConstant support to LLVM lowering">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SymbolMangler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/llvm/SymbolMangler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,7 +62,7 @@
     &quot;git-widget-placeholder&quot;: &quot;main&quot;
   }
 }</component>
-  <component name="RunManager" selected="Application.LlvmRoundTripDemo">
+  <component name="RunManager" selected="Gradle.YABR-fixed [build]">
     <configuration name="LlvmRoundTripDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.LlvmRoundTripDemo" />
       <module name="YABR.main" />
@@ -172,8 +173,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.LlvmRoundTripDemo" />
         <item itemvalue="Gradle.YABR-fixed [build]" />
+        <item itemvalue="Application.LlvmRoundTripDemo" />
         <item itemvalue="Gradle.YABR-fixed [compileJava]" />
         <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
         <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
@@ -301,7 +302,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780250285130</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="- Add DynamicConstant support to LLVM lowering">
+      <option name="closed" value="true" />
+      <created>1780284154718</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1780284154718</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -316,6 +325,7 @@
     <MESSAGE value="- Expand SSA-&gt;LLVM backend to full Java construct set via runtime ABI" />
     <MESSAGE value="-  Add LLVM IR -&gt; SSA lifter for round-trip optimizer integration" />
     <MESSAGE value="- params need to be created before body values" />
-    <option name="LAST_COMMIT_MESSAGE" value="- params need to be created before body values" />
+    <MESSAGE value="- Add DynamicConstant support to LLVM lowering" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Add DynamicConstant support to LLVM lowering" />
   </component>
 </project>

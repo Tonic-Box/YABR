@@ -5,6 +5,7 @@ import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
+import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
@@ -22,6 +23,8 @@ public class MethodRecoverer {
     private final IRMethod irMethod;
     private final MethodEntry sourceMethod;
     private final NameRecoveryStrategy nameStrategy;
+    /** Names reserved by the caller (e.g. captured outer variables); {@code baseNameForSlot} skips these. */
+    private final java.util.Set<String> reservedNames = new java.util.HashSet<>();
 
     private DominatorTree dominatorTree;
     private LoopAnalysis loopAnalysis;
@@ -43,6 +46,14 @@ public class MethodRecoverer {
         this.irMethod = irMethod;
         this.sourceMethod = sourceMethod;
         this.nameStrategy = nameStrategy;
+    }
+
+    /**
+     * Reserves {@code names} so that {@link #baseNameForSlot} never returns them. Must be called
+     * before {@link #initializeRecovery()}.
+     */
+    public void reserveNames(java.util.Set<String> names) {
+        reservedNames.addAll(names);
     }
 
     /**
@@ -128,7 +139,39 @@ public class MethodRecoverer {
         if (slot < paramSlots) {
             return "arg" + getParamIndexForSlot(slot);
         }
-        return "local" + slot;
+        String candidate = "local" + slot;
+        if (!reservedNames.isEmpty() && reservedNames.contains(candidate)) {
+            // The natural name collides with a reserved (captured) name. Bump to a suffix beyond the
+            // whole local-slot space so the new name also can't collide with any other slot's natural
+            // "localN" name.
+            int n = Math.max(slot + 1, localSlotCeiling());
+            while (reservedNames.contains("local" + n)) {
+                n++;
+            }
+            return "local" + n;
+        }
+        return candidate;
+    }
+
+    /** One past the highest local slot index referenced in the method (cached). */
+    private int slotCeiling = -1;
+
+    private int localSlotCeiling() {
+        if (slotCeiling >= 0) {
+            return slotCeiling;
+        }
+        int max = irMethod.getMaxLocals();
+        for (IRBlock block : irMethod.getBlocks()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (instr instanceof LoadLocalInstruction) {
+                    max = Math.max(max, ((LoadLocalInstruction) instr).getLocalIndex() + 1);
+                } else if (instr instanceof StoreLocalInstruction) {
+                    max = Math.max(max, ((StoreLocalInstruction) instr).getLocalIndex() + 1);
+                }
+            }
+        }
+        slotCeiling = max;
+        return max;
     }
 
     /**
