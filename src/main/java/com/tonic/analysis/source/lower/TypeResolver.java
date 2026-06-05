@@ -57,6 +57,72 @@ public class TypeResolver {
         return null;
     }
 
+    /**
+     * Resolves a field's declared type, returning null when the field cannot be found
+     * instead of throwing. Searches the current class declaration first, then the field
+     * tables of the owner class and its superclasses via the ClassPool.
+     */
+    public SourceType findFieldType(String ownerClass, String fieldName) {
+        if (currentClassDecl != null && isCurrentClass(ownerClass)) {
+            for (FieldDecl field : currentClassDecl.getFields()) {
+                if (field.getName().equals(fieldName)) {
+                    return field.getType();
+                }
+            }
+        }
+
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return null;
+        }
+
+        for (FieldEntry field : cf.getFields()) {
+            if (field.getName().equals(fieldName)) {
+                return parseDescriptor(field.getDesc());
+            }
+        }
+
+        String superClass = cf.getSuperClassName();
+        if (superClass != null && !superClass.equals("java/lang/Object") && !superClass.startsWith("Invalid")) {
+            return findFieldType(superClass, fieldName);
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns whether a field is declared static, searching the current class declaration
+     * first, then the owner class and its superclasses. Returns false when the field
+     * cannot be located.
+     */
+    public boolean isStaticField(String ownerClass, String fieldName) {
+        if (currentClassDecl != null && isCurrentClass(ownerClass)) {
+            for (FieldDecl field : currentClassDecl.getFields()) {
+                if (field.getName().equals(fieldName)) {
+                    return field.isStatic();
+                }
+            }
+        }
+
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return false;
+        }
+
+        for (FieldEntry field : cf.getFields()) {
+            if (field.getName().equals(fieldName)) {
+                return (field.getAccess() & 0x0008) != 0;
+            }
+        }
+
+        String superClass = cf.getSuperClassName();
+        if (superClass != null && !superClass.equals("java/lang/Object") && !superClass.startsWith("Invalid")) {
+            return isStaticField(superClass, fieldName);
+        }
+
+        return false;
+    }
+
     private boolean isCurrentClass(String ownerClass) {
         if (ownerClass.equals(currentClass)) {
             return true;
@@ -78,11 +144,7 @@ public class TypeResolver {
 
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
-            SourceType jdkType = resolveJdkMethodReturnType(ownerClass, methodName, argTypes);
-            if (jdkType != null) {
-                return jdkType;
-            }
-            return null;
+            return resolveJdkMethodReturnType(ownerClass, methodName, argTypes);
         }
 
         String expectedParamDesc = buildParamDescriptor(argTypes);

@@ -92,6 +92,53 @@ public class SourceToBytecodeIntegrationTest {
         return TestUtils.loadAndVerify(cf);
     }
 
+    /**
+     * Parses a full class declaration, materializes its fields and methods onto a fresh
+     * ClassFile, lowers every method body (with the parsed class declaration available for
+     * field resolution) and loads the result. Used to exercise unqualified own-class field
+     * references, which the decompiler emits as bare names.
+     */
+    private Class<?> compileClassWithFields(String source, String ownerClass) throws Exception {
+        CompilationUnit cu = parser.parse(source);
+        ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+
+        int classAccess = new AccessBuilder().setPublic().build();
+        ClassFile cf = pool.createNewClass(ownerClass, classAccess);
+
+        for (FieldDecl field : cls.getFields()) {
+            int fieldAccess = field.isStatic()
+                    ? new AccessBuilder().setPublic().setStatic().build()
+                    : new AccessBuilder().setPublic().build();
+            cf.createNewField(fieldAccess, field.getName(),
+                    field.getType().toIRType().getDescriptor(), new ArrayList<>());
+        }
+
+        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
+        lowerer.setCurrentClassDecl(cls);
+        lowerer.setImports(cu.getImports());
+        SSA ssa = new SSA(cf.getConstPool());
+
+        for (MethodDecl method : cls.getMethods()) {
+            if (method.getBody() == null) {
+                continue;
+            }
+            List<SourceType> params = new ArrayList<>();
+            for (ParameterDecl p : method.getParameters()) {
+                params.add(p.getType());
+            }
+            int methodAccess = method.isStatic()
+                    ? new AccessBuilder().setPublic().setStatic().build()
+                    : new AccessBuilder().setPublic().build();
+            cf.createNewMethodWithDescriptor(methodAccess, method.getName(),
+                    buildDescriptor(params, method.getReturnType()));
+            MethodEntry entry = findMethod(cf, method.getName());
+            IRMethod ir = lowerer.lower(method, ownerClass);
+            ssa.lower(ir, entry);
+        }
+
+        return TestUtils.loadAndVerify(cf);
+    }
+
     private String buildDescriptor(List<SourceType> params, SourceType returnType) {
         StringBuilder sb = new StringBuilder("(");
         for (SourceType p : params) {
@@ -1244,6 +1291,42 @@ public class SourceToBytecodeIntegrationTest {
 
             Method m = clazz.getMethod("test", long.class, long.class);
             assertEquals(2L, (long) m.invoke(null, 6000000000L, 3000000000L));
+        }
+    }
+
+    @Nested
+    class FieldAccessTests {
+
+        @Test
+        void staticFieldReadWrite() throws Exception {
+            String source = "class T { static int counter; "
+                    + "static int test() { counter = 41; counter = counter + 1; return counter; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(42, (int) clazz.getMethod("test").invoke(null));
+        }
+
+        @Test
+        void staticFieldCompoundAssignment() throws Exception {
+            String source = "class T { static int counter; "
+                    + "static int test() { counter = 10; counter += 5; return counter; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(15, (int) clazz.getMethod("test").invoke(null));
+        }
+
+        @Test
+        void staticFieldIncrement() throws Exception {
+            String source = "class T { static int counter; "
+                    + "static int test() { counter = 5; counter++; return counter; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(6, (int) clazz.getMethod("test").invoke(null));
+        }
+
+        @Test
+        void staticArrayFieldAccess() throws Exception {
+            String source = "class T { static int[] arr; "
+                    + "static int test() { arr = new int[3]; arr[1] = 99; return arr[1]; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(99, (int) clazz.getMethod("test").invoke(null));
         }
     }
 }

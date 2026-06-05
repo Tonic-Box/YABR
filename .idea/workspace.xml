@@ -4,11 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Add DynamicConstant support to LLVM lowering">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix variable fragmentation across exception edges and read-modify-write">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -310,7 +310,23 @@
       <option name="project" value="LOCAL" />
       <updated>1780284154718</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="- Fix decompiler artifacts on flat methods and lambdas">
+      <option name="closed" value="true" />
+      <created>1780324196792</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1780324196792</updated>
+    </task>
+    <task id="LOCAL-00017" summary="- Fix variable fragmentation across exception edges and read-modify-write">
+      <option name="closed" value="true" />
+      <created>1780338872402</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1780338872402</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -326,6 +342,8 @@
     <MESSAGE value="-  Add LLVM IR -&gt; SSA lifter for round-trip optimizer integration" />
     <MESSAGE value="- params need to be created before body values" />
     <MESSAGE value="- Add DynamicConstant support to LLVM lowering" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Add DynamicConstant support to LLVM lowering" />
+    <MESSAGE value="- Fix decompiler artifacts on flat methods and lambdas" />
+    <MESSAGE value="- Fix variable fragmentation across exception edges and read-modify-write" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fix variable fragmentation across exception edges and read-modify-write" />
   </component>
 </project>

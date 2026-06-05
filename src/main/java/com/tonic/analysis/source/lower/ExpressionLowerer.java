@@ -204,7 +204,80 @@ public class ExpressionLowerer {
         if (var.getSsaValue() != null) {
             return var.getSsaValue();
         }
-        return ctx.getVariable(var.getName());
+        String name = var.getName();
+        if (ctx.hasVariable(name)) {
+            return ctx.getVariable(name);
+        }
+        Value field = tryLowerImplicitFieldRead(name);
+        if (field != null) {
+            return field;
+        }
+        return ctx.getVariable(name);
+    }
+
+    /**
+     * Resolves an unqualified name that is not a local variable as a read of a field
+     * declared on the current class (or inherited). The decompiler emits own-class field
+     * references as bare names; this rewrites them to the appropriate getfield/getstatic.
+     * Returns null when the name does not resolve to a field, leaving the caller to surface
+     * the original "undefined variable" error.
+     */
+    private Value tryLowerImplicitFieldRead(String name) {
+        String ownerClass = ctx.getOwnerClass();
+        if (ownerClass == null || ownerClass.isEmpty()) {
+            return null;
+        }
+        SourceType fieldType = ctx.getTypeResolver().findFieldType(ownerClass, name);
+        if (fieldType == null) {
+            return null;
+        }
+
+        IRType irType = fieldType.toIRType();
+        SSAValue result = ctx.newValue(irType);
+        String descriptor = irType.getDescriptor();
+
+        FieldAccessInstruction instr;
+        if (ctx.getTypeResolver().isStaticField(ownerClass, name)) {
+            instr = FieldAccessInstruction.createStaticLoad(result, ownerClass, name, descriptor);
+        } else {
+            if (!ctx.hasVariable("this")) {
+                return null;
+            }
+            instr = FieldAccessInstruction.createLoad(result, ownerClass, name, descriptor, ctx.getVariable("this"));
+        }
+        ctx.getCurrentBlock().addInstruction(instr);
+        return result;
+    }
+
+    /**
+     * Stores a value into a field referenced by an unqualified name (no local variable of
+     * that name exists). Mirrors {@link #tryLowerImplicitFieldRead} for the write side of
+     * assignment, compound-assignment and increment/decrement. Returns false when the name
+     * does not resolve to a field.
+     */
+    private boolean tryLowerImplicitFieldStore(String name, Value value) {
+        String ownerClass = ctx.getOwnerClass();
+        if (ownerClass == null || ownerClass.isEmpty()) {
+            return false;
+        }
+        SourceType fieldType = ctx.getTypeResolver().findFieldType(ownerClass, name);
+        if (fieldType == null) {
+            return false;
+        }
+
+        String descriptor = fieldType.toIRType().getDescriptor();
+
+        FieldAccessInstruction instr;
+        if (ctx.getTypeResolver().isStaticField(ownerClass, name)) {
+            instr = FieldAccessInstruction.createStaticStore(ownerClass, name, descriptor, value);
+        } else {
+            if (!ctx.hasVariable("this")) {
+                return false;
+            }
+            instr = FieldAccessInstruction.createStore(ownerClass, name, descriptor, ctx.getVariable("this"), value);
+        }
+        ctx.getCurrentBlock().addInstruction(instr);
+        return true;
     }
 
     private Value lowerBinary(BinaryExpr bin) {
@@ -349,6 +422,9 @@ public class ExpressionLowerer {
         Expression left = bin.getLeft();
         if (left instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) left;
+            if (!ctx.hasVariable(varRef.getName()) && tryLowerImplicitFieldStore(varRef.getName(), rhs)) {
+                return rhs;
+            }
             ctx.setVariable(varRef.getName(), (SSAValue) rhs);
             return rhs;
         } else if (left instanceof FieldAccessExpr) {
@@ -377,7 +453,10 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(instr);
 
         if (left instanceof VarRefExpr) {
-            ctx.setVariable(((VarRefExpr) left).getName(), result);
+            VarRefExpr varRef = (VarRefExpr) left;
+            if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), result)) {
+                ctx.setVariable(varRef.getName(), result);
+            }
         } else if (left instanceof FieldAccessExpr) {
             lowerFieldStore((FieldAccessExpr) left, result);
         } else if (left instanceof ArrayAccessExpr) {
@@ -568,7 +647,7 @@ public class ExpressionLowerer {
         Expression operand = unary.getOperand();
         Value oldValue = lower(operand);
 
-        IRType type = unary.getType().toIRType();
+        IRType type = oldValue != null ? oldValue.getType() : unary.getType().toIRType();
         SSAValue one = ctx.newValue(type);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(one, IntConstant.ONE));
 
@@ -577,7 +656,10 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(new BinaryOpInstruction(newValue, binOp, oldValue, one));
 
         if (operand instanceof VarRefExpr) {
-            ctx.setVariable(((VarRefExpr) operand).getName(), newValue);
+            VarRefExpr varRef = (VarRefExpr) operand;
+            if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), newValue)) {
+                ctx.setVariable(varRef.getName(), newValue);
+            }
         } else if (operand instanceof FieldAccessExpr) {
             lowerFieldStore((FieldAccessExpr) operand, newValue);
         } else if (operand instanceof ArrayAccessExpr) {
@@ -896,12 +978,22 @@ public class ExpressionLowerer {
             }
         } else if (arrayExpr instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) arrayExpr;
-            SSAValue val = ctx.getVariable(varRef.getName());
-            if (val != null) {
-                IRType irType = val.getType();
-                if (irType instanceof ArrayType) {
-                    ArrayType arrType = (ArrayType) irType;
-                    return new ArraySourceType(irTypeToSourceType(arrType.getElementType()));
+            if (ctx.hasVariable(varRef.getName())) {
+                SSAValue val = ctx.getVariable(varRef.getName());
+                if (val != null) {
+                    IRType irType = val.getType();
+                    if (irType instanceof ArrayType) {
+                        ArrayType arrType = (ArrayType) irType;
+                        return new ArraySourceType(irTypeToSourceType(arrType.getElementType()));
+                    }
+                }
+            } else {
+                String ownerClass = ctx.getOwnerClass();
+                if (ownerClass != null && !ownerClass.isEmpty()) {
+                    SourceType resolved = ctx.getTypeResolver().findFieldType(ownerClass, varRef.getName());
+                    if (resolved != null) {
+                        return resolved;
+                    }
                 }
             }
         }
