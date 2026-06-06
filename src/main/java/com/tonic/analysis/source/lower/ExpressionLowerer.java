@@ -2,9 +2,6 @@ package com.tonic.analysis.source.lower;
 
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.*;
-import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.stmt.ExprStmt;
-import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
@@ -723,6 +720,9 @@ public class ExpressionLowerer {
                 } else {
                     args.add(lower(receiver));
                     invokeType = InvokeType.VIRTUAL;
+                    if (ownerClass == null || ownerClass.isEmpty()) {
+                        ownerClass = resolveReceiverOwnerClass(receiver);
+                    }
                 }
             } else if (receiver instanceof SuperExpr) {
                 args.add(lower(receiver));
@@ -755,7 +755,13 @@ public class ExpressionLowerer {
         }
 
         List<Value> loweredArgs = new ArrayList<>();
-        for (Expression arg : call.getArguments()) {
+        List<Expression> callArguments = call.getArguments();
+        List<SourceType> calleeParamTypes = resolveCalleeParamTypes(ownerClass, call.getMethodName(), callArguments.size());
+        for (int i = 0; i < callArguments.size(); i++) {
+            Expression arg = callArguments.get(i);
+            if (calleeParamTypes != null && i < calleeParamTypes.size()) {
+                arg = retypeFunctionalArg(arg, calleeParamTypes.get(i));
+            }
             loweredArgs.add(lower(arg));
         }
         args.addAll(loweredArgs);
@@ -772,6 +778,10 @@ public class ExpressionLowerer {
         SourceType returnType = resolveMethodReturnType(call, ownerClass, argTypes);
         String descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);
 
+        if (invokeType == InvokeType.VIRTUAL && ctx.getTypeResolver().isInterface(ownerClass)) {
+            invokeType = InvokeType.INTERFACE;
+        }
+
         SSAValue result = null;
         if (!(returnType instanceof VoidSourceType)) {
             result = ctx.newValue(returnType.toIRType());
@@ -787,6 +797,77 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result != null ? result : NullConstant.INSTANCE;
+    }
+
+    /**
+     * Resolves the declared parameter types of a callee so that lambda/method-reference arguments
+     * can be target-typed to the functional interface the method expects. Uses the ClassPool
+     * descriptor when available, falling back to a table of common JDK functional-interface
+     * consumers (whose declaring classes are usually not in the pool). Returns null when unknown.
+     */
+    private List<SourceType> resolveCalleeParamTypes(String ownerClass, String methodName, int argCount) {
+        List<SourceType> jdk = jdkConsumerParamTypes(ownerClass, methodName, argCount);
+        if (jdk != null) {
+            return jdk;
+        }
+        if (ownerClass == null || ownerClass.isEmpty()) {
+            return null;
+        }
+        String descriptor = ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, methodName, argCount);
+        if (descriptor == null) {
+            return null;
+        }
+        return ctx.getTypeResolver().paramTypesFromDescriptor(descriptor);
+    }
+
+    private List<SourceType> jdkConsumerParamTypes(String ownerClass, String methodName, int argCount) {
+        if (ownerClass == null) {
+            return null;
+        }
+        String runnable = "java/lang/Runnable";
+        String consumer = "java/util/function/Consumer";
+        switch (ownerClass) {
+            case "javax/swing/SwingUtilities":
+            case "java/awt/EventQueue":
+                if (("invokeLater".equals(methodName) || "invokeAndWait".equals(methodName)) && argCount == 1) {
+                    return List.of(new ReferenceSourceType(runnable));
+                }
+                break;
+            case "java/util/concurrent/Executor":
+            case "java/util/concurrent/ExecutorService":
+                if ("execute".equals(methodName) && argCount == 1) {
+                    return List.of(new ReferenceSourceType(runnable));
+                }
+                break;
+            default:
+                break;
+        }
+        if (("forEach".equals(methodName)) && argCount == 1
+                && (ownerClass.startsWith("java/util/") || ownerClass.startsWith("java/lang/Iterable"))) {
+            return List.of(new ReferenceSourceType(consumer));
+        }
+        return null;
+    }
+
+    /**
+     * Re-types a lambda argument with the functional-interface type the callee expects, when the
+     * lambda's own type is unknown (Object). Other argument kinds are returned unchanged.
+     */
+    private Expression retypeFunctionalArg(Expression arg, SourceType expected) {
+        if (!(arg instanceof LambdaExpr) || !(expected instanceof ReferenceSourceType)) {
+            return arg;
+        }
+        String expectedName = ((ReferenceSourceType) expected).getInternalName();
+        if (expectedName == null || expectedName.isEmpty() || "java/lang/Object".equals(expectedName)) {
+            return arg;
+        }
+        LambdaExpr lambda = (LambdaExpr) arg;
+        SourceType current = lambda.getType();
+        if (current instanceof ReferenceSourceType
+                && !"java/lang/Object".equals(((ReferenceSourceType) current).getInternalName())) {
+            return arg;
+        }
+        return new LambdaExpr(lambda.getParameters(), lambda.getBody(), expected);
     }
 
     private String resolveReceiverOwnerClass(Expression receiver) {
@@ -845,7 +926,7 @@ public class ExpressionLowerer {
         if (type instanceof ReferenceSourceType) {
             String internalName = ((ReferenceSourceType) type).getInternalName();
             if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object")) {
-                return internalName;
+                return internalName.contains("/") ? internalName : resolveClassName(internalName);
             }
         }
         return "java/lang/Object";
@@ -901,6 +982,8 @@ public class ExpressionLowerer {
             }
         }
 
+        ownerClass = normalizeOwnerClass(ownerClass);
+
         IRType fieldType = resolveFieldType(field, ownerClass);
         SSAValue result = ctx.newValue(fieldType);
         String descriptor = fieldType.getDescriptor();
@@ -935,6 +1018,19 @@ public class ExpressionLowerer {
         return ctx.getTypeResolver().resolveClassName(simpleName);
     }
 
+    /**
+     * Normalizes a field-owner class name to a fully-qualified internal name. Decompiled source
+     * refers to same-package and imported types by their simple name; this resolves such names
+     * (e.g. {@code MainFrame} -> {@code osrs/dev/MainFrame}) against imports and the loaded pool so
+     * the field can be located. Already-qualified or empty names are returned unchanged.
+     */
+    private String normalizeOwnerClass(String ownerClass) {
+        if (ownerClass == null || ownerClass.isEmpty() || ownerClass.contains("/")) {
+            return ownerClass;
+        }
+        return resolveClassName(ownerClass);
+    }
+
     private Value lowerFieldStore(FieldAccessExpr field, Value value) {
         String ownerClass;
         boolean isStatic = field.isStatic();
@@ -963,6 +1059,8 @@ public class ExpressionLowerer {
                 ownerClass = ctx.getOwnerClass();
             }
         }
+
+        ownerClass = normalizeOwnerClass(ownerClass);
 
         IRType fieldType = resolveFieldType(field, ownerClass);
         String descriptor = fieldType.getDescriptor();
@@ -1065,6 +1163,9 @@ public class ExpressionLowerer {
             return PrimitiveSourceType.SHORT;
         } else if (irType instanceof ReferenceType) {
             return new ReferenceSourceType(((ReferenceType) irType).getInternalName());
+        } else if (irType instanceof ArrayType) {
+            ArrayType arr = (ArrayType) irType;
+            return new ArraySourceType(irTypeToSourceType(arr.getElementType()), arr.getDimensions());
         }
         return ReferenceSourceType.OBJECT;
     }
@@ -1080,7 +1181,7 @@ public class ExpressionLowerer {
     }
 
     private Value lowerNew(NewExpr newExpr) {
-        String className = newExpr.getClassName();
+        String className = normalizeOwnerClass(newExpr.getClassName());
         IRType type = new ReferenceType(className);
         SSAValue result = ctx.newValue(type);
 
@@ -1367,7 +1468,27 @@ public class ExpressionLowerer {
             ownerClass = "UnknownClass";
         }
 
-        SourceType returnType = inferLambdaReturnType(lambda);
+        SourceType lambdaType = lambda.getType();
+        String samInterfaceName = extractInterfaceName(lambdaType);
+
+        // Resolve the functional interface's single abstract method so the lambda's return type
+        // and SAM descriptor reflect the real interface (e.g. Runnable -> ()V) rather than
+        // defaulting block-bodied lambdas to Object. This keeps the invokedynamic call site and a
+        // later-materialized synthetic method in agreement.
+        String[] sam = ctx.getTypeResolver().resolveSamMethod(samInterfaceName);
+        SourceType returnType;
+        String samMethodName;
+        String samDescriptor;
+        if (sam != null) {
+            samMethodName = sam[0];
+            samDescriptor = sam[1];
+            returnType = ctx.getTypeResolver().returnTypeFromDescriptor(sam[1]);
+        } else {
+            returnType = inferLambdaReturnType(lambda);
+            samMethodName = extractSamMethodName(samInterfaceName);
+            samDescriptor = extractSamDescriptor(lambda.getParameters(), returnType);
+        }
+
         String syntheticDescriptor = buildSyntheticMethodDescriptor(captures, lambda.getParameters(), returnType);
         boolean isStatic = !capturesThis(captures);
 
@@ -1376,11 +1497,6 @@ public class ExpressionLowerer {
             captures, lambda.getBody(), lambda.getParameters(), returnType
         );
         ctx.registerSyntheticMethod(synthetic);
-
-        SourceType lambdaType = lambda.getType();
-        String samInterfaceName = extractInterfaceName(lambdaType);
-        String samMethodName = extractSamMethodName(samInterfaceName);
-        String samDescriptor = extractSamDescriptor(lambda.getParameters(), returnType);
 
         MethodHandleConstant bsm = new MethodHandleConstant(
             MethodHandleConstant.REF_invokeStatic,
@@ -1572,11 +1688,7 @@ public class ExpressionLowerer {
         List<SyntheticLambdaMethod.CapturedVariable> captures = new ArrayList<>();
 
         CaptureCollector collector = new CaptureCollector(paramNames, capturedNames);
-        if (lambda.getBody() instanceof Expression) {
-            lambda.getBody().accept(collector);
-        } else if (lambda.getBody() instanceof BlockStmt) {
-            collectCapturesFromBlock((BlockStmt) lambda.getBody(), collector);
-        }
+        lambda.getBody().accept(collector);
 
         for (String name : capturedNames) {
             if (ctx.hasVariable(name)) {
@@ -1587,17 +1699,6 @@ public class ExpressionLowerer {
         }
 
         return captures;
-    }
-
-    private void collectCapturesFromBlock(BlockStmt block, CaptureCollector collector) {
-        for (Statement stmt : block.getStatements()) {
-            if (stmt instanceof ExprStmt) {
-                Expression expr = ((ExprStmt) stmt).getExpression();
-                if (expr != null) {
-                    expr.accept(collector);
-                }
-            }
-        }
     }
 
     private boolean capturesThis(List<SyntheticLambdaMethod.CapturedVariable> captures) {

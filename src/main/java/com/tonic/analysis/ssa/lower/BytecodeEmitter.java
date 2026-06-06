@@ -872,7 +872,13 @@ public class BytecodeEmitter {
         emitShort((short) cpIndex);
 
         if (instr.getInvokeType() == InvokeType.INTERFACE) {
-            emit((byte) (instr.getArguments().size() + 1));
+            // invokeinterface count = total argument slots including the receiver (already present
+            // in the arguments list), with long/double occupying two slots.
+            int count = 0;
+            for (Value arg : instr.getArguments()) {
+                count += arg.getType() != null && arg.getType().isTwoSlot() ? 2 : 1;
+            }
+            emit((byte) count);
             emit((byte) 0);
         }
     }

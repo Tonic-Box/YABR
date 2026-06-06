@@ -4,8 +4,15 @@ import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
+import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.ast.type.VoidSourceType;
+import com.tonic.analysis.ssa.ir.NewArrayInstruction;
+import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -36,6 +43,12 @@ public class ASTLowerer {
     private ClassDecl currentClassDecl;
     @Setter
     private List<ImportDecl> imports = new ArrayList<>();
+
+    /** Synthetic lambda methods produced by lowering, awaiting materialization into the class. */
+    private final List<SyntheticLambdaMethod> pendingLambdas = new ArrayList<>();
+
+    /** Synthetic array-constructor methods produced by lowering, awaiting materialization. */
+    private final List<SyntheticArrayConstructor> pendingArrayConstructors = new ArrayList<>();
 
     /**
      * Lowers an AST method body to a new IRMethod.
@@ -89,6 +102,7 @@ public class ASTLowerer {
             ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
         }
 
+        drainSynthetics(ctx);
         return irMethod;
     }
 
@@ -178,7 +192,164 @@ public class ASTLowerer {
             constructSSAForm(irMethod);
         }
 
+        drainSynthetics(ctx);
         return irMethod;
+    }
+
+    /**
+     * Moves the synthetic methods registered on a finished lowering context into this lowerer's
+     * pending queues, so callers can materialize them into the class after the user methods.
+     */
+    private void drainSynthetics(LoweringContext ctx) {
+        pendingLambdas.addAll(ctx.getSyntheticMethods());
+        pendingArrayConstructors.addAll(ctx.getArrayConstructors());
+        ctx.clearSyntheticMethods();
+        ctx.clearArrayConstructors();
+    }
+
+    /** Whether any synthetic methods are awaiting materialization. */
+    public boolean hasPendingSynthetics() {
+        return !pendingLambdas.isEmpty() || !pendingArrayConstructors.isEmpty();
+    }
+
+    /** Removes and returns the queued synthetic lambda methods. */
+    public List<SyntheticLambdaMethod> drainPendingLambdas() {
+        List<SyntheticLambdaMethod> drained = new ArrayList<>(pendingLambdas);
+        pendingLambdas.clear();
+        return drained;
+    }
+
+    /** Removes and returns the queued synthetic array-constructor methods. */
+    public List<SyntheticArrayConstructor> drainPendingArrayConstructors() {
+        List<SyntheticArrayConstructor> drained = new ArrayList<>(pendingArrayConstructors);
+        pendingArrayConstructors.clear();
+        return drained;
+    }
+
+    /**
+     * Lowers a synthetic lambda method body into an IRMethod. Captured variables and lambda
+     * parameters are registered as locals by their source names, in the synthetic descriptor's
+     * parameter order. Only static synthetics (lambdas that do not capture {@code this}) are
+     * supported; an instance-capturing synthetic throws so the caller can preserve the original.
+     */
+    public IRMethod lowerSyntheticLambda(SyntheticLambdaMethod synthetic, String ownerClass) {
+        if (!synthetic.isStatic()) {
+            throw new LoweringException(
+                "Instance-capturing lambda synthetic not supported for emission: " + synthetic.getName());
+        }
+
+        BlockStmt body = syntheticBody(synthetic);
+        IRMethod irMethod = new IRMethod(ownerClass, synthetic.getName(), synthetic.getDescriptor(), true);
+
+        TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
+        typeResolver.setCurrentClassDecl(currentClassDecl);
+        typeResolver.setImports(imports);
+        LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
+        ctx.setOwnerClass(ownerClass);
+        ctx.setCurrentMethodName(synthetic.getName());
+
+        List<SourceType> paramTypes = new ArrayList<>();
+        List<String> paramNames = new ArrayList<>();
+        for (SyntheticLambdaMethod.CapturedVariable capture : synthetic.getCaptures()) {
+            paramTypes.add(capture.getType());
+            paramNames.add(capture.getName());
+        }
+        for (var param : synthetic.getParameters()) {
+            paramTypes.add(param.type() != null ? param.type() : ReferenceSourceType.OBJECT);
+            paramNames.add(param.name());
+        }
+
+        boolean hasLoops = containsLoops(body);
+        if (hasLoops) {
+            ctx.setEmitLocalInstructions(true);
+            int paramSlotCount = 0;
+            for (SourceType type : paramTypes) {
+                paramSlotCount++;
+                if (type.toIRType().isTwoSlot()) {
+                    paramSlotCount++;
+                }
+            }
+            ctx.initializeLocalSlots(paramSlotCount);
+        }
+
+        IRBlock entryBlock = ctx.createBlock();
+        irMethod.setEntryBlock(entryBlock);
+        ctx.setCurrentBlock(entryBlock);
+
+        int paramSlot = 0;
+        for (int i = 0; i < paramTypes.size(); i++) {
+            IRType paramType = paramTypes.get(i).toIRType();
+            SSAValue paramVal = ctx.newValue(paramType);
+            irMethod.addParameter(paramVal);
+            if (hasLoops) {
+                ctx.registerParameter(paramNames.get(i), paramSlot, paramVal);
+            } else {
+                ctx.setVariable(paramNames.get(i), paramVal);
+            }
+            paramSlot++;
+            if (paramType.isTwoSlot()) {
+                paramSlot++;
+            }
+        }
+
+        ExpressionLowerer exprLowerer = new ExpressionLowerer(ctx);
+        StatementLowerer stmtLowerer = new StatementLowerer(ctx, exprLowerer);
+        stmtLowerer.lower(body);
+
+        if (ctx.getCurrentBlock().getTerminator() == null) {
+            ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
+        }
+
+        if (hasLoops) {
+            constructSSAForm(irMethod);
+        }
+
+        drainSynthetics(ctx);
+        return irMethod;
+    }
+
+    /**
+     * Lowers a synthetic array-constructor method ({@code (I)[T} returning {@code new T[arg0]}).
+     */
+    public IRMethod lowerSyntheticArrayConstructor(SyntheticArrayConstructor constructor, String ownerClass) {
+        IRMethod irMethod = new IRMethod(ownerClass, constructor.getName(), constructor.getDescriptor(), true);
+
+        TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
+        typeResolver.setCurrentClassDecl(currentClassDecl);
+        typeResolver.setImports(imports);
+        LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
+        ctx.setOwnerClass(ownerClass);
+        ctx.setCurrentMethodName(constructor.getName());
+
+        IRBlock entryBlock = ctx.createBlock();
+        irMethod.setEntryBlock(entryBlock);
+        ctx.setCurrentBlock(entryBlock);
+
+        SSAValue size = ctx.newValue(PrimitiveType.INT);
+        irMethod.addParameter(size);
+
+        String arrayDescriptor = constructor.getArrayTypeDescriptor();
+        IRType arrayType = IRType.fromDescriptor(arrayDescriptor);
+        IRType componentType = IRType.fromDescriptor(arrayDescriptor.substring(1));
+        SSAValue array = ctx.newValue(arrayType);
+        ctx.getCurrentBlock().addInstruction(new NewArrayInstruction(array, componentType, size));
+        ctx.getCurrentBlock().addInstruction(new ReturnInstruction(array));
+
+        return irMethod;
+    }
+
+    private BlockStmt syntheticBody(SyntheticLambdaMethod synthetic) {
+        if (synthetic.getBody() instanceof BlockStmt) {
+            return (BlockStmt) synthetic.getBody();
+        }
+        Expression expr = (Expression) synthetic.getBody();
+        BlockStmt block = new BlockStmt();
+        if (synthetic.getReturnType() == null || synthetic.getReturnType() instanceof VoidSourceType) {
+            block.addStatement(new ExprStmt(expr));
+        } else {
+            block.addStatement(new ReturnStmt(expr));
+        }
+        return block;
     }
 
     private boolean containsLoops(BlockStmt body) {

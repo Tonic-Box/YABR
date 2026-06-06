@@ -144,6 +144,37 @@ class ClassFileTest {
     }
 
     @Test
+    void removeMethodRemovesIt() {
+        int access = new AccessBuilder().setPublic().setStatic().build();
+        classFile.createNewMethodWithDescriptor(access, "toRemove", "(I)I");
+        int before = classFile.getMethods().size();
+
+        boolean removed = classFile.removeMethod("toRemove", "(I)I");
+        assertTrue(removed);
+        assertEquals(before - 1, classFile.getMethods().size());
+        assertFalse(classFile.getMethods().stream().anyMatch(m -> m.getName().equals("toRemove")));
+    }
+
+    @Test
+    void removeMethodMatchesOnDescriptor() {
+        int access = new AccessBuilder().setPublic().setStatic().build();
+        classFile.createNewMethodWithDescriptor(access, "overloaded", "(I)V");
+        classFile.createNewMethodWithDescriptor(access, "overloaded", "(J)V");
+
+        assertTrue(classFile.removeMethod("overloaded", "(J)V"));
+        assertTrue(classFile.getMethods().stream()
+            .anyMatch(m -> m.getName().equals("overloaded") && m.getDesc().equals("(I)V")));
+        assertFalse(classFile.getMethods().stream()
+            .anyMatch(m -> m.getName().equals("overloaded") && m.getDesc().equals("(J)V")));
+    }
+
+    @Test
+    void removeNonexistentMethodReturnsFalse() {
+        boolean removed = classFile.removeMethod("nonexistent", "()V");
+        assertFalse(removed);
+    }
+
+    @Test
     void newClassHasDefaultMethods() {
         assertEquals(2, classFile.getMethods().size());
     }

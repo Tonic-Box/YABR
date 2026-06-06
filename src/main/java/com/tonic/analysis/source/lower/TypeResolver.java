@@ -10,6 +10,7 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
+import com.tonic.utill.Modifiers;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -121,6 +122,81 @@ public class TypeResolver {
         }
 
         return false;
+    }
+
+    /**
+     * Resolves the single abstract method (SAM) of a functional interface to its name and
+     * descriptor. Looks the interface up in the ClassPool first (handles user/custom interfaces),
+     * then falls back to a table of common JDK functional interfaces for types not in the pool.
+     * Returns {@code [name, descriptor]} or null when it cannot be determined.
+     */
+    public String[] resolveSamMethod(String interfaceName) {
+        if (interfaceName == null || interfaceName.isEmpty()) {
+            return null;
+        }
+
+        ClassFile cf = classPool.get(interfaceName);
+        if (cf != null) {
+            for (MethodEntry method : cf.getMethods()) {
+                if (Modifiers.isAbstract(method.getAccess()) && !Modifiers.isStatic(method.getAccess())) {
+                    return new String[]{method.getName(), method.getDesc()};
+                }
+            }
+        }
+
+        return jdkSamMethod(interfaceName);
+    }
+
+    private String[] jdkSamMethod(String interfaceName) {
+        String simple = interfaceName.contains("/")
+            ? interfaceName.substring(interfaceName.lastIndexOf('/') + 1)
+            : interfaceName;
+        switch (simple) {
+            case "Runnable":
+                return new String[]{"run", "()V"};
+            case "Callable":
+                return new String[]{"call", "()Ljava/lang/Object;"};
+            case "Supplier":
+                return new String[]{"get", "()Ljava/lang/Object;"};
+            case "Consumer":
+                return new String[]{"accept", "(Ljava/lang/Object;)V"};
+            case "BiConsumer":
+                return new String[]{"accept", "(Ljava/lang/Object;Ljava/lang/Object;)V"};
+            case "Function":
+            case "UnaryOperator":
+                return new String[]{"apply", "(Ljava/lang/Object;)Ljava/lang/Object;"};
+            case "BiFunction":
+            case "BinaryOperator":
+                return new String[]{"apply", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"};
+            case "Predicate":
+                return new String[]{"test", "(Ljava/lang/Object;)Z"};
+            case "BiPredicate":
+                return new String[]{"test", "(Ljava/lang/Object;Ljava/lang/Object;)Z"};
+            case "Comparator":
+                return new String[]{"compare", "(Ljava/lang/Object;Ljava/lang/Object;)I"};
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Parses the return type of a method descriptor into a SourceType.
+     */
+    public SourceType returnTypeFromDescriptor(String methodDescriptor) {
+        int paren = methodDescriptor.indexOf(')');
+        return parseDescriptor(methodDescriptor.substring(paren + 1));
+    }
+
+    /**
+     * Parses the parameter types of a method descriptor into a list of SourceTypes.
+     */
+    public List<SourceType> paramTypesFromDescriptor(String methodDescriptor) {
+        List<SourceType> result = new ArrayList<>();
+        int[] pos = {1};
+        while (pos[0] < methodDescriptor.length() && methodDescriptor.charAt(pos[0]) != ')') {
+            result.add(parseDescriptor(methodDescriptor, pos));
+        }
+        return result;
     }
 
     /**
@@ -532,6 +608,61 @@ public class TypeResolver {
             return currentClass;
         }
 
+        String resolved = resolveFromLoadedClasses(simpleName);
+        if (resolved != null) {
+            return resolved;
+        }
+
         return simpleName;
+    }
+
+    /**
+     * Returns whether the named class is an interface, consulting the ClassPool. Used to choose
+     * invokeinterface over invokevirtual for calls on interface-typed receivers.
+     */
+    public boolean isInterface(String internalName) {
+        if (internalName == null || internalName.isEmpty()) {
+            return false;
+        }
+        ClassFile cf = classPool.get(internalName);
+        return cf != null && (cf.getAccess() & 0x0200) != 0;
+    }
+
+    /**
+     * Resolves a simple class name against classes already loaded in the pool (the default pool
+     * carries the JDK). Tries the implicit {@code java.lang} package first, then a search of
+     * loaded classes by simple name (preferring {@code java/lang} and {@code java/util}). Returns
+     * null when no loaded class matches.
+     */
+    private String resolveFromLoadedClasses(String simpleName) {
+        int currentSlash = currentClass.lastIndexOf('/');
+        if (currentSlash > 0) {
+            String samePackage = currentClass.substring(0, currentSlash + 1) + simpleName;
+            if (classPool.get(samePackage) != null) {
+                return samePackage;
+            }
+        }
+
+        String javaLang = "java/lang/" + simpleName;
+        if (classPool.get(javaLang) != null) {
+            return javaLang;
+        }
+
+        String fallback = null;
+        for (ClassFile cf : classPool.getClasses()) {
+            String name = cf.getClassName();
+            int slash = name.lastIndexOf('/');
+            String simple = slash < 0 ? name : name.substring(slash + 1);
+            if (!simple.equals(simpleName)) {
+                continue;
+            }
+            if (name.startsWith("java/lang/") || name.startsWith("java/util/")) {
+                return name;
+            }
+            if (fallback == null) {
+                fallback = name;
+            }
+        }
+        return fallback;
     }
 }

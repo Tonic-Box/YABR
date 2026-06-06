@@ -411,6 +411,24 @@ public class ClassFile extends AbstractParser {
     }
 
     /**
+     * Removes a method by name and descriptor.
+     *
+     * @param methodName the method name
+     * @param methodDescriptor the method descriptor
+     * @return true if a matching method was removed
+     */
+    public boolean removeMethod(String methodName, String methodDescriptor) {
+        for (int i = 0; i < methods.size(); i++) {
+            MethodEntry method = methods.get(i);
+            if (method.getName().equals(methodName) && method.getDesc().equals(methodDescriptor)) {
+                methods.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Sets the initial value of a field in either clinit (static) or init (non-static) method.
      *
      * @param field the field to set the initial value for
