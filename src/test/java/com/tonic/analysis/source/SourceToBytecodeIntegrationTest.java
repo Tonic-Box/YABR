@@ -1172,6 +1172,27 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
+        void loopWithVariableSwap() throws Exception {
+            // Iterative fibonacci: the loop swap (a = b; b = temp) makes the two loop-carried phis
+            // simultaneously live, so they must not be coalesced into one register.
+            String source = "class Test { static int fib(int n) { "
+                + "if (n <= 1) { return n; } int a = 0; int b = 1; "
+                + "for (int i = 2; i <= n; i = i + 1) { int t = a + b; a = b; b = t; } return b; } }";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            MethodDecl method = cls.getMethods().get(0);
+
+            String className = uniqueClassName();
+            Class<?> clazz = compileAndLoad(method, className);
+
+            Method m = clazz.getMethod("fib", int.class);
+            assertEquals(0, (int) m.invoke(null, 0));
+            assertEquals(1, (int) m.invoke(null, 2));
+            assertEquals(5, (int) m.invoke(null, 5));
+            assertEquals(55, (int) m.invoke(null, 10));
+        }
+
+        @Test
         void doWhileLoop() throws Exception {
             String source = "class Test { static int test(int n) { int count = 0; do { count = count + 1; } while (count < n); return count; } }";
             CompilationUnit cu = parser.parse(source);

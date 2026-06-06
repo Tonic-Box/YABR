@@ -4,14 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Recompile: resolve own-class &amp; cross-class refs, fix lambda lowering, member emit/remov&#10;- Resolve unqualified own-class field refs and static self-calls&#10;- Resolve simple type names against the loaded pool (same-package + java.lang), fixing field/owner resolution (e.g. MainFrame.IDK_LOL)&#10;- Infer arithmetic/increment/array-capture types from operands&#10;- Lambda target-typing + SAM resolution, with correct owner and invokeinterface (kind + count byte)&#10;- Full-body lambda capture detection + synthetic emission infra">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- RegisterAllocator.java — interference-guarded phi coalescing (intervalByValue map + interferes() + guard in buildPhiCoalescingMap).">
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/SamResolverTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/parser/ClassFileTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/parser/ClassFileTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -345,7 +342,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780725129511</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="Recompile: resolve own-class &amp; cross-class refs, fix lambda lowering, member emit/remov&#10;- Resolve unqualified own-class field refs and static self-calls&#10;- Resolve simple type names against the loaded pool (same-package + java.lang), fixing field/owner resolution (e.g. MainFrame.IDK_LOL)&#10;- Infer arithmetic/increment/array-capture types from operands&#10;- Lambda target-typing + SAM resolution, with correct owner and invokeinterface (kind + count byte)&#10;- Full-body lambda capture detection + synthetic emission infra">
+      <option name="closed" value="true" />
+      <created>1780736438044</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1780736438044</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -366,6 +371,7 @@
     <MESSAGE value="- unqualified field resolution" />
     <MESSAGE value="- YABR fixes for source lowering: unqualified static self-calls, arithmetic type inference, and field ++/-- typing." />
     <MESSAGE value="Recompile: resolve own-class &amp; cross-class refs, fix lambda lowering, member emit/remov&#10;- Resolve unqualified own-class field refs and static self-calls&#10;- Resolve simple type names against the loaded pool (same-package + java.lang), fixing field/owner resolution (e.g. MainFrame.IDK_LOL)&#10;- Infer arithmetic/increment/array-capture types from operands&#10;- Lambda target-typing + SAM resolution, with correct owner and invokeinterface (kind + count byte)&#10;- Full-body lambda capture detection + synthetic emission infra" />
-    <option name="LAST_COMMIT_MESSAGE" value="Recompile: resolve own-class &amp; cross-class refs, fix lambda lowering, member emit/remov&#10;- Resolve unqualified own-class field refs and static self-calls&#10;- Resolve simple type names against the loaded pool (same-package + java.lang), fixing field/owner resolution (e.g. MainFrame.IDK_LOL)&#10;- Infer arithmetic/increment/array-capture types from operands&#10;- Lambda target-typing + SAM resolution, with correct owner and invokeinterface (kind + count byte)&#10;- Full-body lambda capture detection + synthetic emission infra" />
+    <MESSAGE value="- RegisterAllocator.java — interference-guarded phi coalescing (intervalByValue map + interferes() + guard in buildPhiCoalescingMap)." />
+    <option name="LAST_COMMIT_MESSAGE" value="- RegisterAllocator.java — interference-guarded phi coalescing (intervalByValue map + interferes() + guard in buildPhiCoalescingMap)." />
   </component>
 </project>

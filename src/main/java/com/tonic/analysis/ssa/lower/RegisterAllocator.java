@@ -9,9 +9,7 @@ import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import lombok.Getter;
-
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Linear scan register allocator.
@@ -23,6 +21,7 @@ public class RegisterAllocator {
     private final IRMethod method;
     private final LivenessAnalysis liveness;
     private final Map<SSAValue, Integer> allocation;
+    private final Map<SSAValue, LiveInterval> intervalByValue = new HashMap<>();
     private int maxLocals;
     private int reservedSlotCount; // Slots reserved for parameters, never released
 
@@ -35,6 +34,9 @@ public class RegisterAllocator {
 
     public void allocate() {
         List<LiveInterval> intervals = buildIntervals();
+        for (LiveInterval interval : intervals) {
+            intervalByValue.put(interval.value, interval);
+        }
         intervals.sort(Comparator.comparingInt(a -> a.start));
 
         List<LiveInterval> active = new ArrayList<>();
@@ -179,7 +181,12 @@ public class RegisterAllocator {
                         CopyInstruction copy = (CopyInstruction) instr;
                         if (copy.getResult().equals(copyInfo.copyValue())) {
                             Value source = copy.getSource();
-                            if (source instanceof SSAValue && allPhiResults.contains(source)) {
+                            // Only coalesce two phis that reference each other when their live
+                            // ranges do not overlap. Coalescing interfering phis into one slot
+                            // corrupts code such as a loop swap (a = b; b = temp), where both phi
+                            // results are simultaneously live and must occupy distinct slots.
+                            if (source instanceof SSAValue && allPhiResults.contains(source)
+                                    && !interferes(phiResult, (SSAValue) source)) {
                                 coalescingMap.put(phiResult, (SSAValue) source);
                             }
                         }
@@ -189,6 +196,19 @@ public class RegisterAllocator {
         }
 
         return coalescingMap;
+    }
+
+    /**
+     * Returns whether two values' live ranges overlap, i.e. they are simultaneously live and
+     * therefore cannot share a register.
+     */
+    private boolean interferes(SSAValue x, SSAValue y) {
+        LiveInterval a = intervalByValue.get(x);
+        LiveInterval b = intervalByValue.get(y);
+        if (a == null || b == null) {
+            return false;
+        }
+        return a.start < b.end && b.start < a.end;
     }
 
     private int allocateSlot(boolean twoSlot, Set<Integer> freeRegs) {
@@ -216,27 +236,6 @@ public class RegisterAllocator {
             reg = maxLocals++;
         }
         return reg;
-    }
-
-    /**
-     * Builds a mapping from phi copy values to their target phi result values.
-     * This allows the allocator to try to place copies in the same register as the phi result.
-     */
-    private Map<SSAValue, SSAValue> buildCoalesceGroups() {
-        Map<SSAValue, SSAValue> coalesce = new HashMap<>();
-        Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
-
-        if (phiCopies == null) return coalesce;
-
-        for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
-            SSAValue phiResult = entry.getKey();
-            for (CopyInfo copy : entry.getValue()) {
-                // All copies should try to coalesce with the phi result's register
-                coalesce.put(copy.copyValue(), phiResult);
-            }
-        }
-
-        return coalesce;
     }
 
     private void expireOldIntervals(List<LiveInterval> active, Set<Integer> freeRegs, int currentPos) {
