@@ -119,8 +119,8 @@ public class ClassFile extends AbstractParser {
         constructor.setKey(constructorName + constructorDescriptor);
 
         CodeAttribute codeAttr = new CodeAttribute("Code", constructor, constPool.getIndexOf(constPool.findOrAddUtf8("Code")), 0);
-        codeAttr.setMaxStack(10);
-        codeAttr.setMaxLocals(1);
+        codeAttr.setMaxStack(0);
+        codeAttr.setMaxLocals(0);
         constructor.getAttributes().add(codeAttr);
 
         codeAttr.setCode(new byte[0]);
@@ -166,7 +166,7 @@ public class ClassFile extends AbstractParser {
         constructor.setKey(constructorName + constructorDescriptor);
 
         CodeAttribute codeAttr = new CodeAttribute("Code", constructor, constPool.getIndexOf(constPool.findOrAddUtf8("Code")), 0);
-        codeAttr.setMaxStack(10);
+        codeAttr.setMaxStack(1);
         codeAttr.setMaxLocals(1);
         constructor.getAttributes().add(codeAttr);
 

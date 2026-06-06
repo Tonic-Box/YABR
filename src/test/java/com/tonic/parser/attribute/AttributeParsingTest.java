@@ -386,7 +386,7 @@ class AttributeParsingTest {
                     .ireturn()
                 .build();
 
-            MethodEntry method = cf.getMethods().get(0);
+            MethodEntry method = findMethod(cf, "deep");
             CodeAttribute code = method.getCodeAttribute();
 
             assertTrue(code.getMaxStack() >= 4);

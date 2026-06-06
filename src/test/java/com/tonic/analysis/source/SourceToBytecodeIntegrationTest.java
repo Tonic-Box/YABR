@@ -620,6 +620,20 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
+        void multipleVariablesInOneDeclaration() throws Exception {
+            String source = "class Test { static int test() { int a = 3, b = 4, c = a + b; return c; } }";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            MethodDecl method = cls.getMethods().get(0);
+            BlockStmt body = method.getBody();
+
+            String className = uniqueClassName();
+            Class<?> clazz = compileAndLoad(body, "test", className, true, List.of(), PrimitiveSourceType.INT);
+
+            assertEquals(7, (int) clazz.getMethod("test").invoke(null));
+        }
+
+        @Test
         void compoundAssignment() throws Exception {
             String source = "class Test { static int test() { int x = 10; x += 5; return x; } }";
             CompilationUnit cu = parser.parse(source);

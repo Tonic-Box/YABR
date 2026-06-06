@@ -732,4 +732,54 @@ class JavaParserTest {
             assertTrue(emitted.contains("void bar()"));
         }
     }
+
+    @Nested
+    class MultiVariableDeclarationTests {
+        private MethodDecl method(CompilationUnit cu) {
+            return ((ClassDecl) cu.getTypes().get(0)).getMethods().get(0);
+        }
+
+        @Test
+        void parsesMultipleLocalsSharingType() {
+            CompilationUnit cu = parser.parse(
+                "class T { void m() { int a = 0, b = 1, c; } }");
+            BlockStmt body = method(cu).getBody();
+            long decls = body.getStatements().stream().filter(s -> s instanceof VarDeclStmt).count();
+            assertEquals(3, decls, "each declarator becomes its own VarDeclStmt");
+            VarDeclStmt b = (VarDeclStmt) body.getStatements().get(1);
+            assertEquals("b", b.getName());
+            assertNotNull(b.getInitializer());
+            VarDeclStmt c = (VarDeclStmt) body.getStatements().get(2);
+            assertEquals("c", c.getName());
+            assertNull(c.getInitializer());
+        }
+
+        @Test
+        void parsesMultipleFieldsSharingType() {
+            CompilationUnit cu = parser.parse(
+                "class T { private static int x = 3, y = 4, z; }");
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            assertEquals(3, cls.getFields().size());
+            assertEquals("z", cls.getFields().get(2).getName());
+        }
+
+        @Test
+        void parsesMultipleForInitDeclarators() {
+            CompilationUnit cu = parser.parse(
+                "class T { void m() { for (int i = 0, j = 10; i < j; i++) {} } }");
+            BlockStmt body = method(cu).getBody();
+            assertInstanceOf(ForStmt.class, body.getStatements().get(0));
+        }
+
+        @Test
+        void parsesPerDeclaratorArrayBrackets() {
+            CompilationUnit cu = parser.parse(
+                "class T { void m() { int a, b[]; } }");
+            BlockStmt body = method(cu).getBody();
+            VarDeclStmt a = (VarDeclStmt) body.getStatements().get(0);
+            VarDeclStmt b = (VarDeclStmt) body.getStatements().get(1);
+            assertInstanceOf(ArraySourceType.class, b.getType());
+            assertFalse(a.getType() instanceof ArraySourceType);
+        }
+    }
 }

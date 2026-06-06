@@ -59,6 +59,7 @@ public class RegisterAllocator {
 
         preAllocatePhiResults(freeRegs);
         assignPhiCopiesToPhiResultSlots();
+        coalesceCopySourcesIntoPhiSlots();
 
         for (LiveInterval interval : intervals) {
             SSAValue value = interval.value;
@@ -166,6 +167,66 @@ public class RegisterAllocator {
                 allocation.put(copyInfo.copyValue(), phiSlot);
             }
         }
+    }
+
+    /**
+     * Move coalescing for phi-edge copies. Each phi has copies of the form
+     * {@code copyValue = copy source} in its predecessors, and the copy value already shares the
+     * phi result's slot. If the copy's <em>source</em> is also pinned to that slot the copy becomes
+     * a no-op (the emitter skips same-slot copies), eliminating the redundant load/store and the
+     * source's separate slot. A source is coalesced only when it does not interfere with the phi
+     * result nor with any source already placed in that slot, so simultaneously-live values keep
+     * distinct slots. Phi slots are reserved for the whole method, so a coalesced source safely
+     * occupies the slot across its (covered) live range.
+     */
+    private void coalesceCopySourcesIntoPhiSlots() {
+        Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
+        if (phiCopies == null) return;
+
+        for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
+            Integer phiSlot = allocation.get(entry.getKey());
+            if (phiSlot == null) continue;
+
+            List<SSAValue> placed = new ArrayList<>();
+            for (CopyInfo copyInfo : entry.getValue()) {
+                SSAValue source = copySource(copyInfo);
+                if (source == null || allocation.containsKey(source)) {
+                    continue;
+                }
+                if (interferes(entry.getKey(), source)) {
+                    continue;
+                }
+                boolean conflictsWithPlaced = false;
+                for (SSAValue other : placed) {
+                    if (interferes(other, source)) {
+                        conflictsWithPlaced = true;
+                        break;
+                    }
+                }
+                if (conflictsWithPlaced) {
+                    continue;
+                }
+                allocation.put(source, phiSlot);
+                placed.add(source);
+            }
+        }
+    }
+
+    /**
+     * Returns the SSA source of the copy that produces a phi's incoming value, or null when the
+     * source is a constant or otherwise not a slot-resident value.
+     */
+    private SSAValue copySource(CopyInfo copyInfo) {
+        for (IRInstruction instr : copyInfo.block().getInstructions()) {
+            if (instr instanceof CopyInstruction) {
+                CopyInstruction copy = (CopyInstruction) instr;
+                if (copy.getResult().equals(copyInfo.copyValue())
+                        && copy.getSource() instanceof SSAValue) {
+                    return (SSAValue) copy.getSource();
+                }
+            }
+        }
+        return null;
     }
 
     private Map<SSAValue, SSAValue> buildPhiCoalescingMap(Set<SSAValue> allPhiResults) {

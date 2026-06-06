@@ -55,10 +55,17 @@ class CodeAttributeTest {
                     .ireturn()
                 .build();
 
-            MethodEntry method = cf.getMethods().get(0);
+            MethodEntry method = findMethod(cf, "deep");
             CodeAttribute code = method.getCodeAttribute();
 
             assertTrue(code.getMaxStack() >= 2);
+        }
+
+        private MethodEntry findMethod(ClassFile cf, String name) {
+            return cf.getMethods().stream()
+                .filter(m -> m.getName().equals(name))
+                .findFirst()
+                .orElseThrow();
         }
 
         @Test

@@ -337,8 +337,9 @@ public class Parser {
                     MethodDecl method = parseMethod(memberMods, memberAnns, type, memberName);
                     constant.addMethod(method);
                 } else {
-                    FieldDecl field = parseField(memberMods, memberAnns, type, memberName);
-                    constant.addField(field);
+                    for (FieldDecl field : parseField(memberMods, memberAnns, type, memberName)) {
+                        constant.addField(field);
+                    }
                 }
             }
             consume(TokenType.RBRACE, "Expected '}'");
@@ -437,8 +438,7 @@ public class Parser {
             MethodDecl method = parseMethod(modifiers, annotations, type, name);
             owner.getMethods().add(method);
         } else {
-            FieldDecl field = parseField(modifiers, annotations, type, name);
-            owner.getFields().add(field);
+            owner.getFields().addAll(parseField(modifiers, annotations, type, name));
         }
     }
 
@@ -516,20 +516,40 @@ public class Parser {
         return ctor;
     }
 
-    private FieldDecl parseField(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
-                                  SourceType type, String name) {
+    private List<FieldDecl> parseField(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
+                                       SourceType type, String name) {
+        List<FieldDecl> fields = new ArrayList<>();
+        fields.add(parseFieldDeclarator(modifiers, annotations, type, name));
+        while (match(TokenType.COMMA)) {
+            String nextName = consume(TokenType.IDENTIFIER, "Expected field name").getText();
+            fields.add(parseFieldDeclarator(modifiers, annotations, type, nextName));
+        }
+        consume(TokenType.SEMICOLON, "Expected ';' after field declaration");
+        return fields;
+    }
+
+    /**
+     * Builds a single field declarator (optional C-style {@code []} dimensions and initializer)
+     * against a shared base type. The field name has already been consumed.
+     */
+    private FieldDecl parseFieldDeclarator(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
+                                           SourceType baseType, String name) {
         SourceLocation loc = currentLocation();
+        SourceType type = baseType;
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+            advance();
+            advance();
+            type = new ArraySourceType(type);
+        }
+
         FieldDecl field = new FieldDecl(name, type, loc);
         field.withModifiers(modifiers);
         for (AnnotationExpr ann : annotations) {
             field.addAnnotation(ann);
         }
-
         if (match(TokenType.EQ)) {
             field.withInitializer(parseExpression());
         }
-
-        consume(TokenType.SEMICOLON, "Expected ';' after field declaration");
         return field;
     }
 
@@ -644,6 +664,10 @@ public class Parser {
 
         List<Statement> statements = new ArrayList<>();
         while (!check(TokenType.RBRACE) && !isAtEnd()) {
+            if (isLocalVariableDeclaration()) {
+                statements.addAll(parseLocalVariableDeclarations());
+                continue;
+            }
             Statement stmt = parseBlockStatement();
             if (stmt != null) {
                 statements.add(stmt);
@@ -811,7 +835,7 @@ public class Parser {
         List<Statement> init = new ArrayList<>();
         if (!check(TokenType.SEMICOLON)) {
             if (isLocalVariableDeclaration()) {
-                init.add(parseLocalVariableNoSemi());
+                init.addAll(parseLocalVariableDeclaratorsNoSemi());
             } else {
                 init.add(new ExprStmt(parseExpression(), loc));
                 while (match(TokenType.COMMA)) {
@@ -907,6 +931,10 @@ public class Parser {
 
         List<Statement> statements = new ArrayList<>();
         while (!check(TokenType.CASE) && !check(TokenType.DEFAULT) && !check(TokenType.RBRACE) && !isAtEnd()) {
+            if (isLocalVariableDeclaration()) {
+                statements.addAll(parseLocalVariableDeclarations());
+                continue;
+            }
             Statement stmt = parseBlockStatement();
             if (stmt != null) {
                 statements.add(stmt);
@@ -1055,29 +1083,77 @@ public class Parser {
     }
 
     private VarDeclStmt parseLocalVariableNoSemi() {
-        SourceLocation loc = currentLocation();
         boolean isFinal = match(TokenType.FINAL);
-        SourceType type;
-        boolean useVar = false;
+        TypePrefix prefix = parseVarTypePrefix();
+        return parseDeclarator(prefix.type, prefix.useVar, isFinal);
+    }
 
+    /**
+     * Parses a local variable declaration with one or more comma-separated declarators sharing
+     * the base type (e.g. {@code int a = 0, b = 1;}), consuming the trailing semicolon, and
+     * returns one VarDeclStmt per declarator.
+     */
+    private List<VarDeclStmt> parseLocalVariableDeclarations() {
+        List<VarDeclStmt> decls = parseLocalVariableDeclaratorsNoSemi();
+        consume(TokenType.SEMICOLON, "Expected ';' after variable declaration");
+        return decls;
+    }
+
+    /**
+     * Parses comma-separated declarators of a local variable declaration without the trailing
+     * semicolon (used by for-loop initializers, e.g. {@code for (int i = 0, j = n; ...)}).
+     */
+    private List<VarDeclStmt> parseLocalVariableDeclaratorsNoSemi() {
+        boolean isFinal = match(TokenType.FINAL);
+        TypePrefix prefix = parseVarTypePrefix();
+        List<VarDeclStmt> decls = new ArrayList<>();
+        do {
+            decls.add(parseDeclarator(prefix.type, prefix.useVar, isFinal));
+        } while (match(TokenType.COMMA));
+        return decls;
+    }
+
+    private TypePrefix parseVarTypePrefix() {
         if (match(TokenType.VAR)) {
-            type = ReferenceSourceType.OBJECT;
-            useVar = true;
-        } else {
-            type = parseTypeReference();
+            return new TypePrefix(ReferenceSourceType.OBJECT, true);
+        }
+        return new TypePrefix(parseTypeReference(), false);
+    }
+
+    /**
+     * Parses a single declarator (name, optional C-style {@code []} dimensions, optional
+     * initializer) against a shared base type, and registers the variable.
+     */
+    private VarDeclStmt parseDeclarator(SourceType baseType, boolean useVar, boolean isFinal) {
+        SourceLocation loc = currentLocation();
+        String name = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+
+        SourceType type = baseType;
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+            advance();
+            advance();
+            type = new ArraySourceType(type);
         }
 
-        String name = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
         Expression init = null;
         if (match(TokenType.EQ)) {
             init = parseExpression();
         }
-
         if (useVar && init != null) {
             type = init.getType();
         }
         defineVariable(name, type);
         return new VarDeclStmt(type, name, init, false, isFinal, loc);
+    }
+
+    private static final class TypePrefix {
+        final SourceType type;
+        final boolean useVar;
+
+        TypePrefix(SourceType type, boolean useVar) {
+            this.type = type;
+            this.useVar = useVar;
+        }
     }
 
     private ExprStmt parseExpressionStatement() {
