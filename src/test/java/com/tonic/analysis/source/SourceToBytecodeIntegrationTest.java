@@ -1328,5 +1328,39 @@ public class SourceToBytecodeIntegrationTest {
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
             assertEquals(99, (int) clazz.getMethod("test").invoke(null));
         }
+
+        @Test
+        void staticFieldDecrement() throws Exception {
+            String source = "class T { static int counter; "
+                    + "static int test() { counter = 5; counter--; return counter; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(4, (int) clazz.getMethod("test").invoke(null));
+        }
+    }
+
+    @Nested
+    class UnqualifiedSelfCallTests {
+
+        @Test
+        void recursiveStaticCall() throws Exception {
+            String source = "class T { static int fib(int n) { "
+                    + "if (n < 2) { return n; } return fib(n - 1) + fib(n - 2); } }";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            Class<?> clazz = compileAndLoad(cls.getMethods().get(0), uniqueClassName());
+
+            Method m = clazz.getMethod("fib", int.class);
+            assertEquals(0, (int) m.invoke(null, 0));
+            assertEquals(1, (int) m.invoke(null, 1));
+            assertEquals(55, (int) m.invoke(null, 10));
+        }
+
+        @Test
+        void unqualifiedStaticHelperCall() throws Exception {
+            String source = "class T { static int dbl(int x) { return x * 2; } "
+                    + "static int use(int x) { return dbl(x) + 1; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(11, (int) clazz.getMethod("use", int.class).invoke(null, 5));
+        }
     }
 }

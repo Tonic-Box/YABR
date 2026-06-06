@@ -312,6 +312,12 @@ public class ExpressionLowerer {
         }
 
         IRType resultType = bin.getType().toIRType();
+        if (!(resultType instanceof PrimitiveType) || resultType == PrimitiveType.BOOLEAN) {
+            IRType inferred = arithmeticResultType(left, right);
+            if (inferred != null) {
+                resultType = inferred;
+            }
+        }
         left = widenIfNeeded(left, resultType);
         right = widenIfNeeded(right, resultType);
 
@@ -320,6 +326,37 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
+    }
+
+    /**
+     * Infers the result type of a binary arithmetic operation from its operand IR types,
+     * following JVM numeric promotion (double &gt; float &gt; long &gt; int). Used as a fallback
+     * when the AST node lacks a resolved numeric type, which happens for hand-written source
+     * with unqualified self-references the parser could not type. Returns null for
+     * non-numeric operands.
+     */
+    private IRType arithmeticResultType(Value left, Value right) {
+        IRType lt = left.getType();
+        IRType rt = right.getType();
+        if (lt == PrimitiveType.DOUBLE || rt == PrimitiveType.DOUBLE) {
+            return PrimitiveType.DOUBLE;
+        }
+        if (lt == PrimitiveType.FLOAT || rt == PrimitiveType.FLOAT) {
+            return PrimitiveType.FLOAT;
+        }
+        if (lt == PrimitiveType.LONG || rt == PrimitiveType.LONG) {
+            return PrimitiveType.LONG;
+        }
+        if (isIntegralIRType(lt) && isIntegralIRType(rt)) {
+            return PrimitiveType.INT;
+        }
+        return null;
+    }
+
+    private boolean isIntegralIRType(IRType type) {
+        return type == PrimitiveType.INT || type == PrimitiveType.BYTE
+            || type == PrimitiveType.CHAR || type == PrimitiveType.SHORT
+            || type == PrimitiveType.BOOLEAN;
     }
 
     private boolean isStringType(SourceType type) {
@@ -703,8 +740,17 @@ public class ExpressionLowerer {
                     ownerClass = resolveReceiverOwnerClass(receiver);
                 }
             } else {
-                args.add(ctx.getVariable("this"));
-                invokeType = InvokeType.VIRTUAL;
+                if (ownerClass == null || ownerClass.isEmpty()) {
+                    ownerClass = ctx.getOwnerClass();
+                }
+                boolean staticContext = !ctx.hasVariable("this");
+                boolean staticTarget = ctx.getTypeResolver().isStaticMethodInCurrentClass(call.getMethodName());
+                if (staticContext || staticTarget) {
+                    invokeType = InvokeType.STATIC;
+                } else {
+                    args.add(ctx.getVariable("this"));
+                    invokeType = InvokeType.VIRTUAL;
+                }
             }
         }
 

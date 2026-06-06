@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix variable fragmentation across exception edges and read-modify-write">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- unqualified field resolution">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
@@ -326,7 +326,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780338872402</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="- unqualified field resolution">
+      <option name="closed" value="true" />
+      <created>1780687786712</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1780687786712</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -344,6 +352,7 @@
     <MESSAGE value="- Add DynamicConstant support to LLVM lowering" />
     <MESSAGE value="- Fix decompiler artifacts on flat methods and lambdas" />
     <MESSAGE value="- Fix variable fragmentation across exception edges and read-modify-write" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix variable fragmentation across exception edges and read-modify-write" />
+    <MESSAGE value="- unqualified field resolution" />
+    <option name="LAST_COMMIT_MESSAGE" value="- unqualified field resolution" />
   </component>
 </project>

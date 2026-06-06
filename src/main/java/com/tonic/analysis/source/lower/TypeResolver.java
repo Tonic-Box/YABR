@@ -123,6 +123,23 @@ public class TypeResolver {
         return false;
     }
 
+    /**
+     * Returns whether a method declared on the class currently being lowered is static.
+     * Consults the parsed class declaration (which may contain methods not yet present on
+     * the ClassFile), so unqualified self-calls can be resolved as static or virtual.
+     * Returns false when no such method is declared.
+     */
+    public boolean isStaticMethodInCurrentClass(String methodName) {
+        if (currentClassDecl != null) {
+            for (MethodDecl method : currentClassDecl.getMethods()) {
+                if (method.getName().equals(methodName)) {
+                    return method.isStatic();
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean isCurrentClass(String ownerClass) {
         if (ownerClass.equals(currentClass)) {
             return true;
