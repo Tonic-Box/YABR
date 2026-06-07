@@ -2121,27 +2121,22 @@ public class StatementRecoverer {
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.isEmpty()) return true;
 
+        // The value is intermediate (inlinable at its use) unless some use needs it to have a home
+        // variable: a branch/phi (recovered as a named condition/merge), a store to a local, or a
+        // store to a field/array. Every other use kind (invoke arg, return, arithmetic, type check,
+        // field/array LOAD) consumes the value inline and does not force materialization.
         for (IRInstruction use : uses) {
-            if (use instanceof InvokeInstruction) continue;
-            if (use instanceof ReturnInstruction) continue;
-            if (use instanceof BinaryOpInstruction) continue;
-            if (use instanceof UnaryOpInstruction) continue;
-            if (use instanceof NewArrayInstruction) continue;
-            if (use instanceof BranchInstruction) return false;
-            if (use instanceof StoreLocalInstruction) return false;
-            if (use instanceof PhiInstruction) return false;
-
-            if (use instanceof FieldAccessInstruction) {
-                FieldAccessInstruction fa = (FieldAccessInstruction) use;
-                if (fa.isStore()) return false;
-                continue;
+            if (use instanceof BranchInstruction
+                    || use instanceof StoreLocalInstruction
+                    || use instanceof PhiInstruction) {
+                return false;
             }
-            if (use instanceof ArrayAccessInstruction) {
-                ArrayAccessInstruction aa = (ArrayAccessInstruction) use;
-                if (aa.isStore()) return false;
-                continue;
+            if (use instanceof FieldAccessInstruction && ((FieldAccessInstruction) use).isStore()) {
+                return false;
             }
-            if (use instanceof TypeCheckInstruction) continue;
+            if (use instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) use).isStore()) {
+                return false;
+            }
         }
         return true;
     }
@@ -3268,8 +3263,18 @@ public class StatementRecoverer {
             SSAValue ssaValue = (SSAValue) storeValue;
             wasMaterialized = context.getExpressionContext().isMaterialized(ssaValue);
             int previousSlot = context.getExpressionContext().getSSAValueSlot(ssaValue);
+            // An array initializer (`new Object[]{a, b}`) is emitted as its own declaration with the
+            // element stores attached (`Object[] tmp = new Object[2]; tmp[0] = a; ...`). A store of
+            // that array to another local must reference the temp, not re-recover the bare
+            // `new Object[2]` expression, which would silently drop the element stores.
+            String valueName = context.getExpressionContext().getVariableName(ssaValue);
+            boolean declaredArrayInit = ssaValue.getDefinition() instanceof NewArrayInstruction
+                    && isUsedByArrayStore(ssaValue)
+                    && valueName != null
+                    && context.getExpressionContext().isDeclared(valueName);
             // Only unmaterialize if this is the first store OR if we're storing to the same slot
-            shouldUnmaterialize = wasMaterialized && (previousSlot == -1 || previousSlot == localIndex);
+            shouldUnmaterialize = wasMaterialized && !declaredArrayInit
+                    && (previousSlot == -1 || previousSlot == localIndex);
             if (shouldUnmaterialize) {
                 context.getExpressionContext().unmarkMaterialized(ssaValue);
             }
@@ -5059,10 +5064,13 @@ public class StatementRecoverer {
         if (targetBool == valueBool) {
             return value;
         }
-        if (!targetBool && isIntegralType(target) && valueBool) {
+        // Exactly one side is boolean here: bridge the JVM's int-as-boolean representation.
+        if (valueBool && isIntegralType(target)) {
+            // a boolean expression stored into an int-like slot: `cond ? 1 : 0`
             return new TernaryExpr(value, LiteralExpr.ofInt(1), LiteralExpr.ofInt(0), target);
         }
         if (targetBool && isIntegralType(value.getType())) {
+            // an int-like value stored into a boolean slot: `value != 0`
             return new BinaryExpr(BinaryOperator.NE, value, LiteralExpr.ofInt(0),
                     PrimitiveSourceType.BOOLEAN);
         }
