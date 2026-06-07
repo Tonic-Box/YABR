@@ -427,8 +427,15 @@ public class SlotVariablePartition {
         if (result == null) {
             return null;
         }
+        int homeSlot = slotFromPhiResultName(phi);
         for (IRInstruction use : result.getUses()) {
             if (use instanceof StoreLocalInstruction) {
+                // Skip cross-slot copies of the phi result (e.g. `x = i`, where i is this loop
+                // phi): the phi belongs to its own slot, not a slot that merely copies its value.
+                // Such a store would otherwise make the phi adopt the copy target's web.
+                if (homeSlot >= 0 && ((StoreLocalInstruction) use).getLocalIndex() != homeSlot) {
+                    continue;
+                }
                 Node node = defNode.get(use);
                 if (node != null) {
                     return node;
@@ -443,10 +450,28 @@ public class SlotVariablePartition {
         if (result == null) {
             return -1;
         }
+        int homeSlot = slotFromPhiResultName(phi);
         for (IRInstruction use : result.getUses()) {
             if (use instanceof StoreLocalInstruction) {
-                return ((StoreLocalInstruction) use).getLocalIndex();
+                int slot = ((StoreLocalInstruction) use).getLocalIndex();
+                if (homeSlot >= 0 && slot != homeSlot) {
+                    continue;
+                }
+                return slot;
             }
+        }
+        return homeSlot;
+    }
+
+    /**
+     * The local slot a phi result belongs to, derived from its SSA name. Phi results for locals
+     * are named {@code phi_{slot}} or {@code v{slot}_{version}} (or {@code v{slot}}); the leading
+     * number is the slot. Returns -1 when the name does not encode a slot.
+     */
+    private int slotFromPhiResultName(PhiInstruction phi) {
+        SSAValue result = phi.getResult();
+        if (result == null) {
+            return -1;
         }
         String name = result.getName();
         if (name == null) {
@@ -458,9 +483,6 @@ public class SlotVariablePartition {
             } catch (NumberFormatException ignored) {
             }
         }
-        // SSA phi results for locals are named "v{slot}_{version}" (or "v{slot}"); the
-        // leading number is the local slot. Mapping the phi to its slot keeps it in the
-        // partition so it never falls back to a name that collides with another component.
         if (name.matches("v\\d+(_\\d+)?")) {
             int underscore = name.indexOf('_');
             String digits = underscore >= 0 ? name.substring(1, underscore) : name.substring(1);

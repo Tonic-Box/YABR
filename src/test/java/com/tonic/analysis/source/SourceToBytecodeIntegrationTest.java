@@ -1186,6 +1186,36 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
+        void loopWithSwapDecompilesItsBody() throws Exception {
+            // Regression: a loop whose body copies between locals (a = b; b = temp) must not have
+            // its body dropped nor its variables conflated on the decompile round-trip. The phi for
+            // the loop variable must be attributed to its own slot, not a slot that copies it.
+            String source = "class Test { static int fib(int n) { "
+                + "if (n <= 1) { return n; } int a = 0; int b = 1; "
+                + "for (int i = 2; i <= n; i = i + 1) { int t = a + b; a = b; b = t; } return b; } }";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            MethodDecl method = cls.getMethods().get(0);
+
+            String className = uniqueClassName();
+            ClassFile cf = createClassWithMethod(className, "fib", "(I)I", true);
+            ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
+            IRMethod ir = lowerer.lower(method, className);
+            new SSA(cf.getConstPool()).lower(ir, findMethod(cf, "fib"));
+
+            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            int forIdx = decompiled.indexOf("for ");
+            assertTrue(forIdx >= 0, "should recover a for loop");
+            int bodyOpen = decompiled.indexOf('{', forIdx);
+            int bodyClose = decompiled.indexOf('}', bodyOpen);
+            String loopBody = decompiled.substring(bodyOpen + 1, bodyClose);
+            assertFalse(loopBody.trim().isEmpty(), "loop body must not be dropped: " + decompiled);
+            assertTrue(loopBody.contains("+"), "loop body must keep the a + b computation: " + decompiled);
+            assertTrue(decompiled.contains("<= 1"),
+                "single-use constant must be inlined into the condition, not materialized to a slot: " + decompiled);
+        }
+
+        @Test
         void loopWithVariableSwap() throws Exception {
             // Iterative fibonacci: the loop swap (a = b; b = temp) makes the two loop-carried phis
             // simultaneously live, so they must not be coalesced into one register.

@@ -1682,8 +1682,6 @@ public class StatementRecoverer {
 
         Set<IRBlock> handlerBlocks = collectExceptionHandlerBlocks(method);
 
-        boolean isStatic = method.isStatic();
-
         Map<String, List<SourceType>> localSlotTypes = new HashMap<>();
 
         slotTypeCategoryToName.clear();
@@ -1992,10 +1990,6 @@ public class StatementRecoverer {
     }
 
     /**
-     * Computes a unified type for a phi instruction by examining all incoming values.
-     * For incompatible types (e.g., Insets and Graphics), returns their common supertype (Object).
-     */
-    /**
      * Detects a dead phi whose operands mix primitive and reference types. Such a phi is a
      * type-pun over a JVM slot reused for unrelated values; it is only verifier-legal because
      * its result is never read. Declaring it would unify the operands to Object and mis-type
@@ -2148,11 +2142,6 @@ public class StatementRecoverer {
                 continue;
             }
             if (use instanceof TypeCheckInstruction) continue;
-            if (use instanceof SimpleInstruction) {
-                SimpleInstruction si = (SimpleInstruction) use;
-                if (si.getOp() == SimpleOp.ATHROW) continue;
-                if (si.getOp() == SimpleOp.ARRAYLENGTH) continue;
-            }
         }
         return true;
     }
@@ -2624,10 +2613,6 @@ public class StatementRecoverer {
 
         while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
             ExceptionHandler tryHandler = findHandlerStartingAt(current);
-            if (tryHandler != null) {
-                boolean alreadyProcessed = processedTryHandlers.contains(tryHandler);
-                boolean handlerBlockProcessed = processedHandlerBlocks.contains(tryHandler.getHandlerBlock());
-            }
             if (tryHandler != null && !processedTryHandlers.contains(tryHandler)
                     && !processedHandlerBlocks.contains(tryHandler.getHandlerBlock())) {
                 processedTryHandlers.add(tryHandler);
@@ -2930,7 +2915,6 @@ public class StatementRecoverer {
                     }
                 }
                 if (expr instanceof NewExpr) {
-                    NewExpr newExpr = (NewExpr) expr;
                     if (ssaReceiver != null) {
                         IRInstruction receiverDef = ssaReceiver.getDefinition();
                         if (receiverDef instanceof NewInstruction) {
@@ -3245,10 +3229,6 @@ public class StatementRecoverer {
     private Statement recoverStoreLocal(StoreLocalInstruction store) {
         Value storeValue = store.getValue();
 
-        if (storeValue instanceof SSAValue) {
-            SSAValue ssaValue = (SSAValue) storeValue;
-        }
-
         // Early exit: if this is a NewArrayInstruction result that was already
         // declared at the NewArray position (because it's used by array stores),
         // skip to avoid duplicate declarations. This is a specific case handled
@@ -3316,9 +3296,6 @@ public class StatementRecoverer {
             name = getNameForLocalSlotWithType(localIndex, valueType);
         }
 
-        // Check if this specific variable name is already declared
-        boolean useExistingVar = context.getExpressionContext().isDeclared(name);
-
         SourceType type = getLocalSlotUnifiedType(name);
         if (type == null) {
             type = value.getType();
@@ -3350,7 +3327,12 @@ public class StatementRecoverer {
         if (store.getValue() instanceof SSAValue) {
             SSAValue sourceValue = (SSAValue) store.getValue();
             IRInstruction sourceDef = sourceValue.getDefinition();
-            boolean isLoadedValue = sourceDef instanceof LoadLocalInstruction;
+            // A value from a load OR a phi is a read of an existing variable (the slot's current
+            // value or a loop-carried merge), not a value freshly defined by this store. Copying
+            // the store's slot name onto it would conflate distinct variables — e.g. `a = b`
+            // (b is a loop phi) would rename b to "a" and collapse the assignment.
+            boolean isLoadedValue = sourceDef instanceof LoadLocalInstruction
+                || sourceDef instanceof PhiInstruction;
             boolean isAlreadyMaterialized = context.getExpressionContext().isMaterialized(sourceValue);
 
             if (!isLoadedValue && !isAlreadyMaterialized) {

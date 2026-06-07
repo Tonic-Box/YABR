@@ -40,6 +40,8 @@ public class BytecodeEmitter {
     private int currentOffset;
 
     private final Set<SSAValue> stackResidentValues;
+    private final Set<SSAValue> inlinedConstants;
+    private final Map<SSAValue, Constant> inlinedConstantValue;
 
     // For fall-through optimization
     private IRBlock nextBlock;
@@ -61,6 +63,8 @@ public class BytecodeEmitter {
         this.blockEndOffsets = new HashMap<>();
         this.pendingJumps = new ArrayList<>();
         this.stackResidentValues = new HashSet<>();
+        this.inlinedConstants = new HashSet<>();
+        this.inlinedConstantValue = new HashMap<>();
     }
 
     /**
@@ -73,6 +77,7 @@ public class BytecodeEmitter {
         dos = new DataOutputStream(bytecode);
         currentOffset = 0;
 
+        analyzeInlinedConstants();
         analyzeStackResidentValues();
 
         try {
@@ -161,6 +166,85 @@ public class BytecodeEmitter {
     }
 
     /**
+     * Identifies single-use literal constants that can be emitted inline at their use site
+     * (e.g. {@code iconst_1}) rather than materialized into a local slot and reloaded. This
+     * mirrors how javac emits constants and avoids spurious local variables on the round-trip.
+     *
+     * <p>A constant is inlinable only when it is used exactly once and that use routes its
+     * operands through {@link #emitOperandLoads} (i.e. not a copy/goto), so the constant can
+     * be pushed at the exact point the consumer reads it, in operand order.
+     */
+    private void analyzeInlinedConstants() {
+        inlinedConstants.clear();
+        inlinedConstantValue.clear();
+
+        Map<SSAValue, Constant> literalResults = new HashMap<>();
+        for (IRBlock block : method.getBlocksInOrder()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (instr instanceof ConstantInstruction) {
+                    ConstantInstruction ci = (ConstantInstruction) instr;
+                    SSAValue result = ci.getResult();
+                    if (result != null && isInlinableConstant(ci.getConstant())) {
+                        literalResults.put(result, ci.getConstant());
+                    }
+                }
+            }
+        }
+
+        Map<SSAValue, Integer> useCounts = new HashMap<>();
+        Map<SSAValue, IRInstruction> singleUser = new HashMap<>();
+        for (IRBlock block : method.getBlocksInOrder()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                for (Value operand : instr.getOperands()) {
+                    if (operand instanceof SSAValue && literalResults.containsKey(operand)) {
+                        SSAValue ssa = (SSAValue) operand;
+                        useCounts.merge(ssa, 1, Integer::sum);
+                        singleUser.put(ssa, instr);
+                    }
+                }
+            }
+        }
+
+        for (Map.Entry<SSAValue, Constant> entry : literalResults.entrySet()) {
+            SSAValue result = entry.getKey();
+            if (useCounts.getOrDefault(result, 0) != 1) continue;
+            if (!routesOperandsThroughLoads(singleUser.get(result))) continue;
+            inlinedConstants.add(result);
+            inlinedConstantValue.put(result, entry.getValue());
+        }
+    }
+
+    /**
+     * Constants {@link #emitConstantValue} knows how to push. Method-handle/type and dynamic
+     * constants are excluded since they have no inline push form here.
+     */
+    private boolean isInlinableConstant(Constant constant) {
+        return constant instanceof IntConstant
+            || constant instanceof LongConstant
+            || constant instanceof FloatConstant
+            || constant instanceof DoubleConstant
+            || constant instanceof StringConstant
+            || constant instanceof NullConstant
+            || constant instanceof ClassConstant;
+    }
+
+    /**
+     * True when an instruction's SSA operands are pushed via {@link #emitOperandLoads}. Copies
+     * (from phi elimination) and gotos read their source directly, so a constant consumed by
+     * them cannot be inlined.
+     */
+    private boolean routesOperandsThroughLoads(IRInstruction instr) {
+        if (instr == null) return false;
+        if (instr instanceof ConstantInstruction
+            || instr instanceof CopyInstruction
+            || instr instanceof PhiInstruction) {
+            return false;
+        }
+        return !(instr instanceof SimpleInstruction)
+                || ((SimpleInstruction) instr).getOp() != SimpleOp.GOTO;
+    }
+
+    /**
      * Identifies values that can remain on the stack instead of being stored to a register.
      */
     private void analyzeStackResidentValues() {
@@ -228,6 +312,10 @@ public class BytecodeEmitter {
     }
 
     private void emitInstruction(IRInstruction instr) throws IOException {
+        if (instr instanceof ConstantInstruction && inlinedConstants.contains(instr.getResult())) {
+            return;
+        }
+
         emitOperandLoads(instr);
 
         if (instr instanceof ConstantInstruction) {
@@ -297,6 +385,10 @@ public class BytecodeEmitter {
         for (Value operand : instr.getOperands()) {
             if (operand instanceof SSAValue) {
                 SSAValue ssa = (SSAValue) operand;
+                if (inlinedConstants.contains(ssa)) {
+                    emitConstantValue(inlinedConstantValue.get(ssa));
+                    continue;
+                }
                 if (stackResidentValues.contains(ssa)) {
                     continue;
                 }
