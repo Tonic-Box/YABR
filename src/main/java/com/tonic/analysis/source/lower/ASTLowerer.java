@@ -115,6 +115,7 @@ public class ASTLowerer {
             throw new LoweringException("Cannot lower abstract method: " + methodDecl.getName());
         }
         new com.tonic.analysis.source.ast.transform.PatternInstanceOfDesugar().transform(body);
+        new com.tonic.analysis.source.ast.transform.PatternSwitchDesugar(classPool).transform(body);
         new com.tonic.analysis.source.ast.transform.SwitchExpressionDesugar().transform(body);
 
         List<ParameterDecl> paramDecls = methodDecl.getParameters();

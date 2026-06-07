@@ -335,7 +335,7 @@ byte[] bytes = cf.write();
 
 ## AST Node Types
 
-### Expressions (24 types)
+### Expressions (21 types)
 
 | Expression | Description | Example |
 |------------|-------------|---------|
@@ -357,8 +357,11 @@ byte[] bytes = cf.write();
 | `ClassExpr` | Class literal | `String.class` |
 | `LambdaExpr` | Lambda | `x -> x * 2` |
 | `MethodRefExpr` | Method reference | `String::length` |
+| `SwitchExpr` | Switch expression (incl. type-pattern and guarded arms) | `switch (o) { case Integer i -> i; default -> 0; }` |
+| `InvokeDynamicExpr` | invokedynamic call site | `invokedynamic(...)` |
+| `DynamicConstantExpr` | Dynamic constant (condy) | `ConstantBootstraps...` |
 
-### Statements (18 types)
+### Statements (16 types)
 
 | Statement | Description | Example |
 |-----------|-------------|---------|

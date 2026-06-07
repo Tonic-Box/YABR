@@ -1749,4 +1749,210 @@ public class SourceToBytecodeIntegrationTest {
             assertEquals(7, clazz.getMethod("f", boolean.class).invoke(null, false));
         }
     }
+
+    @Nested
+    class PatternSwitchTests {
+
+        @Test
+        void decompileReconstructsTypePatternSwitch() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            String javac = "public class Pat21 { static String describe(Object o) {"
+                    + " return switch (o) {"
+                    + "   case Integer i -> \"int:\" + i;"
+                    + "   case String s -> \"str:\" + s.length();"
+                    + "   default -> \"other\"; }; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "Pat21", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Pat21")));
+            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+
+            // Reconstructed as a pattern switch with type-pattern arms; no dispatch-loop artifacts.
+            assertFalse(d.contains("$pc$"), "must not leave a dispatch loop:\n" + d);
+            assertFalse(d.contains("typeSwitch"), "must not leave a raw typeSwitch invokedynamic:\n" + d);
+            assertTrue(d.matches("(?s).*return switch \\(arg0\\) \\{.*"), "expected a return switch:\n" + d);
+            assertTrue(d.matches("(?s).*case Integer \\w+ ->.*"), "expected `case Integer <b> ->`:\n" + d);
+            assertTrue(d.matches("(?s).*case String \\w+ ->.*"), "expected `case String <b> ->`:\n" + d);
+            assertTrue(d.matches("(?s).*default -> \"other\";.*"), "expected default arm:\n" + d);
+        }
+
+        @Test
+        void decompileReconstructsAssignmentTypePatternSwitch() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            String javac = "public class PatA { static int describe(Object o) {"
+                    + " String r = switch (o) {"
+                    + "   case Integer i -> \"int:\" + i;"
+                    + "   case String s -> \"S\";"
+                    + "   default -> \"other\"; };"
+                    + " return r.length(); } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "PatA", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("PatA")));
+            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            assertFalse(d.contains("$pc$"), "no dispatch loop:\n" + d);
+            assertFalse(d.contains("typeSwitch"), "no raw typeSwitch:\n" + d);
+            assertTrue(d.matches("(?s).*=\\s*switch \\(arg0\\) \\{.*"), "expected assignment switch:\n" + d);
+            assertTrue(d.matches("(?s).*case Integer \\w+ -> \"int:\".*"), "expected Integer arm:\n" + d);
+            // Unused String binding must still be a valid type-pattern binding, not `case String ->`.
+            assertTrue(d.matches("(?s).*case String \\w+ -> \"S\";.*"), "expected `case String <b> ->`:\n" + d);
+        }
+
+        @Test
+        void decompileReconstructsRecordDeconstructionPattern() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            String javac = "public class PatRec {"
+                    + " record Point(int x, int y) {}"
+                    + " static int rec(Object o) {"
+                    + "   return switch (o) {"
+                    + "     case Point(int x, int y) -> x + y;"
+                    + "     default -> -1; }; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "PatRec", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("PatRec")));
+            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+
+            // The MatchException machinery is stripped and the accessor sequence folds into a
+            // record-deconstruction pattern; no dispatch-loop / raw-typeSwitch / MatchException leakage.
+            assertFalse(d.contains("$pc$"), "no dispatch loop:\n" + d);
+            assertFalse(d.contains("typeSwitch"), "no raw typeSwitch:\n" + d);
+            assertFalse(d.contains("MatchException"), "MatchException handler must be elided:\n" + d);
+            assertTrue(d.matches("(?s).*return switch \\(arg0\\) \\{.*"), "expected a return switch:\n" + d);
+            assertTrue(d.matches("(?s).*case PatRec\\.Point\\(int \\w+, int \\w+\\) -> \\w+ \\+ \\w+;.*"),
+                    "expected `case PatRec.Point(int a, int b) -> a + b`:\n" + d);
+            assertTrue(d.matches("(?s).*default -> -1;.*"), "expected default arm:\n" + d);
+        }
+
+        @Test
+        void decompileReconstructsGuardedPattern() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            String javac = "public class PatGuard { static String guard(Object o) {"
+                    + " return switch (o) {"
+                    + "   case Integer i when i > 0 -> \"pos\";"
+                    + "   case Integer i -> \"nonpos\";"
+                    + "   default -> \"other\"; }; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "PatGuard", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("PatGuard")));
+            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+
+            // The guard restart loop is recovered (via the $pc$ dispatch form) and folded into a `when`.
+            assertFalse(d.contains("$pc$"), "no dispatch loop:\n" + d);
+            assertFalse(d.contains("typeSwitch"), "no raw typeSwitch:\n" + d);
+            assertTrue(d.matches("(?s).*return switch \\(arg0\\) \\{.*"), "expected a return switch:\n" + d);
+            assertTrue(d.matches("(?s).*case Integer \\w+ when [^>]*> 0 -> \"pos\";.*"),
+                    "expected guarded `case Integer i when ... -> \"pos\"`:\n" + d);
+            assertTrue(d.matches("(?s).*case Integer \\w+ -> \"nonpos\";.*"),
+                    "expected unguarded `case Integer i -> \"nonpos\"`:\n" + d);
+            assertTrue(d.matches("(?s).*default -> \"other\";.*"), "expected default arm:\n" + d);
+        }
+    }
+
+    @Nested
+    class PatternSwitchRecompileTests {
+
+        /**
+         * Lowers every method of a parsed class to bytecode and returns the class bytes. The given
+         * platform classes are pre-loaded into the pool so library calls resolve.
+         */
+        private byte[] recompileToBytes(String source, String ownerClass, String... platformClasses)
+                throws Exception {
+            return recompileToBytes(source, ownerClass, java.util.Collections.emptyMap(), platformClasses);
+        }
+
+        private byte[] recompileToBytes(String source, String ownerClass,
+                                        java.util.Map<String, byte[]> preloaded, String... platformClasses)
+                throws Exception {
+            ClassPool localPool = TestUtils.emptyPool();
+            for (String cn : platformClasses) {
+                localPool.loadPlatformClass(cn + ".class");
+            }
+            for (byte[] classBytes : preloaded.values()) {
+                localPool.loadClass(new java.io.ByteArrayInputStream(classBytes));
+            }
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            ClassFile cf = localPool.createNewClass(ownerClass, new AccessBuilder().setPublic().build());
+            ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), localPool);
+            lowerer.setCurrentClassDecl(cls);
+            lowerer.setImports(cu.getImports());
+            SSA ssa = new SSA(cf.getConstPool());
+            for (MethodDecl method : cls.getMethods()) {
+                if (method.getBody() == null) {
+                    continue;
+                }
+                List<SourceType> params = new ArrayList<>();
+                for (ParameterDecl p : method.getParameters()) {
+                    params.add(p.getType());
+                }
+                cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(),
+                        method.getName(), buildDescriptor(params, method.getReturnType()));
+                MethodEntry entry = findMethod(cf, method.getName());
+                ssa.lower(lowerer.lower(method, ownerClass), entry);
+            }
+            return cf.write();
+        }
+
+        @Test
+        void recompilesTypePatternSwitchAndRunsOnJdk21() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            // main throws (exit != 0) on any wrong arm; runVerified passes iff -Xverify:all and all
+            // arms behave. Exercises a typeSwitch indy + integer dispatch + per-arm casts.
+            String src = "public class PReType {"
+                    + " public static void main(String[] a) {"
+                    + "   Object o1 = \"x\";"
+                    + "   Object o2 = Integer.valueOf(5);"
+                    + "   Object o3 = Double.valueOf(1.0);"
+                    + "   int r1 = switch (o1) { case Integer i -> 1; case String s -> 2; default -> 0; };"
+                    + "   int r2 = switch (o2) { case Integer i -> 1; case String s -> 2; default -> 0; };"
+                    + "   int r3 = switch (o3) { case Integer i -> 1; case String s -> 2; default -> 0; };"
+                    + "   if (r1 != 2 || r2 != 1 || r3 != 0) throw new RuntimeException(); } }";
+            byte[] bytes = recompileToBytes(src, "PReType",
+                    "java/lang/Object", "java/lang/Integer", "java/lang/Double",
+                    "java/lang/String", "java/lang/Number", "java/lang/RuntimeException");
+            java.util.Map<String, byte[]> classes = new java.util.LinkedHashMap<>();
+            classes.put("PReType", bytes);
+            com.tonic.testutil.ModernJdk.runVerified(21, classes, "PReType");
+        }
+
+        @Test
+        void recompilesGuardedPatternSwitchAndRunsOnJdk21() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            // x1: guard passes -> 1; x2: guard fails -> restart re-dispatch -> unguarded Integer arm -> 2;
+            // x3: String selector -> default -> 0. Exercises the typeSwitch restart loop.
+            String src = "public class PReGuard {"
+                    + " public static void main(String[] a) {"
+                    + "   int n = 0;"
+                    + "   Object g1 = Integer.valueOf(5);"
+                    + "   Object g2 = Integer.valueOf(-3);"
+                    + "   Object g3 = \"z\";"
+                    + "   int x1 = switch (g1) { case Integer i when n == 0 -> 1; case Integer i -> 2; default -> 0; };"
+                    + "   int x2 = switch (g2) { case Integer i when n > 0 -> 1; case Integer i -> 2; default -> 0; };"
+                    + "   int x3 = switch (g3) { case Integer i when n == 0 -> 1; case Integer i -> 2; default -> 0; };"
+                    + "   if (x1 != 1 || x2 != 2 || x3 != 0) throw new RuntimeException(); } }";
+            byte[] bytes = recompileToBytes(src, "PReGuard",
+                    "java/lang/Object", "java/lang/Integer", "java/lang/String",
+                    "java/lang/Number", "java/lang/RuntimeException");
+            java.util.Map<String, byte[]> classes = new java.util.LinkedHashMap<>();
+            classes.put("PReGuard", bytes);
+            com.tonic.testutil.ModernJdk.runVerified(21, classes, "PReGuard");
+        }
+
+        @Test
+        void recompilesRecordDeconstructionSwitchAndRunsOnJdk21() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            // The record Pt is compiled by javac so its RecordAttribute is available to resolve the
+            // component accessors; YABR then recompiles a deconstruction switch against it.
+            java.util.Map<String, byte[]> rec =
+                    com.tonic.testutil.ModernJdk.compile(21, "Pt", "public record Pt(int x, int y) {}");
+            String src = "public class PReDec {"
+                    + " public static void main(String[] a) {"
+                    + "   Object o = new Pt(3, 4);"
+                    + "   int r = switch (o) { case Pt(int x, int y) -> x + y; default -> -1; };"
+                    + "   Object o2 = Integer.valueOf(9);"
+                    + "   int r2 = switch (o2) { case Pt(int x, int y) -> x + y; default -> -1; };"
+                    + "   if (r != 7 || r2 != -1) throw new RuntimeException(); } }";
+            byte[] bytes = recompileToBytes(src, "PReDec", rec,
+                    "java/lang/Object", "java/lang/Integer", "java/lang/String",
+                    "java/lang/Number", "java/lang/RuntimeException");
+            java.util.Map<String, byte[]> classes = new java.util.LinkedHashMap<>();
+            classes.put("Pt", rec.get("Pt"));
+            classes.put("PReDec", bytes);
+            com.tonic.testutil.ModernJdk.runVerified(21, classes, "PReDec");
+        }
+    }
 }

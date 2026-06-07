@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.transform.PatternSwitchReconstructor;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
@@ -9,6 +10,8 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
+import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.MethodEntry;
 import lombok.Getter;
 import java.util.List;
@@ -25,6 +28,8 @@ public class MethodRecoverer {
     private final NameRecoveryStrategy nameStrategy;
     /** Names reserved by the caller (e.g. captured outer variables); {@code baseNameForSlot} skips these. */
     private final java.util.Set<String> reservedNames = new java.util.HashSet<>();
+    /** Cast results that are a record deconstruction's synthetic temp (the {@code (T) selector}). */
+    private final java.util.Set<SSAValue> recordDeconstructionTemps = new java.util.HashSet<>();
 
     private DominatorTree dominatorTree;
     private LoopAnalysis loopAnalysis;
@@ -60,6 +65,8 @@ public class MethodRecoverer {
      * Performs all analysis passes needed for recovery.
      */
     public void analyze() {
+        stripSyntheticMatchExceptionHandlers();
+
         dominatorTree = new DominatorTree(irMethod);
         dominatorTree.compute();
 
@@ -74,10 +81,128 @@ public class MethodRecoverer {
     }
 
     /**
+     * Removes compiler-synthesized exception handlers that rethrow caught failures as
+     * {@code java.lang.MatchException}. {@code javac} wraps the record-component accessor
+     * invocations of a record deconstruction pattern in such a handler so that an accessor
+     * throwing surfaces as a {@code MatchException}; this machinery has no idiomatic source
+     * form, so the handler region is pruned before structuring. The protected accessor
+     * sequence then recovers as a straight-line deconstruction the pattern-switch
+     * reconstructor folds into {@code case Type(...)}.
+     */
+    private void stripSyntheticMatchExceptionHandlers() {
+        List<IRBlock> handlerBlocks = new java.util.ArrayList<>();
+        java.util.Set<Integer> deconstructSlots = new java.util.HashSet<>();
+        for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {
+            IRBlock hb = handler.getHandlerBlock();
+            if (hb != null && rethrowsAsMatchException(hb)) {
+                if (!handlerBlocks.contains(hb)) {
+                    handlerBlocks.add(hb);
+                }
+                collectDeconstructionTemps(handler.getTryStart(), deconstructSlots);
+            }
+        }
+        // When an accessor receiver is a local load rather than the cast directly, resolve the slot
+        // to the cast that defines it.
+        if (!deconstructSlots.isEmpty()) {
+            for (IRBlock b : irMethod.getBlocks()) {
+                for (IRInstruction instr : b.getInstructions()) {
+                    if (!(instr instanceof TypeCheckInstruction) || !((TypeCheckInstruction) instr).isCast()) {
+                        continue;
+                    }
+                    SSAValue castResult = instr.getResult();
+                    if (castResult == null) {
+                        continue;
+                    }
+                    for (IRInstruction use : castResult.getUses()) {
+                        if (use instanceof StoreLocalInstruction
+                                && deconstructSlots.contains(((StoreLocalInstruction) use).getLocalIndex())) {
+                            recordDeconstructionTemps.add(castResult);
+                        }
+                    }
+                }
+            }
+        }
+        for (IRBlock hb : handlerBlocks) {
+            if (hb.getPredecessors().isEmpty()) {
+                irMethod.removeBlock(hb);
+            } else {
+                irMethod.getExceptionHandlers().removeIf(h -> h.getHandlerBlock() == hb);
+            }
+        }
+    }
+
+    /**
+     * True when a {@code SwitchBootstraps.typeSwitch} switch block is also a loop header — the
+     * restart loop {@code javac} emits for a guarded pattern ({@code case T t when cond}), where the
+     * guard-fail edge re-dispatches with an incremented restart index. The generic structurer does
+     * not recognize a switch-terminated loop header, dropping the back-edge; the faithful {@code $pc$}
+     * dispatch form preserves it, and {@link PatternSwitchReconstructor} folds it back into a guard.
+     */
+    private boolean hasTypeSwitchRestartLoop() {
+        if (loopAnalysis == null) {
+            return false;
+        }
+        for (IRBlock block : irMethod.getBlocks()) {
+            IRInstruction term = block.getTerminator();
+            if (!(term instanceof SwitchInstruction)) {
+                continue;
+            }
+            Value key = ((SwitchInstruction) term).getKey();
+            if (key instanceof SSAValue) {
+                IRInstruction def = ((SSAValue) key).getDefinition();
+                if (def instanceof InvokeInstruction && ((InvokeInstruction) def).isDynamic()
+                        && "typeSwitch".equals(((InvokeInstruction) def).getName())
+                        && loopAnalysis.isLoopHeader(block)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** True when {@code block} allocates a {@code java.lang.MatchException} (a synthetic rethrow handler). */
+    private boolean rethrowsAsMatchException(IRBlock block) {
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof NewInstruction
+                    && "java/lang/MatchException".equals(((NewInstruction) instr).getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Records the local slots of the receivers of the (component-accessor) invocations protected by
+     * a record-deconstruction's MatchException handler. The cast that defines such a slot is the
+     * deconstruction's synthetic temp.
+     */
+    private void collectDeconstructionTemps(IRBlock tryStart, java.util.Set<Integer> slots) {
+        if (tryStart == null) {
+            return;
+        }
+        for (IRInstruction instr : tryStart.getInstructions()) {
+            if (!(instr instanceof InvokeInstruction)) {
+                continue;
+            }
+            Value receiver = ((InvokeInstruction) instr).getReceiver();
+            if (!(receiver instanceof SSAValue)) {
+                continue;
+            }
+            IRInstruction def = ((SSAValue) receiver).getDefinition();
+            if (def instanceof TypeCheckInstruction && ((TypeCheckInstruction) def).isCast()) {
+                recordDeconstructionTemps.add((SSAValue) receiver);
+            } else if (def instanceof LoadLocalInstruction) {
+                slots.add(((LoadLocalInstruction) def).getLocalIndex());
+            }
+        }
+    }
+
+    /**
      * Initializes all recovery components.
      */
     public void initializeRecovery() {
         recoveryContext = new RecoveryContext(irMethod, sourceMethod, defUseChains);
+        recoveryContext.getRecordDeconstructionTemps().addAll(recordDeconstructionTemps);
 
         nameRecoverer = new NameRecoverer(irMethod, sourceMethod, nameStrategy);
         assignVariableNames();
@@ -325,7 +450,7 @@ public class MethodRecoverer {
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
         boolean noHandlers = handlers == null || handlers.isEmpty();
         if (noHandlers && !Boolean.getBoolean("dispatch.off")
-                && statementRecoverer.hasDroppedOperations(body)) {
+                && (statementRecoverer.hasDroppedOperations(body) || hasTypeSwitchRestartLoop())) {
             initializeRecovery();
             body = statementRecoverer.recoverMethodAsDispatch();
         }

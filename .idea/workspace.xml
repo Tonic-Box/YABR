@@ -4,8 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix loop-variable miscompilation, support multi-var declarations, tidy codegen">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner.">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/PatternSwitchDesugar.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/PatternSwitchReconstructor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/CastExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/CastExpr.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/InvokeDynamicExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/InvokeDynamicExpr.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/SwitchExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/SwitchExpr.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/type/ReferenceSourceType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/type/ReferenceSourceType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -363,7 +379,31 @@
       <option name="project" value="LOCAL" />
       <updated>1780775938464</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="- Codegen: emit single-use literal constants inline at their use site (iconst/ldc) instead of materializing them to a local slot and reloading. Matches javac, shrinks bytecode, and removes the spurious slot variables that round-tripped as `boolean localN = true`.&#10;&#10;- Decompiler: attribute a loop-header phi to its own home slot rather than the first store-use of its result, so a body copy like `a = b`no longer conflates the two variables or drops the body store.">
+      <option name="closed" value="true" />
+      <created>1780794635087</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1780794635087</updated>
+    </task>
+    <task id="LOCAL-00024" summary="Keep single-use values on the stack; drop dead field read on inc/dec&#10;- Codegen: fix isSimpleOperand so a single-use value feeding a comparison (e.g. i*i in i*i &lt;= n) stays stack-resident instead of spilling to a scratch slot the decompiler then mangled.&#10;- Lowering: dispatch inc/dec before lowerUnary's eager operand lowering so a field increment reads the field once, not twice.">
+      <option name="closed" value="true" />
+      <created>1780806063747</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1780806063747</updated>
+    </task>
+    <task id="LOCAL-00025" summary="- don't un-materialize a value already emitted as an array-initializer declaration; reference the temp instead.">
+      <option name="closed" value="true" />
+      <created>1780810658495</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1780810658495</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -386,6 +426,10 @@
     <MESSAGE value="Recompile: resolve own-class &amp; cross-class refs, fix lambda lowering, member emit/remov&#10;- Resolve unqualified own-class field refs and static self-calls&#10;- Resolve simple type names against the loaded pool (same-package + java.lang), fixing field/owner resolution (e.g. MainFrame.IDK_LOL)&#10;- Infer arithmetic/increment/array-capture types from operands&#10;- Lambda target-typing + SAM resolution, with correct owner and invokeinterface (kind + count byte)&#10;- Full-body lambda capture detection + synthetic emission infra" />
     <MESSAGE value="- RegisterAllocator.java — interference-guarded phi coalescing (intervalByValue map + interferes() + guard in buildPhiCoalescingMap)." />
     <MESSAGE value="- Fix loop-variable miscompilation, support multi-var declarations, tidy codegen" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix loop-variable miscompilation, support multi-var declarations, tidy codegen" />
+    <MESSAGE value="- Codegen: emit single-use literal constants inline at their use site (iconst/ldc) instead of materializing them to a local slot and reloading. Matches javac, shrinks bytecode, and removes the spurious slot variables that round-tripped as `boolean localN = true`.&#10;&#10;- Decompiler: attribute a loop-header phi to its own home slot rather than the first store-use of its result, so a body copy like `a = b`no longer conflates the two variables or drops the body store." />
+    <MESSAGE value="Keep single-use values on the stack; drop dead field read on inc/dec&#10;- Codegen: fix isSimpleOperand so a single-use value feeding a comparison (e.g. i*i in i*i &lt;= n) stays stack-resident instead of spilling to a scratch slot the decompiler then mangled.&#10;- Lowering: dispatch inc/dec before lowerUnary's eager operand lowering so a field increment reads the field once, not twice." />
+    <MESSAGE value="- don't un-materialize a value already emitted as an array-initializer declaration; reference the temp instead." />
+    <MESSAGE value="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner." />
+    <option name="LAST_COMMIT_MESSAGE" value="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner." />
   </component>
 </project>

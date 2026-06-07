@@ -1350,7 +1350,13 @@ public class ExpressionLowerer {
             bsmDesc
         );
 
-        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, new ArrayList<>());
+        // For SwitchBootstraps.typeSwitch the bootstrap static arguments are the case-type Class
+        // constants, in declaration order; other bootstraps modeled here carry none.
+        List<Constant> bsArgs = new ArrayList<>();
+        for (String classArg : expr.getBootstrapClassArgs()) {
+            bsArgs.add(new ClassConstant(classArg));
+        }
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
 
         IRType returnType = expr.getType().toIRType();
         SSAValue result = null;

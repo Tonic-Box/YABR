@@ -12,6 +12,7 @@ import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
 import com.tonic.analysis.source.ast.transform.DeclarationHoister;
 import com.tonic.analysis.source.ast.transform.PatternInstanceOfReconstructor;
 import com.tonic.analysis.source.ast.transform.SingleUseInliner;
+import com.tonic.analysis.source.ast.transform.PatternSwitchReconstructor;
 import com.tonic.analysis.source.ast.transform.SwitchExpressionReconstructor;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
@@ -44,7 +45,6 @@ import com.tonic.parser.attribute.anotation.ElementValue;
 import com.tonic.parser.attribute.anotation.ElementValuePair;
 import com.tonic.parser.attribute.anotation.EnumConst;
 import com.tonic.parser.constpool.*;
-import com.tonic.parser.util.TypeInfo;
 import com.tonic.utill.ClassNameUtil;
 import com.tonic.utill.Modifiers;
 
@@ -72,6 +72,7 @@ public class ClassDecompiler {
     private final DeadStoreEliminator deadStoreEliminator;
     private final DeclarationHoister declarationHoister;
     private final SwitchExpressionReconstructor switchExprReconstructor;
+    private final PatternSwitchReconstructor patternSwitchReconstructor;
     private final SingleUseInliner singleUseInliner;
     private final PatternInstanceOfReconstructor patternInstanceOf;
     private final Set<String> usedTypes = new TreeSet<>();
@@ -98,6 +99,7 @@ public class ClassDecompiler {
         this.deadStoreEliminator = new DeadStoreEliminator();
         this.declarationHoister = new DeclarationHoister();
         this.switchExprReconstructor = new SwitchExpressionReconstructor();
+        this.patternSwitchReconstructor = new PatternSwitchReconstructor();
         this.singleUseInliner = new SingleUseInliner();
         this.patternInstanceOf = new PatternInstanceOfReconstructor();
         this.hasInnerClasses = detectInnerClasses();
@@ -264,19 +266,16 @@ public class ClassDecompiler {
 
         for (MethodEntry method : classFile.getMethods()) {
             String methodName = method.getName();
-            if (isSuppressedRecordMethod(record, method)) {
+            if (isSuppressedRecordMethod(record, method)
+                    || methodName.equals("<clinit>")
+                    || isSyntheticLambdaMethod(methodName)
+                    || (isEnum && isSyntheticEnumMethod(methodName))) {
                 continue;
             }
-            if (methodName.equals("<clinit>")) {
-                continue;
-            } else if (methodName.equals("<init>")) {
+            if (methodName.equals("<init>")) {
                 if (!isEnum) {
                     constructors.add(method);
                 }
-            } else if (isSyntheticLambdaMethod(methodName)) {
-                continue;
-            } else if (isEnum && isSyntheticEnumMethod(methodName)) {
-                continue;
             } else {
                 methods.add(method);
             }
@@ -422,7 +421,6 @@ public class ClassDecompiler {
 
         // Superclass - skip for interfaces, annotations, enums, and records (java.lang.Record implicit)
         String superName = classFile.getSuperClassName();
-        boolean isEnum = Modifiers.isEnum(access);
         boolean isAnnotation = Modifiers.isAnnotation(access);
         if (superName != null && !superName.equals("java/lang/Object")
                 && !superName.equals("java/lang/Enum")
@@ -530,11 +528,9 @@ public class ClassDecompiler {
         }
         // Auto-generated Object methods (final + canonical signature).
         if (Modifiers.isFinal(method.getAccess())) {
-            if (("toString".equals(name) && "()Ljava/lang/String;".equals(desc))
+            return ("toString".equals(name) && "()Ljava/lang/String;".equals(desc))
                     || ("hashCode".equals(name) && "()I".equals(desc))
-                    || ("equals".equals(name) && "(Ljava/lang/Object;)Z".equals(desc))) {
-                return true;
-            }
+                    || ("equals".equals(name) && "(Ljava/lang/Object;)Z".equals(desc));
         }
         return false;
     }
@@ -725,6 +721,7 @@ public class ClassDecompiler {
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
+            patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body); // Static initializers cannot have return statements
             emitBlockContents(writer, body);
@@ -816,6 +813,7 @@ public class ClassDecompiler {
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
+            patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
@@ -888,6 +886,7 @@ public class ClassDecompiler {
             // inverts/cleans those.
             astSimplifier.transform(body);
             declarationHoister.transform(body);
+            patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
@@ -1099,112 +1098,6 @@ public class ClassDecompiler {
 
     private boolean isInnerClassOf(String className, String outerClassName) {
         return className.startsWith(outerClassName + "$");
-    }
-
-    private void collectTypesFromDescriptor(String descriptor, Set<String> types) {
-        if (descriptor == null || descriptor.isEmpty()) {
-            return;
-        }
-        TypeInfo type = TypeInfo.of(descriptor);
-        if (type.isArray()) {
-            TypeInfo elementType = type;
-            while (elementType.isArray()) {
-                elementType = elementType.getElementType();
-            }
-            String className = elementType.getClassName();
-            if (className != null) {
-                types.add(className);
-            }
-        } else {
-            String className = type.getClassName();
-            if (className != null) {
-                types.add(className);
-            }
-        }
-    }
-
-    /**
-     * Collects annotation type references from attributes.
-     */
-    private void collectAnnotationTypes(List<Attribute> attributes, Set<String> types) {
-        if (attributes == null) return;
-
-        for (Attribute attr : attributes) {
-            if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
-                RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
-                for (Annotation ann : annAttr.getAnnotations()) {
-                    collectAnnotationTypeRefs(ann, types);
-                }
-            }
-            else if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
-                RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
-                for (Annotation ann : annAttr.getAnnotations()) {
-                    collectAnnotationTypeRefs(ann, types);
-                }
-            }
-        }
-    }
-
-    /**
-     * Recursively collects type references from an annotation and its element values.
-     */
-    private void collectAnnotationTypeRefs(Annotation ann, Set<String> types) {
-        // Add the annotation type itself
-        String typeName = resolveAnnotationType(ann.getTypeIndex());
-        if (typeName.startsWith("L") && typeName.endsWith(";")) {
-            typeName = typeName.substring(1, typeName.length() - 1);
-        }
-        if (!typeName.startsWith("[")) {
-            types.add(typeName);
-        }
-
-        // Check element values for class references and nested annotations
-        if (ann.getElementValuePairs() != null) {
-            for (ElementValuePair pair : ann.getElementValuePairs()) {
-                collectElementValueTypes(pair.getValue(), types);
-            }
-        }
-    }
-
-    /**
-     * Collects type references from an element value.
-     */
-    private void collectElementValueTypes(ElementValue ev, Set<String> types) {
-        int tag = ev.getTag();
-        Object value = ev.getValue();
-
-        switch (tag) {
-            case 'e': // enum - add enum type
-                EnumConst enumConst = (EnumConst) value;
-                String enumType = resolveUtf8(enumConst.getTypeNameIndex());
-                if (enumType.startsWith("L") && enumType.endsWith(";")) {
-                    enumType = enumType.substring(1, enumType.length() - 1);
-                }
-                types.add(enumType);
-                break;
-
-            case 'c': // class literal
-                String className = resolveUtf8((Integer) value);
-                if (className.startsWith("L") && className.endsWith(";")) {
-                    className = className.substring(1, className.length() - 1);
-                }
-                if (!className.startsWith("[") && className.length() > 1) {
-                    types.add(className);
-                }
-                break;
-
-            case '@': // nested annotation
-                collectAnnotationTypeRefs((Annotation) value, types);
-                break;
-
-            case '[': // array
-                @SuppressWarnings("unchecked")
-                List<ElementValue> values = (List<ElementValue>) value;
-                for (ElementValue elemVal : values) {
-                    collectElementValueTypes(elemVal, types);
-                }
-                break;
-        }
     }
 
     /**

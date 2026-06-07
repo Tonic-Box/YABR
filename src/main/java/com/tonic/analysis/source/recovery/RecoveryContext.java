@@ -59,6 +59,9 @@ public class RecoveryContext {
     /** Stack of variables declared in if-then-else branches (scoped to branch) */
     private final Deque<Set<String>> branchScopedVariables = new ArrayDeque<>();
 
+    /** Cast results that are a record deconstruction's synthetic temp (the {@code (T) selector}). */
+    private final Set<SSAValue> recordDeconstructionTemps = new HashSet<>();
+
     public RecoveryContext(IRMethod irMethod, MethodEntry sourceMethod, DefUseChains defUseChains) {
         this.irMethod = irMethod;
         this.sourceMethod = sourceMethod;

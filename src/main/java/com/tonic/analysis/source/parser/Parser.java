@@ -850,8 +850,15 @@ public class Parser {
     }
 
     private boolean looksLikeTypeDeclaration() {
-        int offset = 0;
+        int offset = skipTypeTokens(0);
+        return offset >= 0 && lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER;
+    }
 
+    /**
+     * Assuming {@code current} is the first identifier of a type, returns the peek-offset of the token
+     * immediately after the (possibly qualified, generic, or array) type, or -1 on a malformed array.
+     */
+    private int skipTypeTokens(int offset) {
         if (lexer.peekAhead(offset).getType() == TokenType.DOT) {
             offset++;
             while (lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER) {
@@ -880,11 +887,25 @@ public class Parser {
             if (lexer.peekAhead(offset).getType() == TokenType.RBRACKET) {
                 offset++;
             } else {
-                return false;
+                return -1;
             }
         }
 
-        return lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER;
+        return offset;
+    }
+
+    /** A switch case-label type pattern: {@code Type binding} ({@code current} is the type's first identifier). */
+    private boolean looksLikeTypePattern() {
+        if (!check(TokenType.IDENTIFIER)) return false;
+        int offset = skipTypeTokens(0);
+        return offset >= 0 && lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER;
+    }
+
+    /** A switch case-label record-deconstruction pattern: {@code Type(...)}. */
+    private boolean looksLikeRecordPattern() {
+        if (!check(TokenType.IDENTIFIER)) return false;
+        int offset = skipTypeTokens(0);
+        return offset >= 0 && lexer.peekAhead(offset).getType() == TokenType.LPAREN;
     }
 
     private IfStmt parseIf() {
@@ -1032,27 +1053,75 @@ public class Parser {
         List<com.tonic.analysis.source.ast.expr.SwitchExpr.Arm> arms = new ArrayList<>();
         SourceType type = null;
         while (!check(TokenType.RBRACE) && !isAtEnd()) {
-            List<Expression> labels = new ArrayList<>();
-            boolean isDefault = false;
-            if (match(TokenType.CASE)) {
-                do {
-                    labels.add(parseExpression());
-                } while (match(TokenType.COMMA));
-            } else if (match(TokenType.DEFAULT)) {
-                isDefault = true;
-            } else {
-                throw error("Expected 'case' or 'default' in switch expression");
-            }
-            consume(TokenType.ARROW, "Expected '->' in switch expression arm");
-            Expression result = parseExpression();
-            consume(TokenType.SEMICOLON, "Expected ';' after switch expression arm");
-            arms.add(new com.tonic.analysis.source.ast.expr.SwitchExpr.Arm(labels, isDefault, result));
-            if (type == null && result.getType() != null) {
-                type = result.getType();
+            com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm = parseSwitchExprArm();
+            arms.add(arm);
+            if (type == null && arm.getResult() != null && arm.getResult().getType() != null) {
+                type = arm.getResult().getType();
             }
         }
         consume(TokenType.RBRACE, "Expected '}' after switch expression body");
         return new com.tonic.analysis.source.ast.expr.SwitchExpr(selector, arms, type, loc);
+    }
+
+    /**
+     * Parses one switch-expression arm: a constant arm {@code case L1, L2 -> e}, a type-pattern arm
+     * {@code case T b [when g] -> e}, a record-deconstruction arm {@code case T(C0 b0, ...) [when g] -> e},
+     * or {@code default -> e} (Java 21 pattern switch).
+     */
+    private com.tonic.analysis.source.ast.expr.SwitchExpr.Arm parseSwitchExprArm() {
+        List<Expression> labels = new ArrayList<>();
+        SourceType patternType = null;
+        String patternBinding = null;
+        List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> components = null;
+        Expression guard = null;
+        boolean isDefault = false;
+
+        if (match(TokenType.CASE)) {
+            if (looksLikeRecordPattern()) {
+                patternType = parseType();
+                components = parseDeconstructionComponents();
+            } else if (looksLikeTypePattern()) {
+                patternType = parseType();
+                patternBinding = consume(TokenType.IDENTIFIER, "Expected pattern binding name").getText();
+            } else {
+                do {
+                    labels.add(parseExpression());
+                } while (match(TokenType.COMMA));
+            }
+            if (patternType != null && checkIdentifier("when")) {
+                advance();
+                guard = parseExpression();
+            }
+        } else if (match(TokenType.DEFAULT)) {
+            isDefault = true;
+        } else {
+            throw error("Expected 'case' or 'default' in switch expression");
+        }
+
+        consume(TokenType.ARROW, "Expected '->' in switch expression arm");
+        Expression result = parseExpression();
+        consume(TokenType.SEMICOLON, "Expected ';' after switch expression arm");
+
+        if (patternType != null) {
+            return new com.tonic.analysis.source.ast.expr.SwitchExpr.Arm(
+                    new ArrayList<>(), false, patternType, patternBinding, components, guard, result);
+        }
+        return new com.tonic.analysis.source.ast.expr.SwitchExpr.Arm(labels, isDefault, result);
+    }
+
+    /** Parses {@code (C0 b0, C1 b1, ...)} of a record-deconstruction pattern (flat components). */
+    private List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> parseDeconstructionComponents() {
+        consume(TokenType.LPAREN, "Expected '(' in record-deconstruction pattern");
+        List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> components = new ArrayList<>();
+        if (!check(TokenType.RPAREN)) {
+            do {
+                SourceType compType = parseType();
+                String compBinding = consume(TokenType.IDENTIFIER, "Expected component binding name").getText();
+                components.add(new com.tonic.analysis.source.ast.expr.SwitchExpr.Component(compType, compBinding));
+            } while (match(TokenType.COMMA));
+        }
+        consume(TokenType.RPAREN, "Expected ')' after record-deconstruction components");
+        return components;
     }
 
     private SwitchCase parseSwitchCase() {

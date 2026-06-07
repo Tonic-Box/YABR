@@ -21,6 +21,13 @@ public final class CastExpr implements Expression {
     private final SourceLocation location;
     @Setter
     private ASTNode parent;
+    /**
+     * True when this cast is a record deconstruction's synthetic temp ({@code (T) selector} whose
+     * component accessors were protected by a MatchException handler). The pattern-switch
+     * reconstructor uses this to fold the arm into {@code case T(...)} rather than a type pattern.
+     */
+    @Setter
+    private boolean recordDeconstruction;
 
     public CastExpr(SourceType targetType, Expression expression, SourceLocation location) {
         this.targetType = Objects.requireNonNull(targetType, "targetType cannot be null");

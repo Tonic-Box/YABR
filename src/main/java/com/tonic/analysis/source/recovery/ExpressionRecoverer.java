@@ -675,7 +675,7 @@ public class ExpressionRecoverer {
             String bsmOwner = bsm != null ? bsm.getOwner() : "unknown";
             String bsmName = bsm != null ? bsm.getName() : "unknown";
 
-            return new InvokeDynamicExpr(
+            InvokeDynamicExpr expr = new InvokeDynamicExpr(
                     instr.getName(),
                     instr.getDescriptor(),
                     args,
@@ -683,6 +683,16 @@ public class ExpressionRecoverer {
                     bsmName,
                     returnType
             );
+            // Preserve class-constant bootstrap static arguments (e.g. SwitchBootstraps.typeSwitch
+            // case types) so pattern-switch reconstruction can recover the case-type labels.
+            List<String> classArgs = new ArrayList<>();
+            for (com.tonic.analysis.ssa.value.Constant c : bsInfo.getBootstrapArguments()) {
+                if (c instanceof com.tonic.analysis.ssa.value.ClassConstant) {
+                    classArgs.add(((com.tonic.analysis.ssa.value.ClassConstant) c).getClassName());
+                }
+            }
+            expr.setBootstrapClassArgs(classArgs);
+            return expr;
         }
 
         /**
@@ -1636,7 +1646,12 @@ public class ExpressionRecoverer {
             if (instr.isCast()) {
                 Expression operand = recoverOperand(instr.getOperand());
                 SourceType targetType = SourceType.fromIRType(instr.getTargetType());
-                return new CastExpr(targetType, operand);
+                CastExpr cast = new CastExpr(targetType, operand);
+                if (instr.getResult() != null
+                        && context.getRecordDeconstructionTemps().contains(instr.getResult())) {
+                    cast.setRecordDeconstruction(true);
+                }
+                return cast;
             } else if (instr.isInstanceOf()) {
                 Expression operand = recoverOperand(instr.getOperand());
                 SourceType targetType = SourceType.fromIRType(instr.getTargetType());

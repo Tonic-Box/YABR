@@ -1333,6 +1333,30 @@ public class SourceEmitter implements SourceVisitor<Void> {
         for (com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm : expr.getArms()) {
             if (arm.isDefault()) {
                 writer.write("default -> ");
+            } else if (arm.isRecordDeconstruction()) {
+                writer.write("case ");
+                writer.write(arm.getPatternType().toJavaSource());
+                writer.write("(");
+                List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> comps =
+                        arm.getDeconstructionComponents();
+                for (int i = 0; i < comps.size(); i++) {
+                    if (i > 0) writer.write(", ");
+                    writer.write(comps.get(i).getType().toJavaSource());
+                    writer.write(" ");
+                    writer.write(comps.get(i).getBinding());
+                }
+                writer.write(")");
+                emitWhenGuard(arm);
+                writer.write(" -> ");
+            } else if (arm.isTypePattern()) {
+                writer.write("case ");
+                writer.write(arm.getPatternType().toJavaSource());
+                if (arm.getPatternBinding() != null) {
+                    writer.write(" ");
+                    writer.write(arm.getPatternBinding());
+                }
+                emitWhenGuard(arm);
+                writer.write(" -> ");
             } else {
                 writer.write("case ");
                 List<Expression> labels = arm.getLabels();
@@ -1348,6 +1372,14 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.dedent();
         writer.write("}");
         return null;
+    }
+
+    /** Emits {@code  when <guard>} for a guarded pattern arm. */
+    private void emitWhenGuard(com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm) {
+        if (arm.getGuard() != null) {
+            writer.write(" when ");
+            arm.getGuard().accept(this);
+        }
     }
 
     @Override

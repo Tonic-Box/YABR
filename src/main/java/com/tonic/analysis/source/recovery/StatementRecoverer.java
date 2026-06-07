@@ -3000,6 +3000,13 @@ public class StatementRecoverer {
             }
             if (isSingleUsePhiOperand(result)) {
                 Expression expr = exprRecoverer.recover(invoke);
+                // If the value feeds an already-declared phi (e.g. a structured switch-expression
+                // merge), emit the copy `phiVar = expr` here: the structured recovery path has no
+                // lowerPhisOnEdge step, so otherwise a non-constant arm value would be dropped.
+                Statement phiCopy = phiCopyForDeclaredMerge(result, expr);
+                if (phiCopy != null) {
+                    return phiCopy;
+                }
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
             }
@@ -3108,6 +3115,15 @@ public class StatementRecoverer {
         if (instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction || instr instanceof TypeCheckInstruction) {
             if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
                 Expression value = exprRecoverer.recover(instr);
+                context.getExpressionContext().cacheExpression(instr.getResult(), value);
+                return null;
+            }
+            if (instr.getResult() != null && isSingleUsePhiOperand(instr.getResult())) {
+                Expression value = exprRecoverer.recover(instr);
+                Statement phiCopy = phiCopyForDeclaredMerge(instr.getResult(), value);
+                if (phiCopy != null) {
+                    return phiCopy;
+                }
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
                 return null;
             }
@@ -4058,6 +4074,37 @@ public class StatementRecoverer {
             case USHR: return BinaryOperator.USHR;
             default: return BinaryOperator.ADD;
         }
+    }
+
+    /**
+     * If {@code value} is a single-use operand of a phi whose variable is already declared — a
+     * structured switch-expression / if-merge — returns the {@code phiVar = expr} assignment that
+     * destructs the phi at this predecessor block. The structured recovery path has no
+     * {@code lowerPhisOnEdge} step, so without this a non-constant arm value (e.g. a string concat)
+     * feeding the merge phi would be silently dropped. Returns null otherwise (caller caches).
+     */
+    private Statement phiCopyForDeclaredMerge(SSAValue value, Expression expr) {
+        PhiInstruction targetPhi = getPhiUsingValue(value);
+        if (targetPhi == null || targetPhi.getResult() == null) {
+            return null;
+        }
+        if (context.isForLoopInductionPhi(targetPhi.getResult()) || selfStorePhis.contains(targetPhi)) {
+            return null;
+        }
+        String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
+        if (phiVarName == null || !context.getExpressionContext().isDeclared(phiVarName)
+                || phiVarName.equals("this") || phiVarName.startsWith("arg")) {
+            return null;
+        }
+        SourceType type = getLocalSlotUnifiedType(phiVarName);
+        if (type == null) {
+            type = expr.getType();
+        }
+        if (type == null) {
+            type = typeRecoverer.recoverType(value);
+        }
+        VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
+        return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
     }
 
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {

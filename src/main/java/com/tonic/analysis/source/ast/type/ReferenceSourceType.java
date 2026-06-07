@@ -51,10 +51,24 @@ public final class ReferenceSourceType implements SourceType {
     }
 
     /**
-     * Gets the fully qualified name in Java format (e.g., "java.lang.String").
+     * Gets the fully qualified name in Java format (e.g., "java.lang.String", or "Outer.Inner" for a
+     * nested class). A {@code $} separating a named nested class is rendered as {@code .}; an
+     * anonymous/local marker ({@code $1}) is left intact since it cannot be named in source anyway.
      */
     public String getFullyQualifiedName() {
-        return ClassNameUtil.toSourceName(internalName);
+        String source = ClassNameUtil.toSourceName(internalName);
+        StringBuilder sb = new StringBuilder(source.length());
+        for (int i = 0; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '$' && i + 1 < source.length()
+                    && (Character.isJavaIdentifierStart(source.charAt(i + 1)) && source.charAt(i + 1) != '$')
+                    && !Character.isDigit(source.charAt(i + 1))) {
+                sb.append('.');
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     /**

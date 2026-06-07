@@ -51,6 +51,14 @@ public final class InvokeDynamicExpr implements Expression {
     private ASTNode parent;
 
     /**
+     * For a {@code SwitchBootstraps.typeSwitch} call, the internal names of the case-type class
+     * bootstrap static arguments in declaration order (e.g. {@code [java/lang/Integer, java/lang/String]}).
+     * Empty for other bootstraps. Used to reconstruct pattern-switch case types.
+     */
+    @Setter
+    private List<String> bootstrapClassArgs = Collections.emptyList();
+
+    /**
      * Creates an invokedynamic expression with full bootstrap information.
      */
     public InvokeDynamicExpr(String name, String descriptor, List<Expression> arguments,
