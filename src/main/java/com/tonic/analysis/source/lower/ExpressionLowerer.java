@@ -616,6 +616,15 @@ public class ExpressionLowerer {
 
     private Value lowerUnary(UnaryExpr unary) {
         UnaryOperator op = unary.getOperator();
+
+        // Increment/decrement lower their own operand (read-modify-write); dispatch before the
+        // eager operand lowering below so the operand isn't read twice, leaving a dead load.
+        if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC) {
+            return lowerIncDec(unary, true);
+        } else if (op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC) {
+            return lowerIncDec(unary, false);
+        }
+
         Value operand = lower(unary.getOperand());
 
         if (op == UnaryOperator.NEG) {
@@ -665,10 +674,6 @@ public class ExpressionLowerer {
             mergeBlock.addPhi(phi);
 
             return result;
-        } else if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC) {
-            return lowerIncDec(unary, true);
-        } else if (op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC) {
-            return lowerIncDec(unary, false);
         } else {
             throw new LoweringException("Unsupported unary operator: " + op);
         }

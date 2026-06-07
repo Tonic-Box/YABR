@@ -1216,6 +1216,69 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
+        void incrementDoesNotEmitDeadFieldLoad() throws Exception {
+            // Regression: lowerUnary eagerly lowered the operand for every unary, then inc/dec
+            // lowered it again in lowerIncDec, leaving a dead getstatic/load. `counter++` as a
+            // statement must read the field exactly once.
+            String source = "class Test { static int counter; static void tick() { counter++; } }";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            String ownerClass = uniqueClassName();
+
+            int classAccess = new AccessBuilder().setPublic().build();
+            ClassFile cf = pool.createNewClass(ownerClass, classAccess);
+            for (FieldDecl field : cls.getFields()) {
+                cf.createNewField(new AccessBuilder().setPublic().setStatic().build(), field.getName(),
+                        field.getType().toIRType().getDescriptor(), new ArrayList<>());
+            }
+            ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
+            lowerer.setCurrentClassDecl(cls);
+            lowerer.setImports(cu.getImports());
+            cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(),
+                    "tick", "()V");
+            MethodEntry entry = findMethod(cf, "tick");
+            IRMethod ir = lowerer.lower(cls.getMethods().get(0), ownerClass);
+            new SSA(cf.getConstPool()).lower(ir, entry);
+
+            String code = com.tonic.analysis.CodePrinter.prettyPrintCode(
+                entry.getCodeAttribute().getCode(), cf.getConstPool());
+            int getstatics = code.split("getstatic", -1).length - 1;
+            assertEquals(1, getstatics, "counter++ must read the field exactly once: " + code);
+        }
+
+        @Test
+        void loopConditionWithComputedValueIsNotSpilledToSlot() throws Exception {
+            // Regression: a single-use computed value feeding a comparison (i * i <= n, where the
+            // second operand is the parameter n) must stay on the operand stack, not be spilled to a
+            // scratch local. When spilled, the slot was reused for the body's n % i, and the
+            // decompiler conflated the two, losing the multiplication and emitting an undeclared
+            // variable in the condition (uncompilable). The result must round-trip to i * i <= n.
+            String source = "class Test { static boolean isPrime(int n) { "
+                + "for (int i = 2; i * i <= n; i = i + 1) { if (n % i == 0) { return false; } } return true; } }";
+            CompilationUnit cu = parser.parse(source);
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            MethodDecl method = cls.getMethods().get(0);
+
+            String className = uniqueClassName();
+            ClassFile cf = createClassWithMethod(className, "isPrime", "(I)Z", true);
+            ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
+            IRMethod ir = lowerer.lower(method, className);
+            new SSA(cf.getConstPool()).lower(ir, findMethod(cf, "isPrime"));
+
+            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            int forIdx = decompiled.indexOf("for ");
+            assertTrue(forIdx >= 0, "should recover a for loop: " + decompiled);
+            String condition = decompiled.substring(decompiled.indexOf(';', forIdx) + 1,
+                decompiled.indexOf(';', decompiled.indexOf(';', forIdx) + 1));
+            assertTrue(condition.contains("*") && condition.contains("<="),
+                "loop condition must recover i * i <= n, not a spilled scratch reference: " + decompiled);
+            assertTrue(decompiled.contains("% local1 == 0") || decompiled.replaceAll("\\s", "").contains("%local1==0"),
+                "body must recover n % i == 0: " + decompiled);
+            assertFalse(decompiled.contains("local2"),
+                "no scratch slot variable should be materialized: " + decompiled);
+        }
+
+        @Test
         void loopWithVariableSwap() throws Exception {
             // Iterative fibonacci: the loop swap (a = b; b = temp) makes the two loop-carried phis
             // simultaneously live, so they must not be coalesced into one register.

@@ -267,36 +267,61 @@ public class BytecodeEmitter {
 
             for (int i = 0; i < instructions.size() - 1; i++) {
                 IRInstruction current = instructions.get(i);
-                IRInstruction next = instructions.get(i + 1);
 
                 if (!current.hasResult()) continue;
                 SSAValue result = current.getResult();
                 if (result == null) continue;
+                if (inlinedConstants.contains(result)) continue;
 
                 int useCount = useCounts.getOrDefault(result, 0);
                 if (useCount != 1) continue;
 
+                IRInstruction next = nextEmittedInstruction(instructions, i);
+                if (next == null) continue;
+
                 List<Value> nextOperands = next.getOperands();
                 if (nextOperands.isEmpty()) continue;
 
-                if (nextOperands.get(0).equals(result)) {
-                    if (nextOperands.size() == 1 || isSimpleOperand(nextOperands.get(1))) {
-                        stackResidentValues.add(result);
-                    }
-                }
-                else if (nextOperands.size() == 1 && nextOperands.get(0).equals(result)) {
+                if (nextOperands.get(0).equals(result)
+                        && (nextOperands.size() == 1 || isSimpleOperand(nextOperands.get(1)))) {
                     stackResidentValues.add(result);
                 }
             }
         }
     }
 
+    /**
+     * The next instruction after {@code afterIndex} that actually emits code. Inlined-constant
+     * definitions emit nothing (they are pushed at their use site), so they must be skipped when
+     * testing whether a value's consumer is adjacent — otherwise a single-use binop result feeding
+     * a comparison like {@code i * i <= n} or {@code n % i == 0} would be needlessly spilled to a
+     * slot just because the comparison's constant operand sits between them.
+     */
+    private IRInstruction nextEmittedInstruction(List<IRInstruction> instructions, int afterIndex) {
+        for (int j = afterIndex + 1; j < instructions.size(); j++) {
+            IRInstruction candidate = instructions.get(j);
+            if (candidate instanceof ConstantInstruction
+                    && inlinedConstants.contains(candidate.getResult())) {
+                continue;
+            }
+            return candidate;
+        }
+        return null;
+    }
+
+    /**
+     * Whether an operand can be pushed after a stack-resident first operand without disturbing it.
+     * The second operand is emitted after the first is already on the stack, so it must be a single
+     * fresh push that leaves the first untouched: a constant, or any value loaded from a
+     * register/parameter. The only unsafe case is an operand that is itself stack-resident — and a
+     * second operand never is, since stack-residency keys on being the <em>first</em> operand of the
+     * immediately-following instruction (params/locals reach here with a dangling load definition,
+     * so a definition-based test is unreliable; stack-residency membership is the correct one).
+     */
     private boolean isSimpleOperand(Value operand) {
         if (operand instanceof Constant) return true;
         if (operand instanceof SSAValue) {
-            SSAValue ssa = (SSAValue) operand;
-            String name = ssa.getName();
-            return name.startsWith("p") || name.equals("this");
+            return !stackResidentValues.contains((SSAValue) operand);
         }
         return false;
     }
