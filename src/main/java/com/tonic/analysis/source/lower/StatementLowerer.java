@@ -347,7 +347,19 @@ public class StatementLowerer {
         SwitchInstruction switchInstr = new SwitchInstruction(selector, defaultBlock);
         for (int i = 0; i < cases.size(); i++) {
             SwitchCase sc = cases.get(i);
-            if (!sc.isDefault()) {
+            if (sc.isDefault()) {
+                continue;
+            }
+            // Parsed/desugared cases carry their labels as constant expressions; recovered ones use
+            // integer labels. Honor both, or the switch lowers with no cases (a bare goto to default).
+            if (sc.hasExpressionLabels()) {
+                for (Expression label : sc.expressionLabels()) {
+                    Integer key = constIntLabel(label);
+                    if (key != null) {
+                        switchInstr.addCase(key, caseBlocks[i]);
+                    }
+                }
+            } else {
                 for (Integer label : sc.labels()) {
                     switchInstr.addCase(label, caseBlocks[i]);
                 }
@@ -388,6 +400,30 @@ public class StatementLowerer {
 
         ctx.popLoop();
         ctx.setCurrentBlock(exitBlock);
+    }
+
+    /** Extracts the constant int value of a switch-case label expression (int/char literal), or null. */
+    private Integer constIntLabel(Expression label) {
+        if (label instanceof com.tonic.analysis.source.ast.expr.LiteralExpr) {
+            Object v = ((com.tonic.analysis.source.ast.expr.LiteralExpr) label).getValue();
+            if (v instanceof Integer) {
+                return (Integer) v;
+            }
+            if (v instanceof Character) {
+                return (int) (Character) v;
+            }
+            if (v instanceof Number) {
+                return ((Number) v).intValue();
+            }
+            if (v instanceof String) {
+                try {
+                    return Integer.parseInt(((String) v).trim());
+                } catch (NumberFormatException ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 
     private void lowerThrow(ThrowStmt throwStmt) {

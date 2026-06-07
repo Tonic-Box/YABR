@@ -55,6 +55,8 @@ public interface AccessFlags {
     int V21 = 65;
     int V22 = 66;
     int V23 = 67;
+    int V24 = 68;
+    int V25 = 69;
 
     int ILOAD = 0x15;
     int LLOAD = 0x16;

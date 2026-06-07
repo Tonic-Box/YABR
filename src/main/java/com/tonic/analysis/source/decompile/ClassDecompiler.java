@@ -10,7 +10,9 @@ import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
 import com.tonic.analysis.source.ast.transform.DeclarationHoister;
+import com.tonic.analysis.source.ast.transform.PatternInstanceOfReconstructor;
 import com.tonic.analysis.source.ast.transform.SingleUseInliner;
+import com.tonic.analysis.source.ast.transform.SwitchExpressionReconstructor;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
@@ -30,6 +32,8 @@ import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.ConstantValueAttribute;
+import com.tonic.parser.attribute.PermittedSubclassesAttribute;
+import com.tonic.parser.attribute.RecordAttribute;
 import com.tonic.parser.attribute.RuntimeVisibleAnnotationsAttribute;
 import com.tonic.parser.attribute.RuntimeInvisibleAnnotationsAttribute;
 import com.tonic.parser.attribute.SignatureAttribute;
@@ -67,7 +71,9 @@ public class ClassDecompiler {
     private final DeadVariableEliminator deadVarEliminator;
     private final DeadStoreEliminator deadStoreEliminator;
     private final DeclarationHoister declarationHoister;
+    private final SwitchExpressionReconstructor switchExprReconstructor;
     private final SingleUseInliner singleUseInliner;
+    private final PatternInstanceOfReconstructor patternInstanceOf;
     private final Set<String> usedTypes = new TreeSet<>();
     private final boolean hasInnerClasses;
 
@@ -91,7 +97,9 @@ public class ClassDecompiler {
         this.deadVarEliminator = new DeadVariableEliminator();
         this.deadStoreEliminator = new DeadStoreEliminator();
         this.declarationHoister = new DeclarationHoister();
+        this.switchExprReconstructor = new SwitchExpressionReconstructor();
         this.singleUseInliner = new SingleUseInliner();
+        this.patternInstanceOf = new PatternInstanceOfReconstructor();
         this.hasInnerClasses = detectInnerClasses();
     }
 
@@ -219,6 +227,7 @@ public class ClassDecompiler {
         writer.indent();
 
         boolean isEnum = Modifiers.isEnum(classFile.getAccess());
+        RecordAttribute record = findRecordAttribute();
         List<FieldEntry> fields = classFile.getFields();
 
         if (isEnum) {
@@ -228,6 +237,9 @@ public class ClassDecompiler {
         List<FieldEntry> regularFields = isEnum ? getNonEnumConstantFields(fields) : fields;
         List<FieldEntry> nonSyntheticFields = new ArrayList<>();
         for (FieldEntry field : regularFields) {
+            if (isSuppressedRecordField(record, field)) {
+                continue;
+            }
             if (!isEnum || !isSyntheticEnumField(field)) {
                 nonSyntheticFields.add(field);
             }
@@ -252,6 +264,9 @@ public class ClassDecompiler {
 
         for (MethodEntry method : classFile.getMethods()) {
             String methodName = method.getName();
+            if (isSuppressedRecordMethod(record, method)) {
+                continue;
+            }
             if (methodName.equals("<clinit>")) {
                 continue;
             } else if (methodName.equals("<init>")) {
@@ -361,6 +376,8 @@ public class ClassDecompiler {
 
     private void emitClassDeclaration(IndentingWriter writer) {
         int access = classFile.getAccess();
+        PermittedSubclassesAttribute permits = findPermittedSubclasses();
+        RecordAttribute record = findRecordAttribute();
 
         // Modifiers
         StringBuilder sb = new StringBuilder();
@@ -368,10 +385,15 @@ public class ClassDecompiler {
         if (Modifiers.isPrivate(access)) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
         if (Modifiers.isAbstract(access) && !Modifiers.isInterface(access)) sb.append("abstract ");
-        if (Modifiers.isFinal(access) && !Modifiers.isEnum(access)) sb.append("final ");
+        // Records are implicitly final; never render `final record`.
+        if (Modifiers.isFinal(access) && !Modifiers.isEnum(access) && record == null) sb.append("final ");
+        // A class/interface is sealed iff it carries a PermittedSubclasses attribute.
+        if (permits != null) sb.append("sealed ");
 
         // Type keyword
-        if (Modifiers.isAnnotation(access)) {
+        if (record != null) {
+            sb.append("record ");
+        } else if (Modifiers.isAnnotation(access)) {
             sb.append("@interface ");
         } else if (Modifiers.isInterface(access)) {
             sb.append("interface ");
@@ -386,12 +408,25 @@ public class ClassDecompiler {
         String simpleName = ClassNameUtil.getSimpleNameWithInnerClasses(fullName);
         sb.append(simpleName);
 
-        // Superclass - skip for interfaces, annotations, and enums (implicit)
+        // Record component list: `record Name(T a, U b)`
+        if (record != null) {
+            sb.append("(");
+            List<String[]> comps = record.getComponentNameAndDescriptors();
+            for (int i = 0; i < comps.size(); i++) {
+                if (i > 0) sb.append(", ");
+                String compType = trackAndFormatType(typeRecoverer.recoverType(comps.get(i)[1]));
+                sb.append(compType).append(" ").append(comps.get(i)[0]);
+            }
+            sb.append(")");
+        }
+
+        // Superclass - skip for interfaces, annotations, enums, and records (java.lang.Record implicit)
         String superName = classFile.getSuperClassName();
         boolean isEnum = Modifiers.isEnum(access);
         boolean isAnnotation = Modifiers.isAnnotation(access);
         if (superName != null && !superName.equals("java/lang/Object")
                 && !superName.equals("java/lang/Enum")
+                && !superName.equals("java/lang/Record")
                 && !Modifiers.isInterface(access) && !isAnnotation) {
             sb.append(" extends ").append(formatClassName(superName));
         }
@@ -418,7 +453,90 @@ public class ClassDecompiler {
             }
         }
 
+        // permits clause for sealed types
+        if (permits != null && !permits.getPermittedClassNames().isEmpty()) {
+            sb.append(" permits ");
+            List<String> names = permits.getPermittedClassNames();
+            for (int i = 0; i < names.size(); i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(formatClassName(names.get(i)));
+            }
+        }
+
         writer.write(sb.toString());
+    }
+
+    private PermittedSubclassesAttribute findPermittedSubclasses() {
+        for (Attribute a : classFile.getClassAttributes()) {
+            if (a instanceof PermittedSubclassesAttribute) {
+                return (PermittedSubclassesAttribute) a;
+            }
+        }
+        return null;
+    }
+
+    private RecordAttribute findRecordAttribute() {
+        for (Attribute a : classFile.getClassAttributes()) {
+            if (a instanceof RecordAttribute) {
+                return (RecordAttribute) a;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Names of members the compiler auto-generates for a record and which must be suppressed so the
+     * decompiled {@code record} header is the canonical form: the component backing fields, the
+     * canonical constructor, the component accessors, and the {@code ObjectMethods}-backed
+     * {@code equals}/{@code hashCode}/{@code toString} (recognized by canonical signature + final, so
+     * user overrides — which are not final — are kept).
+     */
+    private boolean isSuppressedRecordField(RecordAttribute record, FieldEntry field) {
+        if (record == null || Modifiers.isStatic(field.getAccess())) {
+            return false;
+        }
+        for (String[] comp : record.getComponentNameAndDescriptors()) {
+            if (comp[0].equals(field.getName()) && comp[1].equals(field.getDesc())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isSuppressedRecordMethod(RecordAttribute record, MethodEntry method) {
+        if (record == null) {
+            return false;
+        }
+        String name = method.getName();
+        String desc = method.getDesc();
+        List<String[]> comps = record.getComponentNameAndDescriptors();
+
+        // Component accessor: `T name()`.
+        for (String[] comp : comps) {
+            if (comp[0].equals(name) && ("()" + comp[1]).equals(desc)) {
+                return true;
+            }
+        }
+        // Canonical constructor: parameter types equal the component types in order.
+        if ("<init>".equals(name)) {
+            StringBuilder canonical = new StringBuilder("(");
+            for (String[] comp : comps) {
+                canonical.append(comp[1]);
+            }
+            canonical.append(")V");
+            if (canonical.toString().equals(desc)) {
+                return true;
+            }
+        }
+        // Auto-generated Object methods (final + canonical signature).
+        if (Modifiers.isFinal(method.getAccess())) {
+            if (("toString".equals(name) && "()Ljava/lang/String;".equals(desc))
+                    || ("hashCode".equals(name) && "()I".equals(desc))
+                    || ("equals".equals(name) && "(Ljava/lang/Object;)Z".equals(desc))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void emitField(IndentingWriter writer, FieldEntry field) {
@@ -602,10 +720,12 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
             astSimplifier.transform(body);
+            patternInstanceOf.transform(body);
             singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
+            switchExprReconstructor.transform(body);
             removeTrailingReturn(body); // Static initializers cannot have return statements
             emitBlockContents(writer, body);
         } catch (Exception e) {
@@ -691,10 +811,12 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
             astSimplifier.transform(body);
+            patternInstanceOf.transform(body);
             singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
             declarationHoister.transform(body);
+            switchExprReconstructor.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
@@ -757,6 +879,7 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
             astSimplifier.transform(body);
+            patternInstanceOf.transform(body);
             singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
@@ -765,6 +888,7 @@ public class ClassDecompiler {
             // inverts/cleans those.
             astSimplifier.transform(body);
             declarationHoister.transform(body);
+            switchExprReconstructor.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body);
         } catch (Exception e) {

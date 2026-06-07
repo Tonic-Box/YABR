@@ -1325,6 +1325,32 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
+    public Void visitSwitchExpr(com.tonic.analysis.source.ast.expr.SwitchExpr expr) {
+        writer.write("switch (");
+        expr.getSelector().accept(this);
+        writer.writeLine(") {");
+        writer.indent();
+        for (com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm : expr.getArms()) {
+            if (arm.isDefault()) {
+                writer.write("default -> ");
+            } else {
+                writer.write("case ");
+                List<Expression> labels = arm.getLabels();
+                for (int i = 0; i < labels.size(); i++) {
+                    if (i > 0) writer.write(", ");
+                    labels.get(i).accept(this);
+                }
+                writer.write(" -> ");
+            }
+            arm.getResult().accept(this);
+            writer.writeLine(";");
+        }
+        writer.dedent();
+        writer.write("}");
+        return null;
+    }
+
+    @Override
     public Void visitLambda(LambdaExpr expr) {
         List<LambdaParameter> params = expr.getParameters();
         if (params.isEmpty()) {

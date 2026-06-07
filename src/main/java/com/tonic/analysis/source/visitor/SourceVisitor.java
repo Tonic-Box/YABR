@@ -62,6 +62,8 @@ public interface SourceVisitor<T> {
     T visitCast(CastExpr expr);
     T visitInstanceOf(InstanceOfExpr expr);
     T visitTernary(TernaryExpr expr);
+    /** Default so existing visitors need no change; only the source emitter overrides it. */
+    default T visitSwitchExpr(SwitchExpr expr) { return null; }
     T visitLambda(LambdaExpr expr);
     T visitMethodRef(MethodRefExpr expr);
     T visitThis(ThisExpr expr);

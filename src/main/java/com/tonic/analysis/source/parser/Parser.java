@@ -142,15 +142,19 @@ public class Parser {
         List<AnnotationExpr> annotations = new ArrayList<>();
         Set<Modifier> modifiers = EnumSet.noneOf(Modifier.class);
 
-        while (check(TokenType.AT) || current.isModifier()) {
+        while (check(TokenType.AT) || current.isModifier() || isSealedContextual()) {
             if (check(TokenType.AT)) {
                 annotations.add(parseAnnotation());
+            } else if (isSealedContextual()) {
+                consumeSealedContextual();
             } else {
                 modifiers.add(parseModifier());
             }
         }
 
-        if (check(TokenType.CLASS)) {
+        if (isRecordDeclAhead()) {
+            return parseRecord(modifiers, annotations);
+        } else if (check(TokenType.CLASS)) {
             return parseClass(modifiers, annotations);
         } else if (check(TokenType.INTERFACE)) {
             return parseInterface(modifiers, annotations);
@@ -191,6 +195,62 @@ public class Parser {
             } while (match(TokenType.COMMA));
         }
 
+        skipPermitsClause();
+
+        parseClassBody(cls);
+        return cls;
+    }
+
+    /**
+     * True if a record declaration begins here: the contextual {@code record} keyword, a name, then
+     * a component list {@code (} (or type parameters {@code <}). The trailing {@code (}/{@code <}
+     * disambiguates from a field/variable whose type is literally named {@code record} in legacy code.
+     */
+    private boolean isRecordDeclAhead() {
+        if (!checkIdentifier("record") || lexer.peekAhead(0).getType() != TokenType.IDENTIFIER) {
+            return false;
+        }
+        TokenType afterName = lexer.peekAhead(1).getType();
+        return afterName == TokenType.LPAREN || afterName == TokenType.LT;
+    }
+
+    /**
+     * Parses a record declaration (Java 16). The implicit component backing fields are materialized
+     * so body references resolve; the canonical constructor / accessors / ObjectMethods members are
+     * compiler-synthesized and not represented here (recompilation edits an existing class, which
+     * already carries them).
+     */
+    private ClassDecl parseRecord(Set<Modifier> modifiers, List<AnnotationExpr> annotations) {
+        SourceLocation loc = currentLocation();
+        advance(); // contextual 'record'
+        String name = consume(TokenType.IDENTIFIER, "Expected record name").getText();
+        ClassDecl cls = new ClassDecl(name, loc);
+        cls.withModifiers(modifiers);
+        for (AnnotationExpr ann : annotations) {
+            cls.addAnnotation(ann);
+        }
+        if (match(TokenType.LT)) {
+            parseTypeParameters(cls.getTypeParameters());
+        }
+        consume(TokenType.LPAREN, "Expected '(' for record components");
+        if (!check(TokenType.RPAREN)) {
+            do {
+                while (check(TokenType.AT)) {
+                    parseAnnotation();
+                }
+                SourceType type = parseTypeReference();
+                String compName = consume(TokenType.IDENTIFIER, "Expected record component name").getText();
+                cls.addField(new FieldDecl(compName, type, loc));
+                defineVariable(compName, type);
+            } while (match(TokenType.COMMA));
+        }
+        consume(TokenType.RPAREN, "Expected ')' after record components");
+        if (match(TokenType.IMPLEMENTS)) {
+            do {
+                cls.addInterface(parseTypeReference());
+            } while (match(TokenType.COMMA));
+        }
+        skipPermitsClause();
         parseClassBody(cls);
         return cls;
     }
@@ -215,6 +275,8 @@ public class Parser {
                 iface.addExtendedInterface(parseTypeReference());
             } while (match(TokenType.COMMA));
         }
+
+        skipPermitsClause();
 
         parseInterfaceBody(iface);
         return iface;
@@ -371,14 +433,20 @@ public class Parser {
         List<AnnotationExpr> annotations = new ArrayList<>();
         Set<Modifier> modifiers = EnumSet.noneOf(Modifier.class);
 
-        while (check(TokenType.AT) || current.isModifier()) {
+        while (check(TokenType.AT) || current.isModifier() || isSealedContextual()) {
             if (check(TokenType.AT)) {
                 annotations.add(parseAnnotation());
+            } else if (isSealedContextual()) {
+                consumeSealedContextual();
             } else {
                 modifiers.add(parseModifier());
             }
         }
 
+        if (isRecordDeclAhead()) {
+            owner.getInnerTypes().add(parseRecord(modifiers, annotations));
+            return;
+        }
         if (check(TokenType.CLASS)) {
             TypeDecl inner = parseClass(modifiers, annotations);
             owner.getInnerTypes().add(inner);
@@ -658,6 +726,42 @@ public class Parser {
         }
     }
 
+    /** True if the current token begins a contextual {@code sealed} or {@code non-sealed} modifier. */
+    private boolean isSealedContextual() {
+        if (checkIdentifier("sealed")) {
+            return true;
+        }
+        return checkIdentifier("non") && checkNext(TokenType.MINUS);
+    }
+
+    /** Consumes a {@code sealed} or {@code non-sealed} contextual modifier (tolerated, not modeled). */
+    private void consumeSealedContextual() {
+        if (checkIdentifier("sealed")) {
+            advance();
+            return;
+        }
+        // non - sealed
+        advance();
+        advance();
+        if (checkIdentifier("sealed")) {
+            advance();
+        }
+    }
+
+    /** Skips an optional {@code permits A, B, ...} clause on a sealed type declaration. */
+    private void skipPermitsClause() {
+        if (checkIdentifier("permits")) {
+            advance();
+            do {
+                parseTypeReference();
+            } while (match(TokenType.COMMA));
+        }
+    }
+
+    private boolean checkIdentifier(String text) {
+        return current.getType() == TokenType.IDENTIFIER && text.equals(current.getText());
+    }
+
     private BlockStmt parseBlock() {
         SourceLocation loc = currentLocation();
         consume(TokenType.LBRACE, "Expected '{'");
@@ -911,6 +1015,44 @@ public class Parser {
 
         consume(TokenType.RBRACE, "Expected '}' after switch body");
         return new SwitchStmt(selector, cases, loc);
+    }
+
+    /**
+     * Parses a switch expression (Java 14) in arrow form:
+     * {@code switch (sel) { case L1, L2 -> expr; default -> expr; }}.
+     */
+    private com.tonic.analysis.source.ast.expr.SwitchExpr parseSwitchExpr() {
+        SourceLocation loc = currentLocation();
+        consume(TokenType.SWITCH, "Expected 'switch'");
+        consume(TokenType.LPAREN, "Expected '(' after 'switch'");
+        Expression selector = parseExpression();
+        consume(TokenType.RPAREN, "Expected ')' after switch selector");
+        consume(TokenType.LBRACE, "Expected '{' before switch body");
+
+        List<com.tonic.analysis.source.ast.expr.SwitchExpr.Arm> arms = new ArrayList<>();
+        SourceType type = null;
+        while (!check(TokenType.RBRACE) && !isAtEnd()) {
+            List<Expression> labels = new ArrayList<>();
+            boolean isDefault = false;
+            if (match(TokenType.CASE)) {
+                do {
+                    labels.add(parseExpression());
+                } while (match(TokenType.COMMA));
+            } else if (match(TokenType.DEFAULT)) {
+                isDefault = true;
+            } else {
+                throw error("Expected 'case' or 'default' in switch expression");
+            }
+            consume(TokenType.ARROW, "Expected '->' in switch expression arm");
+            Expression result = parseExpression();
+            consume(TokenType.SEMICOLON, "Expected ';' after switch expression arm");
+            arms.add(new com.tonic.analysis.source.ast.expr.SwitchExpr.Arm(labels, isDefault, result));
+            if (type == null && result.getType() != null) {
+                type = result.getType();
+            }
+        }
+        consume(TokenType.RBRACE, "Expected '}' after switch expression body");
+        return new com.tonic.analysis.source.ast.expr.SwitchExpr(selector, arms, type, loc);
     }
 
     private SwitchCase parseSwitchCase() {
@@ -1364,6 +1506,9 @@ public class Parser {
     private Expression parsePrimaryExpression() {
         SourceLocation loc = currentLocation();
 
+        if (check(TokenType.SWITCH)) {
+            return parseSwitchExpr();
+        }
         if (match(TokenType.TRUE)) {
             return LiteralExpr.ofBoolean(true);
         }
@@ -1707,7 +1852,14 @@ public class Parser {
 
         if (op.getType() == TokenType.INSTANCEOF) {
             SourceType type = parseTypeReference();
-            return new InstanceOfExpr(left, type, null, loc);
+            // Optional Java 16 pattern binding: `x instanceof T t`. Register the binding in scope so
+            // later references resolve to T (flow scoping is approximated as method scope here).
+            String binding = null;
+            if (check(TokenType.IDENTIFIER)) {
+                binding = consume(TokenType.IDENTIFIER, "Expected pattern variable name").getText();
+                defineVariable(binding, type);
+            }
+            return new InstanceOfExpr(left, type, binding, loc);
         }
 
         Expression right = parseExpressionWithPrecedence(nextMinPrec);

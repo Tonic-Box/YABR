@@ -5,9 +5,12 @@ import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.stmt.SwitchStmt;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
@@ -111,6 +114,8 @@ public class ASTLowerer {
         if (body == null) {
             throw new LoweringException("Cannot lower abstract method: " + methodDecl.getName());
         }
+        new com.tonic.analysis.source.ast.transform.PatternInstanceOfDesugar().transform(body);
+        new com.tonic.analysis.source.ast.transform.SwitchExpressionDesugar().transform(body);
 
         List<ParameterDecl> paramDecls = methodDecl.getParameters();
         List<SourceType> parameters = new ArrayList<>();
@@ -134,7 +139,10 @@ public class ASTLowerer {
         ctx.setOwnerClass(ownerClass);
         ctx.setCurrentMethodName(methodName);
 
-        boolean hasLoops = containsLoops(body);
+        // Use the slot-based form + real SSA construction not only for loops but for any branch
+        // merge (if/else, switch): the direct-value path inserts no phi at a merge, so a variable
+        // assigned in branches and read afterward would wrongly take the last branch's value.
+        boolean hasLoops = containsLoops(body) || containsBranches(body);
         if (hasLoops) {
             ctx.setEmitLocalInstructions(true);
             int paramSlotCount = isStatic ? 0 : 1;
@@ -259,7 +267,10 @@ public class ASTLowerer {
             paramNames.add(param.name());
         }
 
-        boolean hasLoops = containsLoops(body);
+        // Use the slot-based form + real SSA construction not only for loops but for any branch
+        // merge (if/else, switch): the direct-value path inserts no phi at a merge, so a variable
+        // assigned in branches and read afterward would wrongly take the last branch's value.
+        boolean hasLoops = containsLoops(body) || containsBranches(body);
         if (hasLoops) {
             ctx.setEmitLocalInstructions(true);
             int paramSlotCount = 0;
@@ -354,6 +365,23 @@ public class ASTLowerer {
 
     private boolean containsLoops(BlockStmt body) {
         return new LoopDetector().visit(body);
+    }
+
+    /** True if the body contains an if/switch — control flow that can merge a variable's value. */
+    private boolean containsBranches(BlockStmt body) {
+        return containsBranchNode(body);
+    }
+
+    private boolean containsBranchNode(ASTNode node) {
+        if (node instanceof IfStmt || node instanceof SwitchStmt) {
+            return true;
+        }
+        for (ASTNode child : node.getChildren()) {
+            if (containsBranchNode(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void constructSSAForm(IRMethod irMethod) {

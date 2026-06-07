@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SourceToBytecodeIntegrationTest {
 
@@ -1489,6 +1490,263 @@ public class SourceToBytecodeIntegrationTest {
                     + "static int use(int x) { return dbl(x) + 1; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
             assertEquals(11, (int) clazz.getMethod("use", int.class).invoke(null, 5));
+        }
+    }
+
+    @Nested
+    class TextBlockTests {
+
+        @Test
+        void textBlockLowersToNormalizedStringConstant() throws Exception {
+            // The front-end lexer normalizes the text block (incidental whitespace stripped, LF line
+            // terminators). YABR emits a plain String constant in a v55 class, so it loads in-process.
+            String source = "class T { static String tb() { return \"\"\"\n"
+                    + "        Hello\n"
+                    + "        World\n"
+                    + "        \"\"\"; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals("Hello\nWorld\n", clazz.getMethod("tb").invoke(null));
+        }
+
+        @Test
+        void textBlockEscapesAndSpaceEscape() throws Exception {
+            // \s preserves a trailing space; \" stays literal; line-continuation backslash joins lines.
+            String source = "class T { static String tb() { return \"\"\"\n"
+                    + "        a\\sb\n"
+                    + "        c\\\n"
+                    + "        d\\\"\n"
+                    + "        \"\"\"; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals("a b\ncd\"\n", clazz.getMethod("tb").invoke(null));
+        }
+
+        @Test
+        void textBlockRoundTripMatchesJavac() throws Exception {
+            // javac's text block and YABR's must produce the same String value: compile the same
+            // source with corretto javac, run it, and compare to YABR's in-process result.
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            String body = "return \"\"\"\n            Line1\n              indented\n            Line3\n            \"\"\";";
+            String yabrSource = "class T { static String tb() { " + body + " } }";
+            String expected = (String) compileClassWithFields(yabrSource, uniqueClassName())
+                    .getMethod("tb").invoke(null);
+
+            String javacSource = "public class TbRef { public static String tb() { " + body + " }\n"
+                    + "  public static void main(String[] a) { System.out.print(tb()); } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "TbRef", javacSource);
+            String javacValue = com.tonic.testutil.ModernJdk.runVerified(17, classes, "TbRef");
+            assertEquals(javacValue, expected, "YABR text-block value must match javac's");
+        }
+    }
+
+    @Nested
+    class PatternInstanceOfTests {
+
+        @Test
+        void recompilePositivePatternBinding() throws Exception {
+            String source = "class T { static String describe(Object o) { "
+                    + "if (o instanceof String s) { return \"str:\" + s.length(); } return \"other\"; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals("str:5", clazz.getMethod("describe", Object.class).invoke(null, "hello"));
+            assertEquals("other", clazz.getMethod("describe", Object.class).invoke(null, 42));
+        }
+
+        @Test
+        void recompileNegatedGuardPatternBinding() throws Exception {
+            String source = "class T { static int len(Object o) { "
+                    + "if (!(o instanceof String s)) { return -1; } return s.length(); } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(5, clazz.getMethod("len", Object.class).invoke(null, "hello"));
+            assertEquals(-1, clazz.getMethod("len", Object.class).invoke(null, new Object()));
+        }
+
+        @Test
+        void decompileReconstructsPatternBinding() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            String javac = "public class Pat { public static String describe(Object o) {"
+                    + " if (o instanceof String s) { return \"str:\" + s.length(); } return \"other\"; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Pat", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Pat")));
+            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            assertTrue(decompiled.matches("(?s).*instanceof\\s+String\\s+\\w+.*"),
+                    "must reconstruct a pattern binding `instanceof String <var>`:\n" + decompiled);
+        }
+
+        @Test
+        void roundTripJavacToYabrAndBack() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            // javac source -> bytecode -> YABR decompile -> re-parse with YABR front-end -> run.
+            String javac = "public class Pat { public static String describe(Object o) {"
+                    + " if (o instanceof String s) { return \"str:\" + s.length(); } return \"other\"; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Pat", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Pat")));
+            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+
+            // Strip the package/class wrapper down to the method and recompile via YABR.
+            String body = decompiled.substring(decompiled.indexOf("public static String describe"));
+            body = body.substring(0, body.indexOf("\n\t}") + 3);
+            String reSource = "class T { static " + body.substring(body.indexOf("String")) + " }";
+            Class<?> clazz = compileClassWithFields(reSource, uniqueClassName());
+            assertEquals("str:5", clazz.getMethod("describe", Object.class).invoke(null, "hello"));
+            assertEquals("other", clazz.getMethod("describe", Object.class).invoke(null, 42));
+        }
+    }
+
+    @Nested
+    class SealedClassTests {
+
+        @Test
+        void decompileRendersSealedAndPermits() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            java.util.Map<String, String> src = new java.util.LinkedHashMap<>();
+            src.put("Shape", "public sealed interface Shape permits Circle, Square { double area(); }");
+            src.put("Circle", "public final class Circle implements Shape { public double area(){return 1.0;} }");
+            src.put("Square", "public final class Square implements Shape { public double area(){return 2.0;} }");
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, src);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Shape")));
+            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            assertTrue(decompiled.contains("sealed interface Shape"),
+                    "must render the sealed modifier:\n" + decompiled);
+            assertTrue(decompiled.matches("(?s).*permits\\s+Circle,\\s*Square.*"),
+                    "must render the permits clause:\n" + decompiled);
+        }
+
+        @Test
+        void parserToleratesSealedAndPermitsAndNonSealed() {
+            // Re-parsing decompiled modern source must not error on the sealed header.
+            parser.parse("public sealed interface Shape permits Circle, Square { double area(); }");
+            parser.parse("public sealed class Base permits A, B { }");
+            parser.parse("public non-sealed class A extends Base { }");
+        }
+    }
+
+    @Nested
+    class RecordTests {
+
+        @Test
+        void decompileReconstructsRecordHeaderAndSuppressesGenerated() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            String javac = "public record Point(int x, int y) { public int sum() { return x + y; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Point", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Point")));
+            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+
+            assertTrue(d.contains("record Point(int x, int y)"), "must render record header:\n" + d);
+            assertTrue(d.contains("public int sum()"), "must keep the user method:\n" + d);
+            assertFalse(d.contains("class Point"), "must not render as a class:\n" + d);
+            assertFalse(d.contains("extends Record"), "must not render the implicit Record supertype:\n" + d);
+            assertFalse(d.contains("int x()") || d.contains("int y()"), "accessors must be suppressed:\n" + d);
+            assertFalse(d.contains("ObjectMethods"), "ObjectMethods equals/hashCode/toString must be suppressed:\n" + d);
+            assertFalse(d.contains("private final int x"), "component fields must be suppressed:\n" + d);
+        }
+
+        @Test
+        void parserReParsesDecompiledRecord() {
+            // Decompiled record source must re-parse without error, materializing component fields.
+            CompilationUnit cu = parser.parse(
+                    "public record Point(int x, int y) { public int sum() { return this.x + this.y; } }");
+            ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+            assertEquals(2, cls.getFields().size(), "components should be materialized as fields");
+            assertEquals(1, cls.getMethods().size(), "user method should be parsed");
+        }
+    }
+
+    @Nested
+    class SwitchExpressionTests {
+
+        @Test
+        void decompileReconstructsReturnSwitchExpression() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            String javac = "public class Sw { public static int classify(int n) {"
+                    + " return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Sw", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Sw")));
+            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            assertTrue(d.matches("(?s).*return switch \\(arg0\\) \\{.*-> 10;.*-> 20;.*default -> 0;.*"),
+                    "must reconstruct a return switch expression:\n" + d);
+        }
+
+        @Test
+        void decompileReconstructsAssignmentSwitchExpression() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            String javac = "public class Sw { public static String name(int d) {"
+                    + " String s = switch (d) { case 1 -> \"one\"; case 2 -> \"two\"; default -> \"?\"; }; return s; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Sw", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Sw")));
+            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            assertTrue(d.matches("(?s).*=\\s*switch \\(arg0\\) \\{.*-> \"one\";.*default -> \"\\?\";.*"),
+                    "must reconstruct an assignment switch expression:\n" + d);
+        }
+
+        @Test
+        void recompileReturnSwitchExpression() throws Exception {
+            String source = "class T { static int classify(int n) { "
+                    + "return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(10, clazz.getMethod("classify", int.class).invoke(null, 1));
+            assertEquals(20, clazz.getMethod("classify", int.class).invoke(null, 2));
+            assertEquals(0, clazz.getMethod("classify", int.class).invoke(null, 99));
+        }
+
+        @Test
+        void recompileAssignmentSwitchExpression() throws Exception {
+            String source = "class T { static String name(int d) { "
+                    + "String s = switch (d) { case 1 -> \"one\"; case 2 -> \"two\"; default -> \"?\"; }; "
+                    + "return s; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals("one", clazz.getMethod("name", int.class).invoke(null, 1));
+            assertEquals("two", clazz.getMethod("name", int.class).invoke(null, 2));
+            assertEquals("?", clazz.getMethod("name", int.class).invoke(null, 9));
+        }
+
+        @Test
+        void fullRoundTripJavacToYabr() throws Exception {
+            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            String javac = "public class Sw { public static int classify(int n) {"
+                    + " return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
+            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Sw", javac);
+            ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Sw")));
+            String dec = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String body = dec.substring(dec.indexOf("public static int classify"));
+            body = body.substring(0, body.indexOf("\n\t}") + 3);
+            String reSource = "class T { static " + body.substring(body.indexOf("int")) + " }";
+            Class<?> clazz = compileClassWithFields(reSource, uniqueClassName());
+            assertEquals(10, clazz.getMethod("classify", int.class).invoke(null, 1));
+            assertEquals(0, clazz.getMethod("classify", int.class).invoke(null, 7));
+        }
+    }
+
+    @Nested
+    class BranchMergeRecompileTests {
+
+        // Regression: variables assigned across if/switch branches and read afterward must merge via
+        // a phi on recompile. Previously SSA construction ran only for loops, so the post-branch read
+        // wrongly took the last branch's value.
+
+        @Test
+        void ifElseVariableMerge() throws Exception {
+            String source = "class T { static int f(boolean c) { int r; if (c) { r = 1; } else { r = 2; } return r; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(1, clazz.getMethod("f", boolean.class).invoke(null, true));
+            assertEquals(2, clazz.getMethod("f", boolean.class).invoke(null, false));
+        }
+
+        @Test
+        void switchStatementVariableMerge() throws Exception {
+            String source = "class T { static int f(int n) { int r = 0; "
+                    + "switch (n) { case 1: r = 10; break; case 2: r = 20; break; default: r = 99; break; } "
+                    + "return r; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(10, clazz.getMethod("f", int.class).invoke(null, 1));
+            assertEquals(20, clazz.getMethod("f", int.class).invoke(null, 2));
+            assertEquals(99, clazz.getMethod("f", int.class).invoke(null, 5));
+        }
+
+        @Test
+        void ifWithoutElseMerge() throws Exception {
+            String source = "class T { static int f(boolean c) { int r = 7; if (c) { r = 1; } return r; } }";
+            Class<?> clazz = compileClassWithFields(source, uniqueClassName());
+            assertEquals(1, clazz.getMethod("f", boolean.class).invoke(null, true));
+            assertEquals(7, clazz.getMethod("f", boolean.class).invoke(null, false));
         }
     }
 }

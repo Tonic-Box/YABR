@@ -223,7 +223,9 @@ public final class Lexer {
                 return makeToken(TokenType.GT);
 
             case '\'': return scanCharLiteral();
-            case '"': return scanStringLiteral();
+            case '"':
+                if (peek(0) == '"' && peek(1) == '"') return scanTextBlock();
+                return scanStringLiteral();
 
             default:
                 return makeErrorToken("Unexpected character: '" + c + "'");
@@ -440,6 +442,177 @@ public final class Lexer {
 
         advance();
         return new Token(TokenType.STRING_LITERAL, currentTokenText(), sb.toString(), tokenStartPosition());
+    }
+
+    /**
+     * Scans a text block (Java 15, JLS 3.10.6). The opening {@code "} was consumed by the dispatch;
+     * this consumes the remaining {@code ""}, the optional whitespace + required line terminator,
+     * the raw content up to the closing {@code """}, then applies line-terminator normalization,
+     * incidental-whitespace stripping, and escape processing. Emits a normal STRING_LITERAL so the
+     * parser/lowerer need no text-block-specific handling.
+     */
+    private Token scanTextBlock() {
+        advance();
+        advance();
+        while (peek(0) == ' ' || peek(0) == '\t' || peek(0) == '\f') {
+            advance();
+        }
+        if (peek(0) == '\r') {
+            advance();
+        }
+        if (peek(0) == '\n') {
+            advance();
+            line++;
+            column = 1;
+        }
+
+        StringBuilder raw = new StringBuilder();
+        while (true) {
+            if (isAtEnd()) {
+                return makeErrorToken("Unterminated text block");
+            }
+            char c = peek(0);
+            if (c == '"' && peek(1) == '"' && peek(2) == '"') {
+                advance();
+                advance();
+                advance();
+                break;
+            }
+            if (c == '\\') {
+                raw.append(advance());
+                if (!isAtEnd()) {
+                    raw.append(advance());
+                }
+                continue;
+            }
+            if (c == '\r') {
+                advance();
+                if (peek(0) == '\n') {
+                    advance();
+                }
+                raw.append('\n');
+                line++;
+                column = 1;
+                continue;
+            }
+            if (c == '\n') {
+                advance();
+                raw.append('\n');
+                line++;
+                column = 1;
+                continue;
+            }
+            raw.append(advance());
+        }
+
+        String value = processTextBlockEscapes(stripIncidentalWhitespace(raw.toString()));
+        return new Token(TokenType.STRING_LITERAL, currentTokenText(), value, tokenStartPosition());
+    }
+
+    /**
+     * Removes incidental white space from raw (LF-normalized) text-block content: strips the common
+     * leading-whitespace prefix (computed over all non-blank lines plus the last line, which carries
+     * the closing delimiter's indentation) and trailing white space from every line.
+     */
+    private static String stripIncidentalWhitespace(String raw) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        int start = 0;
+        for (int i = 0; i < raw.length(); i++) {
+            if (raw.charAt(i) == '\n') {
+                lines.add(raw.substring(start, i));
+                start = i + 1;
+            }
+        }
+        lines.add(raw.substring(start));
+
+        int minIndent = Integer.MAX_VALUE;
+        for (int i = 0; i < lines.size(); i++) {
+            String ln = lines.get(i);
+            boolean blank = ln.trim().isEmpty();
+            boolean last = i == lines.size() - 1;
+            if (blank && !last) {
+                continue;
+            }
+            minIndent = Math.min(minIndent, leadingWhitespaceCount(ln));
+        }
+        if (minIndent == Integer.MAX_VALUE) {
+            minIndent = 0;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < lines.size(); i++) {
+            String ln = lines.get(i);
+            String stripped = ln.length() >= minIndent ? ln.substring(minIndent) : "";
+            sb.append(stripTrailingWhitespace(stripped));
+            if (i < lines.size() - 1) {
+                sb.append('\n');
+            }
+        }
+        return sb.toString();
+    }
+
+    private static int leadingWhitespaceCount(String s) {
+        int n = 0;
+        while (n < s.length() && (s.charAt(n) == ' ' || s.charAt(n) == '\t' || s.charAt(n) == '\f')) {
+            n++;
+        }
+        return n;
+    }
+
+    private static String stripTrailingWhitespace(String s) {
+        int end = s.length();
+        while (end > 0 && (s.charAt(end - 1) == ' ' || s.charAt(end - 1) == '\t' || s.charAt(end - 1) == '\f')) {
+            end--;
+        }
+        return s.substring(0, end);
+    }
+
+    /**
+     * Interprets escape sequences in re-indented text-block content, including {@code \s} (space,
+     * preserved past trailing-whitespace stripping) and {@code \<line-terminator>} line continuation.
+     */
+    private static String processTextBlockEscapes(String s) {
+        StringBuilder out = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c != '\\' || i + 1 >= s.length()) {
+                out.append(c);
+                continue;
+            }
+            char next = s.charAt(++i);
+            switch (next) {
+                case 'b': out.append('\b'); break;
+                case 't': out.append('\t'); break;
+                case 'n': out.append('\n'); break;
+                case 'f': out.append('\f'); break;
+                case 'r': out.append('\r'); break;
+                case 's': out.append(' '); break;
+                case '"': out.append('"'); break;
+                case '\'': out.append('\''); break;
+                case '\\': out.append('\\'); break;
+                case '\n': break;
+                case 'u': {
+                    if (i + 4 < s.length()) {
+                        out.append((char) Integer.parseInt(s.substring(i + 1, i + 5), 16));
+                        i += 4;
+                    }
+                    break;
+                }
+                default:
+                    if (next >= '0' && next <= '7') {
+                        int j = i;
+                        StringBuilder oct = new StringBuilder();
+                        while (j < s.length() && oct.length() < 3 && s.charAt(j) >= '0' && s.charAt(j) <= '7') {
+                            oct.append(s.charAt(j++));
+                        }
+                        out.append((char) Integer.parseInt(oct.toString(), 8));
+                        i = j - 1;
+                    } else {
+                        out.append(next);
+                    }
+            }
+        }
+        return out.toString();
     }
 
     private char scanEscapeSequence() {

@@ -35,7 +35,8 @@ public class BootstrapMethodInfo {
      */
     public boolean isLambdaMetafactory() {
         return "java/lang/invoke/LambdaMetafactory".equals(bootstrapMethod.getOwner()) &&
-               "metafactory".equals(bootstrapMethod.getName());
+               ("metafactory".equals(bootstrapMethod.getName())
+                || "altMetafactory".equals(bootstrapMethod.getName()));
     }
 
     /**
@@ -45,6 +46,27 @@ public class BootstrapMethodInfo {
      */
     public boolean isStringConcatFactory() {
         return "java/lang/invoke/StringConcatFactory".equals(bootstrapMethod.getOwner());
+    }
+
+    /**
+     * Checks if this is the records {@code ObjectMethods} bootstrap (Java 16) backing the
+     * auto-generated {@code equals}/{@code hashCode}/{@code toString} of a record.
+     *
+     * @return true if this uses java.lang.runtime.ObjectMethods
+     */
+    public boolean isObjectMethodsBootstrap() {
+        return "java/lang/runtime/ObjectMethods".equals(bootstrapMethod.getOwner()) &&
+               "bootstrap".equals(bootstrapMethod.getName());
+    }
+
+    /**
+     * Checks if this is a {@code SwitchBootstraps} bootstrap (Java 21 pattern switch):
+     * {@code typeSwitch} or {@code enumSwitch}.
+     *
+     * @return true if this uses java.lang.runtime.SwitchBootstraps
+     */
+    public boolean isSwitchBootstrap() {
+        return "java/lang/runtime/SwitchBootstraps".equals(bootstrapMethod.getOwner());
     }
 
     @Override

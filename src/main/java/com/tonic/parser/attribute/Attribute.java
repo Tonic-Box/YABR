@@ -155,6 +155,10 @@ public abstract class Attribute {
                 return new NestHostAttribute(name, classFile, nameIndex, length);
             case "NestMembers":
                 return new NestMembersAttribute(name, classFile, nameIndex, length);
+            case "Record":
+                return new RecordAttribute(name, classFile, nameIndex, length);
+            case "PermittedSubclasses":
+                return new PermittedSubclassesAttribute(name, classFile, nameIndex, length);
             default:
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
                 return new GenericAttribute(name, classFile, nameIndex, length);
@@ -212,6 +216,10 @@ public abstract class Attribute {
                 return new NestHostAttribute(name, parent, nameIndex, length);
             case "NestMembers":
                 return new NestMembersAttribute(name, parent, nameIndex, length);
+            case "Record":
+                return new RecordAttribute(name, parent, nameIndex, length);
+            case "PermittedSubclasses":
+                return new PermittedSubclassesAttribute(name, parent, nameIndex, length);
             default:
                 Logger.error("Warning: Unknown attribute '" + name + "'. Using GenericAttribute.");
                 return new GenericAttribute(name, parent, nameIndex, length);
