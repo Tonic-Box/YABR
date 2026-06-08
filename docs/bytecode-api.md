@@ -262,6 +262,17 @@ block — the mechanical building block for inlining a method body.
 List<Instruction> body = cw.cloneRange(first, last, localOffset);
 host.insertBefore(callSite, body);   // splice the cloned body in; relink wires it up
 ```
+Shifted local-variable ops use the narrowest valid encoding: the compact `xload_<n>` form for index
+0–3, the general form for 4–255, and the `wide` form beyond 255.
+
+To splice a body **across constant pools** into a method the target already owns (e.g. merging into an
+existing `<clinit>`), drive the public `ConstPoolRemapper` directly — it re-resolves every operand
+(including bootstrap methods) into the target pool:
+```java
+ConstPoolRemapper remap = new ConstPoolRemapper(sourceClass, targetClass);
+CodeWriter.ClonedRange cr = sourceCw.cloneRangeWithTargets(first, last, base, targetPool, remap::remap);
+targetCw.replaceBody(cr);            // or insertBefore(handle, cr) to merge rather than replace
+```
 
 ### Reference retargeting and cross-class grafting
 

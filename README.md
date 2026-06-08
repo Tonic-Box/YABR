@@ -8,10 +8,13 @@ A comprehensive alternative to ASM, Javassist, and other bytecode libraries.
 
 - **Class file parsing** - Read and write Java `.class` files
 - **Bytecode generation** - Fluent builder API for creating classes from scratch
-- **Bytecode manipulation** - High-level and low-level APIs for modifying bytecode
+- **Bytecode manipulation** - High-level and low-level APIs for modifying bytecode: handle-keyed
+  insert/remove/replace, range cloning, cross-class method grafting, and owner retargeting, with
+  automatic relink (branch widening) and StackMapTable regeneration
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
-- **Class decompilation** - Full class decompilation with imports, fields, and methods
+- **Class decompilation** - Full class decompilation with imports, fields, and methods, including
+  modern constructs (records, sealed types, switch expressions, and Java 21 pattern-matching switch)
 - **Analysis APIs** - Call graph, dependency, type inference, pattern search, xrefs, data flow, similarity, PDG, SDG, CPG, taint analysis
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+

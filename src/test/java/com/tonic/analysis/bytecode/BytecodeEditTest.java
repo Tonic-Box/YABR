@@ -156,6 +156,38 @@ class BytecodeEditTest {
     }
 
     @Test
+    void cloneRangeCanonicalizesLocalVarOpcodes() throws Exception {
+        // Locals at slots 0 (param n) and 1 (a). Clone with localOffset so a slot lands in 0-3 and,
+        // separately, beyond 255 — the clone must use the compact 1-byte form for the former and the
+        // wide form for the latter (rather than always emitting a general 2-byte load/store).
+        ClassFile cf = compile("public class LV { static int f(int n) { int a = n + 1; return a; } }", "LV");
+        CodeWriter cw = new CodeWriter(method(cf, "f"));
+        List<Instruction> body = new ArrayList<>();
+        cw.getInstructions().forEach(body::add);
+
+        List<Instruction> shifted = cw.cloneRange(body.get(0), body.get(body.size() - 1), 1);
+        boolean sawLowLocal = false;
+        for (Instruction i : shifted) {
+            if (i instanceof com.tonic.analysis.instruction.ILoadInstruction
+                    || i instanceof com.tonic.analysis.instruction.IStoreInstruction) {
+                assertEquals(1, i.getLength(), "a local at index 0-3 must use the compact 1-byte form: " + i);
+                sawLowLocal = true;
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(sawLowLocal, "expected compact local-var ops in the clone");
+
+        List<Instruction> wide = cw.cloneRange(body.get(0), body.get(body.size() - 1), 300);
+        boolean sawWide = false;
+        for (Instruction i : wide) {
+            if (i instanceof com.tonic.analysis.instruction.WideInstruction) {
+                sawWide = true;
+                break;
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(sawWide, "a local index > 255 must use the wide form");
+    }
+
+    @Test
     void cloneRangeReproducesBodyWithRelinkedBranches() throws Exception {
         // A method with a loop + an if + locals; clone its whole body into a twin method (same pool)
         // and confirm the twin computes the same result — proving cloneRange relinks the cloned

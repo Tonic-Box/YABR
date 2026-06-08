@@ -35,6 +35,32 @@ The pipeline has two paths:
 1. **Forward path** - Bytecode -> IR -> AST -> Source (decompilation)
 2. **Round-trip path** - Bytecode -> IR -> AST -> Mutate -> IR -> Bytecode (transformation)
 
+## Supported Java language features
+
+Beyond ordinary methods and control flow, the AST layer recovers and re-emits modern Java constructs.
+
+**Decompilation** reconstructs, from the desugared bytecode:
+
+- Switch expressions (arrow/`yield`, in both `return` and assignment forms) — Java 14
+- Pattern `instanceof` with a bound variable — Java 16
+- `sealed` / `non-sealed` classes and their `permits` clause — Java 17
+- `record` headers, suppressing the compiler-generated canonical constructor, accessors and
+  `equals`/`hashCode`/`toString` — Java 16
+- Pattern-matching `switch` (`SwitchBootstraps.typeSwitch`): type patterns, `when` guards, and
+  record-deconstruction patterns (`case Point(int x, int y) ->`) — Java 21
+
+**Recompilation** (front-end parse → lower → bytecode) handles end-to-end, verified by running the
+emitted class on a real JDK:
+
+- Text blocks (`"""…"""`, with incidental-whitespace and escape normalization) — Java 15
+- Switch expressions, pattern `instanceof`, and pattern-matching `switch` (type, guarded, and
+  record-deconstruction patterns)
+
+The front end additionally accepts `sealed`/`non-sealed`/`permits` modifiers and re-parses decompiled
+`record` declarations. The constant-pool/attribute model is transform-safe for these features:
+`Record`, `PermittedSubclasses`, and the `SwitchBootstraps`/`ObjectMethods`/`LambdaMetafactory`
+bootstraps survive constant-pool-mutating edits rather than corrupting as opaque blobs.
+
 ## Basic Usage
 
 ### Decompiling a Complete Class

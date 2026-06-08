@@ -6,12 +6,11 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
-import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.StackMapTableAttribute;
-import com.tonic.parser.attribute.stack.*;
 import com.tonic.analysis.instruction.*;
 import com.tonic.utill.Logger;
+import com.tonic.utill.Opcode;
 import com.tonic.utill.ReturnType;
 import lombok.Getter;
 
@@ -565,46 +564,89 @@ public class CodeWriter {
             }
         }
         if (localOffset != 0) {
-            if (i instanceof ILoadInstruction) {
-                return new ILoadInstruction(ILOAD.getCode(), 0, ((ILoadInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof LLoadInstruction) {
-                return new LLoadInstruction(LLOAD.getCode(), 0, ((LLoadInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof FLoadInstruction) {
-                return new FLoadInstruction(FLOAD.getCode(), 0, ((FLoadInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof DLoadInstruction) {
-                return new DLoadInstruction(DLOAD.getCode(), 0, ((DLoadInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof ALoadInstruction) {
-                return new ALoadInstruction(ALOAD.getCode(), 0, ((ALoadInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof IStoreInstruction) {
-                return new IStoreInstruction(ISTORE.getCode(), 0, ((IStoreInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof LStoreInstruction) {
-                return new LStoreInstruction(LSTORE.getCode(), 0, ((LStoreInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof FStoreInstruction) {
-                return new FStoreInstruction(FSTORE.getCode(), 0, ((FStoreInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof DStoreInstruction) {
-                return new DStoreInstruction(DSTORE.getCode(), 0, ((DStoreInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof AStoreInstruction) {
-                return new AStoreInstruction(ASTORE.getCode(), 0, ((AStoreInstruction) i).getVarIndex() + localOffset);
-            }
-            if (i instanceof IIncInstruction) {
-                IIncInstruction x = (IIncInstruction) i;
-                return new IIncInstruction(IINC.getCode(), 0, x.getVarIndex() + localOffset, x.getConstValue());
-            }
-            if (i instanceof WideInstruction || i instanceof WideIIncInstruction || i instanceof RetInstruction) {
-                throw new UnsupportedOperationException(
-                        "cloneRange with a nonzero localOffset does not support wide/ret local ops: " + i);
+            Instruction local = remapLocalVar(i, localOffset);
+            if (local != null) {
+                return local;
             }
         }
         return genericCopy(i);
+    }
+
+    @FunctionalInterface
+    private interface LocalCtor {
+        Instruction make(int opcode, int index);
+    }
+
+    /**
+     * Re-emits a local-variable instruction (any compact/general/wide load, store, iinc or ret) with
+     * its index shifted by {@code localOffset}, choosing the canonical narrowest encoding: the compact
+     * {@code xload_<n>} form for index 0-3, the general form for 4-255, and the {@code wide} form for
+     * index (or iinc constant) beyond a byte. Returns null when {@code i} is not a local-variable op.
+     */
+    private Instruction remapLocalVar(Instruction i, int localOffset) {
+        Opcode general = localGeneralOpcode(i);
+        if (general == null) {
+            return null;
+        }
+        int index = localVarIndex(i) + localOffset;
+        int constValue = i instanceof IIncInstruction ? ((IIncInstruction) i).getConstValue()
+                : i instanceof WideIIncInstruction ? ((WideIIncInstruction) i).getConstValue() : 0;
+        return buildLocalVar(general, index, constValue);
+    }
+
+    /** The general-form opcode of a local-variable instruction (the modified opcode for a wide), or null. */
+    private static Opcode localGeneralOpcode(Instruction i) {
+        if (i instanceof ILoadInstruction) return ILOAD;
+        if (i instanceof LLoadInstruction) return LLOAD;
+        if (i instanceof FLoadInstruction) return FLOAD;
+        if (i instanceof DLoadInstruction) return DLOAD;
+        if (i instanceof ALoadInstruction) return ALOAD;
+        if (i instanceof IStoreInstruction) return ISTORE;
+        if (i instanceof LStoreInstruction) return LSTORE;
+        if (i instanceof FStoreInstruction) return FSTORE;
+        if (i instanceof DStoreInstruction) return DSTORE;
+        if (i instanceof AStoreInstruction) return ASTORE;
+        if (i instanceof IIncInstruction || i instanceof WideIIncInstruction) return IINC;
+        if (i instanceof RetInstruction) return RET;
+        if (i instanceof WideInstruction) return ((WideInstruction) i).getModifiedOpcode();
+        return null;
+    }
+
+    /** Builds the canonical narrowest encoding of a local-variable op identified by its general opcode. */
+    private Instruction buildLocalVar(Opcode general, int index, int constValue) {
+        switch (general) {
+            case ILOAD:  return loadStore(ILOAD_0, ILOAD, index, (op, x) -> new ILoadInstruction(op, 0, x));
+            case LLOAD:  return loadStore(LLOAD_0, LLOAD, index, (op, x) -> new LLoadInstruction(op, 0, x));
+            case FLOAD:  return loadStore(FLOAD_0, FLOAD, index, (op, x) -> new FLoadInstruction(op, 0, x));
+            case DLOAD:  return loadStore(DLOAD_0, DLOAD, index, (op, x) -> new DLoadInstruction(op, 0, x));
+            case ALOAD:  return loadStore(ALOAD_0, ALOAD, index, (op, x) -> new ALoadInstruction(op, 0, x));
+            case ISTORE: return loadStore(ISTORE_0, ISTORE, index, (op, x) -> new IStoreInstruction(op, 0, x));
+            case LSTORE: return loadStore(LSTORE_0, LSTORE, index, (op, x) -> new LStoreInstruction(op, 0, x));
+            case FSTORE: return loadStore(FSTORE_0, FSTORE, index, (op, x) -> new FStoreInstruction(op, 0, x));
+            case DSTORE: return loadStore(DSTORE_0, DSTORE, index, (op, x) -> new DStoreInstruction(op, 0, x));
+            case ASTORE: return loadStore(ASTORE_0, ASTORE, index, (op, x) -> new AStoreInstruction(op, 0, x));
+            case IINC:
+                if (index <= 0xFF && constValue >= Byte.MIN_VALUE && constValue <= Byte.MAX_VALUE) {
+                    return new IIncInstruction(IINC.getCode(), 0, index, constValue);
+                }
+                return new WideInstruction(WIDE.getCode(), 0, IINC, index, constValue);
+            case RET:
+                return index <= 0xFF ? new RetInstruction(RET.getCode(), 0, index)
+                        : new WideInstruction(WIDE.getCode(), 0, RET, index);
+            default:
+                throw new IllegalStateException("not a local-variable opcode: " + general);
+        }
+    }
+
+    /** Compact ({@code _<n>}, index 0-3), general (4-255), or wide (&gt;255) encoding of a load/store. */
+    private Instruction loadStore(Opcode compact0, Opcode general, int index, LocalCtor ctor) {
+        if (index >= 0 && index <= 3) {
+            return ctor.make(compact0.getCode() + index, index);
+        }
+        if (index <= 0xFF) {
+            return ctor.make(general.getCode(), index);
+        }
+        return new WideInstruction(WIDE.getCode(), 0, general, index);
     }
 
     /** A fresh copy of a non-branch instruction via re-parse (operands preserved, offset 0). */
@@ -794,7 +836,7 @@ public class CodeWriter {
     private void ensureMaxLocals() {
         int needed = maxLocals;
         for (Instruction i : instructions.values()) {
-            int slot = localSlot(i);
+            int slot = localVarIndex(i);
             if (slot >= 0) {
                 needed = Math.max(needed, slot + localSlotSize(i));
             }
@@ -807,7 +849,8 @@ public class CodeWriter {
         }
     }
 
-    private static int localSlot(Instruction i) {
+    /** The local-variable slot a load/store/iinc/ret (compact, general, or wide) references, or -1. */
+    private static int localVarIndex(Instruction i) {
         if (i instanceof ILoadInstruction) return ((ILoadInstruction) i).getVarIndex();
         if (i instanceof LLoadInstruction) return ((LLoadInstruction) i).getVarIndex();
         if (i instanceof FLoadInstruction) return ((FLoadInstruction) i).getVarIndex();
@@ -820,6 +863,8 @@ public class CodeWriter {
         if (i instanceof AStoreInstruction) return ((AStoreInstruction) i).getVarIndex();
         if (i instanceof IIncInstruction) return ((IIncInstruction) i).getVarIndex();
         if (i instanceof RetInstruction) return ((RetInstruction) i).getVarIndex();
+        if (i instanceof WideIIncInstruction) return ((WideIIncInstruction) i).getVarIndex();
+        if (i instanceof WideInstruction) return ((WideInstruction) i).getVarIndex();
         return -1;
     }
 
@@ -927,8 +972,17 @@ public class CodeWriter {
     }
 
     private static int localSlotSize(Instruction i) {
-        return (i instanceof LLoadInstruction || i instanceof LStoreInstruction
-                || i instanceof DLoadInstruction || i instanceof DStoreInstruction) ? 2 : 1;
+        if (i instanceof LLoadInstruction || i instanceof LStoreInstruction
+                || i instanceof DLoadInstruction || i instanceof DStoreInstruction) {
+            return 2;
+        }
+        if (i instanceof WideInstruction) {
+            Opcode m = ((WideInstruction) i).getModifiedOpcode();
+            if (m == LLOAD || m == LSTORE || m == DLOAD || m == DSTORE) {
+                return 2;
+            }
+        }
+        return 1;
     }
 
     private static boolean isBranch(Instruction i) {

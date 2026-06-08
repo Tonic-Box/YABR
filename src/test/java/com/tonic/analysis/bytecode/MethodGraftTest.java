@@ -1,5 +1,6 @@
 package com.tonic.analysis.bytecode;
 
+import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.MethodGrafter;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
@@ -83,6 +84,56 @@ class MethodGraftTest {
 
         Class<?> clazz = TestUtils.loadAndVerify(game);
         assertEquals("v5", clazz.getMethod("tag", int.class).invoke(null, 5));
+    }
+
+    @Test
+    void constPoolRemapperSplicesBodyIntoExistingMethod() throws Exception {
+        // The graftMethod path can't help when the target already owns the method (e.g. merging into an
+        // existing <clinit>). Here we drive ConstPoolRemapper + cloneRangeWithTargets directly to splice
+        // a source body into an existing target method, relocating its String constant across pools.
+        ClassPool pool = TestUtils.emptyPool();
+        for (String cn : new String[]{"java/lang/Object", "java/lang/String"}) {
+            pool.loadPlatformClass(cn + ".class");
+        }
+        ClassFile sound = compile(pool, "Sound",
+                "public class Sound { public static String src() { return \"spliced-7\"; } }");
+        ClassFile game = compile(pool, "Game",
+                "public class Game { public static String run() { return \"old\"; } }");
+
+        com.tonic.analysis.ConstPoolRemapper remapper =
+                new com.tonic.analysis.ConstPoolRemapper(sound, game);
+        CodeWriter srcWriter = new CodeWriter(method(sound, "src"));
+        java.util.List<com.tonic.analysis.instruction.Instruction> body = new java.util.ArrayList<>();
+        srcWriter.getInstructions().forEach(body::add);
+        CodeWriter.ClonedRange cloned = srcWriter.cloneRangeWithTargets(
+                body.get(0), body.get(body.size() - 1), 0, game.getConstPool(), remapper::remap);
+
+        CodeWriter gameWriter = new CodeWriter(method(game, "run"));
+        gameWriter.replaceBody(cloned);
+        gameWriter.write();
+
+        Class<?> clazz = TestUtils.loadAndVerify(game);
+        assertEquals("spliced-7", clazz.getMethod("run").invoke(null));
+    }
+
+    /** Compiles a single-method class onto the given pool via the YABR front end. */
+    private static ClassFile compile(ClassPool pool, String name, String src) throws Exception {
+        CompilationUnit cu = JavaParser.create().parse(src);
+        ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
+        ClassFile cf = pool.createNewClass(name, new AccessBuilder().setPublic().build());
+        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
+        lowerer.setCurrentClassDecl(cls);
+        lowerer.setImports(cu.getImports());
+        SSA ssa = new SSA(cf.getConstPool());
+        for (MethodDecl m : cls.getMethods()) {
+            if (m.getBody() == null) {
+                continue;
+            }
+            cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(),
+                    m.getName(), "()" + m.getReturnType().toIRType().getDescriptor());
+            ssa.lower(lowerer.lower(m, name), method(cf, m.getName()));
+        }
+        return cf;
     }
 
     private static MethodEntry method(ClassFile cf, String name) {
