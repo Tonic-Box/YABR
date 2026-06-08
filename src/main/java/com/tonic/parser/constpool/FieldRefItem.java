@@ -41,6 +41,15 @@ public class FieldRefItem extends Item<FieldRef> {
     }
 
     /**
+     * Repoints this field reference at a different owner class (constant-pool class index).
+     *
+     * @param classIndex the new CONSTANT_Class index
+     */
+    public void setClassIndex(int classIndex) {
+        value.setClassIndex(classIndex);
+    }
+
+    /**
      * Gets the class name from constant pool.
      *
      * @return class name or null if unavailable

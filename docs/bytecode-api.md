@@ -226,6 +226,78 @@ cw.computeFrames();
 cw.forceComputeFrames();
 ```
 
+### Structural Editing (by instruction handle)
+
+Beyond offset-based insertion, `CodeWriter` supports editing keyed on an instruction **handle** (the
+`Instruction` object itself). Every structural edit runs a relink/layout pass that recomputes
+instruction offsets, branch/switch targets (by identity — so jumps survive arbitrary shifts), switch
+padding, the exception table, and the StackMapTable. (This also fixes a former hazard where inserting
+inside a branch span left stale branch offsets.)
+
+```java
+CodeWriter cw = new CodeWriter(methodEntry);
+Instruction handle = cw.getInstructions().iterator().next();
+
+cw.insertBefore(handle, newInstr);        // or a List<Instruction> (e.g. a spliced body)
+cw.insertAfter(handle, newInstr);
+cw.replaceInstruction(handle, replacement); // branches that targeted `handle` are retargeted
+cw.removeInstruction(handle);               // throws if `handle` is a branch/switch target
+
+// When building branches that jump to a known instruction, register the target by identity:
+cw.setBranchTarget(branchInstr, targetInstr);
+cw.setSwitchTargets(switchInstr, defaultTarget, caseTargets);
+
+// Replace the whole body (e.g. a cloned/grafted method body); offsets/frames are rebuilt:
+cw.replaceBody(instructionList);
+cw.replaceBody(instructionList, exceptionTableEntries);
+```
+
+### Cloning a range
+
+`cloneRange` copies a contiguous instruction range into a fresh, self-contained list, shifting every
+local-variable index by `localOffset` and recomputing internal branch/switch targets for the cloned
+block — the mechanical building block for inlining a method body.
+
+```java
+List<Instruction> body = cw.cloneRange(first, last, localOffset);
+host.insertBefore(callSite, body);   // splice the cloned body in; relink wires it up
+```
+
+### Reference retargeting and cross-class grafting
+
+`ConstPool`/`ClassFile` can repoint every member reference (method/field/interface) from one owner to
+another, and `MethodGrafter` copies a method into another class, re-resolving its constant-pool
+references symbolically into the target pool (and regenerating frames):
+
+```java
+import com.tonic.analysis.MethodGrafter;
+
+// Redirect every Sound.* member reference to Game.* (pool-wide):
+int n = gameClass.redirectOwner("pkg/Sound", "pkg/Game");
+
+// Move a method from one ClassFile into another (returns the new method on the target):
+MethodEntry moved = MethodGrafter.graftMethod(soundClass, soundMethod, gameClass);
+gameClass.redirectOwner("pkg/Sound", "pkg/Game"); // repoint its self-calls, if desired
+```
+
+`graftMethod` remaps method/field/interface/class references, `ldc` constants
+(String/Class/int/float/long/double/MethodHandle/MethodType), and `invokedynamic`/dynamic constants —
+for the latter the referenced bootstrap method (handle + static arguments) is copied and remapped into
+the target's `BootstrapMethods` attribute. Structural edits (including the relink after a graft) also
+**widen branches automatically** (`goto`→`goto_w`, and an over-long conditional becomes an inverted
+conditional skipping a `goto_w`) when an edit pushes a branch span past ±32 KB.
+
+### Frameless write
+
+To serialize without a `StackMapTable` (e.g. for tooling that emits frame-free class versions or
+recomputes frames downstream), strip the attribute before writing. A frameless class only loads where
+frames aren't required (class major version &lt; 50, or `-Xverify:none`).
+
+```java
+classFile.stripStackMapTables();
+byte[] bytes = classFile.write();
+```
+
 ## Common Patterns
 
 ### Print Statement

@@ -45,6 +45,15 @@ public class InterfaceRefItem extends Item<InterfaceRef> {
     }
 
     /**
+     * Repoints this interface-method reference at a different owner class (constant-pool class index).
+     *
+     * @param classIndex the new CONSTANT_Class index
+     */
+    public void setClassIndex(int classIndex) {
+        value.setClassIndex(classIndex);
+    }
+
+    /**
      * Returns the number of parameters for the interface method.
      *
      * @return The number of parameters.

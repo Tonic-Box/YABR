@@ -112,7 +112,7 @@ public class FrameGenerator {
             if (instr instanceof GotoInstruction) {
                 GotoInstruction gotoInstr =
                     (GotoInstruction) instr;
-                int target = offset + gotoInstr.getBranchOffset();
+                int target = offset + gotoBranchOffset(gotoInstr);
                 if (target > 0) {
                     targets.add(target);
                 }
@@ -181,7 +181,6 @@ public class FrameGenerator {
             offsetToIndex.put(instructionList.get(i).getOffset(), i);
         }
 
-        TypeState currentState = initialState;
         Map<Integer, TypeState> visitedStates = new HashMap<>();
         Queue<WorkItem> worklist = new LinkedList<>();
         worklist.add(new WorkItem(0, initialState));
@@ -288,10 +287,15 @@ public class FrameGenerator {
      * @param instr the jump instruction
      * @return target offset or -1 if not a jump
      */
+    private static int gotoBranchOffset(GotoInstruction gotoInstr) {
+        return gotoInstr.getType() == GotoInstruction.GotoType.GOTO_WIDE
+                ? gotoInstr.getBranchOffsetWide() : gotoInstr.getBranchOffset();
+    }
+
     private int getJumpTarget(Instruction instr) {
         if (instr instanceof GotoInstruction) {
             GotoInstruction gotoInstr = (GotoInstruction) instr;
-            return instr.getOffset() + gotoInstr.getBranchOffset();
+            return instr.getOffset() + gotoBranchOffset(gotoInstr);
         }
         if (instr instanceof JsrInstruction) {
             JsrInstruction jsrInstr = (JsrInstruction) instr;

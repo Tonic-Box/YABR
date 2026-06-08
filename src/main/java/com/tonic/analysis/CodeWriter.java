@@ -36,9 +36,25 @@ public class CodeWriter {
 
     protected final Map<Integer, Instruction> instructions = new TreeMap<>();
 
+    /**
+     * Branch/switch instruction -> the target instructions it jumps to, by identity. Index 0 is the
+     * default/sole target; for switches, indices 1..n follow in case order. Resolved at parse time and
+     * maintained across structural edits by {@link #relink}, so branch targets survive offset shifts
+     * (the internal "label" model). A null target means the original branch pointed outside any known
+     * instruction boundary and is left untouched.
+     */
+    private final Map<Instruction, List<Instruction>> branchTargets = new IdentityHashMap<>();
+
     private int maxStack;
     private int maxLocals;
 
+    /**
+     * -- GETTER --
+     *  Returns whether the bytecode has been modified since loading.
+     *
+     * @return true if modified, false otherwise
+     */
+    @Getter
     private boolean modified = false;
 
     /**
@@ -83,7 +99,7 @@ public class CodeWriter {
                     for (int i = 0; i < Math.min(30, bytecode.length); i++) {
                         sb.append(String.format("%02X ", bytecode[i]));
                     }
-                    System.err.println(sb.toString());
+                    System.err.println(sb);
                     System.err.println("Previously parsed instructions:");
                     for (var entry : instructions.entrySet()) {
                         System.err.println("  offset " + entry.getKey() + ": " + entry.getValue().getClass().getSimpleName() + " length=" + entry.getValue().getLength());
@@ -94,6 +110,18 @@ public class CodeWriter {
         }
         this.maxStack = codeAttribute.getMaxStack();
         this.maxLocals = codeAttribute.getMaxLocals();
+        resolveAllBranchTargets();
+    }
+
+    /** Rebuilds {@link #branchTargets} from the current instruction offsets (consistent state). */
+    private void resolveAllBranchTargets() {
+        branchTargets.clear();
+        for (Instruction instr : instructions.values()) {
+            List<Instruction> targets = resolveTargets(instr);
+            if (targets != null) {
+                branchTargets.put(instr, targets);
+            }
+        }
     }
 
     /**
@@ -184,7 +212,6 @@ public class CodeWriter {
         int index = 0;
         for (Map.Entry<Integer, Instruction> entry : instructions.entrySet()) {
             int instrOffset = entry.getKey();
-            Instruction instr = entry.getValue();
             if (instrOffset == targetOffset) {
                 return index;
             }
@@ -197,152 +224,858 @@ public class CodeWriter {
     }
 
     /**
-     * Inserts an instruction into the bytecode and updates blocks accordingly.
+     * Inserts an instruction before whatever instruction currently sits at {@code offset} (or appends
+     * it when {@code offset == code length}). Routes through {@link #relink}, so branch/switch targets,
+     * the exception table, and frames are all kept correct — including when the insertion point lies
+     * within a branch span (which the previous offset-only implementation corrupted).
      *
-     * @param offset   The bytecode offset to insert the instruction at.
-     * @param newInstr The new Instruction to insert.
+     * @param offset   the bytecode offset of the instruction to insert before
+     * @param newInstr the new instruction to insert
      */
     public void insertInstruction(int offset, Instruction newInstr) {
         if (!instructions.containsKey(offset) && offset != bytecode.length) {
             throw new IllegalArgumentException("Invalid bytecode offset: " + offset);
         }
-
-        this.modified = true;
-
-        Logger.info("Inserting instruction at offset: " + offset);
-        Logger.info("Instruction to insert: " + newInstr);
-
-        List<Map.Entry<Integer, Instruction>> entries = new ArrayList<>(instructions.entrySet());
-        Map<Integer, Instruction> updatedInstructions = new TreeMap<>();
+        List<Instruction> order = new ArrayList<>();
         boolean inserted = false;
-
-        for (Map.Entry<Integer, Instruction> entry : entries) {
-            int currentOffset = entry.getKey();
-            Instruction instr = entry.getValue();
-
-            if (currentOffset == offset) {
-                updatedInstructions.put(offset, newInstr);
-                updatedInstructions.put(offset + newInstr.getLength(), instr);
+        for (Instruction instr : instructions.values()) {
+            if (instr.getOffset() == offset) {
+                order.add(newInstr);
                 inserted = true;
-                Logger.info("Inserted new instruction at " + offset + ", shifted existing instruction to " + (offset + newInstr.getLength()));
-            } else if (currentOffset > offset) {
-                int newShiftedOffset = currentOffset + newInstr.getLength();
-                updatedInstructions.put(newShiftedOffset, instr);
-                Logger.info("Shifted instruction from " + currentOffset + " to " + newShiftedOffset);
-            } else {
-                updatedInstructions.put(currentOffset, instr);
             }
+            order.add(instr);
         }
-
-        if (!inserted && offset == bytecode.length) {
-            updatedInstructions.put(offset, newInstr);
-            Logger.info("Appended instruction at end offset: " + offset);
+        if (!inserted) {
+            order.add(newInstr);
         }
-
-        if (entries.isEmpty() && offset == 0) {
-            updatedInstructions.put(0, newInstr);
-            Logger.info("Inserted instruction into empty bytecode at offset 0");
-        }
-
-        instructions.clear();
-        instructions.putAll(updatedInstructions);
-
-        int insertLen = newInstr.getLength();
-        for (com.tonic.parser.attribute.table.ExceptionTableEntry ex : codeAttribute.getExceptionTable()) {
-            if (ex.getStartPc() >= offset) {
-                ex.setStartPc(ex.getStartPc() + insertLen);
-            }
-            if (ex.getEndPc() > offset) {
-                ex.setEndPc(ex.getEndPc() + insertLen);
-            }
-            if (ex.getHandlerPc() >= offset) {
-                ex.setHandlerPc(ex.getHandlerPc() + insertLen);
-            }
-        }
-
-        shiftStackMapTable(offset, insertLen);
-
-        rebuildBytecode();
-
-        parseBytecode();
+        relink(order);
     }
 
+    /**
+     * Removes an instruction, identified by handle (object identity), and relinks the method.
+     * Throws if the instruction is the target of a branch/switch (retarget or replace it instead).
+     *
+     * @param handle the instruction to remove (an object currently in this method)
+     */
+    public void removeInstruction(Instruction handle) {
+        requirePresent(handle);
+        for (List<Instruction> targets : branchTargets.values()) {
+            if (targets.contains(handle)) {
+                throw new IllegalStateException("Cannot remove an instruction that is a branch/switch target: " + handle);
+            }
+        }
+        List<Instruction> order = new ArrayList<>();
+        for (Instruction instr : instructions.values()) {
+            if (instr != handle) {
+                order.add(instr);
+            }
+        }
+        branchTargets.remove(handle);
+        relink(order);
+    }
 
-    private void shiftStackMapTable(int insertionOffset, int insertLength) {
-        StackMapTableAttribute smt = null;
-        for (Attribute attr : codeAttribute.getAttributes()) {
-            if (attr instanceof StackMapTableAttribute) {
-                smt = (StackMapTableAttribute) attr;
+    /**
+     * Replaces an instruction (by handle) with another, preserving control flow: any branch/switch
+     * that targeted the old instruction is retargeted to the replacement. If {@code replacement} is
+     * itself a branch, register its target first via {@link #setBranchTarget}/{@link #setSwitchTargets}.
+     *
+     * @param handle      the instruction to replace
+     * @param replacement the new instruction
+     */
+    public void replaceInstruction(Instruction handle, Instruction replacement) {
+        requirePresent(handle);
+        for (List<Instruction> targets : branchTargets.values()) {
+            for (int k = 0; k < targets.size(); k++) {
+                if (targets.get(k) == handle) {
+                    targets.set(k, replacement);
+                }
+            }
+        }
+        List<Instruction> order = new ArrayList<>();
+        for (Instruction instr : instructions.values()) {
+            order.add(instr == handle ? replacement : instr);
+        }
+        branchTargets.remove(handle);
+        relink(order);
+    }
+
+    /**
+     * Replaces this method's entire instruction stream with {@code body} (e.g. a cloned/grafted body),
+     * then relinks: offsets, branch/switch targets, and frames are recomputed. Branches in {@code body}
+     * must either be self-contained (relative offsets valid for the block, as produced by
+     * {@link #cloneRange}) or have their targets registered via {@link #setBranchTarget}. The exception
+     * table is cleared (set a new one separately if needed).
+     *
+     * @param body the new instruction stream, in order
+     */
+    public void replaceBody(List<Instruction> body) {
+        codeAttribute.getExceptionTable().clear();
+        relink(new ArrayList<>(body));
+    }
+
+    /**
+     * As {@link #replaceBody(List)} but installs {@code exceptions} as the method's exception table
+     * before relinking (so regenerated frames cover the handler blocks). Entry PCs are interpreted
+     * against {@code body}'s layout.
+     *
+     * @param body       the new instruction stream, in order
+     * @param exceptions the exception-table entries (catch_type indices in this method's pool)
+     */
+    public void replaceBody(List<Instruction> body,
+                            List<com.tonic.parser.attribute.table.ExceptionTableEntry> exceptions) {
+        codeAttribute.getExceptionTable().clear();
+        codeAttribute.getExceptionTable().addAll(exceptions);
+        relink(new ArrayList<>(body));
+    }
+
+    /** Replaces the body with a cloned range, carrying its branch/switch targets by identity. */
+    public void replaceBody(ClonedRange block) {
+        branchTargets.putAll(block.targets);
+        replaceBody(block.instructions);
+    }
+
+    /** Replaces the body with a cloned range plus an exception table, carrying targets by identity. */
+    public void replaceBody(ClonedRange block,
+                            List<com.tonic.parser.attribute.table.ExceptionTableEntry> exceptions) {
+        branchTargets.putAll(block.targets);
+        replaceBody(block.instructions, exceptions);
+    }
+
+    /** Inserts a cloned range before the handle, carrying its branch/switch targets by identity. */
+    public void insertBefore(Instruction handle, ClonedRange block) {
+        branchTargets.putAll(block.targets);
+        insertBefore(handle, block.instructions);
+    }
+
+    /** Inserts a cloned range after the handle, carrying its branch/switch targets by identity. */
+    public void insertAfter(Instruction handle, ClonedRange block) {
+        branchTargets.putAll(block.targets);
+        insertAfter(handle, block.instructions);
+    }
+
+    /**
+     * Inserts {@code newInstr} immediately before the given instruction handle.
+     */
+    public void insertBefore(Instruction handle, Instruction newInstr) {
+        insertBefore(handle, Collections.singletonList(newInstr));
+    }
+
+    /**
+     * Inserts a block of instructions (e.g. a cloned method body) immediately before the handle.
+     * Branch targets internal to the block are honored; register any branch that targets outside the
+     * block via {@link #setBranchTarget} before calling.
+     */
+    public void insertBefore(Instruction handle, List<Instruction> block) {
+        requirePresent(handle);
+        List<Instruction> order = new ArrayList<>();
+        for (Instruction instr : instructions.values()) {
+            if (instr == handle) {
+                order.addAll(block);
+            }
+            order.add(instr);
+        }
+        relink(order);
+    }
+
+    /**
+     * Inserts {@code newInstr} immediately after the given instruction handle.
+     */
+    public void insertAfter(Instruction handle, Instruction newInstr) {
+        insertAfter(handle, Collections.singletonList(newInstr));
+    }
+
+    /**
+     * Inserts a block of instructions immediately after the handle.
+     */
+    public void insertAfter(Instruction handle, List<Instruction> block) {
+        requirePresent(handle);
+        List<Instruction> order = new ArrayList<>();
+        for (Instruction instr : instructions.values()) {
+            order.add(instr);
+            if (instr == handle) {
+                order.addAll(block);
+            }
+        }
+        relink(order);
+    }
+
+    /**
+     * Registers the target of a (typically newly created) branch instruction by identity, so that the
+     * relink pass can compute its relative offset. Use this when building branches that jump to an
+     * existing instruction handle rather than via a raw relative offset.
+     */
+    public void setBranchTarget(Instruction branch, Instruction target) {
+        branchTargets.put(branch, new ArrayList<>(Collections.singletonList(target)));
+    }
+
+    /**
+     * Registers the targets of a switch instruction by identity: the default target followed by one
+     * target per case in case order.
+     */
+    public void setSwitchTargets(Instruction switchInstr, Instruction defaultTarget, List<Instruction> caseTargets) {
+        List<Instruction> targets = new ArrayList<>(caseTargets.size() + 1);
+        targets.add(defaultTarget);
+        targets.addAll(caseTargets);
+        branchTargets.put(switchInstr, targets);
+    }
+
+    private void requirePresent(Instruction handle) {
+        if (!instructions.containsValue(handle)) {
+            throw new IllegalArgumentException("Instruction is not part of this method: " + handle);
+        }
+    }
+
+    /**
+     * A cloned instruction range: the fresh instructions plus the by-identity targets of any
+     * branch/switch among them. Splicing it via {@link #insertBefore(Instruction, ClonedRange)} /
+     * {@link #replaceBody(ClonedRange)} carries the targets into the host so they relink correctly
+     * regardless of where (and at what 4-byte alignment) the block lands.
+     */
+    public static final class ClonedRange {
+        private final List<Instruction> instructions;
+        private final Map<Instruction, List<Instruction>> targets;
+
+        ClonedRange(List<Instruction> instructions, Map<Instruction, List<Instruction>> targets) {
+            this.instructions = instructions;
+            this.targets = targets;
+        }
+
+        public List<Instruction> instructions() {
+            return instructions;
+        }
+    }
+
+    /**
+     * Clones a contiguous instruction range {@code [from, to]} (inclusive) into a fresh list, shifting
+     * every local-variable index by {@code localOffset} and recomputing branch/switch relative offsets
+     * for the cloned block's own layout (the inliner's "clone with label remap + local offset"). The
+     * returned block is translation-invariant for branch-only blocks; for blocks containing a
+     * {@code switch}, prefer {@link #cloneRangeWithTargets} + the {@link ClonedRange} splice overloads,
+     * which carry targets by identity and are correct at any alignment.
+     *
+     * @param from        first instruction of the range (a handle in this method)
+     * @param to          last instruction of the range (inclusive)
+     * @param localOffset value added to every local-variable index in the clone
+     * @return the cloned instructions, in order
+     */
+    public List<Instruction> cloneRange(Instruction from, Instruction to, int localOffset) {
+        return cloneRangeWithTargets(from, to, localOffset, null, null).instructions;
+    }
+
+    /**
+     * As {@link #cloneRange(Instruction, Instruction, int)} but returns a {@link ClonedRange} that also
+     * carries each cloned branch/switch's targets by identity, and remaps every constant-pool reference
+     * through {@code cpRemap} (old index &rarr; new index in {@code targetPool}) — used by cross-class
+     * grafting to re-resolve operands into the target pool ({@code ldc} widens to {@code ldc_w} if a
+     * remapped index exceeds 255).
+     *
+     * @param from        first instruction (inclusive)
+     * @param to          last instruction (inclusive)
+     * @param localOffset value added to every local-variable index
+     * @param targetPool  the constant pool the clones will live in (null to keep this method's pool)
+     * @param cpRemap     old cp index &rarr; new cp index, or null for no remap
+     * @return the cloned range with identity-tracked targets
+     */
+    public ClonedRange cloneRangeWithTargets(Instruction from, Instruction to, int localOffset,
+                                             ConstPool targetPool, java.util.function.IntUnaryOperator cpRemap) {
+        List<Instruction> src = new ArrayList<>();
+        boolean in = false;
+        for (Instruction i : instructions.values()) {
+            if (i == from) {
+                in = true;
+            }
+            if (in) {
+                src.add(i);
+            }
+            if (i == to && in) {
                 break;
             }
         }
-        if (smt == null || smt.getFrames().isEmpty()) return;
-
-        List<StackMapFrame> oldFrames = smt.getFrames();
-        List<StackMapFrame> newFrames = new ArrayList<>(oldFrames.size());
-
-        int prevOldAbsBci = -1;
-        int prevNewAbsBci = -1;
-
-        for (StackMapFrame frame : oldFrames) {
-            int delta = frame.getOffsetDelta();
-            int oldAbsBci = (prevOldAbsBci == -1) ? delta : prevOldAbsBci + delta + 1;
-
-            int newAbsBci = oldAbsBci;
-            if (oldAbsBci >= insertionOffset) {
-                newAbsBci = oldAbsBci + insertLength;
-            }
-
-            int newDelta = (prevNewAbsBci == -1) ? newAbsBci : newAbsBci - prevNewAbsBci - 1;
-
-            StackMapFrame newFrame = createAdjustedFrame(frame, newDelta);
-            newFrames.add(newFrame);
-
-            prevOldAbsBci = oldAbsBci;
-            prevNewAbsBci = newAbsBci;
+        if (src.isEmpty()) {
+            throw new IllegalArgumentException("Range start is not part of this method");
+        }
+        if (src.get(src.size() - 1) != to) {
+            throw new IllegalArgumentException("Range end does not follow start in this method");
         }
 
-        smt.setFrames(newFrames);
-        smt.updateLength();
+        Map<Instruction, Instruction> map = new IdentityHashMap<>();
+        List<Instruction> clones = new ArrayList<>(src.size());
+        ConstPool pool = targetPool != null ? targetPool : constPool;
+        for (Instruction i : src) {
+            Instruction c = cloneOne(i, localOffset, pool, cpRemap);
+            map.put(i, c);
+            clones.add(c);
+        }
+
+        // Lay out the block 0-based to compute correct internal relative offsets (for the list path).
+        Map<Instruction, Integer> blockOff = new IdentityHashMap<>();
+        int run = 0;
+        for (Instruction c : clones) {
+            blockOff.put(c, run);
+            run += isSwitch(c) ? switchBaseLength(c) + paddingAfterOpcode(run) : c.getLength();
+        }
+        for (int k = 0; k < src.size(); k++) {
+            Instruction s = src.get(k);
+            Instruction c = clones.get(k);
+            if (isBranch(s) || isSwitch(s)) {
+                Instruction rebuilt = rebuildBranch(c, blockOff.get(c), cloneTargetsFor(s, map), blockOff);
+                clones.set(k, rebuilt);
+                map.put(s, rebuilt);
+                blockOff.put(rebuilt, blockOff.get(c));
+            } else {
+                c.setOffset(blockOff.get(c));
+            }
+        }
+
+        // Build the by-identity target table against the final clone objects.
+        Map<Instruction, List<Instruction>> targets = new IdentityHashMap<>();
+        for (Instruction s : src) {
+            if (isBranch(s) || isSwitch(s)) {
+                targets.put(map.get(s), cloneTargetsFor(s, map));
+            }
+        }
+        return new ClonedRange(clones, targets);
     }
 
-    private static StackMapFrame createAdjustedFrame(StackMapFrame original, int newDelta) {
-        if (original instanceof SameFrame) {
-            if (newDelta <= 63) {
-                return new SameFrame(newDelta);
+    /** Maps a source branch/switch's targets to their clones (internal) or null (external to the range). */
+    private List<Instruction> cloneTargetsFor(Instruction src, Map<Instruction, Instruction> map) {
+        List<Instruction> tg = branchTargets.get(src);
+        if (tg == null) {
+            tg = resolveTargets(src);
+        }
+        List<Instruction> out = new ArrayList<>();
+        if (tg != null) {
+            for (Instruction t : tg) {
+                out.add(t == null ? null : map.get(t));
             }
-            return new SameFrameExtended(newDelta);
         }
-        if (original instanceof SameLocals1StackItemFrame) {
-            VerificationTypeInfo stackItem = ((SameLocals1StackItemFrame) original).getStack();
-            if (newDelta <= 63) {
-                return new SameLocals1StackItemFrame(newDelta, stackItem);
+        return out;
+    }
+
+    /** Copies a single instruction for {@link #cloneRange}, shifting local indices and remapping cp refs. */
+    private Instruction cloneOne(Instruction i, int localOffset, ConstPool pool,
+                                 java.util.function.IntUnaryOperator cpRemap) {
+        if (isBranch(i) || isSwitch(i)) {
+            return structuralCopy(i);
+        }
+        if (cpRemap != null) {
+            Instruction remapped = remapCpBearing(i, pool, cpRemap);
+            if (remapped != null) {
+                return remapped;
             }
-            return new SameLocals1StackItemFrameExtended(newDelta, stackItem);
         }
-        if (original instanceof SameLocals1StackItemFrameExtended) {
-            VerificationTypeInfo stackItem = ((SameLocals1StackItemFrameExtended) original).getStack();
-            if (newDelta <= 63) {
-                return new SameLocals1StackItemFrame(newDelta, stackItem);
+        if (localOffset != 0) {
+            if (i instanceof ILoadInstruction) {
+                return new ILoadInstruction(ILOAD.getCode(), 0, ((ILoadInstruction) i).getVarIndex() + localOffset);
             }
-            return new SameLocals1StackItemFrameExtended(newDelta, stackItem);
-        }
-        if (original instanceof SameFrameExtended) {
-            if (newDelta <= 63) {
-                return new SameFrame(newDelta);
+            if (i instanceof LLoadInstruction) {
+                return new LLoadInstruction(LLOAD.getCode(), 0, ((LLoadInstruction) i).getVarIndex() + localOffset);
             }
-            return new SameFrameExtended(newDelta);
+            if (i instanceof FLoadInstruction) {
+                return new FLoadInstruction(FLOAD.getCode(), 0, ((FLoadInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof DLoadInstruction) {
+                return new DLoadInstruction(DLOAD.getCode(), 0, ((DLoadInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof ALoadInstruction) {
+                return new ALoadInstruction(ALOAD.getCode(), 0, ((ALoadInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof IStoreInstruction) {
+                return new IStoreInstruction(ISTORE.getCode(), 0, ((IStoreInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof LStoreInstruction) {
+                return new LStoreInstruction(LSTORE.getCode(), 0, ((LStoreInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof FStoreInstruction) {
+                return new FStoreInstruction(FSTORE.getCode(), 0, ((FStoreInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof DStoreInstruction) {
+                return new DStoreInstruction(DSTORE.getCode(), 0, ((DStoreInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof AStoreInstruction) {
+                return new AStoreInstruction(ASTORE.getCode(), 0, ((AStoreInstruction) i).getVarIndex() + localOffset);
+            }
+            if (i instanceof IIncInstruction) {
+                IIncInstruction x = (IIncInstruction) i;
+                return new IIncInstruction(IINC.getCode(), 0, x.getVarIndex() + localOffset, x.getConstValue());
+            }
+            if (i instanceof WideInstruction || i instanceof WideIIncInstruction || i instanceof RetInstruction) {
+                throw new UnsupportedOperationException(
+                        "cloneRange with a nonzero localOffset does not support wide/ret local ops: " + i);
+            }
         }
-        if (original instanceof ChopFrame) {
-            return new ChopFrame(original.getFrameType(), newDelta);
+        return genericCopy(i);
+    }
+
+    /** A fresh copy of a non-branch instruction via re-parse (operands preserved, offset 0). */
+    private Instruction genericCopy(Instruction i) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (DataOutputStream dos = new DataOutputStream(baos)) {
+                i.write(dos);
+            }
+            byte[] bytes = baos.toByteArray();
+            return InstructionFactory.createInstruction(bytes[0] & 0xFF, 0, bytes, constPool);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to clone instruction: " + i, e);
         }
-        if (original instanceof AppendFrame) {
-            return new AppendFrame(original.getFrameType(), newDelta, ((AppendFrame) original).getLocals());
+    }
+
+    /** A structural copy of a branch/switch at offset 0 (relative offsets fixed later by relink). */
+    private Instruction structuralCopy(Instruction i) {
+        int op = i.getOpcode();
+        if (i instanceof GotoInstruction) {
+            return ((GotoInstruction) i).getType() == GotoInstruction.GotoType.GOTO_WIDE
+                    ? new GotoInstruction(op, 0, 0) : new GotoInstruction(op, 0, (short) 0);
         }
-        if (original instanceof FullFrame) {
-            return new FullFrame(newDelta, ((FullFrame) original).getLocals(), ((FullFrame) original).getStack());
+        if (i instanceof ConditionalBranchInstruction) {
+            return new ConditionalBranchInstruction(op, 0, (short) 0);
         }
-        throw new IllegalArgumentException("Unknown frame type: " + original.getClass());
+        if (i instanceof JsrInstruction) {
+            return new JsrInstruction(op, 0, 0);
+        }
+        if (i instanceof TableSwitchInstruction) {
+            TableSwitchInstruction t = (TableSwitchInstruction) i;
+            return new TableSwitchInstruction(op, 0, 0, 0, t.getLow(), t.getHigh(),
+                    new LinkedHashMap<>(t.getJumpOffsets()));
+        }
+        LookupSwitchInstruction l = (LookupSwitchInstruction) i;
+        return new LookupSwitchInstruction(op, 0, 0, 0, l.getNpairs(), new LinkedHashMap<>(l.getMatchOffsets()));
+    }
+
+    /**
+     * Rebuilds a constant-pool-referencing instruction with its index remapped into {@code pool} via
+     * {@code cpRemap}. Returns null for instructions that carry no cp reference. {@code ldc} widens to
+     * {@code ldc_w} if the remapped index exceeds a byte.
+     */
+    private Instruction remapCpBearing(Instruction i, ConstPool pool, java.util.function.IntUnaryOperator cpRemap) {
+        int op = i.getOpcode();
+        if (i instanceof InvokeVirtualInstruction) {
+            return new InvokeVirtualInstruction(pool, op, 0, cpRemap.applyAsInt(((InvokeVirtualInstruction) i).getMethodIndex()));
+        }
+        if (i instanceof InvokeSpecialInstruction) {
+            return new InvokeSpecialInstruction(pool, op, 0, cpRemap.applyAsInt(((InvokeSpecialInstruction) i).getMethodIndex()));
+        }
+        if (i instanceof InvokeStaticInstruction) {
+            return new InvokeStaticInstruction(pool, op, 0, cpRemap.applyAsInt(((InvokeStaticInstruction) i).getMethodIndex()));
+        }
+        if (i instanceof InvokeInterfaceInstruction) {
+            InvokeInterfaceInstruction x = (InvokeInterfaceInstruction) i;
+            return new InvokeInterfaceInstruction(pool, op, 0, cpRemap.applyAsInt(x.getMethodIndex()), x.getCount());
+        }
+        if (i instanceof GetFieldInstruction) {
+            return new GetFieldInstruction(pool, op, 0, cpRemap.applyAsInt(((GetFieldInstruction) i).getFieldIndex()));
+        }
+        if (i instanceof PutFieldInstruction) {
+            return new PutFieldInstruction(pool, op, 0, cpRemap.applyAsInt(((PutFieldInstruction) i).getFieldIndex()));
+        }
+        if (i instanceof NewInstruction) {
+            return new NewInstruction(pool, op, 0, cpRemap.applyAsInt(((NewInstruction) i).getClassIndex()));
+        }
+        if (i instanceof CheckCastInstruction) {
+            return new CheckCastInstruction(pool, op, 0, cpRemap.applyAsInt(((CheckCastInstruction) i).getClassIndex()));
+        }
+        if (i instanceof InstanceOfInstruction) {
+            return new InstanceOfInstruction(pool, op, 0, cpRemap.applyAsInt(((InstanceOfInstruction) i).getClassIndex()));
+        }
+        if (i instanceof ANewArrayInstruction) {
+            ANewArrayInstruction x = (ANewArrayInstruction) i;
+            return new ANewArrayInstruction(pool, op, 0, cpRemap.applyAsInt(x.getClassIndex()), x.getCount());
+        }
+        if (i instanceof MultiANewArrayInstruction) {
+            MultiANewArrayInstruction x = (MultiANewArrayInstruction) i;
+            return new MultiANewArrayInstruction(pool, op, 0, cpRemap.applyAsInt(x.getClassIndex()), x.getDimensions());
+        }
+        if (i instanceof LdcInstruction) {
+            int ni = cpRemap.applyAsInt(((LdcInstruction) i).getCpIndex());
+            return ni > 0xFF ? new LdcWInstruction(pool, LDC_W.getCode(), 0, ni)
+                    : new LdcInstruction(pool, op, 0, ni);
+        }
+        if (i instanceof LdcWInstruction) {
+            return new LdcWInstruction(pool, op, 0, cpRemap.applyAsInt(((LdcWInstruction) i).getCpIndex()));
+        }
+        if (i instanceof Ldc2WInstruction) {
+            return new Ldc2WInstruction(pool, op, 0, cpRemap.applyAsInt(((Ldc2WInstruction) i).getCpIndex()));
+        }
+        if (i instanceof InvokeDynamicInstruction) {
+            return new InvokeDynamicInstruction(pool, op, 0, cpRemap.applyAsInt(((InvokeDynamicInstruction) i).getCpIndex()));
+        }
+        return null;
+    }
+
+
+    /**
+     * Recomputes the layout of an edited instruction stream and writes back correct bytecode. Given
+     * the new ordered instruction list (the result of an insert/remove/replace), this assigns fresh
+     * offsets (recomputing switch padding), relinks every branch/switch to its target by identity (so
+     * targets survive arbitrary shifts), remaps the exception table, drops now-stale debug tables, and
+     * regenerates the StackMapTable. This is the single correct backend for all structural edits and
+     * fixes the prior gap where branch/switch targets were not recomputed after a shift.
+     *
+     * @param newOrder the instructions in their new order; survivors keep identity, new ones are spliced in
+     */
+    private void relink(List<Instruction> newOrder) {
+        // 1. Layout: provisional new offsets + per-instruction lengths (switch padding from new offset).
+        Map<Instruction, Integer> newOff = layout(newOrder);
+        Map<Integer, Instruction> newByOffset = new HashMap<>();
+        for (Instruction i : newOrder) {
+            newByOffset.put(newOff.get(i), i);
+        }
+
+        // 2. Freshly inserted branches (no target entry yet) resolve against the new contiguous layout.
+        for (Instruction i : newOrder) {
+            if ((isBranch(i) || isSwitch(i)) && !branchTargets.containsKey(i)) {
+                List<Instruction> t = resolveTargetsUsing(i, newOff.get(i), newByOffset);
+                if (t != null) {
+                    branchTargets.put(i, t);
+                }
+            }
+        }
+
+        // 2b. Widen any branch whose span now exceeds the 16-bit range (goto->goto_w, conditional->
+        // inverted-conditional + goto_w). Mutates newOrder/branchTargets; re-layout afterwards.
+        newOrder = widenBranches(newOrder);
+        newOff = layout(newOrder);
+        int newCodeLength = newOff.isEmpty() ? 0
+                : newOff.get(newOrder.get(newOrder.size() - 1))
+                  + instructionLength(newOrder.get(newOrder.size() - 1), newOff.get(newOrder.get(newOrder.size() - 1)));
+
+        // 3. Old->new offset map for attribute remap (survivors carry their pre-edit offset).
+        Map<Integer, Integer> oldToNew = new HashMap<>();
+        for (Instruction i : newOrder) {
+            oldToNew.put(i.getOffset(), newOff.get(i));
+        }
+        oldToNew.put(bytecode.length, newCodeLength);
+
+        // 4. Reconstruct branches/switches with new offsets+relatives; move others to their new offset.
+        Map<Instruction, Instruction> remap = new IdentityHashMap<>();
+        for (Instruction i : newOrder) {
+            int off = newOff.get(i);
+            if (isBranch(i) || isSwitch(i)) {
+                remap.put(i, rebuildBranch(i, off, branchTargets.get(i), newOff));
+            } else {
+                i.setOffset(off);
+                remap.put(i, i);
+            }
+        }
+
+        // 5. Rebuild the instruction map and branch-target table with the remapped objects.
+        Map<Integer, Instruction> rebuilt = new TreeMap<>();
+        for (Instruction i : newOrder) {
+            rebuilt.put(newOff.get(i), remap.get(i));
+        }
+        Map<Instruction, List<Instruction>> newTargets = new IdentityHashMap<>();
+        for (Map.Entry<Instruction, List<Instruction>> e : branchTargets.entrySet()) {
+            Instruction src = remap.get(e.getKey());
+            if (src == null) {
+                continue;
+            }
+            List<Instruction> mapped = new ArrayList<>(e.getValue().size());
+            for (Instruction t : e.getValue()) {
+                mapped.add(t == null ? null : remap.getOrDefault(t, t));
+            }
+            newTargets.put(src, mapped);
+        }
+        instructions.clear();
+        instructions.putAll(rebuilt);
+        branchTargets.clear();
+        branchTargets.putAll(newTargets);
+
+        // 6. Attributes + bytecode + frames.
+        remapExceptionTable(oldToNew);
+        dropTransientDebugAttributes();
+        modified = true;
+        ensureMaxLocals();
+        rebuildBytecode();
+        regenerateFrames();
+    }
+
+    /** Raises maxLocals to cover every local-variable slot the current instruction stream references. */
+    private void ensureMaxLocals() {
+        int needed = maxLocals;
+        for (Instruction i : instructions.values()) {
+            int slot = localSlot(i);
+            if (slot >= 0) {
+                needed = Math.max(needed, slot + localSlotSize(i));
+            }
+        }
+        if (needed > maxLocals) {
+            maxLocals = needed;
+        }
+        if (maxLocals > codeAttribute.getMaxLocals()) {
+            codeAttribute.setMaxLocals(maxLocals);
+        }
+    }
+
+    private static int localSlot(Instruction i) {
+        if (i instanceof ILoadInstruction) return ((ILoadInstruction) i).getVarIndex();
+        if (i instanceof LLoadInstruction) return ((LLoadInstruction) i).getVarIndex();
+        if (i instanceof FLoadInstruction) return ((FLoadInstruction) i).getVarIndex();
+        if (i instanceof DLoadInstruction) return ((DLoadInstruction) i).getVarIndex();
+        if (i instanceof ALoadInstruction) return ((ALoadInstruction) i).getVarIndex();
+        if (i instanceof IStoreInstruction) return ((IStoreInstruction) i).getVarIndex();
+        if (i instanceof LStoreInstruction) return ((LStoreInstruction) i).getVarIndex();
+        if (i instanceof FStoreInstruction) return ((FStoreInstruction) i).getVarIndex();
+        if (i instanceof DStoreInstruction) return ((DStoreInstruction) i).getVarIndex();
+        if (i instanceof AStoreInstruction) return ((AStoreInstruction) i).getVarIndex();
+        if (i instanceof IIncInstruction) return ((IIncInstruction) i).getVarIndex();
+        if (i instanceof RetInstruction) return ((RetInstruction) i).getVarIndex();
+        return -1;
+    }
+
+    /** Assigns sequential offsets to {@code order}, recomputing switch padding from each offset. */
+    private static Map<Instruction, Integer> layout(List<Instruction> order) {
+        Map<Instruction, Integer> off = new IdentityHashMap<>();
+        int run = 0;
+        for (Instruction i : order) {
+            off.put(i, run);
+            run += instructionLength(i, run);
+        }
+        return off;
+    }
+
+    private static int instructionLength(Instruction i, int offset) {
+        return isSwitch(i) ? switchBaseLength(i) + paddingAfterOpcode(offset) : i.getLength();
+    }
+
+    /**
+     * Widens any branch whose target span exceeds the signed 16-bit range, iterating to a fixpoint
+     * (widths only grow, so it converges): {@code goto -> goto_w}, and a conditional branch becomes an
+     * inverted conditional skipping a {@code goto_w} to the original target. Switch offsets are 32-bit
+     * and never overflow. {@code jsr} has no modeled wide form and raises an exception (obsolete since
+     * Java 6). Mutates {@code order} and {@link #branchTargets}; returns the (possibly grown) list.
+     */
+    private List<Instruction> widenBranches(List<Instruction> order) {
+        while (true) {
+            Map<Instruction, Integer> off = layout(order);
+            int idx = -1;
+            for (int k = 0; k < order.size(); k++) {
+                Instruction b = order.get(k);
+                if (!isBranch(b)) {
+                    continue;
+                }
+                List<Instruction> tg = branchTargets.get(b);
+                if (tg == null || tg.isEmpty() || tg.get(0) == null) {
+                    continue;
+                }
+                Integer to = off.get(tg.get(0));
+                if (to == null) {
+                    continue;
+                }
+                int rel = to - off.get(b);
+                if (rel >= Short.MIN_VALUE && rel <= Short.MAX_VALUE) {
+                    continue;
+                }
+                if (b instanceof JsrInstruction) {
+                    throw new UnsupportedOperationException("branch widening for jsr (jsr_w) is unsupported");
+                }
+                if (b instanceof GotoInstruction
+                        && ((GotoInstruction) b).getType() == GotoInstruction.GotoType.GOTO_WIDE) {
+                    continue;
+                }
+                idx = k;
+                break;
+            }
+            if (idx < 0) {
+                return order;
+            }
+            Instruction b = order.get(idx);
+            if (b instanceof GotoInstruction) {
+                GotoInstruction wide = new GotoInstruction(GOTO_W.getCode(), 0, 0);
+                order.set(idx, wide);
+                branchTargets.put(wide, branchTargets.remove(b));
+            } else {
+                ConditionalBranchInstruction c = (ConditionalBranchInstruction) b;
+                if (idx + 1 >= order.size()) {
+                    throw new IllegalStateException("conditional branch at method end cannot be widened");
+                }
+                Instruction skip = order.get(idx + 1);
+                List<Instruction> origTargets = branchTargets.remove(c);
+                ConditionalBranchInstruction inverted =
+                        new ConditionalBranchInstruction(invertConditionalOpcode(c.getType()), 0, (short) 0);
+                GotoInstruction wide = new GotoInstruction(GOTO_W.getCode(), 0, 0);
+                order.set(idx, inverted);
+                order.add(idx + 1, wide);
+                branchTargets.put(inverted, new ArrayList<>(Collections.singletonList(skip)));
+                branchTargets.put(wide, origTargets);
+            }
+        }
+    }
+
+    private static int invertConditionalOpcode(ConditionalBranchInstruction.BranchType t) {
+        ConditionalBranchInstruction.BranchType inverse;
+        switch (t) {
+            case IFEQ: inverse = ConditionalBranchInstruction.BranchType.IFNE; break;
+            case IFNE: inverse = ConditionalBranchInstruction.BranchType.IFEQ; break;
+            case IFLT: inverse = ConditionalBranchInstruction.BranchType.IFGE; break;
+            case IFGE: inverse = ConditionalBranchInstruction.BranchType.IFLT; break;
+            case IFGT: inverse = ConditionalBranchInstruction.BranchType.IFLE; break;
+            case IFLE: inverse = ConditionalBranchInstruction.BranchType.IFGT; break;
+            case IF_ICMPEQ: inverse = ConditionalBranchInstruction.BranchType.IF_ICMPNE; break;
+            case IF_ICMPNE: inverse = ConditionalBranchInstruction.BranchType.IF_ICMPEQ; break;
+            case IF_ICMPLT: inverse = ConditionalBranchInstruction.BranchType.IF_ICMPGE; break;
+            case IF_ICMPGE: inverse = ConditionalBranchInstruction.BranchType.IF_ICMPLT; break;
+            case IF_ICMPGT: inverse = ConditionalBranchInstruction.BranchType.IF_ICMPLE; break;
+            case IF_ICMPLE: inverse = ConditionalBranchInstruction.BranchType.IF_ICMPGT; break;
+            case IF_ACMPEQ: inverse = ConditionalBranchInstruction.BranchType.IF_ACMPNE; break;
+            case IF_ACMPNE: inverse = ConditionalBranchInstruction.BranchType.IF_ACMPEQ; break;
+            case IFNULL: inverse = ConditionalBranchInstruction.BranchType.IFNONNULL; break;
+            case IFNONNULL: inverse = ConditionalBranchInstruction.BranchType.IFNULL; break;
+            default: throw new IllegalStateException("cannot invert conditional " + t);
+        }
+        return inverse.getOpcode();
+    }
+
+    private static int localSlotSize(Instruction i) {
+        return (i instanceof LLoadInstruction || i instanceof LStoreInstruction
+                || i instanceof DLoadInstruction || i instanceof DStoreInstruction) ? 2 : 1;
+    }
+
+    private static boolean isBranch(Instruction i) {
+        return i instanceof GotoInstruction || i instanceof ConditionalBranchInstruction
+                || i instanceof JsrInstruction;
+    }
+
+    private static boolean isSwitch(Instruction i) {
+        return i instanceof TableSwitchInstruction || i instanceof LookupSwitchInstruction;
+    }
+
+    /** Padding bytes after a switch opcode so its operands align to a 4-byte boundary from method start. */
+    private static int paddingAfterOpcode(int offset) {
+        return (4 - ((offset + 1) % 4)) % 4;
+    }
+
+    /** A switch instruction's length excluding alignment padding. */
+    private static int switchBaseLength(Instruction i) {
+        if (i instanceof TableSwitchInstruction) {
+            TableSwitchInstruction t = (TableSwitchInstruction) i;
+            return 13 + (t.getHigh() - t.getLow() + 1) * 4;
+        }
+        LookupSwitchInstruction l = (LookupSwitchInstruction) i;
+        return 9 + l.getNpairs() * 8;
+    }
+
+    private List<Instruction> resolveTargets(Instruction instr) {
+        return resolveTargetsUsing(instr, instr.getOffset(), instructions);
+    }
+
+    private List<Instruction> resolveTargetsUsing(Instruction instr, int base, Map<Integer, Instruction> byOffset) {
+        if (instr instanceof GotoInstruction) {
+            GotoInstruction g = (GotoInstruction) instr;
+            int rel = g.getType() == GotoInstruction.GotoType.GOTO_WIDE
+                    ? g.getBranchOffsetWide() : g.getBranchOffset();
+            return new ArrayList<>(Collections.singletonList(byOffset.get(base + rel)));
+        }
+        if (instr instanceof ConditionalBranchInstruction) {
+            int rel = ((ConditionalBranchInstruction) instr).getBranchOffset();
+            return new ArrayList<>(Collections.singletonList(byOffset.get(base + rel)));
+        }
+        if (instr instanceof JsrInstruction) {
+            int rel = ((JsrInstruction) instr).getBranchOffset();
+            return new ArrayList<>(Collections.singletonList(byOffset.get(base + rel)));
+        }
+        if (instr instanceof TableSwitchInstruction) {
+            TableSwitchInstruction t = (TableSwitchInstruction) instr;
+            List<Instruction> targets = new ArrayList<>();
+            targets.add(byOffset.get(base + t.getDefaultOffset()));
+            for (int key = t.getLow(); key <= t.getHigh(); key++) {
+                int rel = t.getJumpOffsets().getOrDefault(key, t.getDefaultOffset());
+                targets.add(byOffset.get(base + rel));
+            }
+            return targets;
+        }
+        if (instr instanceof LookupSwitchInstruction) {
+            LookupSwitchInstruction l = (LookupSwitchInstruction) instr;
+            List<Instruction> targets = new ArrayList<>();
+            targets.add(byOffset.get(base + l.getDefaultOffset()));
+            for (Map.Entry<Integer, Integer> e : l.getMatchOffsets().entrySet()) {
+                targets.add(byOffset.get(base + e.getValue()));
+            }
+            return targets;
+        }
+        return null;
+    }
+
+    /** Rebuilds a branch/switch at a new offset with relative offsets recomputed from its targets. */
+    private Instruction rebuildBranch(Instruction i, int newOff, List<Instruction> targets,
+                                      Map<Instruction, Integer> newOffMap) {
+        int op = i.getOpcode();
+        if (i instanceof GotoInstruction) {
+            Integer t = targetOffset(targets, 0, newOffMap);
+            if (t == null) { i.setOffset(newOff); return i; }
+            int rel = t - newOff;
+            return ((GotoInstruction) i).getType() == GotoInstruction.GotoType.GOTO_WIDE
+                    ? new GotoInstruction(op, newOff, rel) : new GotoInstruction(op, newOff, (short) rel);
+        }
+        if (i instanceof ConditionalBranchInstruction) {
+            Integer t = targetOffset(targets, 0, newOffMap);
+            if (t == null) { i.setOffset(newOff); return i; }
+            return new ConditionalBranchInstruction(op, newOff, (short) (t - newOff));
+        }
+        if (i instanceof JsrInstruction) {
+            Integer t = targetOffset(targets, 0, newOffMap);
+            if (t == null) { i.setOffset(newOff); return i; }
+            return new JsrInstruction(op, newOff, t - newOff);
+        }
+        if (i instanceof TableSwitchInstruction) {
+            TableSwitchInstruction t = (TableSwitchInstruction) i;
+            Integer def = targetOffset(targets, 0, newOffMap);
+            if (def == null) { i.setOffset(newOff); return i; }
+            Map<Integer, Integer> jumps = new LinkedHashMap<>();
+            int idx = 1;
+            for (int key = t.getLow(); key <= t.getHigh(); key++) {
+                Integer to = targetOffset(targets, idx++, newOffMap);
+                jumps.put(key, (to == null ? def : to) - newOff);
+            }
+            return new TableSwitchInstruction(op, newOff, paddingAfterOpcode(newOff),
+                    def - newOff, t.getLow(), t.getHigh(), jumps);
+        }
+        LookupSwitchInstruction l = (LookupSwitchInstruction) i;
+        Integer def = targetOffset(targets, 0, newOffMap);
+        if (def == null) { i.setOffset(newOff); return i; }
+        Map<Integer, Integer> matches = new LinkedHashMap<>();
+        int idx = 1;
+        for (Integer key : l.getMatchOffsets().keySet()) {
+            Integer to = targetOffset(targets, idx++, newOffMap);
+            matches.put(key, (to == null ? def : to) - newOff);
+        }
+        return new LookupSwitchInstruction(op, newOff, paddingAfterOpcode(newOff),
+                def - newOff, l.getNpairs(), matches);
+    }
+
+    private static Integer targetOffset(List<Instruction> targets, int idx, Map<Instruction, Integer> newOffMap) {
+        if (targets == null || idx >= targets.size() || targets.get(idx) == null) {
+            return null;
+        }
+        return newOffMap.get(targets.get(idx));
+    }
+
+    /** Remaps exception-table PCs through the old->new offset map. catch_type is a cp index, unchanged. */
+    private void remapExceptionTable(Map<Integer, Integer> oldToNew) {
+        for (com.tonic.parser.attribute.table.ExceptionTableEntry ex : codeAttribute.getExceptionTable()) {
+            ex.setStartPc(oldToNew.getOrDefault(ex.getStartPc(), ex.getStartPc()));
+            ex.setEndPc(oldToNew.getOrDefault(ex.getEndPc(), ex.getEndPc()));
+            ex.setHandlerPc(oldToNew.getOrDefault(ex.getHandlerPc(), ex.getHandlerPc()));
+        }
+    }
+
+    /** Drops debug tables whose offsets are invalidated by a structural edit (entries are immutable). */
+    private void dropTransientDebugAttributes() {
+        codeAttribute.getAttributes().removeIf(a -> {
+            String n = a.getClass().getSimpleName();
+            return n.equals("LineNumberTableAttribute")
+                    || n.equals("LocalVariableTableAttribute")
+                    || n.equals("LocalVariableTypeTableAttribute");
+        });
+    }
+
+    /** Regenerates the StackMapTable from the corrected bytecode (best-effort). */
+    private void regenerateFrames() {
+        try {
+            new FrameGenerator(constPool).updateStackMapTable(methodEntry);
+        } catch (Exception e) {
+            Logger.error("Frame regeneration after edit failed: " + e.getMessage());
+        }
     }
 
     /**
@@ -406,15 +1139,6 @@ public class CodeWriter {
     public void write() throws IOException {
         analyze();
         rebuildBytecode();
-    }
-
-    /**
-     * Returns whether the bytecode has been modified since loading.
-     *
-     * @return true if modified, false otherwise
-     */
-    public boolean isModified() {
-        return modified;
     }
 
     /**

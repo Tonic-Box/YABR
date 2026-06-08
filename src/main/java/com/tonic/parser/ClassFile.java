@@ -429,6 +429,41 @@ public class ClassFile extends AbstractParser {
     }
 
     /**
+     * Redirects every member reference (method/field/interface-method) in this class's constant pool
+     * whose owner is {@code fromInternal} to {@code toInternal}. See {@link ConstPool#redirectOwner}.
+     *
+     * @param fromInternal the current owner internal name (e.g. {@code "pkg/A"})
+     * @param toInternal   the new owner internal name (e.g. {@code "pkg/B"})
+     * @return the number of references repointed
+     */
+    public int redirectOwner(String fromInternal, String toInternal) {
+        return getConstPool().redirectOwner(fromInternal, toInternal);
+    }
+
+    /**
+     * Removes the StackMapTable attribute from every method, so the class serializes "frameless".
+     * Useful for tools (e.g. resource packers) that emit class versions which don't require
+     * split-verification frames, or that recompute frames downstream. Call before {@link #write()}.
+     * Note: a frameless class only loads on JVMs/verification modes that don't require a StackMapTable
+     * (class major version &lt; 50, or {@code -Xverify:none}).
+     *
+     * @return the number of StackMapTable attributes removed
+     */
+    public int stripStackMapTables() {
+        int removed = 0;
+        for (MethodEntry m : methods) {
+            CodeAttribute code = m.getCodeAttribute();
+            if (code == null) {
+                continue;
+            }
+            int before = code.getAttributes().size();
+            code.getAttributes().removeIf(a -> a.getClass().getSimpleName().equals("StackMapTableAttribute"));
+            removed += before - code.getAttributes().size();
+        }
+        return removed;
+    }
+
+    /**
      * Sets the initial value of a field in either clinit (static) or init (non-static) method.
      *
      * @param field the field to set the initial value for

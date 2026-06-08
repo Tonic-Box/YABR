@@ -475,6 +475,62 @@ public class ConstPool {
     }
 
     /**
+     * Repoints every member reference (Methodref, Fieldref, InterfaceMethodref) whose owner is
+     * {@code fromInternal} to the class {@code toInternal}, find-or-adding the target class. This is
+     * the "redirect owner A&rarr;B" operation used when merging a class's members into another: the
+     * class reference's index is repointed, leaving any unrelated use of {@code from} (e.g. as a type)
+     * untouched. Internal names use {@code '/'} (e.g. {@code "pkg/A"}). Idempotent; returns the number
+     * of references repointed.
+     *
+     * @param fromInternal the current owner's internal name
+     * @param toInternal   the new owner's internal name
+     * @return the count of member references repointed
+     */
+    public int redirectOwner(String fromInternal, String toInternal) {
+        if (fromInternal == null || fromInternal.equals(toInternal)) {
+            return 0;
+        }
+        int toIndex = getIndexOf(findOrAddClass(toInternal));
+        int count = 0;
+        for (Item<?> item : items) {
+            Integer classIndex = memberRefClassIndex(item);
+            if (classIndex == null) {
+                continue;
+            }
+            Item<?> owner = getItem(classIndex);
+            if (owner instanceof ClassRefItem
+                    && fromInternal.equals(((ClassRefItem) owner).getClassName())) {
+                setMemberRefClassIndex(item, toIndex);
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static Integer memberRefClassIndex(Item<?> item) {
+        if (item instanceof MethodRefItem) {
+            return ((MethodRefItem) item).getValue().getClassIndex();
+        }
+        if (item instanceof FieldRefItem) {
+            return ((FieldRefItem) item).getValue().getClassIndex();
+        }
+        if (item instanceof InterfaceRefItem) {
+            return ((InterfaceRefItem) item).getValue().getClassIndex();
+        }
+        return null;
+    }
+
+    private static void setMemberRefClassIndex(Item<?> item, int classIndex) {
+        if (item instanceof MethodRefItem) {
+            ((MethodRefItem) item).setClassIndex(classIndex);
+        } else if (item instanceof FieldRefItem) {
+            ((FieldRefItem) item).setClassIndex(classIndex);
+        } else if (item instanceof InterfaceRefItem) {
+            ((InterfaceRefItem) item).setClassIndex(classIndex);
+        }
+    }
+
+    /**
      * Finds an existing MethodRefItem or creates a new one using string parameters.
      *
      * @param owner The fully qualified class name (e.g., "java/lang/String").

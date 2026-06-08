@@ -4,24 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner.">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/PatternSwitchDesugar.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/PatternSwitchReconstructor.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Bytecode editor: branch widening, indy graft, clone alignment">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/MethodGrafter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/BytecodeEditTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/MethodGraftTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/CastExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/CastExpr.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/InvokeDynamicExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/InvokeDynamicExpr.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/SwitchExpr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/expr/SwitchExpr.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/type/ReferenceSourceType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/type/ReferenceSourceType.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/parser/Parser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/SourceToBytecodeIntegrationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/bytecode-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/bytecode-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/FieldRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/FieldRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/InterfaceRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/InterfaceRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/structure/InterfaceRef.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/constpool/structure/InterfaceRef.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -403,7 +399,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780810658495</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner.">
+      <option name="closed" value="true" />
+      <created>1780866277953</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1780866277953</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -430,6 +434,7 @@
     <MESSAGE value="Keep single-use values on the stack; drop dead field read on inc/dec&#10;- Codegen: fix isSimpleOperand so a single-use value feeding a comparison (e.g. i*i in i*i &lt;= n) stays stack-resident instead of spilling to a scratch slot the decompiler then mangled.&#10;- Lowering: dispatch inc/dec before lowerUnary's eager operand lowering so a field increment reads the field once, not twice." />
     <MESSAGE value="- don't un-materialize a value already emitted as an array-initializer declaration; reference the temp instead." />
     <MESSAGE value="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner." />
-    <option name="LAST_COMMIT_MESSAGE" value="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner." />
+    <MESSAGE value="- Bytecode editor: branch widening, indy graft, clone alignment" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Bytecode editor: branch widening, indy graft, clone alignment" />
   </component>
 </project>
