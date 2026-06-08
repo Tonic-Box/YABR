@@ -5,7 +5,6 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 
 /**
  * An abstract parser for reading various data types from a byte array.
@@ -243,7 +242,19 @@ public abstract class AbstractParser {
         if (index + length > bytes.length) {
             throw new IndexOutOfBoundsException("Not enough bytes to read a UTF-8 string.");
         }
-        String value = new String(bytes, index, length, StandardCharsets.UTF_8);
+        // CONSTANT_Utf8 is JVMS 4.4.7 modified UTF-8 (0xC0 0x80 -> U+0000, 2-/3-byte forms, supplementary
+        // chars as surrogate-pair CESU-8), NOT standard UTF-8. Decode via DataInputStream.readUTF, which
+        // implements exactly that algorithm; prefix the bytes with the u2 length it expects.
+        byte[] buf = new byte[length + 2];
+        buf[0] = (byte) (length >>> 8);
+        buf[1] = (byte) length;
+        System.arraycopy(bytes, index, buf, 2, length);
+        String value;
+        try {
+            value = new java.io.DataInputStream(new java.io.ByteArrayInputStream(buf)).readUTF();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Malformed modified-UTF-8 in CONSTANT_Utf8 entry", e);
+        }
         index += length;
         return value;
     }

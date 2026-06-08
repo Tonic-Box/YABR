@@ -21,9 +21,10 @@ public class Utf8Item extends Item<String> {
 
     @Override
     public void write(DataOutputStream dos) throws IOException {
-        byte[] utf8Bytes = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        dos.writeShort(utf8Bytes.length);
-        dos.write(utf8Bytes);
+        // CONSTANT_Utf8 uses JVMS 4.4.7 modified UTF-8 (U+0000 -> 0xC0 0x80, supplementary chars as a
+        // surrogate-pair CESU-8 form), NOT standard UTF-8. DataOutputStream.writeUTF emits exactly that,
+        // prefixed by the u2 byte length the entry requires.
+        dos.writeUTF(value);
     }
 
     @Override
