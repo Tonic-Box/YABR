@@ -430,16 +430,111 @@ public class ClassFile extends AbstractParser {
         return false;
     }
 
+    /** Returns the first method named {@code name}, or {@code null} if none. */
+    public MethodEntry getMethod(String name) {
+        for (MethodEntry m : methods) {
+            if (m.getName().equals(name)) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    /** Returns the method with the exact name and descriptor, or {@code null} if none. */
+    public MethodEntry getMethod(String name, String descriptor) {
+        for (MethodEntry m : methods) {
+            if (m.getName().equals(name) && m.getDesc().equals(descriptor)) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    /** Returns every method named {@code name} (the overload set). */
+    public List<MethodEntry> getMethods(String name) {
+        List<MethodEntry> out = new ArrayList<>();
+        for (MethodEntry m : methods) {
+            if (m.getName().equals(name)) {
+                out.add(m);
+            }
+        }
+        return out;
+    }
+
+    /** Returns the constructors ({@code <init>}). */
+    public List<MethodEntry> getConstructors() {
+        return getMethods("<init>");
+    }
+
+    /** Returns the static initializer ({@code <clinit>}), or {@code null} if none. */
+    public MethodEntry getStaticInitializer() {
+        return getMethod("<clinit>");
+    }
+
+    /** Returns the first field named {@code name}, or {@code null} if none. */
+    public FieldEntry getField(String name) {
+        for (FieldEntry f : fields) {
+            if (f.getName().equals(name)) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    /** Returns the resolved internal names of the directly-implemented interfaces. */
+    public List<String> getInterfaceNames() {
+        List<String> names = new ArrayList<>(interfaces.size());
+        for (int index : interfaces) {
+            names.add(resolveClassName(index));
+        }
+        return names;
+    }
+
     /**
-     * Redirects every member reference (method/field/interface-method) in this class's constant pool
-     * whose owner is {@code fromInternal} to {@code toInternal}. See {@link ConstPool#redirectOwner}.
+     * Canonicalizes every reference to class {@code fromInternal} in this class so it names
+     * {@code toInternal} — the complete form of {@link #redirectClassReferences}.
      *
-     * @param fromInternal the current owner internal name (e.g. {@code "pkg/A"})
-     * @param toInternal   the new owner internal name (e.g. {@code "pkg/B"})
-     * @return the number of references repointed
+     * @param fromInternal the current class internal name (e.g. {@code "pkg/A"})
+     * @param toInternal   the new class internal name (e.g. {@code "pkg/B"})
+     * @return the number of constants rewritten
      */
     public int redirectOwner(String fromInternal, String toInternal) {
-        return getConstPool().redirectOwner(fromInternal, toInternal);
+        return redirectClassReferences(fromInternal, toInternal);
+    }
+
+    /**
+     * Rewrites every constant-pool reference to {@code fromInternal} so it resolves to
+     * {@code toInternal} (see {@link ConstPool#redirectClassReferences} for exactly what is covered),
+     * then refreshes the cached descriptor and owner-name on this class's fields and methods so they
+     * stay consistent with the rewritten pool.
+     *
+     * @param fromInternal the current class internal name
+     * @param toInternal   the new class internal name
+     * @return the number of constants rewritten
+     */
+    public int redirectClassReferences(String fromInternal, String toInternal) {
+        int count = constPool.redirectClassReferences(fromInternal, toInternal);
+        for (FieldEntry field : fields) {
+            refreshMemberAfterRedirect(field.getDescIndex(), field::setDesc);
+            if (fromInternal.equals(field.getOwnerName())) {
+                field.setOwnerName(toInternal);
+            }
+        }
+        for (MethodEntry method : methods) {
+            refreshMemberAfterRedirect(method.getDescIndex(), method::setDesc);
+            if (fromInternal.equals(method.getOwnerName())) {
+                method.setOwnerName(toInternal);
+            }
+        }
+        return count;
+    }
+
+    /** Refreshes a member's cached descriptor from the (possibly rewritten) descriptor Utf8. */
+    private void refreshMemberAfterRedirect(int descIndex, java.util.function.Consumer<String> setDesc) {
+        Item<?> item = constPool.getItem(descIndex);
+        if (item instanceof Utf8Item) {
+            setDesc.accept(((Utf8Item) item).getValue());
+        }
     }
 
     /**

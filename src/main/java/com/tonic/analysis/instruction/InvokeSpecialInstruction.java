@@ -16,7 +16,7 @@ import java.io.IOException;
 /**
  * Represents the INVOKESPECIAL instruction (0xB7).
  */
-public class InvokeSpecialInstruction extends Instruction {
+public class InvokeSpecialInstruction extends Instruction implements InvokeInsn {
     @Getter
     private final int methodIndex;
     private final ConstPool constPool;

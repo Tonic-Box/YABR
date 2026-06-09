@@ -475,59 +475,64 @@ public class ConstPool {
     }
 
     /**
-     * Repoints every member reference (Methodref, Fieldref, InterfaceMethodref) whose owner is
-     * {@code fromInternal} to the class {@code toInternal}, find-or-adding the target class. This is
-     * the "redirect owner A&rarr;B" operation used when merging a class's members into another: the
-     * class reference's index is repointed, leaving any unrelated use of {@code from} (e.g. as a type)
-     * untouched. Internal names use {@code '/'} (e.g. {@code "pkg/A"}). Idempotent; returns the number
-     * of references repointed.
+     * Canonicalizes every reference to class {@code fromInternal} so it names {@code toInternal} — the
+     * complete form of {@link #redirectClassReferences}. See that method for what is (and isn't)
+     * rewritten. Internal names use {@code '/'} (e.g. {@code "pkg/A"}). Idempotent.
      *
-     * @param fromInternal the current owner's internal name
-     * @param toInternal   the new owner's internal name
-     * @return the count of member references repointed
+     * @param fromInternal the current class internal name
+     * @param toInternal   the new class internal name
+     * @return the count of constants rewritten
      */
     public int redirectOwner(String fromInternal, String toInternal) {
+        return redirectClassReferences(fromInternal, toInternal);
+    }
+
+    /**
+     * Rewrites every constant-pool reference to class {@code fromInternal} so it resolves to
+     * {@code toInternal}, leaving no live constant naming {@code fromInternal}. This covers all
+     * reference kinds, because they share a {@code CONSTANT_Class}: {@code new}/{@code checkcast}/
+     * {@code instanceof}/{@code anewarray} operands, exception {@code catch_type}, member-ref owners,
+     * and {@code invokedynamic} bootstrap handle/arg classes — plus class names embedded in method/
+     * field/{@code MethodType} descriptors and array {@code CONSTANT_Class} names ({@code [LB;}).
+     * <p>
+     * A class name appears in a descriptor only as the token {@code L<name>;}, so the descriptor rewrite
+     * is an exact-token replace. <b>Not</b> rewritten: class names in generic {@code Signature}
+     * attributes (use the {@code Renamer} for generic-aware full renames). Internal names use
+     * {@code '/'}. Idempotent; returns the number of constants rewritten.
+     *
+     * @param fromInternal the current class internal name
+     * @param toInternal   the new class internal name
+     * @return the count of constants rewritten
+     */
+    public int redirectClassReferences(String fromInternal, String toInternal) {
         if (fromInternal == null || fromInternal.equals(toInternal)) {
             return 0;
         }
-        int toIndex = getIndexOf(findOrAddClass(toInternal));
+        String fromDescriptor = "L" + fromInternal + ";";
+        String toDescriptor = "L" + toInternal + ";";
+        int toNameIndex = -1;
         int count = 0;
-        for (Item<?> item : items) {
-            Integer classIndex = memberRefClassIndex(item);
-            if (classIndex == null) {
-                continue;
-            }
-            Item<?> owner = getItem(classIndex);
-            if (owner instanceof ClassRefItem
-                    && fromInternal.equals(((ClassRefItem) owner).getClassName())) {
-                setMemberRefClassIndex(item, toIndex);
-                count++;
+        // Snapshot: find-or-adding the target's Utf8 below may append to `items` mid-pass.
+        for (Item<?> item : new ArrayList<>(items)) {
+            if (item instanceof ClassRefItem) {
+                ClassRefItem classRef = (ClassRefItem) item;
+                if (fromInternal.equals(classRef.getClassName())) {
+                    if (toNameIndex < 0) {
+                        toNameIndex = getIndexOf(findOrAddUtf8(toInternal));
+                    }
+                    classRef.setNameIndex(toNameIndex);
+                    count++;
+                }
+            } else if (item instanceof Utf8Item) {
+                Utf8Item utf8 = (Utf8Item) item;
+                String value = utf8.getValue();
+                if (value != null && value.contains(fromDescriptor)) {
+                    utf8.setValue(value.replace(fromDescriptor, toDescriptor));
+                    count++;
+                }
             }
         }
         return count;
-    }
-
-    private static Integer memberRefClassIndex(Item<?> item) {
-        if (item instanceof MethodRefItem) {
-            return ((MethodRefItem) item).getValue().getClassIndex();
-        }
-        if (item instanceof FieldRefItem) {
-            return ((FieldRefItem) item).getValue().getClassIndex();
-        }
-        if (item instanceof InterfaceRefItem) {
-            return ((InterfaceRefItem) item).getValue().getClassIndex();
-        }
-        return null;
-    }
-
-    private static void setMemberRefClassIndex(Item<?> item, int classIndex) {
-        if (item instanceof MethodRefItem) {
-            ((MethodRefItem) item).setClassIndex(classIndex);
-        } else if (item instanceof FieldRefItem) {
-            ((FieldRefItem) item).setClassIndex(classIndex);
-        } else if (item instanceof InterfaceRefItem) {
-            ((InterfaceRefItem) item).setClassIndex(classIndex);
-        }
     }
 
     /**

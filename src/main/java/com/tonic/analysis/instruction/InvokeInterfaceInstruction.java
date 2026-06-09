@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.InterfaceRefItem;
@@ -15,7 +14,7 @@ import java.io.IOException;
 /**
  * Represents the INVOKEINTERFACE instruction (0xB9).
  */
-public class InvokeInterfaceInstruction extends Instruction {
+public class InvokeInterfaceInstruction extends Instruction implements InvokeInsn {
     @Getter
     private final int methodIndex;
     @Getter

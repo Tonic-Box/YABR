@@ -198,8 +198,9 @@ For more control, use `CodeWriter` directly:
 ```java
 CodeWriter cw = new CodeWriter(methodEntry);
 
-// Get existing instructions
-List<Instruction> instructions = cw.getInstructions();
+// Iterate existing instructions, or get a random-access snapshot
+Iterable<Instruction> it = cw.getInstructions();
+List<Instruction> instructions = cw.getInstructionList();   // bytecode-ordered, identity-indexed
 
 // Insert at specific offset
 cw.insertInvokeVirtual(offset, methodRefIndex);
@@ -318,20 +319,27 @@ hostCw.insertChainBefore(callSuccessor, List.of(bodyA.redirectReturns(), bodyB.r
 
 ### Reference retargeting and cross-class grafting
 
-`ConstPool`/`ClassFile` can repoint every member reference (method/field/interface) from one owner to
-another, and `MethodGrafter` copies a method into another class, re-resolving its constant-pool
-references symbolically into the target pool (and regenerating frames):
+`ConstPool`/`ClassFile` can canonicalize every reference to a class from one name to another, and
+`MethodGrafter` copies a method into another class, re-resolving its constant-pool references
+symbolically into the target pool (and regenerating frames):
 
 ```java
 import com.tonic.analysis.MethodGrafter;
 
-// Redirect every Sound.* member reference to Game.* (pool-wide):
-int n = gameClass.redirectOwner("pkg/Sound", "pkg/Game");
+// Rewrite EVERY reference to Sound so it names Game (pool-wide):
+int n = gameClass.redirectClassReferences("pkg/Sound", "pkg/Game");   // redirectOwner is an alias
 
 // Move a method from one ClassFile into another (returns the new method on the target):
 MethodEntry moved = MethodGrafter.graftMethod(soundClass, soundMethod, gameClass);
-gameClass.redirectOwner("pkg/Sound", "pkg/Game"); // repoint its self-calls, if desired
+gameClass.redirectClassReferences("pkg/Sound", "pkg/Game"); // repoint its self-calls, if desired
 ```
+
+`redirectClassReferences` (and its alias `redirectOwner`) rewrites *all* reference kinds, since they
+share a `CONSTANT_Class`: `new`/`checkcast`/`instanceof`/`anewarray` operands, exception `catch_type`,
+member-ref owners, `invokedynamic` bootstrap handle/arg classes, **and** class names embedded in
+method/field/`MethodType` descriptors and array class refs (`[LB;`). The `ClassFile` form also refreshes
+the cached descriptor/owner on its fields and methods. **Not** rewritten: class names in generic
+`Signature` attributes — use the [Renamer](renamer-api.md) for generic-aware full renames.
 
 `graftMethod` remaps method/field/interface/class references, `ldc` constants
 (String/Class/int/float/long/double/MethodHandle/MethodType), and `invokedynamic`/dynamic constants —
@@ -431,6 +439,16 @@ YABR supports all JVM instructions through the `com.tonic.analysis.instruction` 
 | Control | `GotoInstruction`, `ReturnInstruction`, `SwitchInstruction` |
 | Reference | `GetFieldInstruction`, `PutFieldInstruction`, `NewInstruction` |
 | Invoke | `InvokeVirtualInstruction`, `InvokeStaticInstruction` |
+
+The four owner-bearing invokes — `Invoke{Virtual,Special,Static,Interface}Instruction` — implement the
+common interface **`InvokeInsn`** (`getOwnerClass()`/`getMethodName()`/`getMethodDescriptor()`, plus
+`isStatic()`/`isInterface()`), so a call site of any kind is handled uniformly:
+```java
+if (insn instanceof InvokeInsn call) {
+    cg.addEdge(call.getOwnerClass(), call.getMethodName(), call.getMethodDescriptor());
+}
+```
+`invokedynamic` (`InvokeDynamicInstruction`) is intentionally excluded — it has no owning class.
 
 ## Stack Frame Computation
 

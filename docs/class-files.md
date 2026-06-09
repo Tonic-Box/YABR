@@ -92,11 +92,14 @@ cf.addInterface("java/io/Serializable");
 List<FieldEntry> fields = cf.getFields();
 List<MethodEntry> methods = cf.getMethods();
 
-// Find specific members
-MethodEntry main = methods.stream()
-    .filter(m -> m.getName().equals("main"))
-    .findFirst()
-    .orElse(null);
+// Targeted lookups (null when absent)
+MethodEntry main      = cf.getMethod("main");                 // first by name
+MethodEntry exact     = cf.getMethod("main", "([Ljava/lang/String;)V");
+List<MethodEntry> set = cf.getMethods("foo");                 // overload set
+List<MethodEntry> cts = cf.getConstructors();                 // <init>
+MethodEntry clinit    = cf.getStaticInitializer();            // <clinit>
+FieldEntry value      = cf.getField("value");
+List<String> ifaces   = cf.getInterfaceNames();               // resolved internal names
 ```
 
 ### Writing Classes

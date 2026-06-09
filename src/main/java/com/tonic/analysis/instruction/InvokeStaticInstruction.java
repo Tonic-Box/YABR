@@ -17,7 +17,7 @@ import java.io.IOException;
 /**
  * Represents the INVOKESTATIC instruction (0xB8).
  */
-public class InvokeStaticInstruction extends Instruction {
+public class InvokeStaticInstruction extends Instruction implements InvokeInsn {
     @Getter
     private final int methodIndex;
     private final ConstPool constPool;

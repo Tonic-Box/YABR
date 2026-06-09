@@ -15,7 +15,7 @@ import java.io.IOException;
 /**
  * Represents the INVOKEVIRTUAL instruction (0xB6).
  */
-public class InvokeVirtualInstruction extends Instruction {
+public class InvokeVirtualInstruction extends Instruction implements InvokeInsn {
     @Getter
     private final int methodIndex;
     private final ConstPool constPool;

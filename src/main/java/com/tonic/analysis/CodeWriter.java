@@ -134,6 +134,18 @@ public class CodeWriter {
     }
 
     /**
+     * Returns a fresh, bytecode-ordered, random-access snapshot of the instructions. Identity-stable
+     * (the same {@code Instruction} objects), so {@code indexOf(handle)} resolves by identity; a
+     * snapshot rather than a live view, so it can be iterated while editing by handle. Re-call after an
+     * edit to reflect the new state.
+     *
+     * @return the instructions in offset order
+     */
+    public List<Instruction> getInstructionList() {
+        return new ArrayList<>(instructions.values());
+    }
+
+    /**
      * Returns the total number of instructions in this method.
      *
      * @return instruction count
