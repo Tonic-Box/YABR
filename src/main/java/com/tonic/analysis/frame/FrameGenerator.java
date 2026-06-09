@@ -30,6 +30,7 @@ import static com.tonic.utill.Opcode.*;
 public class FrameGenerator {
     private final ConstPool constPool;
     private final TypeInference typeInference;
+    private int maxStackSlots;
 
     /**
      * Constructs a FrameGenerator for the given constant pool.
@@ -85,6 +86,31 @@ public class FrameGenerator {
         }
 
         return frames;
+    }
+
+    /**
+     * Computes the true {@code max_stack} over the method's control-flow graph: the peak operand-stack
+     * depth (in slots) across every reachable program point — including loop back-edges, join points,
+     * and exception-handler entry states. Unlike a linear textual scan this never under-reports.
+     *
+     * @param method the method to analyze
+     * @return the CFG-correct max_stack in slots (0 if the method has no code)
+     */
+    public int computeMaxStack(MethodEntry method) {
+        if (method.getCodeAttribute() == null) {
+            return 0;
+        }
+        computeTypeStates(method, findFrameTargets(method));
+        return maxStackSlots;
+    }
+
+    /**
+     * The max operand-stack depth (slots) observed by the most recent {@link #computeFrames} /
+     * {@link #computeMaxStack} run. Valid only after the worklist has run (i.e. when the method had
+     * frame targets, or after {@link #computeMaxStack}).
+     */
+    public int getMaxStack() {
+        return maxStackSlots;
     }
 
     /**
@@ -168,6 +194,7 @@ public class FrameGenerator {
         Map<Integer, TypeState> states = new HashMap<>();
         CodeAttribute codeAttr = method.getCodeAttribute();
 
+        maxStackSlots = 0;
         TypeState initialState = TypeState.fromMethodEntry(method, constPool);
 
         CodeWriter codeWriter = new CodeWriter(method);
@@ -284,7 +311,7 @@ public class FrameGenerator {
     /**
      * Gets the target offset of a jump instruction.
      *
-     * @param instr the jump instruction
+     * @param gotoInstr the jump instruction
      * @return target offset or -1 if not a jump
      */
     private static int gotoBranchOffset(GotoInstruction gotoInstr) {
@@ -341,6 +368,8 @@ public class FrameGenerator {
                 }
             }
 
+            maxStackSlots = Math.max(maxStackSlots, currentState.stackSlots());
+
             Integer index = offsetToIndex.get(offset);
             if (index == null) {
                 continue;
@@ -369,6 +398,7 @@ public class FrameGenerator {
                             "Frame error at offset " + instrOffset + " for instruction "
                                     + instr + ": " + e.getMessage(), e);
                 }
+                maxStackSlots = Math.max(maxStackSlots, currentState.stackSlots());
 
                 int opcode = instr.getOpcode();
 

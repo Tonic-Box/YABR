@@ -3,14 +3,16 @@ package com.tonic.builder;
 import com.tonic.analysis.Bytecode;
 import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.instruction.*;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
+import com.tonic.utill.AccessBuilder;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.parser.constpool.*;
 import com.tonic.type.MethodHandle;
 import com.tonic.type.TypeDescriptor;
-import com.tonic.utill.Opcode;
 import com.tonic.utill.ReturnType;
 
 import java.util.*;
@@ -30,8 +32,32 @@ public class CodeBuilder {
         this.parent = parent;
     }
 
+    /**
+     * Creates a standalone builder for authoring a detached instruction snippet, independent of the
+     * {@link ClassBuilder}/{@link MethodBuilder} chain. Use the same fluent API, then materialize the
+     * snippet with {@link #assemble(ClassFile)} and splice it into an existing method via
+     * {@code CodeWriter.insertBefore}/{@code replaceBody}. {@link #end()} is not available on a
+     * detached builder; {@code invokedynamic} is (its bootstrap method is added to the
+     * {@link #assemble(ClassFile)} target's {@code BootstrapMethods}).
+     */
+    public static CodeBuilder detached() {
+        return new CodeBuilder(null);
+    }
+
     private Label getOrCreateLabel(String name) {
-        return labels.computeIfAbsent(name, k -> new Label());
+        return labels.computeIfAbsent(name, Label::new);
+    }
+
+    /**
+     * Declares {@code name} as an <b>external</b> branch target — an instruction in the host method the
+     * snippet will be spliced into, not one defined in the snippet. Branches to it are left unresolved
+     * by {@link #assemble(ClassFile)} and must be bound at splice time via
+     * {@code ClonedRange.bindLabel} (or a {@code Map} splice overload). Only meaningful on a detached
+     * builder destined for {@code assemble}.
+     */
+    public CodeBuilder externalLabel(String name) {
+        getOrCreateLabel(name).external = true;
+        return this;
     }
 
     public CodeBuilder label(String name) {
@@ -94,16 +120,12 @@ public class CodeBuilder {
     }
 
     public CodeBuilder bipush(int value) {
-        addOp((bc, cw) -> {
-            cw.appendInstruction(new BipushInstruction(BIPUSH.getCode(), cw.getBytecodeSize(), value));
-        }, 2);
+        addOp((bc, cw) -> cw.appendInstruction(new BipushInstruction(BIPUSH.getCode(), cw.getBytecodeSize(), value)), 2);
         return this;
     }
 
     public CodeBuilder sipush(int value) {
-        addOp((bc, cw) -> {
-            cw.appendInstruction(new SipushInstruction(SIPUSH.getCode(), cw.getBytecodeSize(), value));
-        }, 3);
+        addOp((bc, cw) -> cw.appendInstruction(new SipushInstruction(SIPUSH.getCode(), cw.getBytecodeSize(), value)), 3);
         return this;
     }
 
@@ -669,6 +691,43 @@ public class CodeBuilder {
         return this;
     }
 
+    /**
+     * Emits a {@code tableswitch} over the contiguous keys {@code low..high}. {@code caseLabels} gives
+     * the target label for each key in ascending order (so {@code caseLabels.length == high - low + 1});
+     * {@code defaultLabel} is the fallthrough. All labels must be {@code label()}-defined in the snippet
+     * (switch targets are not external/continuation-bindable). Padding to the 4-byte boundary is
+     * computed automatically.
+     */
+    public CodeBuilder tableswitch(int low, int high, String defaultLabel, String... caseLabels) {
+        if (high < low) {
+            throw new IllegalArgumentException("tableswitch high < low");
+        }
+        if (caseLabels.length != high - low + 1) {
+            throw new IllegalArgumentException(
+                    "tableswitch expects " + (high - low + 1) + " case labels, got " + caseLabels.length);
+        }
+        List<Label> cases = new ArrayList<>(caseLabels.length);
+        for (String name : caseLabels) {
+            cases.add(getOrCreateLabel(name));
+        }
+        sizedOps.add(new TableSwitchOp(low, high, getOrCreateLabel(defaultLabel), cases));
+        return this;
+    }
+
+    /**
+     * Emits a {@code lookupswitch} mapping each key in {@code cases} to its target label, with
+     * {@code defaultLabel} as the fallthrough. Keys are sorted ascending as the JVM requires. All labels
+     * must be {@code label()}-defined in the snippet. Padding is computed automatically.
+     */
+    public CodeBuilder lookupswitch(String defaultLabel, Map<Integer, String> cases) {
+        Map<Integer, Label> sorted = new TreeMap<>();
+        for (Map.Entry<Integer, String> e : cases.entrySet()) {
+            sorted.put(e.getKey(), getOrCreateLabel(e.getValue()));
+        }
+        sizedOps.add(new LookupSwitchOp(getOrCreateLabel(defaultLabel), sorted));
+        return this;
+    }
+
     public CodeBuilder invokevirtual(String owner, String name, String descriptor) {
         addOp((bc, cw) -> bc.addInvokeVirtual(owner, name, descriptor), 3);
         return this;
@@ -750,7 +809,9 @@ public class CodeBuilder {
                 }
             }
 
-            int bsmIndex = parent.getParent().addBootstrapMethod(methodHandle, argIndices);
+            int bsmIndex = parent != null
+                    ? parent.getParent().addBootstrapMethod(methodHandle, argIndices)
+                    : bc.getCodeWriter().getMethodEntry().getClassFile().addBootstrapMethod(methodHandle, argIndices);
             int nameAndType = cp.addNameAndType(name, descriptor);
             int indyIndex = cp.addInvokeDynamic(bsmIndex, nameAndType);
             bc.addInvokeDynamic(indyIndex);
@@ -927,11 +988,18 @@ public class CodeBuilder {
         sizedOps.add(new LegacyOp(op, size));
     }
 
-    void buildCode(MethodEntry method, ConstPool constPool) throws java.io.IOException {
-        Bytecode bc = new Bytecode(method);
+    /**
+     * Resolves labels and emits the recorded ops into the CodeWriter bound to {@code bc}, laying the
+     * snippet out from offset 0. Shared by {@link #buildCode} and {@link #assemble}; does not install
+     * exception regions or serialize.
+     *
+     * @return the resolved label offsets plus any unresolved external/continuation branch offsets
+     */
+    private EmitResult emitInto(Bytecode bc) {
         CodeWriter cw = bc.getCodeWriter();
-
         Map<Label, Integer> labelOffsets = new HashMap<>();
+        Map<String, List<Integer>> externalRefs = new LinkedHashMap<>();
+        List<Integer> continuationRefs = new ArrayList<>();
 
         if (!labels.isEmpty()) {
             int maxIterations = 10;
@@ -948,15 +1016,27 @@ public class CodeBuilder {
                             changed = true;
                         }
                     } else {
-                        int size = op.getSizeAt(offset);
-                        offset += size;
+                        offset += op.getSizeAt(offset);
                     }
                 }
                 if (!changed) break;
             }
 
+            int codeLength = 0;
+            for (SizedOp op : sizedOps) {
+                codeLength += op.getSizeAt(codeLength);
+            }
+
             int currentOffset = 0;
             for (SizedOp op : sizedOps) {
+                if (op instanceof BranchOp) {
+                    Label t = ((BranchOp) op).target;
+                    if (t.external) {
+                        externalRefs.computeIfAbsent(t.name, k -> new ArrayList<>()).add(currentOffset);
+                    } else if (Integer.valueOf(codeLength).equals(labelOffsets.get(t))) {
+                        continuationRefs.add(currentOffset);
+                    }
+                }
                 op.emit(bc, cw, labelOffsets, currentOffset);
                 currentOffset += op.getSizeAt(currentOffset);
             }
@@ -965,6 +1045,32 @@ public class CodeBuilder {
                 op.apply(bc, cw);
             }
         }
+        return new EmitResult(labelOffsets, externalRefs, continuationRefs);
+    }
+
+    /** Result of {@link #emitInto}: bound label offsets plus unresolved external/continuation branches. */
+    private static final class EmitResult {
+        final Map<Label, Integer> labelOffsets;
+        final Map<String, List<Integer>> externalRefs;
+        final List<Integer> continuationRefs;
+
+        EmitResult(Map<Label, Integer> labelOffsets, Map<String, List<Integer>> externalRefs,
+                   List<Integer> continuationRefs) {
+            this.labelOffsets = labelOffsets;
+            this.externalRefs = externalRefs;
+            this.continuationRefs = continuationRefs;
+        }
+    }
+
+    void buildCode(MethodEntry method, ConstPool constPool) throws java.io.IOException {
+        Bytecode bc = new Bytecode(method);
+        EmitResult emit = emitInto(bc);
+        if (!emit.externalRefs.isEmpty() || !emit.continuationRefs.isEmpty()) {
+            throw new IllegalStateException(
+                    "external/continuation labels are only resolvable when splicing via assemble(); "
+                            + "they are not valid in a complete method build");
+        }
+        Map<Label, Integer> labelOffsets = emit.labelOffsets;
 
         if (!exceptionRegions.isEmpty()) {
             CodeAttribute codeAttr = method.getCodeAttribute();
@@ -987,13 +1093,80 @@ public class CodeBuilder {
         bc.finalizeBytecode();
     }
 
+    /**
+     * Materializes the recorded ops into a detached, self-contained instruction snapshot resolved
+     * against {@code target}'s constant pool, ready to splice into any method that {@code target}
+     * owns via {@code CodeWriter.insertBefore(handle, ClonedRange)} or {@code replaceBody(ClonedRange)}.
+     * Branch and switch targets — and any {@code trycatch} regions — are carried by identity, so the
+     * snippet relinks correctly at any insertion point. Constant-pool references created here (classes,
+     * members, ldc constants, exception catch types) are added to {@code target}, so the spliced
+     * indices are valid where used.
+     *
+     * @param target the class whose constant pool backs the snippet and which will host the result
+     * @return the assembled snippet
+     */
+    public CodeWriter.ClonedRange assemble(ClassFile target) {
+        Bytecode bc = new Bytecode(scratchMethod(target));
+        EmitResult emit = emitInto(bc);
+        return bc.getCodeWriter().toClonedRange(
+                resolveExceptionEntries(target, emit.labelOffsets),
+                emit.externalRefs,
+                emit.continuationRefs);
+    }
+
+    /** Resolves the recorded try/catch regions to exception-table entries against {@code target}'s pool. */
+    private List<ExceptionTableEntry> resolveExceptionEntries(ClassFile target, Map<Label, Integer> labelOffsets) {
+        List<ExceptionTableEntry> entries = new ArrayList<>();
+        for (ExceptionRegion region : exceptionRegions) {
+            int catchType = 0;
+            if (region.exceptionType != null) {
+                ConstPool cp = target.getConstPool();
+                catchType = cp.getIndexOf(cp.findOrAddClass(region.exceptionType));
+            }
+            entries.add(new ExceptionTableEntry(
+                    labelOffsets.get(region.start),
+                    labelOffsets.get(region.end),
+                    labelOffsets.get(region.handler),
+                    catchType));
+        }
+        return entries;
+    }
+
+    /**
+     * Builds a throwaway static method bound to {@code target} purely to host a {@link CodeWriter}
+     * during {@link #assemble}. It is never added to the class or written, and reuses an existing Utf8
+     * (the class name, always present) for its name/descriptor so it adds nothing to the constant pool
+     * — only the snippet's own references (added during emit) persist.
+     */
+    private MethodEntry scratchMethod(ClassFile target) {
+        ConstPool cp = target.getConstPool();
+        int utf8 = cp.getIndexOf(cp.findOrAddUtf8(target.getClassName()));
+        CodeAttribute codeAttr = new CodeAttribute("Code", (MethodEntry) null, utf8, 0);
+        codeAttr.setMaxStack(0);
+        codeAttr.setMaxLocals(0);
+        codeAttr.setCode(new byte[0]);
+        codeAttr.setAttributes(new ArrayList<>());
+        List<Attribute> attrs = new ArrayList<>();
+        attrs.add(codeAttr);
+        MethodEntry scratch = new MethodEntry(
+                target, new AccessBuilder().setStatic().build(), utf8, utf8, attrs);
+        codeAttr.setParent(scratch);
+        return scratch;
+    }
+
     @FunctionalInterface
     private interface BytecodeOp {
         void apply(Bytecode bc, CodeWriter cw);
     }
 
     private static class Label {
+        private final String name;
         private int offset = -1;
+        private boolean external;
+
+        Label(String name) {
+            this.name = name;
+        }
 
         boolean isBound() {
             return offset >= 0;
@@ -1011,6 +1184,7 @@ public class CodeBuilder {
 
     private static abstract class SizedOp {
         abstract int getSize();
+        /** Byte length at {@code offset}; offset-dependent for switches (4-byte-aligned padding). */
         int getSizeAt(int offset) {
             return getSize();
         }
@@ -1072,9 +1246,15 @@ public class CodeBuilder {
 
         @Override
         void emit(Bytecode bc, CodeWriter cw, Map<Label, Integer> labelOffsets, int currentOffset) {
-            Integer targetOffset = labelOffsets.get(target);
-            if (targetOffset == null) throw new IllegalStateException("Label not found in label map");
-            int relativeOffset = targetOffset - currentOffset;
+            int relativeOffset;
+            if (target.external) {
+                // Target lives in the host; emit a placeholder relative offset and bind at splice time.
+                relativeOffset = 0;
+            } else {
+                Integer targetOffset = labelOffsets.get(target);
+                if (targetOffset == null) throw new IllegalStateException("Label not found in label map");
+                relativeOffset = targetOffset - currentOffset;
+            }
 
             if (opcode == GOTO.getCode()) {
                 cw.appendInstruction(new GotoInstruction(opcode, currentOffset, (short) relativeOffset));
@@ -1083,6 +1263,86 @@ public class CodeBuilder {
             } else {
                 cw.appendInstruction(new ConditionalBranchInstruction(opcode, currentOffset, (short) relativeOffset));
             }
+        }
+    }
+
+    /** Padding bytes after the opcode so the jump table aligns to a 4-byte boundary from the method start. */
+    private static int switchPadding(int offset) {
+        return (4 - ((offset + 1) % 4)) % 4;
+    }
+
+    private static int resolveSwitchTarget(Map<Label, Integer> labelOffsets, Label target, int switchOffset) {
+        Integer to = labelOffsets.get(target);
+        if (to == null) {
+            throw new IllegalStateException("switch target label not defined: " + target.name);
+        }
+        return to - switchOffset;
+    }
+
+    private static class TableSwitchOp extends SizedOp {
+        final int low;
+        final int high;
+        final Label defaultLabel;
+        final List<Label> cases;
+
+        TableSwitchOp(int low, int high, Label defaultLabel, List<Label> cases) {
+            this.low = low;
+            this.high = high;
+            this.defaultLabel = defaultLabel;
+            this.cases = cases;
+        }
+
+        @Override
+        int getSize() {
+            return getSizeAt(0);
+        }
+
+        @Override
+        int getSizeAt(int offset) {
+            return 1 + switchPadding(offset) + 12 + (high - low + 1) * 4;
+        }
+
+        @Override
+        void emit(Bytecode bc, CodeWriter cw, Map<Label, Integer> labelOffsets, int currentOffset) {
+            int defaultRel = resolveSwitchTarget(labelOffsets, defaultLabel, currentOffset);
+            Map<Integer, Integer> jumps = new LinkedHashMap<>();
+            for (int key = low; key <= high; key++) {
+                jumps.put(key, resolveSwitchTarget(labelOffsets, cases.get(key - low), currentOffset));
+            }
+            cw.appendInstruction(new TableSwitchInstruction(
+                    TABLESWITCH.getCode(), currentOffset, switchPadding(currentOffset), defaultRel, low, high, jumps));
+        }
+    }
+
+    private static class LookupSwitchOp extends SizedOp {
+        final Label defaultLabel;
+        final Map<Integer, Label> cases;
+
+        LookupSwitchOp(Label defaultLabel, Map<Integer, Label> cases) {
+            this.defaultLabel = defaultLabel;
+            this.cases = cases;
+        }
+
+        @Override
+        int getSize() {
+            return getSizeAt(0);
+        }
+
+        @Override
+        int getSizeAt(int offset) {
+            return 1 + switchPadding(offset) + 8 + cases.size() * 8;
+        }
+
+        @Override
+        void emit(Bytecode bc, CodeWriter cw, Map<Label, Integer> labelOffsets, int currentOffset) {
+            int defaultRel = resolveSwitchTarget(labelOffsets, defaultLabel, currentOffset);
+            Map<Integer, Integer> matches = new LinkedHashMap<>();
+            for (Map.Entry<Integer, Label> e : cases.entrySet()) {
+                matches.put(e.getKey(), resolveSwitchTarget(labelOffsets, e.getValue(), currentOffset));
+            }
+            cw.appendInstruction(new LookupSwitchInstruction(
+                    LOOKUPSWITCH.getCode(), currentOffset, switchPadding(currentOffset), defaultRel,
+                    cases.size(), matches));
         }
     }
 

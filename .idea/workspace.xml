@@ -4,15 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixed: standard UTF-8 was used for CONSTANT_Utf8 instead of JVMS modified UTF-8">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Detached snippet assembly + cloned-range inlining primitives&#10;- CodeBuilder.detached()/assemble() produces a spliceable ClonedRange: invokedynamic (bootstrap added to the target's BootstrapMethods), try/catch, and branches into the host via externalLabel/bindLabel or a tail continuation label.&#10;- CodeWriter: exception-table relink is now identity-based (fixes host table corruption when a spliced block's offsets collide on insert); max_stack is computed over the CFG via FrameGenerator (computeMaxStack, applied in relink + write) so handler/loop peaks no longer under-count; cloneRangeWithTargets carries out-of-range branch targets by identity (same-method, guarded loud against cross-method misuse); ClonedRange.redirectReturns() turns cloned returns into continuation exits and insertChainBefore folds several bodies without the skip hazard.&#10;- ClassFile.addBootstrapMethod/getBootstrapMethodsAttribute (ConstPoolRemapper now delegates to them). New tests: CodeBuilderSnippetTest, CodeBuilderExternalBranchTest, MaxStackTest, ClonedRangeExitsTest.">
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/ClonedRangeExitsTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/CodeBuilderExternalBranchTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/CodeBuilderSnippetTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/MaxStackTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/bytecode-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/bytecode-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/generation-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/generation-api.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/MethodGrafter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/MethodGrafter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ConstPoolRemapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ConstPoolRemapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/builder/CodeBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/builder/CodeBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/BytecodeEditTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/BytecodeEditTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/MethodGraftTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/MethodGraftTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,7 +72,20 @@
     &quot;git-widget-placeholder&quot;: &quot;main&quot;
   }
 }</component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [build]">
+  <component name="RunManager" selected="Application.DebugDoAction">
+    <configuration name="DebugDoAction" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.tonic.demo.DebugDoAction" />
+      <module name="YABR.main" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.tonic.demo.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="LlvmRoundTripDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.tonic.demo.LlvmRoundTripDemo" />
       <module name="YABR.main" />
@@ -146,42 +165,20 @@
       <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
-    <configuration name="YABR-fixed [publishToMavenLocal]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value="publishToMavenLocal" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <RunAsTest>false</RunAsTest>
-      <method v="2" />
-    </configuration>
     <list>
+      <item itemvalue="Application.DebugDoAction" />
       <item itemvalue="Application.LlvmRoundTripDemo" />
       <item itemvalue="Gradle.YABR-fixed [build]" />
       <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
-      <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
       <item itemvalue="Gradle.YABR-fixed [compileJava]" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.DebugDoAction" />
         <item itemvalue="Gradle.YABR-fixed [build]" />
         <item itemvalue="Application.LlvmRoundTripDemo" />
         <item itemvalue="Gradle.YABR-fixed [compileJava]" />
         <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
-        <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
       </list>
     </recent_temporary>
   </component>
@@ -418,12 +415,18 @@
       <option name="project" value="LOCAL" />
       <updated>1780883648183</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="- CodeWriter: handle-keyed insertBefore/insertAfter/removeInstruction/replaceInstruction/replaceBody + cloneRange/cloneRangeWithTargets, all via a relink pass (branch/switch retarget, branch widening, exception table, frame regen). New ConstPoolRemapper + MethodGrafter for cross-pool method grafting (incl. invokedynamic bootstraps); ClassFile.redirectOwner and stripStackMapTables. Local-var clones use the narrowest encoding.&#10;&#10;- Fix CONSTANT_Utf8 to use JVMS modified UTF-8 (read + write) and FrameGenerator goto_w target computation.">
+      <option name="closed" value="true" />
+      <created>1780895682551</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1780895682551</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fixed issues with SSA lowering for bootstrap args for condy" />
-    <MESSAGE value="- cleanup" />
     <MESSAGE value="- fixed for look edge detection for AST IR and source emission" />
     <MESSAGE value="- fixed local scoping issues" />
     <MESSAGE value="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission" />
@@ -447,6 +450,8 @@
     <MESSAGE value="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner." />
     <MESSAGE value="- Bytecode editor: branch widening, indy graft, clone alignment" />
     <MESSAGE value="- Fixed: standard UTF-8 was used for CONSTANT_Utf8 instead of JVMS modified UTF-8" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixed: standard UTF-8 was used for CONSTANT_Utf8 instead of JVMS modified UTF-8" />
+    <MESSAGE value="- CodeWriter: handle-keyed insertBefore/insertAfter/removeInstruction/replaceInstruction/replaceBody + cloneRange/cloneRangeWithTargets, all via a relink pass (branch/switch retarget, branch widening, exception table, frame regen). New ConstPoolRemapper + MethodGrafter for cross-pool method grafting (incl. invokedynamic bootstraps); ClassFile.redirectOwner and stripStackMapTables. Local-var clones use the narrowest encoding.&#10;&#10;- Fix CONSTANT_Utf8 to use JVMS modified UTF-8 (read + write) and FrameGenerator goto_w target computation." />
+    <MESSAGE value="Detached snippet assembly + cloned-range inlining primitives&#10;- CodeBuilder.detached()/assemble() produces a spliceable ClonedRange: invokedynamic (bootstrap added to the target's BootstrapMethods), try/catch, and branches into the host via externalLabel/bindLabel or a tail continuation label.&#10;- CodeWriter: exception-table relink is now identity-based (fixes host table corruption when a spliced block's offsets collide on insert); max_stack is computed over the CFG via FrameGenerator (computeMaxStack, applied in relink + write) so handler/loop peaks no longer under-count; cloneRangeWithTargets carries out-of-range branch targets by identity (same-method, guarded loud against cross-method misuse); ClonedRange.redirectReturns() turns cloned returns into continuation exits and insertChainBefore folds several bodies without the skip hazard.&#10;- ClassFile.addBootstrapMethod/getBootstrapMethodsAttribute (ConstPoolRemapper now delegates to them). New tests: CodeBuilderSnippetTest, CodeBuilderExternalBranchTest, MaxStackTest, ClonedRangeExitsTest." />
+    <option name="LAST_COMMIT_MESSAGE" value="Detached snippet assembly + cloned-range inlining primitives&#10;- CodeBuilder.detached()/assemble() produces a spliceable ClonedRange: invokedynamic (bootstrap added to the target's BootstrapMethods), try/catch, and branches into the host via externalLabel/bindLabel or a tail continuation label.&#10;- CodeWriter: exception-table relink is now identity-based (fixes host table corruption when a spliced block's offsets collide on insert); max_stack is computed over the CFG via FrameGenerator (computeMaxStack, applied in relink + write) so handler/loop peaks no longer under-count; cloneRangeWithTargets carries out-of-range branch targets by identity (same-method, guarded loud against cross-method misuse); ClonedRange.redirectReturns() turns cloned returns into continuation exits and insertChainBefore folds several bodies without the skip hazard.&#10;- ClassFile.addBootstrapMethod/getBootstrapMethodsAttribute (ConstPoolRemapper now delegates to them). New tests: CodeBuilderSnippetTest, CodeBuilderExternalBranchTest, MaxStackTest, ClonedRangeExitsTest." />
   </component>
 </project>

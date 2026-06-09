@@ -3,6 +3,8 @@ package com.tonic.analysis.bytecode;
 import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.instruction.NopInstruction;
+import com.tonic.builder.ClassBuilder;
+import com.tonic.type.AccessFlags;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
@@ -295,6 +297,39 @@ class BytecodeEditTest {
             assertEquals((int) clazz.getMethod("pick", int.class).invoke(null, x),
                     (int) clazz.getMethod("h", int.class).invoke(null, x), "switch clone diverged at x=" + x);
         }
+    }
+
+    @Test
+    void insertIntoMethodWithTryCatchPreservesHandler() throws Exception {
+        // Host has a real try/catch (10/x, catching ArithmeticException -> -1). Insert a NOP whose
+        // scratch offset (0) collides with the host's first instruction; the exception table must
+        // relink by identity (the prior offset-keyed remap corrupted it on such a collision).
+        ClassFile cf = ClassBuilder.create("TC")
+                .version(AccessFlags.V11, 0)
+                .access(AccessFlags.ACC_PUBLIC)
+                .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "guarded", "(I)I")
+                .code()
+                    .label("try")
+                    .bipush(10)
+                    .iload(0)
+                    .idiv()
+                    .ireturn()
+                    .label("handler")
+                    .pop()
+                    .iconst(-1)
+                    .ireturn()
+                    .trycatch("try", "handler", "handler", "java/lang/ArithmeticException")
+                .end()
+                .end()
+                .build();
+
+        CodeWriter cw = new CodeWriter(method(cf, "guarded"));
+        cw.insertBefore(cw.getInstructions().iterator().next(), new NopInstruction(0x00, 0));
+        cw.write();
+
+        Class<?> clazz = TestUtils.loadAndVerify(cf);
+        assertEquals(5, (int) clazz.getMethod("guarded", int.class).invoke(null, 2));
+        assertEquals(-1, (int) clazz.getMethod("guarded", int.class).invoke(null, 0));
     }
 
     private static int countStackMapTables(ClassFile cf) {

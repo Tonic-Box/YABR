@@ -4,7 +4,9 @@ import com.tonic.analysis.Bytecode;
 import com.tonic.analysis.frame.FrameGenerator;
 import com.tonic.analysis.visitor.AbstractClassVisitor;
 import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.utill.*;
 import lombok.Getter;
@@ -438,6 +440,43 @@ public class ClassFile extends AbstractParser {
      */
     public int redirectOwner(String fromInternal, String toInternal) {
         return getConstPool().redirectOwner(fromInternal, toInternal);
+    }
+
+    /**
+     * Returns this class's {@link BootstrapMethodsAttribute}, or {@code null} if it has none.
+     */
+    public BootstrapMethodsAttribute getBootstrapMethodsAttribute() {
+        for (Attribute a : classAttributes) {
+            if (a instanceof BootstrapMethodsAttribute) {
+                return (BootstrapMethodsAttribute) a;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find-or-adds a bootstrap method (its method-handle index plus static-argument indices, all in
+     * this class's pool) to the {@code BootstrapMethods} attribute, creating the attribute if absent.
+     *
+     * @param methodHandleIndex constant-pool index of the bootstrap method handle
+     * @param arguments         constant-pool indices of the static bootstrap arguments
+     * @return the index of the (existing or newly appended) bootstrap method
+     */
+    public int addBootstrapMethod(int methodHandleIndex, List<Integer> arguments) {
+        BootstrapMethodsAttribute bsm = getBootstrapMethodsAttribute();
+        if (bsm == null) {
+            bsm = new BootstrapMethodsAttribute(constPool);
+            classAttributes.add(bsm);
+        }
+        List<BootstrapMethod> entries = bsm.getBootstrapMethods();
+        for (int i = 0; i < entries.size(); i++) {
+            BootstrapMethod e = entries.get(i);
+            if (e.getBootstrapMethodRef() == methodHandleIndex && e.getBootstrapArguments().equals(arguments)) {
+                return i;
+            }
+        }
+        bsm.addBootstrapMethod(methodHandleIndex, arguments);
+        return entries.size() - 1;
     }
 
     /**

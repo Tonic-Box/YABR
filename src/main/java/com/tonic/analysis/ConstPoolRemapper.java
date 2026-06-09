@@ -2,7 +2,6 @@ package com.tonic.analysis;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.ClassRefItem;
@@ -51,7 +50,6 @@ public final class ConstPoolRemapper {
     private final ConstPool sp;
     private final ConstPool tp;
     private final Map<Integer, Integer> cache = new HashMap<>();
-    private BootstrapMethodsAttribute targetBootstraps;
 
     public ConstPoolRemapper(ClassFile source, ClassFile target) {
         this.source = source;
@@ -152,9 +150,9 @@ public final class ConstPoolRemapper {
         return tp.getIndexOf(tp.findOrAddMethodHandle(v.getReferenceKind(), owner, name, desc));
     }
 
-    /** Copies the source bootstrap-method entry to the target's BootstrapMethods, returning its index. */
+    /** Copies the source bootstrap-method entry into the target's BootstrapMethods, returning its index. */
     private int remapBootstrap(int srcBootstrapIndex) {
-        BootstrapMethodsAttribute srcBsm = findBootstraps(source);
+        BootstrapMethodsAttribute srcBsm = source.getBootstrapMethodsAttribute();
         if (srcBsm == null) {
             throw new IllegalStateException("source class has no BootstrapMethods attribute");
         }
@@ -164,35 +162,6 @@ public final class ConstPoolRemapper {
         for (int a : bm.getBootstrapArguments()) {
             args.add(remap(a));
         }
-        BootstrapMethodsAttribute dst = ensureTargetBootstraps();
-        List<BootstrapMethod> entries = dst.getBootstrapMethods();
-        for (int k = 0; k < entries.size(); k++) {
-            BootstrapMethod e = entries.get(k);
-            if (e.getBootstrapMethodRef() == handle && e.getBootstrapArguments().equals(args)) {
-                return k;
-            }
-        }
-        dst.addBootstrapMethod(handle, args);
-        return entries.size() - 1;
-    }
-
-    private BootstrapMethodsAttribute ensureTargetBootstraps() {
-        if (targetBootstraps == null) {
-            targetBootstraps = findBootstraps(target);
-            if (targetBootstraps == null) {
-                targetBootstraps = new BootstrapMethodsAttribute(tp);
-                target.getClassAttributes().add(targetBootstraps);
-            }
-        }
-        return targetBootstraps;
-    }
-
-    private static BootstrapMethodsAttribute findBootstraps(ClassFile cf) {
-        for (Attribute a : cf.getClassAttributes()) {
-            if (a instanceof BootstrapMethodsAttribute) {
-                return (BootstrapMethodsAttribute) a;
-            }
-        }
-        return null;
+        return target.addBootstrapMethod(handle, args);
     }
 }

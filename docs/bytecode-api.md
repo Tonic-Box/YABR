@@ -230,9 +230,10 @@ cw.forceComputeFrames();
 
 Beyond offset-based insertion, `CodeWriter` supports editing keyed on an instruction **handle** (the
 `Instruction` object itself). Every structural edit runs a relink/layout pass that recomputes
-instruction offsets, branch/switch targets (by identity — so jumps survive arbitrary shifts), switch
-padding, the exception table, and the StackMapTable. (This also fixes a former hazard where inserting
-inside a branch span left stale branch offsets.)
+instruction offsets, branch/switch targets, switch padding, the exception table, and the StackMapTable
+— all **by identity**, so jumps and try/catch boundaries survive arbitrary shifts. (This also fixes
+former hazards where inserting inside a branch span left stale branch offsets, and where a spliced
+block's offsets collided with the host's and corrupted the exception table.)
 
 ```java
 CodeWriter cw = new CodeWriter(methodEntry);
@@ -251,6 +252,18 @@ cw.setSwitchTargets(switchInstr, defaultTarget, caseTargets);
 cw.replaceBody(instructionList);
 cw.replaceBody(instructionList, exceptionTableEntries);
 ```
+
+A `ClonedRange` (from `cloneRangeWithTargets` or `CodeBuilder.assemble`) carries its branch/switch
+targets **and** any try/catch regions by identity, so `replaceBody(cr)` / `insertBefore(handle, cr)` /
+`insertAfter(handle, cr)` splice an exception-bearing body that relinks correctly wherever it lands.
+
+A `ClonedRange` can also carry branches that exit into the host: **external labels** (bind to a host
+instruction before splicing via `cr.bindLabel(name, hostInsn)` or the
+`insertBefore`/`insertAfter(handle, cr, Map<String,Instruction>)` overloads) and **continuation
+branches** (auto-bound to the splice successor — `insertBefore` → the handle, `insertAfter` → the
+instruction after it; `replaceBody` has no successor and rejects them). See
+[Generation API](generation-api.md) for authoring these via `CodeBuilder.externalLabel` / a tail label,
+and the cloning section below for `redirectReturns()`.
 
 ### Cloning a range
 
@@ -272,6 +285,35 @@ existing `<clinit>`), drive the public `ConstPoolRemapper` directly — it re-re
 ConstPoolRemapper remap = new ConstPoolRemapper(sourceClass, targetClass);
 CodeWriter.ClonedRange cr = sourceCw.cloneRangeWithTargets(first, last, base, targetPool, remap::remap);
 targetCw.replaceBody(cr);            // or insertBefore(handle, cr) to merge rather than replace
+```
+
+**Control transfers that leave the range.** A cloned range can exit into the host, reusing the
+identity-based splice binding:
+
+- **Out-of-range branches** (a partial range with a `break`/jump to a shared exit) carry their original
+  target by identity, so the cloned branch resolves against the host at splice time. This is automatic
+  and **same-method-only**: splicing such a range into a *different* method (where the carried target
+  doesn't exist) throws `IllegalStateException` at splice rather than producing a class-load
+  `VerifyError`. (Cross-method relocation of an exiting branch isn't supported; rebind with
+  `setBranchTarget` if you must.)
+- **Returns** can be redirected so an inlined body continues after the splice point instead of
+  returning from the host — opt in on the produced range:
+  ```java
+  CodeWriter.ClonedRange body = sourceCw.cloneRangeWithTargets(first, last, base, pool, remap::remap);
+  body.redirectReturns();                  // cloned returns -> continuation gotos
+  hostCw.insertBefore(continuationPoint, body);   // they bind to the splice successor
+  ```
+  Each cloned `return` becomes a continuation branch (bound like a tail label: `insertBefore` → the
+  handle, `insertAfter` → the instruction after it); `replaceBody` has no successor and rejects them.
+  A value-returning body leaves its result on the stack at the continuation. Leave `redirectReturns()`
+  off to relocate a body whose returns should stay returns.
+
+To fold **several** redirected bodies before one instruction, use `insertChainBefore(at, bodies)` — it
+chains them so each body's continuation falls through into the next and the last into `at`. Do **not**
+hand-stack them with repeated `insertBefore(at, …)`: that binds every body's continuation to `at`, so
+earlier bodies skip later ones (a silent miscompile).
+```java
+hostCw.insertChainBefore(callSuccessor, List.of(bodyA.redirectReturns(), bodyB.redirectReturns()));
 ```
 
 ### Reference retargeting and cross-class grafting
@@ -297,6 +339,18 @@ for the latter the referenced bootstrap method (handle + static arguments) is co
 the target's `BootstrapMethods` attribute. Structural edits (including the relink after a graft) also
 **widen branches automatically** (`goto`→`goto_w`, and an over-long conditional becomes an inverted
 conditional skipping a `goto_w`) when an edit pushes a branch span past ±32 KB.
+
+The bootstrap-method table is reachable directly on `ClassFile`, which is what the graft path and
+hand-built `invokedynamic` (e.g. `CodeBuilder.assemble`) both use:
+
+```java
+BootstrapMethodsAttribute bsm = classFile.getBootstrapMethodsAttribute();   // null if none yet
+int index = classFile.addBootstrapMethod(methodHandleIndex, argIndices);    // find-or-create + dedup
+```
+
+`addBootstrapMethod` creates the `BootstrapMethods` attribute on first use, returns an existing entry's
+index when the handle and static arguments already match, and otherwise appends — so repeated calls
+never duplicate an identical bootstrap.
 
 ### Frameless write
 
@@ -394,6 +448,18 @@ classFile.computeFrames();
 
 // Via ClassFile (specific method)
 classFile.computeFrames("methodName", "(II)I");
+```
+
+### max_stack
+
+`max_stack` is computed over the control-flow graph, not a linear scan — it accounts for every
+reachable path (loop back-edges, joins, and exception-handler entry states, where the JVM pushes the
+caught exception). `write()` and the relink after any structural edit apply it automatically, so you
+no longer need to set `max_stack` by hand after generating branches or loops. It is raise-only (never
+under-counts; an existing larger value is left as-is). To force it explicitly:
+
+```java
+int maxStack = codeWriter.computeMaxStack();   // CFG-correct; updates the CodeAttribute
 ```
 
 ---

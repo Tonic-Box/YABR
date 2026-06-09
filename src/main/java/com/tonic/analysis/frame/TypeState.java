@@ -197,6 +197,16 @@ public final class TypeState {
     }
 
     /**
+     * The operand-stack depth in slots (category-2 {@code long}/{@code double} count as 2, since they
+     * are stored with a {@code TOP} filler) — i.e. the {@code max_stack} contribution of this state.
+     *
+     * @return the stack depth in slots
+     */
+    public int stackSlots() {
+        return stack.size();
+    }
+
+    /**
      * Pushes a type onto the stack.
      *
      * @param type the type to push

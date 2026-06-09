@@ -8,6 +8,7 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.StackMapTableAttribute;
+import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.analysis.instruction.*;
 import com.tonic.utill.Logger;
 import com.tonic.utill.Opcode;
@@ -308,48 +309,187 @@ public class CodeWriter {
      * @param body the new instruction stream, in order
      */
     public void replaceBody(List<Instruction> body) {
-        codeAttribute.getExceptionTable().clear();
-        relink(new ArrayList<>(body));
+        relink(new ArrayList<>(body), Collections.emptyList());
     }
 
     /**
-     * As {@link #replaceBody(List)} but installs {@code exceptions} as the method's exception table
-     * before relinking (so regenerated frames cover the handler blocks). Entry PCs are interpreted
-     * against {@code body}'s layout.
+     * As {@link #replaceBody(List)} but with an exception table whose entry PCs are interpreted against
+     * {@code body}'s layout, bound by identity so regenerated frames cover the handler blocks.
      *
      * @param body       the new instruction stream, in order
      * @param exceptions the exception-table entries (catch_type indices in this method's pool)
      */
-    public void replaceBody(List<Instruction> body,
-                            List<com.tonic.parser.attribute.table.ExceptionTableEntry> exceptions) {
-        codeAttribute.getExceptionTable().clear();
-        codeAttribute.getExceptionTable().addAll(exceptions);
-        relink(new ArrayList<>(body));
+    public void replaceBody(List<Instruction> body, List<ExceptionTableEntry> exceptions) {
+        List<Instruction> order = new ArrayList<>(body);
+        relink(order, resolveRegions(exceptions, order));
     }
 
-    /** Replaces the body with a cloned range, carrying its branch/switch targets by identity. */
+    /** Replaces the body with a cloned range, carrying its targets + exception regions by identity. */
     public void replaceBody(ClonedRange block) {
+        requireSelfContained(block);
+        List<Instruction> order = new ArrayList<>(block.instructions);
+        requireTargetsPresent(block, order);
         branchTargets.putAll(block.targets);
-        replaceBody(block.instructions);
+        relink(order, block.regions);
     }
 
-    /** Replaces the body with a cloned range plus an exception table, carrying targets by identity. */
-    public void replaceBody(ClonedRange block,
-                            List<com.tonic.parser.attribute.table.ExceptionTableEntry> exceptions) {
+    /** Replaces the body with a cloned range plus an explicit exception table (targets by identity). */
+    public void replaceBody(ClonedRange block, List<ExceptionTableEntry> exceptions) {
+        requireSelfContained(block);
+        List<Instruction> order = new ArrayList<>(block.instructions);
+        requireTargetsPresent(block, order);
         branchTargets.putAll(block.targets);
-        replaceBody(block.instructions, exceptions);
+        relink(order, resolveRegions(exceptions, order));
     }
 
-    /** Inserts a cloned range before the handle, carrying its branch/switch targets by identity. */
+    /** Inserts a cloned range before the handle, carrying its targets + exception regions by identity. */
     public void insertBefore(Instruction handle, ClonedRange block) {
+        List<Instruction> order = orderWith(handle, block.instructions, true);
+        requireTargetsPresent(block, order);
         branchTargets.putAll(block.targets);
-        insertBefore(handle, block.instructions);
+        bindExternalTargets(block, handle);
+        List<ExceptionRegionRef> regions = resolveExistingTable();
+        regions.addAll(block.regions);
+        relink(order, regions);
     }
 
-    /** Inserts a cloned range after the handle, carrying its branch/switch targets by identity. */
+    /** As {@link #insertBefore(Instruction, ClonedRange)} but binds external labels to host targets first. */
+    public void insertBefore(Instruction handle, ClonedRange block, Map<String, Instruction> externalBindings) {
+        externalBindings.forEach(block::bindLabel);
+        insertBefore(handle, block);
+    }
+
+    /** Inserts a cloned range after the handle, carrying its targets + exception regions by identity. */
     public void insertAfter(Instruction handle, ClonedRange block) {
+        List<Instruction> order = orderWith(handle, block.instructions, false);
+        requireTargetsPresent(block, order);
         branchTargets.putAll(block.targets);
-        insertAfter(handle, block.instructions);
+        bindExternalTargets(block, successorOf(handle));
+        List<ExceptionRegionRef> regions = resolveExistingTable();
+        regions.addAll(block.regions);
+        relink(order, regions);
+    }
+
+    /** As {@link #insertAfter(Instruction, ClonedRange)} but binds external labels to host targets first. */
+    public void insertAfter(Instruction handle, ClonedRange block, Map<String, Instruction> externalBindings) {
+        externalBindings.forEach(block::bindLabel);
+        insertAfter(handle, block);
+    }
+
+    /**
+     * Splices several cloned bodies before {@code at}, chaining them so each body's continuation exits
+     * (e.g. from {@link ClonedRange#redirectReturns()}) fall through into the next body's entry and the
+     * last body's into {@code at}. Use this to fold multiple bodies before one instruction: repeated
+     * {@code insertBefore(at, …)} would instead bind every body's continuation to {@code at}, so earlier
+     * bodies would skip later ones (a silent miscompile). External-label bindings carried by the bodies
+     * are preserved. A no-op for an empty list.
+     */
+    public void insertChainBefore(Instruction at, List<ClonedRange> bodies) {
+        List<ClonedRange> chain = new ArrayList<>();
+        for (ClonedRange b : bodies) {
+            if (!b.instructions.isEmpty()) {
+                chain.add(b);
+            }
+        }
+        if (chain.isEmpty()) {
+            return;
+        }
+
+        List<Instruction> instrs = new ArrayList<>();
+        Map<Instruction, List<Instruction>> targets = new IdentityHashMap<>();
+        List<ExceptionRegionRef> regions = new ArrayList<>();
+        Map<String, List<Instruction>> external = new LinkedHashMap<>();
+        Map<String, Instruction> bindings = new HashMap<>();
+        List<Instruction> continuation = new ArrayList<>();
+        for (int i = 0; i < chain.size(); i++) {
+            ClonedRange b = chain.get(i);
+            instrs.addAll(b.instructions);
+            targets.putAll(b.targets);
+            regions.addAll(b.regions);
+            external.putAll(b.externalLabels);
+            bindings.putAll(b.bindings);
+            if (i + 1 < chain.size()) {
+                Instruction nextEntry = chain.get(i + 1).instructions.get(0);
+                for (Instruction c : b.continuationBranches) {
+                    targets.put(c, new ArrayList<>(Collections.singletonList(nextEntry)));
+                }
+            } else {
+                continuation.addAll(b.continuationBranches);
+            }
+        }
+        ClonedRange combined = new ClonedRange(instrs, targets, regions, external, continuation);
+        combined.bindings.putAll(bindings);
+        insertBefore(at, combined);
+    }
+
+    /**
+     * Fails loud if a carried branch target isn't present in the post-splice instruction set — e.g. an
+     * out-of-range branch whose target was carried by identity from another method. Out-of-range branch
+     * carry is same-method-only; this converts what would be a class-load {@code VerifyError} into a
+     * located build-time error.
+     */
+    private static void requireTargetsPresent(ClonedRange block, List<Instruction> order) {
+        Set<Instruction> present = Collections.newSetFromMap(new IdentityHashMap<>());
+        present.addAll(order);
+        for (List<Instruction> tg : block.targets.values()) {
+            for (Instruction t : tg) {
+                if (t != null && !present.contains(t)) {
+                    throw new IllegalStateException(
+                            "branch target not present in host method; out-of-range branch carry is same-method-only");
+                }
+            }
+        }
+    }
+
+    /** A whole-body replacement has no host context, so it cannot carry external/continuation branches. */
+    private static void requireSelfContained(ClonedRange block) {
+        if (!block.externalLabels.isEmpty() || !block.continuationBranches.isEmpty()) {
+            throw new IllegalStateException(
+                    "replaceBody cannot resolve external/continuation branches (no host successor); "
+                            + "use insertBefore/insertAfter");
+        }
+    }
+
+    /**
+     * Resolves a spliced block's external labels (to their bound host instructions) and continuation
+     * branches (to {@code continuationTarget}) into the identity-target map relink consumes.
+     */
+    private void bindExternalTargets(ClonedRange block, Instruction continuationTarget) {
+        for (Map.Entry<String, List<Instruction>> e : block.externalLabels.entrySet()) {
+            Instruction host = block.bindings.get(e.getKey());
+            if (host == null) {
+                throw new IllegalStateException("unbound external label: " + e.getKey());
+            }
+            if (!instructions.containsValue(host)) {
+                throw new IllegalArgumentException("external label target is not part of this method: " + e.getKey());
+            }
+            for (Instruction branch : e.getValue()) {
+                branchTargets.put(branch, new ArrayList<>(Collections.singletonList(host)));
+            }
+        }
+        if (!block.continuationBranches.isEmpty()) {
+            if (continuationTarget == null) {
+                throw new IllegalStateException(
+                        "snippet has continuation branches but the splice point has no host successor");
+            }
+            for (Instruction branch : block.continuationBranches) {
+                branchTargets.put(branch, new ArrayList<>(Collections.singletonList(continuationTarget)));
+            }
+        }
+    }
+
+    /** The instruction immediately after {@code handle} in the current layout, or null if it is last. */
+    private Instruction successorOf(Instruction handle) {
+        boolean seen = false;
+        for (Instruction i : instructions.values()) {
+            if (seen) {
+                return i;
+            }
+            if (i == handle) {
+                seen = true;
+            }
+        }
+        return null;
     }
 
     /**
@@ -365,15 +505,7 @@ public class CodeWriter {
      * block via {@link #setBranchTarget} before calling.
      */
     public void insertBefore(Instruction handle, List<Instruction> block) {
-        requirePresent(handle);
-        List<Instruction> order = new ArrayList<>();
-        for (Instruction instr : instructions.values()) {
-            if (instr == handle) {
-                order.addAll(block);
-            }
-            order.add(instr);
-        }
-        relink(order);
+        relink(orderWith(handle, block, true));
     }
 
     /**
@@ -387,15 +519,23 @@ public class CodeWriter {
      * Inserts a block of instructions immediately after the handle.
      */
     public void insertAfter(Instruction handle, List<Instruction> block) {
+        relink(orderWith(handle, block, false));
+    }
+
+    /** Builds the post-edit instruction order with {@code block} spliced before/after {@code handle}. */
+    private List<Instruction> orderWith(Instruction handle, List<Instruction> block, boolean before) {
         requirePresent(handle);
         List<Instruction> order = new ArrayList<>();
         for (Instruction instr : instructions.values()) {
+            if (before && instr == handle) {
+                order.addAll(block);
+            }
             order.add(instr);
-            if (instr == handle) {
+            if (!before && instr == handle) {
                 order.addAll(block);
             }
         }
-        relink(order);
+        return order;
     }
 
     /**
@@ -425,22 +565,173 @@ public class CodeWriter {
     }
 
     /**
-     * A cloned instruction range: the fresh instructions plus the by-identity targets of any
-     * branch/switch among them. Splicing it via {@link #insertBefore(Instruction, ClonedRange)} /
-     * {@link #replaceBody(ClonedRange)} carries the targets into the host so they relink correctly
-     * regardless of where (and at what 4-byte alignment) the block lands.
+     * Snapshots this writer's full instruction list and its by-identity branch/switch targets into a
+     * {@link ClonedRange}, so an externally-assembled body can be spliced into another method via
+     * {@link #insertBefore(Instruction, ClonedRange)} / {@link #replaceBody(ClonedRange)}. The
+     * snapshot reuses the live instruction objects; the target map is copied defensively.
+     */
+    public ClonedRange toClonedRange() {
+        return toClonedRange(Collections.emptyList());
+    }
+
+    /**
+     * As {@link #toClonedRange()} but also carries exception regions. Each entry's PCs are interpreted
+     * against this writer's own layout and bound by instruction identity, so a try/catch survives being
+     * spliced at any offset/alignment.
+     */
+    public ClonedRange toClonedRange(List<ExceptionTableEntry> regionEntries) {
+        return toClonedRange(regionEntries, Collections.emptyMap(), Collections.emptyList());
+    }
+
+    /**
+     * As {@link #toClonedRange(List)} but also records branches whose targets lie outside the snippet:
+     * {@code externalOffsets} (branch offsets per external label name, bound at splice via
+     * {@link ClonedRange#bindLabel}) and {@code continuationOffsets} (branches that fall through into
+     * the host, auto-bound to the splice successor). Offsets are interpreted against this writer's
+     * layout; these branches are omitted from the auto-resolved target snapshot as they have no
+     * in-snippet target.
+     */
+    public ClonedRange toClonedRange(List<ExceptionTableEntry> regionEntries,
+                                     Map<String, List<Integer>> externalOffsets,
+                                     List<Integer> continuationOffsets) {
+        resolveAllBranchTargets();
+        List<Instruction> snapshot = new ArrayList<>(instructions.values());
+
+        Set<Instruction> unresolved = Collections.newSetFromMap(new IdentityHashMap<>());
+        Map<String, List<Instruction>> external = new LinkedHashMap<>();
+        for (Map.Entry<String, List<Integer>> e : externalOffsets.entrySet()) {
+            List<Instruction> branches = new ArrayList<>();
+            for (int off : e.getValue()) {
+                Instruction b = instructions.get(off);
+                if (b != null) {
+                    branches.add(b);
+                    unresolved.add(b);
+                }
+            }
+            external.put(e.getKey(), branches);
+        }
+        List<Instruction> continuation = new ArrayList<>();
+        for (int off : continuationOffsets) {
+            Instruction b = instructions.get(off);
+            if (b != null) {
+                continuation.add(b);
+                unresolved.add(b);
+            }
+        }
+
+        Map<Instruction, List<Instruction>> targets = new IdentityHashMap<>();
+        for (Map.Entry<Instruction, List<Instruction>> e : branchTargets.entrySet()) {
+            if (!unresolved.contains(e.getKey())) {
+                targets.put(e.getKey(), new ArrayList<>(e.getValue()));
+            }
+        }
+
+        List<ExceptionRegionRef> regions = new ArrayList<>();
+        for (ExceptionTableEntry ex : regionEntries) {
+            ExceptionRegionRef r = resolveRegion(ex, instructions);
+            if (r != null) {
+                regions.add(r);
+            }
+        }
+        return new ClonedRange(snapshot, targets, regions, external, continuation);
+    }
+
+    /** A try/catch region bound to instruction identities so it survives relayout. */
+    private static final class ExceptionRegionRef {
+        final Instruction start;
+        final Instruction last;
+        final Instruction handler;
+        final int catchType;
+
+        ExceptionRegionRef(Instruction start, Instruction last, Instruction handler, int catchType) {
+            this.start = start;
+            this.last = last;
+            this.handler = handler;
+            this.catchType = catchType;
+        }
+    }
+
+    /**
+     * A cloned instruction range: the fresh instructions, the by-identity targets of any branch/switch
+     * among them, and any exception regions (also by identity). Splicing it via
+     * {@link #insertBefore(Instruction, ClonedRange)} / {@link #replaceBody(ClonedRange)} carries all of
+     * these into the host so they relink correctly regardless of where (and at what 4-byte alignment)
+     * the block lands.
      */
     public static final class ClonedRange {
         private final List<Instruction> instructions;
         private final Map<Instruction, List<Instruction>> targets;
+        private final List<ExceptionRegionRef> regions;
+        private final Map<String, List<Instruction>> externalLabels;
+        private final List<Instruction> continuationBranches;
+        private final Map<String, Instruction> bindings = new HashMap<>();
 
         ClonedRange(List<Instruction> instructions, Map<Instruction, List<Instruction>> targets) {
+            this(instructions, targets, Collections.emptyList());
+        }
+
+        ClonedRange(List<Instruction> instructions, Map<Instruction, List<Instruction>> targets,
+                    List<ExceptionRegionRef> regions) {
+            this(instructions, targets, regions, Collections.emptyMap(), Collections.emptyList());
+        }
+
+        ClonedRange(List<Instruction> instructions, Map<Instruction, List<Instruction>> targets,
+                    List<ExceptionRegionRef> regions, Map<String, List<Instruction>> externalLabels,
+                    List<Instruction> continuationBranches) {
             this.instructions = instructions;
             this.targets = targets;
+            this.regions = regions;
+            this.externalLabels = externalLabels;
+            this.continuationBranches = new ArrayList<>(continuationBranches);
         }
 
         public List<Instruction> instructions() {
             return instructions;
+        }
+
+        /**
+         * Binds an external label (declared via {@code CodeBuilder.externalLabel}) to an instruction in
+         * the host method; must be called before splicing. Returns this range for chaining.
+         */
+        public ClonedRange bindLabel(String name, Instruction hostTarget) {
+            bindings.put(name, hostTarget);
+            return this;
+        }
+
+        /**
+         * Rewrites every cloned {@code return} into a continuation exit (a placeholder {@code goto}
+         * recorded as a continuation branch), so an inlined body's returns fall through to the splice
+         * successor instead of returning from the host. Branches that targeted a rewritten return are
+         * repointed at its goto. Opt-in: leave it off to relocate a body whose returns should stay
+         * returns. Must be spliced via {@code insertBefore}/{@code insertAfter} (which supply the
+         * successor); {@code replaceBody} has none and will reject the continuation. Returns this range.
+         * <p>
+         * To fold several such bodies before one instruction, use
+         * {@link CodeWriter#insertChainBefore(Instruction, java.util.List)} — repeated
+         * {@code insertBefore(at, …)} would bind every body's continuation to {@code at}, so earlier
+         * bodies would skip later ones.
+         */
+        public ClonedRange redirectReturns() {
+            Map<Instruction, Instruction> rewritten = new IdentityHashMap<>();
+            for (int i = 0; i < instructions.size(); i++) {
+                if (instructions.get(i) instanceof ReturnInstruction) {
+                    Instruction goto_ = new GotoInstruction(GOTO.getCode(), 0, (short) 0);
+                    rewritten.put(instructions.get(i), goto_);
+                    instructions.set(i, goto_);
+                    continuationBranches.add(goto_);
+                }
+            }
+            if (!rewritten.isEmpty()) {
+                for (List<Instruction> tg : targets.values()) {
+                    for (int k = 0; k < tg.size(); k++) {
+                        Instruction repl = rewritten.get(tg.get(k));
+                        if (repl != null) {
+                            tg.set(k, repl);
+                        }
+                    }
+                }
+            }
+            return this;
         }
     }
 
@@ -545,7 +836,9 @@ public class CodeWriter {
         List<Instruction> out = new ArrayList<>();
         if (tg != null) {
             for (Instruction t : tg) {
-                out.add(t == null ? null : map.get(t));
+                // In-range targets map to their clone; an out-of-range target is carried by identity so
+                // it resolves against the host at splice time (rather than dangling as null).
+                out.add(t == null ? null : map.getOrDefault(t, t));
             }
         }
         return out;
@@ -757,6 +1050,16 @@ public class CodeWriter {
      * @param newOrder the instructions in their new order; survivors keep identity, new ones are spliced in
      */
     private void relink(List<Instruction> newOrder) {
+        relink(newOrder, resolveExistingTable());
+    }
+
+    /**
+     * As {@link #relink(List)} but with the exception table supplied by identity ({@code regions},
+     * resolved by the caller against the correct baseline) rather than read from the current table.
+     * The table is rebuilt from each region's post-layout offsets, which is robust against the offset
+     * collisions a freshly spliced block would otherwise cause in an offset-keyed remap.
+     */
+    private void relink(List<Instruction> newOrder, List<ExceptionRegionRef> regions) {
         // 1. Layout: provisional new offsets + per-instruction lengths (switch padding from new offset).
         Map<Instruction, Integer> newOff = layout(newOrder);
         Map<Integer, Instruction> newByOffset = new HashMap<>();
@@ -778,16 +1081,6 @@ public class CodeWriter {
         // inverted-conditional + goto_w). Mutates newOrder/branchTargets; re-layout afterwards.
         newOrder = widenBranches(newOrder);
         newOff = layout(newOrder);
-        int newCodeLength = newOff.isEmpty() ? 0
-                : newOff.get(newOrder.get(newOrder.size() - 1))
-                  + instructionLength(newOrder.get(newOrder.size() - 1), newOff.get(newOrder.get(newOrder.size() - 1)));
-
-        // 3. Old->new offset map for attribute remap (survivors carry their pre-edit offset).
-        Map<Integer, Integer> oldToNew = new HashMap<>();
-        for (Instruction i : newOrder) {
-            oldToNew.put(i.getOffset(), newOff.get(i));
-        }
-        oldToNew.put(bytecode.length, newCodeLength);
 
         // 4. Reconstruct branches/switches with new offsets+relatives; move others to their new offset.
         Map<Instruction, Instruction> remap = new IdentityHashMap<>();
@@ -824,7 +1117,7 @@ public class CodeWriter {
         branchTargets.putAll(newTargets);
 
         // 6. Attributes + bytecode + frames.
-        remapExceptionTable(oldToNew);
+        rebuildExceptionTable(regions, newOff);
         dropTransientDebugAttributes();
         modified = true;
         ensureMaxLocals();
@@ -1105,11 +1398,69 @@ public class CodeWriter {
     }
 
     /** Remaps exception-table PCs through the old->new offset map. catch_type is a cp index, unchanged. */
-    private void remapExceptionTable(Map<Integer, Integer> oldToNew) {
-        for (com.tonic.parser.attribute.table.ExceptionTableEntry ex : codeAttribute.getExceptionTable()) {
-            ex.setStartPc(oldToNew.getOrDefault(ex.getStartPc(), ex.getStartPc()));
-            ex.setEndPc(oldToNew.getOrDefault(ex.getEndPc(), ex.getEndPc()));
-            ex.setHandlerPc(oldToNew.getOrDefault(ex.getHandlerPc(), ex.getHandlerPc()));
+    private List<ExceptionRegionRef> resolveExistingTable() {
+        List<ExceptionRegionRef> refs = new ArrayList<>();
+        for (ExceptionTableEntry ex : codeAttribute.getExceptionTable()) {
+            ExceptionRegionRef r = resolveRegion(ex, instructions);
+            if (r != null) {
+                refs.add(r);
+            }
+        }
+        return refs;
+    }
+
+    /** Resolves PC-based entries to identity-based regions against {@code body}'s own layout. */
+    private static List<ExceptionRegionRef> resolveRegions(List<ExceptionTableEntry> entries, List<Instruction> body) {
+        Map<Integer, Instruction> byOffset = new HashMap<>();
+        for (Instruction i : body) {
+            byOffset.put(i.getOffset(), i);
+        }
+        List<ExceptionRegionRef> refs = new ArrayList<>();
+        for (ExceptionTableEntry ex : entries) {
+            ExceptionRegionRef r = resolveRegion(ex, byOffset);
+            if (r != null) {
+                refs.add(r);
+            }
+        }
+        return refs;
+    }
+
+    /**
+     * Binds one entry to instruction identities: start/handler by exact offset, and the protected
+     * region's last instruction (inclusive) as the greatest offset below the exclusive end_pc. Returns
+     * {@code null} if any boundary cannot be resolved.
+     */
+    private static ExceptionRegionRef resolveRegion(ExceptionTableEntry ex, Map<Integer, Instruction> byOffset) {
+        Instruction start = byOffset.get(ex.getStartPc());
+        Instruction handler = byOffset.get(ex.getHandlerPc());
+        Instruction last = null;
+        int best = -1;
+        for (Map.Entry<Integer, Instruction> e : byOffset.entrySet()) {
+            int off = e.getKey();
+            if (off < ex.getEndPc() && off > best) {
+                best = off;
+                last = e.getValue();
+            }
+        }
+        if (start == null || handler == null || last == null) {
+            return null;
+        }
+        return new ExceptionRegionRef(start, last, handler, ex.getCatchType());
+    }
+
+    /** Rebuilds the exception table from identity regions, deriving PCs from the final layout. */
+    private void rebuildExceptionTable(List<ExceptionRegionRef> regions, Map<Instruction, Integer> newOff) {
+        List<ExceptionTableEntry> table = codeAttribute.getExceptionTable();
+        table.clear();
+        for (ExceptionRegionRef r : regions) {
+            Integer start = newOff.get(r.start);
+            Integer last = newOff.get(r.last);
+            Integer handler = newOff.get(r.handler);
+            if (start == null || last == null || handler == null) {
+                continue;
+            }
+            int endPc = last + instructionLength(r.last, last);
+            table.add(new ExceptionTableEntry(start, endPc, handler, r.catchType));
         }
     }
 
@@ -1123,12 +1474,37 @@ public class CodeWriter {
         });
     }
 
-    /** Regenerates the StackMapTable from the corrected bytecode (best-effort). */
+    /** Regenerates the StackMapTable from the corrected bytecode (best-effort) and raises max_stack. */
     private void regenerateFrames() {
         try {
-            new FrameGenerator(constPool).updateStackMapTable(methodEntry);
+            FrameGenerator fg = new FrameGenerator(constPool);
+            fg.updateStackMapTable(methodEntry);
+            raiseMaxStack(fg.getMaxStack());
         } catch (Exception e) {
             Logger.error("Frame regeneration after edit failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Computes {@code max_stack} over the control-flow graph (via {@link FrameGenerator}) and raises the
+     * method's value if the linear estimate under-counts — correct for loops, joins, and handler entry
+     * states where a textual scan can miss the true peak. Best-effort: a failure leaves the existing
+     * value untouched. Returns the resulting max_stack.
+     */
+    public int computeMaxStack() {
+        try {
+            raiseMaxStack(new FrameGenerator(constPool).computeMaxStack(methodEntry));
+        } catch (Exception e) {
+            Logger.error("max_stack computation failed: " + e.getMessage());
+        }
+        return maxStack;
+    }
+
+    /** Raises max_stack (and the CodeAttribute) to {@code candidate} when it exceeds the current value. */
+    private void raiseMaxStack(int candidate) {
+        if (candidate > maxStack) {
+            maxStack = candidate;
+            codeAttribute.setMaxStack(maxStack);
         }
     }
 
@@ -1192,6 +1568,7 @@ public class CodeWriter {
      */
     public void write() throws IOException {
         analyze();
+        computeMaxStack();
         rebuildBytecode();
     }
 

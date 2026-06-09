@@ -286,6 +286,34 @@ The fluent bytecode instruction builder with string-based labels.
     .ireturn()
 ```
 
+### Switch Instructions
+
+`tableswitch` dispatches over a contiguous key range; `lookupswitch` over an arbitrary key set. Targets
+are label names (all `label()`-defined), and the 4-byte alignment padding is computed automatically.
+
+```java
+.code()
+    .iload(0)
+    .tableswitch(0, 2, "dflt", "c0", "c1", "c2")   // keys 0,1,2 in order; "dflt" is the fallthrough
+    .label("c0").iconst(10).ireturn()
+    .label("c1").iconst(20).ireturn()
+    .label("c2").iconst(30).ireturn()
+    .label("dflt").iconst(-1).ireturn()
+```
+
+```java
+Map<Integer, String> cases = new LinkedHashMap<>();
+cases.put(1, "one");
+cases.put(100, "hundred");                          // keys are sorted ascending for you
+
+.code()
+    .iload(0)
+    .lookupswitch("dflt", cases)
+    .label("one").iconst(1).ireturn()
+    .label("hundred").iconst(2).ireturn()
+    .label("dflt").iconst(0).ireturn()
+```
+
 ### Method Invocation
 
 ```java
@@ -417,6 +445,69 @@ The fluent bytecode instruction builder with string-based labels.
     .aload(0)
     .monitorexit()
 ```
+
+### Detached Snippets (splice into existing methods)
+
+`CodeBuilder` normally builds a whole method through the `ClassBuilder -> MethodBuilder -> code()`
+chain. To hand-assemble a fragment and splice it into a method that *already exists* (parsed from a
+loaded class), use `CodeBuilder.detached()` and `assemble(ClassFile target)`. The snippet is resolved
+against `target`'s constant pool (so any classes, members, or `ldc` constants it references are added
+to `target` and the spliced indices are valid), and returned as a `CodeWriter.ClonedRange` whose
+branch/switch targets are carried by identity — so it relinks correctly wherever it lands.
+
+```java
+// Assemble a fragment against the class it will be spliced into.
+CodeWriter.ClonedRange snippet = CodeBuilder.detached()
+    .getstatic("java/lang/System", "out", "Ljava/io/PrintStream;")
+    .ldc("loaded")
+    .invokevirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V")
+    .assemble(target);
+
+// Splice it into an existing method (here, prepend to <clinit>).
+CodeWriter cw = new CodeWriter(clinit);
+cw.insertBefore(cw.getInstructions().iterator().next(), snippet);  // or cw.replaceBody(snippet)
+cw.write();
+```
+
+The relink pass recomputes offsets, branch widening, the exception table, and regenerates the
+StackMapTable. See [Bytecode API](bytecode-api.md) for the handle-keyed `insertBefore`/`replaceBody`
+splice points and `ClonedRange`. `invokedynamic` is supported on a detached builder — its bootstrap
+method is added to the `assemble` target's `BootstrapMethods` attribute — and `trycatch` regions are
+carried by instruction identity, so they relink correctly wherever the snippet lands. The only thing a
+detached builder lacks is `end()` (it has no parent chain).
+
+**Branching into the host (external + continuation labels).** A snippet whose control flow exits into
+the host method (a guard, or a loop that falls through) can branch to a target outside itself:
+
+- `externalLabel(name)` declares a target that lives in the host. Branch to it as usual (`goto_`,
+  `if*`), then bind it to a host instruction at splice time — either `range.bindLabel(name, hostInsn)`
+  or the `insertBefore`/`insertAfter(handle, range, Map<String,Instruction>)` overload. An unbound
+  external label, or a target not in the host method, throws at splice (never a silent miscompile). A
+  branch to a label that is neither defined nor declared external stays a hard error.
+- A `label(name)` placed at the snippet's tail (no following op) is a **continuation** label: branches
+  to it fall through into the host after the splice point, auto-bound to the insertion successor
+  (`insertBefore` → the handle; `insertAfter` → the instruction after it). `replaceBody` has no host
+  successor and rejects continuation branches.
+
+```java
+CodeWriter.ClonedRange guard = CodeBuilder.detached()
+    .externalLabel("slow")
+    .aload(0).ifnull("slow")     // null? jump to an existing host instruction
+    .assemble(target);           // falls through into the host otherwise
+hostCw.insertBefore(firstHostInsn, guard.bindLabel("slow", slowPathHandle));
+hostCw.write();
+```
+
+Both kinds are bound into the host's identity-based relink, so they survive subsequent edits/shifts.
+
+**`ClonedRange` vs. the raw instruction list.** Every splice point also has a plain
+`List<Instruction>` overload, and `ClonedRange.instructions()` exposes the assembled list — so
+`cw.insertAfter(handle, snippet.instructions())` works too. Prefer this only for straight-line
+snippets or ones whose only control flow is `goto`/`if*`: the List overloads re-derive branch targets
+from stored relative offsets against the new layout, which is alignment-independent for those. A
+snippet containing an internal `tableswitch`/`lookupswitch` **must** be spliced as the `ClonedRange`
+itself — switch padding is alignment-sensitive, and only the `ClonedRange` carries the targets by
+identity so they survive landing at a different 4-byte alignment.
 
 ---
 
