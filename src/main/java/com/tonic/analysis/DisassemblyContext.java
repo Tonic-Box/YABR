@@ -3,18 +3,26 @@ package com.tonic.analysis;
 import com.tonic.analysis.instruction.InvokeDynamicInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.BootstrapMethodsAttribute;
+import com.tonic.parser.attribute.MethodParametersAttribute;
 import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.attribute.table.LocalVariableTableEntry;
+import com.tonic.parser.attribute.table.MethodParameter;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
+import com.tonic.utill.DescriptorUtil;
+import com.tonic.utill.Modifiers;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Supplies the verbose enrichments {@link InstructionRenderer} appends to operands: local-variable
- * names/types (from the LocalVariableTable) and resolved invokedynamic bootstraps (from the class's
- * BootstrapMethods). Disabled enrichments yield empty strings, so the renderer needs no extra guards.
+ * Supplies the verbose enrichments for disassembly: local-variable names/types (from the
+ * LocalVariableTable) and resolved invokedynamic bootstraps (from the class's BootstrapMethods) that
+ * {@link InstructionRenderer} appends to operands, plus the method {@link #signature(MethodEntry)}
+ * header. Disabled enrichments yield empty strings, so the renderer needs no extra guards.
  */
 final class DisassemblyContext {
 
@@ -42,17 +50,75 @@ final class DisassemblyContext {
      * @return the annotation, or an empty string
      */
     String localAnnotation(int pc, int slot) {
-        if (!localVariables || localTable == null) {
+        if (!localVariables) {
             return "";
+        }
+        LocalVariableTableEntry entry = entryForSlot(pc, slot);
+        if (entry == null) {
+            return "";
+        }
+        return "  // " + utf8(entry.getNameIndex()) + ": " + utf8(entry.getDescriptorIndex());
+    }
+
+    /**
+     * Renders a method's signature as {@code name(param: descriptor, ...)}, resolving parameter names
+     * from the MethodParameters attribute, then the LocalVariableTable, falling back to {@code argN}.
+     * Parameter types always come from the descriptor; the implicit {@code this} slot is omitted.
+     *
+     * @param method the method to describe
+     * @return the rendered signature
+     */
+    String signature(MethodEntry method) {
+        List<String> paramTypes = DescriptorUtil.parseParameterDescriptors(method.getDesc());
+        List<String> declaredNames = methodParameterNames(method);
+        boolean isStatic = Modifiers.isStatic(method.getAccess());
+
+        int slot = isStatic ? 0 : 1;
+        StringBuilder sb = new StringBuilder(method.getName()).append('(');
+        for (int i = 0; i < paramTypes.size(); i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            String type = paramTypes.get(i);
+            String name = i < declaredNames.size() ? declaredNames.get(i) : null;
+            if (name == null) {
+                LocalVariableTableEntry entry = entryForSlot(0, slot);
+                if (entry != null) {
+                    name = utf8(entry.getNameIndex());
+                }
+            }
+            sb.append(name != null ? name : "arg" + i).append(": ").append(type);
+            slot += ("J".equals(type) || "D".equals(type)) ? 2 : 1;
+        }
+        return sb.append(')').toString();
+    }
+
+    private List<String> methodParameterNames(MethodEntry method) {
+        for (Attribute attribute : method.getAttributes()) {
+            if (attribute instanceof MethodParametersAttribute) {
+                List<MethodParameter> params = ((MethodParametersAttribute) attribute).getParameters();
+                List<String> names = new ArrayList<>(params.size());
+                for (MethodParameter param : params) {
+                    names.add(param.getNameIndex() != 0 ? utf8(param.getNameIndex()) : null);
+                }
+                return names;
+            }
+        }
+        return List.of();
+    }
+
+    private LocalVariableTableEntry entryForSlot(int pc, int slot) {
+        if (localTable == null) {
+            return null;
         }
         for (LocalVariableTableEntry entry : localTable) {
             if (entry.getIndex() == slot
                     && pc >= entry.getStartPc()
                     && pc < entry.getStartPc() + entry.getLengthPc()) {
-                return "  // " + utf8(entry.getNameIndex()) + ": " + utf8(entry.getDescriptorIndex());
+                return entry;
             }
         }
-        return "";
+        return null;
     }
 
     /**

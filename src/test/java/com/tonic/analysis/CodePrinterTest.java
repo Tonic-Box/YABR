@@ -681,6 +681,16 @@ class CodePrinterTest {
         }
 
         @Test
+        void printsSipushNegative() {
+            byte[] code = {0x11, (byte) 0xFF, (byte) 0xFF};
+            String result = CodePrinter.prettyPrintCode(code, constPool);
+
+            assertTrue(result.contains("sipush"));
+            assertTrue(result.contains("-1"));
+            assertFalse(result.contains("65535"));
+        }
+
+        @Test
         void printsLdc() {
             Utf8Item utf8 = constPool.findOrAddUtf8("test");
             StringRefItem stringRef = constPool.findOrAddString("test");
@@ -1052,6 +1062,16 @@ class CodePrinterTest {
 
             assertTrue(result.contains("goto"));
             assertTrue(result.contains("5"));
+        }
+
+        @Test
+        void printsBackwardGoto() {
+            byte[] code = {0x00, 0x00, (byte) 0xA7, (byte) 0xFF, (byte) 0xFE};
+            String result = CodePrinter.prettyPrintCode(code, constPool);
+
+            assertTrue(result.contains("goto"));
+            assertTrue(result.contains("-2"));
+            assertFalse(result.contains("65534"));
         }
 
         @Test

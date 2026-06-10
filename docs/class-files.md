@@ -305,7 +305,10 @@ System.out.println(code.prettyPrintCode(opts));
 
 The verbose profile adds, as `//` comment lines (so editors style them as comments):
 
-- a `// max_stack = N, max_locals = M` header (`withHeader`)
+- a `// signature: name(param: descriptor, ...)` line and a `// max_stack = N, max_locals = M`
+  header (`withHeader`). Parameter names are resolved from the MethodParameters attribute
+  (`-parameters`), then the LocalVariableTable (`-g`), falling back to `argN`; types always come
+  from the descriptor and the implicit `this` slot is omitted.
 - `// line N` markers from the LineNumberTable (`withLineNumbers`)
 - `// frame: <FrameKind>` markers from the StackMapTable (`withStackMapFrames`)
 - `// name: descriptor` annotations on local-slot operands from the LocalVariableTable (`withLocalVariables`)
@@ -315,6 +318,7 @@ The verbose profile adds, as `//` comment lines (so editors style them as commen
 Example (a method with a lambda + string concat in a `try`/`catch`, compiled with `-g`):
 
 ```
+// signature: run(n: I)
 // max_stack = 2, max_locals = 4
 // line 5
 0000: iconst_0

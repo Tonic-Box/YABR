@@ -4,6 +4,7 @@ import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.instruction.InstructionFactory;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
@@ -72,6 +73,10 @@ public class CodePrinter {
 
         StringBuilder sb = new StringBuilder();
         if (options.isHeader()) {
+            MethodEntry method = codeAttribute.getMethod();
+            if (method != null) {
+                sb.append("// signature: ").append(context.signature(method)).append("\n");
+            }
             sb.append("// max_stack = ").append(codeAttribute.getMaxStack())
                     .append(", max_locals = ").append(codeAttribute.getMaxLocals()).append("\n");
         }

@@ -103,6 +103,15 @@ public class CodeAttribute extends Attribute {
         return super.getClassFile();
     }
 
+    /**
+     * Returns the method that owns this code attribute, or {@code null} if its parent is not a method.
+     *
+     * @return the owning method entry, or {@code null}
+     */
+    public MethodEntry getMethod() {
+        return parent instanceof MethodEntry ? (MethodEntry) parent : null;
+    }
+
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
         dos.writeShort(maxStack);

@@ -52,7 +52,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
 
     @Override
     public void visit(SipushInstruction instr) {
-        sb.append(instr.getValue() & 0xFFFF);
+        sb.append(instr.getValue());
     }
 
     @Override
@@ -134,7 +134,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
 
     @Override
     public void visit(ConditionalBranchInstruction instr) {
-        sb.append(instr.getBranchOffset() & 0xFFFF);
+        sb.append(instr.getBranchOffset());
     }
 
     @Override
@@ -142,17 +142,13 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
         if (instr.getType() == GotoInstruction.GotoType.GOTO_WIDE) {
             sb.append(instr.getBranchOffsetWide());
         } else {
-            sb.append(instr.getBranchOffset() & 0xFFFF);
+            sb.append(instr.getBranchOffset());
         }
     }
 
     @Override
     public void visit(JsrInstruction instr) {
-        if (instr.isWide()) {
-            sb.append(instr.getBranchOffset());
-        } else {
-            sb.append(instr.getBranchOffset() & 0xFFFF);
-        }
+        sb.append(instr.getBranchOffset());
     }
 
     @Override

@@ -74,6 +74,7 @@ class VerboseDisassemblyTest {
 
         String verbose = code.prettyPrintCode(DisassemblyOptions.verbose());
 
+        assertTrue(verbose.contains("// signature: run(n: I)"), "signature with param name present:\n" + verbose);
         assertTrue(verbose.contains("max_stack ="), "header present:\n" + verbose);
         assertTrue(verbose.contains("// line "), "line numbers present:\n" + verbose);
         assertTrue(verbose.contains("invokedynamic"), "invokedynamic present:\n" + verbose);
