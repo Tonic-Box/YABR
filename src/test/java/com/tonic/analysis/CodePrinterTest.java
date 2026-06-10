@@ -4,9 +4,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
-import com.tonic.parser.constpool.structure.FieldRef;
-import com.tonic.parser.constpool.structure.MethodRef;
-import com.tonic.parser.constpool.structure.NameAndType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -1065,13 +1062,14 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsBackwardGoto() {
-            byte[] code = {0x00, 0x00, (byte) 0xA7, (byte) 0xFF, (byte) 0xFE};
+        void printsBackwardGotoAsAbsoluteTarget() {
+            byte[] code = {0x00, 0x00, 0x00, 0x00, (byte) 0xA7, (byte) 0xFF, (byte) 0xFE};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
-            assertTrue(result.contains("goto"));
-            assertTrue(result.contains("-2"));
-            assertFalse(result.contains("65534"));
+            String gotoLine = result.lines().filter(l -> l.contains("goto")).findFirst().orElse("");
+            assertTrue(gotoLine.contains("0002"), "goto at 0004 jumps -2 -> absolute target 0002, was: " + gotoLine);
+            assertFalse(gotoLine.contains("-2"), "must print absolute target, not relative offset");
+            assertFalse(result.contains("65534"), "must not print unsigned 16-bit garbage");
         }
 
         @Test
@@ -1147,7 +1145,7 @@ class CodePrinterTest {
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
             assertTrue(result.contains("tableswitch"));
-            assertTrue(result.contains("default=16"));
+            assertTrue(result.contains("default=0016"));
             assertTrue(result.contains("low=1"));
             assertTrue(result.contains("high=3"));
             assertTrue(result.contains("count=3"));
@@ -1171,7 +1169,7 @@ class CodePrinterTest {
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
             assertTrue(result.contains("tableswitch"));
-            assertTrue(result.contains("default=12"));
+            assertTrue(result.contains("default=0013"));
             assertTrue(result.contains("low=0"));
             assertTrue(result.contains("high=1"));
         }
@@ -1191,7 +1189,7 @@ class CodePrinterTest {
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
             assertTrue(result.contains("lookupswitch"));
-            assertTrue(result.contains("default=20"));
+            assertTrue(result.contains("default=0020"));
             assertTrue(result.contains("npairs=2"));
             assertTrue(result.contains("match=10"));
             assertTrue(result.contains("match=20"));
@@ -1211,7 +1209,7 @@ class CodePrinterTest {
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
             assertTrue(result.contains("lookupswitch"));
-            assertTrue(result.contains("default=8"));
+            assertTrue(result.contains("default=0010"));
             assertTrue(result.contains("npairs=1"));
             assertTrue(result.contains("match=5"));
         }

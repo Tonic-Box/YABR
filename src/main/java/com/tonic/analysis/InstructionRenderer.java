@@ -134,21 +134,20 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
 
     @Override
     public void visit(ConditionalBranchInstruction instr) {
-        sb.append(instr.getBranchOffset());
+        appendTarget(instr.getOffset() + instr.getBranchOffset());
     }
 
     @Override
     public void visit(GotoInstruction instr) {
-        if (instr.getType() == GotoInstruction.GotoType.GOTO_WIDE) {
-            sb.append(instr.getBranchOffsetWide());
-        } else {
-            sb.append(instr.getBranchOffset());
-        }
+        int relative = instr.getType() == GotoInstruction.GotoType.GOTO_WIDE
+                ? instr.getBranchOffsetWide()
+                : instr.getBranchOffset();
+        appendTarget(instr.getOffset() + relative);
     }
 
     @Override
     public void visit(JsrInstruction instr) {
-        sb.append(instr.getBranchOffset());
+        appendTarget(instr.getOffset() + instr.getBranchOffset());
     }
 
     @Override
@@ -238,24 +237,26 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
 
     @Override
     public void visit(TableSwitchInstruction instr) {
+        int base = instr.getOffset();
         int count = instr.getHigh() - instr.getLow() + 1;
-        sb.append(" default=").append(instr.getDefaultOffset())
+        sb.append(" default=").append(formatTarget(base + instr.getDefaultOffset()))
                 .append(", low=").append(instr.getLow())
                 .append(", high=").append(instr.getHigh())
                 .append(", count=").append(count);
         for (Map.Entry<Integer, Integer> entry : instr.getJumpOffsets().entrySet()) {
             sb.append("\n        case[").append(entry.getKey())
-                    .append("] => offset ").append(entry.getValue());
+                    .append("] => offset ").append(formatTarget(base + entry.getValue()));
         }
     }
 
     @Override
     public void visit(LookupSwitchInstruction instr) {
-        sb.append(" default=").append(instr.getDefaultOffset())
+        int base = instr.getOffset();
+        sb.append(" default=").append(formatTarget(base + instr.getDefaultOffset()))
                 .append(", npairs=").append(instr.getNpairs());
         for (Map.Entry<Integer, Integer> entry : instr.getMatchOffsets().entrySet()) {
             sb.append("\n        match=").append(entry.getKey())
-                    .append(" => offset ").append(entry.getValue());
+                    .append(" => offset ").append(formatTarget(base + entry.getValue()));
         }
     }
 
@@ -295,6 +296,17 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
         if (context != null) {
             sb.append(context.localAnnotation(instr.getOffset(), slot));
         }
+    }
+
+    /**
+     * Appends a branch target as an absolute bytecode offset, zero-padded to match the offset column.
+     */
+    private void appendTarget(int absoluteOffset) {
+        sb.append(formatTarget(absoluteOffset));
+    }
+
+    private static String formatTarget(int absoluteOffset) {
+        return String.format("%04d", absoluteOffset);
     }
 
     /**

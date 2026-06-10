@@ -4,16 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam&#10;- Update docs">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/class-files.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/class-files.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/DisassemblyContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/DisassemblyContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/InstructionRenderer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/InstructionRenderer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/CodePrinterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/CodePrinterTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/VerboseDisassemblyTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/VerboseDisassemblyTest.java" afterDir="false" />
-    </list>
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -449,11 +440,18 @@
       <option name="project" value="LOCAL" />
       <updated>1781065565297</updated>
     </task>
-    <option name="localTasksCounter" value="34" />
+    <task id="LOCAL-00034" summary="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer">
+      <option name="closed" value="true" />
+      <created>1781068208430</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1781068208430</updated>
+    </task>
+    <option name="localTasksCounter" value="35" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fixes to statement recovery" />
     <MESSAGE value="- Fixes to statement recovery p2" />
     <MESSAGE value="- Expand SSA-&gt;LLVM backend to full Java construct set via runtime ABI" />
     <MESSAGE value="-  Add LLVM IR -&gt; SSA lifter for round-trip optimizer integration" />
@@ -478,6 +476,7 @@
     <MESSAGE value="- constant guard for force inlining" />
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam" />
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam&#10;- Update docs" />
-    <option name="LAST_COMMIT_MESSAGE" value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam&#10;- Update docs" />
+    <MESSAGE value="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer" />
   </component>
 </project>
