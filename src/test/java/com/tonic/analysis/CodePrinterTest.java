@@ -878,7 +878,7 @@ class CodePrinterTest {
             ClassRefItem classRef = constPool.findOrAddClass("[[I");
             int index = constPool.getIndexOf(classRef);
 
-            byte[] code = {(byte) 0xC5, (byte) (index >> 8), (byte) (index & 0xFF)};
+            byte[] code = {(byte) 0xC5, (byte) (index >> 8), (byte) (index & 0xFF), 0x02};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
             assertTrue(result.contains("multianewarray"));

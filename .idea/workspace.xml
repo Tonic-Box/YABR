@@ -4,10 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- constant guard for force inlining">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodePrinter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/Instruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/JsrInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/JsrInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/UnknownInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/UnknownInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/CodePrinterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/CodePrinterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/InstructionTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/InstructionTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -428,11 +437,18 @@
       <option name="project" value="LOCAL" />
       <updated>1780969996921</updated>
     </task>
-    <option name="localTasksCounter" value="32" />
+    <task id="LOCAL-00032" summary="- constant guard for force inlining">
+      <option name="closed" value="true" />
+      <created>1781058293739</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1781058293739</updated>
+    </task>
+    <option name="localTasksCounter" value="33" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- fixed local scoping issues" />
     <MESSAGE value="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission" />
     <MESSAGE value="- Fixed issues with scope, guard recovery, and local inlining" />
     <MESSAGE value="- Fixes to statement recovery" />
@@ -457,6 +473,7 @@
     <MESSAGE value="- CodeWriter: handle-keyed insertBefore/insertAfter/removeInstruction/replaceInstruction/replaceBody + cloneRange/cloneRangeWithTargets, all via a relink pass (branch/switch retarget, branch widening, exception table, frame regen). New ConstPoolRemapper + MethodGrafter for cross-pool method grafting (incl. invokedynamic bootstraps); ClassFile.redirectOwner and stripStackMapTables. Local-var clones use the narrowest encoding.&#10;&#10;- Fix CONSTANT_Utf8 to use JVMS modified UTF-8 (read + write) and FrameGenerator goto_w target computation." />
     <MESSAGE value="Detached snippet assembly + cloned-range inlining primitives&#10;- CodeBuilder.detached()/assemble() produces a spliceable ClonedRange: invokedynamic (bootstrap added to the target's BootstrapMethods), try/catch, and branches into the host via externalLabel/bindLabel or a tail continuation label.&#10;- CodeWriter: exception-table relink is now identity-based (fixes host table corruption when a spliced block's offsets collide on insert); max_stack is computed over the CFG via FrameGenerator (computeMaxStack, applied in relink + write) so handler/loop peaks no longer under-count; cloneRangeWithTargets carries out-of-range branch targets by identity (same-method, guarded loud against cross-method misuse); ClonedRange.redirectReturns() turns cloned returns into continuation exits and insertChainBefore folds several bodies without the skip hazard.&#10;- ClassFile.addBootstrapMethod/getBootstrapMethodsAttribute (ConstPoolRemapper now delegates to them). New tests: CodeBuilderSnippetTest, CodeBuilderExternalBranchTest, MaxStackTest, ClonedRangeExitsTest." />
     <MESSAGE value="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly" />
-    <option name="LAST_COMMIT_MESSAGE" value="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly" />
+    <MESSAGE value="- constant guard for force inlining" />
+    <option name="LAST_COMMIT_MESSAGE" value="- constant guard for force inlining" />
   </component>
 </project>

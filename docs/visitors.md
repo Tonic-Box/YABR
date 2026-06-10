@@ -151,10 +151,12 @@ Override these methods to handle specific instruction types:
 
 ```java
 // Control flow
-void visit(GotoInstruction instr)
-void visit(IfInstruction instr)
-void visit(IfIcmpInstruction instr)
-void visit(SwitchInstruction instr)
+void visit(GotoInstruction instr)                 // goto, goto_w
+void visit(JsrInstruction instr)                  // jsr, jsr_w
+void visit(RetInstruction instr)
+void visit(ConditionalBranchInstruction instr)    // if<cond>, if_icmp<cond>, if_acmp<cond>, ifnull, ifnonnull
+void visit(TableSwitchInstruction instr)
+void visit(LookupSwitchInstruction instr)
 void visit(ReturnInstruction instr)
 
 // Method calls
@@ -164,25 +166,26 @@ void visit(InvokeSpecialInstruction instr)
 void visit(InvokeInterfaceInstruction instr)
 void visit(InvokeDynamicInstruction instr)
 
-// Field access
+// Field access (getstatic/getfield share one class; putstatic/putfield share another)
 void visit(GetFieldInstruction instr)
 void visit(PutFieldInstruction instr)
-void visit(GetStaticInstruction instr)
-void visit(PutStaticInstruction instr)
 
 // Object operations
 void visit(NewInstruction instr)
+void visit(NewArrayInstruction instr)
+void visit(ANewArrayInstruction instr)
+void visit(MultiANewArrayInstruction instr)
 void visit(CheckCastInstruction instr)
 void visit(InstanceOfInstruction instr)
 
-// Stack operations
+// Stack / locals / constants
 void visit(ALoadInstruction instr)
 void visit(ILoadInstruction instr)
 void visit(AStoreInstruction instr)
 void visit(IStoreInstruction instr)
 void visit(LdcInstruction instr)
 void visit(IConstInstruction instr)
-// ... and many more
+// ... and many more (see AbstractBytecodeVisitor for the full set)
 ```
 
 ## AbstractBlockVisitor

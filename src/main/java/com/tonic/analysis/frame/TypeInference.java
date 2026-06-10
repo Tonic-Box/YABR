@@ -862,6 +862,9 @@ public class TypeInference {
     }
 
     private String newArrayTypeDescriptor(NewArrayInstruction.ArrayType arrayType) {
+        if (arrayType == null) {
+            return "[Ljava/lang/Object;";
+        }
         switch (arrayType) {
             case T_BOOLEAN: return "[Z";
             case T_CHAR:    return "[C";

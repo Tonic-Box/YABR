@@ -1,21 +1,36 @@
 package com.tonic.analysis;
 
+import com.tonic.analysis.instruction.Instruction;
+import com.tonic.analysis.instruction.InstructionFactory;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
+import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.LineNumberTableAttribute;
+import com.tonic.parser.attribute.LocalVariableTableAttribute;
+import com.tonic.parser.attribute.StackMapTableAttribute;
+import com.tonic.parser.attribute.stack.StackMapFrame;
+import com.tonic.parser.attribute.table.ExceptionTableEntry;
+import com.tonic.parser.attribute.table.LineNumberTableEntry;
 import com.tonic.parser.constpool.ClassRefItem;
-import com.tonic.parser.constpool.FieldRefItem;
-import com.tonic.parser.constpool.MethodRefItem;
-import com.tonic.parser.constpool.StringRefItem;
-import com.tonic.parser.constpool.Utf8Item;
-import com.tonic.utill.Logger;
+import com.tonic.parser.constpool.Item;
 import com.tonic.utill.Opcode;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Bytecode disassembler for converting raw bytecode into human-readable format.
+ *
+ * <p>Decoding is delegated to {@link InstructionFactory} (the single bytecode decoder) and operand
+ * formatting to {@link InstructionRenderer}, so this class only lays out the per-instruction lines
+ * and, for the verbose profile, interleaves line numbers, local-variable and stack-frame markers,
+ * and the exception table.
  */
 public class CodePrinter {
 
     /**
-     * Disassembles the given bytecode into a human-readable format.
+     * Disassembles raw bytecode into the terse per-instruction listing.
      *
      * @param code      the method's bytecode
      * @param constPool the constant pool for resolving references
@@ -23,520 +38,124 @@ public class CodePrinter {
      */
     public static String prettyPrintCode(byte[] code, ConstPool constPool) {
         StringBuilder sb = new StringBuilder();
-        int pc = 0;
-
-        while (pc < code.length) {
-            int opcodeValue = Byte.toUnsignedInt(code[pc]);
-            Opcode opcode = Opcode.fromCode(opcodeValue);
-            String mnemonic = opcode.getMnemonic();
-
-            Logger.info("DEBUG: Decoding opcode " + mnemonic + " at pc=" + pc);
-
-            sb.append(String.format("%04d: %-20s", pc, mnemonic));
-
-            pc += 1;
-
-            switch (opcode) {
-                case NOP:
-                case ACONST_NULL:
-                case ICONST_M1:
-                case ICONST_0:
-                case ICONST_1:
-                case ICONST_2:
-                case ICONST_3:
-                case ICONST_4:
-                case ICONST_5:
-                case LCONST_0:
-                case LCONST_1:
-                case FCONST_0:
-                case FCONST_1:
-                case FCONST_2:
-                case DCONST_0:
-                case DCONST_1:
-                case IALOAD:
-                case LALOAD:
-                case FALOAD:
-                case DALOAD:
-                case AALOAD:
-                case BALOAD:
-                case CALOAD:
-                case SALOAD:
-                case POP:
-                case POP2:
-                case DUP:
-                case DUP_X1:
-                case DUP_X2:
-                case DUP2:
-                case DUP2_X1:
-                case DUP2_X2:
-                case SWAP:
-                case IADD:
-                case LADD:
-                case FADD:
-                case DADD:
-                case ISUB:
-                case LSUB:
-                case FSUB:
-                case DSUB:
-                case IMUL:
-                case LMUL:
-                case FMUL:
-                case DMUL:
-                case IDIV:
-                case LDIV:
-                case FDIV:
-                case DDIV:
-                case IREM:
-                case LREM:
-                case FREM:
-                case DREM:
-                case INEG:
-                case LNEG:
-                case FNEG:
-                case DNEG:
-                case ISHL:
-                case LSHL:
-                case ISHR:
-                case LSHR:
-                case IUSHR:
-                case LUSHR:
-                case IAND:
-                case LAND:
-                case IOR:
-                case LOR:
-                case IXOR:
-                case LXOR:
-                case I2L:
-                case I2F:
-                case I2D:
-                case L2I:
-                case L2F:
-                case L2D:
-                case F2I:
-                case F2L:
-                case F2D:
-                case D2I:
-                case D2L:
-                case D2F:
-                case I2B:
-                case I2C:
-                case I2S:
-                case LCMP:
-                case FCMPL:
-                case FCMPG:
-                case DCMPL:
-                case DCMPG:
-                case ILOAD_0:
-                case ILOAD_1:
-                case ILOAD_2:
-                case ILOAD_3:
-                case LLOAD_0:
-                case LLOAD_1:
-                case LLOAD_2:
-                case LLOAD_3:
-                case FLOAD_0:
-                case FLOAD_1:
-                case FLOAD_2:
-                case FLOAD_3:
-                case DLOAD_0:
-                case DLOAD_1:
-                case DLOAD_2:
-                case DLOAD_3:
-                case ALOAD_0:
-                case ALOAD_1:
-                case ALOAD_2:
-                case ALOAD_3:
-                case ISTORE_0:
-                case ISTORE_1:
-                case ISTORE_2:
-                case ISTORE_3:
-                case LSTORE_0:
-                case LSTORE_1:
-                case LSTORE_2:
-                case LSTORE_3:
-                case FSTORE_0:
-                case FSTORE_1:
-                case FSTORE_2:
-                case FSTORE_3:
-                case DSTORE_0:
-                case DSTORE_1:
-                case DSTORE_2:
-                case DSTORE_3:
-                case ASTORE_0:
-                case ASTORE_1:
-                case ASTORE_2:
-                case ASTORE_3:
-                case IASTORE:
-                case LASTORE:
-                case FASTORE:
-                case DASTORE:
-                case AASTORE:
-                case BASTORE:
-                case CASTORE:
-                case SASTORE:
-                case IRETURN:
-                case LRETURN:
-                case FRETURN:
-                case DRETURN:
-                case ARETURN:
-                case RETURN_:
-                case ARRAYLENGTH:
-                case ATHROW:
-                case MONITORENTER:
-                case MONITOREXIT:
-                case BREAKPOINT:
-                    break;
-
-                case BIPUSH:
-                    if (pc >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int byteValue = code[pc++];
-                    sb.append(byteValue);
-                    break;
-
-                case ILOAD:
-                case LLOAD:
-                case FLOAD:
-                case DLOAD:
-                case ALOAD:
-                case ISTORE:
-                case LSTORE:
-                case FSTORE:
-                case DSTORE:
-                case ASTORE:
-                case RET:
-                    if (pc >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int localIndex = Byte.toUnsignedInt(code[pc++]);
-                    sb.append(localIndex);
-                    break;
-
-                case LDC:
-                    if (pc >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int ldcIndex = Byte.toUnsignedInt(code[pc++]);
-                    Logger.info("DEBUG: about to call resolveConstantPoolReference(" + ldcIndex
-                            + ") at pc=" + (pc - 1));
-                    sb.append("#").append(ldcIndex)
-                            .append(" (").append(resolveConstantPoolReference(ldcIndex, constPool)).append(")");
-                    break;
-
-                case SIPUSH:
-                case IFEQ:
-                case IFNE:
-                case IFLT:
-                case IFGE:
-                case IFGT:
-                case IFLE:
-                case IF_ICMPEQ:
-                case IF_ICMPNE:
-                case IF_ICMPLT:
-                case IF_ICMPGE:
-                case IF_ICMPGT:
-                case IF_ICMPLE:
-                case IF_ACMPEQ:
-                case IF_ACMPNE:
-                case GOTO:
-                case JSR:
-                case IFNULL:
-                case IFNONNULL:
-                    if (pc + 1 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int sipushValue = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                    sb.append(sipushValue);
-                    pc += 2;
-                    break;
-
-                case GETSTATIC:
-                case PUTSTATIC:
-                case GETFIELD:
-                case PUTFIELD:
-                case INVOKEVIRTUAL:
-                case INVOKESPECIAL:
-                case INVOKESTATIC:
-                case CHECKCAST:
-                case INSTANCEOF:
-                case NEW:
-                case ANEWARRAY:
-                case MULTIANEWARRAY:
-                case LDC_W:
-                case LDC2_W:
-                    if (pc + 1 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int cpIndex = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                    Logger.info("DEBUG: about to call resolveConstantPoolReference(" + cpIndex
-                            + ") at pc=" + (pc - 1));
-                    sb.append("#").append(cpIndex)
-                            .append(" (").append(resolveConstantPoolReference(cpIndex, constPool)).append(")");
-                    pc += 2;
-                    break;
-
-                case INVOKEINTERFACE: {
-                    if (pc + 3 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int cpIndex1 = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                    Logger.info("DEBUG: INVOKEINTERFACE with cpIndex=" + cpIndex1
-                            + " at pc=" + (pc - 1));
-                    int count = code[pc + 2] & 0xFF;
-                    int zero = code[pc + 3] & 0xFF;
-                    pc += 4;
-
-                    sb.append("#").append(cpIndex1)
-                            .append(" (").append(resolveConstantPoolReference(cpIndex1, constPool)).append(")")
-                            .append(", count=").append(count)
-                            .append(", zero=").append(zero);
-                    break;
-                }
-
-                case INVOKEDYNAMIC: {
-                    if (pc + 3 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int cpIndex2 = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                    Logger.info("DEBUG: INVOKEDYNAMIC with cpIndex=" + cpIndex2
-                            + " at pc=" + (pc - 1));
-                    int zero1 = code[pc + 2] & 0xFF;
-                    int zero2 = code[pc + 3] & 0xFF;
-                    pc += 4;
-
-                    sb.append("#").append(cpIndex2)
-                            .append(" (InvokeDynamic bootstrapMethodIndex=")
-                            .append(cpIndex2).append(")")
-                            .append(", zero1=").append(zero1)
-                            .append(", zero2=").append(zero2);
-                    break;
-                }
-
-                case NEWARRAY:
-                    if (pc >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int atype = Byte.toUnsignedInt(code[pc++]);
-                    sb.append(atypeDescription(atype));
-                    break;
-
-                case IINC:
-                    if (pc + 1 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int varIndexIinc = Byte.toUnsignedInt(code[pc++]);
-                    int constValueIinc = Byte.toUnsignedInt(code[pc++]);
-                    sb.append(varIndexIinc).append(", ").append(constValueIinc);
-                    break;
-
-                case WIDE:
-                    if (pc >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int wideOpcodeValue = Byte.toUnsignedInt(code[pc++]);
-                    Opcode wideOpcode = Opcode.fromCode(wideOpcodeValue);
-                    Logger.info("DEBUG: WIDE sub-opcode " + wideOpcode.getMnemonic()
-                            + " at pc=" + (pc - 1));
-                    sb.append(wideOpcode.getMnemonic());
-                    switch (wideOpcode) {
-                        case ILOAD:
-                        case FLOAD:
-                        case LLOAD:
-                        case DLOAD:
-                        case ALOAD:
-                        case ISTORE:
-                        case FSTORE:
-                        case LSTORE:
-                        case DSTORE:
-                        case ASTORE:
-                            if (pc + 1 >= code.length) {
-                                sb.append(" <invalid>");
-                                break;
-                            }
-                            int wideVarIndex = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                            sb.append(" ").append(wideVarIndex);
-                            pc += 2;
-                            break;
-                        case IINC:
-                            if (pc + 3 >= code.length) {
-                                sb.append(" <invalid>");
-                                break;
-                            }
-                            int wideIincVar = ((code[pc] & 0xFF) << 8) | (code[pc + 1] & 0xFF);
-                            int wideIincConst = ((code[pc + 2] & 0xFF) << 8) | (code[pc + 3] & 0xFF);
-                            sb.append(" ").append(wideIincVar)
-                                    .append(", ").append(wideIincConst);
-                            pc += 4;
-                            break;
-                        default:
-                            sb.append(" <unsupported>");
-                            break;
-                    }
-                    break;
-
-                case GOTO_W:
-                case JSR_W:
-                    if (pc + 3 >= code.length) {
-                        sb.append(" <invalid>");
-                        break;
-                    }
-                    int branchOffsetW = ((code[pc] & 0xFF) << 24)
-                            | ((code[pc + 1] & 0xFF) << 16)
-                            | ((code[pc + 2] & 0xFF) << 8)
-                            |  (code[pc + 3] & 0xFF);
-                    sb.append(branchOffsetW);
-                    pc += 4;
-                    break;
-
-                case TABLESWITCH: {
-                    int padding = (4 - (pc % 4)) % 4;
-                    pc += padding;
-
-                    int defaultOffset = readIntFromCode(code, pc);
-                    pc += 4;
-                    int low = readIntFromCode(code, pc);
-                    pc += 4;
-                    int high = readIntFromCode(code, pc);
-                    pc += 4;
-
-                    sb.append(" default=").append(defaultOffset)
-                            .append(", low=").append(low)
-                            .append(", high=").append(high);
-
-                    int count2 = high - low + 1;
-                    sb.append(", count=").append(count2);
-
-                    for (int i = 0; i < count2; i++) {
-                        int jumpOffset = readIntFromCode(code, pc);
-                        pc += 4;
-                        sb.append("\n        case[").append(low + i)
-                                .append("] => offset ").append(jumpOffset);
-                    }
-                    break;
-                }
-
-                case LOOKUPSWITCH: {
-                    int padding = (4 - (pc % 4)) % 4;
-                    pc += padding;
-
-                    int defaultOffset = readIntFromCode(code, pc);
-                    pc += 4;
-
-                    int npairs = readIntFromCode(code, pc);
-                    pc += 4;
-
-                    sb.append(" default=").append(defaultOffset)
-                            .append(", npairs=").append(npairs);
-
-                    for (int i = 0; i < npairs; i++) {
-                        int match = readIntFromCode(code, pc);
-                        pc += 4;
-                        int jumpOffset = readIntFromCode(code, pc);
-                        pc += 4;
-                        sb.append("\n        match=").append(match)
-                                .append(" => offset ").append(jumpOffset);
-                    }
-                    break;
-                }
-
-                default:
-                    sb.append(String.format("<unknown opcode 0x%02X>", opcodeValue));
-                    break;
-            }
-
-            sb.append("\n");
+        InstructionRenderer renderer = new InstructionRenderer(sb, constPool);
+        for (Instruction instr : InstructionFactory.parse(code, constPool)) {
+            appendInstruction(sb, renderer, instr);
         }
-
         return sb.toString();
     }
 
     /**
-     * Reads 4 bytes from the code array as a big-endian int.
+     * Disassembles a method's {@link CodeAttribute} with the enrichments selected by {@code options}.
+     * With {@link DisassemblyOptions#terse()} the output matches {@link #prettyPrintCode(byte[],
+     * ConstPool)}.
      *
-     * @param code The bytecode array.
-     * @param pos The position to read from.
-     * @return The int value read from the bytecode.
+     * @param codeAttribute the method's Code attribute
+     * @param options       the enrichments to include
+     * @return the disassembled method
      */
-    private static int readIntFromCode(byte[] code, int pos) {
-        if (pos + 3 >= code.length) {
-            throw new IndexOutOfBoundsException("Not enough bytes to read an int at position " + pos);
+    public static String prettyPrintCode(CodeAttribute codeAttribute, DisassemblyOptions options) {
+        ClassFile classFile = codeAttribute.getClassFile();
+        ConstPool constPool = classFile.getConstPool();
+        byte[] code = codeAttribute.getCode();
+
+        LineNumberTableAttribute lineNumbers = findAttribute(codeAttribute, LineNumberTableAttribute.class);
+        LocalVariableTableAttribute localVariables = findAttribute(codeAttribute, LocalVariableTableAttribute.class);
+        StackMapTableAttribute stackMap = findAttribute(codeAttribute, StackMapTableAttribute.class);
+
+        Map<Integer, Integer> lineByPc = options.isLineNumbers() ? lineNumberMap(lineNumbers) : Map.of();
+        Map<Integer, String> frameByPc = options.isStackMapFrames() ? frameMap(stackMap) : Map.of();
+
+        DisassemblyContext context = new DisassemblyContext(constPool, classFile,
+                localVariables != null ? localVariables.getLocalVariableTable() : null,
+                options.isLocalVariables(), options.isResolveBootstraps());
+
+        StringBuilder sb = new StringBuilder();
+        if (options.isHeader()) {
+            sb.append("// max_stack = ").append(codeAttribute.getMaxStack())
+                    .append(", max_locals = ").append(codeAttribute.getMaxLocals()).append("\n");
         }
-        return ((code[pos] & 0xFF) << 24)
-                | ((code[pos + 1] & 0xFF) << 16)
-                | ((code[pos + 2] & 0xFF) << 8)
-                |  (code[pos + 3] & 0xFF);
+
+        InstructionRenderer renderer = new InstructionRenderer(sb, constPool, context);
+        for (Instruction instr : InstructionFactory.parse(code, constPool)) {
+            int pc = instr.getOffset();
+            Integer line = lineByPc.get(pc);
+            if (line != null) {
+                sb.append("// line ").append(line).append("\n");
+            }
+            String frame = frameByPc.get(pc);
+            if (frame != null) {
+                sb.append("// frame: ").append(frame).append("\n");
+            }
+            appendInstruction(sb, renderer, instr);
+        }
+
+        if (options.isExceptionTable()) {
+            appendExceptionTable(sb, constPool, codeAttribute.getExceptionTable());
+        }
+        return sb.toString();
     }
 
-    /**
-     * Resolves a constant pool reference to a human-readable string.
-     *
-     * @param index The constant pool index.
-     * @param constPool The constant pool.
-     * @return A human-readable representation of the constant pool entry.
-     */
-    private static String resolveConstantPoolReference(int index, ConstPool constPool) {
-        Logger.info("DEBUG: resolveConstantPoolReference(" + index + ")");
-        if (constPool.getItem(index) instanceof MethodRefItem) {
-            MethodRefItem methodRef = (MethodRefItem) constPool.getItem(index);
-            String className = methodRef.getClassName().replace('/', '.');
-            String methodName = methodRef.getName();
-            String methodDesc = methodRef.getDescriptor();
-            return className + "." + methodName + methodDesc;
-        } else if (constPool.getItem(index) instanceof FieldRefItem) {
-            FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(index);
-            String className = fieldRef.getClassName().replace('/', '.');
-            String fieldName = fieldRef.getName();
-            String fieldDesc = fieldRef.getDescriptor();
-            return className + "." + fieldName + " " + fieldDesc;
-        } else if (constPool.getItem(index) instanceof StringRefItem) {
-            StringRefItem stringItem = (StringRefItem) constPool.getItem(index);
-            Utf8Item utf8 = (Utf8Item) constPool.getItem(stringItem.getValue());
-            return "\"" + utf8.getValue() + "\"";
-        } else if (constPool.getItem(index) instanceof ClassRefItem) {
-            ClassRefItem classRef = (ClassRefItem) constPool.getItem(index);
-            return classRef.getClassName().replace('/', '.');
-        } else {
-            return "UnknownReference";
+    private static void appendInstruction(StringBuilder sb, InstructionRenderer renderer, Instruction instr) {
+        String mnemonic = Opcode.fromCode(instr.getOpcode()).getMnemonic();
+        sb.append(String.format("%04d: %-20s", instr.getOffset(), mnemonic));
+        renderer.render(instr);
+        sb.append("\n");
+    }
+
+    private static void appendExceptionTable(StringBuilder sb, ConstPool constPool, List<ExceptionTableEntry> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return;
+        }
+        sb.append("// Exception table:\n");
+        sb.append(String.format("//   %-8s %-8s %-8s %s%n", "from", "to", "target", "type"));
+        for (ExceptionTableEntry entry : entries) {
+            sb.append(String.format("//   %-8d %-8d %-8d %s%n",
+                    entry.getStartPc(), entry.getEndPc(), entry.getHandlerPc(), catchType(constPool, entry.getCatchType())));
         }
     }
 
-    /**
-     * Provides a description for the atype in NEWARRAY instruction.
-     *
-     * @param atype The array type code.
-     * @return A human-readable type description.
-     */
-    private static String atypeDescription(int atype) {
-        switch (atype) {
-            case 4:
-                return "boolean";
-            case 5:
-                return "char";
-            case 6:
-                return "float";
-            case 7:
-                return "double";
-            case 8:
-                return "byte";
-            case 9:
-                return "short";
-            case 10:
-                return "int";
-            case 11:
-                return "long";
-            default:
-                return "unknown_atype_" + atype;
+    private static String catchType(ConstPool constPool, int catchTypeIndex) {
+        if (catchTypeIndex == 0) {
+            return "any";
         }
+        Item<?> item = constPool.getItem(catchTypeIndex);
+        if (item instanceof ClassRefItem) {
+            return ((ClassRefItem) item).getClassName().replace('/', '.');
+        }
+        return "#" + catchTypeIndex;
+    }
+
+    private static Map<Integer, Integer> lineNumberMap(LineNumberTableAttribute attribute) {
+        Map<Integer, Integer> map = new HashMap<>();
+        if (attribute == null || attribute.getLineNumberTable() == null) {
+            return map;
+        }
+        for (LineNumberTableEntry entry : attribute.getLineNumberTable()) {
+            map.putIfAbsent(entry.getStartPc(), entry.getLineNumber());
+        }
+        return map;
+    }
+
+    private static Map<Integer, String> frameMap(StackMapTableAttribute attribute) {
+        Map<Integer, String> map = new HashMap<>();
+        if (attribute == null || attribute.getFrames() == null) {
+            return map;
+        }
+        int pc = -1;
+        for (StackMapFrame frame : attribute.getFrames()) {
+            pc = (pc < 0) ? frame.getOffsetDelta() : pc + frame.getOffsetDelta() + 1;
+            map.putIfAbsent(pc, frame.getClass().getSimpleName());
+        }
+        return map;
+    }
+
+    private static <T extends Attribute> T findAttribute(CodeAttribute codeAttribute, Class<T> type) {
+        for (Attribute attribute : codeAttribute.getAttributes()) {
+            if (type.isInstance(attribute)) {
+                return type.cast(attribute);
+            }
+        }
+        return null;
     }
 }

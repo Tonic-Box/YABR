@@ -1,14 +1,16 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import static com.tonic.utill.Opcode.JSR;
+import static com.tonic.utill.Opcode.JSR_W;
+
 /**
- * Represents the JSR instruction (0xA8).
+ * Represents the JSR (0xA8) and JSR_W (0xC9) instructions.
  */
 @Getter
 public class JsrInstruction extends Instruction {
@@ -17,16 +19,25 @@ public class JsrInstruction extends Instruction {
     /**
      * Constructs a JsrInstruction.
      *
-     * @param opcode        The opcode of the instruction.
+     * @param opcode        The opcode of the instruction (JSR or JSR_W).
      * @param offset        The bytecode offset of the instruction.
      * @param branchOffset  The branch target offset relative to current instruction.
      */
     public JsrInstruction(int opcode, int offset, int branchOffset) {
-        super(opcode, offset, 3); // opcode + two bytes branch offset
-        if (opcode != 0xA8) {
+        super(opcode, offset, (opcode == JSR.getCode()) ? 3 : 5);
+        if (opcode != JSR.getCode() && opcode != JSR_W.getCode()) {
             throw new IllegalArgumentException("Invalid opcode for JsrInstruction: " + opcode);
         }
         this.branchOffset = branchOffset;
+    }
+
+    /**
+     * Returns whether this is the wide JSR_W form.
+     *
+     * @return {@code true} for JSR_W, {@code false} for JSR.
+     */
+    public boolean isWide() {
+        return opcode == JSR_W.getCode();
     }
 
     @Override
@@ -43,7 +54,11 @@ public class JsrInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        dos.writeShort(branchOffset);
+        if (isWide()) {
+            dos.writeInt(branchOffset);
+        } else {
+            dos.writeShort(branchOffset);
+        }
     }
 
     /**

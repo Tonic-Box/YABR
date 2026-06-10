@@ -281,6 +281,57 @@ if (code != null) {
 }
 ```
 
+### Verbose disassembly
+
+`prettyPrintCode()` produces the terse `offset: opcode operands` listing. The overload
+`prettyPrintCode(DisassemblyOptions)` adds optional enrichments; `DisassemblyOptions.terse()`
+(the default) reproduces the terse listing exactly, while `DisassemblyOptions.verbose()` enables
+all of them:
+
+```java
+import com.tonic.analysis.DisassemblyOptions;
+
+CodeAttribute code = method.getCodeAttribute();
+
+// Everything on
+System.out.println(code.prettyPrintCode(DisassemblyOptions.verbose()));
+
+// Or pick enrichments (each flag has a with* toggle)
+DisassemblyOptions opts = DisassemblyOptions.terse()
+        .withLineNumbers(true)
+        .withExceptionTable(true);
+System.out.println(code.prettyPrintCode(opts));
+```
+
+The verbose profile adds, as `//` comment lines (so editors style them as comments):
+
+- a `// max_stack = N, max_locals = M` header (`withHeader`)
+- `// line N` markers from the LineNumberTable (`withLineNumbers`)
+- `// frame: <FrameKind>` markers from the StackMapTable (`withStackMapFrames`)
+- `// name: descriptor` annotations on local-slot operands from the LocalVariableTable (`withLocalVariables`)
+- a resolved `// BSM: <handle> [args]` after each `invokedynamic` (`withResolveBootstraps`)
+- a trailing exception table with resolved catch types (`withExceptionTable`)
+
+Example (a method with a lambda + string concat in a `try`/`catch`, compiled with `-g`):
+
+```
+// max_stack = 2, max_locals = 4
+// line 5
+0000: iconst_0
+0001: istore_2
+// line 7
+0002: iload_1               // n: I
+0003: invokedynamic       #2 (get(I)Ljava/util/function/Supplier;)  // BSM: invokeStatic java.lang.invoke.LambdaMetafactory.metafactory(...)Ljava/lang/invoke/CallSite; [()Ljava/lang/Object;, invokeStatic t.Verbose.lambda$run$0(I)Ljava/lang/String;, ()Ljava/lang/String;]
+0008: astore_3
+...
+// frame: SameFrame
+0030: iload_2               // total: I
+0031: ireturn
+// Exception table:
+//   from     to       target   type
+//   2        24       27       java.lang.RuntimeException
+```
+
 ## AccessBuilder
 
 Fluent API for constructing access flags:

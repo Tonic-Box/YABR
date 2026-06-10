@@ -6,6 +6,7 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.analysis.CodePrinter;
+import com.tonic.analysis.DisassemblyOptions;
 import com.tonic.utill.Logger;
 import lombok.Getter;
 import lombok.Setter;
@@ -92,6 +93,16 @@ public class CodeAttribute extends Attribute {
         this.parent = methodEntry;
     }
 
+    /**
+     * Returns the class file that owns this code attribute.
+     *
+     * @return the owning class file
+     */
+    @Override
+    public ClassFile getClassFile() {
+        return super.getClassFile();
+    }
+
     @Override
     protected void writeInfo(DataOutputStream dos) throws IOException {
         dos.writeShort(maxStack);
@@ -141,6 +152,16 @@ public class CodeAttribute extends Attribute {
      */
     public String prettyPrintCode() {
         return CodePrinter.prettyPrintCode(this.code, getClassFile().getConstPool());
+    }
+
+    /**
+     * Generates a human-readable disassembly of this method with the selected enrichments.
+     *
+     * @param options the disassembly enrichments to include
+     * @return the disassembled method
+     */
+    public String prettyPrintCode(DisassemblyOptions options) {
+        return CodePrinter.prettyPrintCode(this, options);
     }
 
     @Override

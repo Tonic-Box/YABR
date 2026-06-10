@@ -1,17 +1,26 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
+import lombok.Getter;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents an unknown or unhandled instruction.
  */
+@Getter
 public class UnknownInstruction extends Instruction {
+    /**
+     * -- GETTER --
+     *  Returns the raw operand bytes following the opcode.
+     *
+     * @return The operand bytes.
+     */
     private final byte[] operands;
 
     /**
-     * Constructs an UnknownInstruction.
+     * Constructs an UnknownInstruction with zero-filled operands.
      *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
@@ -19,7 +28,24 @@ public class UnknownInstruction extends Instruction {
      */
     public UnknownInstruction(int opcode, int offset, int length) {
         super(opcode, offset, length);
-        this.operands = new byte[length - 1];
+        this.operands = new byte[Math.max(0, length - 1)];
+    }
+
+    /**
+     * Constructs an UnknownInstruction, copying the real operand bytes from the source bytecode so
+     * the instruction round-trips through {@link #write} and its operands can be inspected.
+     *
+     * @param opcode   The opcode of the instruction.
+     * @param offset   The bytecode offset of the instruction.
+     * @param length   The total length of the instruction in bytes.
+     * @param bytecode The source bytecode array to copy operand bytes from.
+     */
+    public UnknownInstruction(int opcode, int offset, int length, byte[] bytecode) {
+        super(opcode, offset, length);
+        this.operands = new byte[Math.max(0, length - 1)];
+        int available = bytecode.length - (offset + 1);
+        int copy = Math.min(operands.length, Math.max(0, available));
+        System.arraycopy(bytecode, offset + 1, operands, 0, copy);
     }
 
     @Override

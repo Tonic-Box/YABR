@@ -12,6 +12,7 @@ import java.io.IOException;
 @Getter
 public class NewArrayInstruction extends Instruction {
     private final ArrayType arrayType;
+    private final int typeCode;
     private final int count;
 
     /**
@@ -59,10 +60,8 @@ public class NewArrayInstruction extends Instruction {
         if (opcode != 0xBC) {
             throw new IllegalArgumentException("Invalid opcode for NewArrayInstruction: " + opcode);
         }
+        this.typeCode = typeCode;
         this.arrayType = ArrayType.fromCode(typeCode);
-        if (this.arrayType == null) {
-            throw new IllegalArgumentException("Invalid array type code for NEWARRAY: " + typeCode);
-        }
         this.count = count;
     }
 
@@ -80,7 +79,7 @@ public class NewArrayInstruction extends Instruction {
     @Override
     public void write(DataOutputStream dos) throws IOException {
         dos.writeByte(opcode);
-        dos.writeByte(arrayType.getCode());
+        dos.writeByte(typeCode);
     }
 
     /**
@@ -110,6 +109,7 @@ public class NewArrayInstruction extends Instruction {
      */
     @Override
     public String toString() {
-        return String.format("NEWARRAY %s", arrayType.getDescription());
+        return String.format("NEWARRAY %s",
+                arrayType != null ? arrayType.getDescription() : "unknown_atype_" + typeCode);
     }
 }

@@ -451,35 +451,35 @@ class InstructionTest {
     @Test
     void factoryCreatesNopInstruction() {
         byte[] bytecode = {0x00};
-        Instruction instr = CodeWriter.InstructionFactory.createInstruction(0x00, 0, bytecode, constPool);
+        Instruction instr = InstructionFactory.createInstruction(0x00, 0, bytecode, constPool);
         assertTrue(instr instanceof NopInstruction);
     }
 
     @Test
     void factoryCreatesIconstInstruction() {
         byte[] bytecode = {0x03};
-        Instruction instr = CodeWriter.InstructionFactory.createInstruction(0x03, 0, bytecode, constPool);
+        Instruction instr = InstructionFactory.createInstruction(0x03, 0, bytecode, constPool);
         assertTrue(instr instanceof IConstInstruction);
     }
 
     @Test
     void factoryCreatesBipushInstruction() {
         byte[] bytecode = {0x10, 0x2A};
-        Instruction instr = CodeWriter.InstructionFactory.createInstruction(0x10, 0, bytecode, constPool);
+        Instruction instr = InstructionFactory.createInstruction(0x10, 0, bytecode, constPool);
         assertTrue(instr instanceof BipushInstruction);
     }
 
     @Test
     void factoryCreatesReturnInstruction() {
         byte[] bytecode = {(byte) 0xB1};
-        Instruction instr = CodeWriter.InstructionFactory.createInstruction(0xB1, 0, bytecode, constPool);
+        Instruction instr = InstructionFactory.createInstruction(0xB1, 0, bytecode, constPool);
         assertTrue(instr instanceof ReturnInstruction);
     }
 
     @Test
     void factoryCreatesUnknownForInvalidOpcode() {
         byte[] bytecode = {(byte) 0xFF};
-        Instruction instr = CodeWriter.InstructionFactory.createInstruction(0xFF, 0, bytecode, constPool);
+        Instruction instr = InstructionFactory.createInstruction(0xFF, 0, bytecode, constPool);
         assertTrue(instr instanceof UnknownInstruction);
     }
 }

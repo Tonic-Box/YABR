@@ -41,7 +41,7 @@ public class InvokeStaticInstruction extends Instruction implements InvokeInsn {
 
     @Override
     public void accept(AbstractBytecodeVisitor visitor) {
-
+        visitor.visit(this);
     }
 
     /**
