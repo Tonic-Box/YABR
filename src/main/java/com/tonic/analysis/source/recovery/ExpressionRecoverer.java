@@ -252,6 +252,11 @@ public class ExpressionRecoverer {
             int useCount = ssa.getUses().size();
             return useCount <= 1;
         }
+        // A single-use constant must render as its literal, never as a (possibly mis-materialized)
+        // variable reference: a constant used directly as an operand was not a named local at that use.
+        if (def instanceof ConstantInstruction) {
+            return ssa.getUses().size() <= 1;
+        }
         return false;
     }
 

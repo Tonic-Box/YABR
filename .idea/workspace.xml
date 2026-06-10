@@ -5,19 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeInsn.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/ApiConvenienceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/parser/RedirectClassReferencesTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/bytecode-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/bytecode-api.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/class-files.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/class-files.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeInterfaceInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeInterfaceInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeSpecialInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeSpecialInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/parser/ConstPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -430,7 +420,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780963758078</updated>
     </task>
-    <option name="localTasksCounter" value="31" />
+    <task id="LOCAL-00031" summary="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly">
+      <option name="closed" value="true" />
+      <created>1780969996921</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1780969996921</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

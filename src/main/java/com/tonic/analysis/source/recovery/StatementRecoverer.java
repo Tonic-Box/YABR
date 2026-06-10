@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
+import com.tonic.utill.Logger;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
@@ -2370,6 +2371,13 @@ public class StatementRecoverer {
      * instruction needs to use the actual expression or a synthetic variable,
      * not the local variable name that will be declared later.
      */
+    /** Whether {@code v} is a compile-time constant operand (a bare constant or a constant SSA def). */
+    private static boolean isConstantOperand(com.tonic.analysis.ssa.value.Value v) {
+        return v instanceof Constant
+                || (v instanceof SSAValue
+                    && ((SSAValue) v).getDefinition() instanceof com.tonic.analysis.ssa.ir.ConstantInstruction);
+    }
+
     private boolean isUsedByArrayStore(SSAValue value) {
         if (value == null) return false;
 
@@ -2878,6 +2886,10 @@ public class StatementRecoverer {
                 Expression array = exprRecoverer.recoverOperand(arrayAccess.getArray());
                 Expression index = exprRecoverer.recoverOperand(arrayAccess.getIndex());
                 Expression value = exprRecoverer.recoverOperand(arrayAccess.getValue());
+                if (!(index instanceof LiteralExpr) && isConstantOperand(arrayAccess.getIndex())) {
+                    Logger.error("decompiler: constant array-store index recovered as non-literal '"
+                            + index + "' on '" + array + "' — likely a mis-materialized constant");
+                }
                 SourceType arrayType = array.getType();
                 SourceType elemType = (arrayType instanceof ArraySourceType)
                     ? ((ArraySourceType) arrayType).getElementType()
