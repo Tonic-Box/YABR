@@ -186,6 +186,16 @@ SSAType type = result.getType();    // INT, LONG, OBJECT, etc.
 
 YABR defines IR instruction types organized into functional categories. Recent refactoring consolidated symmetric instruction pairs (e.g., GetField/PutField) into unified classes with mode enums. See [SSA IR Migration Guide](SSA_IR_MIGRATION.md) for migration details.
 
+Every instruction shares a common base (`IRInstruction`) carrying its defined value, containing block, and provenance back to the source bytecode:
+
+```java
+SSAValue result = instr.getResult();        // value defined by this instruction, or null
+IRBlock block = instr.getBlock();            // containing basic block
+int offset = instr.getBytecodeOffset();      // originating bytecode offset, or -1 if unknown
+```
+
+The lifter stamps `bytecodeOffset` on each instruction it emits, so SSA instructions can be correlated back to their source bytecode (e.g. for data-flow provenance or diagnostics).
+
 ### Constants and Loads
 
 ```java

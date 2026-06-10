@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Stamp bytecode offset onto SSA IR instructions during lifting&#10;- InstructionTranslator records each emitted instruction's originating bytecode offset, enabling data-flow provenance back to source bytecode">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/ir/IRInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/ir/IRInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -448,11 +452,18 @@
       <option name="project" value="LOCAL" />
       <updated>1781068208430</updated>
     </task>
-    <option name="localTasksCounter" value="35" />
+    <task id="LOCAL-00035" summary="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer">
+      <option name="closed" value="true" />
+      <created>1781069224464</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1781069224465</updated>
+    </task>
+    <option name="localTasksCounter" value="36" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fixes to statement recovery p2" />
     <MESSAGE value="- Expand SSA-&gt;LLVM backend to full Java construct set via runtime ABI" />
     <MESSAGE value="-  Add LLVM IR -&gt; SSA lifter for round-trip optimizer integration" />
     <MESSAGE value="- params need to be created before body values" />
@@ -477,6 +488,7 @@
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam" />
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam&#10;- Update docs" />
     <MESSAGE value="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer" />
+    <MESSAGE value="Stamp bytecode offset onto SSA IR instructions during lifting&#10;- InstructionTranslator records each emitted instruction's originating bytecode offset, enabling data-flow provenance back to source bytecode" />
+    <option name="LAST_COMMIT_MESSAGE" value="Stamp bytecode offset onto SSA IR instructions during lifting&#10;- InstructionTranslator records each emitted instruction's originating bytecode offset, enabling data-flow provenance back to source bytecode" />
   </component>
 </project>

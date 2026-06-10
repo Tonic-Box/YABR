@@ -58,6 +58,7 @@ public class InstructionTranslator {
      */
     public void translate(Instruction instr, AbstractState state, IRBlock block) {
         int opcode = instr.getOpcode();
+        int emittedFrom = block.getInstructions().size();
 
         switch (opcode) {
             case 0x00: break;
@@ -92,7 +93,7 @@ public class InstructionTranslator {
             case 0x43: case 0x44: case 0x45: case 0x46: translateFStore(opcode - 0x43, state, block); break;
             case 0x47: case 0x48: case 0x49: case 0x4A: translateDStore(opcode - 0x47, state, block); break;
             case 0x4B: case 0x4C: case 0x4D: case 0x4E: translateAStore(opcode - 0x4B, state, block); break;
-            case 0x4F: case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56: translateArrayStore(opcode, state, block); break;
+            case 0x4F: case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56: translateArrayStore(state, block); break;
             case 0x57: state.pop(); break;
             case 0x58: translatePop2(state); break;
             case 0x59: translateDup(state); break;
@@ -138,9 +139,9 @@ public class InstructionTranslator {
             case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: translateIfZero((ConditionalBranchInstruction) instr, opcode, state, block); break;
             case 0x9F: case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: translateIfICmp((ConditionalBranchInstruction) instr, opcode, state, block); break;
             case 0xA5: case 0xA6: translateIfACmp((ConditionalBranchInstruction) instr, opcode, state, block); break;
-            case 0xA7: case 0xC8: translateGoto((GotoInstruction) instr, state, block); break;
+            case 0xA7: case 0xC8: translateGoto((GotoInstruction) instr, block); break;
             case 0xA8: case 0xC9: translateJsr((JsrInstruction) instr, state, block); break;
-            case 0xA9: translateRet((RetInstruction) instr, state, block); break;
+            case 0xA9: translateRet(block); break;
             case 0xAA: translateTableSwitch((TableSwitchInstruction) instr, state, block); break;
             case 0xAB: translateLookupSwitch((LookupSwitchInstruction) instr, state, block); break;
             case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: translateReturn(state, block); break;
@@ -168,6 +169,14 @@ public class InstructionTranslator {
             case 0xC6: translateIfNull((ConditionalBranchInstruction) instr, state, block); break;
             case 0xC7: translateIfNonNull((ConditionalBranchInstruction) instr, state, block); break;
             default: throw new UnsupportedOperationException("Unsupported opcode: 0x" + Integer.toHexString(opcode));
+        }
+
+        List<IRInstruction> emitted = block.getInstructions();
+        for (int i = emittedFrom; i < emitted.size(); i++) {
+            IRInstruction ir = emitted.get(i);
+            if (ir.getBytecodeOffset() < 0) {
+                ir.setBytecodeOffset(instr.getOffset());
+            }
         }
     }
 
@@ -394,7 +403,7 @@ public class InstructionTranslator {
         block.addInstruction(new StoreLocalInstruction(index, value));
     }
 
-    private void translateArrayStore(int opcode, AbstractState state, IRBlock block) {
+    private void translateArrayStore(AbstractState state, IRBlock block) {
         Value value = state.pop();
         Value index = state.pop();
         Value array = state.pop();
@@ -406,7 +415,6 @@ public class InstructionTranslator {
      * pop2 pops either:
      * - Two category-1 values (int, float, reference), OR
      * - One category-2 value (long, double)
-     *
      * In our SSA representation, longs and doubles are single Values with
      * a type marker, so we check the type to determine how many pops to do.
      */
@@ -517,10 +525,11 @@ public class InstructionTranslator {
         Value v1 = state.peek();
         boolean v1TwoSlot = v1.getType() != null && v1.getType().isTwoSlot();
 
+        v1 = state.pop();
+        Value v2;
         if (v1TwoSlot) {
             // Forms 1 or 3: category-2 on top
-            v1 = state.pop();
-            Value v2 = state.peek();
+            v2 = state.peek();
             boolean v2TwoSlot = v2.getType() != null && v2.getType().isTwoSlot();
 
             if (v2TwoSlot) {
@@ -539,8 +548,7 @@ public class InstructionTranslator {
             }
         } else {
             // Forms 2 or 4: two category-1 on top
-            v1 = state.pop();
-            Value v2 = state.pop();
+            v2 = state.pop();
             Value v3 = state.peek();
             boolean v3TwoSlot = v3.getType() != null && v3.getType().isTwoSlot();
 
@@ -698,7 +706,7 @@ public class InstructionTranslator {
         block.addInstruction(new BranchInstruction(CompareOp.IFNONNULL, operand, trueBlock, falseBlock));
     }
 
-    private void translateGoto(GotoInstruction instr, AbstractState state, IRBlock block) {
+    private void translateGoto(GotoInstruction instr, IRBlock block) {
         int target = instr.getOffset() + instr.getBranchOffset();
         IRBlock targetBlock = offsetToBlock.get(target);
         block.addInstruction(SimpleInstruction.createGoto(targetBlock));
@@ -748,7 +756,7 @@ public class InstructionTranslator {
      * RET returns from a subroutine to the address stored in a local variable.
      * Since we track JSR continuations, we convert RET to GOTO the continuation.
      */
-    private void translateRet(RetInstruction instr, AbstractState state, IRBlock block) {
+    private void translateRet(IRBlock block) {
         // Find all possible continuations for this subroutine
         // In the simple case (single JSR to this subroutine), there's exactly one continuation
         // For multiple JSRs, we need to handle all possible return targets
@@ -764,18 +772,8 @@ public class InstructionTranslator {
             throw new IllegalStateException("RET instruction without corresponding JSR");
         }
 
-        if (allContinuations.size() == 1) {
-            // Single continuation - simple case, just GOTO
-            IRBlock continuation = allContinuations.get(0);
-            block.addInstruction(SimpleInstruction.createGoto(continuation));
-        } else {
-            // Multiple possible continuations
-            // For now, we handle this by jumping to the first one
-            // A more sophisticated approach would use a switch based on the return address
-            // but that requires runtime dispatch which SSA doesn't support directly
-            IRBlock firstContinuation = allContinuations.get(0);
-            block.addInstruction(SimpleInstruction.createGoto(firstContinuation));
-        }
+        IRBlock continuation = allContinuations.get(0);
+        block.addInstruction(SimpleInstruction.createGoto(continuation));
     }
 
     private void translateTableSwitch(TableSwitchInstruction instr, AbstractState state, IRBlock block) {

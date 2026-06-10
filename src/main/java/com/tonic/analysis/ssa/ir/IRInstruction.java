@@ -24,6 +24,13 @@ public abstract class IRInstruction {
     @Setter
     protected SSAValue result;
 
+    /**
+     * Originating bytecode offset, or {@code -1} when unknown. Stamped by the lifter so SSA
+     * instructions can be correlated back to their source bytecode (e.g. data-flow provenance).
+     */
+    @Setter
+    protected int bytecodeOffset = -1;
+
     protected IRInstruction() {
         this.id = nextId++;
     }
