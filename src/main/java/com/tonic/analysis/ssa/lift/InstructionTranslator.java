@@ -974,7 +974,10 @@ public class InstructionTranslator {
     private void translateANewArray(ANewArrayInstruction instr, AbstractState state, IRBlock block) {
         Value length = state.pop();
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
-        IRType elemType = new ReferenceType(classRef.getClassName());
+        String elemName = classRef.getClassName();
+        IRType elemType = elemName.startsWith("[")
+                ? IRType.fromDescriptor(elemName)
+                : new ReferenceType(elemName);
         SSAValue result = new SSAValue(new ArrayType(elemType));
         block.addInstruction(new NewArrayInstruction(result, elemType, length));
         state.push(result);

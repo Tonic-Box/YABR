@@ -2142,8 +2142,15 @@ public class StatementRecoverer {
         return true;
     }
 
+    /**
+     * Whether a call result must be forced into a named temporary instead of inlined. Only multi-use
+     * receivers qualify: a single-use value is always inlined at its sole use site by the expression
+     * recoverer, so materializing it here is futile and leaves an orphaned, re-inlined statement once
+     * dead-variable elimination strips the unread declaration.
+     */
     private boolean shouldStoreMethodResult(InvokeInstruction invoke, SSAValue result) {
         if (result == null || result.getType() == null) return false;
+        if (result.getUses().size() <= 1) return false;
 
         String methodName = invoke.getName();
         if (isImportantMethodName(methodName)) {
@@ -2365,12 +2372,6 @@ public class StatementRecoverer {
         return null;
     }
 
-    /**
-     * Checks if an SSA value is used by an ArrayAccessInstruction store.
-     * Such values should not be pre-materialized because the array store
-     * instruction needs to use the actual expression or a synthetic variable,
-     * not the local variable name that will be declared later.
-     */
     /** Whether {@code v} is a compile-time constant operand (a bare constant or a constant SSA def). */
     private static boolean isConstantOperand(com.tonic.analysis.ssa.value.Value v) {
         return v instanceof Constant

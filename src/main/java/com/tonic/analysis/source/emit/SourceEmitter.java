@@ -1138,10 +1138,19 @@ public class SourceEmitter implements SourceVisitor<Void> {
     @Override
     public Void visitNewArray(NewArrayExpr expr) {
         writer.write("new ");
-        expr.getElementType().accept(this);
+        SourceType elementType = expr.getElementType();
+        int elementArrayDims = 0;
+        if (elementType instanceof ArraySourceType) {
+            ArraySourceType arrayElement = (ArraySourceType) elementType;
+            elementArrayDims = arrayElement.getTotalDimensions();
+            elementType = arrayElement.getElementType();
+        }
+        elementType.accept(this);
 
         if (expr.hasInitializer()) {
-            writer.write("[] ");
+            writer.write("[]");
+            writeEmptyDimensions(elementArrayDims);
+            writer.write(" ");
             expr.getInitializer().accept(this);
         } else {
             for (Expression dim : expr.getDimensions()) {
@@ -1149,8 +1158,15 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 dim.accept(this);
                 writer.write("]");
             }
+            writeEmptyDimensions(elementArrayDims);
         }
         return null;
+    }
+
+    private void writeEmptyDimensions(int count) {
+        for (int i = 0; i < count; i++) {
+            writer.write("[]");
+        }
     }
 
     @Override

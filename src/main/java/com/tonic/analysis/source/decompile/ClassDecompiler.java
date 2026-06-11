@@ -14,6 +14,7 @@ import com.tonic.analysis.source.ast.transform.PatternInstanceOfReconstructor;
 import com.tonic.analysis.source.ast.transform.SingleUseInliner;
 import com.tonic.analysis.source.ast.transform.PatternSwitchReconstructor;
 import com.tonic.analysis.source.ast.transform.SwitchExpressionReconstructor;
+import com.tonic.analysis.source.ast.transform.VarargsReconstructor;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
@@ -75,6 +76,7 @@ public class ClassDecompiler {
     private final PatternSwitchReconstructor patternSwitchReconstructor;
     private final SingleUseInliner singleUseInliner;
     private final PatternInstanceOfReconstructor patternInstanceOf;
+    private final VarargsReconstructor varargsReconstructor;
     private final Set<String> usedTypes = new TreeSet<>();
     private final boolean hasInnerClasses;
 
@@ -102,6 +104,7 @@ public class ClassDecompiler {
         this.patternSwitchReconstructor = new PatternSwitchReconstructor();
         this.singleUseInliner = new SingleUseInliner();
         this.patternInstanceOf = new PatternInstanceOfReconstructor();
+        this.varargsReconstructor = new VarargsReconstructor(classFile);
         this.hasInnerClasses = detectInnerClasses();
     }
 
@@ -720,6 +723,7 @@ public class ClassDecompiler {
             singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            varargsReconstructor.transform(body);
             declarationHoister.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
@@ -787,7 +791,7 @@ public class ClassDecompiler {
         String sigOrDesc = signature != null ? signature : desc;
 
         sb.append("(");
-        sb.append(formatParameters(sigOrDesc, signature != null));
+        sb.append(formatParameters(sigOrDesc, signature != null, Modifiers.isVarArgs(ctor.getAccess())));
         sb.append(")");
 
         // Throws clause (TODO: could extract from Exceptions attribute)
@@ -812,6 +816,7 @@ public class ClassDecompiler {
             singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            varargsReconstructor.transform(body);
             declarationHoister.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
@@ -855,7 +860,7 @@ public class ClassDecompiler {
         sb.append(method.getName());
 
         sb.append("(");
-        sb.append(formatParameters(sigOrDesc, signature != null));
+        sb.append(formatParameters(sigOrDesc, signature != null, Modifiers.isVarArgs(access)));
         sb.append(")");
 
         writer.write(sb.toString());
@@ -885,6 +890,7 @@ public class ClassDecompiler {
             // `if (c) {} else { ... }`), which the first pass could not see. A second pass
             // inverts/cleans those.
             astSimplifier.transform(body);
+            varargsReconstructor.transform(body);
             declarationHoister.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
@@ -997,7 +1003,7 @@ public class ClassDecompiler {
         }
     }
 
-    private String formatParameters(String desc, boolean isSignature) {
+    private String formatParameters(String desc, boolean isSignature, boolean varargs) {
         String workDesc = desc;
         if (isSignature && workDesc.startsWith("<")) {
             int depth = 1;
@@ -1054,7 +1060,11 @@ public class ClassDecompiler {
         StringBuilder sb = new StringBuilder();
         for (int j = 0; j < paramTypes.size(); j++) {
             if (j > 0) sb.append(", ");
-            sb.append(paramTypes.get(j));
+            String type = paramTypes.get(j);
+            if (varargs && j == paramTypes.size() - 1 && type.endsWith("[]")) {
+                type = type.substring(0, type.length() - 2) + "...";
+            }
+            sb.append(type);
             sb.append(" arg").append(j);
         }
         return sb.toString();
