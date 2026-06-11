@@ -60,6 +60,7 @@ YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation librar
 | `com.tonic.analysis.dependency` | Class dependency analysis |
 | `com.tonic.analysis.typeinference` | Type and nullability inference |
 | `com.tonic.analysis.pattern` | Code pattern search |
+| `com.tonic.analysis.query` | Composable query language for searching bytecode |
 | `com.tonic.analysis.instrumentation` | Bytecode instrumentation hooks |
 | `com.tonic.analysis.simulation` | Abstract bytecode simulation and metrics |
 | `com.tonic.analysis.execution` | Concrete bytecode execution and debugging |

@@ -15,7 +15,7 @@ A comprehensive alternative to ASM, Javassist, and other bytecode libraries.
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
 - **Class decompilation** - Full class decompilation with imports, fields, and methods, including
   modern constructs (records, sealed types, switch expressions, and Java 21 pattern-matching switch)
-- **Analysis APIs** - Call graph, dependency, type inference, pattern search, xrefs, data flow, similarity, PDG, SDG, CPG, taint analysis
+- **Analysis APIs** - Call graph, dependency, type inference, pattern search, query language, xrefs, data flow, similarity, PDG, SDG, CPG, taint analysis
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+
 
@@ -59,6 +59,7 @@ byte[] bytes = newClass.write();
 | [PDG API](docs/pdg-api.md) | Program Dependence Graph with slicing |
 | [SDG API](docs/sdg-api.md) | Interprocedural System Dependence Graph |
 | [CPG API](docs/cpg-api.md) | Code Property Graph with taint analysis |
+| [Query API](docs/query-api.md) | Composable query language for searching bytecode |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
 | [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |

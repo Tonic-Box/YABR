@@ -2,7 +2,7 @@
 
 # Analysis APIs
 
-YABR provides thirteen high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
+YABR provides fourteen high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
 
 ---
 
@@ -23,6 +23,7 @@ YABR provides thirteen high-level analysis APIs that build on top of the SSA IR 
 | **PDG** | `pdg` | Program Dependence Graph with slicing | [Details](pdg-api.md) |
 | **SDG** | `pdg.sdg` | Interprocedural System Dependence Graph | [Details](sdg-api.md) |
 | **CPG** | `cpg` | Code Property Graph with taint analysis | [Details](cpg-api.md) |
+| **Query** | `query` | Composable query language for searching bytecode | [Details](query-api.md) |
 
 ---
 
@@ -254,6 +255,25 @@ List<TaintPath> vulns = new TaintQuery(cpg)
 **Key features:** Fluent query API, taint analysis, data flow tracking, DOT export, unified traversal across CFG/PDG/call edges.
 
 [Full documentation →](cpg-api.md)
+
+---
+
+## Query API
+
+Search loaded bytecode with a composable query language — structural matches, SSA/data-flow predicates, and instruction-sequence patterns — over a `ClassPool`.
+
+```java
+QueryService service = new QueryService(pool);
+QueryService.QueryResult result = service.execute(
+        "FIND methods WHERE HAS call WHERE (name == \"println\")",
+        QueryService.QueryConfig.builder().timeBudgetMs(5000).build(),
+        null);
+List<QueryMatch> matches = result.results();
+```
+
+**Key features:** Textual `FIND … WHERE …` queries, quantifiers (`HAS`/`ALL`/`NONE`/`COUNT`), data flow (`flowsTo`/`flowsFrom`), `SEQUENCE` instruction patterns, navigable matches with bytecode-offset targets.
+
+[Full documentation →](query-api.md)
 
 ---
 

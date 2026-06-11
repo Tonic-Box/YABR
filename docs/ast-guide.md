@@ -48,6 +48,8 @@ Beyond ordinary methods and control flow, the AST layer recovers and re-emits mo
   `equals`/`hashCode`/`toString` — Java 16
 - Pattern-matching `switch` (`SwitchBootstraps.typeSwitch`): type patterns, `when` guards, and
   record-deconstruction patterns (`case Point(int x, int y) ->`) — Java 21
+- Varargs calls — collapsing the compiler-packed trailing array (`f(new T[]{a, b})`) back into
+  `f(a, b)`, and rendering a varargs parameter as `T...` — Java 5
 
 **Recompilation** (front-end parse → lower → bytecode) handles end-to-end, verified by running the
 emitted class on a real JDK:
