@@ -29,6 +29,13 @@ public final class LambdaExpr implements Expression {
     private final SourceLocation location;
     @Setter
     private ASTNode parent;
+    /**
+     * The synthetic implementation method this lambda was reconstructed from, as {@code name + desc}
+     * (e.g. {@code lambda$foo$0()V}), or null when it could not be identified. Lets the decompiler key
+     * the inlined body's offset→line entries under the lambda's own method rather than the enclosing
+     * method's offset space.
+     */
+    private String implMethodKey;
 
     public LambdaExpr(List<LambdaParameter> parameters, ASTNode body, SourceType type, SourceLocation location) {
         this.parameters = new ArrayList<>(parameters != null ? parameters : List.of());
@@ -47,6 +54,15 @@ public final class LambdaExpr implements Expression {
         if (this.body != null) this.body.setParent(null);
         this.body = body;
         if (body != null) body.setParent(this);
+        return this;
+    }
+
+    /**
+     * Records the synthetic implementation method key ({@code name + desc}, e.g. {@code lambda$foo$0()V})
+     * this lambda was built from. Fluent (returns {@code this}); null is allowed (key unset).
+     */
+    public LambdaExpr withImplMethodKey(String implMethodKey) {
+        this.implMethodKey = implMethodKey;
         return this;
     }
 

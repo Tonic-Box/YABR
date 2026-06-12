@@ -141,7 +141,9 @@ class LineMapTest {
     }
 
     @Test
-    void lambdaBodyOffsetsAreSuppressed() {
+    void enclosingMethodMapExcludesLambdaBody() {
+        // The lambda body's offsets live in a separate method's space, so they must not appear in the
+        // enclosing method's map (they go under the lambda's own key instead — see next test).
         NavigableMap<Integer, Integer> map = result.getLineMaps().get("sum(I)I");
         for (int line : map.values()) {
             String text = lineText(line);
@@ -149,6 +151,22 @@ class LineMapTest {
                     "lambda-body statement leaked into the enclosing method's map: line "
                             + line + " : " + text.trim());
         }
+    }
+
+    @Test
+    void lambdaBodyMappedUnderItsOwnKey() {
+        String lambdaKey = result.getLineMaps().keySet().stream()
+                .filter(k -> k.startsWith("lambda$"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(lambdaKey, "the inlined lambda body should have its own line-map key: "
+                + result.getLineMaps().keySet());
+
+        String mapped = result.getLineMaps().get(lambdaKey).values().stream()
+                .map(LineMapTest::lineText)
+                .reduce("", (a, b) -> a + "\n" + b);
+        assertTrue(mapped.contains("counter++") || mapped.contains("\"lambda\""),
+                "lambda body statements must be mapped under the lambda key:\n" + mapped);
     }
 
     @Test

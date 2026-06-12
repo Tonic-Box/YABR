@@ -8,6 +8,8 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.utill.ClassNameUtil;
 import lombok.Getter;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -22,8 +24,21 @@ public class SourceEmitter implements SourceVisitor<Void> {
     private final IdentifierNormalizer normalizer;
     @Getter
     private final Set<String> usedTypes = new HashSet<>();
-    private java.util.function.BiConsumer<Statement, Integer> statementLineListener;
-    private int lambdaDepth;
+
+    /** Receives each provenance-carrying statement's (owning method key, statement, 1-based line). */
+    @FunctionalInterface
+    public interface LineMapSink {
+        void record(String methodKey, Statement stmt, int line);
+    }
+
+    /** Pushed for a lambda whose impl method is unknown — recording is then skipped (method keys,
+     *  being name+descriptor, are never empty, so an empty string is an unambiguous marker). */
+    private static final String SUPPRESS = "";
+
+    private LineMapSink lineMapSink;
+    /** Active recording key per nesting level: base method at the bottom, an impl key (or
+     *  {@link #SUPPRESS}) pushed for each lambda body. Empty when no sink is set. */
+    private final Deque<String> methodKeyStack = new ArrayDeque<>();
     private String currentClassName;
     /** Declared type of each local variable name, recorded as declarations are emitted, so member
      *  accesses cast against the DECLARED type (e.g. a merged Object slot) rather than the
@@ -49,19 +64,28 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     /**
-     * Registers a callback invoked with each statement and the 1-based output line its emission
-     * starts on. Only statements carrying bytecode-offset provenance are reported; statements inside
-     * inlined lambda bodies are suppressed because their offsets belong to the lambda's own method.
+     * Registers a sink invoked with each provenance-carrying statement and the 1-based output line its
+     * emission starts on, keyed by the method that owns the statement's offset. {@code baseMethodKey}
+     * is the method being emitted; statements inside an inlined lambda body are reported under the
+     * lambda's own impl-method key instead, so their (separate) offset space never pollutes the base
+     * method's map. Offsets whose owning method can't be identified are skipped.
      */
-    public void setStatementLineListener(java.util.function.BiConsumer<Statement, Integer> listener) {
-        this.statementLineListener = listener;
+    public void setLineMapSink(String baseMethodKey, LineMapSink sink) {
+        this.lineMapSink = sink;
+        this.methodKeyStack.clear();
+        this.methodKeyStack.push(baseMethodKey);
     }
 
     private void recordLine(Statement stmt) {
-        if (statementLineListener != null && lambdaDepth == 0
-                && stmt.getLocation() != null && stmt.getLocation().hasOffset()) {
-            statementLineListener.accept(stmt, writer.getCurrentLine());
+        if (lineMapSink == null || methodKeyStack.isEmpty()
+                || stmt.getLocation() == null || !stmt.getLocation().hasOffset()) {
+            return;
         }
+        String key = methodKeyStack.peek();
+        if (key.isEmpty()) {
+            return;
+        }
+        lineMapSink.record(key, stmt, writer.getCurrentLine());
     }
 
     private void recordTypeUsage(String internalName) {
@@ -1456,7 +1480,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
         writer.write(" -> ");
 
-        lambdaDepth++;
+        // Route the inlined body's statement lines to the lambda's own impl method (its offsets are a
+        // separate space); SUPPRESS when the impl method is unknown so we never poison the base map.
+        String implKey = expr.getImplMethodKey();
+        methodKeyStack.push(implKey != null ? implKey : SUPPRESS);
         try {
             if (expr.getBody() instanceof BlockStmt) {
                 BlockStmt blockStmt = (BlockStmt) expr.getBody();
@@ -1472,7 +1499,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 expr.getBody().accept(this);
             }
         } finally {
-            lambdaDepth--;
+            methodKeyStack.pop();
         }
         return null;
     }

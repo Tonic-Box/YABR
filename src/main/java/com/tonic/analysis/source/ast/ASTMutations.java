@@ -145,7 +145,7 @@ public final class ASTMutations {
                 deepClone(e.getBody()),
                 e.getType(),
                 e.getLocation()
-            );
+            ).withImplMethodKey(e.getImplMethodKey());
         } else if (expr instanceof MethodRefExpr) {
             MethodRefExpr e = (MethodRefExpr) expr;
             return new MethodRefExpr(

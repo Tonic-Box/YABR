@@ -872,7 +872,8 @@ public class ExpressionLowerer {
                 && !"java/lang/Object".equals(((ReferenceSourceType) current).getInternalName())) {
             return arg;
         }
-        return new LambdaExpr(lambda.getParameters(), lambda.getBody(), expected);
+        return new LambdaExpr(lambda.getParameters(), lambda.getBody(), expected)
+                .withImplMethodKey(lambda.getImplMethodKey());
     }
 
     private String resolveReceiverOwnerClass(Expression receiver) {

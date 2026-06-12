@@ -1042,7 +1042,8 @@ public class ExpressionRecoverer {
                     ASTNode body = generateLambdaBody(implHandle, instr, params, samDescriptor);
 
                     if (body != null && !isEmptyBody(body)) {
-                        return new LambdaExpr(params, body, returnType);
+                        return new LambdaExpr(params, body, returnType)
+                                .withImplMethodKey(implName + implHandle.getDescriptor());
                     }
                 }
 
@@ -1050,7 +1051,8 @@ public class ExpressionRecoverer {
                 if (isSyntheticLambda) {
                     List<LambdaParameter> params = generateLambdaParameters(samDescriptor, instr.getName());
                     ASTNode body = generateLambdaBody(implHandle, instr, params, samDescriptor);
-                    return new LambdaExpr(params, body, returnType);
+                    return new LambdaExpr(params, body, returnType)
+                            .withImplMethodKey(implName + implHandle.getDescriptor());
                 }
 
                 return createMethodReference(implHandle, instr, returnType);

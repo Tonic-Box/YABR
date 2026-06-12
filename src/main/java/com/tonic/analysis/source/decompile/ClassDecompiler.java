@@ -987,10 +987,11 @@ public class ClassDecompiler {
         SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
         emitter.setCurrentClassName(classFile.getClassName());
         if (lineMapsCollector != null && methodKey != null) {
-            NavigableMap<Integer, Integer> lineMap =
-                    lineMapsCollector.computeIfAbsent(methodKey, k -> new TreeMap<>());
-            emitter.setStatementLineListener((stmt, line) ->
-                    lineMap.put(stmt.getLocation().bytecodeOffset(), line));
+            // Statements inside an inlined lambda are reported under the lambda's own impl-method key,
+            // so each method (including synthetic lambda$ methods) gets its own offset→line map.
+            emitter.setLineMapSink(methodKey, (key, stmt, line) ->
+                    lineMapsCollector.computeIfAbsent(key, k -> new TreeMap<>())
+                            .put(stmt.getLocation().bytecodeOffset(), line));
         }
         for (Statement stmt : block.getStatements()) {
             stmt.accept(emitter);

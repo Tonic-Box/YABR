@@ -799,7 +799,10 @@ String source = ClassDecompiler.decompile(classFile);
 // bytecode offset to the 1-based output line of the statement recovered from that offset.
 // Resolve an arbitrary PC with ceilingEntry/floorEntry (inlined expressions live in a
 // later-offset consumer statement, so prefer ceiling). Statements whose provenance did not
-// survive recovery/transforms simply have no entry.
+// survive recovery/transforms simply have no entry. An inlined lambda body's statements are
+// keyed under the lambda's own synthetic impl method (e.g. "lambda$doWork$0" + desc), not the
+// enclosing method, since they carry that method's offsets — so a PC inside a lambda resolves
+// via getLineMap("lambda$doWork$0", "()V").
 DecompileResult result = new ClassDecompiler(classFile).decompileWithLineMap();
 NavigableMap<Integer, Integer> lineMap = result.getLineMap("doWork", "(I)V");
 int line = lineMap.ceilingEntry(callSitePc).getValue();
