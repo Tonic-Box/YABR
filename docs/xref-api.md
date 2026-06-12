@@ -45,6 +45,12 @@ for (Xref ref : callers) {
     System.out.println(ref.getSourceDisplay() + " -> " + ref.getTargetDisplay());
 }
 
+// Each Xref records where the reference occurs within its source method:
+// getBytecodeOffset() - the referencing instruction's bytecode offset (-1 when unavailable);
+// combine with ClassDecompiler.decompileWithLineMap() to resolve a usage to its decompiled
+// source line. getInstructionIndex() and getLineNumber() are also available.
+int pc = callers.iterator().next().getBytecodeOffset();
+
 // Find all reads/writes to a field
 Set<Xref> fieldRefs = db.getRefsToField("java/lang/System", "out", "Ljava/io/PrintStream;");
 ```

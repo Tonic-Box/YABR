@@ -24,7 +24,7 @@ public final class TryCatchStmt implements Statement {
     @Setter
     private Statement finallyBlock;
     private final NodeList<Expression> resources;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -116,8 +116,7 @@ public final class TryCatchStmt implements Statement {
 
     @Override
     public java.util.List<ASTNode> getChildren() {
-        java.util.List<ASTNode> children = new java.util.ArrayList<>();
-        children.addAll(resources);
+        java.util.List<ASTNode> children = new java.util.ArrayList<>(resources);
         if (tryBlock != null) children.add(tryBlock);
         for (CatchClause clause : catches) {
             children.add(clause.body());
@@ -145,5 +144,10 @@ public final class TryCatchStmt implements Statement {
             sb.append(" finally { ... }");
         }
         return sb.toString();
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

@@ -50,7 +50,7 @@ public final class IRRegionStmt implements Statement {
     @Setter
     private String reason;
 
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -110,5 +110,10 @@ public final class IRRegionStmt implements Statement {
         }
         sb.append(" */");
         return sb.toString();
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

@@ -14,7 +14,7 @@ public final class ContinueStmt implements Statement {
 
     @Setter
     private String targetLabel;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -49,5 +49,10 @@ public final class ContinueStmt implements Statement {
     @Override
     public String toString() {
         return targetLabel != null ? "continue " + targetLabel : "continue";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

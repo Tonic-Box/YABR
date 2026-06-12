@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Accumulates the bytecode locations that satisfied a query, so results stay navigable. A matching
  * instruction/call/arg records the owning method signature + the producing instruction's pc; the
- * planner turns these into {@code PCTarget} result rows (replacing the old xref thread-local).
+ * runner turns these into {@code PCTarget} evidence matches.
  */
 public final class EvidenceCollector {
 

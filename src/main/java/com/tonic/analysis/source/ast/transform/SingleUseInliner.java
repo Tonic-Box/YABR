@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
@@ -165,6 +166,14 @@ public class SingleUseInliner implements ASTTransform {
     }
 
     private Statement replaceInStatement(Statement stmt, ExpressionReplacer replacer) {
+        Statement replaced = replaceInStatement0(stmt, replacer);
+        if (replaced != stmt) {
+            Locations.copy(stmt, replaced);
+        }
+        return replaced;
+    }
+
+    private Statement replaceInStatement0(Statement stmt, ExpressionReplacer replacer) {
         if (stmt instanceof ExprStmt) {
             ExprStmt exprStmt = (ExprStmt) stmt;
             Expression newExpr = replaceInExpression(exprStmt.getExpression(), replacer);

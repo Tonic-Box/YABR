@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
@@ -99,10 +100,7 @@ public class DeclarationHoister implements ASTTransform {
             }
         }
 
-        for (int i = 0; i < frontDeclarations.size(); i++) {
-            stmts.remove(0);
-        }
-        firstNonDeclIndex = 0;
+        stmts.subList(0, frontDeclarations.size()).clear();
 
         List<VarDeclStmt> declsToInsert = new ArrayList<>(frontDeclarations);
         declsToInsert.sort((a, b) -> {
@@ -112,7 +110,6 @@ public class DeclarationHoister implements ASTTransform {
         });
 
         int offset = 0;
-        Set<String> inlinedVars = new HashSet<>();
 
         for (VarDeclStmt decl : declsToInsert) {
             String varName = decl.getName();
@@ -129,8 +126,8 @@ public class DeclarationHoister implements ASTTransform {
             if (inlineValue != null) {
                 VarDeclStmt newDecl = new VarDeclStmt(decl.getType(), varName, inlineValue);
                 int insertPos = useIdx + offset;
+                Locations.copy(stmts.get(insertPos), newDecl);
                 stmts.set(insertPos, newDecl);
-                inlinedVars.add(varName);
                 changed = true;
             } else {
                 int insertPos = useIdx + offset;

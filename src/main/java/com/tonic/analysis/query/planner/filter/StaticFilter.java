@@ -9,7 +9,7 @@ import java.util.stream.Stream;
 
 /**
  * Static prefilter that narrows candidate methods/classes without execution.
- * Uses xrefs, callgraph, pattern matching, and metadata.
+ * Uses scope patterns and metadata.
  */
 public interface StaticFilter {
 

@@ -14,7 +14,7 @@ public final class BreakStmt implements Statement {
 
     @Setter
     private String targetLabel;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -49,5 +49,10 @@ public final class BreakStmt implements Statement {
     @Override
     public String toString() {
         return targetLabel != null ? "break " + targetLabel : "break";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

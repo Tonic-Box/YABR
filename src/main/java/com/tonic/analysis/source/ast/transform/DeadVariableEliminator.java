@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
@@ -176,8 +177,9 @@ public class DeadVariableEliminator implements ASTTransform {
                         stmts.remove(i);
                         changed = true;
                     } else {
-                        // Has side effects - convert to expression statement
-                        stmts.set(i, new ExprStmt(init));
+                        ExprStmt initStmt = new ExprStmt(init);
+                        Locations.copy(stmt, initStmt);
+                        stmts.set(i, initStmt);
                         changed = true;
                     }
                 }
@@ -197,8 +199,9 @@ public class DeadVariableEliminator implements ASTTransform {
                                 stmts.remove(i);
                                 changed = true;
                             } else {
-                                // RHS has side effects - keep just the RHS as expression statement
-                                stmts.set(i, new ExprStmt(rhs));
+                                ExprStmt rhsStmt = new ExprStmt(rhs);
+                                Locations.copy(stmt, rhsStmt);
+                                stmts.set(i, rhsStmt);
                                 changed = true;
                             }
                         }

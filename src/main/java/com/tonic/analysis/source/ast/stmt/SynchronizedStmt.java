@@ -19,7 +19,7 @@ public final class SynchronizedStmt implements Statement {
     private Expression lock;
     @Setter
     private Statement body;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -70,5 +70,10 @@ public final class SynchronizedStmt implements Statement {
     @Override
     public String toString() {
         return "synchronized (" + lock + ") { ... }";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

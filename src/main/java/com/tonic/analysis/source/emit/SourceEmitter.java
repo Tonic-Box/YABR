@@ -22,6 +22,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     private final IdentifierNormalizer normalizer;
     @Getter
     private final Set<String> usedTypes = new HashSet<>();
+    private java.util.function.BiConsumer<Statement, Integer> statementLineListener;
+    private int lambdaDepth;
     private String currentClassName;
     /** Declared type of each local variable name, recorded as declarations are emitted, so member
      *  accesses cast against the DECLARED type (e.g. a merged Object slot) rather than the
@@ -44,6 +46,22 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     public void setCurrentClassName(String className) {
         this.currentClassName = className;
+    }
+
+    /**
+     * Registers a callback invoked with each statement and the 1-based output line its emission
+     * starts on. Only statements carrying bytecode-offset provenance are reported; statements inside
+     * inlined lambda bodies are suppressed because their offsets belong to the lambda's own method.
+     */
+    public void setStatementLineListener(java.util.function.BiConsumer<Statement, Integer> listener) {
+        this.statementLineListener = listener;
+    }
+
+    private void recordLine(Statement stmt) {
+        if (statementLineListener != null && lambdaDepth == 0
+                && stmt.getLocation() != null && stmt.getLocation().hasOffset()) {
+            statementLineListener.accept(stmt, writer.getCurrentLine());
+        }
     }
 
     private void recordTypeUsage(String internalName) {
@@ -465,6 +483,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitBlock(BlockStmt stmt) {
+        recordLine(stmt);
         List<Statement> stmts = stmt.getStatements();
         if (stmts.isEmpty()) {
             writer.writeLine("{}");
@@ -489,6 +508,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitIf(IfStmt stmt) {
+        recordLine(stmt);
         boolean thenEmpty = isEmptyBlock(stmt.getThenBranch());
         boolean elseEmpty = stmt.getElseBranch() == null || isEmptyBlock(stmt.getElseBranch());
         if (thenEmpty && elseEmpty) {
@@ -538,6 +558,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitWhile(WhileStmt stmt) {
+        recordLine(stmt);
         writer.write("while (");
         stmt.getCondition().accept(this);
         writer.write(") ");
@@ -547,6 +568,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitDoWhile(DoWhileStmt stmt) {
+        recordLine(stmt);
         writer.write("do ");
         emitBody(stmt.getBody());
         writer.write("while (");
@@ -557,6 +579,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitFor(ForStmt stmt) {
+        recordLine(stmt);
         writer.write("for (");
 
         List<Statement> init = stmt.getInit();
@@ -593,6 +616,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitForEach(ForEachStmt stmt) {
+        recordLine(stmt);
         writer.write("for (");
         VarDeclStmt var = stmt.getVariable();
         var.getType().accept(this);
@@ -607,6 +631,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitSwitch(SwitchStmt stmt) {
+        recordLine(stmt);
         writer.write("switch (");
         stmt.getSelector().accept(this);
         writer.writeLine(") {");
@@ -662,6 +687,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitTryCatch(TryCatchStmt stmt) {
+        recordLine(stmt);
         writer.write("try ");
 
         if (!stmt.getResources().isEmpty()) {
@@ -699,6 +725,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitReturn(ReturnStmt stmt) {
+        recordLine(stmt);
         if (stmt.getValue() == null) {
             writer.writeLine("return;");
         } else {
@@ -729,6 +756,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitThrow(ThrowStmt stmt) {
+        recordLine(stmt);
         writer.write("throw ");
         stmt.getException().accept(this);
         writer.writeLine(";");
@@ -737,6 +765,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitVarDecl(VarDeclStmt stmt) {
+        recordLine(stmt);
         emitVarDeclNoSemicolon(stmt);
         writer.writeLine(";");
         return null;
@@ -783,6 +812,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitExprStmt(ExprStmt stmt) {
+        recordLine(stmt);
         stmt.getExpression().accept(this);
         writer.writeLine(";");
         return null;
@@ -790,6 +820,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitSynchronized(SynchronizedStmt stmt) {
+        recordLine(stmt);
         writer.write("synchronized (");
         stmt.getLock().accept(this);
         writer.write(") ");
@@ -799,6 +830,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitLabeled(LabeledStmt stmt) {
+        recordLine(stmt);
         writer.write(stmt.getLabel());
         writer.writeLine(":");
         stmt.getStatement().accept(this);
@@ -807,6 +839,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitBreak(BreakStmt stmt) {
+        recordLine(stmt);
         if (stmt.getTargetLabel() != null) {
             writer.writeLine("break " + stmt.getTargetLabel() + ";");
         } else {
@@ -817,6 +850,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitContinue(ContinueStmt stmt) {
+        recordLine(stmt);
         if (stmt.getTargetLabel() != null) {
             writer.writeLine("continue " + stmt.getTargetLabel() + ";");
         } else {
@@ -827,6 +861,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitIRRegion(IRRegionStmt stmt) {
+        recordLine(stmt);
         writer.writeLine("/* IR Region - irreducible control flow */");
         writer.writeLine("/* Blocks: " + stmt.getBlocks().size() + " */");
         // Emit block contents as comments for debugging
@@ -1421,18 +1456,23 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
         writer.write(" -> ");
 
-        if (expr.getBody() instanceof BlockStmt) {
-            BlockStmt blockStmt = (BlockStmt) expr.getBody();
-            if (blockStmt.getStatements().isEmpty()) {
-                writer.write("{ }");
+        lambdaDepth++;
+        try {
+            if (expr.getBody() instanceof BlockStmt) {
+                BlockStmt blockStmt = (BlockStmt) expr.getBody();
+                if (blockStmt.getStatements().isEmpty()) {
+                    writer.write("{ }");
+                } else {
+                    expr.getBody().accept(this);
+                }
+            } else if (expr.getBody() instanceof ExprStmt) {
+                ExprStmt exprStmt = (ExprStmt) expr.getBody();
+                exprStmt.getExpression().accept(this);
             } else {
                 expr.getBody().accept(this);
             }
-        } else if (expr.getBody() instanceof ExprStmt) {
-            ExprStmt exprStmt = (ExprStmt) expr.getBody();
-            exprStmt.getExpression().accept(this);
-        } else {
-            expr.getBody().accept(this);
+        } finally {
+            lambdaDepth--;
         }
         return null;
     }

@@ -179,10 +179,9 @@ public class XrefBuilder {
             }
 
             int instrIndex = 0;
-            // Scan all blocks for xref-relevant instructions
             for (IRBlock block : irMethod.getBlocks()) {
                 for (IRInstruction instr : block.getInstructions()) {
-                    processInstruction(cf, instr, className, methodName, methodDesc, instrIndex);
+                    processInstruction(cf, instr, className, methodName, methodDesc, instrIndex, instr.getBytecodeOffset());
                     instrIndex++;
                 }
             }
@@ -195,7 +194,7 @@ public class XrefBuilder {
      * Process a single IR instruction for xrefs.
      */
     private void processInstruction(ClassFile cf, IRInstruction instr, String sourceClass,
-                                   String sourceMethod, String sourceMethodDesc, int instrIndex) {
+                                   String sourceMethod, String sourceMethodDesc, int instrIndex, int bytecodeOffset) {
 
         if (instr instanceof InvokeInstruction) {
             InvokeInstruction invoke = (InvokeInstruction) instr;
@@ -203,12 +202,13 @@ public class XrefBuilder {
                 .sourceClass(sourceClass)
                 .sourceMethod(sourceMethod, sourceMethodDesc)
                 .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                 .targetMethod(invoke.getOwner(), invoke.getName(), invoke.getDescriptor())
                 .type(XrefType.METHOD_CALL)
                 .build());
 
             if (invoke.isDynamic() && invoke.hasBootstrapInfo()) {
-                processBootstrapInfo(cf, invoke.getBootstrapInfo(), sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+                processBootstrapInfo(cf, invoke.getBootstrapInfo(), sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
             }
 
         } else if (instr instanceof FieldAccessInstruction) {
@@ -218,6 +218,7 @@ public class XrefBuilder {
                 .sourceClass(sourceClass)
                 .sourceMethod(sourceMethod, sourceMethodDesc)
                 .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                 .targetField(fieldAccess.getOwner(), fieldAccess.getName(), fieldAccess.getDescriptor())
                 .type(xrefType)
                 .build());
@@ -229,6 +230,7 @@ public class XrefBuilder {
                 .sourceClass(sourceClass)
                 .sourceMethod(sourceMethod, sourceMethodDesc)
                 .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                 .targetClass(targetClass)
                 .type(XrefType.CLASS_INSTANTIATE)
                 .build());
@@ -244,6 +246,7 @@ public class XrefBuilder {
                         .sourceClass(sourceClass)
                         .sourceMethod(sourceMethod, sourceMethodDesc)
                         .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                         .targetClass(typeName)
                         .type(xrefType)
                         .build());
@@ -253,14 +256,14 @@ public class XrefBuilder {
         } else if (instr instanceof ConstantInstruction) {
             ConstantInstruction constInstr = (ConstantInstruction) instr;
             Constant constant = constInstr.getConstant();
-            processConstantForXref(cf, constant, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+            processConstantForXref(cf, constant, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
         }
 
         for (Value operand : instr.getOperands()) {
             if (operand instanceof MethodHandleConstant) {
-                processMethodHandleConstant((MethodHandleConstant) operand, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, XrefType.BOOTSTRAP_ARG_METHOD);
+                processMethodHandleConstant((MethodHandleConstant) operand, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset, XrefType.BOOTSTRAP_ARG_METHOD);
             } else if (operand instanceof DynamicConstant) {
-                processDynamicConstant(cf, (DynamicConstant) operand, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+                processDynamicConstant(cf, (DynamicConstant) operand, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
             }
         }
     }
@@ -269,11 +272,11 @@ public class XrefBuilder {
      * Process a constant value for xrefs (method handles, dynamic constants).
      */
     private void processConstantForXref(ClassFile cf, Constant constant, String sourceClass,
-                                        String sourceMethod, String sourceMethodDesc, int instrIndex) {
+                                        String sourceMethod, String sourceMethodDesc, int instrIndex, int bytecodeOffset) {
         if (constant instanceof MethodHandleConstant) {
-            processMethodHandleConstant((MethodHandleConstant) constant, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, XrefType.BOOTSTRAP_ARG_METHOD);
+            processMethodHandleConstant((MethodHandleConstant) constant, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset, XrefType.BOOTSTRAP_ARG_METHOD);
         } else if (constant instanceof DynamicConstant) {
-            processDynamicConstant(cf, (DynamicConstant) constant, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+            processDynamicConstant(cf, (DynamicConstant) constant, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
         }
     }
 
@@ -281,17 +284,17 @@ public class XrefBuilder {
      * Process bootstrap method info from invokedynamic.
      */
     private void processBootstrapInfo(ClassFile cf, BootstrapMethodInfo bootstrapInfo, String sourceClass,
-                                      String sourceMethod, String sourceMethodDesc, int instrIndex) {
+                                      String sourceMethod, String sourceMethodDesc, int instrIndex, int bytecodeOffset) {
         MethodHandleConstant bsm = bootstrapInfo.getBootstrapMethod();
         if (bsm != null) {
-            processMethodHandleConstant(bsm, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, XrefType.BOOTSTRAP_METHOD);
+            processMethodHandleConstant(bsm, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset, XrefType.BOOTSTRAP_METHOD);
         }
 
         for (Constant arg : bootstrapInfo.getBootstrapArguments()) {
             if (arg instanceof MethodHandleConstant) {
-                processMethodHandleConstant((MethodHandleConstant) arg, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, XrefType.BOOTSTRAP_ARG_METHOD);
+                processMethodHandleConstant((MethodHandleConstant) arg, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset, XrefType.BOOTSTRAP_ARG_METHOD);
             } else if (arg instanceof DynamicConstant) {
-                processDynamicConstant(cf, (DynamicConstant) arg, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+                processDynamicConstant(cf, (DynamicConstant) arg, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
             }
         }
     }
@@ -301,12 +304,13 @@ public class XrefBuilder {
      */
     private void processMethodHandleConstant(MethodHandleConstant mh, String sourceClass,
                                              String sourceMethod, String sourceMethodDesc,
-                                             int instrIndex, XrefType xrefType) {
+                                             int instrIndex, int bytecodeOffset, XrefType xrefType) {
         if (mh.isMethodReference()) {
             database.addXref(Xref.builder()
                 .sourceClass(sourceClass)
                 .sourceMethod(sourceMethod, sourceMethodDesc)
                 .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                 .targetMethod(mh.getOwner(), mh.getName(), mh.getDescriptor())
                 .type(xrefType)
                 .build());
@@ -316,6 +320,7 @@ public class XrefBuilder {
                 .sourceClass(sourceClass)
                 .sourceMethod(sourceMethod, sourceMethodDesc)
                 .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                 .targetField(mh.getOwner(), mh.getName(), mh.getDescriptor())
                 .type(fieldXrefType)
                 .build());
@@ -327,7 +332,7 @@ public class XrefBuilder {
      * Resolves the bootstrap method and its arguments from the constant pool.
      */
     private void processDynamicConstant(ClassFile cf, DynamicConstant condy, String sourceClass,
-                                        String sourceMethod, String sourceMethodDesc, int instrIndex) {
+                                        String sourceMethod, String sourceMethodDesc, int instrIndex, int bytecodeOffset) {
         try {
             BootstrapMethodsAttribute bsmAttr = findBootstrapMethodsAttribute(cf);
             if (bsmAttr == null || bsmAttr.getBootstrapMethods() == null) {
@@ -340,7 +345,7 @@ public class XrefBuilder {
             }
 
             BootstrapMethod bsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
-            processBootstrapMethodFromCP(cf, bsm, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+            processBootstrapMethodFromCP(cf, bsm, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
         } catch (Exception e) {
             // Ignore resolution failures
         }
@@ -358,7 +363,7 @@ public class XrefBuilder {
             }
 
             for (BootstrapMethod bsm : bsmAttr.getBootstrapMethods()) {
-                processBootstrapMethodFromCP(cf, bsm, sourceClass, null, null, -1);
+                processBootstrapMethodFromCP(cf, bsm, sourceClass, null, null, -1, -1);
             }
         } catch (Exception e) {
             // Ignore failures
@@ -384,11 +389,11 @@ public class XrefBuilder {
      * Process a bootstrap method entry from the constant pool.
      */
     private void processBootstrapMethodFromCP(ClassFile cf, BootstrapMethod bsm, String sourceClass,
-                                              String sourceMethod, String sourceMethodDesc, int instrIndex) {
+                                              String sourceMethod, String sourceMethodDesc, int instrIndex, int bytecodeOffset) {
         try {
             Item<?> mhItem = cf.getConstPool().getItem(bsm.getBootstrapMethodRef());
             if (mhItem instanceof MethodHandleItem) {
-                processMethodHandleFromCP(cf, (MethodHandleItem) mhItem, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, XrefType.BOOTSTRAP_METHOD);
+                processMethodHandleFromCP(cf, (MethodHandleItem) mhItem, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset, XrefType.BOOTSTRAP_METHOD);
             }
 
             for (Integer argIndex : bsm.getBootstrapArguments()) {
@@ -397,10 +402,10 @@ public class XrefBuilder {
                     MethodHandleItem mhArg = (MethodHandleItem) argItem;
                     int refKind = mhArg.getValue().getReferenceKind();
                     XrefType type = (refKind >= 5 && refKind <= 9) ? XrefType.BOOTSTRAP_ARG_METHOD : XrefType.BOOTSTRAP_ARG_FIELD;
-                    processMethodHandleFromCP(cf, mhArg, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, type);
+                    processMethodHandleFromCP(cf, mhArg, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset, type);
                 } else if (argItem instanceof ConstantDynamicItem) {
                     ConstantDynamicItem nestedCondy = (ConstantDynamicItem) argItem;
-                    processNestedCondy(cf, nestedCondy, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+                    processNestedCondy(cf, nestedCondy, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
                 }
             }
         } catch (Exception e) {
@@ -413,7 +418,7 @@ public class XrefBuilder {
      */
     private void processMethodHandleFromCP(ClassFile cf, MethodHandleItem mhItem, String sourceClass,
                                            String sourceMethod, String sourceMethodDesc,
-                                           int instrIndex, XrefType xrefType) {
+                                           int instrIndex, int bytecodeOffset, XrefType xrefType) {
         try {
             int refKind = mhItem.getValue().getReferenceKind();
             int refIndex = mhItem.getValue().getReferenceIndex();
@@ -444,6 +449,7 @@ public class XrefBuilder {
                         .sourceClass(sourceClass)
                         .sourceMethod(sourceMethod, sourceMethodDesc)
                         .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                         .targetMethod(owner, name, descriptor)
                         .type(xrefType)
                         .build());
@@ -452,6 +458,7 @@ public class XrefBuilder {
                         .sourceClass(sourceClass)
                         .sourceMethod(sourceMethod, sourceMethodDesc)
                         .instructionIndex(instrIndex)
+                .bytecodeOffset(bytecodeOffset)
                         .targetField(owner, name, descriptor)
                         .type(XrefType.BOOTSTRAP_ARG_FIELD)
                         .build());
@@ -466,7 +473,7 @@ public class XrefBuilder {
      * Process a nested ConstantDynamic from the constant pool.
      */
     private void processNestedCondy(ClassFile cf, ConstantDynamicItem condy, String sourceClass,
-                                    String sourceMethod, String sourceMethodDesc, int instrIndex) {
+                                    String sourceMethod, String sourceMethodDesc, int instrIndex, int bytecodeOffset) {
         try {
             BootstrapMethodsAttribute bsmAttr = findBootstrapMethodsAttribute(cf);
             if (bsmAttr == null || bsmAttr.getBootstrapMethods() == null) {
@@ -479,7 +486,7 @@ public class XrefBuilder {
             }
 
             BootstrapMethod bsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
-            processBootstrapMethodFromCP(cf, bsm, sourceClass, sourceMethod, sourceMethodDesc, instrIndex);
+            processBootstrapMethodFromCP(cf, bsm, sourceClass, sourceMethod, sourceMethodDesc, instrIndex, bytecodeOffset);
         } catch (Exception e) {
             // Ignore resolution failures
         }

@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
@@ -67,6 +68,7 @@ public class PatternSwitchReconstructor implements ASTTransform {
             if (loop != null) {
                 Folded f = tryFold(loop);
                 if (f != null) {
+                    Locations.copy(stmts.get(i), f.replacement);
                     stmts.set(i, f.replacement);
                     removeDeadDecls(stmts, i, f.deadVars);
                     changed = true;
@@ -266,7 +268,7 @@ public class PatternSwitchReconstructor implements ASTTransform {
         }
         deadVars.add(resultVar);
 
-        SourceType resultType = arms.isEmpty() || arms.get(0).getResult() == null
+        SourceType resultType = arms.get(0).getResult() == null
                 ? null : arms.get(0).getResult().getType();
         SwitchExpr switchExpr = new SwitchExpr(selector, arms, resultType);
         return new Folded(new ReturnStmt(switchExpr), deadVars);
@@ -316,9 +318,8 @@ public class PatternSwitchReconstructor implements ASTTransform {
             }
             returnForm |= a.isReturn;
             if (a.resultVar != null) {
-                String prev = resultVar;
                 resultVar = checkSame(resultVar, a.resultVar);
-                if (resultVar == null && prev != null) {
+                if (resultVar == null) {
                     return false; // inconsistent result variables across arms
                 }
             }
@@ -351,7 +352,9 @@ public class PatternSwitchReconstructor implements ASTTransform {
         SwitchExpr switchExpr = new SwitchExpr(selector, arms, resultType);
 
         if (returnForm) {
-            stmts.set(index, new ReturnStmt(switchExpr));
+            ReturnStmt returnStmt = new ReturnStmt(switchExpr);
+            Locations.copy(stmts.get(index), returnStmt);
+            stmts.set(index, returnStmt);
             if (resultVar != null) {
                 // The trailing `return resultVar` is now unreachable; drop it and the result decl.
                 if (index + 1 < stmts.size() && isReturnOfVar(stmts.get(index + 1), resultVar)) {
@@ -367,14 +370,18 @@ public class PatternSwitchReconstructor implements ASTTransform {
         for (int j = index - 1; j >= 0; j--) {
             if (stmts.get(j) instanceof VarDeclStmt && resultVar.equals(((VarDeclStmt) stmts.get(j)).getName())) {
                 VarDeclStmt decl = (VarDeclStmt) stmts.get(j);
-                stmts.set(j, new VarDeclStmt(decl.getType(), resultVar, switchExpr));
+                VarDeclStmt foldedDecl = new VarDeclStmt(decl.getType(), resultVar, switchExpr);
+                Locations.copy(decl, foldedDecl);
+                stmts.set(j, foldedDecl);
                 stmts.remove(index);
                 removeDeadDeclsByName(stmts, bindings);
                 return true;
             }
         }
-        stmts.set(index, new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
-                new VarRefExpr(resultVar, resultType), switchExpr, resultType)));
+        ExprStmt assignStmt = new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                new VarRefExpr(resultVar, resultType), switchExpr, resultType));
+        Locations.copy(stmts.get(index), assignStmt);
+        stmts.set(index, assignStmt);
         removeDeadDeclsByName(stmts, bindings);
         return true;
     }
@@ -423,8 +430,9 @@ public class PatternSwitchReconstructor implements ASTTransform {
             String lhs = ((VarRefExpr) assign.getLeft()).getName();
             Expression rhs = assign.getRight();
             if (rhs instanceof CastExpr && sameExpr(((CastExpr) rhs).getExpression(), selector)) {
-                info.bindingType = ((CastExpr) rhs).getType();
-                if (((CastExpr) rhs).isRecordDeconstruction()) {
+                CastExpr cast = (CastExpr) rhs;
+                info.bindingType = cast.getType();
+                if (cast.isRecordDeconstruction()) {
                     info.isDeconstruction = true;
                     info.deconstructTemp = lhs;
                 } else {
@@ -530,9 +538,10 @@ public class PatternSwitchReconstructor implements ASTTransform {
                 }
                 info.mergeState = (Integer) ((LiteralExpr) rhs).getValue();
             } else if (rhs instanceof CastExpr && sameExpr(((CastExpr) rhs).getExpression(), selector)) {
+                CastExpr cast = (CastExpr) rhs;
                 // binding: b = (T) selector
                 info.binding = lhs;
-                info.bindingType = ((CastExpr) rhs).getType();
+                info.bindingType = cast.getType();
             } else {
                 // result computation: resultVar = expr (last one wins)
                 info.resultVar = lhs;

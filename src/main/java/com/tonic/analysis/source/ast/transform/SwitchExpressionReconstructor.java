@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
@@ -74,7 +75,9 @@ public class SwitchExpressionReconstructor implements ASTTransform {
 
             SwitchExpr folded = tryFoldAssignmentSwitch(decl.getName(), decl.getType(), sw);
             if (folded != null) {
-                stmts.set(i, new VarDeclStmt(decl.getType(), decl.getName(), folded));
+                VarDeclStmt foldedDecl = new VarDeclStmt(decl.getType(), decl.getName(), folded);
+                Locations.copy(decl, foldedDecl);
+                stmts.set(i, foldedDecl);
                 stmts.remove(i + 1);
                 changed = true;
                 continue;
@@ -82,7 +85,9 @@ public class SwitchExpressionReconstructor implements ASTTransform {
 
             SwitchExpr returned = tryFoldReturnSwitch(decl, sw);
             if (returned != null) {
-                stmts.set(i, new ReturnStmt(returned));
+                ReturnStmt returnStmt = new ReturnStmt(returned);
+                Locations.copy(decl, returnStmt);
+                stmts.set(i, returnStmt);
                 stmts.remove(i + 1); // the switch
                 // Drop the (now dead) trailing `return v`.
                 if (i + 1 < stmts.size() && isReturnOf(stmts.get(i + 1), decl.getName())) {

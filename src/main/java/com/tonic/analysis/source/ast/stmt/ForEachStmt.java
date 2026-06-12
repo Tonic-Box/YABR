@@ -23,7 +23,7 @@ public final class ForEachStmt implements Statement {
     private Statement body;
     @Setter
     private String label;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -94,5 +94,10 @@ public final class ForEachStmt implements Statement {
         String labelStr = label != null ? label + ": " : "";
         return labelStr + "for (" + variable.getType() + " " + variable.getName() +
                " : " + iterable + ") ...";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

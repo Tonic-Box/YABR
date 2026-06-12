@@ -17,7 +17,7 @@ public final class LabeledStmt implements Statement {
     private final String label;
     @Setter
     private Statement statement;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -60,5 +60,10 @@ public final class LabeledStmt implements Statement {
     @Override
     public String toString() {
         return label + ": " + statement;
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

@@ -21,7 +21,7 @@ public final class WhileStmt implements Statement {
     private Statement body;
     @Setter
     private String label;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -84,5 +84,10 @@ public final class WhileStmt implements Statement {
     public String toString() {
         String labelStr = label != null ? label + ": " : "";
         return labelStr + "while (" + condition + ") ...";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

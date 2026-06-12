@@ -21,7 +21,7 @@ public final class IfStmt implements Statement {
     private Statement thenBranch;
     @Setter
     private Statement elseBranch;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -98,5 +98,10 @@ public final class IfStmt implements Statement {
     @Override
     public String toString() {
         return "if (" + condition + ") " + (hasElse() ? "then...else..." : "then...");
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

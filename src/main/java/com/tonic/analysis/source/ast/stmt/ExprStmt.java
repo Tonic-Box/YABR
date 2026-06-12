@@ -18,7 +18,7 @@ public final class ExprStmt implements Statement {
 
     @Setter
     private Expression expression;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -55,5 +55,10 @@ public final class ExprStmt implements Statement {
     @Override
     public String toString() {
         return expression + ";";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

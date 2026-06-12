@@ -20,7 +20,7 @@ public final class SwitchStmt implements Statement {
     @Setter
     private Expression selector;
     private final List<SwitchCase> cases;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -101,5 +101,10 @@ public final class SwitchStmt implements Statement {
     @Override
     public String toString() {
         return "switch (" + selector + ") { " + cases.size() + " cases }";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

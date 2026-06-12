@@ -11,7 +11,7 @@ import java.util.Objects;
  * - The source class and method where the reference occurs
  * - The target being referenced (class, method, or field)
  * - The type of reference (call, read, write, instantiate, etc.)
- * - The location within the source (line number, instruction index)
+ * - The location within the source (line number, instruction index, bytecode offset)
  */
 public class Xref {
 
@@ -21,6 +21,7 @@ public class Xref {
     private final String sourceMethodDesc;
     private final int lineNumber;
     private final int instructionIndex;
+    private final int bytecodeOffset;
 
     // Target (what is being referenced)
     private final String targetClass;
@@ -36,6 +37,7 @@ public class Xref {
         this.sourceMethodDesc = builder.sourceMethodDesc;
         this.lineNumber = builder.lineNumber;
         this.instructionIndex = builder.instructionIndex;
+        this.bytecodeOffset = builder.bytecodeOffset;
         this.targetClass = builder.targetClass;
         this.targetMember = builder.targetMember;
         this.targetDescriptor = builder.targetDescriptor;
@@ -62,6 +64,10 @@ public class Xref {
 
     public int getInstructionIndex() {
         return instructionIndex;
+    }
+
+    public int getBytecodeOffset() {
+        return bytecodeOffset;
     }
 
     public String getTargetClass() {
@@ -159,6 +165,7 @@ public class Xref {
         Xref xref = (Xref) o;
         return lineNumber == xref.lineNumber &&
                instructionIndex == xref.instructionIndex &&
+               bytecodeOffset == xref.bytecodeOffset &&
                Objects.equals(sourceClass, xref.sourceClass) &&
                Objects.equals(sourceMethod, xref.sourceMethod) &&
                Objects.equals(targetClass, xref.targetClass) &&
@@ -168,7 +175,7 @@ public class Xref {
 
     @Override
     public int hashCode() {
-        return Objects.hash(sourceClass, sourceMethod, lineNumber, instructionIndex,
+        return Objects.hash(sourceClass, sourceMethod, lineNumber, instructionIndex, bytecodeOffset,
                            targetClass, targetMember, type);
     }
 
@@ -189,6 +196,7 @@ public class Xref {
         private String sourceMethodDesc;
         private int lineNumber = -1;
         private int instructionIndex = -1;
+        private int bytecodeOffset = -1;
         private String targetClass = "";
         private String targetMember;
         private String targetDescriptor;
@@ -212,6 +220,11 @@ public class Xref {
 
         public Builder instructionIndex(int index) {
             this.instructionIndex = index;
+            return this;
+        }
+
+        public Builder bytecodeOffset(int offset) {
+            this.bytecodeOffset = offset;
             return this;
         }
 

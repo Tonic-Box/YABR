@@ -51,7 +51,11 @@ import com.tonic.utill.Modifiers;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -78,6 +82,7 @@ public class ClassDecompiler {
     private final PatternInstanceOfReconstructor patternInstanceOf;
     private final VarargsReconstructor varargsReconstructor;
     private final Set<String> usedTypes = new TreeSet<>();
+    private Map<String, NavigableMap<Integer, Integer>> lineMapsCollector;
     private final boolean hasInnerClasses;
 
     public ClassDecompiler(ClassFile classFile) {
@@ -199,6 +204,23 @@ public class ClassDecompiler {
     }
 
     /**
+     * Decompiles the class and additionally collects, per method, a map from bytecode offset to the
+     * 1-based output line of the statement recovered from that offset. Provenance flows from the SSA
+     * lifter through statement recovery and the AST transform pipeline; statements without surviving
+     * provenance (synthesized or merged away) simply have no entry.
+     */
+    public DecompileResult decompileWithLineMap() {
+        lineMapsCollector = new LinkedHashMap<>();
+        try {
+            IndentingWriter writer = new IndentingWriter(new StringWriter(), emitterConfig.getIndentString());
+            decompile(writer);
+            return new DecompileResult(writer.toString(), lineMapsCollector);
+        } finally {
+            lineMapsCollector = null;
+        }
+    }
+
+    /**
      * Decompiles the entire class to the given writer.
      */
     public void decompile(IndentingWriter writer) {
@@ -221,6 +243,14 @@ public class ClassDecompiler {
             emitImports(writer, className);
         }
 
+        if (lineMapsCollector != null) {
+            int headerLines = writer.getCurrentLine() - 1;
+            if (headerLines > 0) {
+                for (NavigableMap<Integer, Integer> map : lineMapsCollector.values()) {
+                    map.replaceAll((offset, line) -> line + headerLines);
+                }
+            }
+        }
         writer.writeRaw(bodyContent);
     }
 
@@ -728,7 +758,7 @@ public class ClassDecompiler {
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body); // Static initializers cannot have return statements
-            emitBlockContents(writer, body);
+            emitBlockContents(writer, body, clinit.getName() + clinit.getDesc());
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile static initializer: " + e.getMessage());
         }
@@ -822,7 +852,7 @@ public class ClassDecompiler {
             switchExprReconstructor.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
-            emitBlockContents(writer, body);
+            emitBlockContents(writer, body, ctor.getName() + ctor.getDesc());
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile constructor: " + e.getMessage());
         }
@@ -895,7 +925,7 @@ public class ClassDecompiler {
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body);
-            emitBlockContents(writer, body);
+            emitBlockContents(writer, body, method.getName() + method.getDesc());
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile: " + e.getMessage());
         }
@@ -904,9 +934,15 @@ public class ClassDecompiler {
         writer.writeLine("}");
     }
 
-    private void emitBlockContents(IndentingWriter writer, BlockStmt block) {
+    private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey) {
         SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
         emitter.setCurrentClassName(classFile.getClassName());
+        if (lineMapsCollector != null && methodKey != null) {
+            NavigableMap<Integer, Integer> lineMap =
+                    lineMapsCollector.computeIfAbsent(methodKey, k -> new TreeMap<>());
+            emitter.setStatementLineListener((stmt, line) ->
+                    lineMap.put(stmt.getLocation().bytecodeOffset(), line));
+        }
         for (Statement stmt : block.getStatements()) {
             stmt.accept(emitter);
         }
@@ -1453,9 +1489,7 @@ public class ClassDecompiler {
         // Track the class type for imports
         if (internalName != null) {
             usedTypes.add(internalName);
-        } else if (!className.contains("/") && !className.contains(".")) {
-            // Not a fully qualified name, might be internal name without descriptor
-        } else {
+        } else if (className.contains("/") || className.contains(".")) {
             usedTypes.add(className.replace('.', '/'));
         }
 

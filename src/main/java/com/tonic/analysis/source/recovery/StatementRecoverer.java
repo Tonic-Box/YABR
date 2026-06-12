@@ -1,6 +1,8 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.utill.Logger;
+import com.tonic.analysis.source.ast.Locations;
+import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
@@ -412,6 +414,7 @@ public class StatementRecoverer {
                 }
 
                 TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
+                stampFromBody(tryCatch, tryBlock);
                 result.add(tryCatch);
             } else {
                 result.addAll(tryStmts);
@@ -596,7 +599,9 @@ public class StatementRecoverer {
                             filteredCatches.add(clause);
                         }
                     }
-                    result.add(new TryCatchStmt(tryBlock, filteredCatches, finallyBlock));
+                    TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
+                    stampFromBody(tryCatch, tryBlock);
+                    result.add(tryCatch);
                 } else {
                     result.addAll(tryStmts);
                 }
@@ -955,7 +960,9 @@ public class StatementRecoverer {
                 Statement newElse = ifStmt.getElseBranch() != null
                     ? filterInlinedFinallyFromBranch(ifStmt.getElseBranch(), finallyStmts)
                     : null;
-                result.add(new IfStmt(ifStmt.getCondition(), newThen, newElse));
+                IfStmt rebuiltIf = new IfStmt(ifStmt.getCondition(), newThen, newElse);
+                Locations.copy(ifStmt, rebuiltIf);
+                result.add(rebuiltIf);
                 i++;
                 continue;
             }
@@ -963,7 +970,9 @@ public class StatementRecoverer {
             if (stmt instanceof WhileStmt) {
                 WhileStmt whileStmt = (WhileStmt) stmt;
                 Statement newBody = filterInlinedFinallyFromBranch(whileStmt.getBody(), finallyStmts);
-                result.add(new WhileStmt(whileStmt.getCondition(), newBody));
+                WhileStmt rebuiltWhile = new WhileStmt(whileStmt.getCondition(), newBody);
+                Locations.copy(whileStmt, rebuiltWhile);
+                result.add(rebuiltWhile);
                 i++;
                 continue;
             }
@@ -971,7 +980,9 @@ public class StatementRecoverer {
             if (stmt instanceof DoWhileStmt) {
                 DoWhileStmt doWhileStmt = (DoWhileStmt) stmt;
                 Statement newBody = filterInlinedFinallyFromBranch(doWhileStmt.getBody(), finallyStmts);
-                result.add(new DoWhileStmt(newBody, doWhileStmt.getCondition()));
+                DoWhileStmt rebuiltDoWhile = new DoWhileStmt(newBody, doWhileStmt.getCondition());
+                Locations.copy(doWhileStmt, rebuiltDoWhile);
+                result.add(rebuiltDoWhile);
                 i++;
                 continue;
             }
@@ -979,7 +990,9 @@ public class StatementRecoverer {
             if (stmt instanceof ForStmt) {
                 ForStmt forStmt = (ForStmt) stmt;
                 Statement newBody = filterInlinedFinallyFromBranch(forStmt.getBody(), finallyStmts);
-                result.add(new ForStmt(forStmt.getInit(), forStmt.getCondition(), forStmt.getUpdate(), newBody));
+                ForStmt rebuiltFor = new ForStmt(forStmt.getInit(), forStmt.getCondition(), forStmt.getUpdate(), newBody);
+                Locations.copy(forStmt, rebuiltFor);
+                result.add(rebuiltFor);
                 i++;
                 continue;
             }
@@ -1128,6 +1141,7 @@ public class StatementRecoverer {
                 SimpleInstruction simple = (SimpleInstruction) terminator;
                 Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
                 Statement throwStmt = new ThrowStmt(exception);
+                stamp(throwStmt, simple);
                 stmts.add(throwStmt);
                 continue;
             }
@@ -1135,6 +1149,7 @@ public class StatementRecoverer {
             if (isReturn) {
                 ReturnInstruction ret = (ReturnInstruction) terminator;
                 Statement returnStmt = recoverReturn(ret);
+                stamp(returnStmt, ret);
                 stmts.add(returnStmt);
                 continue;
             }
@@ -1332,14 +1347,6 @@ public class StatementRecoverer {
             this.end = end;
         }
 
-        public IRBlock start() {
-            return start;
-        }
-
-        public IRBlock end() {
-            return end;
-        }
-
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
@@ -1476,7 +1483,9 @@ public class StatementRecoverer {
             tryBlock = new BlockStmt(tryStmts);
         }
 
-        return new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
+        TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
+        stampFromBody(tryCatch, tryBlock);
+        return tryCatch;
     }
 
     /**
@@ -2825,7 +2834,55 @@ public class StatementRecoverer {
         return statements;
     }
 
+    /**
+     * Recovers a statement for an instruction and stamps it with the instruction's bytecode-offset
+     * provenance, so decompiled output can be mapped back to bytecode positions.
+     */
     private Statement recoverInstruction(IRInstruction instr) {
+        Statement stmt = recoverInstruction0(instr);
+        if (stmt != null && instr.getBytecodeOffset() >= 0 && !stmt.getLocation().hasOffset()) {
+            stmt.setLocation(SourceLocation.fromOffset(instr.getBytecodeOffset()));
+        }
+        return stmt;
+    }
+
+    private void stamp(Statement stmt, IRInstruction instr) {
+        if (stmt != null && instr != null && instr.getBytecodeOffset() >= 0 && !stmt.getLocation().hasOffset()) {
+            stmt.setLocation(SourceLocation.fromOffset(instr.getBytecodeOffset()));
+        }
+    }
+
+    /**
+     * Stamps a recovered control-flow statement with its header's bytecode offset, preferring the
+     * branch/switch terminator's provenance and falling back to the block's start offset.
+     */
+    private void stampFromHeader(Statement stmt, IRBlock header) {
+        if (stmt == null || header == null || stmt.getLocation().hasOffset()) {
+            return;
+        }
+        int offset = header.getTerminator() != null ? header.getTerminator().getBytecodeOffset() : -1;
+        if (offset < 0) {
+            offset = header.getBytecodeOffset();
+        }
+        if (offset >= 0) {
+            stmt.setLocation(SourceLocation.fromOffset(offset));
+        }
+    }
+
+    /** Stamps a wrapper statement (e.g. try/catch) from the first stamped statement in its body. */
+    private void stampFromBody(Statement stmt, BlockStmt body) {
+        if (stmt == null || body == null || stmt.getLocation().hasOffset()) {
+            return;
+        }
+        for (Statement child : body.getStatements()) {
+            if (child.getLocation() != null && child.getLocation().hasOffset()) {
+                stmt.setLocation(child.getLocation());
+                return;
+            }
+        }
+    }
+
+    private Statement recoverInstruction0(IRInstruction instr) {
         if (instr.isTerminator()) {
             return recoverTerminator(instr);
         }
@@ -3570,6 +3627,7 @@ public class StatementRecoverer {
 
         if (isAndConditionChain(thenStmts)) {
             Statement mergedIf = mergeAndConditions(condition, thenStmts);
+            stampFromHeader(mergedIf, header);
             if (!headerStmts.isEmpty()) {
                 context.addPendingStatements(headerStmts);
             }
@@ -3579,6 +3637,7 @@ public class StatementRecoverer {
         BlockStmt thenBlock = new BlockStmt(thenStmts);
 
         IfStmt ifStmt = new IfStmt(condition, thenBlock, null);
+        stampFromHeader(ifStmt, header);
 
         if (!headerStmts.isEmpty()) {
             context.addPendingStatements(headerStmts);
@@ -3607,6 +3666,7 @@ public class StatementRecoverer {
         }
 
         IfStmt guardStmt = new IfStmt(condition, exitStmt, null);
+        stampFromHeader(guardStmt, header);
 
         if (!headerStmts.isEmpty()) {
             context.addPendingStatements(headerStmts);
@@ -3716,6 +3776,7 @@ public class StatementRecoverer {
 
         if (isOrConditionChain(thenStmts, elseStmts)) {
             Statement mergedIf = mergeOrConditions(condition, thenStmts, elseStmts);
+            stampFromHeader(mergedIf, header);
             if (!headerStmts.isEmpty()) {
                 context.addPendingStatements(headerStmts);
             }
@@ -3763,6 +3824,7 @@ public class StatementRecoverer {
         BlockStmt elseBlock = new BlockStmt(elseStmts);
 
         IfStmt ifStmt = new IfStmt(condition, thenBlock, elseBlock);
+        stampFromHeader(ifStmt, header);
 
         if (!headerStmts.isEmpty()) {
             context.addPendingStatements(headerStmts);
@@ -3818,7 +3880,9 @@ public class StatementRecoverer {
         try {
             List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
             BlockStmt body = new BlockStmt(bodyStmts);
-            return new WhileStmt(condition, body);
+            WhileStmt whileStmt = new WhileStmt(condition, body);
+            stampFromHeader(whileStmt, header);
+            return whileStmt;
         } finally {
             context.popStopBlocks();
         }
@@ -3847,7 +3911,9 @@ public class StatementRecoverer {
             List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
             BlockStmt body = new BlockStmt(bodyStmts);
             Expression condition = recoverCondition(header, info.isConditionNegated());
-            return new DoWhileStmt(body, condition);
+            DoWhileStmt doWhileStmt = new DoWhileStmt(body, condition);
+            stampFromHeader(doWhileStmt, header);
+            return doWhileStmt;
         } finally {
             context.popStopBlocks();
         }
@@ -3928,7 +3994,9 @@ public class StatementRecoverer {
                 List<Statement> bodyStmts = recoverBlockSequence(bodyBlock, stopBlocks);
                 BlockStmt body = new BlockStmt(bodyStmts);
 
-                return new ForStmt(initStmts, condition, updateExprs, body);
+                ForStmt forStmt = new ForStmt(initStmts, condition, updateExprs, body);
+                stampFromHeader(forStmt, header);
+                return forStmt;
             } finally {
                 context.popSkipInstructions();
                 context.popStopBlocks();
@@ -3960,7 +4028,9 @@ public class StatementRecoverer {
         try {
             List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
             BlockStmt body = new BlockStmt(bodyStmts);
-            return new WhileStmt(condition, body);
+            WhileStmt whileStmt = new WhileStmt(condition, body);
+            stampFromHeader(whileStmt, header);
+            return whileStmt;
         } finally {
             context.popStopBlocks();
         }
@@ -4227,6 +4297,7 @@ public class StatementRecoverer {
         }
 
         Statement switchStmt = new SwitchStmt(selector, cases);
+        stampFromHeader(switchStmt, header);
         if (!headerStmts.isEmpty()) {
             List<Statement> combined = new ArrayList<>(headerStmts);
             combined.add(switchStmt);

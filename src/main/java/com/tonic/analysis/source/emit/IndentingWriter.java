@@ -13,6 +13,7 @@ public class IndentingWriter {
     private final String indentString;
     private int indentLevel;
     private boolean atLineStart;
+    private int currentLine = 1;
 
     public IndentingWriter(Writer writer) {
         this(writer, "\t");
@@ -62,6 +63,7 @@ public class IndentingWriter {
                 writer.write(c);
                 if (c == '\n') {
                     atLineStart = true;
+                    currentLine++;
                 }
             }
         } catch (IOException e) {
@@ -84,6 +86,7 @@ public class IndentingWriter {
         try {
             writer.write("\n");
             atLineStart = true;
+            currentLine++;
         } catch (IOException e) {
             throw new RuntimeException("Failed to write newline", e);
         }
@@ -118,10 +121,22 @@ public class IndentingWriter {
             writer.write(text);
             if (!text.isEmpty()) {
                 atLineStart = text.charAt(text.length() - 1) == '\n';
+                for (int i = 0; i < text.length(); i++) {
+                    if (text.charAt(i) == '\n') {
+                        currentLine++;
+                    }
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to write", e);
         }
+    }
+
+    /**
+     * The 1-based line number the next character will be written to.
+     */
+    public int getCurrentLine() {
+        return currentLine;
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
@@ -66,6 +67,7 @@ public class ControlFlowSimplifier implements ASTTransform {
 
                 Statement replacement = tryConvertIfElseToAssignment(ifStmt);
                 if (replacement != null) {
+                    Locations.copy(ifStmt, replacement);
                     stmts.set(i, replacement);
                     changed = true;
                     continue;
@@ -116,7 +118,9 @@ public class ControlFlowSimplifier implements ASTTransform {
                 return true;
             }
             if (isStatementExpression(cond)) {
-                parentList.set(index, new ExprStmt(cond));
+                ExprStmt condStmt = new ExprStmt(cond);
+                Locations.copy(ifStmt, condStmt);
+                parentList.set(index, condStmt);
                 return true;
             }
             return false;
@@ -152,6 +156,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             Statement thenBody = ifStmt.getThenBranch();
 
             IfStmt guard = new IfStmt(negate(ifStmt.getCondition()), earlyExit);
+            Locations.copy(ifStmt, guard);
 
             parentList.set(index, guard);
 
@@ -183,6 +188,14 @@ public class ControlFlowSimplifier implements ASTTransform {
     }
 
     private Statement simplifyExpressionsInStatement(Statement stmt) {
+        Statement simplified = simplifyExpressionsInStatement0(stmt);
+        if (simplified != stmt) {
+            Locations.copy(stmt, simplified);
+        }
+        return simplified;
+    }
+
+    private Statement simplifyExpressionsInStatement0(Statement stmt) {
         if (stmt instanceof ReturnStmt) {
             ReturnStmt ret = (ReturnStmt) stmt;
             if (ret.getValue() != null) {
@@ -275,7 +288,7 @@ public class ControlFlowSimplifier implements ASTTransform {
         if (def instanceof ConstantInstruction) {
             ConstantInstruction constInstr = (ConstantInstruction) def;
             Constant constant = constInstr.getConstant();
-            return constantToLiteral(constant, varRef.getType());
+            return constantToLiteral(constant);
         }
 
         return null;
@@ -284,7 +297,7 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Converts an SSA constant to a literal expression.
      */
-    private Expression constantToLiteral(Constant constant, SourceType type) {
+    private Expression constantToLiteral(Constant constant) {
         if (constant instanceof IntConstant) {
             return LiteralExpr.ofInt(((IntConstant) constant).getValue());
         } else if (constant instanceof LongConstant) {
@@ -595,6 +608,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
 
             VarDeclStmt merged = new VarDeclStmt(decl.getType(), varName, assign.getRight());
+            Locations.copy(stmts.get(firstAssignIdx), merged);
             stmts.remove(i);
             stmts.set(firstAssignIdx - 1, merged);
             changed = true;
@@ -828,6 +842,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
 
             IfStmt mergedIf = new IfStmt(combined, firstIf.getThenBranch());
+            Locations.copy(firstIf, mergedIf);
             stmts.set(i, mergedIf);
 
             for (int k = 1; k < guards.size(); k++) {
@@ -1081,6 +1096,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
 
             IfStmt newIf = new IfStmt(orCondition, afterIf);
+            Locations.copy(stmts.get(i), newIf);
 
             stmts.set(i, newIf);
 

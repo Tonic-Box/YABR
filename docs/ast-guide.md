@@ -51,6 +51,11 @@ Beyond ordinary methods and control flow, the AST layer recovers and re-emits mo
 - Varargs calls — collapsing the compiler-packed trailing array (`f(new T[]{a, b})`) back into
   `f(a, b)`, and rendering a varargs parameter as `T...` — Java 5
 
+Decompiled statements carry **bytecode-offset provenance**: the SSA lifter stamps each IR
+instruction's offset, recovery transfers it onto the statements it builds (`SourceLocation`), the
+AST transform pipeline preserves it across rewrites, and `decompileWithLineMap()` exposes the
+result as per-method offset-to-line maps (see [ClassDecompiler](#classdecompiler) below).
+
 **Recompilation** (front-end parse → lower → bytecode) handles end-to-end, verified by running the
 emitted class on a real JDK:
 
@@ -789,6 +794,15 @@ import com.tonic.analysis.source.emit.SourceEmitterConfig;
 
 // Simple usage
 String source = ClassDecompiler.decompile(classFile);
+
+// With bytecode-offset provenance: per method (keyed name + descriptor), a NavigableMap from
+// bytecode offset to the 1-based output line of the statement recovered from that offset.
+// Resolve an arbitrary PC with ceilingEntry/floorEntry (inlined expressions live in a
+// later-offset consumer statement, so prefer ceiling). Statements whose provenance did not
+// survive recovery/transforms simply have no entry.
+DecompileResult result = new ClassDecompiler(classFile).decompileWithLineMap();
+NavigableMap<Integer, Integer> lineMap = result.getLineMap("doWork", "(I)V");
+int line = lineMap.ceilingEntry(callSitePc).getValue();
 
 // With emitter configuration
 SourceEmitterConfig emitterConfig = SourceEmitterConfig.builder()

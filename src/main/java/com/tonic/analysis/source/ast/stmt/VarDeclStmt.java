@@ -27,7 +27,7 @@ public final class VarDeclStmt implements Statement {
     private boolean useVarKeyword;
     @Setter
     private boolean isFinal;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -104,5 +104,10 @@ public final class VarDeclStmt implements Statement {
             sb.append(" = ").append(initializer);
         }
         return sb.toString();
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

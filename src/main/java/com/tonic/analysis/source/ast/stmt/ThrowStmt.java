@@ -17,7 +17,7 @@ public final class ThrowStmt implements Statement {
 
     @Setter
     private Expression exception;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -54,5 +54,10 @@ public final class ThrowStmt implements Statement {
     @Override
     public String toString() {
         return "throw " + exception;
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

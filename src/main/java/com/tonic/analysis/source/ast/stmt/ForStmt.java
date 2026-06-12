@@ -25,7 +25,7 @@ public final class ForStmt implements Statement {
     private Statement body;
     @Setter
     private String label;
-    private final SourceLocation location;
+    private SourceLocation location;
     @Setter
     private ASTNode parent;
 
@@ -121,8 +121,7 @@ public final class ForStmt implements Statement {
 
     @Override
     public java.util.List<ASTNode> getChildren() {
-        java.util.List<ASTNode> children = new java.util.ArrayList<>();
-        children.addAll(init);
+        java.util.List<ASTNode> children = new java.util.ArrayList<>(init);
         if (condition != null) children.add(condition);
         children.addAll(update);
         if (body != null) children.add(body);
@@ -141,5 +140,10 @@ public final class ForStmt implements Statement {
         String condStr = condition != null ? condition.toString() : "";
         String updateStr = update.isEmpty() ? "" : "update";
         return labelStr + "for (" + initStr + "; " + condStr + "; " + updateStr + ") ...";
+    }
+
+    @Override
+    public void setLocation(SourceLocation location) {
+        this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
@@ -76,7 +77,7 @@ public class DeadStoreEliminator implements ASTTransform {
                             newValue
                         );
 
-                        // Replace the declaration and remove the assignment
+                        Locations.copy(decl, newDecl);
                         stmts.set(i, newDecl);
                         stmts.remove(reassignIndex);
                         changed = true;

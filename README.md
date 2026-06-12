@@ -14,7 +14,8 @@ A comprehensive alternative to ASM, Javassist, and other bytecode libraries.
 - **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
 - **Source AST system** - Recover, mutate, and emit Java source from bytecode
 - **Class decompilation** - Full class decompilation with imports, fields, and methods, including
-  modern constructs (records, sealed types, switch expressions, and Java 21 pattern-matching switch)
+  modern constructs (records, sealed types, switch expressions, and Java 21 pattern-matching switch),
+  with optional bytecode-offset-to-source-line maps for PC-to-line navigation
 - **Analysis APIs** - Call graph, dependency, type inference, pattern search, query language, xrefs, data flow, similarity, PDG, SDG, CPG, taint analysis
 - **Visitor patterns** - Traverse classes at multiple abstraction levels
 - **Frame computation** - Automatic StackMapTable generation for Java 7+
@@ -170,6 +171,9 @@ SourceEmitterConfig config = SourceEmitterConfig.builder()
     .build();
 
 String source = ClassDecompiler.decompile(classFile, config);
+
+// With per-method bytecode-offset -> source-line maps (PC-to-line navigation)
+DecompileResult result = new ClassDecompiler(classFile).decompileWithLineMap();
 ```
 
 Command-line usage:
