@@ -61,17 +61,22 @@ class LineMapTest {
 
     @BeforeAll
     static void setUp() throws Exception {
+        classFile = compile("Mapped", SOURCE);
+        result = new ClassDecompiler(classFile).decompileWithLineMap();
+        lines = result.getSource().split("\n", -1);
+    }
+
+    /** Compiles a single top-level class to bytecode and parses it into a {@link ClassFile}. */
+    private static ClassFile compile(String simpleName, String source) throws Exception {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null);
         Path dir = Files.createTempDirectory("yabr-linemap");
         try {
-            Path src = dir.resolve("Mapped.java");
-            Files.writeString(src, SOURCE);
+            Path src = dir.resolve(simpleName + ".java");
+            Files.writeString(src, source);
             assertEquals(0, compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()));
-            byte[] bytes = Files.readAllBytes(dir.resolve("Mapped.class"));
-            classFile = new ClassFile(new ByteArrayInputStream(bytes));
-            result = new ClassDecompiler(classFile).decompileWithLineMap();
-            lines = result.getSource().split("\n", -1);
+            byte[] bytes = Files.readAllBytes(dir.resolve(simpleName + ".class"));
+            return new ClassFile(new ByteArrayInputStream(bytes));
         } finally {
             try (var paths = Files.walk(dir)) {
                 paths.sorted(Comparator.reverseOrder()).forEach(p -> {
@@ -163,6 +168,59 @@ class LineMapTest {
         assertNotNull(greetSpan);
         assertTrue(greetSpan.getEndLine() < sumSpan.getStartLine() || sumSpan.getEndLine() < greetSpan.getStartLine(),
                 "method spans must not overlap");
+    }
+
+    @Test
+    void fieldSpanCoversDeclaration() {
+        DecompileResult.MemberSpan span = result.getFieldSpan("counter", "I");
+        assertNotNull(span, "counter should have a field span");
+        assertEquals(span.getStartLine(), span.getEndLine(), "plain field is a single line");
+        String text = lineText(span.getStartLine());
+        assertTrue(text.contains("counter"), "field span must land on the declaration: " + text.trim());
+        assertEquals(";", text.trim().substring(text.trim().length() - 1), "field span must end at ';'");
+    }
+
+    @Test
+    void classSpanCoversDeclaration() {
+        DecompileResult.MemberSpan span = result.getClassSpan();
+        assertNotNull(span, "class should have a span");
+        StringBuilder spanned = new StringBuilder();
+        for (int line = span.getStartLine(); line <= span.getEndLine(); line++) {
+            spanned.append(lineText(line)).append('\n');
+        }
+        assertTrue(spanned.toString().contains("class Mapped"),
+                "class span must cover the declaration:\n" + spanned);
+    }
+
+    @Test
+    void annotationsAreIncludedInSpans() throws Exception {
+        String source =
+            "import java.lang.annotation.*;\n" +
+            "@Deprecated\n" +
+            "public class Annotated {\n" +
+            "    @Deprecated\n" +
+            "    static int flagged;\n" +
+            "}\n";
+        DecompileResult annotated = new ClassDecompiler(compile("Annotated", source)).decompileWithLineMap();
+        String[] aLines = annotated.getSource().split("\n", -1);
+
+        DecompileResult.MemberSpan fieldSpan = annotated.getFieldSpan("flagged", "I");
+        assertNotNull(fieldSpan);
+        assertTrue(fieldSpan.getEndLine() > fieldSpan.getStartLine(),
+                "annotated field span must include the annotation line");
+        assertTrue(aLines[fieldSpan.getStartLine() - 1].contains("@Deprecated"),
+                "field span must start at its annotation");
+        assertTrue(aLines[fieldSpan.getEndLine() - 1].contains("flagged"),
+                "field span must end at the declaration");
+
+        DecompileResult.MemberSpan classSpan = annotated.getClassSpan();
+        assertNotNull(classSpan);
+        assertTrue(classSpan.getEndLine() > classSpan.getStartLine(),
+                "annotated class span must include the annotation line");
+        assertTrue(aLines[classSpan.getStartLine() - 1].contains("@Deprecated"),
+                "class span must start at its annotation");
+        assertTrue(aLines[classSpan.getEndLine() - 1].contains("class Annotated"),
+                "class span must end at the declaration");
     }
 
     @Test

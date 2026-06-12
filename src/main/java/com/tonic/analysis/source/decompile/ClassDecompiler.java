@@ -84,6 +84,8 @@ public class ClassDecompiler {
     private final Set<String> usedTypes = new TreeSet<>();
     private Map<String, NavigableMap<Integer, Integer>> lineMapsCollector;
     private Map<String, DecompileResult.MethodSpan> methodSpansCollector;
+    private Map<String, DecompileResult.MemberSpan> fieldSpansCollector;
+    private DecompileResult.MemberSpan classSpanCollector;
     private final boolean hasInnerClasses;
 
     public ClassDecompiler(ClassFile classFile) {
@@ -213,13 +215,18 @@ public class ClassDecompiler {
     public DecompileResult decompileWithLineMap() {
         lineMapsCollector = new LinkedHashMap<>();
         methodSpansCollector = new LinkedHashMap<>();
+        fieldSpansCollector = new LinkedHashMap<>();
+        classSpanCollector = null;
         try {
             IndentingWriter writer = new IndentingWriter(new StringWriter(), emitterConfig.getIndentString());
             decompile(writer);
-            return new DecompileResult(writer.toString(), lineMapsCollector, methodSpansCollector);
+            return new DecompileResult(writer.toString(), lineMapsCollector, methodSpansCollector,
+                    fieldSpansCollector, classSpanCollector);
         } finally {
             lineMapsCollector = null;
             methodSpansCollector = null;
+            fieldSpansCollector = null;
+            classSpanCollector = null;
         }
     }
 
@@ -254,15 +261,24 @@ public class ClassDecompiler {
                 }
                 methodSpansCollector.replaceAll((key, span) -> new DecompileResult.MethodSpan(
                         span.getStartLine() + headerLines, span.getEndLine() + headerLines));
+                fieldSpansCollector.replaceAll((key, span) -> new DecompileResult.MemberSpan(
+                        span.getStartLine() + headerLines, span.getEndLine() + headerLines));
+                if (classSpanCollector != null) {
+                    classSpanCollector = new DecompileResult.MemberSpan(
+                            classSpanCollector.getStartLine() + headerLines,
+                            classSpanCollector.getEndLine() + headerLines);
+                }
             }
         }
         writer.writeRaw(bodyContent);
     }
 
     private void emitClassBody(IndentingWriter writer) {
+        int classSpanStart = writer.getCurrentLine();
         emitClassAnnotations(writer);
         emitClassDeclaration(writer);
         writer.writeLine(" {");
+        recordClassSpan(classSpanStart, writer.getCurrentLine() - 1);
         writer.newLine();
         writer.indent();
 
@@ -574,6 +590,7 @@ public class ClassDecompiler {
     }
 
     private void emitField(IndentingWriter writer, FieldEntry field) {
+        int spanStart = writer.getCurrentLine();
         emitFieldAnnotations(writer, field);
 
         int access = field.getAccess();
@@ -599,6 +616,7 @@ public class ClassDecompiler {
 
         sb.append(";");
         writer.writeLine(sb.toString());
+        recordFieldSpan(field.getName() + field.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
     private com.tonic.analysis.source.ast.type.SourceType getFieldType(FieldEntry field) {
@@ -950,6 +968,18 @@ public class ClassDecompiler {
     private void recordMethodSpan(String methodKey, int startLine, int endLine) {
         if (methodSpansCollector != null) {
             methodSpansCollector.put(methodKey, new DecompileResult.MethodSpan(startLine, endLine));
+        }
+    }
+
+    private void recordFieldSpan(String fieldKey, int startLine, int endLine) {
+        if (fieldSpansCollector != null) {
+            fieldSpansCollector.put(fieldKey, new DecompileResult.MemberSpan(startLine, endLine));
+        }
+    }
+
+    private void recordClassSpan(int startLine, int endLine) {
+        if (fieldSpansCollector != null) {
+            classSpanCollector = new DecompileResult.MemberSpan(startLine, endLine);
         }
     }
 

@@ -812,6 +812,13 @@ String methodText = String.join("
 "))
         .subList(span.getStartLine() - 1, span.getEndLine()));
 
+// Fields and the class declaration carry the same spans (a generic MemberSpan; MethodSpan is a
+// MemberSpan subtype). Field spans are keyed name + descriptor; the class span covers its
+// annotations through the `... {` signature line. Useful for locating a declaration without
+// parsing source text.
+DecompileResult.MemberSpan fieldSpan = result.getFieldSpan("count", "I");
+DecompileResult.MemberSpan classSpan = result.getClassSpan();
+
 // With emitter configuration
 SourceEmitterConfig emitterConfig = SourceEmitterConfig.builder()
     .useFullyQualifiedNames(false)  // Simple names + imports (default)

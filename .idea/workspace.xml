@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
@@ -494,11 +494,18 @@
       <option name="project" value="LOCAL" />
       <updated>1781239206538</updated>
     </task>
-    <option name="localTasksCounter" value="40" />
+    <task id="LOCAL-00040" summary="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps">
+      <option name="closed" value="true" />
+      <created>1781242915599</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1781242915599</updated>
+    </task>
+    <option name="localTasksCounter" value="41" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- unqualified field resolution" />
     <MESSAGE value="- YABR fixes for source lowering: unqualified static self-calls, arithmetic type inference, and field ++/-- typing." />
     <MESSAGE value="Recompile: resolve own-class &amp; cross-class refs, fix lambda lowering, member emit/remov&#10;- Resolve unqualified own-class field refs and static self-calls&#10;- Resolve simple type names against the loaded pool (same-package + java.lang), fixing field/owner resolution (e.g. MainFrame.IDK_LOL)&#10;- Infer arithmetic/increment/array-capture types from operands&#10;- Lambda target-typing + SAM resolution, with correct owner and invokeinterface (kind + count byte)&#10;- Full-body lambda capture detection + synthetic emission infra" />
     <MESSAGE value="- RegisterAllocator.java — interference-guarded phi coalescing (intervalByValue map + interferes() + guard in buildPhiCoalescingMap)." />
@@ -523,6 +530,7 @@
     <MESSAGE value="Query API (Migrated over from JStudio)" />
     <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets (replaces dead instructionIndex)" />
     <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets" />
+    <MESSAGE value="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps" />
   </component>
 </project>
