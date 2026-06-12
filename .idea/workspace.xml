@@ -4,47 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets (replaces dead instructionIndex)">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/Locations.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/DecompileResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/decompile/LineMapTest.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/ast-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ast-guide.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/xref-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/xref-api.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvidenceCollector.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvidenceCollector.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/planner/filter/StaticFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/planner/filter/StaticFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/BlockStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/BlockStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/BreakStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/BreakStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ContinueStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ContinueStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/DoWhileStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/DoWhileStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ExprStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ExprStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ForEachStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ForEachStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ForStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ForStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/IRRegionStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/IRRegionStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/IfStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/IfStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/LabeledStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/LabeledStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ReturnStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ReturnStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/Statement.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/Statement.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/SwitchStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/SwitchStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/SynchronizedStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/SynchronizedStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ThrowStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/ThrowStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/TryCatchStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/TryCatchStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/VarDeclStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/VarDeclStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/WhileStmt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/stmt/WhileStmt.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeclarationHoister.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/DeclarationHoister.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/PatternSwitchReconstructor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/PatternSwitchReconstructor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/SingleUseInliner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/SingleUseInliner.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/SwitchExpressionReconstructor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/ast/transform/SwitchExpressionReconstructor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/IndentingWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/IndentingWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/emit/SourceEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/Xref.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/Xref.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/DecompileResult.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/decompile/DecompileResult.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/decompile/LineMapTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/decompile/LineMapTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -521,11 +486,18 @@
       <option name="project" value="LOCAL" />
       <updated>1781215090237</updated>
     </task>
-    <option name="localTasksCounter" value="39" />
+    <task id="LOCAL-00039" summary="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets">
+      <option name="closed" value="true" />
+      <created>1781239206538</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1781239206538</updated>
+    </task>
+    <option name="localTasksCounter" value="40" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fix variable fragmentation across exception edges and read-modify-write" />
     <MESSAGE value="- unqualified field resolution" />
     <MESSAGE value="- YABR fixes for source lowering: unqualified static self-calls, arithmetic type inference, and field ++/-- typing." />
     <MESSAGE value="Recompile: resolve own-class &amp; cross-class refs, fix lambda lowering, member emit/remov&#10;- Resolve unqualified own-class field refs and static self-calls&#10;- Resolve simple type names against the loaded pool (same-package + java.lang), fixing field/owner resolution (e.g. MainFrame.IDK_LOL)&#10;- Infer arithmetic/increment/array-capture types from operands&#10;- Lambda target-typing + SAM resolution, with correct owner and invokeinterface (kind + count byte)&#10;- Full-body lambda capture detection + synthetic emission infra" />
@@ -550,6 +522,7 @@
     <MESSAGE value="Query API (Migrated over from JStudio" />
     <MESSAGE value="Query API (Migrated over from JStudio)" />
     <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets (replaces dead instructionIndex)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets (replaces dead instructionIndex)" />
+    <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets" />
   </component>
 </project>

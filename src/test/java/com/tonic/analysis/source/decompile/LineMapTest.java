@@ -147,6 +147,25 @@ class LineMapTest {
     }
 
     @Test
+    void methodSpansCoverTheirMappedLines() {
+        DecompileResult.MethodSpan sumSpan = result.getMethodSpan("sum", "(I)I");
+        assertNotNull(sumSpan, "sum should have a span");
+        assertTrue(lineText(sumSpan.getStartLine()).contains("sum("),
+                "span must start at the declaration: " + lineText(sumSpan.getStartLine()).trim());
+        assertEquals("}", lineText(sumSpan.getEndLine()).trim(),
+                "span must end at the closing brace: " + lineText(sumSpan.getEndLine()).trim());
+        for (int line : result.getLineMaps().get("sum(I)I").values()) {
+            assertTrue(sumSpan.contains(line),
+                    "mapped line " + line + " outside span [" + sumSpan.getStartLine() + ", " + sumSpan.getEndLine() + "]");
+        }
+
+        DecompileResult.MethodSpan greetSpan = result.getMethodSpan("greet", "(Ljava/lang/String;)V");
+        assertNotNull(greetSpan);
+        assertTrue(greetSpan.getEndLine() < sumSpan.getStartLine() || sumSpan.getEndLine() < greetSpan.getStartLine(),
+                "method spans must not overlap");
+    }
+
+    @Test
     void plainDecompileOutputUnchanged() {
         assertEquals(new ClassDecompiler(classFile).decompile(), result.getSource());
     }

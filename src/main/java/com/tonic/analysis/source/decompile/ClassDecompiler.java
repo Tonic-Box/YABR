@@ -83,6 +83,7 @@ public class ClassDecompiler {
     private final VarargsReconstructor varargsReconstructor;
     private final Set<String> usedTypes = new TreeSet<>();
     private Map<String, NavigableMap<Integer, Integer>> lineMapsCollector;
+    private Map<String, DecompileResult.MethodSpan> methodSpansCollector;
     private final boolean hasInnerClasses;
 
     public ClassDecompiler(ClassFile classFile) {
@@ -211,12 +212,14 @@ public class ClassDecompiler {
      */
     public DecompileResult decompileWithLineMap() {
         lineMapsCollector = new LinkedHashMap<>();
+        methodSpansCollector = new LinkedHashMap<>();
         try {
             IndentingWriter writer = new IndentingWriter(new StringWriter(), emitterConfig.getIndentString());
             decompile(writer);
-            return new DecompileResult(writer.toString(), lineMapsCollector);
+            return new DecompileResult(writer.toString(), lineMapsCollector, methodSpansCollector);
         } finally {
             lineMapsCollector = null;
+            methodSpansCollector = null;
         }
     }
 
@@ -249,6 +252,8 @@ public class ClassDecompiler {
                 for (NavigableMap<Integer, Integer> map : lineMapsCollector.values()) {
                     map.replaceAll((offset, line) -> line + headerLines);
                 }
+                methodSpansCollector.replaceAll((key, span) -> new DecompileResult.MethodSpan(
+                        span.getStartLine() + headerLines, span.getEndLine() + headerLines));
             }
         }
         writer.writeRaw(bodyContent);
@@ -740,6 +745,7 @@ public class ClassDecompiler {
     }
 
     private void emitStaticInitializer(IndentingWriter writer, MethodEntry clinit) {
+        int spanStart = writer.getCurrentLine();
         writer.writeLine("static {");
         writer.indent();
 
@@ -765,6 +771,7 @@ public class ClassDecompiler {
 
         writer.dedent();
         writer.writeLine("}");
+        recordMethodSpan(clinit.getName() + clinit.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
     /**
@@ -801,6 +808,7 @@ public class ClassDecompiler {
     }
 
     private void emitConstructor(IndentingWriter writer, MethodEntry ctor) {
+        int spanStart = writer.getCurrentLine();
         // Constructor annotations
         emitMethodAnnotations(writer, ctor);
 
@@ -830,6 +838,7 @@ public class ClassDecompiler {
 
         if (ctor.getCodeAttribute() == null) {
             writer.writeLine(";");
+            recordMethodSpan(ctor.getName() + ctor.getDesc(), spanStart, writer.getCurrentLine() - 1);
             return;
         }
 
@@ -859,9 +868,11 @@ public class ClassDecompiler {
 
         writer.dedent();
         writer.writeLine("}");
+        recordMethodSpan(ctor.getName() + ctor.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
     private void emitMethod(IndentingWriter writer, MethodEntry method) {
+        int spanStart = writer.getCurrentLine();
         // Method annotations
         emitMethodAnnotations(writer, method);
 
@@ -898,6 +909,7 @@ public class ClassDecompiler {
         // Abstract or native methods have no body
         if (Modifiers.isAbstract(access) || Modifiers.isNative(access) || method.getCodeAttribute() == null) {
             writer.writeLine(";");
+            recordMethodSpan(method.getName() + method.getDesc(), spanStart, writer.getCurrentLine() - 1);
             return;
         }
 
@@ -932,6 +944,13 @@ public class ClassDecompiler {
 
         writer.dedent();
         writer.writeLine("}");
+        recordMethodSpan(method.getName() + method.getDesc(), spanStart, writer.getCurrentLine() - 1);
+    }
+
+    private void recordMethodSpan(String methodKey, int startLine, int endLine) {
+        if (methodSpansCollector != null) {
+            methodSpansCollector.put(methodKey, new DecompileResult.MethodSpan(startLine, endLine));
+        }
     }
 
     private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey) {

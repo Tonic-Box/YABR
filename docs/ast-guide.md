@@ -804,6 +804,14 @@ DecompileResult result = new ClassDecompiler(classFile).decompileWithLineMap();
 NavigableMap<Integer, Integer> lineMap = result.getLineMap("doWork", "(I)V");
 int line = lineMap.ceilingEntry(callSitePc).getValue();
 
+// Each emitted member also gets its exact text span (annotations + signature through the
+// closing brace), e.g. for slicing a single method out of the class source.
+DecompileResult.MethodSpan span = result.getMethodSpan("doWork", "(I)V");
+String methodText = String.join("
+", java.util.Arrays.asList(result.getSource().split("
+"))
+        .subList(span.getStartLine() - 1, span.getEndLine()));
+
 // With emitter configuration
 SourceEmitterConfig emitterConfig = SourceEmitterConfig.builder()
     .useFullyQualifiedNames(false)  // Simple names + imports (default)
