@@ -22,6 +22,7 @@ import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.NullConstant;
+import com.tonic.analysis.ssa.value.StringConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
@@ -363,6 +364,12 @@ public class StatementRecoverer {
             }
 
             processedTryHandlers.addAll(outerHandlers);
+            // Mark the handler block (stable across the merge that may have replaced the handler objects) so
+            // the try body's own block-sequence recovery does not rebuild the same region as a nested
+            // try/catch, which would duplicate the clause (and drop multi-catch types via the merge).
+            if (outerHandler.getHandlerBlock() != null) {
+                processedHandlerBlocks.add(outerHandler.getHandlerBlock());
+            }
 
             IRBlock tryStart = outerHandler.getTryStart();
             List<Statement> preTryStmts = new ArrayList<>();
@@ -382,17 +389,15 @@ public class StatementRecoverer {
             BlockStmt tryBlock = new BlockStmt(tryStmts);
             result.addAll(preTryStmts);
 
-            List<CatchClause> catchClauses = new ArrayList<>();
-            Set<IRBlock> emittedHandlerBlocks = new HashSet<>();
-            for (ExceptionHandler handler : outerHandlers) {
-                if (!emittedHandlerBlocks.contains(handler.getHandlerBlock())) {
-                    CatchClause catchClause = recoverCatchClause(handler);
-                    if (catchClause != null) {
-                        catchClauses.add(catchClause);
-                        emittedHandlerBlocks.add(handler.getHandlerBlock());
-                    }
+            // Build clauses from the original (pre-merge) handlers sharing the outer handler block, so a
+            // multi-catch's several exception-table entries coalesce into one `catch (A | B e)` clause.
+            List<ExceptionHandler> outerRegionHandlers = new ArrayList<>();
+            for (ExceptionHandler h : handlers) {
+                if (h.getHandlerBlock() == outerHandler.getHandlerBlock()) {
+                    outerRegionHandlers.add(h);
                 }
             }
+            List<CatchClause> catchClauses = buildCatchClauses(outerRegionHandlers);
 
             if (!catchClauses.isEmpty()) {
                 BlockStmt finallyBlock = null;
@@ -410,12 +415,37 @@ public class StatementRecoverer {
 
                 if (!finallyExceptionVars.isEmpty()) {
                     tryStmts = filterOrphanFinallyThrows(tryStmts, finallyExceptionVars);
+
+                    List<Statement> finallyStmts = finallyBlock.getStatements();
+                    tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyStmts);
+
+                    // The blocks between the protected region's end and the handler hold the finally inlined on
+                    // the normal exit path plus the region's real continuation (e.g. its return). Recover them
+                    // with the inlined-finally copies filtered out so the genuine continuation joins the try body
+                    // instead of being dropped (which would leave an empty try when the finally has control flow).
+                    if (outerHandler.getTryEnd() != null && outerHandler.getHandlerBlock() != null) {
+                        List<Statement> gapStmts = recoverFinallyGap(
+                            outerHandler.getTryEnd(), outerHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
+
+                        if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts))) {
+                            tryStmts = new ArrayList<>(tryStmts);
+                            tryStmts.addAll(gapStmts);
+                        }
+                    }
+
                     tryBlock = new BlockStmt(tryStmts);
                 }
 
-                TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
-                stampFromBody(tryCatch, tryBlock);
-                result.add(tryCatch);
+                Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(outerHandler) : null;
+                if (syncLock != null) {
+                    SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
+                    stampFromBody(sync, tryBlock);
+                    result.add(sync);
+                } else {
+                    TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
+                    stampFromBody(tryCatch, tryBlock);
+                    result.add(tryCatch);
+                }
             } else {
                 result.addAll(tryStmts);
             }
@@ -763,8 +793,104 @@ public class StatementRecoverer {
     }
 
     /**
-     * Recovers a catch clause from an exception handler.
+     * The caught type for one exception-table entry: {@code java/lang/Throwable} for a catch-all, otherwise
+     * the declared catch type. Used to assemble the type list of a reconstructed multi-catch clause.
      */
+    private SourceType catchTypeOf(ExceptionHandler handler) {
+        if (handler.isCatchAll()) {
+            return new ReferenceSourceType("java/lang/Throwable", Collections.emptyList());
+        }
+        return new ReferenceSourceType(handler.getCatchType().getInternalName(), Collections.emptyList());
+    }
+
+    /**
+     * Builds the catch clauses for one try region, coalescing every group of handlers that share a handler
+     * block into a single (multi-)catch clause. javac compiles a multi-catch {@code catch (A | B e)} to one
+     * handler block reached by several exception-table entries; duplicate types (a region split into several
+     * entries by intervening returns) collapse to a single type.
+     */
+    private List<CatchClause> buildCatchClauses(List<ExceptionHandler> regionHandlers) {
+        Map<IRBlock, List<ExceptionHandler>> byBlock = new LinkedHashMap<>();
+        for (ExceptionHandler h : regionHandlers) {
+            if (h.getHandlerBlock() != null) {
+                byBlock.computeIfAbsent(h.getHandlerBlock(), k -> new ArrayList<>()).add(h);
+            }
+        }
+
+        List<CatchClause> clauses = new ArrayList<>();
+        for (List<ExceptionHandler> group : byBlock.values()) {
+            CatchClause clause = recoverCatchClause(group.get(0));
+            if (clause == null) {
+                continue;
+            }
+            List<SourceType> types = new ArrayList<>();
+            Set<String> seen = new HashSet<>();
+            for (ExceptionHandler h : group) {
+                SourceType type = catchTypeOf(h);
+                if (seen.add(((ReferenceSourceType) type).getInternalName())) {
+                    types.add(type);
+                }
+            }
+            if (types.size() > 1) {
+                clause = CatchClause.multiCatch(types, clause.variableName(), clause.body());
+            }
+            clauses.add(clause);
+        }
+        return clauses;
+    }
+
+    /**
+     * Detects a {@code synchronized} block. javac compiles it to a protected region guarded by a catch-all
+     * handler that releases the monitor ({@code monitorexit}) and rethrows, with a {@code monitorenter} on
+     * the same lock dominating the region. Returns the lock value of that {@code monitorenter}, or null if
+     * the handler is not a monitor-release. The monitor instructions themselves are dropped during statement
+     * recovery, so the region's recovered body is exactly the synchronized body.
+     */
+    private Value detectSynchronizedLock(ExceptionHandler handler) {
+        if (handler == null || !handler.isCatchAll() || handler.getHandlerBlock() == null) {
+            return null;
+        }
+        if (!blockContainsMonitorExit(handler.getHandlerBlock())) {
+            return null;
+        }
+        return findMonitorEnterLock(handler.getTryStart());
+    }
+
+    private boolean blockContainsMonitorExit(IRBlock block) {
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.MONITOREXIT) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Searches backwards from a try region's start for the {@code monitorenter} that opens it, returning its
+     * lock operand (the innermost enter reached first). Null if none precedes the region.
+     */
+    private Value findMonitorEnterLock(IRBlock tryStart) {
+        if (tryStart == null) {
+            return null;
+        }
+        Set<IRBlock> visited = new HashSet<>();
+        Deque<IRBlock> work = new ArrayDeque<>(tryStart.getPredecessors());
+        while (!work.isEmpty()) {
+            IRBlock block = work.poll();
+            if (!visited.add(block)) {
+                continue;
+            }
+            for (IRInstruction instr : block.getInstructions()) {
+                if (instr instanceof SimpleInstruction
+                        && ((SimpleInstruction) instr).getOp() == SimpleOp.MONITORENTER) {
+                    return ((SimpleInstruction) instr).getOperand();
+                }
+            }
+            work.addAll(block.getPredecessors());
+        }
+        return null;
+    }
+
     private CatchClause recoverCatchClause(ExceptionHandler handler) {
         IRBlock handlerBlock = handler.getHandlerBlock();
         if (handlerBlock == null) {
@@ -1055,41 +1181,52 @@ public class StatementRecoverer {
         return true;
     }
 
-    private List<Statement> recoverGapBlocksWithFinallyFiltering(
-            List<IRBlock> gapBlocks, BlockStmt finallyBlock, Set<String> finallyExceptionVars,
-            Set<IRBlock> visited) {
-        List<Statement> result = new ArrayList<>();
-        List<Statement> finallyStmts = finallyBlock != null ? finallyBlock.getStatements() : Collections.emptyList();
+    /**
+     * Recovers the blocks between a protected region's end and its handler - the finally inlined on the normal
+     * exit path followed by the region's real continuation - then strips the inlined-finally copies. Recovery
+     * is <em>structural</em> (not linear block-by-block) because when the finally contains control flow (e.g. a
+     * conditional {@code return}) the inlined copy is itself an {@code if}/{@code else} whose non-finally arm is
+     * the genuine continuation; linear recovery would otherwise stop at the finally's own inlined return.
+     */
+    private List<Statement> recoverFinallyGap(IRBlock tryEnd, IRBlock handlerBlock,
+                                              BlockStmt finallyBlock, Set<String> finallyExceptionVars) {
+        IRMethod irMethod = context.getIrMethod();
+        int tryEndOffset = tryEnd.getBytecodeOffset();
+        int handlerOffset = handlerBlock.getBytecodeOffset();
 
-        for (IRBlock block : gapBlocks) {
-            if (visited.contains(block)) continue;
-            visited.add(block);
-
-            List<Statement> blockStmts = recoverSimpleBlock(block);
-
-            for (Statement stmt : blockStmts) {
-                if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
-                    if (stmt instanceof ThrowStmt) {
-                        ThrowStmt throwStmt = (ThrowStmt) stmt;
-                        Expression exception = throwStmt.getException();
-                        if (exception instanceof VarRefExpr) {
-                            String varName = ((VarRefExpr) exception).getName();
-                            if (finallyExceptionVars.contains(varName)) {
-                                continue;
-                            }
-                        }
-                    }
-                    result.add(stmt);
-                    return result;
-                }
-
-                if (!isStatementInFinallyBlock(stmt, finallyStmts)) {
-                    result.add(stmt);
-                }
+        IRBlock gapStart = null;
+        Set<IRBlock> stopBlocks = new HashSet<>();
+        for (IRBlock block : irMethod.getBlocks()) {
+            int offset = block.getBytecodeOffset();
+            if (offset >= handlerOffset) {
+                stopBlocks.add(block);
+            } else if (offset >= tryEndOffset
+                    && (gapStart == null || offset < gapStart.getBytecodeOffset())) {
+                gapStart = block;
             }
         }
+        if (gapStart == null) {
+            return Collections.emptyList();
+        }
 
-        return result;
+        List<Statement> gapStmts;
+        context.pushStopBlocks(stopBlocks);
+        try {
+            gapStmts = recoverBlockSequence(gapStart, stopBlocks);
+        } finally {
+            context.popStopBlocks();
+        }
+        gapStmts = filterOrphanFinallyThrows(gapStmts, finallyExceptionVars);
+        gapStmts = filterInlinedFinallyFromTryStatements(gapStmts, finallyBlock.getStatements());
+        // Drop any standalone inlined-finally statement (one not folded into a preceding return by the filter
+        // above), so a side-effecting finally like `x += 2` appears only in the finally, not also in the body.
+        List<Statement> deduped = new ArrayList<>();
+        for (Statement stmt : gapStmts) {
+            if (!isStatementInFinallyBlock(stmt, finallyBlock.getStatements())) {
+                deduped.add(stmt);
+            }
+        }
+        return deduped;
     }
 
     private boolean isStatementInFinallyBlock(Statement stmt, List<Statement> finallyStmts) {
@@ -1392,7 +1529,7 @@ public class StatementRecoverer {
     /**
      * Recovers a try-catch statement starting at the given block.
      */
-    private TryCatchStmt recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler,
+    private Statement recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler,
                                           Set<IRBlock> originalStopBlocks, Set<IRBlock> visited) {
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
@@ -1424,18 +1561,14 @@ public class StatementRecoverer {
         List<Statement> tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited);
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
-        List<CatchClause> catchClauses = new ArrayList<>();
         Set<String> finallyExceptionVars = new HashSet<>();
         for (ExceptionHandler h : sameRegionHandlers) {
             if (h.getHandlerBlock() != null) {
                 visited.add(h.getHandlerBlock());
                 collectReachableBlocks(h.getHandlerBlock(), visited);
             }
-            CatchClause clause = recoverCatchClause(h);
-            if (clause != null) {
-                catchClauses.add(clause);
-            }
         }
+        List<CatchClause> catchClauses = buildCatchClauses(sameRegionHandlers);
 
         if (catchClauses.isEmpty()) {
             return null;
@@ -1459,20 +1592,8 @@ public class StatementRecoverer {
             tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyStmts);
 
             if (mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null) {
-                int tryEndOffset = mainHandler.getTryEnd().getBytecodeOffset();
-                int handlerOffset = mainHandler.getHandlerBlock().getBytecodeOffset();
-
-                List<IRBlock> gapBlocks = new ArrayList<>();
-                for (IRBlock block : irMethod.getBlocks()) {
-                    int blockOffset = block.getBytecodeOffset();
-                    if (blockOffset >= tryEndOffset && blockOffset < handlerOffset) {
-                        gapBlocks.add(block);
-                    }
-                }
-                gapBlocks.sort(Comparator.comparingInt(IRBlock::getBytecodeOffset));
-
-                List<Statement> gapStmts = recoverGapBlocksWithFinallyFiltering(
-                    gapBlocks, finallyBlock, finallyExceptionVars, visited);
+                List<Statement> gapStmts = recoverFinallyGap(
+                    mainHandler.getTryEnd(), mainHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
 
                 if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts))) {
                     tryStmts = new ArrayList<>(tryStmts);
@@ -1481,6 +1602,13 @@ public class StatementRecoverer {
             }
 
             tryBlock = new BlockStmt(tryStmts);
+        }
+
+        Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(mainHandler) : null;
+        if (syncLock != null) {
+            SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
+            stampFromBody(sync, tryBlock);
+            return sync;
         }
 
         TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
@@ -1627,6 +1755,17 @@ public class StatementRecoverer {
             }
         }
         return true;
+    }
+
+    /** Whether a try/catch or synchronized statement recovered for a region leaves no normal fall-through. */
+    private boolean isTerminatingRecoveredTry(Statement recovered) {
+        if (recovered instanceof TryCatchStmt) {
+            return isTerminatingTryCatch((TryCatchStmt) recovered);
+        }
+        if (recovered instanceof SynchronizedStmt) {
+            return isTerminatingBranch(((SynchronizedStmt) recovered).getBody());
+        }
+        return false;
     }
 
     private boolean isTerminatingBlock(BlockStmt block) {
@@ -2633,11 +2772,11 @@ public class StatementRecoverer {
                     processedHandlerBlocks.add(tryHandler.getHandlerBlock());
                 }
                 Set<IRBlock> tryVisited = new HashSet<>(visited);
-                TryCatchStmt tryCatch = recoverTryCatch(current, tryHandler, stopBlocks, tryVisited);
-                if (tryCatch != null) {
-                    result.add(tryCatch);
+                Statement recovered = recoverTryCatch(current, tryHandler, stopBlocks, tryVisited);
+                if (recovered != null) {
+                    result.add(recovered);
                     visited.addAll(tryVisited);
-                    if (isTerminatingTryCatch(tryCatch)) {
+                    if (isTerminatingRecoveredTry(recovered)) {
                         current = null;
                     } else {
                         current = findBlockAfterTryCatch(tryHandler, visited);
@@ -2732,8 +2871,19 @@ public class StatementRecoverer {
                     break;
                 }
                 case SWITCH: {
-                    result.add(recoverSwitch(current, info));
-                    current = findSwitchMerge(info);
+                    StringSwitchInfo stringSwitch = detectStringSwitch(current);
+                    if (stringSwitch != null) {
+                        IRBlock exit = stringSwitchExit(stringSwitch);
+                        context.markProcessed(current);
+                        Statement sw = recoverStringSwitch(current, stringSwitch, exit);
+                        result.add(sw);
+                        visited.addAll(stringSwitch.scaffolding);
+                        current = (exit != null && !visited.contains(exit) && !stopBlocks.contains(exit))
+                                ? exit : null;
+                    } else {
+                        result.add(recoverSwitch(current, info));
+                        current = findSwitchMerge(info);
+                    }
                     break;
                 }
                 case GUARD_CLAUSE: {
@@ -4190,6 +4340,281 @@ public class StatementRecoverer {
         return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
     }
 
+    /**
+     * Reconstructed {@code switch} on a {@code String}. javac lowers it to two phases: a {@code switch} on
+     * {@code s.hashCode()} whose cases run {@code s.equals("literal")} guards and, on a match, assign a dense
+     * index to a synthetic local, followed by a second {@code switch} on that index holding the real bodies.
+     */
+    private static final class StringSwitchInfo {
+        final Value stringValue;
+        final Map<String, Integer> literalToIndex;
+        final IRBlock mergeBlock;
+        final SwitchInstruction indexSwitch;
+        final Set<IRBlock> scaffolding;
+
+        StringSwitchInfo(Value stringValue, Map<String, Integer> literalToIndex, IRBlock mergeBlock,
+                         SwitchInstruction indexSwitch, Set<IRBlock> scaffolding) {
+            this.stringValue = stringValue;
+            this.literalToIndex = literalToIndex;
+            this.mergeBlock = mergeBlock;
+            this.indexSwitch = indexSwitch;
+            this.scaffolding = scaffolding;
+        }
+    }
+
+    private static final class EqualsStep {
+        final String literal;
+        final IRBlock matchBlock;
+        final IRBlock noMatchBlock;
+
+        EqualsStep(String literal, IRBlock matchBlock, IRBlock noMatchBlock) {
+            this.literal = literal;
+            this.matchBlock = matchBlock;
+            this.noMatchBlock = noMatchBlock;
+        }
+    }
+
+    /**
+     * Recognizes javac's two-phase {@code String} switch rooted at a {@code switch (s.hashCode())} and returns
+     * the data needed to rebuild a single {@code switch (s)}, or null if {@code header} is an ordinary switch.
+     */
+    private StringSwitchInfo detectStringSwitch(IRBlock header) {
+        IRInstruction term = header.getTerminator();
+        if (!(term instanceof SwitchInstruction)) {
+            return null;
+        }
+        SwitchInstruction hashSwitch = (SwitchInstruction) term;
+
+        Value key = hashSwitch.getKey();
+        if (!(key instanceof SSAValue)) {
+            return null;
+        }
+        IRInstruction keyDef = ((SSAValue) key).getDefinition();
+        if (!(keyDef instanceof InvokeInstruction)) {
+            return null;
+        }
+        InvokeInstruction hashCall = (InvokeInstruction) keyDef;
+        if (!"hashCode".equals(hashCall.getName()) || !"()I".equals(hashCall.getDescriptor())) {
+            return null;
+        }
+        Value stringValue = hashCall.getReceiver();
+        if (stringValue == null) {
+            return null;
+        }
+
+        Map<String, Integer> literalToIndex = new LinkedHashMap<>();
+        Set<IRBlock> scaffolding = new HashSet<>();
+        scaffolding.add(header);
+        IRBlock mergeBlock = null;
+
+        for (IRBlock caseTarget : hashSwitch.getCases().values()) {
+            IRBlock current = caseTarget;
+            Set<IRBlock> guard = new HashSet<>();
+            while (current != null && guard.add(current)) {
+                EqualsStep step = matchEqualsStep(current);
+                if (step == null) {
+                    return null;
+                }
+                Integer index = indexAssignedIn(step.matchBlock);
+                IRBlock matchMerge = singleSuccessor(step.matchBlock);
+                if (index == null || matchMerge == null) {
+                    return null;
+                }
+                if (mergeBlock == null) {
+                    mergeBlock = matchMerge;
+                } else if (mergeBlock != matchMerge) {
+                    return null;
+                }
+                literalToIndex.put(step.literal, index);
+                scaffolding.add(current);
+                scaffolding.add(step.matchBlock);
+                // Several strings can share a hashCode: the no-match edge then tests the next equals.
+                current = (matchEqualsStep(step.noMatchBlock) != null) ? step.noMatchBlock : null;
+            }
+        }
+
+        if (literalToIndex.isEmpty()) {
+            return null;
+        }
+        IRInstruction mergeTerm = mergeBlock.getTerminator();
+        if (!(mergeTerm instanceof SwitchInstruction)) {
+            return null;
+        }
+        SwitchInstruction indexSwitch = (SwitchInstruction) mergeTerm;
+        for (Integer index : literalToIndex.values()) {
+            if (!indexSwitch.getCases().containsKey(index)) {
+                return null;
+            }
+        }
+        scaffolding.add(mergeBlock);
+        return new StringSwitchInfo(stringValue, literalToIndex, mergeBlock, indexSwitch, scaffolding);
+    }
+
+    /** The block following the entire string switch (where non-returning cases converge), or null. */
+    private IRBlock stringSwitchExit(StringSwitchInfo info) {
+        var postDom = analyzer.getPostDominatorTree();
+        if (postDom == null) {
+            return null;
+        }
+        IRBlock exit = postDom.getImmediatePostDominator(info.mergeBlock);
+        if (exit == null || info.scaffolding.contains(exit) || info.indexSwitch.getCases().containsValue(exit)) {
+            return null;
+        }
+        return exit;
+    }
+
+    private EqualsStep matchEqualsStep(IRBlock block) {
+        if (block == null) {
+            return null;
+        }
+        InvokeInstruction equalsCall = null;
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof InvokeInstruction) {
+                InvokeInstruction invoke = (InvokeInstruction) instr;
+                if ("equals".equals(invoke.getName()) && "(Ljava/lang/Object;)Z".equals(invoke.getDescriptor())) {
+                    equalsCall = invoke;
+                }
+            }
+        }
+        if (equalsCall == null || equalsCall.getMethodArguments().size() != 1) {
+            return null;
+        }
+        String literal = stringConstantOf(equalsCall.getMethodArguments().get(0));
+        if (literal == null) {
+            return null;
+        }
+        if (!(block.getTerminator() instanceof BranchInstruction)) {
+            return null;
+        }
+        BranchInstruction branch = (BranchInstruction) block.getTerminator();
+        if (branch.getLeft() != equalsCall.getResult()) {
+            return null;
+        }
+        if (branch.getCondition() == CompareOp.IFEQ) {
+            return new EqualsStep(literal, branch.getFalseTarget(), branch.getTrueTarget());
+        }
+        if (branch.getCondition() == CompareOp.IFNE) {
+            return new EqualsStep(literal, branch.getTrueTarget(), branch.getFalseTarget());
+        }
+        return null;
+    }
+
+    private Integer indexAssignedIn(IRBlock block) {
+        if (block == null) {
+            return null;
+        }
+        Integer index = null;
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof StoreLocalInstruction) {
+                Integer constant = intConstantOf(((StoreLocalInstruction) instr).getValue());
+                if (constant != null) {
+                    index = constant;
+                }
+            }
+        }
+        return index;
+    }
+
+    private IRBlock singleSuccessor(IRBlock block) {
+        if (block == null) {
+            return null;
+        }
+        IRInstruction term = block.getTerminator();
+        if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.GOTO) {
+            return ((SimpleInstruction) term).getTarget();
+        }
+        return block.getSuccessors().size() == 1 ? block.getSuccessors().iterator().next() : null;
+    }
+
+    private String stringConstantOf(Value value) {
+        if (!(value instanceof SSAValue)) {
+            return null;
+        }
+        IRInstruction def = ((SSAValue) value).getDefinition();
+        if (def instanceof ConstantInstruction && ((ConstantInstruction) def).getConstant() instanceof StringConstant) {
+            return ((StringConstant) ((ConstantInstruction) def).getConstant()).getValue();
+        }
+        return null;
+    }
+
+    private Integer intConstantOf(Value value) {
+        if (!(value instanceof SSAValue)) {
+            return null;
+        }
+        IRInstruction def = ((SSAValue) value).getDefinition();
+        if (def instanceof ConstantInstruction && ((ConstantInstruction) def).getConstant() instanceof IntConstant) {
+            return ((IntConstant) ((ConstantInstruction) def).getConstant()).getValue();
+        }
+        return null;
+    }
+
+    /**
+     * Rebuilds a {@code switch (s)} from a detected two-phase string switch. Each {@code equals} literal maps to
+     * a dense index, and that index's body in the second switch becomes the string case's body; index-switch
+     * cases sharing a body collapse into consecutive {@code case "x":} labels.
+     */
+    private Statement recoverStringSwitch(IRBlock header, StringSwitchInfo info, IRBlock exit) {
+        SwitchInstruction indexSwitch = info.indexSwitch;
+        Expression selector = exprRecoverer.recoverOperand(info.stringValue);
+
+        for (IRBlock block : info.scaffolding) {
+            context.markProcessed(block);
+            context.setStatements(block, Collections.emptyList());
+        }
+
+        Map<Integer, List<String>> indexToLiterals = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : info.literalToIndex.entrySet()) {
+            indexToLiterals.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
+        }
+
+        // Every case body stops at the other case bodies and at the block following the whole switch, so a
+        // body that breaks does not bleed into a sibling case or the continuation.
+        Set<IRBlock> bodyStops = new LinkedHashSet<>(indexSwitch.getCases().values());
+        if (indexSwitch.getDefaultTarget() != null) {
+            bodyStops.add(indexSwitch.getDefaultTarget());
+        }
+        if (exit != null) {
+            bodyStops.add(exit);
+        }
+
+        Map<IRBlock, List<String>> bodyToLiterals = new LinkedHashMap<>();
+        for (Map.Entry<Integer, IRBlock> entry : indexSwitch.getCases().entrySet()) {
+            List<String> literals = indexToLiterals.get(entry.getKey());
+            if (literals != null) {
+                bodyToLiterals.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).addAll(literals);
+            }
+        }
+
+        List<SwitchCase> cases = new ArrayList<>();
+        for (Map.Entry<IRBlock, List<String>> entry : bodyToLiterals.entrySet()) {
+            List<Statement> stmts = recoverStringSwitchBody(entry.getKey(), bodyStops);
+            List<Expression> labels = new ArrayList<>();
+            for (String literal : entry.getValue()) {
+                labels.add(LiteralExpr.ofString(literal));
+            }
+            cases.add(SwitchCase.ofExpressions(labels, stmts));
+        }
+
+        if (indexSwitch.getDefaultTarget() != null) {
+            cases.add(SwitchCase.defaultCase(recoverStringSwitchBody(indexSwitch.getDefaultTarget(), bodyStops)));
+        }
+
+        Statement switchStmt = new SwitchStmt(selector, cases);
+        stampFromHeader(switchStmt, header);
+        return switchStmt;
+    }
+
+    private List<Statement> recoverStringSwitchBody(IRBlock body, Set<IRBlock> bodyStops) {
+        Set<IRBlock> stopBlocks = new HashSet<>(bodyStops);
+        stopBlocks.remove(body);
+        context.pushStopBlocks(stopBlocks);
+        try {
+            return recoverBlockSequence(body, stopBlocks);
+        } finally {
+            context.popStopBlocks();
+        }
+    }
+
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
         context.markProcessed(header);
 
@@ -4367,7 +4792,9 @@ public class StatementRecoverer {
         "byteValue", "shortValue", "charValue",
         "iterator", "hasNext", "next", "makeConcatWithConstants",
         // ordinal() is folded into switch(enumVar) syntax by the $SwitchMap$ enum-switch idiom
-        "ordinal"));
+        "ordinal",
+        // hashCode()/equals() are folded into switch(stringVar) syntax by the String-switch idiom
+        "hashCode", "equals"));
 
     /**
      * Completeness invariant: reports whether any observable operation reachable from the entry in

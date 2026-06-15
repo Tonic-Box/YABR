@@ -9,6 +9,7 @@ import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
 import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.frame.FrameGenerator;
+import com.tonic.analysis.ssa.transform.DeadCodeElimination;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
@@ -18,8 +19,10 @@ import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Lowers SSA-form IR back to JVM bytecode.
@@ -39,6 +42,10 @@ public class BytecodeLowerer {
         // results with actual SSA values. Keeping them causes incorrect bytecode
         // because they reference stale local variable indices.
         removeLocalInstructionArtifacts(irMethod);
+
+        // Drop blocks unreachable from entry/handlers (e.g. the fall-through join after an exhaustive
+        // switch) so the emitter never produces a stray trailing return/goto for dead code.
+        DeadCodeElimination.removeUnreachableBlocks(irMethod);
 
         PhiEliminator phiEliminator = new PhiEliminator();
         phiEliminator.eliminate(irMethod);
@@ -85,20 +92,9 @@ public class BytecodeLowerer {
         Map<IRBlock, Integer> endOffsets = emitter.getBlockEndOffsets();
 
         for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {
-            IRBlock tryStart = handler.getTryStart();
-            IRBlock tryEnd = handler.getTryEnd();
             IRBlock handlerBlock = handler.getHandlerBlock();
-
-            if (!offsets.containsKey(tryStart) || !offsets.containsKey(handlerBlock)) {
+            if (!offsets.containsKey(handlerBlock)) {
                 continue;
-            }
-
-            int startPc = offsets.get(tryStart);
-            int endPc;
-            if (tryEnd != null && endOffsets.containsKey(tryEnd)) {
-                endPc = endOffsets.get(tryEnd);
-            } else {
-                endPc = endOffsets.getOrDefault(tryStart, startPc + 1);
             }
             int handlerPc = offsets.get(handlerBlock);
 
@@ -107,12 +103,62 @@ public class BytecodeLowerer {
                 catchType = constPool.findOrAddClass(handler.getCatchType().getInternalName()).getIndex(constPool);
             }
 
+            if (handler.getTryBlocks() != null && !handler.getTryBlocks().isEmpty()) {
+                for (int[] run : contiguousRuns(handler.getTryBlocks(), offsets, endOffsets)) {
+                    entries.add(new ExceptionTableEntry(run[0], run[1], handlerPc, catchType));
+                }
+                continue;
+            }
+
+            IRBlock tryStart = handler.getTryStart();
+            IRBlock tryEnd = handler.getTryEnd();
+            if (!offsets.containsKey(tryStart)) {
+                continue;
+            }
+            int startPc = offsets.get(tryStart);
+            int endPc;
+            if (tryEnd != null && endOffsets.containsKey(tryEnd)) {
+                endPc = endOffsets.get(tryEnd);
+            } else {
+                endPc = endOffsets.getOrDefault(tryStart, startPc + 1);
+            }
             if (startPc < endPc) {
                 entries.add(new ExceptionTableEntry(startPc, endPc, handlerPc, catchType));
             }
         }
 
         return entries;
+    }
+
+    /**
+     * Collapses the emitted byte ranges of a protected region's blocks into maximal contiguous runs. A nested
+     * try whose body is interrupted by an interleaved handler emits as several non-adjacent ranges; each run
+     * becomes one exception-table entry, matching how javac splits such a region.
+     */
+    private List<int[]> contiguousRuns(Set<IRBlock> tryBlocks, Map<IRBlock, Integer> offsets,
+                                       Map<IRBlock, Integer> endOffsets) {
+        List<int[]> intervals = new ArrayList<>();
+        for (IRBlock block : tryBlocks) {
+            if (offsets.containsKey(block) && endOffsets.containsKey(block)) {
+                int start = offsets.get(block);
+                int end = endOffsets.get(block);
+                if (start < end) {
+                    intervals.add(new int[]{start, end});
+                }
+            }
+        }
+        intervals.sort(Comparator.comparingInt(a -> a[0]));
+
+        List<int[]> runs = new ArrayList<>();
+        for (int[] interval : intervals) {
+            if (!runs.isEmpty() && interval[0] <= runs.get(runs.size() - 1)[1]) {
+                int[] last = runs.get(runs.size() - 1);
+                last[1] = Math.max(last[1], interval[1]);
+            } else {
+                runs.add(new int[]{interval[0], interval[1]});
+            }
+        }
+        return runs;
     }
 
     /**

@@ -11,10 +11,13 @@ import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.SwitchStmt;
+import com.tonic.analysis.source.ast.stmt.SynchronizedStmt;
+import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.ssa.ir.NewArrayInstruction;
+import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
@@ -374,7 +377,11 @@ public class ASTLowerer {
     }
 
     private boolean containsBranchNode(ASTNode node) {
-        if (node instanceof IfStmt || node instanceof SwitchStmt) {
+        // try/catch and synchronized create control-flow merges (the protected/handler paths join a
+        // continuation), so a variable assigned inside and read afterwards needs the slot-based SSA form
+        // and a phi at the join - exactly like if/switch.
+        if (node instanceof IfStmt || node instanceof SwitchStmt
+                || node instanceof TryCatchStmt || node instanceof SynchronizedStmt) {
             return true;
         }
         for (ASTNode child : node.getChildren()) {
@@ -394,6 +401,35 @@ public class ASTLowerer {
 
         VariableRenamer renamer = new VariableRenamer(domTree);
         renamer.rename(irMethod);
+
+        removeDeadPhis(irMethod);
+    }
+
+    /**
+     * Removes phi functions whose result is never used, iterating to a fixpoint so a phi that becomes dead
+     * once its only consumer (another dead phi) is removed is also dropped. Minimal (unpruned) SSA places a
+     * phi at every dominance frontier of a definition; for a variable defined on only one path into a join
+     * (e.g. an exception handler's caught-exception local, dead at the continuation) this yields a malformed
+     * phi missing an entry for the other predecessor, which breaks frame generation. Such a phi is always
+     * unused for valid source, so pruning dead phis here removes it without affecting live values.
+     */
+    private void removeDeadPhis(IRMethod irMethod) {
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (IRBlock block : irMethod.getBlocks()) {
+                for (PhiInstruction phi : new ArrayList<>(block.getPhiInstructions())) {
+                    if (!phi.getResult().getUses().isEmpty()) {
+                        continue;
+                    }
+                    for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks())) {
+                        phi.removeIncoming(pred);
+                    }
+                    block.removePhi(phi);
+                    changed = true;
+                }
+            }
+        }
     }
 
     /**

@@ -4,6 +4,8 @@ import com.tonic.analysis.ssa.type.ReferenceType;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Set;
+
 /**
  * Represents exception handler information for try-catch blocks.
  */
@@ -15,6 +17,14 @@ public class ExceptionHandler {
     private IRBlock tryEnd;
     private IRBlock handlerBlock;
     private ReferenceType catchType;
+
+    /**
+     * The full set of blocks making up the protected (try) region, when known. Lets the exception table be
+     * regenerated as one entry per maximal contiguous PC run, which correctly handles a nested try whose body
+     * is split into non-contiguous ranges by an interleaved handler. Null when unknown (e.g. lifted handlers),
+     * in which case the {@code tryStart}/{@code tryEnd} block pair is used instead.
+     */
+    private Set<IRBlock> tryBlocks;
 
     /**
      * Creates an exception handler.

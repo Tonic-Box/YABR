@@ -3,7 +3,9 @@ package com.tonic.analysis.source.lower;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
+import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.Constant;
@@ -11,6 +13,7 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -452,10 +455,23 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(tryBlock);
+        int blocksBeforeTryBody = ctx.getIrMethod().getBlocks().size();
         lower(tryCatch.getTryBlock());
+        IRBlock tryEnd = ctx.getCurrentBlock();
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
             ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        }
+
+        // The protected region is tryBlock plus every block produced while lowering the try body (including a
+        // nested try/catch's own handler blocks, which the outer try still protects). Tracking the full set
+        // lets the exception table be emitted as one entry per contiguous PC run even when an interleaved
+        // handler splits the region.
+        Set<IRBlock> tryBodyBlocks = new LinkedHashSet<>();
+        tryBodyBlocks.add(tryBlock);
+        List<IRBlock> allBlocks = ctx.getIrMethod().getBlocks();
+        for (int i = blocksBeforeTryBody; i < allBlocks.size(); i++) {
+            tryBodyBlocks.add(allBlocks.get(i));
         }
 
         for (CatchClause catchClause : tryCatch.getCatches()) {
@@ -465,14 +481,30 @@ public class StatementLowerer {
             ctx.setCurrentBlock(catchBlock);
 
             String exVarName = catchClause.variableName();
-            SourceType exType = catchClause.exceptionTypes().get(0);
-            SSAValue exVar = ctx.newValue(exType.toIRType());
+            String exVarType = ctx.getTypeResolver().resolveClassName(
+                    ((ReferenceType) catchClause.exceptionTypes().get(0).toIRType()).getInternalName());
+            SSAValue exVar = ctx.newValue(new ReferenceType(exVarType));
+            // Capture the JVM-provided exception (on the stack at handler entry) into the catch variable;
+            // otherwise it leaks onto the operand stack of whatever follows the catch.
+            catchBlock.addInstruction(SimpleInstruction.createCatch(exVar));
             ctx.setVariable(exVarName, exVar);
 
             lower(catchClause.body());
             if (ctx.getCurrentBlock().getTerminator() == null) {
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
                 ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            }
+
+            // Register the exception table entry/entries. A multi-catch shares one handler block but
+            // needs one table entry per caught type; without this the protected region is never recorded
+            // and the handler ends up as dead, frame-less code that fails verification.
+            for (SourceType caught : catchClause.exceptionTypes()) {
+                String catchType = ctx.getTypeResolver()
+                        .resolveClassName(((ReferenceType) caught.toIRType()).getInternalName());
+                ExceptionHandler handler =
+                        new ExceptionHandler(tryBlock, tryEnd, catchBlock, new ReferenceType(catchType));
+                handler.setTryBlocks(tryBodyBlocks);
+                ctx.getIrMethod().addExceptionHandler(handler);
             }
         }
 

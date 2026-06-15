@@ -5,6 +5,7 @@ import com.tonic.analysis.source.ast.decl.FieldDecl;
 import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
+import com.tonic.analysis.frame.TypeState;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -12,18 +13,51 @@ import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.utill.Modifiers;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RequiredArgsConstructor
 public class TypeResolver {
 
     private final ClassPool classPool;
     @Getter
     private final String currentClass;
+
+    public TypeResolver(ClassPool classPool, String currentClass) {
+        this.classPool = classPool;
+        this.currentClass = currentClass;
+        // Frame generation merges reference types at control-flow joins; give it a real
+        // common-superclass lookup (backed by the class pool) instead of collapsing to Object.
+        TypeState.setSuperclassResolver(this::getSuperclassName);
+    }
+
+    /**
+     * Returns the direct superclass (internal name) of {@code internalName}, or null for
+     * {@code java/lang/Object}, unresolvable classes, or on any lookup failure. Resolves user
+     * classes from the pool and falls back to loading JDK/system classes.
+     */
+    public String getSuperclassName(String internalName) {
+        if (internalName == null || internalName.isEmpty() || internalName.equals("java/lang/Object")) {
+            return null;
+        }
+        try {
+            ClassFile cf = classPool.get(internalName);
+            if (cf == null) {
+                cf = classPool.loadSystemClass(internalName);
+            }
+            if (cf == null) {
+                return null;
+            }
+            String superClass = cf.getSuperClassName();
+            if (superClass == null || superClass.isEmpty() || superClass.startsWith("Invalid")) {
+                return null;
+            }
+            return superClass;
+        } catch (Exception e) {
+            return null;
+        }
+    }
     @Setter
     private ClassDecl currentClassDecl;
     @Setter
@@ -628,12 +662,19 @@ public class TypeResolver {
         return cf != null && (cf.getAccess() & 0x0200) != 0;
     }
 
-    /**
-     * Resolves a simple class name against classes already loaded in the pool (the default pool
-     * carries the JDK). Tries the implicit {@code java.lang} package first, then a search of
-     * loaded classes by simple name (preferring {@code java/lang} and {@code java/util}). Returns
-     * null when no loaded class matches.
-     */
+    /** Whether {@code internalName} names a class resolvable via the pool — already loaded, or loadable
+     * from the system class path (so e.g. implicitly-imported {@code java.lang} exceptions resolve). */
+    private boolean classExists(String internalName) {
+        if (classPool.get(internalName) != null) {
+            return true;
+        }
+        try {
+            return classPool.loadSystemClass(internalName) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private String resolveFromLoadedClasses(String simpleName) {
         int currentSlash = currentClass.lastIndexOf('/');
         if (currentSlash > 0) {
@@ -644,7 +685,7 @@ public class TypeResolver {
         }
 
         String javaLang = "java/lang/" + simpleName;
-        if (classPool.get(javaLang) != null) {
+        if (classExists(javaLang)) {
             return javaLang;
         }
 

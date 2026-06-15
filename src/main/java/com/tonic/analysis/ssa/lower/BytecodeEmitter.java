@@ -1182,6 +1182,11 @@ public class BytecodeEmitter {
                     emitShort((short) 0);
                 }
                 break;
+            case CATCH:
+                // No opcode: the JVM already placed the caught exception on the stack at the handler
+                // entry. emitResultStore turns this into an astore into the catch variable's slot (or
+                // discards it into a dead slot if the variable is unused).
+                break;
             default:
                 throw new IllegalStateException("Unknown simple op: " + instr.getOp());
         }

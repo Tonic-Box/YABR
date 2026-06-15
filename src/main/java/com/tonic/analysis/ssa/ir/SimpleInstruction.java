@@ -37,6 +37,11 @@ public class SimpleInstruction extends IRInstruction {
         return new SimpleInstruction(SimpleOp.GOTO, null, null, target);
     }
 
+    /** Captures the JVM-provided caught exception (on the stack at handler entry) into {@code result}. */
+    public static SimpleInstruction createCatch(SSAValue result) {
+        return new SimpleInstruction(SimpleOp.CATCH, result, null, null);
+    }
+
     private SimpleInstruction(SimpleOp op, SSAValue result, Value operand, IRBlock target) {
         super(result);
         this.op = op;
@@ -110,6 +115,8 @@ public class SimpleInstruction extends IRInstruction {
                 return createThrow(newOperands.get(0));
             case GOTO:
                 return createGoto(target);
+            case CATCH:
+                return createCatch(newResult);
             default:
                 return null;
         }
@@ -128,6 +135,8 @@ public class SimpleInstruction extends IRInstruction {
                 return "throw " + operand;
             case GOTO:
                 return "goto " + (target != null ? target.getName() : "null");
+            case CATCH:
+                return result + " = catch";
             default:
                 return "simple " + op;
         }

@@ -679,6 +679,21 @@ public class ExpressionLowerer {
         }
     }
 
+    /** The constant {@code 1} typed to match {@code type}, so {@code ++}/{@code --} on a long/double/float
+     * operand adds a category-correct value (e.g. {@code lconst_1}, not {@code iconst_1}). */
+    private static Constant oneConstant(IRType type) {
+        if (type == PrimitiveType.LONG) {
+            return LongConstant.ONE;
+        }
+        if (type == PrimitiveType.DOUBLE) {
+            return DoubleConstant.ONE;
+        }
+        if (type == PrimitiveType.FLOAT) {
+            return FloatConstant.ONE;
+        }
+        return IntConstant.ONE;
+    }
+
     private Value lowerIncDec(UnaryExpr unary, boolean isPrefix) {
         UnaryOperator op = unary.getOperator();
         boolean isInc = (op == UnaryOperator.PRE_INC || op == UnaryOperator.POST_INC);
@@ -688,7 +703,7 @@ public class ExpressionLowerer {
 
         IRType type = oldValue != null ? oldValue.getType() : unary.getType().toIRType();
         SSAValue one = ctx.newValue(type);
-        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(one, IntConstant.ONE));
+        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(one, oneConstant(type)));
 
         SSAValue newValue = ctx.newValue(type);
         BinaryOp binOp = isInc ? BinaryOp.ADD : BinaryOp.SUB;
@@ -719,14 +734,22 @@ public class ExpressionLowerer {
             Expression receiver = call.getReceiver();
             if (receiver instanceof VarRefExpr) {
                 VarRefExpr varRef = (VarRefExpr) receiver;
-                if (!ctx.hasVariable(varRef.getName())) {
+                SourceType fieldType = ctx.hasVariable(varRef.getName())
+                        ? null
+                        : ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName());
+                if (!ctx.hasVariable(varRef.getName()) && !(fieldType instanceof ReferenceSourceType)) {
+                    // A bare identifier that is neither a local variable nor a field: a class name (static call).
                     invokeType = InvokeType.STATIC;
                     ownerClass = resolveClassName(varRef.getName());
                 } else {
-                    args.add(lower(receiver));
+                    // A local variable, or an own-class field used as the receiver: a virtual call on its type.
+                    Value receiverValue = lower(receiver);
+                    args.add(receiverValue);
                     invokeType = InvokeType.VIRTUAL;
                     if (ownerClass == null || ownerClass.isEmpty()) {
-                        ownerClass = resolveReceiverOwnerClass(receiver);
+                        ownerClass = fieldType instanceof ReferenceSourceType
+                                ? ((ReferenceSourceType) fieldType).getInternalName()
+                                : ownerClassFromValue(receiverValue, receiver);
                     }
                 }
             } else if (receiver instanceof SuperExpr) {
@@ -739,10 +762,11 @@ public class ExpressionLowerer {
                     }
                 }
             } else if (receiver != null) {
-                args.add(lower(receiver));
+                Value receiverValue = lower(receiver);
+                args.add(receiverValue);
                 invokeType = InvokeType.VIRTUAL;
                 if (ownerClass == null || ownerClass.isEmpty()) {
-                    ownerClass = resolveReceiverOwnerClass(receiver);
+                    ownerClass = ownerClassFromValue(receiverValue, receiver);
                 }
             } else {
                 if (ownerClass == null || ownerClass.isEmpty()) {
@@ -874,6 +898,21 @@ public class ExpressionLowerer {
         }
         return new LambdaExpr(lambda.getParameters(), lambda.getBody(), expected)
                 .withImplMethodKey(lambda.getImplMethodKey());
+    }
+
+    /**
+     * Resolves the owning class for a virtual call on a local-variable receiver. The lowered value's IR type
+     * is authoritative (e.g. a caught exception, whose AST reference carries no declared type), so it is
+     * preferred over the AST-based {@link #resolveReceiverOwnerClass} fallback.
+     */
+    private String ownerClassFromValue(Value receiverValue, Expression receiver) {
+        if (receiverValue instanceof SSAValue && receiverValue.getType() instanceof ReferenceType) {
+            String internalName = ((ReferenceType) receiverValue.getType()).getInternalName();
+            if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object")) {
+                return internalName;
+            }
+        }
+        return resolveReceiverOwnerClass(receiver);
     }
 
     private String resolveReceiverOwnerClass(Expression receiver) {
