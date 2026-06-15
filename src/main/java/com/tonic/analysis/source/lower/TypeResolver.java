@@ -651,6 +651,57 @@ public class TypeResolver {
     }
 
     /**
+     * Resolves a parsed type name to its fully-qualified internal name: applies imports (via
+     * {@link #resolveClassName}) for a simple name, then repairs nested-class boundaries that the source
+     * spelled with a dot - the decompiler renders {@code Outer.Inner} which naively becomes {@code Outer/Inner},
+     * but the JVM internal name is {@code Outer$Inner}. The correct boundary is found by consulting the pool.
+     */
+    public String resolveInternalName(String rawName) {
+        return normalizeNestedName(resolveClassName(rawName));
+    }
+
+    /**
+     * A JVM type descriptor for {@code type} with reference types fully resolved (imports + nested {@code $}).
+     * Unlike {@code type.toIRType().getDescriptor()} - which emits the unresolved, possibly mis-nested name as
+     * written in source - this yields the descriptor that matches the compiled class, so method signatures
+     * built from decompiled source line up with the originals.
+     */
+    public String descriptorOf(SourceType type) {
+        if (type instanceof ReferenceSourceType) {
+            return "L" + resolveInternalName(((ReferenceSourceType) type).getInternalName()) + ";";
+        }
+        if (type instanceof ArraySourceType) {
+            ArraySourceType array = (ArraySourceType) type;
+            return "[".repeat(Math.max(0, array.getTotalDimensions())) +
+                    descriptorOf(array.getElementType());
+        }
+        return type.toIRType().getDescriptor();
+    }
+
+    /**
+     * Repairs nested-class boundaries in an internal name. A name spelled with {@code /} for every separator
+     * (e.g. {@code a/b/Outer/Inner}) is corrected to use {@code $} where a {@code /}-segment is actually a
+     * nested class, identified by testing successive boundaries against the pool from the rightmost inward.
+     * Returns the input unchanged when it already resolves or no nested form is found.
+     */
+    private String normalizeNestedName(String internalName) {
+        if (internalName == null || internalName.isEmpty() || classExists(internalName)) {
+            return internalName;
+        }
+        char[] chars = internalName.toCharArray();
+        for (int i = chars.length - 1; i >= 0; i--) {
+            if (chars[i] == '/') {
+                chars[i] = '$';
+                String candidate = new String(chars);
+                if (classExists(candidate)) {
+                    return candidate;
+                }
+            }
+        }
+        return internalName;
+    }
+
+    /**
      * Returns whether the named class is an interface, consulting the ClassPool. Used to choose
      * invokeinterface over invokevirtual for calls on interface-typed receivers.
      */
@@ -664,7 +715,7 @@ public class TypeResolver {
 
     /** Whether {@code internalName} names a class resolvable via the pool — already loaded, or loadable
      * from the system class path (so e.g. implicitly-imported {@code java.lang} exceptions resolve). */
-    private boolean classExists(String internalName) {
+    public boolean classExists(String internalName) {
         if (classPool.get(internalName) != null) {
             return true;
         }

@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Fix recompiler VerifyErrors and decompiler structural recovery&#10;&#10;Recompiler (source -&gt; verifiable bytecode):&#10;- switch, try/catch frames + exception table, nested try (multi-run table)&#10;- long/double increment, try/catch value continuation (SSA), caught-exception type resolution for chained calls&#10;&#10;Decompiler structural recovery:&#10;- reconstruct synchronized blocks from the monitor pattern&#10;- coalesce multi-catch into one clause; drop the redundant outer try&#10;- structural finally-gap recovery (handles a return inside finally)&#10;- reconstruct String switch from the hashCode/equals two-phase form&#10;&#10;Adds RecompileVerifyTest and StructuralRecoveryReconstructionTest.">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Add MethodGrafter.replaceMethodBody for in-place body swaps">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/MethodGrafter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/MethodGrafter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/MethodGraftTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/MethodGraftTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/CompileAndRunTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/CompileAndRunTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -524,11 +525,18 @@
       <option name="project" value="LOCAL" />
       <updated>1781490845894</updated>
     </task>
-    <option name="localTasksCounter" value="44" />
+    <task id="LOCAL-00044" summary="Add MethodGrafter.replaceMethodBody for in-place body swaps">
+      <option name="closed" value="true" />
+      <created>1781495120264</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1781495120264</updated>
+    </task>
+    <option name="localTasksCounter" value="45" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fix loop-variable miscompilation, support multi-var declarations, tidy codegen" />
     <MESSAGE value="- Codegen: emit single-use literal constants inline at their use site (iconst/ldc) instead of materializing them to a local slot and reloading. Matches javac, shrinks bytecode, and removes the spurious slot variables that round-tripped as `boolean localN = true`.&#10;&#10;- Decompiler: attribute a loop-header phi to its own home slot rather than the first store-use of its result, so a body copy like `a = b`no longer conflates the two variables or drops the body store." />
     <MESSAGE value="Keep single-use values on the stack; drop dead field read on inc/dec&#10;- Codegen: fix isSimpleOperand so a single-use value feeding a comparison (e.g. i*i in i*i &lt;= n) stays stack-resident instead of spilling to a scratch slot the decompiler then mangled.&#10;- Lowering: dispatch inc/dec before lowerUnary's eager operand lowering so a field increment reads the field once, not twice." />
     <MESSAGE value="- don't un-materialize a value already emitted as an array-initializer declaration; reference the temp instead." />
@@ -553,6 +561,7 @@
     <MESSAGE value="- Add field and class declaration spans to decompiler" />
     <MESSAGE value="- Map inlined lambda bodies under their own line-map key" />
     <MESSAGE value="Fix recompiler VerifyErrors and decompiler structural recovery&#10;&#10;Recompiler (source -&gt; verifiable bytecode):&#10;- switch, try/catch frames + exception table, nested try (multi-run table)&#10;- long/double increment, try/catch value continuation (SSA), caught-exception type resolution for chained calls&#10;&#10;Decompiler structural recovery:&#10;- reconstruct synchronized blocks from the monitor pattern&#10;- coalesce multi-catch into one clause; drop the redundant outer try&#10;- structural finally-gap recovery (handles a return inside finally)&#10;- reconstruct String switch from the hashCode/equals two-phase form&#10;&#10;Adds RecompileVerifyTest and StructuralRecoveryReconstructionTest." />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix recompiler VerifyErrors and decompiler structural recovery&#10;&#10;Recompiler (source -&gt; verifiable bytecode):&#10;- switch, try/catch frames + exception table, nested try (multi-run table)&#10;- long/double increment, try/catch value continuation (SSA), caught-exception type resolution for chained calls&#10;&#10;Decompiler structural recovery:&#10;- reconstruct synchronized blocks from the monitor pattern&#10;- coalesce multi-catch into one clause; drop the redundant outer try&#10;- structural finally-gap recovery (handles a return inside finally)&#10;- reconstruct String switch from the hashCode/equals two-phase form&#10;&#10;Adds RecompileVerifyTest and StructuralRecoveryReconstructionTest." />
+    <MESSAGE value="Add MethodGrafter.replaceMethodBody for in-place body swaps" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add MethodGrafter.replaceMethodBody for in-place body swaps" />
   </component>
 </project>

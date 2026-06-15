@@ -1021,9 +1021,15 @@ public class ExpressionLowerer {
                 ownerClass = "java/lang/Object";
             }
         } else {
-            ownerClass = field.getOwnerClass();
-            if (ownerClass == null || ownerClass.isEmpty()) {
-                ownerClass = ctx.getOwnerClass();
+            String qualifiedOwner = resolveQualifiedTypeReceiver(receiver);
+            if (qualifiedOwner != null) {
+                ownerClass = qualifiedOwner;
+                isStatic = true;
+            } else {
+                ownerClass = field.getOwnerClass();
+                if (ownerClass == null || ownerClass.isEmpty()) {
+                    ownerClass = ctx.getOwnerClass();
+                }
             }
         }
 
@@ -1064,6 +1070,35 @@ public class ExpressionLowerer {
     }
 
     /**
+     * If {@code receiver} is a pure dotted-name chain that names a class in the pool, returns that class's
+     * internal name; otherwise null. The decompiler emits a static/enum member fully qualified
+     * ({@code a.b.Outer$Inner.CONST}), which the parser builds as a field-access chain rather than a type
+     * reference - so a {@code .CONST} access whose receiver is such a chain is really a static field access on
+     * the named class. A chain rooted at a local variable is a genuine field access and is left alone.
+     */
+    private String resolveQualifiedTypeReceiver(Expression receiver) {
+        String dottedName = flattenDottedName(receiver);
+        if (dottedName == null) {
+            return null;
+        }
+        String internalName = ctx.getTypeResolver().resolveInternalName(dottedName);
+        return ctx.getTypeResolver().classExists(internalName) ? internalName : null;
+    }
+
+    private String flattenDottedName(Expression expr) {
+        if (expr instanceof VarRefExpr) {
+            String name = ((VarRefExpr) expr).getName();
+            return ctx.hasVariable(name) ? null : name;
+        }
+        if (expr instanceof FieldAccessExpr) {
+            FieldAccessExpr access = (FieldAccessExpr) expr;
+            String base = flattenDottedName(access.getReceiver());
+            return base != null ? base + "." + access.getFieldName() : null;
+        }
+        return null;
+    }
+
+    /**
      * Normalizes a field-owner class name to a fully-qualified internal name. Decompiled source
      * refers to same-package and imported types by their simple name; this resolves such names
      * (e.g. {@code MainFrame} -> {@code osrs/dev/MainFrame}) against imports and the loaded pool so
@@ -1099,9 +1134,15 @@ public class ExpressionLowerer {
                 ownerClass = "java/lang/Object";
             }
         } else {
-            ownerClass = field.getOwnerClass();
-            if (ownerClass == null || ownerClass.isEmpty()) {
-                ownerClass = ctx.getOwnerClass();
+            String qualifiedOwner = resolveQualifiedTypeReceiver(receiver);
+            if (qualifiedOwner != null) {
+                ownerClass = qualifiedOwner;
+                isStatic = true;
+            } else {
+                ownerClass = field.getOwnerClass();
+                if (ownerClass == null || ownerClass.isEmpty()) {
+                    ownerClass = ctx.getOwnerClass();
+                }
             }
         }
 

@@ -139,6 +139,23 @@ public class CompileAndRunTest {
     }
 
 
+    @Test
+    void fullyQualifiedStaticFieldAccessResolvesOwner() throws Exception {
+        // A fully-qualified static field reference (e.g. `java.lang.Integer.MAX_VALUE`) parses as a
+        // field-access chain rooted at a name, not a type reference. Lowering must recognize the qualified
+        // class name as the static-field owner instead of falling back to java/lang/Object.
+        String source =
+            "package test;\n" +
+            "public class Qual {\n" +
+            "    public static int maxInt() { return java.lang.Integer.MAX_VALUE; }\n" +
+            "    public static long minLong() { return java.lang.Long.MIN_VALUE; }\n" +
+            "}\n";
+
+        Class<?> cls = TestUtils.compileLinkAndLoad(source, "test/Qual");
+        assertEquals(Integer.MAX_VALUE, cls.getMethod("maxInt").invoke(null));
+        assertEquals(Long.MIN_VALUE, cls.getMethod("minLong").invoke(null));
+    }
+
     private ClassFile compileSource(String source, String className) throws Exception {
         return TestUtils.compileSource(source, className);
     }
