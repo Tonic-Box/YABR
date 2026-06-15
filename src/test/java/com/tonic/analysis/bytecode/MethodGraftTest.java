@@ -116,6 +116,30 @@ class MethodGraftTest {
         assertEquals("spliced-7", clazz.getMethod("run").invoke(null));
     }
 
+    @Test
+    void replaceMethodBodyKeepsMemberSetForLiveRedefine() throws Exception {
+        // The live-patch use case: overwrite a method's body in place, leaving the class's member set (and
+        // every other method) untouched so a JVMTI redefine accepts it. Here Game.run() is rebodied from
+        // Sound.src() across pools, and the spliced String constant is relocated.
+        ClassPool pool = TestUtils.emptyPool();
+        for (String cn : new String[]{"java/lang/Object", "java/lang/String"}) {
+            pool.loadPlatformClass(cn + ".class");
+        }
+        ClassFile sound = compile(pool, "Sound",
+                "public class Sound { public static String src() { return \"spliced-7\"; } }");
+        ClassFile game = compile(pool, "Game",
+                "public class Game { public static String run() { return \"old\"; }"
+                        + " public static int keep() { return 42; } }");
+
+        int methodsBefore = game.getMethods().size();
+        MethodGrafter.replaceMethodBody(sound, method(sound, "src"), game, method(game, "run"));
+        assertEquals(methodsBefore, game.getMethods().size(), "replacing a body must not change the member set");
+
+        Class<?> clazz = TestUtils.loadAndVerify(game);
+        assertEquals("spliced-7", clazz.getMethod("run").invoke(null), "the body must be replaced");
+        assertEquals(42, (int) clazz.getMethod("keep").invoke(null), "untouched methods must be unaffected");
+    }
+
     /** Compiles a single-method class onto the given pool via the YABR front end. */
     private static ClassFile compile(ClassPool pool, String name, String src) throws Exception {
         CompilationUnit cu = JavaParser.create().parse(src);

@@ -30,8 +30,8 @@ public final class MethodGrafter {
     }
 
     /**
-     * Grafts {@code method} from {@code source} into {@code target}, returning the new method entry on
-     * the target. The source method is left untouched.
+     * Grafts {@code method} from {@code source} into {@code target} as a brand-new method, returning the new
+     * method entry on the target. The source method is left untouched.
      *
      * @param source the class file the method currently lives in
      * @param method the method to copy
@@ -39,15 +39,40 @@ public final class MethodGrafter {
      * @return the newly created method on {@code target}
      */
     public static MethodEntry graftMethod(ClassFile source, MethodEntry method, ClassFile target) {
+        MethodEntry grafted = target.createNewMethodWithDescriptor(
+                method.getAccess(), method.getName(), method.getDesc());
+        copyBodyInto(source, method, target, grafted);
+        return grafted;
+    }
+
+    /**
+     * Replaces {@code targetMethod}'s body in place with {@code sourceMethod}'s, remapping every constant-pool
+     * reference into the target. The target method entry - and therefore the target class's member set and
+     * member order - is preserved, which is what makes a JVMTI live redefine accept the result: it can change
+     * method bodies but never add or remove members. {@code sourceMethod} is left untouched.
+     *
+     * @param source       the class file {@code sourceMethod} lives in
+     * @param sourceMethod the method whose body to copy
+     * @param target       the class file {@code targetMethod} lives in
+     * @param targetMethod the method on {@code target} to overwrite (typically same name and descriptor)
+     */
+    public static void replaceMethodBody(ClassFile source, MethodEntry sourceMethod,
+                                         ClassFile target, MethodEntry targetMethod) {
+        copyBodyInto(source, sourceMethod, target, targetMethod);
+    }
+
+    /**
+     * Clones {@code method}'s body from {@code source} into {@code destination} on {@code target}, remapping
+     * constant-pool references and the exception table, then rebuilds branch/switch targets, {@code maxLocals}
+     * and the StackMapTable through {@link CodeWriter}/{@link FrameGenerator}.
+     */
+    private static void copyBodyInto(ClassFile source, MethodEntry method, ClassFile target, MethodEntry destination) {
         CodeAttribute srcCode = method.getCodeAttribute();
         if (srcCode == null) {
             throw new IllegalArgumentException("Cannot graft a method without a Code attribute: " + method.getName());
         }
         ConstPool tp = target.getConstPool();
         ConstPoolRemapper remapper = new ConstPoolRemapper(source, target);
-
-        MethodEntry grafted = target.createNewMethodWithDescriptor(
-                method.getAccess(), method.getName(), method.getDesc());
 
         CodeWriter sourceWriter = new CodeWriter(method);
         List<Instruction> src = new ArrayList<>();
@@ -64,11 +89,10 @@ public final class MethodGrafter {
             exceptions.add(new ExceptionTableEntry(ex.getStartPc(), ex.getEndPc(), ex.getHandlerPc(), catchType));
         }
 
-        CodeWriter targetWriter = new CodeWriter(grafted);
+        CodeWriter targetWriter = new CodeWriter(destination);
         targetWriter.getCodeAttribute().setMaxStack(srcCode.getMaxStack());
         targetWriter.getCodeAttribute().setMaxLocals(srcCode.getMaxLocals());
         targetWriter.replaceBody(body, exceptions);
-        new FrameGenerator(tp).updateStackMapTable(grafted);
-        return grafted;
+        new FrameGenerator(tp).updateStackMapTable(destination);
     }
 }
