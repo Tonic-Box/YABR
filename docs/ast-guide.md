@@ -50,6 +50,12 @@ Beyond ordinary methods and control flow, the AST layer recovers and re-emits mo
   record-deconstruction patterns (`case Point(int x, int y) ->`) — Java 21
 - Varargs calls — collapsing the compiler-packed trailing array (`f(new T[]{a, b})`) back into
   `f(a, b)`, and rendering a varargs parameter as `T...` — Java 5
+- `String` `switch` - collapsing javac's two-phase `hashCode()`/`equals()` dispatch (incl. hashCode
+  collisions and fall-through) back into a single `switch (s)` with string-literal cases - Java 7
+- Multi-catch (`catch (A | B e)`) - coalescing the several exception-table entries that share one
+  handler block into a single clause - Java 7
+- `synchronized` blocks - recovering the `monitorenter` ... `monitorexit` + catch-all monitor-release
+  pattern that javac emits as a guarded try/finally
 
 Decompiled statements carry **bytecode-offset provenance**: the SSA lifter stamps each IR
 instruction's offset, recovery transfers it onto the statements it builds (`SourceLocation`), the

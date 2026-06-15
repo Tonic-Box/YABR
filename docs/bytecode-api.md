@@ -332,6 +332,11 @@ int n = gameClass.redirectClassReferences("pkg/Sound", "pkg/Game");   // redirec
 // Move a method from one ClassFile into another (returns the new method on the target):
 MethodEntry moved = MethodGrafter.graftMethod(soundClass, soundMethod, gameClass);
 gameClass.redirectClassReferences("pkg/Sound", "pkg/Game"); // repoint its self-calls, if desired
+
+// Or overwrite an existing method's body in place (same remapping), keeping the target's member entry
+// and order - which is what makes a JVMTI live redefine accept the result (bodies may change, the member
+// set may not):
+MethodGrafter.replaceMethodBody(srcClass, srcMethod, targetClass, targetMethod);
 ```
 
 `redirectClassReferences` (and its alias `redirectOwner`) rewrites *all* reference kinds, since they
@@ -341,7 +346,7 @@ method/field/`MethodType` descriptors and array class refs (`[LB;`). The `ClassF
 the cached descriptor/owner on its fields and methods. **Not** rewritten: class names in generic
 `Signature` attributes — use the [Renamer](renamer-api.md) for generic-aware full renames.
 
-`graftMethod` remaps method/field/interface/class references, `ldc` constants
+`graftMethod` and `replaceMethodBody` remap method/field/interface/class references, `ldc` constants
 (String/Class/int/float/long/double/MethodHandle/MethodType), and `invokedynamic`/dynamic constants —
 for the latter the referenced bootstrap method (handle + static arguments) is copied and remapped into
 the target's `BootstrapMethods` attribute. Structural edits (including the relink after a graft) also
