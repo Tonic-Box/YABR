@@ -1,7 +1,11 @@
 package com.tonic.analysis.query.eval;
 
+import com.tonic.analysis.Bootstraps;
 import com.tonic.analysis.instruction.GetFieldInstruction;
 import com.tonic.analysis.instruction.Instruction;
+import com.tonic.analysis.instruction.Ldc2WInstruction;
+import com.tonic.analysis.instruction.LdcInstruction;
+import com.tonic.analysis.instruction.LdcWInstruction;
 import com.tonic.analysis.instruction.InvokeDynamicInstruction;
 import com.tonic.analysis.instruction.InvokeInsn;
 import com.tonic.analysis.instruction.InvokeInterfaceInstruction;
@@ -12,7 +16,20 @@ import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.constpool.ClassRefItem;
+import com.tonic.parser.constpool.ConstantDynamicItem;
+import com.tonic.parser.constpool.DoubleItem;
+import com.tonic.parser.constpool.FloatItem;
+import com.tonic.parser.constpool.IntegerItem;
+import com.tonic.parser.constpool.InvokeDynamicItem;
+import com.tonic.parser.constpool.Item;
+import com.tonic.parser.constpool.LongItem;
+import com.tonic.parser.constpool.MethodHandleItem;
+import com.tonic.parser.constpool.MethodTypeItem;
+import com.tonic.parser.constpool.StringRefItem;
+import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.analysis.query.util.ArgumentTypeAnalyzer;
 import com.tonic.analysis.query.value.Value;
 import com.tonic.utill.Opcode;
@@ -21,11 +38,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.tonic.analysis.query.eval.SubjectKind.ARG;
+import static com.tonic.analysis.query.eval.SubjectKind.BOOTSTRAP_ARG;
 import static com.tonic.analysis.query.eval.SubjectKind.CALL;
 import static com.tonic.analysis.query.eval.SubjectKind.CLASS;
+import static com.tonic.analysis.query.eval.SubjectKind.DYNAMIC;
 import static com.tonic.analysis.query.eval.SubjectKind.FIELD_ACCESS;
 import static com.tonic.analysis.query.eval.SubjectKind.INSTRUCTION;
 import static com.tonic.analysis.query.eval.SubjectKind.METHOD;
@@ -69,6 +89,8 @@ public final class DefaultAttributes {
         registerArg(r);
         registerInstruction(r);
         registerFieldAccess(r);
+        registerDynamic(r);
+        registerBootstrapArg(r);
         registerCfg(r);
         registerIdentities(r);
         return r;
@@ -164,6 +186,14 @@ public final class DefaultAttributes {
         AttributeRegistry.Selector fields = (s, step) -> instructionStream(s, (insn, idx) ->
                 isFieldAccess(insn) ? new Subject.FieldAccessSubject(insn, s.context()) : null);
         registerStream(r, METHOD, fields, "field", "fields");
+
+        AttributeRegistry.Selector indys = (s, step) -> instructionStream(s, (insn, idx) ->
+                insn instanceof InvokeDynamicInstruction ? indySubject((InvokeDynamicInstruction) insn, s.context()) : null);
+        registerStream(r, METHOD, indys, "indy", "indys");
+
+        AttributeRegistry.Selector condies = (s, step) -> instructionStream(s, (insn, idx) ->
+                condySubject(insn, s.context()));
+        registerStream(r, METHOD, condies, "condy", "condies");
     }
 
     private static void registerCall(AttributeRegistry r) {
@@ -225,6 +255,31 @@ public final class DefaultAttributes {
                 s -> Value.of(field(s).instruction() instanceof PutFieldInstruction ? "write" : "read"));
     }
 
+    private static void registerDynamic(AttributeRegistry r) {
+        r.registerScalar(DYNAMIC, "name", s -> Value.of(dynamic(s).name()));
+        r.registerScalar(DYNAMIC, "descriptor", s -> Value.of(dynamic(s).descriptor()));
+        r.registerScalar(DYNAMIC, "site", s -> Value.of(dynamic(s).site()));
+        r.registerScalar(DYNAMIC, "category", s -> bootstrapValue(s, Bootstraps.BootstrapRef::category));
+        r.registerScalar(DYNAMIC, "recipe", s -> recipe(dynamic(s)));
+        r.registerScalar(DYNAMIC, "bsmowner", s -> bootstrapValue(s, Bootstraps.BootstrapRef::getOwner));
+        r.registerScalar(DYNAMIC, "bsmname", s -> bootstrapValue(s, Bootstraps.BootstrapRef::getName));
+        r.registerScalar(DYNAMIC, "bsmdescriptor", s -> bootstrapValue(s, Bootstraps.BootstrapRef::getDescriptor));
+        r.registerScalar(DYNAMIC, "bsmkind", s -> bootstrapValue(s, Bootstraps.BootstrapRef::getKind));
+        r.registerScalar(DYNAMIC, "line", s -> {
+            Instruction at = dynamic(s).instruction();
+            return Value.of(at != null ? s.context().lineForOffset(at.getOffset()) : -1);
+        });
+
+        AttributeRegistry.Selector bsmArgs = (s, step) -> bootstrapArgs(dynamic(s));
+        registerStream(r, DYNAMIC, bsmArgs, "bsmarg", "bsmargs");
+    }
+
+    private static void registerBootstrapArg(AttributeRegistry r) {
+        r.registerScalar(BOOTSTRAP_ARG, "kind", s -> Value.of(constantKind(bootstrapArg(s))));
+        r.registerScalar(BOOTSTRAP_ARG, "value",
+                s -> Value.of(Bootstraps.constantValue(constPool(bootstrapArg(s).context()), bootstrapArg(s).cpIndex())));
+    }
+
     // ---- selector helpers -------------------------------------------------
 
     private interface InstructionMapper {
@@ -256,6 +311,98 @@ public final class DefaultAttributes {
         return out.stream();
     }
 
+    // ---- dynamic-site helpers ---------------------------------------------
+
+    private static Subject.DynamicSubject indySubject(InvokeDynamicInstruction indy, EvalContext ctx) {
+        Item<?> item = ctx.classFile() == null ? null : constPool(ctx).getItem(indy.getCpIndex());
+        String name = null;
+        String descriptor = null;
+        if (item instanceof InvokeDynamicItem) {
+            name = ((InvokeDynamicItem) item).getName();
+            descriptor = ((InvokeDynamicItem) item).getDescriptor();
+        }
+        Bootstraps.BootstrapRef ref = Bootstraps.resolve(ctx.classFile(), indy.getBootstrapMethodAttrIndex());
+        return new Subject.DynamicSubject(ref, name, descriptor, "indy", indy, ctx);
+    }
+
+    private static Subject.DynamicSubject condySubject(Instruction insn, EvalContext ctx) {
+        int cpIndex = ldcCpIndex(insn);
+        if (cpIndex < 0 || ctx.classFile() == null) {
+            return null;
+        }
+        Item<?> item = constPool(ctx).getItem(cpIndex);
+        if (!(item instanceof ConstantDynamicItem)) {
+            return null;
+        }
+        ConstantDynamicItem condy = (ConstantDynamicItem) item;
+        Bootstraps.BootstrapRef ref = Bootstraps.resolve(ctx.classFile(), condy.getBootstrapMethodAttrIndex());
+        return new Subject.DynamicSubject(ref, condy.getName(), condy.getDescriptor(), "condy", insn, ctx);
+    }
+
+    private static int ldcCpIndex(Instruction insn) {
+        if (insn instanceof LdcInstruction) return ((LdcInstruction) insn).getCpIndex();
+        if (insn instanceof LdcWInstruction) return ((LdcWInstruction) insn).getCpIndex();
+        if (insn instanceof Ldc2WInstruction) return ((Ldc2WInstruction) insn).getCpIndex();
+        return -1;
+    }
+
+    private static Value bootstrapValue(Subject s, Function<Bootstraps.BootstrapRef, String> getter) {
+        Bootstraps.BootstrapRef ref = dynamic(s).bootstrap();
+        return ref == null ? Value.ABSENT : Value.of(getter.apply(ref));
+    }
+
+    private static Value recipe(Subject.DynamicSubject d) {
+        Bootstraps.BootstrapRef ref = d.bootstrap();
+        if (ref == null || !"stringconcat".equals(ref.category()) || ref.getArgCpIndices().isEmpty()) {
+            return Value.ABSENT;
+        }
+        ConstPool cp = constPool(d.context());
+        Item<?> item = cp.getItem(ref.getArgCpIndices().get(0));
+        if (!(item instanceof StringRefItem)) {
+            return Value.ABSENT;
+        }
+        Utf8Item utf8 = (Utf8Item) cp.getItem(((StringRefItem) item).getValue());
+        return Value.of(Bootstraps.readableRecipe(utf8.getValue()));
+    }
+
+    private static Stream<Subject> bootstrapArgs(Subject.DynamicSubject d) {
+        Bootstraps.BootstrapRef ref = d.bootstrap();
+        if (ref == null) {
+            return Stream.empty();
+        }
+        EvalContext ctx = d.context();
+        ConstPool cp = constPool(ctx);
+        List<Subject> out = new ArrayList<>();
+        for (int cpIndex : ref.getArgCpIndices()) {
+            Item<?> item = cp.getItem(cpIndex);
+            if (item instanceof ConstantDynamicItem) {
+                ConstantDynamicItem condy = (ConstantDynamicItem) item;
+                Bootstraps.BootstrapRef nested = Bootstraps.resolve(ctx.classFile(), condy.getBootstrapMethodAttrIndex());
+                out.add(new Subject.DynamicSubject(nested, condy.getName(), condy.getDescriptor(), "condy", null, ctx));
+            } else {
+                out.add(new Subject.BootstrapArgSubject(cpIndex, ctx));
+            }
+        }
+        return out.stream();
+    }
+
+    private static String constantKind(Subject.BootstrapArgSubject arg) {
+        Item<?> item = constPool(arg.context()).getItem(arg.cpIndex());
+        if (item instanceof IntegerItem) return "int";
+        if (item instanceof LongItem) return "long";
+        if (item instanceof FloatItem) return "float";
+        if (item instanceof DoubleItem) return "double";
+        if (item instanceof StringRefItem) return "string";
+        if (item instanceof ClassRefItem) return "class";
+        if (item instanceof MethodTypeItem) return "methodType";
+        if (item instanceof MethodHandleItem) return "methodHandle";
+        return "other";
+    }
+
+    private static ConstPool constPool(EvalContext ctx) {
+        return ctx.classFile().getConstPool();
+    }
+
     // ---- subject casts ----------------------------------------------------
 
     private static ClassFile classOf(Subject s) { return ((Subject.ClassSubject) s).classFile(); }
@@ -264,6 +411,8 @@ public final class DefaultAttributes {
     private static Subject.ArgSubject arg(Subject s) { return (Subject.ArgSubject) s; }
     private static Subject.InstructionSubject insn(Subject s) { return (Subject.InstructionSubject) s; }
     private static Subject.FieldAccessSubject field(Subject s) { return (Subject.FieldAccessSubject) s; }
+    private static Subject.DynamicSubject dynamic(Subject s) { return (Subject.DynamicSubject) s; }
+    private static Subject.BootstrapArgSubject bootstrapArg(Subject s) { return (Subject.BootstrapArgSubject) s; }
 
     private static InvokeInsn invoke(Subject s) {
         Instruction i = call(s).invoke();

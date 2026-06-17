@@ -1,5 +1,6 @@
 package com.tonic.analysis.query.eval;
 
+import com.tonic.analysis.Bootstraps;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
@@ -79,6 +80,45 @@ public interface Subject {
         }
         public Instruction instruction() { return instruction; }
         @Override public SubjectKind kind() { return SubjectKind.FIELD_ACCESS; }
+        @Override public EvalContext context() { return context; }
+    }
+
+    /**
+     * A dynamic site: an invokedynamic call site ({@code site == "indy"}), a {@code CONSTANT_Dynamic}
+     * load, or a nested condy bootstrap argument ({@code site == "condy"}). Holds the resolved
+     * bootstrap and the call-site name/descriptor (the indy/condy name+type), plus the originating
+     * instruction (for evidence) when there is one.
+     */
+    final class DynamicSubject implements Subject {
+        private final Bootstraps.BootstrapRef bootstrap;
+        private final String name;
+        private final String descriptor;
+        private final String site;
+        private final Instruction instruction;
+        private final EvalContext context;
+        public DynamicSubject(Bootstraps.BootstrapRef bootstrap, String name, String descriptor,
+                              String site, Instruction instruction, EvalContext context) {
+            this.bootstrap = bootstrap; this.name = name; this.descriptor = descriptor;
+            this.site = site; this.instruction = instruction; this.context = context;
+        }
+        public Bootstraps.BootstrapRef bootstrap() { return bootstrap; }
+        public String name() { return name; }
+        public String descriptor() { return descriptor; }
+        public String site() { return site; }
+        public Instruction instruction() { return instruction; }
+        @Override public SubjectKind kind() { return SubjectKind.DYNAMIC; }
+        @Override public EvalContext context() { return context; }
+    }
+
+    /** A non-dynamic static bootstrap argument, identified by its constant-pool index. */
+    final class BootstrapArgSubject implements Subject {
+        private final int cpIndex;
+        private final EvalContext context;
+        public BootstrapArgSubject(int cpIndex, EvalContext context) {
+            this.cpIndex = cpIndex; this.context = context;
+        }
+        public int cpIndex() { return cpIndex; }
+        @Override public SubjectKind kind() { return SubjectKind.BOOTSTRAP_ARG; }
         @Override public EvalContext context() { return context; }
     }
 }

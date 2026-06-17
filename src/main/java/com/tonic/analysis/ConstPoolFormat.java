@@ -47,7 +47,9 @@ final class ConstPoolFormat {
         } else if (item instanceof StringRefItem) {
             StringRefItem stringItem = (StringRefItem) item;
             Utf8Item utf8 = (Utf8Item) constPool.getItem(stringItem.getValue());
-            return "\"" + utf8.getValue() + "\"";
+            StringBuilder sb = new StringBuilder("\"");
+            StringConcatRecipe.appendEscaped(sb, utf8.getValue());
+            return sb.append('"').toString();
         } else if (item instanceof ClassRefItem) {
             return ((ClassRefItem) item).getClassName().replace('/', '.');
         }
@@ -111,7 +113,7 @@ final class ConstPoolFormat {
     /**
      * Maps a method-handle reference kind (JVMS 4.4.8) to its mnemonic.
      */
-    private static String referenceKindName(int kind) {
+    static String referenceKindName(int kind) {
         switch (kind) {
             case 1: return "getField";
             case 2: return "getStatic";

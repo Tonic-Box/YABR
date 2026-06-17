@@ -5,12 +5,12 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
-import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.MethodParametersAttribute;
-import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.attribute.table.LocalVariableTableEntry;
 import com.tonic.parser.attribute.table.MethodParameter;
+import com.tonic.parser.constpool.ConstantDynamicItem;
 import com.tonic.parser.constpool.Item;
+import com.tonic.parser.constpool.StringRefItem;
 import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.utill.DescriptorUtil;
 import com.tonic.utill.Modifiers;
@@ -130,33 +130,68 @@ final class DisassemblyContext {
      * @return the annotation, or an empty string
      */
     String bootstrap(InvokeDynamicInstruction instr) {
-        if (!resolveBootstraps || classFile == null) {
+        return bootstrapAnnotation("  // BSM: ", instr.getBootstrapMethodAttrIndex());
+    }
+
+    /**
+     * Returns a {@code  // condy BSM: handle [args]} annotation for a {@code ldc}-family load of a
+     * {@code CONSTANT_Dynamic} at the given constant-pool index, resolving its bootstrap method and
+     * static arguments. Empty when the entry is not a condy, resolution is disabled, or the bootstrap
+     * cannot be located.
+     *
+     * @param cpIndex the constant-pool index of the loaded constant
+     * @return the annotation, or an empty string
+     */
+    String condy(int cpIndex) {
+        Item<?> item = constPool.getItem(cpIndex);
+        if (!(item instanceof ConstantDynamicItem)) {
             return "";
         }
-        BootstrapMethodsAttribute attribute = classFile.getBootstrapMethodsAttribute();
-        if (attribute == null) {
+        return bootstrapAnnotation("  // condy BSM: ", ((ConstantDynamicItem) item).getBootstrapMethodAttrIndex());
+    }
+
+    private String bootstrapAnnotation(String prefix, int attrIndex) {
+        if (!resolveBootstraps) {
             return "";
         }
-        List<BootstrapMethod> methods = attribute.getBootstrapMethods();
-        int index = instr.getBootstrapMethodAttrIndex();
-        if (methods == null || index < 0 || index >= methods.size()) {
+        Bootstraps.BootstrapRef ref = Bootstraps.resolve(classFile, attrIndex);
+        if (ref == null) {
             return "";
         }
-        BootstrapMethod method = methods.get(index);
-        StringBuilder sb = new StringBuilder("  // BSM: ")
-                .append(ConstPoolFormat.methodHandle(constPool, method.getBootstrapMethodRef()));
-        List<Integer> arguments = method.getBootstrapArguments();
-        if (arguments != null && !arguments.isEmpty()) {
+        StringBuilder sb = new StringBuilder(prefix)
+                .append(ref.getKind()).append(' ')
+                .append(handleTarget(ref));
+        List<Integer> arguments = ref.getArgCpIndices();
+        if (!arguments.isEmpty()) {
+            boolean stringConcat = "stringconcat".equals(ref.category());
             sb.append(" [");
             for (int i = 0; i < arguments.size(); i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(ConstPoolFormat.constant(constPool, arguments.get(i)));
+                sb.append(argument(arguments.get(i), stringConcat && i == 0));
             }
             sb.append(']');
         }
         return sb.toString();
+    }
+
+    private String handleTarget(Bootstraps.BootstrapRef ref) {
+        if (ref.getOwner() == null) {
+            return "UnknownReference";
+        }
+        return ref.getOwner().replace('/', '.') + "." + ref.getName() + ref.getDescriptor();
+    }
+
+    private String argument(int cpIndex, boolean asRecipe) {
+        if (asRecipe) {
+            Item<?> item = constPool.getItem(cpIndex);
+            if (item instanceof StringRefItem) {
+                Utf8Item utf8 = (Utf8Item) constPool.getItem(((StringRefItem) item).getValue());
+                return "\"" + StringConcatRecipe.toReadable(utf8.getValue()) + "\"";
+            }
+        }
+        return ConstPoolFormat.constant(constPool, cpIndex);
     }
 
     private String utf8(int index) {

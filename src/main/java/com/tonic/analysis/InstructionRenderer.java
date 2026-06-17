@@ -58,16 +58,19 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
     @Override
     public void visit(LdcInstruction instr) {
         reference(instr.getCpIndex());
+        condy(instr.getCpIndex());
     }
 
     @Override
     public void visit(LdcWInstruction instr) {
         reference(instr.getCpIndex());
+        condy(instr.getCpIndex());
     }
 
     @Override
     public void visit(Ldc2WInstruction instr) {
         reference(instr.getCpIndex());
+        condy(instr.getCpIndex());
     }
 
     @Override
@@ -314,6 +317,16 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
      */
     private void reference(int index) {
         sb.append('#').append(index).append(" (").append(ConstPoolFormat.reference(constPool, index)).append(')');
+    }
+
+    /**
+     * Appends the resolved condy bootstrap annotation for a ldc-family operand, when a verbose context
+     * is present and the loaded constant is a {@code CONSTANT_Dynamic}.
+     */
+    private void condy(int index) {
+        if (context != null) {
+            sb.append(context.condy(index));
+        }
     }
 
     /**

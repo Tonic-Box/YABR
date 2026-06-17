@@ -218,11 +218,30 @@ A bare accessor is truthy (e.g. `WHERE recursive`). Quantifier bodies rebind the
 | `arg(n)` | `value` `type` `kind` `index` |
 | `field` | `name` `owner` `descriptor` `kind` |
 | `insn` | `opcode` `index` `line` |
+| `indy` / `condy` | `name` `descriptor` `site` `category` `recipe` `bsmOwner` `bsmName` `bsmDescriptor` `bsmKind` `line` |
+| `bsmArg` | `kind` `value` |
 | SSA / CFG | `recursive` &nbsp; `method.loops` &nbsp; `method.blocks` &nbsp; `(call\|insn).inLoop` &nbsp; `(call\|insn).loopDepth` |
+
+`indy`/`condy` expose the resolved bootstrap of an invokedynamic call site / `CONSTANT_Dynamic` load.
+`site` is `"indy"` or `"condy"`; `category` is one of `stringconcat`, `lambda`, `switch`, `record`,
+`other`; `recipe` is the readable `StringConcatFactory` recipe (`{arg}`/`{const}` markers) and is
+absent unless `category == "stringconcat"`. `bsm*` describe the bootstrap method handle.
 
 ## Selectors
 
-`call` &nbsp; `arg` &nbsp; `insn` &nbsp; `field` - quantify over these with `HAS`/`ANY`/`ALL`/`NONE`/`COUNT`.
+`call` &nbsp; `arg` &nbsp; `insn` &nbsp; `field` &nbsp; `indy` &nbsp; `condy` &nbsp; `bsmArg` -
+quantify over these with `HAS`/`ANY`/`ALL`/`NONE`/`COUNT`. `bsmArg` is nested under `indy`/`condy`;
+a `bsmArg` that is itself a dynamic constant rebinds to a (nested) `condy` subject.
+
+### Bootstrap examples
+
+```
+FIND methods WHERE HAS indy WHERE (category == "stringconcat" AND recipe contains "x")
+FIND methods WHERE HAS indy WHERE (bsmName matches /makeConcat.*/)
+FIND methods WHERE HAS indy WHERE (category == "lambda")
+FIND methods WHERE HAS condy WHERE (bsmOwner == "java/lang/runtime/SwitchBootstraps")
+FIND methods WHERE HAS indy WHERE (HAS bsmArg WHERE (kind == "condy" AND bsmName matches /.../))
+```
 
 ## Operators
 
