@@ -2,6 +2,7 @@ package com.tonic.analysis;
 
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
+import com.tonic.parser.constpool.ConstantDynamicItem;
 import com.tonic.parser.constpool.DoubleItem;
 import com.tonic.parser.constpool.FieldRefItem;
 import com.tonic.parser.constpool.FloatItem;
@@ -78,6 +79,9 @@ final class ConstPoolFormat {
             return methodType(constPool, (MethodTypeItem) item);
         } else if (item instanceof MethodHandleItem) {
             return methodHandle(constPool, (MethodHandleItem) item);
+        } else if (item instanceof ConstantDynamicItem) {
+            ConstantDynamicItem condy = (ConstantDynamicItem) item;
+            return "ConstantDynamic[" + condy.getName() + ":" + condy.getDescriptor() + "]";
         }
         return reference(constPool, index);
     }

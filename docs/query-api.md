@@ -218,14 +218,17 @@ A bare accessor is truthy (e.g. `WHERE recursive`). Quantifier bodies rebind the
 | `arg(n)` | `value` `type` `kind` `index` |
 | `field` | `name` `owner` `descriptor` `kind` |
 | `insn` | `opcode` `index` `line` |
-| `indy` / `condy` | `name` `descriptor` `site` `category` `recipe` `bsmOwner` `bsmName` `bsmDescriptor` `bsmKind` `line` |
+| `indy` / `condy` | `name` `descriptor` `site` `kind` `category` `recipe` `bsmOwner` `bsmName` `bsmDescriptor` `bsmKind` `line` |
 | `bsmArg` | `kind` `value` |
 | SSA / CFG | `recursive` &nbsp; `method.loops` &nbsp; `method.blocks` &nbsp; `(call\|insn).inLoop` &nbsp; `(call\|insn).loopDepth` |
 
 `indy`/`condy` expose the resolved bootstrap of an invokedynamic call site / `CONSTANT_Dynamic` load.
-`site` is `"indy"` or `"condy"`; `category` is one of `stringconcat`, `lambda`, `switch`, `record`,
-`other`; `recipe` is the readable `StringConcatFactory` recipe (`{arg}`/`{const}` markers) and is
-absent unless `category == "stringconcat"`. `bsm*` describe the bootstrap method handle.
+`site` (and the alias `kind`) is `"indy"` or `"condy"`; `category` is one of `stringconcat`, `lambda`,
+`switch`, `record`, `other`; `recipe` is the readable `StringConcatFactory` recipe (`{arg}`/`{const}`
+markers) and is absent unless `category == "stringconcat"`. `bsm*` describe the bootstrap method handle.
+A `bsmArg` exposes `kind` (`int`/`long`/.../`condy`) + `value`; a `condy`-valued arg has `kind == "condy"`
+and rebinds to a nested `condy` subject (so its own `bsmName`/`category`/`bsmArg` are reachable) — e.g.
+`HAS indy WHERE (HAS bsmArg WHERE (kind == "condy" AND bsmName matches /.../))`.
 
 ## Selectors
 

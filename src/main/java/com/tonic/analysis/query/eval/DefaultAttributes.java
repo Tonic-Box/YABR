@@ -259,6 +259,9 @@ public final class DefaultAttributes {
         r.registerScalar(DYNAMIC, "name", s -> Value.of(dynamic(s).name()));
         r.registerScalar(DYNAMIC, "descriptor", s -> Value.of(dynamic(s).descriptor()));
         r.registerScalar(DYNAMIC, "site", s -> Value.of(dynamic(s).site()));
+        // `kind` mirrors `site` ("indy"/"condy") so a condy bootstrap argument - which is itself a dynamic
+        // subject - is matchable the same way a plain constant arg is (`HAS bsmArg WHERE (kind == "condy")`).
+        r.registerScalar(DYNAMIC, "kind", s -> Value.of(dynamic(s).site()));
         r.registerScalar(DYNAMIC, "category", s -> bootstrapValue(s, Bootstraps.BootstrapRef::category));
         r.registerScalar(DYNAMIC, "recipe", s -> recipe(dynamic(s)));
         r.registerScalar(DYNAMIC, "bsmowner", s -> bootstrapValue(s, Bootstraps.BootstrapRef::getOwner));

@@ -6,18 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- update docs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/bytecode-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/bytecode-api.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/class-files.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/class-files.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/query-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/query-api.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ConstPoolFormat.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ConstPoolFormat.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/DisassemblyContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/DisassemblyContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/InstructionRenderer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/InstructionRenderer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/ConditionEvaluator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/ConditionEvaluator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/DefaultAttributes.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/DefaultAttributes.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvalContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvalContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/Subject.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/Subject.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/SubjectKind.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/SubjectKind.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/ir/BootstrapMethodInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/ir/BootstrapMethodInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/query/eval/DynamicQueryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/query/eval/DynamicQueryTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,6 +41,11 @@
     <option name="BRANCH" value="main" />
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="feature/indy-condy-bootstraps" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="RESET_MODE" value="MIXED" />
   </component>
@@ -560,6 +558,17 @@
     </task>
     <option name="localTasksCounter" value="47" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="- don't un-materialize a value already emitted as an array-initializer declaration; reference the temp instead." />

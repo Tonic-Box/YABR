@@ -184,14 +184,29 @@ final class DisassemblyContext {
     }
 
     private String argument(int cpIndex, boolean asRecipe) {
-        if (asRecipe) {
-            Item<?> item = constPool.getItem(cpIndex);
-            if (item instanceof StringRefItem) {
-                Utf8Item utf8 = (Utf8Item) constPool.getItem(((StringRefItem) item).getValue());
-                return "\"" + StringConcatRecipe.toReadable(utf8.getValue()) + "\"";
-            }
+        Item<?> item = constPool.getItem(cpIndex);
+        if (asRecipe && item instanceof StringRefItem) {
+            Utf8Item utf8 = (Utf8Item) constPool.getItem(((StringRefItem) item).getValue());
+            return "\"" + StringConcatRecipe.toReadable(utf8.getValue()) + "\"";
+        }
+        if (item instanceof ConstantDynamicItem) {
+            return condyArgument((ConstantDynamicItem) item);
         }
         return ConstPoolFormat.constant(constPool, cpIndex);
+    }
+
+    /**
+     * Renders a dynamic-constant bootstrap argument as {@code condy name:desc {BSM handle}}, resolving the
+     * condy's own bootstrap one level deep so a nested bootstrap referenced inside a recipe is visible rather
+     * than an opaque {@code UnknownReference}.
+     */
+    private String condyArgument(ConstantDynamicItem condy) {
+        StringBuilder sb = new StringBuilder("condy ").append(condy.getName()).append(':').append(condy.getDescriptor());
+        Bootstraps.BootstrapRef ref = Bootstraps.resolve(classFile, condy.getBootstrapMethodAttrIndex());
+        if (ref != null) {
+            sb.append(" {").append(ref.getKind()).append(' ').append(handleTarget(ref)).append('}');
+        }
+        return sb.toString();
     }
 
     private String utf8(int index) {
