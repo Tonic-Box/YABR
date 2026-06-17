@@ -51,6 +51,10 @@ public final class EvalContext {
         this.evidence = evidence;
     }
 
+    public ClassFile classFile() {
+        return classFile;
+    }
+
     public MethodEntry method() {
         return method;
     }

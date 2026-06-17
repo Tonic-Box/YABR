@@ -365,6 +365,11 @@ int index = classFile.addBootstrapMethod(methodHandleIndex, argIndices);    // f
 index when the handle and static arguments already match, and otherwise appends — so repeated calls
 never duplicate an identical bootstrap.
 
+Verbose disassembly (`DisassemblyOptions.verbose()` / `withResolveBootstraps`, see
+[class-files.md](class-files.md#verbose-disassembly)) resolves these bootstraps for both
+`invokedynamic` (`// BSM: …`) and `CONSTANT_Dynamic` loads (`// condy BSM: …`), rendering a
+`StringConcatFactory` recipe with readable `{arg}`/`{const}` markers.
+
 ### Frameless write
 
 To serialize without a `StackMapTable` (e.g. for tooling that emits frame-free class versions or

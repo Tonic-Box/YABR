@@ -28,15 +28,66 @@ public class BootstrapMethodInfo {
         this.bootstrapArguments = List.copyOf(bootstrapArguments);
     }
 
+    /** Internal name of {@code LambdaMetafactory}, the lambda/method-reference bootstrap owner. */
+    public static final String LAMBDA_METAFACTORY = "java/lang/invoke/LambdaMetafactory";
+    /** Internal name of {@code StringConcatFactory}, the string-concatenation bootstrap owner. */
+    public static final String STRING_CONCAT_FACTORY = "java/lang/invoke/StringConcatFactory";
+    /** Internal name of {@code ObjectMethods}, the record-component bootstrap owner (Java 16+). */
+    public static final String OBJECT_METHODS = "java/lang/runtime/ObjectMethods";
+    /** Internal name of {@code SwitchBootstraps}, the pattern-switch bootstrap owner (Java 21+). */
+    public static final String SWITCH_BOOTSTRAPS = "java/lang/runtime/SwitchBootstraps";
+
+    /**
+     * Tests whether the given owner is {@code StringConcatFactory}.
+     *
+     * @param owner the bootstrap owner internal name
+     * @return true for the string-concatenation factory
+     */
+    public static boolean isStringConcat(String owner) {
+        return STRING_CONCAT_FACTORY.equals(owner);
+    }
+
+    /**
+     * Tests whether the given owner/name is the {@code LambdaMetafactory}
+     * {@code metafactory}/{@code altMetafactory} bootstrap.
+     *
+     * @param owner the bootstrap owner internal name
+     * @param name  the bootstrap method name
+     * @return true for a lambda metafactory bootstrap
+     */
+    public static boolean isLambda(String owner, String name) {
+        return LAMBDA_METAFACTORY.equals(owner) &&
+               ("metafactory".equals(name) || "altMetafactory".equals(name));
+    }
+
+    /**
+     * Tests whether the given owner/name is the {@code ObjectMethods.bootstrap} record bootstrap.
+     *
+     * @param owner the bootstrap owner internal name
+     * @param name  the bootstrap method name
+     * @return true for the record {@code ObjectMethods} bootstrap
+     */
+    public static boolean isRecord(String owner, String name) {
+        return OBJECT_METHODS.equals(owner) && "bootstrap".equals(name);
+    }
+
+    /**
+     * Tests whether the given owner is {@code SwitchBootstraps}.
+     *
+     * @param owner the bootstrap owner internal name
+     * @return true for a pattern-switch bootstrap
+     */
+    public static boolean isSwitch(String owner) {
+        return SWITCH_BOOTSTRAPS.equals(owner);
+    }
+
     /**
      * Checks if this is a lambda metafactory bootstrap.
      *
      * @return true if this uses LambdaMetafactory
      */
     public boolean isLambdaMetafactory() {
-        return "java/lang/invoke/LambdaMetafactory".equals(bootstrapMethod.getOwner()) &&
-               ("metafactory".equals(bootstrapMethod.getName())
-                || "altMetafactory".equals(bootstrapMethod.getName()));
+        return isLambda(bootstrapMethod.getOwner(), bootstrapMethod.getName());
     }
 
     /**
@@ -45,7 +96,7 @@ public class BootstrapMethodInfo {
      * @return true if this uses StringConcatFactory
      */
     public boolean isStringConcatFactory() {
-        return "java/lang/invoke/StringConcatFactory".equals(bootstrapMethod.getOwner());
+        return isStringConcat(bootstrapMethod.getOwner());
     }
 
     /**
@@ -55,8 +106,7 @@ public class BootstrapMethodInfo {
      * @return true if this uses java.lang.runtime.ObjectMethods
      */
     public boolean isObjectMethodsBootstrap() {
-        return "java/lang/runtime/ObjectMethods".equals(bootstrapMethod.getOwner()) &&
-               "bootstrap".equals(bootstrapMethod.getName());
+        return isRecord(bootstrapMethod.getOwner(), bootstrapMethod.getName());
     }
 
     /**
@@ -66,7 +116,7 @@ public class BootstrapMethodInfo {
      * @return true if this uses java.lang.runtime.SwitchBootstraps
      */
     public boolean isSwitchBootstrap() {
-        return "java/lang/runtime/SwitchBootstraps".equals(bootstrapMethod.getOwner());
+        return isSwitch(bootstrapMethod.getOwner());
     }
 
     @Override

@@ -249,6 +249,7 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
         if (s instanceof Subject.InstructionSubject) return ((Subject.InstructionSubject) s).instruction();
         if (s instanceof Subject.FieldAccessSubject) return ((Subject.FieldAccessSubject) s).instruction();
         if (s instanceof Subject.ArgSubject) return ((Subject.ArgSubject) s).call().invoke();
+        if (s instanceof Subject.DynamicSubject) return ((Subject.DynamicSubject) s).instruction();
         return null;
     }
 

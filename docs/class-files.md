@@ -312,7 +312,11 @@ The verbose profile adds, as `//` comment lines (so editors style them as commen
 - `// line N` markers from the LineNumberTable (`withLineNumbers`)
 - `// frame: <FrameKind>` markers from the StackMapTable (`withStackMapFrames`)
 - `// name: descriptor` annotations on local-slot operands from the LocalVariableTable (`withLocalVariables`)
-- a resolved `// BSM: <handle> [args]` after each `invokedynamic` (`withResolveBootstraps`)
+- a resolved `// BSM: <handle> [args]` after each `invokedynamic`, and a `// condy BSM: <handle>
+  [args]` after each `ldc`/`ldc_w`/`ldc2_w` of a `CONSTANT_Dynamic` (`withResolveBootstraps`). For a
+  `StringConcatFactory.makeConcatWithConstants` bootstrap the recipe argument is rendered with
+  `{arg}`/`{const}` markers, and ISO control characters in any string constant are escaped as
+  `\uXXXX`, so the raw ``/`` recipe tags never leak into the listing.
 - a trailing exception table with resolved catch types (`withExceptionTable`)
 
 Example (a method with a lambda + string concat in a `try`/`catch`, compiled with `-g`):
