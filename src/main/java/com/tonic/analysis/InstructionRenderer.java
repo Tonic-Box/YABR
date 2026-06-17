@@ -57,19 +57,19 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
 
     @Override
     public void visit(LdcInstruction instr) {
-        reference(instr.getCpIndex());
+        constant(instr.getCpIndex());
         condy(instr.getCpIndex());
     }
 
     @Override
     public void visit(LdcWInstruction instr) {
-        reference(instr.getCpIndex());
+        constant(instr.getCpIndex());
         condy(instr.getCpIndex());
     }
 
     @Override
     public void visit(Ldc2WInstruction instr) {
-        reference(instr.getCpIndex());
+        constant(instr.getCpIndex());
         condy(instr.getCpIndex());
     }
 
@@ -317,6 +317,15 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
      */
     private void reference(int index) {
         sb.append('#').append(index).append(" (").append(ConstPoolFormat.reference(constPool, index)).append(')');
+    }
+
+    /**
+     * Appends a loadable-constant operand (ldc family) as {@code #index (resolved)}. Unlike
+     * {@link #reference(int)} this resolves primitives, method types/handles and dynamic constants - so a
+     * {@code long}/{@code double}/condy prints its value instead of {@code UnknownReference}.
+     */
+    private void constant(int index) {
+        sb.append('#').append(index).append(" (").append(ConstPoolFormat.constant(constPool, index)).append(')');
     }
 
     /**

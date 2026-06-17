@@ -158,9 +158,14 @@ final class DisassemblyContext {
         if (ref == null) {
             return "";
         }
-        StringBuilder sb = new StringBuilder(prefix)
-                .append(ref.getKind()).append(' ')
-                .append(handleTarget(ref));
+        StringBuilder sb = new StringBuilder(prefix);
+        appendBootstrap(sb, ref);
+        return sb.toString();
+    }
+
+    /** Appends {@code kind owner.name desc [arg, ...]} for a resolved bootstrap, recursing into condy args. */
+    private void appendBootstrap(StringBuilder sb, Bootstraps.BootstrapRef ref) {
+        sb.append(ref.getKind()).append(' ').append(handleTarget(ref));
         List<Integer> arguments = ref.getArgCpIndices();
         if (!arguments.isEmpty()) {
             boolean stringConcat = "stringconcat".equals(ref.category());
@@ -173,7 +178,6 @@ final class DisassemblyContext {
             }
             sb.append(']');
         }
-        return sb.toString();
     }
 
     private String handleTarget(Bootstraps.BootstrapRef ref) {
@@ -196,15 +200,17 @@ final class DisassemblyContext {
     }
 
     /**
-     * Renders a dynamic-constant bootstrap argument as {@code condy name:desc {BSM handle}}, resolving the
-     * condy's own bootstrap one level deep so a nested bootstrap referenced inside a recipe is visible rather
-     * than an opaque {@code UnknownReference}.
+     * Renders a dynamic-constant bootstrap argument as {@code condy name:desc {BSM handle [args]}}, resolving
+     * the condy's own bootstrap and its static arguments so the method actually invoked through the condy (the
+     * MethodHandle argument) is visible rather than an opaque {@code UnknownReference}.
      */
     private String condyArgument(ConstantDynamicItem condy) {
         StringBuilder sb = new StringBuilder("condy ").append(condy.getName()).append(':').append(condy.getDescriptor());
         Bootstraps.BootstrapRef ref = Bootstraps.resolve(classFile, condy.getBootstrapMethodAttrIndex());
         if (ref != null) {
-            sb.append(" {").append(ref.getKind()).append(' ').append(handleTarget(ref)).append('}');
+            sb.append(" {");
+            appendBootstrap(sb, ref);
+            sb.append('}');
         }
         return sb.toString();
     }
