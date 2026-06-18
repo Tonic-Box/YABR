@@ -34,7 +34,8 @@ public final class ConditionParser {
             "endswith", Operator.ENDS_WITH,
             "in", Operator.IN,
             "flowsto", Operator.FLOWS_TO,
-            "flowsfrom", Operator.FLOWS_FROM);
+            "flowsfrom", Operator.FLOWS_FROM,
+            "issubtypeof", Operator.SUBTYPE_OF);
 
     private final List<Token> tokens;
     private int current;

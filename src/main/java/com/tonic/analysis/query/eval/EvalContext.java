@@ -13,6 +13,7 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.table.LineNumberTableEntry;
+import com.tonic.renamer.hierarchy.ClassHierarchy;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,6 +21,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Per-subject evaluation scope with lazy, cached views of a method so repeated accessors (every
@@ -31,6 +33,7 @@ public final class EvalContext {
     private final ClassFile classFile;
     private final MethodEntry method;
     private final EvidenceCollector evidence;
+    private final Supplier<ClassHierarchy> hierarchySupplier;
     private final Map<Object, Object> cache = new HashMap<>();
 
     private CodeWriter codeWriter;
@@ -46,13 +49,24 @@ public final class EvalContext {
     private boolean defUseAttempted;
 
     public EvalContext(ClassFile classFile, MethodEntry method, EvidenceCollector evidence) {
+        this(classFile, method, evidence, null);
+    }
+
+    public EvalContext(ClassFile classFile, MethodEntry method, EvidenceCollector evidence,
+                       Supplier<ClassHierarchy> hierarchySupplier) {
         this.classFile = classFile;
         this.method = method;
         this.evidence = evidence;
+        this.hierarchySupplier = hierarchySupplier;
     }
 
     public ClassFile classFile() {
         return classFile;
+    }
+
+    /** The shared class hierarchy for transitive subtype checks ({@code isSubtypeOf}), or {@code null} when unavailable. */
+    public ClassHierarchy hierarchy() {
+        return hierarchySupplier != null ? hierarchySupplier.get() : null;
     }
 
     public MethodEntry method() {

@@ -11,6 +11,7 @@ public enum SubjectKind {
     INSTRUCTION,
     CALL,
     ARG,
+    PARAM,
     FIELD_ACCESS,
     DYNAMIC,
     BOOTSTRAP_ARG

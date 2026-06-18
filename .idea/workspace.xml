@@ -4,11 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix bug where query wasn't considering DynamicSubject condys">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixed bytecode printer for nested BSMs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/DisassemblyContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/DisassemblyContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/InstructionRenderer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/InstructionRenderer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/DisassemblyBootstrapTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/DisassemblyBootstrapTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/query-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/query-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/ConditionEvaluator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/ConditionEvaluator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/DefaultAttributes.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/DefaultAttributes.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvalContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvalContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/Subject.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/Subject.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/SubjectKind.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/SubjectKind.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/exec/QueryBatchRunner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/exec/QueryBatchRunner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/parser/ConditionParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/parser/ConditionParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/value/Operator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/value/Operator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -562,7 +569,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781684392712</updated>
     </task>
-    <option name="localTasksCounter" value="48" />
+    <task id="LOCAL-00048" summary="- Fixed bytecode printer for nested BSMs">
+      <option name="closed" value="true" />
+      <created>1781729144636</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1781729144636</updated>
+    </task>
+    <option name="localTasksCounter" value="49" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -577,7 +592,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner." />
     <MESSAGE value="- Bytecode editor: branch widening, indy graft, clone alignment" />
     <MESSAGE value="- Fixed: standard UTF-8 was used for CONSTANT_Utf8 instead of JVMS modified UTF-8" />
     <MESSAGE value="- CodeWriter: handle-keyed insertBefore/insertAfter/removeInstruction/replaceInstruction/replaceBody + cloneRange/cloneRangeWithTargets, all via a relink pass (branch/switch retarget, branch widening, exception table, frame regen). New ConstPoolRemapper + MethodGrafter for cross-pool method grafting (incl. invokedynamic bootstraps); ClassFile.redirectOwner and stripStackMapTables. Local-var clones use the narrowest encoding.&#10;&#10;- Fix CONSTANT_Utf8 to use JVMS modified UTF-8 (read + write) and FrameGenerator goto_w target computation." />
@@ -602,6 +616,7 @@
     <MESSAGE value="Resolve reference types in descriptors and qualified static field access&#10;&#10;descriptorOf/resolveInternalName apply imports and fix nested $ so descriptors match the originals; recognize a.b.Outer$Inner.CONST as a static field access instead of resolving its owner to Object." />
     <MESSAGE value="- update docs" />
     <MESSAGE value="- Fix bug where query wasn't considering DynamicSubject condys" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix bug where query wasn't considering DynamicSubject condys" />
+    <MESSAGE value="- Fixed bytecode printer for nested BSMs" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fixed bytecode printer for nested BSMs" />
   </component>
 </project>

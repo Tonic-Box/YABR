@@ -18,6 +18,8 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.RecordAttribute;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.ConstantDynamicItem;
 import com.tonic.parser.constpool.DoubleItem;
@@ -32,6 +34,7 @@ import com.tonic.parser.constpool.StringRefItem;
 import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.analysis.query.util.ArgumentTypeAnalyzer;
 import com.tonic.analysis.query.value.Value;
+import com.tonic.utill.DescriptorUtil;
 import com.tonic.utill.Opcode;
 
 import java.util.ArrayList;
@@ -49,6 +52,7 @@ import static com.tonic.analysis.query.eval.SubjectKind.DYNAMIC;
 import static com.tonic.analysis.query.eval.SubjectKind.FIELD_ACCESS;
 import static com.tonic.analysis.query.eval.SubjectKind.INSTRUCTION;
 import static com.tonic.analysis.query.eval.SubjectKind.METHOD;
+import static com.tonic.analysis.query.eval.SubjectKind.PARAM;
 
 /**
  * Registers the static (bytecode-level) query vocabulary. Each line is one queryable fact; the same
@@ -87,6 +91,7 @@ public final class DefaultAttributes {
         registerMethod(r);
         registerCall(r);
         registerArg(r);
+        registerParam(r);
         registerInstruction(r);
         registerFieldAccess(r);
         registerDynamic(r);
@@ -162,7 +167,15 @@ public final class DefaultAttributes {
 
     private static void registerClass(AttributeRegistry r) {
         r.registerScalar(CLASS, "name", s -> Value.of(classOf(s).getClassName()));
-        r.registerScalar(CLASS, "modifiers", s -> modifiers(classOf(s).getAccess()));
+        r.registerScalar(CLASS, "modifiers", s -> classModifiers(classOf(s)));
+        r.registerScalar(CLASS, "super", s -> superType(classOf(s)));
+        r.registerScalar(CLASS, "superclass", s -> superType(classOf(s)));
+        r.registerScalar(CLASS, "interfaces", s -> interfaceTypes(classOf(s)));
+
+        // A class can quantify over its own declared methods: `FIND classes WHERE HAS method WHERE (...)`.
+        AttributeRegistry.Selector methods = (s, step) -> classOf(s).getMethods().stream()
+                .map(m -> (Subject) new Subject.MethodSubject(m, s.context()));
+        registerStream(r, CLASS, methods, "method", "methods");
     }
 
     private static void registerMethod(AttributeRegistry r) {
@@ -194,6 +207,22 @@ public final class DefaultAttributes {
         AttributeRegistry.Selector condies = (s, step) -> instructionStream(s, (insn, idx) ->
                 condySubject(insn, s.context()));
         registerStream(r, METHOD, condies, "condy", "condies");
+
+        // The owning class as a subject, so `class.*` (super, interfaces, modifiers, ...) reads against the
+        // method's declaring class inside a `FIND methods` query.
+        AttributeRegistry.Selector owningClass = (s, step) -> {
+            ClassFile owner = s.context().classFile();
+            return owner == null ? Stream.empty() : Stream.of(new Subject.ClassSubject(owner, s.context()));
+        };
+        registerStream(r, METHOD, owningClass, "class", "declaringclass");
+
+        AttributeRegistry.Selector params = (s, step) -> params(methodOf(s), s.context(), step);
+        registerStream(r, METHOD, params, "param", "params");
+    }
+
+    private static void registerParam(AttributeRegistry r) {
+        r.registerScalar(PARAM, "index", s -> Value.of(param(s).index()));
+        r.registerScalar(PARAM, "type", s -> Value.ofType(param(s).type()));
     }
 
     private static void registerCall(AttributeRegistry r) {
@@ -314,6 +343,22 @@ public final class DefaultAttributes {
         return out.stream();
     }
 
+    private static Stream<Subject> params(MethodEntry method, EvalContext ctx,
+                                          com.tonic.analysis.query.ast.Step step) {
+        List<String> types = DescriptorUtil.parseParameterDescriptors(method.getDesc());
+        if (step.hasIndex()) {
+            int idx = step.index();
+            return idx >= 0 && idx < types.size()
+                    ? Stream.of(new Subject.ParamSubject(method, idx, types.get(idx), ctx))
+                    : Stream.empty();
+        }
+        List<Subject> out = new ArrayList<>();
+        for (int i = 0; i < types.size(); i++) {
+            out.add(new Subject.ParamSubject(method, i, types.get(i), ctx));
+        }
+        return out.stream();
+    }
+
     // ---- dynamic-site helpers ---------------------------------------------
 
     private static Subject.DynamicSubject indySubject(InvokeDynamicInstruction indy, EvalContext ctx) {
@@ -410,6 +455,7 @@ public final class DefaultAttributes {
 
     private static ClassFile classOf(Subject s) { return ((Subject.ClassSubject) s).classFile(); }
     private static MethodEntry methodOf(Subject s) { return ((Subject.MethodSubject) s).method(); }
+    private static Subject.ParamSubject param(Subject s) { return (Subject.ParamSubject) s; }
     private static Subject.CallSubject call(Subject s) { return (Subject.CallSubject) s; }
     private static Subject.ArgSubject arg(Subject s) { return (Subject.ArgSubject) s; }
     private static Subject.InstructionSubject insn(Subject s) { return (Subject.InstructionSubject) s; }
@@ -430,6 +476,46 @@ public final class DefaultAttributes {
             if ((access & e.getKey()) != 0) {
                 names.add(Value.of(e.getValue()));
             }
+        }
+        return Value.ofSet(names);
+    }
+
+    /**
+     * Class modifiers: the access-flag set (which already carries {@code enum}/{@code interface}/
+     * {@code annotation}/{@code abstract}) plus a synthetic {@code record} when the class carries a
+     * {@link RecordAttribute} (records have no access flag).
+     */
+    private static Value classModifiers(ClassFile cf) {
+        List<Value> names = new ArrayList<>();
+        for (Map.Entry<Integer, String> e : MODIFIERS.entrySet()) {
+            if ((cf.getAccess() & e.getKey()) != 0) {
+                names.add(Value.of(e.getValue()));
+            }
+        }
+        if (isRecord(cf)) {
+            names.add(Value.of("record"));
+        }
+        return Value.ofSet(names);
+    }
+
+    private static boolean isRecord(ClassFile cf) {
+        for (Attribute a : cf.getClassAttributes()) {
+            if (a instanceof RecordAttribute) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Value superType(ClassFile cf) {
+        String name = cf.getSuperClassName();
+        return name == null ? Value.ofNull() : Value.ofType(name);
+    }
+
+    private static Value interfaceTypes(ClassFile cf) {
+        List<Value> names = new ArrayList<>();
+        for (String iface : cf.getInterfaceNames()) {
+            names.add(Value.ofType(iface));
         }
         return Value.ofSet(names);
     }

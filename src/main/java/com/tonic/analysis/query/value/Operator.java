@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  * for them.
  */
 public enum Operator {
-    EQ, NEQ, LT, LTE, GT, GTE, MATCHES, CONTAINS, STARTS_WITH, ENDS_WITH, IN, FLOWS_TO, FLOWS_FROM;
+    EQ, NEQ, LT, LTE, GT, GTE, MATCHES, CONTAINS, STARTS_WITH, ENDS_WITH, IN, FLOWS_TO, FLOWS_FROM, SUBTYPE_OF;
 
     /** Data-flow relations whose right operand is an accessor, evaluated over SSA (not {@link #test}). */
     public boolean isRelational() {
@@ -40,6 +40,7 @@ public enum Operator {
             case IN:          return rhs.kind() == ValueKind.SET && memberOf((Value.SetValue) rhs, lhs);
             case FLOWS_TO:
             case FLOWS_FROM:
+            case SUBTYPE_OF:
             default:          return false;
         }
     }

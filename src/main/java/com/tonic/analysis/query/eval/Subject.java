@@ -71,6 +71,22 @@ public interface Subject {
         @Override public EvalContext context() { return call.context(); }
     }
 
+    /** A declared method parameter, identified by position; {@code type} is its descriptor from the method signature. */
+    final class ParamSubject implements Subject {
+        private final MethodEntry method;
+        private final int index;
+        private final String type;
+        private final EvalContext context;
+        public ParamSubject(MethodEntry method, int index, String type, EvalContext context) {
+            this.method = method; this.index = index; this.type = type; this.context = context;
+        }
+        public MethodEntry method() { return method; }
+        public int index() { return index; }
+        public String type() { return type; }
+        @Override public SubjectKind kind() { return SubjectKind.PARAM; }
+        @Override public EvalContext context() { return context; }
+    }
+
     /** A field read/write site; {@code instruction} is a GetField/PutField instruction. */
     final class FieldAccessSubject implements Subject {
         private final Instruction instruction;

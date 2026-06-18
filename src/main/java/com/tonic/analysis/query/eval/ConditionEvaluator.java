@@ -5,8 +5,12 @@ import com.tonic.analysis.query.ast.Accessor;
 import com.tonic.analysis.query.ast.Condition;
 import com.tonic.analysis.query.ast.Operand;
 import com.tonic.analysis.query.ast.Step;
+import com.tonic.analysis.query.value.Operator;
+import com.tonic.analysis.query.value.TypeNames;
 import com.tonic.analysis.query.value.Value;
 import com.tonic.analysis.query.value.ValueKind;
+import com.tonic.parser.ClassFile;
+import com.tonic.renamer.hierarchy.ClassHierarchy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,6 +74,9 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
 
     @Override
     public Boolean visitComparison(Condition.Comparison c) {
+        if (c.op() == Operator.SUBTYPE_OF) {
+            return evaluateSubtype(c.accessor(), c.operand());
+        }
         if (c.op() != null && c.op().isRelational()) {
             Accessor rhs = ((Operand.Ref) c.operand()).accessor();
             return DataFlowAnalysis.evaluate(subject, c.accessor(), c.op(), rhs);
@@ -227,6 +234,51 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
             return ((Operand.Literal) operand).value();
         }
         return resolveScalar(((Operand.Ref) operand).accessor(), from);
+    }
+
+    /**
+     * Transitive subtype test ({@code class isSubtypeOf java.lang.Applet}). The left accessor resolves to a class
+     * subject (a {@code FIND classes} subject directly, or a {@code FIND methods} subject's owner via the
+     * {@code class} stream); the right operand is a type literal. Walks the shared class hierarchy
+     * (superclass chain + interfaces); best-effort - unresolved ancestors stop the walk.
+     */
+    private Boolean evaluateSubtype(Accessor lhs, Operand operand) {
+        Subject resolved = single(resolveStream(lhs, subject));
+        ClassFile cf;
+        if (resolved instanceof Subject.ClassSubject) {
+            cf = ((Subject.ClassSubject) resolved).classFile();
+        } else {
+            cf = (resolved != null ? resolved : subject).context().classFile();
+        }
+        if (cf == null) {
+            return false;
+        }
+        ClassHierarchy hierarchy = subject.context().hierarchy();
+        if (hierarchy == null) {
+            return false;
+        }
+        String target = internalName(resolveOperand(operand, subject));
+        return target != null && hierarchy.isAncestorOf(target, cf.getClassName());
+    }
+
+    /** A type/string Value as an internal class name ({@code java/lang/Applet}), or {@code null} if not a class type. */
+    private static String internalName(Value v) {
+        String text;
+        if (v.kind() == ValueKind.TYPE) {
+            text = ((Value.TypeValue) v).get();
+        } else if (v.kind() == ValueKind.STRING) {
+            text = ((Value.StrValue) v).get();
+        } else {
+            return null;
+        }
+        String canonical = TypeNames.canonical(text);
+        if (canonical == null) {
+            return null;
+        }
+        if (canonical.startsWith("L") && canonical.endsWith(";")) {
+            return canonical.substring(1, canonical.length() - 1);
+        }
+        return canonical.indexOf('/') >= 0 || canonical.indexOf('.') >= 0 ? canonical.replace('.', '/') : null;
     }
 
     private static Subject single(Stream<Subject> stream) {

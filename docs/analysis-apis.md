@@ -271,7 +271,7 @@ QueryService.QueryResult result = service.execute(
 List<QueryMatch> matches = result.results();
 ```
 
-**Key features:** Textual `FIND … WHERE …` queries, quantifiers (`HAS`/`ALL`/`NONE`/`COUNT`), data flow (`flowsTo`/`flowsFrom`), `SEQUENCE` instruction patterns, navigable matches with bytecode-offset targets.
+**Key features:** Textual `FIND … WHERE …` queries, quantifiers (`HAS`/`ALL`/`NONE`/`COUNT`), data flow (`flowsTo`/`flowsFrom`), `SEQUENCE` instruction patterns, class type-system predicates (`class.super`/`class.interfaces`, `class isSubtypeOf <type>`, `class.modifiers contains record`), positional `param(n).type`, navigable matches with bytecode-offset targets.
 
 [Full documentation →](query-api.md)
 

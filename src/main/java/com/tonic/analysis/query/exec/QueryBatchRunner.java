@@ -17,6 +17,8 @@ import com.tonic.analysis.query.planner.ProbePlan;
 import com.tonic.analysis.query.planner.QueryMatch;
 import com.tonic.analysis.query.planner.QueryTarget;
 import com.tonic.analysis.query.planner.filter.StaticFilter;
+import com.tonic.renamer.hierarchy.ClassHierarchy;
+import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -41,8 +43,27 @@ public class QueryBatchRunner {
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
     private Set<String> userClassNames;
 
+    private ClassHierarchy hierarchy;
+    private boolean hierarchyAttempted;
+
     public QueryBatchRunner(ClassPool classPool) {
         this.classPool = classPool;
+    }
+
+    /**
+     * The class hierarchy for the current pool, built once on first use (so queries that don't use
+     * {@code isSubtypeOf} never pay for it) and shared across every {@link EvalContext} of a run.
+     */
+    private ClassHierarchy hierarchy() {
+        if (!hierarchyAttempted) {
+            hierarchyAttempted = true;
+            try {
+                hierarchy = ClassHierarchyBuilder.build(classPool);
+            } catch (Exception e) {
+                hierarchy = null;
+            }
+        }
+        return hierarchy;
     }
 
     public void setUserClassNames(Set<String> userClassNames) {
@@ -82,7 +103,7 @@ public class QueryBatchRunner {
             }
             for (ClassFile cf : candidates) {
                 if (cancelled.get() || overBudget(startTime)) break;
-                EvalContext ctx = new EvalContext(cf, null, new EvidenceCollector());
+                EvalContext ctx = new EvalContext(cf, null, new EvidenceCollector(), this::hierarchy);
                 if (condition == null || evaluator.eval(condition, new Subject.ClassSubject(cf, ctx))) {
                     matches.add(classMatch(cf));
                 }
@@ -100,7 +121,7 @@ public class QueryBatchRunner {
                 for (MethodEntry method : cf.getMethods()) {
                     if (!candidates.contains(method)) continue;
                     EvidenceCollector evidence = new EvidenceCollector();
-                    EvalContext ctx = new EvalContext(cf, method, evidence);
+                    EvalContext ctx = new EvalContext(cf, method, evidence, this::hierarchy);
                     if (condition == null || evaluator.eval(condition, new Subject.MethodSubject(method, ctx))) {
                         matches.add(methodMatch(method, evidence));
                     }
