@@ -1500,13 +1500,11 @@ public class CodeWriter {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (DataOutputStream dos = new DataOutputStream(baos)) {
             for (Instruction instr : instructions.values()) {
-                Logger.info("Writing instruction at offset " + instr.getOffset() + ": " + instr);
                 instr.write(dos);
             }
             dos.flush();
             bytecode = baos.toByteArray();
             codeAttribute.setCode(bytecode);
-            Logger.info("Rebuilt bytecode: " + Arrays.toString(bytecode));
         } catch (IOException e) {
             Logger.error("Failed to rebuild bytecode: " + e.getMessage());
         }

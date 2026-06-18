@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.analysis.visitor.Visitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
 import lombok.Getter;
@@ -12,6 +11,7 @@ import java.io.IOException;
 /**
  * Represents the LDC instruction (0x12).
  */
+@Getter
 public class LdcInstruction extends Instruction {
 
     public enum ConstantType {
@@ -27,20 +27,27 @@ public class LdcInstruction extends Instruction {
         UNKNOWN
     }
 
-    @Getter
+    /** {@code ldc} — single-byte constant-pool index. */
+    private static final int LDC_OPCODE = 0x12;
+    /** {@code ldc_w} — two-byte index; required once the index exceeds 255. */
+    private static final int LDC_W_OPCODE = 0x13;
+
     private final int cpIndex;
     private final ConstPool constPool;
 
     /**
-     * Constructs an LdcInstruction.
+     * Constructs an LdcInstruction. The physical encoding (narrow {@code ldc} vs wide {@code ldc_w}) is
+     * derived from {@code cpIndex}: a one-byte {@code ldc} cannot hold an index above 255, so such an
+     * index transparently widens to {@code ldc_w}. This makes index truncation impossible no matter how
+     * large the target constant pool has grown.
      *
      * @param constPool The constant pool associated with the class.
-     * @param opcode    The opcode of the instruction.
+     * @param opcode    The nominal opcode (ignored; the form is derived from {@code cpIndex}).
      * @param offset    The bytecode offset of the instruction.
      * @param cpIndex   The constant pool index.
      */
     public LdcInstruction(ConstPool constPool, int opcode, int offset, int cpIndex) {
-        super(opcode, offset, 2);
+        super(cpIndex > 0xFF ? LDC_W_OPCODE : LDC_OPCODE, offset, cpIndex > 0xFF ? 3 : 2);
         this.constPool = constPool;
         this.cpIndex = cpIndex;
     }
@@ -58,8 +65,13 @@ public class LdcInstruction extends Instruction {
      */
     @Override
     public void write(DataOutputStream dos) throws IOException {
-        dos.writeByte(opcode);
-        dos.writeByte(cpIndex);
+        if (cpIndex > 0xFF) {
+            dos.writeByte(LDC_W_OPCODE);
+            dos.writeShort(cpIndex);
+        } else {
+            dos.writeByte(LDC_OPCODE);
+            dos.writeByte(cpIndex);
+        }
     }
 
     /**
@@ -69,6 +81,9 @@ public class LdcInstruction extends Instruction {
      */
     @Override
     public int getStackChange() {
+        if (cpIndex <= 0) {
+            return 1;
+        }
         Item<?> item = constPool.getItem(cpIndex);
         if (item instanceof DoubleItem || item instanceof LongItem) {
             return 2;
@@ -83,6 +98,9 @@ public class LdcInstruction extends Instruction {
     }
 
     public ConstantType getConstantType() {
+        if (cpIndex <= 0) {
+            return ConstantType.UNKNOWN;
+        }
         Item<?> item = constPool.getItem(cpIndex);
         if (item instanceof IntegerItem) {
             return ConstantType.INTEGER;
@@ -106,10 +124,6 @@ public class LdcInstruction extends Instruction {
         return ConstantType.UNKNOWN;
     }
 
-    public ConstPool getConstPool() {
-        return constPool;
-    }
-
     /**
      * Returns the change in local variables caused by this instruction.
      *
@@ -126,6 +140,9 @@ public class LdcInstruction extends Instruction {
      * @return The constant as a string.
      */
     public String resolveConstant() {
+        if (cpIndex <= 0) {
+            return "INVALID_CP_INDEX(" + cpIndex + ")";
+        }
         Item<?> item = constPool.getItem(cpIndex);
         if (item instanceof StringRefItem) {
             return "\"" + ((StringRefItem) item).getValue() + "\"";

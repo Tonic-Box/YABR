@@ -287,7 +287,6 @@ public class Bytecode {
         }
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
-        Logger.info("Appended LCONST instruction with value " + value + " at offset " + (processOffset() - instr.getLength()));
     }
 
     /**
