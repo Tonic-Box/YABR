@@ -9,6 +9,7 @@ import com.tonic.renamer.descriptor.SignatureRemapper;
 import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 import com.tonic.renamer.mapping.MappingStore;
+import lombok.Getter;
 
 import java.util.*;
 import java.util.function.Function;
@@ -17,12 +18,43 @@ import java.util.function.Function;
  * Shared context for rename operations.
  * Contains the ClassPool, mappings, hierarchy, and utility methods.
  */
+@Getter
 public class RenamerContext {
 
+    /**
+     * -- GETTER --
+     *  Returns the ClassPool being used for rename operations.
+     *
+     * @return the ClassPool
+     */
     private final ClassPool classPool;
+    /**
+     * -- GETTER --
+     *  Returns the MappingStore containing all rename mappings.
+     *
+     * @return the MappingStore
+     */
     private final MappingStore mappings;
+    /**
+     * -- GETTER --
+     *  Returns the class hierarchy for the pool.
+     *
+     * @return the ClassHierarchy
+     */
     private ClassHierarchy hierarchy;
+    /**
+     * -- GETTER --
+     *  Returns the descriptor remapper for updating type descriptors.
+     *
+     * @return the DescriptorRemapper
+     */
     private DescriptorRemapper descriptorRemapper;
+    /**
+     * -- GETTER --
+     *  Returns the signature remapper for updating generic signatures.
+     *
+     * @return the SignatureRemapper
+     */
     private SignatureRemapper signatureRemapper;
 
     public RenamerContext(ClassPool classPool, MappingStore mappings) {
@@ -36,15 +68,6 @@ public class RenamerContext {
         Function<String, String> classMapper = mappings::getClassMapping;
         this.descriptorRemapper = new DescriptorRemapper(classMapper);
         this.signatureRemapper = new SignatureRemapper(classMapper);
-    }
-
-    /**
-     * Returns the ClassPool being used for rename operations.
-     *
-     * @return the ClassPool
-     */
-    public ClassPool getClassPool() {
-        return classPool;
     }
 
     /**
@@ -73,42 +96,6 @@ public class RenamerContext {
             return classPool.get(newName);
         }
         return null;
-    }
-
-    /**
-     * Returns the MappingStore containing all rename mappings.
-     *
-     * @return the MappingStore
-     */
-    public MappingStore getMappings() {
-        return mappings;
-    }
-
-    /**
-     * Returns the class hierarchy for the pool.
-     *
-     * @return the ClassHierarchy
-     */
-    public ClassHierarchy getHierarchy() {
-        return hierarchy;
-    }
-
-    /**
-     * Returns the descriptor remapper for updating type descriptors.
-     *
-     * @return the DescriptorRemapper
-     */
-    public DescriptorRemapper getDescriptorRemapper() {
-        return descriptorRemapper;
-    }
-
-    /**
-     * Returns the signature remapper for updating generic signatures.
-     *
-     * @return the SignatureRemapper
-     */
-    public SignatureRemapper getSignatureRemapper() {
-        return signatureRemapper;
     }
 
     /**
@@ -229,17 +216,15 @@ public class RenamerContext {
         nat.setConstPool(cp);
         int descIndex = nat.getValue().getDescriptorIndex();
 
-        if (isSharedNameAndType(cp, natIndex)) {
-            // Create new NAT with new name
-            Utf8Item newNameUtf8 = cp.findOrAddUtf8(newName);
-            int newNameIndex = cp.getIndexOf(newNameUtf8);
-            NameAndTypeRefItem newNat = cp.findOrAddNameAndType(newNameIndex, descIndex);
-            return cp.getIndexOf(newNat);
-        } else {
-            // Safe to modify in place
-            Utf8Item nameUtf8 = (Utf8Item) cp.getItem(nat.getValue().getNameIndex());
-            nameUtf8.setValue(newName);
-            return natIndex;
-        }
+        // Always repoint to a NameAndType backed by a fresh name Utf8 rather than mutating the
+        // existing name Utf8 in place. The name Utf8 is deduplicated and may be shared with a
+        // CONSTANT_String (or another member's name) of equal text; mutating it in place would
+        // silently corrupt that constant. A NameAndType-reference count cannot detect Utf8-level
+        // sharing, so creating/reusing a NameAndType with a fresh name Utf8 is the only safe option.
+        // Any NameAndType this leaves unreferenced is a harmless, unused constant-pool entry.
+        Utf8Item newNameUtf8 = cp.findOrAddUtf8(newName);
+        int newNameIndex = cp.getIndexOf(newNameUtf8);
+        NameAndTypeRefItem newNat = cp.findOrAddNameAndType(newNameIndex, descIndex);
+        return cp.getIndexOf(newNat);
     }
 }

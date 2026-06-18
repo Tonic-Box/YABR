@@ -48,6 +48,31 @@ class RenamerSharedUtf8Test {
                 "string constant must not have been rewritten to the new class name");
     }
 
+    @Test
+    void renamingMethodPreservesEqualStringConstant() throws IOException {
+        ClassPool pool = TestUtils.emptyPool();
+        int access = new AccessBuilder().setPublic().build();
+
+        // Owner declares a method named "es"; Caller both calls it (creating a NameAndType "es")
+        // and holds the equal string literal "es" — sharing one Utf8 entry.
+        ClassFile owner = pool.createNewClass("com/test/Owner", access);
+        owner.createNewMethodWithDescriptor(access, "es", "()V");
+
+        ClassFile caller = pool.createNewClass("com/test/Caller", access);
+        ConstPool cp = caller.getConstPool();
+        cp.findOrAddMethodRef("com/test/Owner", "es", "()V");
+        cp.findOrAddString("es");
+
+        Renamer renamer = new Renamer(pool);
+        renamer.mapMethod("com/test/Owner", "es", "()V", "renamed");
+        renamer.applyUnsafe();
+
+        assertTrue(hasStringConstant(cp, "es"),
+                "string constant \"es\" was corrupted by the method rename (shared NameAndType name Utf8)");
+        assertFalse(hasStringConstant(cp, "renamed"),
+                "string constant must not have been rewritten to the new method name");
+    }
+
     private static boolean hasStringConstant(ConstPool cp, String value) {
         for (Item<?> item : cp.getItems()) {
             if (item instanceof StringRefItem) {
