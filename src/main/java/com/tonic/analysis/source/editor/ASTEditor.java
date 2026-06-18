@@ -495,6 +495,10 @@ public class ASTEditor {
         if (result.replacement != null && !result.replacement.isKeep()) {
             if (result.replacement.getType() == Replacement.Type.REPLACE_EXPR) {
                 stmt.setExpression(result.replacement.getExpression());
+            } else if (result.replacement.getType() == Replacement.Type.REMOVE) {
+                // The expression was the whole statement (e.g. a void call) and a handler removed it -
+                // drop the enclosing statement so the removal actually takes effect.
+                return Replacement.remove();
             }
         }
 

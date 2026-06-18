@@ -45,11 +45,7 @@ public class CopyPropagation implements IRTransform {
             for (IRInstruction instr : block.getInstructions()) {
                 if (instr instanceof CopyInstruction) {
                     CopyInstruction copy = (CopyInstruction) instr;
-                    Value source = copy.getSource();
-                    while (copies.containsKey(source)) {
-                        source = copies.get(source);
-                    }
-                    copies.put(copy.getResult(), source);
+                    copies.put(copy.getResult(), resolve(copy.getSource(), copies));
                 }
             }
         }
@@ -58,7 +54,7 @@ public class CopyPropagation implements IRTransform {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks())) {
                     Value incoming = phi.getIncoming(pred);
-                    Value replacement = findReplacement(incoming, copies);
+                    Value replacement = resolve(incoming, copies);
                     if (replacement != incoming) {
                         phi.removeIncoming(pred);
                         phi.addIncoming(replacement, pred);
@@ -69,7 +65,7 @@ public class CopyPropagation implements IRTransform {
 
             for (IRInstruction instr : block.getInstructions()) {
                 for (Value operand : new ArrayList<>(instr.getOperands())) {
-                    Value replacement = findReplacement(operand, copies);
+                    Value replacement = resolve(operand, copies);
                     if (replacement != operand) {
                         instr.replaceOperand(operand, replacement);
                         changed = true;
@@ -90,12 +86,19 @@ public class CopyPropagation implements IRTransform {
         return null;
     }
 
-    private Value findReplacement(Value value, Map<SSAValue, Value> copies) {
+    /**
+     * Follows a chain of copies to its ultimate source. A {@code visited} set makes this terminate even
+     * when the chain cycles — mutually referencing phi/copy values (e.g. {@code a -> b -> a} from a loop)
+     * would otherwise spin forever; on a cycle it stops at the first repeated value.
+     */
+    private static Value resolve(Value value, Map<SSAValue, Value> copies) {
         Value current = value;
-        while (current instanceof SSAValue && copies.containsKey((SSAValue) current)) {
-            SSAValue ssa = (SSAValue) current;
-            Value next = copies.get(ssa);
-            if (next == current) break;
+        Set<SSAValue> visited = new HashSet<>();
+        while (current instanceof SSAValue && visited.add((SSAValue) current)) {
+            Value next = copies.get((SSAValue) current);
+            if (next == null) {
+                break;
+            }
             current = next;
         }
         return current;

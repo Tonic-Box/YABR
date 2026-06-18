@@ -220,6 +220,35 @@ class CopyPropagationTest {
     }
 
     @Test
+    void terminatesOnCyclicCopies() {
+        // Two mutually-referencing single-source phis form a copy cycle v1 -> v2 -> v1 (the shape a loop
+        // produces, e.g. in the gamepack's ev.bz). Following the chain without cycle detection spins
+        // forever; this must terminate.
+        IRBlock loop = new IRBlock("loop");
+        method.addBlock(loop);
+        block.addSuccessor(loop);
+
+        SSAValue v1 = new SSAValue(PrimitiveType.INT);
+        SSAValue v2 = new SSAValue(PrimitiveType.INT);
+        SSAValue v3 = new SSAValue(PrimitiveType.INT);
+
+        PhiInstruction phi1 = new PhiInstruction(v1);
+        phi1.addIncoming(v2, block);
+        PhiInstruction phi2 = new PhiInstruction(v2);
+        phi2.addIncoming(v1, block);
+        loop.addPhi(phi1);
+        loop.addPhi(phi2);
+
+        // a copy whose source sits inside the cycle exercises the chain-following loop
+        loop.addInstruction(new CopyInstruction(v3, v1));
+        loop.addInstruction(new ReturnInstruction(v3));
+
+        CopyPropagation transform = new CopyPropagation();
+        assertTimeoutPreemptively(java.time.Duration.ofSeconds(5), () -> transform.run(method),
+                "CopyPropagation must terminate on a cyclic copy chain");
+    }
+
+    @Test
     void propagatesAcrossBlocks() {
         // Block 1: v1 = v0 (copy)
         // Block 2: v2 = v1 + 5

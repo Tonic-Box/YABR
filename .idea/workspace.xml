@@ -4,11 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write().">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/Bytecode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/Bytecode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/CopyPropagation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/CopyPropagation.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/CopyPropagationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/CopyPropagationTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -179,14 +179,6 @@
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
-    <task id="LOCAL-00003" summary="- fixed for look edge detection for AST IR and source emission">
-      <option name="closed" value="true" />
-      <created>1769098294619</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1769098294619</updated>
-    </task>
     <task id="LOCAL-00004" summary="- fixed local scoping issues">
       <option name="closed" value="true" />
       <created>1769107350479</created>
@@ -578,7 +570,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781784068318</updated>
     </task>
-    <option name="localTasksCounter" value="52" />
+    <task id="LOCAL-00052" summary="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write().">
+      <option name="closed" value="true" />
+      <created>1781796278551</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1781796278551</updated>
+    </task>
+    <option name="localTasksCounter" value="53" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -593,7 +593,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Detached snippet assembly + cloned-range inlining primitives&#10;- CodeBuilder.detached()/assemble() produces a spliceable ClonedRange: invokedynamic (bootstrap added to the target's BootstrapMethods), try/catch, and branches into the host via externalLabel/bindLabel or a tail continuation label.&#10;- CodeWriter: exception-table relink is now identity-based (fixes host table corruption when a spliced block's offsets collide on insert); max_stack is computed over the CFG via FrameGenerator (computeMaxStack, applied in relink + write) so handler/loop peaks no longer under-count; cloneRangeWithTargets carries out-of-range branch targets by identity (same-method, guarded loud against cross-method misuse); ClonedRange.redirectReturns() turns cloned returns into continuation exits and insertChainBefore folds several bodies without the skip hazard.&#10;- ClassFile.addBootstrapMethod/getBootstrapMethodsAttribute (ConstPoolRemapper now delegates to them). New tests: CodeBuilderSnippetTest, CodeBuilderExternalBranchTest, MaxStackTest, ClonedRangeExitsTest." />
     <MESSAGE value="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly" />
     <MESSAGE value="- constant guard for force inlining" />
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam" />
@@ -618,6 +617,7 @@
     <MESSAGE value="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type" />
     <MESSAGE value="- Fixed issue with ClassRenamer erroneously renaming unrelated Utf8 attributes" />
     <MESSAGE value="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8" />
-    <option name="LAST_COMMIT_MESSAGE" value="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8" />
+    <MESSAGE value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
+    <option name="LAST_COMMIT_MESSAGE" value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
   </component>
 </project>
