@@ -8,7 +8,6 @@ import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.InnerClassesAttribute;
 import com.tonic.parser.attribute.SignatureAttribute;
 import com.tonic.parser.constpool.*;
-import com.tonic.parser.constpool.structure.MethodHandle;
 import com.tonic.renamer.mapping.ClassMapping;
 
 /**
@@ -70,17 +69,24 @@ public class ClassRenamer {
      * Updates all ClassRefItem entries that point to renamed classes.
      */
     private void updateClassRefItems(ConstPool cp) {
-        for (int i = 1; i < cp.getItems().size(); i++) {
+        // Snapshot the size: findOrAddUtf8 below may append new Utf8 entries, and the appended
+        // entries (the new class names) never need processing here.
+        int size = cp.getItems().size();
+        for (int i = 1; i < size; i++) {
             Item<?> item = cp.getItems().get(i);
             if (item instanceof ClassRefItem) {
                 ClassRefItem classRef = (ClassRefItem) item;
-                int nameIndex = classRef.getNameIndex();
-                Utf8Item nameUtf8 = (Utf8Item) cp.getItem(nameIndex);
+                Utf8Item nameUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
                 String oldName = nameUtf8.getValue();
 
                 String newName = context.getMappings().getClassMapping(oldName);
                 if (newName != null) {
-                    nameUtf8.setValue(newName);
+                    // Repoint this class reference to a fresh Utf8 for the new name rather than
+                    // mutating the existing Utf8 in place. Constant pools deduplicate Utf8 entries,
+                    // so the class-name Utf8 can be shared with a CONSTANT_String (or other use) of
+                    // equal text; mutating it would silently corrupt that constant.
+                    int newNameIndex = cp.getIndexOf(cp.findOrAddUtf8(newName));
+                    classRef.setNameIndex(newNameIndex);
                 }
             }
         }

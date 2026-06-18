@@ -4,18 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixed bytecode printer for nested BSMs">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/query-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/query-api.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/ConditionEvaluator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/ConditionEvaluator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/DefaultAttributes.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/DefaultAttributes.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvalContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/EvalContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/Subject.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/Subject.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/SubjectKind.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/eval/SubjectKind.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/exec/QueryBatchRunner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/exec/QueryBatchRunner.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/parser/ConditionParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/parser/ConditionParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/value/Operator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/query/value/Operator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/ClassRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/ClassRenamer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -577,7 +568,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781729144636</updated>
     </task>
-    <option name="localTasksCounter" value="49" />
+    <task id="LOCAL-00049" summary="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type">
+      <option name="closed" value="true" />
+      <created>1781762476087</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1781762476087</updated>
+    </task>
+    <option name="localTasksCounter" value="50" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -592,7 +591,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Bytecode editor: branch widening, indy graft, clone alignment" />
     <MESSAGE value="- Fixed: standard UTF-8 was used for CONSTANT_Utf8 instead of JVMS modified UTF-8" />
     <MESSAGE value="- CodeWriter: handle-keyed insertBefore/insertAfter/removeInstruction/replaceInstruction/replaceBody + cloneRange/cloneRangeWithTargets, all via a relink pass (branch/switch retarget, branch widening, exception table, frame regen). New ConstPoolRemapper + MethodGrafter for cross-pool method grafting (incl. invokedynamic bootstraps); ClassFile.redirectOwner and stripStackMapTables. Local-var clones use the narrowest encoding.&#10;&#10;- Fix CONSTANT_Utf8 to use JVMS modified UTF-8 (read + write) and FrameGenerator goto_w target computation." />
     <MESSAGE value="Detached snippet assembly + cloned-range inlining primitives&#10;- CodeBuilder.detached()/assemble() produces a spliceable ClonedRange: invokedynamic (bootstrap added to the target's BootstrapMethods), try/catch, and branches into the host via externalLabel/bindLabel or a tail continuation label.&#10;- CodeWriter: exception-table relink is now identity-based (fixes host table corruption when a spliced block's offsets collide on insert); max_stack is computed over the CFG via FrameGenerator (computeMaxStack, applied in relink + write) so handler/loop peaks no longer under-count; cloneRangeWithTargets carries out-of-range branch targets by identity (same-method, guarded loud against cross-method misuse); ClonedRange.redirectReturns() turns cloned returns into continuation exits and insertChainBefore folds several bodies without the skip hazard.&#10;- ClassFile.addBootstrapMethod/getBootstrapMethodsAttribute (ConstPoolRemapper now delegates to them). New tests: CodeBuilderSnippetTest, CodeBuilderExternalBranchTest, MaxStackTest, ClonedRangeExitsTest." />
@@ -617,6 +615,7 @@
     <MESSAGE value="- update docs" />
     <MESSAGE value="- Fix bug where query wasn't considering DynamicSubject condys" />
     <MESSAGE value="- Fixed bytecode printer for nested BSMs" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fixed bytecode printer for nested BSMs" />
+    <MESSAGE value="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type" />
   </component>
 </project>
