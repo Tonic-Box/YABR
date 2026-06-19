@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- TypeInference: handle WIDE-prefixed load/store (locals &gt; 255) instead of treating them as frame no-ops&#10;- BytecodeLifter: propagate primitive type around phi cycles (long loop var seeded by a const was mis-typed int)&#10;- BytecodeLifter/BytecodeEmitter: emit the caught-exception astore at handler entry; mark it via the real exception value (SSA IR unchanged)&#10;- BytecodeLifter: populate ExceptionHandler.tryBlocks so the regenerated table no longer spans the handler&#10;- Fix two tests that codified the old bugs (testWide, removeMethodCall)">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="CodeWriter.replaceInstructions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/BytecodeEditTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/bytecode/BytecodeEditTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -178,14 +177,6 @@
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
-    <task id="LOCAL-00006" summary="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission">
-      <option name="closed" value="true" />
-      <created>1769124567174</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1769124567174</updated>
-    </task>
     <task id="LOCAL-00007" summary="- Guard clause detection - Added pattern detection for early-exit conditionals&#10;- AND chain merging - Nested if statements without else branches are now combined into &amp;&amp; conditions&#10;- Spurious block removal - Unnecessary nested { } blocks are now flattened during emission">
       <option name="closed" value="true" />
       <created>1769128320786</created>
@@ -577,7 +568,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781835561457</updated>
     </task>
-    <option name="localTasksCounter" value="55" />
+    <task id="LOCAL-00055" summary="CodeWriter.replaceInstructions">
+      <option name="closed" value="true" />
+      <created>1781847950015</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1781847950015</updated>
+    </task>
+    <option name="localTasksCounter" value="56" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -592,7 +591,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam" />
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam&#10;- Update docs" />
     <MESSAGE value="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer" />
     <MESSAGE value="Stamp bytecode offset onto SSA IR instructions during lifting&#10;- InstructionTranslator records each emitted instruction's originating bytecode offset, enabling data-flow provenance back to source bytecode" />
@@ -617,6 +615,7 @@
     <MESSAGE value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
     <MESSAGE value="- CopyPropagation replaced both chain-followers with one resolve()" />
     <MESSAGE value="- TypeInference: handle WIDE-prefixed load/store (locals &gt; 255) instead of treating them as frame no-ops&#10;- BytecodeLifter: propagate primitive type around phi cycles (long loop var seeded by a const was mis-typed int)&#10;- BytecodeLifter/BytecodeEmitter: emit the caught-exception astore at handler entry; mark it via the real exception value (SSA IR unchanged)&#10;- BytecodeLifter: populate ExceptionHandler.tryBlocks so the regenerated table no longer spans the handler&#10;- Fix two tests that codified the old bugs (testWide, removeMethodCall)" />
-    <option name="LAST_COMMIT_MESSAGE" value="- TypeInference: handle WIDE-prefixed load/store (locals &gt; 255) instead of treating them as frame no-ops&#10;- BytecodeLifter: propagate primitive type around phi cycles (long loop var seeded by a const was mis-typed int)&#10;- BytecodeLifter/BytecodeEmitter: emit the caught-exception astore at handler entry; mark it via the real exception value (SSA IR unchanged)&#10;- BytecodeLifter: populate ExceptionHandler.tryBlocks so the regenerated table no longer spans the handler&#10;- Fix two tests that codified the old bugs (testWide, removeMethodCall)" />
+    <MESSAGE value="CodeWriter.replaceInstructions" />
+    <option name="LAST_COMMIT_MESSAGE" value="CodeWriter.replaceInstructions" />
   </component>
 </project>

@@ -1111,6 +1111,26 @@ public class ExpressionLowerer {
         return resolveClassName(ownerClass);
     }
 
+    /**
+     * Converts a source type to an IR type with its class name(s) resolved through the type resolver, so a simple,
+     * same-package, or imported name (e.g. {@code Main} in its own package) becomes the fully-qualified internal
+     * name. Use this where a reference type names a class constant in the bytecode - {@code .class} literals, casts,
+     * and {@code instanceof} - which {@link SourceType#toIRType()} alone leaves unqualified (emitting e.g. {@code
+     * Main} instead of {@code osrs/dev/Main}, which fails to load at runtime).
+     */
+    private IRType resolveTypeForConstant(SourceType type) {
+        if (type instanceof ReferenceSourceType) {
+            String resolved = normalizeOwnerClass(((ReferenceSourceType) type).getInternalName());
+            if (resolved != null && !resolved.isEmpty()) {
+                return new ReferenceType(resolved);
+            }
+        } else if (type instanceof ArraySourceType) {
+            ArraySourceType array = (ArraySourceType) type;
+            return new ArrayType(resolveTypeForConstant(array.getElementType()), array.getTotalDimensions());
+        }
+        return type.toIRType();
+    }
+
     private Value lowerFieldStore(FieldAccessExpr field, Value value) {
         String ownerClass;
         boolean isStatic = field.isStatic();
@@ -1341,7 +1361,7 @@ public class ExpressionLowerer {
         }
 
         if (toType instanceof ReferenceSourceType) {
-            IRType resultType = toType.toIRType();
+            IRType resultType = resolveTypeForConstant(toType);
             SSAValue result = ctx.newValue(resultType);
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, operand, resultType);
             ctx.getCurrentBlock().addInstruction(instr);
@@ -1386,7 +1406,7 @@ public class ExpressionLowerer {
 
         IRType checkType;
         if (inst.getCheckType() instanceof ReferenceSourceType) {
-            checkType = inst.getCheckType().toIRType();
+            checkType = resolveTypeForConstant(inst.getCheckType());
         } else {
             throw new LoweringException("instanceof requires reference type");
         }
@@ -1403,7 +1423,7 @@ public class ExpressionLowerer {
     }
 
     private Value lowerClass(ClassExpr classExpr) {
-        IRType classType = classExpr.getClassType().toIRType();
+        IRType classType = resolveTypeForConstant(classExpr.getClassType());
         ClassConstant constant = new ClassConstant(classType);
         SSAValue result = ctx.newValue(ReferenceType.CLASS);
         ConstantInstruction instr = new ConstantInstruction(result, constant);
