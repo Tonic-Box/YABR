@@ -71,12 +71,13 @@ public class ASTLowerer {
                           boolean isStatic, List<SourceType> parameters,
                           SourceType returnType) {
 
-        String descriptor = buildDescriptor(parameters, returnType);
-        IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
-
         TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
+
+        String descriptor = buildDescriptor(parameters, returnType, typeResolver);
+        IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
+
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setOwnerClass(ownerClass);
         ctx.setCurrentMethodName(methodName);
@@ -93,7 +94,7 @@ public class ASTLowerer {
         }
 
         for (int i = 0; i < parameters.size(); i++) {
-            IRType paramType = parameters.get(i).toIRType();
+            IRType paramType = resolvedParamType(parameters.get(i), typeResolver);
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
             ctx.setVariable("arg" + i, paramVal);
@@ -133,12 +134,13 @@ public class ASTLowerer {
         boolean isStatic = methodDecl.isStatic();
         String methodName = methodDecl.getName();
 
-        String descriptor = buildDescriptor(parameters, returnType);
-        IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
-
         TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
+
+        String descriptor = buildDescriptor(parameters, returnType, typeResolver);
+        IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
+
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setOwnerClass(ownerClass);
         ctx.setCurrentMethodName(methodName);
@@ -177,7 +179,7 @@ public class ASTLowerer {
         }
 
         for (int i = 0; i < parameters.size(); i++) {
-            IRType paramType = parameters.get(i).toIRType();
+            IRType paramType = resolvedParamType(parameters.get(i), typeResolver);
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
             if (hasLoops) {
@@ -471,14 +473,20 @@ public class ASTLowerer {
         }
     }
 
-    private String buildDescriptor(List<SourceType> parameters, SourceType returnType) {
+    private String buildDescriptor(List<SourceType> parameters, SourceType returnType, TypeResolver resolver) {
         StringBuilder sb = new StringBuilder("(");
         for (SourceType param : parameters) {
-            sb.append(param.toIRType().getDescriptor());
+            sb.append(resolver.descriptorOf(param));
         }
         sb.append(")");
-        sb.append(returnType.toIRType().getDescriptor());
+        sb.append(resolver.descriptorOf(returnType));
         return sb.toString();
+    }
+
+    /** A parameter's IR type with reference names resolved to FQN (imports/same-package), via the descriptor - so the
+     * SSA value and its StackMapTable frame use {@code java/awt/Frame}, not a bare {@code Frame} CONSTANT_Class. */
+    private static IRType resolvedParamType(SourceType param, TypeResolver resolver) {
+        return IRType.fromDescriptor(resolver.descriptorOf(param));
     }
 
     /**
