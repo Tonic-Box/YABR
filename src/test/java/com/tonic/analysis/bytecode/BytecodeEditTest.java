@@ -21,7 +21,9 @@ import com.tonic.utill.AccessBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -152,6 +154,35 @@ class BytecodeEditTest {
                 }
             }
             cw2.replaceInstruction(nop, new NopInstruction(0x00, 0));
+            cw2.write();
+        }
+        assertBehaviour(cf);
+    }
+
+    @Test
+    void replaceInstructionsBatchesInOneRelink() throws Exception {
+        ClassFile cf = compile(SRC, "BE");
+        for (String mn : new String[]{"loopSum", "pick"}) {
+            // Insert several NOPs across the method, then replace them all in a single batched relink with
+            // fresh NOPs: stack-neutral so behaviour is preserved, while exercising the batch path + relink
+            // across branch spans. Equivalent to N replaceInstruction calls but with one relink.
+            CodeWriter cw = new CodeWriter(method(cf, mn));
+            List<Instruction> all = new ArrayList<>();
+            cw.getInstructions().forEach(all::add);
+            cw.insertBefore(all.get(all.size() / 3), new NopInstruction(0x00, 0));
+            cw.insertBefore(all.get(all.size() / 2), new NopInstruction(0x00, 0));
+            cw.insertBefore(all.get(2 * all.size() / 3), new NopInstruction(0x00, 0));
+            cw.write();
+
+            CodeWriter cw2 = new CodeWriter(method(cf, mn));
+            Map<Instruction, Instruction> replacements = new IdentityHashMap<>();
+            for (Instruction i : cw2.getInstructions()) {
+                if (i instanceof NopInstruction) {
+                    replacements.put(i, new NopInstruction(0x00, 0));
+                }
+            }
+            assertEquals(3, replacements.size());
+            cw2.replaceInstructions(replacements);
             cw2.write();
         }
         assertBehaviour(cf);

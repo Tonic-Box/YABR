@@ -285,6 +285,43 @@ public class CodeWriter {
     }
 
     /**
+     * Replaces many instructions in a single relink, preserving control flow exactly as
+     * {@link #replaceInstruction} does per element. Each map entry maps an existing instruction handle to
+     * its replacement; branches/switches targeting any replaced handle are retargeted. This is O(n) in the
+     * method size rather than O(replacements &times; n) — replacing instructions one at a time relinks the
+     * whole method per call, which is quadratic when many sites are rewritten (e.g. local-slot remapping).
+     * None of the replacements may themselves be branches/switches unless their targets are registered
+     * first via {@link #setBranchTarget}/{@link #setSwitchTargets}.
+     *
+     * @param replacements existing handle &rarr; replacement instruction
+     */
+    public void replaceInstructions(Map<Instruction, Instruction> replacements) {
+        if (replacements.isEmpty()) {
+            return;
+        }
+        for (Instruction handle : replacements.keySet()) {
+            requirePresent(handle);
+        }
+        for (List<Instruction> targets : branchTargets.values()) {
+            for (int k = 0; k < targets.size(); k++) {
+                Instruction replacement = replacements.get(targets.get(k));
+                if (replacement != null) {
+                    targets.set(k, replacement);
+                }
+            }
+        }
+        List<Instruction> order = new ArrayList<>();
+        for (Instruction instr : instructions.values()) {
+            Instruction replacement = replacements.get(instr);
+            order.add(replacement != null ? replacement : instr);
+        }
+        for (Instruction handle : replacements.keySet()) {
+            branchTargets.remove(handle);
+        }
+        relink(order);
+    }
+
+    /**
      * Replaces this method's entire instruction stream with {@code body} (e.g. a cloned/grafted body),
      * then relinks: offsets, branch/switch targets, and frames are recomputed. Branches in {@code body}
      * must either be self-contained (relative offsets valid for the block, as produced by
