@@ -78,6 +78,16 @@ public class BinaryOpInstruction extends IRInstruction {
         return new BinaryOpInstruction(newResult, op, newOperands.get(0), newOperands.get(1));
     }
 
+    /**
+     * Swaps the two operands in place. Valid only for commutative ops; the operand set is unchanged so the
+     * use-lists need no update. Lets a canonical-ordering pass reorder {@code a op b} to {@code b op a}.
+     */
+    public void swapOperands() {
+        Value tmp = left;
+        left = right;
+        right = tmp;
+    }
+
     @Override
     public String toString() {
         return result + " = " + op.name().toLowerCase() + " " + left + ", " + right;
