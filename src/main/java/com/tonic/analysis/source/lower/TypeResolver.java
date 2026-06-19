@@ -69,7 +69,7 @@ public class TypeResolver {
         if (currentClassDecl != null && isCurrentClass(ownerClass)) {
             for (FieldDecl field : currentClassDecl.getFields()) {
                 if (field.getName().equals(fieldName)) {
-                    return field.getType();
+                    return resolveDeclaredType(field.getType());
                 }
             }
             throw new LoweringException("Cannot resolve field: " + ownerClass + "." + fieldName + " in current class");
@@ -103,7 +103,7 @@ public class TypeResolver {
         if (currentClassDecl != null && isCurrentClass(ownerClass)) {
             for (FieldDecl field : currentClassDecl.getFields()) {
                 if (field.getName().equals(fieldName)) {
-                    return field.getType();
+                    return resolveDeclaredType(field.getType());
                 }
             }
         }
@@ -125,6 +125,29 @@ public class TypeResolver {
         }
 
         return null;
+    }
+
+    /**
+     * Resolves a parsed declared type (a current-class field type taken from the source AST) to its fully-qualified
+     * internal form via {@link #resolveInternalName} - imports, same package, nested {@code $}. The AST holds the
+     * bare name as written ({@code AuthenticationAttemptTracker}); left unresolved, callers that use it as a method
+     * owner miss the FQN-keyed {@link ClassPool} and the call's return type falls back to {@code Object}, producing
+     * invalid bytecode (an {@code Object} where an {@code int}/return value is expected). Mirrors the FQN that the
+     * ClassFile-descriptor branch already yields for non-current classes.
+     */
+    private SourceType resolveDeclaredType(SourceType type) {
+        if (type instanceof ReferenceSourceType) {
+            String name = ((ReferenceSourceType) type).getInternalName();
+            String resolved = resolveInternalName(name);
+            return resolved == null || resolved.equals(name) ? type : new ReferenceSourceType(resolved);
+        }
+        if (type instanceof ArraySourceType) {
+            ArraySourceType array = (ArraySourceType) type;
+            SourceType element = resolveDeclaredType(array.getElementType());
+            return element == array.getElementType() ? type
+                    : new ArraySourceType(element, array.getTotalDimensions());
+        }
+        return type;
     }
 
     /**
