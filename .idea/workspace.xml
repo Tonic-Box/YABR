@@ -4,11 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write().">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- CopyPropagation replaced both chain-followers with one resolve()">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/CopyPropagation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/CopyPropagation.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/CopyPropagationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/CopyPropagationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeInference.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/frame/TypeInferenceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/frame/TypeInferenceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/editor/ExpressionEditorTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/editor/ExpressionEditorTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/lift/BytecodeLifterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/lift/BytecodeLifterTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -179,14 +182,6 @@
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
-    <task id="LOCAL-00004" summary="- fixed local scoping issues">
-      <option name="closed" value="true" />
-      <created>1769107350479</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1769107350479</updated>
-    </task>
     <task id="LOCAL-00005" summary="- fixed local scoping issues">
       <option name="closed" value="true" />
       <created>1769107829935</created>
@@ -578,7 +573,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781796278551</updated>
     </task>
-    <option name="localTasksCounter" value="53" />
+    <task id="LOCAL-00053" summary="- CopyPropagation replaced both chain-followers with one resolve()">
+      <option name="closed" value="true" />
+      <created>1781823936445</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1781823936445</updated>
+    </task>
+    <option name="localTasksCounter" value="54" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -593,7 +596,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly" />
     <MESSAGE value="- constant guard for force inlining" />
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam" />
     <MESSAGE value="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam&#10;- Update docs" />
@@ -618,6 +620,7 @@
     <MESSAGE value="- Fixed issue with ClassRenamer erroneously renaming unrelated Utf8 attributes" />
     <MESSAGE value="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8" />
     <MESSAGE value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
-    <option name="LAST_COMMIT_MESSAGE" value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
+    <MESSAGE value="- CopyPropagation replaced both chain-followers with one resolve()" />
+    <option name="LAST_COMMIT_MESSAGE" value="- CopyPropagation replaced both chain-followers with one resolve()" />
   </component>
 </project>

@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.lower;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -42,6 +43,12 @@ public class BytecodeEmitter {
     private final Set<SSAValue> stackResidentValues;
     private final Set<SSAValue> inlinedConstants;
     private final Map<SSAValue, Constant> inlinedConstantValue;
+    /**
+     * Caught-exception values captured at handler entry. The lift marks each handler block with a self-copy
+     * of the value the JVM pushes onto the entry stack; this set drives the emitter to store that stack
+     * value into the value's local (an {@code astore}) so a later use re-loads it correctly.
+     */
+    private final Set<SSAValue> handlerExceptionCaptures;
 
     // For fall-through optimization
     private IRBlock nextBlock;
@@ -65,6 +72,7 @@ public class BytecodeEmitter {
         this.stackResidentValues = new HashSet<>();
         this.inlinedConstants = new HashSet<>();
         this.inlinedConstantValue = new HashMap<>();
+        this.handlerExceptionCaptures = new HashSet<>();
     }
 
     /**
@@ -79,6 +87,7 @@ public class BytecodeEmitter {
 
         analyzeInlinedConstants();
         analyzeStackResidentValues();
+        identifyHandlerExceptionCaptures();
 
         try {
             List<IRBlock> orderedBlocks = computeOptimalBlockOrder();
@@ -242,6 +251,27 @@ public class BytecodeEmitter {
         }
         return !(instr instanceof SimpleInstruction)
                 || ((SimpleInstruction) instr).getOp() != SimpleOp.GOTO;
+    }
+
+    /**
+     * Records each handler block's leading self-copy marker value — the caught exception the JVM places on
+     * the entry stack. These must be stored off the stack at handler entry (see {@link #emitCopy}).
+     */
+    private void identifyHandlerExceptionCaptures() {
+        handlerExceptionCaptures.clear();
+        for (ExceptionHandler handler : method.getExceptionHandlers()) {
+            IRBlock handlerBlock = handler.getHandlerBlock();
+            if (handlerBlock == null || handlerBlock.getInstructions().isEmpty()) {
+                continue;
+            }
+            IRInstruction first = handlerBlock.getInstructions().get(0);
+            if (first instanceof CopyInstruction) {
+                CopyInstruction copy = (CopyInstruction) first;
+                if (copy.getResult() != null && copy.getSource() == copy.getResult()) {
+                    handlerExceptionCaptures.add(copy.getResult());
+                }
+            }
+        }
     }
 
     /**
@@ -1265,6 +1295,13 @@ public class BytecodeEmitter {
         int dstReg = getPhiCopyDestination(instr.getResult());
         if (dstReg < 0) {
             dstReg = regAlloc.getRegister(instr.getResult());
+        }
+
+        // Caught-exception capture: the JVM has placed the exception (a reference) on the handler-entry
+        // stack. Store it into the exception value's local so later handler code can re-load it.
+        if (source == instr.getResult() && handlerExceptionCaptures.contains(instr.getResult())) {
+            emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), dstReg);
+            return;
         }
 
         if (source instanceof SSAValue) {

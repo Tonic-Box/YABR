@@ -8,6 +8,7 @@ import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.type.VoidType;
+import com.tonic.analysis.ssa.value.LongConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
@@ -111,6 +112,45 @@ class BytecodeLifterTest {
 
             assertEquals(ReferenceType.OBJECT, phi.getResult().getType(),
                 "a genuine primitive+reference type-pun phi must be left untouched");
+        }
+
+        @Test
+        void propagatesLongTypeAroundPhiCycleSeededByLongConstant() {
+            // A loop-carried long (e.g. `long x = -1L;` updated each iteration) lifts to a phi cycle. If the
+            // phis default to int, the only concrete seed (a long constant) must still propagate around the
+            // cycle so the value is typed long — otherwise it lowers to an int load and underflows lcmp.
+            // The cyclic back-edges must not deadlock the refinement. (Gamepack regression: qk.fq.)
+            IRMethod m = new IRMethod("com/test/T", "h", "()V", true);
+            IRBlock entry = new IRBlock("entry");
+            IRBlock loop = new IRBlock("loop");
+            m.addBlock(entry);
+            m.addBlock(loop);
+            m.setEntryBlock(entry);
+            entry.addSuccessor(loop);
+            loop.addSuccessor(loop);
+
+            SSAValue seed = new SSAValue(PrimitiveType.LONG);
+            entry.addInstruction(new ConstantInstruction(seed, LongConstant.of(-1L)));
+
+            SSAValue v1 = new SSAValue(PrimitiveType.INT, "phi_1");
+            SSAValue v2 = new SSAValue(PrimitiveType.INT, "phi_2");
+            PhiInstruction phi1 = new PhiInstruction(v1);
+            PhiInstruction phi2 = new PhiInstruction(v2);
+            v1.setDefinition(phi1);
+            v2.setDefinition(phi2);
+            phi1.addIncoming(seed, entry);
+            phi1.addIncoming(v2, loop);
+            phi2.addIncoming(v1, loop);
+            loop.addPhi(phi1);
+            loop.addPhi(phi2);
+            loop.addInstruction(new ReturnInstruction());
+
+            BytecodeLifter.refinePhiTypes(m);
+
+            assertEquals(PrimitiveType.LONG, phi1.getResult().getType(),
+                "the long seed must propagate to the cyclic phi");
+            assertEquals(PrimitiveType.LONG, phi2.getResult().getType(),
+                "the long type must propagate around the entire phi cycle");
         }
     }
 

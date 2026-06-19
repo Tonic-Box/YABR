@@ -30,7 +30,13 @@ public class TypeInference {
      * @return The new type state after the instruction
      */
     public TypeState apply(TypeState state, Instruction instr) {
-        int opcode = instr.getOpcode();
+        // A WIDE prefix carries the real load/store/iinc/ret opcode plus a 2-byte local index; dispatch on
+        // the modified opcode so the wrapped instruction's stack/local effect is applied. Its own opcode is
+        // the wide prefix 0xC4, which matches no case below, so without this it is a silent no-op that leaves
+        // the stack height wrong (e.g. a wide astore never pops) and corrupts frame computation.
+        int opcode = instr instanceof WideInstruction
+                ? ((WideInstruction) instr).getModifiedOpcode().getCode()
+                : instr.getOpcode();
 
         if (opcode == NOP.getCode()) {
             return state;
@@ -807,6 +813,9 @@ public class TypeInference {
      * @return local variable index
      */
     private int getLocalIndex(Instruction instr) {
+        if (instr instanceof WideInstruction) {
+            return ((WideInstruction) instr).getVarIndex();
+        }
         if (instr instanceof ILoadInstruction) {
             return ((ILoadInstruction) instr).getVarIndex();
         }

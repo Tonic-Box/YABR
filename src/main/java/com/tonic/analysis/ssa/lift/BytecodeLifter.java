@@ -26,6 +26,8 @@ public class BytecodeLifter {
 
     private final ConstPool constPool;
     private Map<IRBlock, Map<Integer, PhiInstruction>> stackPhiIndex;
+    /** The exception value pushed onto each handler block's entry stack (the actual caught exception). */
+    private Map<IRBlock, SSAValue> handlerExceptionValues;
 
     /**
      * Creates a new bytecode lifter.
@@ -47,6 +49,7 @@ public class BytecodeLifter {
         IRBlock.resetIdCounter();
         IRInstruction.resetIdCounter();
         stackPhiIndex = new HashMap<>();
+        handlerExceptionValues = new HashMap<>();
 
         CodeAttribute codeAttr = method.getCodeAttribute();
         if (codeAttr == null) {
@@ -115,16 +118,27 @@ public class BytecodeLifter {
     }
 
     /**
-     * Returns the shared primitive type of all non-null phi incomings, or null if any incoming
-     * is non-primitive or the incomings disagree.
+     * Returns the shared primitive type of the phi's incomings, or null if any concrete incoming is
+     * non-primitive or the incomings disagree.
+     *
+     * <p>An incoming that is itself a phi of the same (still-unrefined) type as this phi is skipped: it is a
+     * back-edge in a phi cycle, and counting it would deadlock a cycle whose only concrete seed is a
+     * different primitive — e.g. a long loop variable seeded by a long constant but carried through phis that
+     * defaulted to int. Across the refinement fixpoint the concrete seed's type then propagates around the
+     * cycle. Concrete (non-phi) incomings always count, so a genuine primitive mix still blocks refinement.
      */
     private static IRType uniformPrimitiveIncomingType(PhiInstruction phi) {
+        IRType resultType = phi.getResult() != null ? phi.getResult().getType() : null;
         PrimitiveType common = null;
         for (Value v : phi.getOperands()) {
             if (v == null) {
                 continue;
             }
             IRType t = v.getType();
+            if (t == resultType && v instanceof SSAValue
+                    && ((SSAValue) v).getDefinition() instanceof PhiInstruction) {
+                continue;
+            }
             if (!(t instanceof PrimitiveType)) {
                 return null;
             }
@@ -346,6 +360,7 @@ public class BytecodeLifter {
                         "exc_" + handlerBlock.getName()
                 );
                 handlerState.push(exceptionValue);
+                handlerExceptionValues.put(handlerBlock, exceptionValue);
                 blockStates.put(handlerBlock, handlerState);
                 worklist.add(handlerBlock);
             }
@@ -652,19 +667,34 @@ public class BytecodeLifter {
 
             if (tryStart != null) {
                 ExceptionHandler handler = new ExceptionHandler(tryStart, tryEnd, handlerBlock, catchType);
+                // Record every block of the protected region so the exception table is regenerated per
+                // contiguous PC run after lowering reorders blocks. Without this, the tryStart/tryEnd
+                // fallback yields a single range that can wrongly span the (interleaved or trailing) handler.
+                Set<IRBlock> tryBlocks = new HashSet<>();
+                for (Map.Entry<Integer, IRBlock> e : offsetToBlock.entrySet()) {
+                    if (e.getKey() >= entry.getStartPc() && e.getKey() < entry.getEndPc()) {
+                        tryBlocks.add(e.getValue());
+                    }
+                }
+                handler.setTryBlocks(tryBlocks);
                 irMethod.addExceptionHandler(handler);
 
-                // Only insert exception marker once per handler block
+                // Mark the handler entry with a self-copy of the ACTUAL caught-exception value (the one
+                // pushed onto the handler's entry stack and used by the handler body), not a fresh dummy.
+                // The bytecode emitter recognizes this marker and stores the JVM-pushed exception off the
+                // stack into the exception value's local; the old dummy-valued marker emitted nothing, so a
+                // handler that did work before re-using the exception lost the capturing astore.
                 if (!processedHandlerBlocks.contains(handlerBlock)) {
                     processedHandlerBlocks.add(handlerBlock);
 
                     // Skip if block already starts with a load (bytecode handles exception)
                     if (handlerBlock.getInstructions().isEmpty() ||
                             !(handlerBlock.getInstructions().get(0) instanceof LoadLocalInstruction)) {
-                        SSAValue exceptionValue = new SSAValue(
-                                catchType != null ? catchType : ReferenceType.THROWABLE,
-                                "exc"
-                        );
+                        SSAValue exceptionValue = handlerExceptionValues.get(handlerBlock);
+                        if (exceptionValue == null) {
+                            exceptionValue = new SSAValue(
+                                    catchType != null ? catchType : ReferenceType.THROWABLE, "exc");
+                        }
                         handlerBlock.insertInstruction(0, new CopyInstruction(exceptionValue, exceptionValue));
                     }
                 }

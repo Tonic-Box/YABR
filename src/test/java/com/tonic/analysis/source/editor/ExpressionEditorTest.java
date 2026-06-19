@@ -115,9 +115,10 @@ class ExpressionEditorTest {
         editor.removeMethodCall("com/example/Service", "deprecatedMethod");
         editor.apply();
 
-        // Expression statement should still exist but expression might be null or removed
-        // Implementation may vary - verify the handler was called
-        assertNotNull(body.getStatements().get(0));
+        // The call was the entire statement, so removing it drops the enclosing statement — see
+        // ASTEditor.processExprStmt, which removes a whole-statement expression when a handler removes it.
+        // (Previously this asserted the statement survived via get(0), which threw IndexOutOfBounds.)
+        assertTrue(body.getStatements().isEmpty());
     }
 
     @Test

@@ -7,11 +7,11 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
 import com.tonic.testutil.TestUtils;
 import com.tonic.utill.AccessBuilder;
+import com.tonic.utill.Opcode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -1727,10 +1727,14 @@ class TypeInferenceTest {
 
     @Test
     void testWide() {
+        // A WIDE-prefixed iload (local index > 255) pushes an int, exactly like its narrow form. This
+        // previously asserted a no-op (assertSame) — codifying the bug where TypeInference dispatched on the
+        // 0xC4 prefix, matched nothing, and ignored the wrapped instruction's stack effect.
         Instruction wide = new WideInstruction(0xC4, 0, com.tonic.utill.Opcode.ILOAD, 300);
         TypeState result = inference.apply(initialState, wide);
 
-        assertSame(initialState, result);
+        assertEquals(1, result.getStackSize());
+        assertEquals(VerificationType.INTEGER, result.peek());
     }
 
     @Test
@@ -1867,5 +1871,44 @@ class TypeInferenceTest {
         TypeState result = inference.apply(initialState, unknown);
 
         assertSame(initialState, result);
+    }
+
+    // ========== WIDE-prefixed load/store (locals > 255) ==========
+
+    @Test
+    void testWideReferenceStoreThenLoadAdjustsStack() {
+        // Regression: a WIDE-prefixed load/store (used for local indices > 255) must apply the wrapped
+        // opcode's stack effect. TypeInference dispatched on the 0xC4 prefix, which matched no case, so the
+        // stack height was left unchanged — a wide astore never popped, under-counting frames downstream.
+        TypeState s = inference.apply(initialState, new AConstNullInstruction(0x01, 0));
+        assertEquals(1, s.getStackSize());
+
+        s = inference.apply(s, new WideInstruction(0xC4, 1, Opcode.ASTORE, 300));
+        assertEquals(0, s.getStackSize(), "wide astore must pop the reference");
+
+        s = inference.apply(s, new WideInstruction(0xC4, 5, Opcode.ALOAD, 300));
+        assertEquals(1, s.getStackSize(), "wide aload must push the stored local");
+        assertEquals(VerificationType.NULL, s.peek());
+    }
+
+    @Test
+    void testWideLongStoreThenLoadIsCategoryTwo() {
+        TypeState s = inference.apply(initialState, new LConstInstruction(0x09, 0, 0L));
+        assertEquals(2, s.getStackSize());
+
+        s = inference.apply(s, new WideInstruction(0xC4, 1, Opcode.LSTORE, 300));
+        assertEquals(0, s.getStackSize(), "wide lstore must pop the long (2 slots)");
+
+        s = inference.apply(s, new WideInstruction(0xC4, 5, Opcode.LLOAD, 300));
+        assertEquals(2, s.getStackSize(), "wide lload must push the long (2 slots)");
+    }
+
+    @Test
+    void testWideIincLeavesStackUnchanged() {
+        TypeState s = inference.apply(initialState, new IConstInstruction(0x04, 0, 1));
+        assertEquals(1, s.getStackSize());
+
+        s = inference.apply(s, new WideInstruction(0xC4, 1, Opcode.IINC, 300, 5));
+        assertEquals(1, s.getStackSize(), "wide iinc must not touch the operand stack");
     }
 }
