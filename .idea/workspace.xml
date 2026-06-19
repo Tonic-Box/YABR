@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix decompile-&gt;recompile fidelity: qualified names + return types">
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/FieldTypeResolutionTest.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix decompile-&gt;recompile fidelity: qualified names + return types for wildcard imports">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -184,14 +183,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00012" summary="- Expand SSA-&gt;LLVM backend to full Java construct set via runtime ABI">
-      <option name="closed" value="true" />
-      <created>1780242900981</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1780242900981</updated>
     </task>
     <task id="LOCAL-00013" summary="-  Add LLVM IR -&gt; SSA lifter for round-trip optimizer integration">
       <option name="closed" value="true" />
@@ -577,7 +568,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781871841882</updated>
     </task>
-    <option name="localTasksCounter" value="61" />
+    <task id="LOCAL-00061" summary="- Fix decompile-&gt;recompile fidelity: qualified names + return types for wildcard imports">
+      <option name="closed" value="true" />
+      <created>1781872772381</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1781872772381</updated>
+    </task>
+    <option name="localTasksCounter" value="62" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -592,7 +591,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Query API (Migrated over from JStudio" />
     <MESSAGE value="Query API (Migrated over from JStudio)" />
     <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets (replaces dead instructionIndex)" />
     <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets" />
@@ -617,6 +615,7 @@
     <MESSAGE value="- BinaryOpInstruction.swapOperands" />
     <MESSAGE value="- Renamer ordering fix" />
     <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix decompile-&gt;recompile fidelity: qualified names + return types" />
+    <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types for wildcard imports" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fix decompile-&gt;recompile fidelity: qualified names + return types for wildcard imports" />
   </component>
 </project>

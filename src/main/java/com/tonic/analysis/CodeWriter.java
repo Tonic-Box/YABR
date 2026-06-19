@@ -322,6 +322,41 @@ public class CodeWriter {
     }
 
     /**
+     * Removes many instructions in a single relink, as {@link #removeInstruction} does per element but O(n) in
+     * the method size rather than O(removals &times; n) — removing one at a time relinks the whole method per
+     * call, which is quadratic when many sites are removed. None of the removed instructions may be a
+     * branch/switch target.
+     *
+     * @param handles the instruction handles to remove
+     */
+    public void removeInstructions(Collection<Instruction> handles) {
+        if (handles.isEmpty()) {
+            return;
+        }
+        Set<Instruction> toRemove = handles instanceof Set ? (Set<Instruction>) handles : new HashSet<>(handles);
+        for (Instruction handle : toRemove) {
+            requirePresent(handle);
+        }
+        for (List<Instruction> targets : branchTargets.values()) {
+            for (Instruction target : targets) {
+                if (toRemove.contains(target)) {
+                    throw new IllegalStateException("Cannot remove an instruction that is a branch/switch target: " + target);
+                }
+            }
+        }
+        List<Instruction> order = new ArrayList<>();
+        for (Instruction instr : instructions.values()) {
+            if (!toRemove.contains(instr)) {
+                order.add(instr);
+            }
+        }
+        for (Instruction handle : toRemove) {
+            branchTargets.remove(handle);
+        }
+        relink(order);
+    }
+
+    /**
      * Replaces this method's entire instruction stream with {@code body} (e.g. a cloned/grafted body),
      * then relinks: offsets, branch/switch targets, and frames are recomputed. Branches in {@code body}
      * must either be self-contained (relative offsets valid for the block, as produced by
