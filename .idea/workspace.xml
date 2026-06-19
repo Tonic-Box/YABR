@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- CodeWriter::removeInstruction">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- ASTLowerer ordering fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -183,14 +185,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00014" summary="- params need to be created before body values">
-      <option name="closed" value="true" />
-      <created>1780250285130</created>
-      <option name="number" value="00014" />
-      <option name="presentableId" value="LOCAL-00014" />
-      <option name="project" value="LOCAL" />
-      <updated>1780250285130</updated>
     </task>
     <task id="LOCAL-00015" summary="- Add DynamicConstant support to LLVM lowering">
       <option name="closed" value="true" />
@@ -576,7 +570,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781874492600</updated>
     </task>
-    <option name="localTasksCounter" value="63" />
+    <task id="LOCAL-00063" summary="- ASTLowerer ordering fix">
+      <option name="closed" value="true" />
+      <created>1781875079343</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1781875079343</updated>
+    </task>
+    <option name="localTasksCounter" value="64" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -591,7 +593,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets (replaces dead instructionIndex)" />
     <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets" />
     <MESSAGE value="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps" />
     <MESSAGE value="- Add field and class declaration spans to decompiler" />
@@ -616,6 +617,7 @@
     <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types" />
     <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types for wildcard imports" />
     <MESSAGE value="- CodeWriter::removeInstruction" />
-    <option name="LAST_COMMIT_MESSAGE" value="- CodeWriter::removeInstruction" />
+    <MESSAGE value="- ASTLowerer ordering fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="- ASTLowerer ordering fix" />
   </component>
 </project>

@@ -63,6 +63,20 @@ public class ExpressionLowerer {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
+        // Reference == / != (including against null) must compare with acmp, not the integer icmp. Decide from the
+        // lowered VALUE types (reliable) - the AST operand types are often unqualified or unset, and
+        // getCommonComparisonType defaults non-floating operands to int.
+        if (isReferenceValue(left) || isReferenceValue(right)) {
+            BinaryOperator binOp = bin.getOperator();
+            if (binOp == BinaryOperator.EQ || binOp == BinaryOperator.NE) {
+                CompareOp op = binOp == BinaryOperator.EQ ? CompareOp.ACMPEQ : CompareOp.ACMPNE;
+                ctx.getCurrentBlock().addInstruction(new BranchInstruction(op, left, right, trueTarget, falseTarget));
+                ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                return;
+            }
+        }
+
         SourceType leftType = bin.getLeft().getType();
         SourceType rightType = bin.getRight().getType();
         SourceType commonType = getCommonComparisonType(leftType, rightType);
@@ -178,15 +192,21 @@ public class ExpressionLowerer {
             PrimitiveSourceType prim = (PrimitiveSourceType) type;
             if (prim == PrimitiveSourceType.BOOLEAN) {
                 return IntConstant.of(((Boolean) value) ? 1 : 0);
-            } else if (prim == PrimitiveSourceType.BYTE || prim == PrimitiveSourceType.CHAR ||
-                       prim == PrimitiveSourceType.SHORT || prim == PrimitiveSourceType.INT) {
-                return IntConstant.of(((Number) value).intValue());
-            } else if (prim == PrimitiveSourceType.LONG) {
-                return new LongConstant(((Number) value).longValue());
-            } else if (prim == PrimitiveSourceType.FLOAT) {
-                return new FloatConstant(((Number) value).floatValue());
-            } else if (prim == PrimitiveSourceType.DOUBLE) {
-                return new DoubleConstant(((Number) value).doubleValue());
+            }
+            // A char literal arrives as a Character, not a Number; treat it as its integer code value.
+            Number num = (value instanceof Character) ? (int) (Character) value
+                       : (value instanceof Number) ? (Number) value : null;
+            if (num != null) {
+                if (prim == PrimitiveSourceType.BYTE || prim == PrimitiveSourceType.CHAR ||
+                    prim == PrimitiveSourceType.SHORT || prim == PrimitiveSourceType.INT) {
+                    return IntConstant.of(num.intValue());
+                } else if (prim == PrimitiveSourceType.LONG) {
+                    return new LongConstant(num.longValue());
+                } else if (prim == PrimitiveSourceType.FLOAT) {
+                    return new FloatConstant(num.floatValue());
+                } else if (prim == PrimitiveSourceType.DOUBLE) {
+                    return new DoubleConstant(num.doubleValue());
+                }
             }
         }
 
@@ -585,7 +605,16 @@ public class ExpressionLowerer {
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
         } else {
-            BranchInstruction branch = new BranchInstruction(cmpOp, left, right, trueBlock, falseBlock);
+            // Reference == / != (value context, e.g. `return x != null`) must use acmp, not the integer icmp.
+            CompareOp op = cmpOp;
+            if (isReferenceValue(left) || isReferenceValue(right)) {
+                if (bin.getOperator() == BinaryOperator.EQ) {
+                    op = CompareOp.ACMPEQ;
+                } else if (bin.getOperator() == BinaryOperator.NE) {
+                    op = CompareOp.ACMPNE;
+                }
+            }
+            BranchInstruction branch = new BranchInstruction(op, left, right, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
         }
 
@@ -979,13 +1008,21 @@ public class ExpressionLowerer {
 
     private SourceType resolveMethodReturnType(MethodCallExpr call, String ownerClass, List<SourceType> argTypes) {
         SourceType declaredType = call.getType();
-        if (declaredType == ReferenceSourceType.OBJECT || declaredType == null) {
+        // Value check, not identity: the decompiler hands us fresh ReferenceSourceType("java/lang/Object") instances,
+        // so `== ReferenceSourceType.OBJECT` misses them and a real return type (e.g. LocalDateTime.isAfter -> boolean)
+        // is left as Object -> wrong descriptor -> "Bad type on operand stack" when an ifeq consumes it.
+        if (isObjectOrNull(declaredType)) {
             SourceType resolved = ctx.getTypeResolver().resolveMethodReturnType(ownerClass, call.getMethodName(), argTypes);
             if (resolved != null) {
                 return resolved;
             }
         }
         return declaredType != null ? declaredType : ReferenceSourceType.OBJECT;
+    }
+
+    private static boolean isObjectOrNull(SourceType t) {
+        return t == null
+            || (t instanceof ReferenceSourceType && "java/lang/Object".equals(((ReferenceSourceType) t).getInternalName()));
     }
 
     private String buildMethodDescriptorWithReturn(List<SourceType> argTypes, SourceType returnType) {
@@ -1002,6 +1039,26 @@ public class ExpressionLowerer {
         String ownerClass;
         boolean isStatic = field.isStatic();
         Expression receiver = field.getReceiver();
+
+        // `array.length` is the arraylength instruction, not a field load. Decide from the lowered receiver's type
+        // (reliable) so a genuine field literally named "length" on a class still lowers as a getfield. Skip
+        // class-name receivers (static access). Lower the receiver exactly once to preserve side effects.
+        if (!isStatic && "length".equals(field.getFieldName()) && receiver != null
+                && !(receiver instanceof VarRefExpr && !ctx.hasVariable(((VarRefExpr) receiver).getName()))) {
+            Value recv = lower(receiver);
+            if (recv.getType() instanceof ArrayType) {
+                SSAValue len = ctx.newValue(PrimitiveType.INT);
+                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createArrayLength(len, recv));
+                return len;
+            }
+            String owner = recv.getType() instanceof ReferenceType
+                ? ((ReferenceType) recv.getType()).getInternalName() : "java/lang/Object";
+            IRType ft = resolveFieldType(field, owner);
+            SSAValue res = ctx.newValue(ft);
+            ctx.getCurrentBlock().addInstruction(
+                FieldAccessInstruction.createLoad(res, owner, field.getFieldName(), ft.getDescriptor(), recv));
+            return res;
+        }
 
         if (isStatic) {
             ownerClass = field.getOwnerClass();
@@ -1035,6 +1092,15 @@ public class ExpressionLowerer {
 
         ownerClass = normalizeOwnerClass(ownerClass);
 
+        Value receiverVal = null;
+        if (!isStatic) {
+            receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
+            String fromValue = receiverOwner(receiverVal);
+            if (fromValue != null) {
+                ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+            }
+        }
+
         IRType fieldType = resolveFieldType(field, ownerClass);
         SSAValue result = ctx.newValue(fieldType);
         String descriptor = fieldType.getDescriptor();
@@ -1043,7 +1109,6 @@ public class ExpressionLowerer {
         if (isStatic) {
             instr = FieldAccessInstruction.createStaticLoad(result, ownerClass, field.getFieldName(), descriptor);
         } else {
-            Value receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
             instr = FieldAccessInstruction.createLoad(result, ownerClass, field.getFieldName(), descriptor, receiverVal);
         }
         ctx.getCurrentBlock().addInstruction(instr);
@@ -1051,9 +1116,20 @@ public class ExpressionLowerer {
         return result;
     }
 
+    /** The receiver value's reference type as an internal owner name, or null when it is not a usable named reference. */
+    private static String receiverOwner(Value receiverVal) {
+        if (receiverVal != null && receiverVal.getType() instanceof ReferenceType) {
+            String n = ((ReferenceType) receiverVal.getType()).getInternalName();
+            if (n != null && !n.isEmpty() && !n.equals("java/lang/Object")) {
+                return n;
+            }
+        }
+        return null;
+    }
+
     private IRType resolveFieldType(FieldAccessExpr field, String ownerClass) {
         SourceType declaredType = field.getType();
-        if (declaredType == ReferenceSourceType.OBJECT || declaredType == null) {
+        if (isObjectOrNull(declaredType)) {
             SourceType resolved = ctx.getTypeResolver().resolveFieldType(ownerClass, field.getFieldName());
             if (resolved == null) {
                 String fieldRef = (ownerClass != null ? ownerClass.replace('/', '.') : "<unknown>")
@@ -1062,7 +1138,10 @@ public class ExpressionLowerer {
             }
             return resolved.toIRType();
         }
-        return declaredType.toIRType();
+        // Resolve the declared (AST) type's reference name to its FQN via the descriptor, rather than the raw
+        // toIRType() - else a wildcard/same-package field type (e.g. DefaultListModel) emits an unqualified
+        // `LDefaultListModel;` descriptor -> NoClassDefFoundError, and poisons the field value's owner downstream.
+        return IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(declaredType));
     }
 
     private String resolveClassName(String simpleName) {
@@ -1105,10 +1184,12 @@ public class ExpressionLowerer {
      * the field can be located. Already-qualified or empty names are returned unchanged.
      */
     private String normalizeOwnerClass(String ownerClass) {
-        if (ownerClass == null || ownerClass.isEmpty() || ownerClass.contains("/")) {
+        if (ownerClass == null || ownerClass.isEmpty()) {
             return ownerClass;
         }
-        return resolveClassName(ownerClass);
+        // resolveInternalName (not resolveClassName) so a nested type spelled Outer.Inner / Outer/Inner becomes
+        // Outer$Inner, not a bogus Outer/Inner package boundary -> ClassNotFoundException on the nested class.
+        return ctx.getTypeResolver().resolveInternalName(ownerClass);
     }
 
     /**
@@ -1168,6 +1249,15 @@ public class ExpressionLowerer {
 
         ownerClass = normalizeOwnerClass(ownerClass);
 
+        Value receiverVal = null;
+        if (!isStatic) {
+            receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
+            String fromValue = receiverOwner(receiverVal);
+            if (fromValue != null) {
+                ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+            }
+        }
+
         IRType fieldType = resolveFieldType(field, ownerClass);
         String descriptor = fieldType.getDescriptor();
 
@@ -1175,7 +1265,6 @@ public class ExpressionLowerer {
         if (isStatic) {
             instr = FieldAccessInstruction.createStaticStore(ownerClass, field.getFieldName(), descriptor, value);
         } else {
-            Value receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
             instr = FieldAccessInstruction.createStore(ownerClass, field.getFieldName(), descriptor, receiverVal, value);
         }
         ctx.getCurrentBlock().addInstruction(instr);
@@ -1301,14 +1390,28 @@ public class ExpressionLowerer {
             args.add(lower(arg));
         }
 
-        StringBuilder descBuilder = new StringBuilder("(");
-        for (Expression arg : newExpr.getArguments()) {
-            descBuilder.append(arg.getType().toIRType().getDescriptor());
+        // Prefer the constructor's real (fully-qualified) descriptor from the pool; only fall back to building one
+        // from the args when the class isn't loaded - and then from the lowered VALUE types (resolved), never the
+        // raw AST types (which leave wildcard/same-package names unqualified -> e.g. `new LoginDialog(parent)`
+        // emitting `(LFrame;)V` instead of `(Ljava/awt/Frame;)V` -> ClassNotFoundException: Frame).
+        List<IRType> argIrTypes = new ArrayList<>();
+        for (int k = 1; k < args.size(); k++) {
+            argIrTypes.add(args.get(k).getType());
         }
-        descBuilder.append(")V");
+        // Match the constructor by argument types (disambiguates same-arity overloads, e.g. ArrayList(int) vs
+        // ArrayList(Collection)); only when the class isn't in the pool do we build a descriptor from the value types.
+        String descriptor = ctx.getTypeResolver().resolveConstructorDescriptor(className, argIrTypes);
+        if (descriptor == null) {
+            StringBuilder descBuilder = new StringBuilder("(");
+            for (IRType argIrType : argIrTypes) {
+                descBuilder.append(argIrType.getDescriptor());
+            }
+            descBuilder.append(")V");
+            descriptor = descBuilder.toString();
+        }
 
         InvokeInstruction initInstr = new InvokeInstruction(
-            InvokeType.SPECIAL, className, "<init>", descBuilder.toString(), args
+            InvokeType.SPECIAL, className, "<init>", descriptor, args
         );
         ctx.getCurrentBlock().addInstruction(initInstr);
 
@@ -1557,6 +1660,10 @@ public class ExpressionLowerer {
             if (to == PrimitiveType.DOUBLE) return UnaryOp.F2D;
         }
         return null;
+    }
+
+    private static boolean isReferenceValue(Value v) {
+        return v != null && v.getType() != null && v.getType().isReference();
     }
 
     private SourceType getCommonComparisonType(SourceType left, SourceType right) {

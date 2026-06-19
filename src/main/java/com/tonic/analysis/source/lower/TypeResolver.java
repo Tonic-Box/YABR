@@ -7,6 +7,7 @@ import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
 import com.tonic.analysis.frame.TypeState;
 import com.tonic.analysis.source.ast.type.*;
+import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.FieldEntry;
@@ -77,7 +78,7 @@ public class TypeResolver {
 
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
-            return null;
+            return reflectFieldType(ownerClass, fieldName);
         }
 
         for (FieldEntry field : cf.getFields()) {
@@ -88,10 +89,13 @@ public class TypeResolver {
 
         String superClass = cf.getSuperClassName();
         if (superClass != null && !superClass.equals("java/lang/Object") && !superClass.startsWith("Invalid")) {
-            return resolveFieldType(superClass, fieldName);
+            SourceType inherited = resolveFieldType(superClass, fieldName);
+            if (inherited != null) {
+                return inherited;
+            }
         }
 
-        return null;
+        return reflectFieldType(ownerClass, fieldName);
     }
 
     /**
@@ -110,7 +114,7 @@ public class TypeResolver {
 
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
-            return null;
+            return reflectFieldType(ownerClass, fieldName);
         }
 
         for (FieldEntry field : cf.getFields()) {
@@ -121,10 +125,13 @@ public class TypeResolver {
 
         String superClass = cf.getSuperClassName();
         if (superClass != null && !superClass.equals("java/lang/Object") && !superClass.startsWith("Invalid")) {
-            return findFieldType(superClass, fieldName);
+            SourceType inherited = findFieldType(superClass, fieldName);
+            if (inherited != null) {
+                return inherited;
+            }
         }
 
-        return null;
+        return reflectFieldType(ownerClass, fieldName);
     }
 
     /**
@@ -136,6 +143,11 @@ public class TypeResolver {
      * ClassFile-descriptor branch already yields for non-current classes.
      */
     private SourceType resolveDeclaredType(SourceType type) {
+        if (type instanceof GenericSourceType) {
+            // Descriptors carry no generics: resolve the raw type (e.g. DefaultListModel<String> -> the FQN of
+            // DefaultListModel). Without this the raw name stays unqualified -> LDefaultListModel; -> NoClassDefFound.
+            return resolveDeclaredType(((GenericSourceType) type).getRawType());
+        }
         if (type instanceof ReferenceSourceType) {
             String name = ((ReferenceSourceType) type).getInternalName();
             String resolved = resolveInternalName(name);
@@ -289,7 +301,7 @@ public class TypeResolver {
         if (currentClassDecl != null && isCurrentClass(ownerClass)) {
             for (MethodDecl method : currentClassDecl.getMethods()) {
                 if (method.getName().equals(methodName) && parametersMatch(method.getParameters(), argTypes)) {
-                    return method.getReturnType();
+                    return resolveDeclaredType(method.getReturnType());
                 }
             }
         }
@@ -329,7 +341,11 @@ public class TypeResolver {
             }
         }
 
-        return null;
+        // The pool search matches the parameter descriptor exactly, so a call with a SUBTYPE argument (e.g.
+        // LocalDateTime.isAfter(ChronoLocalDateTime) invoked with a LocalDateTime) finds no match. Fall back to
+        // reflection, which matches by name + arity over the full inherited method set - otherwise the return
+        // defaults to Object and an ifeq/areturn on it fails verification.
+        return reflectMethodReturnType(ownerClass, methodName, argTypes.size());
     }
 
     private SourceType resolveJdkMethodReturnType(String ownerClass, String methodName, List<SourceType> argTypes) {
@@ -413,6 +429,23 @@ public class TypeResolver {
                 }
             }
             return returnType == null ? null : sourceTypeFromClass(returnType);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolves a field's declared type by reflecting a classpath-available class - the fallback for JDK/library fields
+     * not in the {@link ClassPool} (e.g. {@code java.awt.Color.DARK_GRAY}). Returns null when the class or field is
+     * absent. Uses getField so inherited public fields resolve too.
+     */
+    private SourceType reflectFieldType(String ownerClass, String fieldName) {
+        if (ownerClass == null || ownerClass.isEmpty()) {
+            return null;
+        }
+        try {
+            Class<?> cls = Class.forName(ownerClass.replace('/', '.'), false, getClass().getClassLoader());
+            return sourceTypeFromClass(cls.getField(fieldName).getType());
         } catch (Throwable ignored) {
             return null;
         }
@@ -568,6 +601,72 @@ public class TypeResolver {
         }
 
         return candidates.get(0);
+    }
+
+    /**
+     * Picks the constructor whose parameters best match the given argument IR types (exact descriptor preferred, then
+     * same primitive/reference kind), disambiguating same-arity overloads such as {@code ArrayList(int)} vs
+     * {@code ArrayList(Collection)}. Returns null when the class is absent from the pool or no kind-compatible
+     * constructor exists, so the caller can fall back to building a descriptor from the argument value types.
+     */
+    public String resolveConstructorDescriptor(String ownerClass, List<IRType> argTypes) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return null;
+        }
+        String best = null;
+        int bestScore = -1;
+        for (MethodEntry method : cf.getMethods()) {
+            if (!method.getName().equals("<init>")) {
+                continue;
+            }
+            List<String> params = splitParamDescriptors(method.getDesc());
+            if (params.size() != argTypes.size()) {
+                continue;
+            }
+            int score = 0;
+            boolean ok = true;
+            for (int i = 0; i < params.size(); i++) {
+                String p = params.get(i);
+                String a = argTypes.get(i).getDescriptor();
+                if (p.equals(a)) {
+                    score += 2;
+                } else if (isReferenceDescriptor(p) == isReferenceDescriptor(a)) {
+                    score += 1;
+                } else {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok && score > bestScore) {
+                bestScore = score;
+                best = method.getDesc();
+            }
+        }
+        return best;
+    }
+
+    private static boolean isReferenceDescriptor(String desc) {
+        return !desc.isEmpty() && (desc.charAt(0) == 'L' || desc.charAt(0) == '[');
+    }
+
+    private static List<String> splitParamDescriptors(String methodDesc) {
+        List<String> out = new ArrayList<>();
+        int i = methodDesc.indexOf('(') + 1;
+        int end = methodDesc.indexOf(')');
+        while (i >= 1 && i < end) {
+            int start = i;
+            while (methodDesc.charAt(i) == '[') {
+                i++;
+            }
+            if (methodDesc.charAt(i) == 'L') {
+                i = methodDesc.indexOf(';', i) + 1;
+            } else {
+                i++;
+            }
+            out.add(methodDesc.substring(start, i));
+        }
+        return out;
     }
 
     public String resolveConstructorDescriptor(String ownerClass, int expectedParamCount) {
@@ -753,6 +852,9 @@ public class TypeResolver {
      * built from decompiled source line up with the originals.
      */
     public String descriptorOf(SourceType type) {
+        if (type instanceof GenericSourceType) {
+            return descriptorOf(((GenericSourceType) type).getRawType());
+        }
         if (type instanceof ReferenceSourceType) {
             return "L" + resolveInternalName(((ReferenceSourceType) type).getInternalName()) + ";";
         }

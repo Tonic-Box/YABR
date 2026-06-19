@@ -450,6 +450,12 @@ public class StatementLowerer {
     private void lowerTryCatch(TryCatchStmt tryCatch) {
         IRBlock tryBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
+        // Normal exits (try-success, end-of-catch) flow THROUGH the finally so its body runs on every normal path -
+        // a single shared copy with phis merging the protected variables at its entry. Previously the finally block
+        // had no predecessors (try/catch jumped straight to exit), so it never ran and the protected variable was
+        // split across slots (-> "Bad local variable type" / uninitialized local at verification).
+        IRBlock finallyBlock = tryCatch.getFinallyBlock() != null ? ctx.createBlock() : null;
+        IRBlock normalExit = finallyBlock != null ? finallyBlock : exitBlock;
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(tryBlock));
         ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
@@ -459,8 +465,8 @@ public class StatementLowerer {
         lower(tryCatch.getTryBlock());
         IRBlock tryEnd = ctx.getCurrentBlock();
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
-            ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(normalExit));
+            ctx.getCurrentBlock().addSuccessor(normalExit, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
         // The protected region is tryBlock plus every block produced while lowering the try body (including a
@@ -491,8 +497,8 @@ public class StatementLowerer {
 
             lower(catchClause.body());
             if (ctx.getCurrentBlock().getTerminator() == null) {
-                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
-                ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(normalExit));
+                ctx.getCurrentBlock().addSuccessor(normalExit, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
             }
 
             // Register the exception table entry/entries. A multi-catch shares one handler block but
@@ -508,8 +514,7 @@ public class StatementLowerer {
             }
         }
 
-        if (tryCatch.getFinallyBlock() != null) {
-            IRBlock finallyBlock = ctx.createBlock();
+        if (finallyBlock != null) {
             ctx.setCurrentBlock(finallyBlock);
             lower(tryCatch.getFinallyBlock());
             if (ctx.getCurrentBlock().getTerminator() == null) {
