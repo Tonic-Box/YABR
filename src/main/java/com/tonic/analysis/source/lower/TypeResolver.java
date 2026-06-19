@@ -12,6 +12,8 @@ import com.tonic.parser.ClassPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.utill.Modifiers;
+
+import java.lang.reflect.Method;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -361,7 +363,65 @@ public class TypeResolver {
                     return PrimitiveSourceType.INT;
             }
         }
-        return null;
+        return reflectMethodReturnType(ownerClass, methodName, argTypes.size());
+    }
+
+    /**
+     * Resolves a method's return type by reflecting a classpath-available class - the fallback for JDK/library
+     * classes not loaded into the {@link ClassPool} (e.g. {@code javax.swing.SwingUtilities} from the java.desktop
+     * module). Without this, an unresolved return defaults to {@code Object}, producing a wrong descriptor (e.g.
+     * {@code invokeLater(Runnable)Object}) and a {@code NoSuchMethodError} at run time. Matches by name + parameter
+     * count; bails (returns null) when overloads of that arity disagree on the return type, or the class is absent.
+     */
+    private SourceType reflectMethodReturnType(String ownerClass, String methodName, int paramCount) {
+        if (ownerClass == null || ownerClass.isEmpty()) {
+            return null;
+        }
+        try {
+            Class<?> cls = Class.forName(ownerClass.replace('/', '.'), false, getClass().getClassLoader());
+            Class<?> returnType = null;
+            for (Method m : cls.getMethods()) {
+                if (m.getName().equals(methodName) && m.getParameterCount() == paramCount) {
+                    if (returnType == null) {
+                        returnType = m.getReturnType();
+                    } else if (!returnType.equals(m.getReturnType())) {
+                        return null;
+                    }
+                }
+            }
+            return returnType == null ? null : sourceTypeFromClass(returnType);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /** Maps a reflected {@link Class} to the equivalent {@link SourceType} (void, primitive, array, or reference). */
+    private SourceType sourceTypeFromClass(Class<?> c) {
+        if (c == void.class) {
+            return VoidSourceType.INSTANCE;
+        }
+        if (c.isPrimitive()) {
+            if (c == boolean.class) return PrimitiveSourceType.BOOLEAN;
+            if (c == byte.class) return PrimitiveSourceType.BYTE;
+            if (c == char.class) return PrimitiveSourceType.CHAR;
+            if (c == short.class) return PrimitiveSourceType.SHORT;
+            if (c == int.class) return PrimitiveSourceType.INT;
+            if (c == long.class) return PrimitiveSourceType.LONG;
+            if (c == float.class) return PrimitiveSourceType.FLOAT;
+            if (c == double.class) return PrimitiveSourceType.DOUBLE;
+            return null;
+        }
+        if (c.isArray()) {
+            int dims = 0;
+            Class<?> component = c;
+            while (component.isArray()) {
+                dims++;
+                component = component.getComponentType();
+            }
+            SourceType element = sourceTypeFromClass(component);
+            return element == null ? null : new ArraySourceType(element, dims);
+        }
+        return new ReferenceSourceType(c.getName().replace('.', '/'));
     }
 
     private boolean parametersMatch(List<ParameterDecl> params, List<SourceType> argTypes) {
