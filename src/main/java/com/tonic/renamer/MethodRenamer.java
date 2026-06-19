@@ -66,17 +66,20 @@ public class MethodRenamer {
         // Get the new class name (after class renaming) for the mapping owner
         String mappedOwner = context.getMappings().getClassMapping(mapping.getOwner());
         String currentOwner = mappedOwner != null ? mappedOwner : mapping.getOwner();
+        // Class renames already rewrote this method's descriptor, so translate the mapping descriptor through
+        // the class mappings before matching it against the live descriptors (see FieldRenamer for details).
+        String currentDescriptor = context.getDescriptorRemapper().remapMethodDescriptor(mapping.getDescriptor());
 
         // Find and rename the declaration
         ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
-            renameMethodDeclaration(ownerClass, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+            renameMethodDeclaration(ownerClass, mapping.getOldName(), currentDescriptor, mapping.getNewName());
         }
 
         // Update all call sites across all classes
         // Use the CURRENT class name (after class rename) which matches constant pool
         for (ClassFile cf : context.getAllClasses()) {
-            updateMethodCallSites(cf, currentOwner, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+            updateMethodCallSites(cf, currentOwner, mapping.getOldName(), currentDescriptor, mapping.getNewName());
         }
     }
 
@@ -87,11 +90,14 @@ public class MethodRenamer {
         // Get the new class name (after class renaming) for the mapping owner
         String mappedOwner = context.getMappings().getClassMapping(mapping.getOwner());
         String currentOwner = mappedOwner != null ? mappedOwner : mapping.getOwner();
+        // Class renames already rewrote this method's descriptor, so translate the mapping descriptor through
+        // the class mappings before matching it against the live descriptors (see FieldRenamer for details).
+        String currentDescriptor = context.getDescriptorRemapper().remapMethodDescriptor(mapping.getDescriptor());
 
         // Find all classes that have this method (declaration or override)
         // Use the current (possibly renamed) owner name to search hierarchy
         Set<ClassNode> methodClasses = context.getHierarchy().findMethodHierarchy(
-                currentOwner, mapping.getOldName(), mapping.getDescriptor());
+                currentOwner, mapping.getOldName(), currentDescriptor);
 
         // Collect all owner names that need their method renamed
         // These are the CURRENT names (after class rename)
@@ -107,7 +113,7 @@ public class MethodRenamer {
         for (String ownerName : ownerNames) {
             ClassFile cf = context.getClass(ownerName);
             if (cf != null) {
-                renameMethodDeclaration(cf, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+                renameMethodDeclaration(cf, mapping.getOldName(), currentDescriptor, mapping.getNewName());
             }
         }
 
@@ -116,7 +122,7 @@ public class MethodRenamer {
         // which matches what's in the constant pool
         for (ClassFile cf : context.getAllClasses()) {
             for (String ownerName : ownerNames) {
-                updateMethodCallSites(cf, ownerName, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+                updateMethodCallSites(cf, ownerName, mapping.getOldName(), currentDescriptor, mapping.getNewName());
             }
         }
     }

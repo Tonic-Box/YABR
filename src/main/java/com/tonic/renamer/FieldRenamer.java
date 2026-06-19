@@ -53,15 +53,21 @@ public class FieldRenamer {
         String mappedOwner = context.getMappings().getClassMapping(mapping.getOwner());
         String currentOwner = mappedOwner != null ? mappedOwner : mapping.getOwner();
 
+        // Class renames run first and have already rewritten this field's descriptor (e.g. Lab; -> Lclass4;),
+        // so translate the mapping descriptor through the class mappings before matching it against the live
+        // field/access-site descriptors — mirroring the owner translation above. Without this, fields whose
+        // type references a renamed class are never matched and keep their obfuscated names.
+        String currentDescriptor = context.getDescriptorRemapper().remapFieldDescriptor(mapping.getDescriptor());
+
         // Find and rename the declaration
         ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
-            renameFieldDeclaration(ownerClass, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+            renameFieldDeclaration(ownerClass, mapping.getOldName(), currentDescriptor, mapping.getNewName());
         }
 
         // Update all access sites across all classes using the current (possibly renamed) owner
         for (ClassFile cf : context.getAllClasses()) {
-            updateFieldAccessSites(cf, currentOwner, mapping.getOldName(), mapping.getDescriptor(), mapping.getNewName());
+            updateFieldAccessSites(cf, currentOwner, mapping.getOldName(), currentDescriptor, mapping.getNewName());
         }
     }
 

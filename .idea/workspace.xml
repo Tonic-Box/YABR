@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix recompile fidelity: qualified class constants + JDK return types">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- BinaryOpInstruction.swapOperands">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/ir/BinaryOpInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/ir/BinaryOpInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/FieldRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/FieldRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/MethodRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/MethodRenamer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -177,14 +178,6 @@
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
-    <task id="LOCAL-00009" summary="- Fixes to statement recovery">
-      <option name="closed" value="true" />
-      <created>1769234649607</created>
-      <option name="number" value="00009" />
-      <option name="presentableId" value="LOCAL-00009" />
-      <option name="project" value="LOCAL" />
-      <updated>1769234649607</updated>
-    </task>
     <task id="LOCAL-00010" summary="- Fixes to statement recovery p2">
       <option name="closed" value="true" />
       <created>1769236643843</created>
@@ -576,7 +569,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781861892983</updated>
     </task>
-    <option name="localTasksCounter" value="58" />
+    <task id="LOCAL-00058" summary="- BinaryOpInstruction.swapOperands">
+      <option name="closed" value="true" />
+      <created>1781865494202</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1781865494202</updated>
+    </task>
+    <option name="localTasksCounter" value="59" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -591,7 +592,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Stamp bytecode offset onto SSA IR instructions during lifting&#10;- InstructionTranslator records each emitted instruction's originating bytecode offset, enabling data-flow provenance back to source bytecode" />
     <MESSAGE value="Fix decompiler call/array reconstruction&#10;- Don't materialize single-use call results (fixes orphaned re-inlined statements)&#10;- Collapse varargs array packing back into individual arguments (materialized + inline forms)&#10;- Render varargs method parameters as T... instead of T[]&#10;- Fix multidim anewarray: parse array-descriptor element types and emit dimensions in valid order (new int[2][] not new int[][2])" />
     <MESSAGE value="Query API" />
     <MESSAGE value="Query API (Migrated over from JStudio" />
@@ -616,6 +616,7 @@
     <MESSAGE value="CodeWriter.replaceInstructions" />
     <MESSAGE value="Fix unresolved class constants in .class literals, casts, and instanceof&#10;&#10;lowerClass/lowerCast/lowerInstanceOf emitted bare simple names (e.g. Main instead of osrs/dev/Main) for same-package/imported types, causing NoClassDefFoundError at runtime. Resolve the type name through the TypeResolver via a shared helper. Adds ClassLiteralResolutionTest." />
     <MESSAGE value="- Fix recompile fidelity: qualified class constants + JDK return types" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix recompile fidelity: qualified class constants + JDK return types" />
+    <MESSAGE value="- BinaryOpInstruction.swapOperands" />
+    <option name="LAST_COMMIT_MESSAGE" value="- BinaryOpInstruction.swapOperands" />
   </component>
 </project>
