@@ -693,7 +693,10 @@ public class TypeResolver {
             if (!imp.isStatic() && imp.isWildcard()) {
                 String packageName = imp.getName().replace('.', '/');
                 String candidate = packageName + "/" + simpleName;
-                if (classPool.get(candidate) != null) {
+                // classExists (not just classPool.get) so a wildcard-imported JDK type whose module isn't loaded
+                // into the pool - e.g. java.awt.Frame via `import java.awt.*` - still resolves to its FQN instead
+                // of staying a bare simple name (which produces a bad descriptor -> ClassNotFoundException).
+                if (classExists(candidate)) {
                     return candidate;
                 }
             }
@@ -803,8 +806,17 @@ public class TypeResolver {
             return true;
         }
         try {
-            return classPool.loadSystemClass(internalName) != null;
-        } catch (Exception e) {
+            if (classPool.loadSystemClass(internalName) != null) {
+                return true;
+            }
+        } catch (Exception ignored) {
+        }
+        // Modular JDK classes (e.g. java.desktop's java.awt.Frame) aren't readable via getResourceAsStream, so fall
+        // back to reflection, which resolves them regardless of module/resource visibility.
+        try {
+            Class.forName(internalName.replace('/', '.'), false, getClass().getClassLoader());
+            return true;
+        } catch (Throwable ignored) {
             return false;
         }
     }

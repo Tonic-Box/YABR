@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Renamer ordering fix" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix decompile-&gt;recompile fidelity: qualified names + return types">
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/source/lower/FieldTypeResolutionTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -174,14 +178,6 @@
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
-    <task id="LOCAL-00011" summary="- Fixes to statement recovery p2">
-      <option name="closed" value="true" />
-      <created>1769236658926</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1769236658926</updated>
-    </task>
     <task active="true" id="Default" summary="Default task">
       <changelist id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fixes to statement recovery p2" />
       <created>1769502970794</created>
@@ -573,7 +569,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781870381162</updated>
     </task>
-    <option name="localTasksCounter" value="60" />
+    <task id="LOCAL-00060" summary="- Fix decompile-&gt;recompile fidelity: qualified names + return types">
+      <option name="closed" value="true" />
+      <created>1781871841882</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1781871841882</updated>
+    </task>
+    <option name="localTasksCounter" value="61" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -588,7 +592,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Query API" />
     <MESSAGE value="Query API (Migrated over from JStudio" />
     <MESSAGE value="Query API (Migrated over from JStudio)" />
     <MESSAGE value="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets (replaces dead instructionIndex)" />
@@ -613,6 +616,7 @@
     <MESSAGE value="- Fix recompile fidelity: qualified class constants + JDK return types" />
     <MESSAGE value="- BinaryOpInstruction.swapOperands" />
     <MESSAGE value="- Renamer ordering fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Renamer ordering fix" />
+    <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fix decompile-&gt;recompile fidelity: qualified names + return types" />
   </component>
 </project>
