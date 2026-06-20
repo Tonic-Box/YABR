@@ -31,6 +31,12 @@ public class FrameGenerator {
     private final ConstPool constPool;
     private final TypeInference typeInference;
     private int maxStackSlots;
+    // Accumulated handler-entry LOCAL state per handler PC: the merge of the local-variable state over every
+    // instruction in the protected region (an exception may propagate from any of them). visitedStates only records
+    // worklist-target offsets, so the region's interior states are otherwise lost and the handler frame drops live
+    // locals -> "Bad local variable type" at verification.
+    private Map<Integer, TypeState> handlerBaseLocals;
+    private List<int[]> protectedRegions;
 
     /**
      * Constructs a FrameGenerator for the given constant pool.
@@ -197,6 +203,12 @@ public class FrameGenerator {
         maxStackSlots = 0;
         TypeState initialState = TypeState.fromMethodEntry(method, constPool);
 
+        handlerBaseLocals = new HashMap<>();
+        protectedRegions = new ArrayList<>();
+        for (ExceptionTableEntry e : codeAttr.getExceptionTable()) {
+            protectedRegions.add(new int[]{e.getStartPc(), e.getEndPc(), e.getHandlerPc()});
+        }
+
         CodeWriter codeWriter = new CodeWriter(method);
         List<Instruction> instructionList = new ArrayList<>();
         for (Instruction instr : codeWriter.getInstructions()) {
@@ -223,17 +235,16 @@ public class FrameGenerator {
         for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
             int handlerPc = entry.getHandlerPc();
 
-            TypeState baseLocals;
+            // Handler entry locals = the local state merged across the protected region (accumulated during the scan),
+            // merged with any normal-flow reach of the handler PC. Falls back to initialState only if the region was
+            // never reached.
+            TypeState baseLocals = handlerBaseLocals.get(handlerPc);
             if (states.containsKey(handlerPc)) {
-                baseLocals = states.get(handlerPc);
-            } else {
+                baseLocals = (baseLocals == null) ? states.get(handlerPc)
+                        : baseLocals.merge(states.get(handlerPc), constPool);
+            }
+            if (baseLocals == null) {
                 baseLocals = initialState;
-                for (Map.Entry<Integer, TypeState> vs : visitedStates.entrySet()) {
-                    int visitedOffset = vs.getKey();
-                    if (visitedOffset >= entry.getStartPc() && visitedOffset < entry.getEndPc()) {
-                        baseLocals = baseLocals.merge(vs.getValue(), constPool);
-                    }
-                }
             }
 
             TypeState handlerState = createExceptionHandlerState(baseLocals, entry.getCatchType());
@@ -389,6 +400,19 @@ public class FrameGenerator {
 
                 if (i > index && handlerPcSet.contains(instrOffset)) {
                     break;
+                }
+
+                // Before applying this (possibly throwing) instruction, fold its local state into the base of every
+                // handler whose protected region covers it - the handler can be entered with these locals.
+                if (!protectedRegions.isEmpty()) {
+                    for (int[] region : protectedRegions) {
+                        if (instrOffset >= region[0] && instrOffset < region[1]) {
+                            TypeState localsOnly = currentState.clearStack();
+                            TypeState existing = handlerBaseLocals.get(region[2]);
+                            handlerBaseLocals.put(region[2],
+                                    existing == null ? localsOnly : existing.merge(localsOnly, constPool));
+                        }
+                    }
                 }
 
                 try {

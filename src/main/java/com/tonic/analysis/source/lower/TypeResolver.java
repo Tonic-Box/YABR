@@ -557,6 +557,140 @@ public class TypeResolver {
         }
     }
 
+    /**
+     * Resolves the DECLARED descriptor of the best-matching overload of {@code methodName} on {@code ownerClass},
+     * choosing among same-arity candidates by argument-type compatibility (exact descriptor, then primitive/reference
+     * kind). This yields the method's real signature for the emitted invoke descriptor (e.g. Map.put(Object,Object),
+     * not the caller's (String,String)), which the verifier requires. Searches superclass + interfaces. Returns null
+     * when the class or a compatible method is not in the pool, so the caller falls back to the argument types.
+     */
+    public String resolveMethodDescriptor(String ownerClass, String methodName, List<IRType> argTypes) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return null;
+        }
+        String best = null;
+        int bestScore = -1;
+        for (MethodEntry method : cf.getMethods()) {
+            if (!method.getName().equals(methodName)) {
+                continue;
+            }
+            int score = scoreMethodMatch(method, argTypes);
+            if (score > bestScore) {
+                bestScore = score;
+                best = method.getDesc();
+            }
+        }
+        if (best != null) {
+            return best;
+        }
+        String superClass = cf.getSuperClassName();
+        if (superClass != null && !superClass.equals("java/lang/Object")) {
+            String r = resolveMethodDescriptor(superClass, methodName, argTypes);
+            if (r != null) {
+                return r;
+            }
+        }
+        for (int ifaceIdx : cf.getInterfaces()) {
+            String r = resolveMethodDescriptor(cf.resolveClassName(ifaceIdx), methodName, argTypes);
+            if (r != null) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Scores how well {@code method} matches the call argument types: exact descriptor (+2) beats same-kind (+1); any
+     * incompatible parameter disqualifies (-1). A varargs method is also considered in its EXPANDED form (fixed
+     * parameters + the array component repeated for the trailing args), with a small penalty so a non-varargs exact
+     * match wins ties. The exact-arity (direct-array) interpretation of a varargs method only applies when the last
+     * argument is actually an array.
+     */
+    private int scoreMethodMatch(MethodEntry method, List<IRType> argTypes) {
+        List<String> params = splitParamDescriptors(method.getDesc());
+        boolean varargs = (method.getAccess() & 0x0080) != 0
+                && !params.isEmpty() && params.get(params.size() - 1).startsWith("[");
+
+        if (params.size() == argTypes.size()) {
+            boolean lastArgArray = !argTypes.isEmpty()
+                    && argTypes.get(argTypes.size() - 1).getDescriptor().startsWith("[");
+            if (!varargs || lastArgArray) {
+                int s = scoreParamDescriptors(params, argTypes, params.size());
+                if (s >= 0) {
+                    return s;
+                }
+            }
+        }
+
+        if (varargs) {
+            int fixedCount = params.size() - 1;
+            if (argTypes.size() >= fixedCount) {
+                int score = scoreParamDescriptors(params, argTypes, fixedCount);
+                if (score >= 0) {
+                    String component = params.get(params.size() - 1).substring(1);
+                    boolean ok = true;
+                    for (int i = fixedCount; i < argTypes.size(); i++) {
+                        int p = scoreParam(component, argTypes.get(i).getDescriptor());
+                        if (p < 0) {
+                            ok = false;
+                            break;
+                        }
+                        score += p;
+                    }
+                    if (ok) {
+                        return score - 1;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    private int scoreParamDescriptors(List<String> params, List<IRType> argTypes, int count) {
+        int score = 0;
+        for (int i = 0; i < count; i++) {
+            int p = scoreParam(params.get(i), argTypes.get(i).getDescriptor());
+            if (p < 0) {
+                return -1;
+            }
+            score += p;
+        }
+        return score;
+    }
+
+    private static int scoreParam(String paramDesc, String argDesc) {
+        if (paramDesc.equals(argDesc)) {
+            return 2;
+        }
+        return isReferenceDescriptor(paramDesc) == isReferenceDescriptor(argDesc) ? 1 : -1;
+    }
+
+    /** Whether the method with this exact descriptor on the owner (or a supertype) is declared {@code ACC_VARARGS}. */
+    public boolean isVarargsMethod(String ownerClass, String methodName, String descriptor) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return false;
+        }
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getName().equals(methodName) && method.getDesc().equals(descriptor)) {
+                return (method.getAccess() & 0x0080) != 0;
+            }
+        }
+        String superClass = cf.getSuperClassName();
+        if (superClass != null && !superClass.equals("java/lang/Object")) {
+            if (isVarargsMethod(superClass, methodName, descriptor)) {
+                return true;
+            }
+        }
+        for (int ifaceIdx : cf.getInterfaces()) {
+            if (isVarargsMethod(cf.resolveClassName(ifaceIdx), methodName, descriptor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public String resolveMethodDescriptor(String ownerClass, String methodName, int expectedParamCount) {
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {

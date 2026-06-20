@@ -822,19 +822,39 @@ public class ExpressionLowerer {
             }
             loweredArgs.add(lower(arg));
         }
-        args.addAll(loweredArgs);
-
         List<SourceType> argTypes = new ArrayList<>();
+        List<IRType> argIrTypes = new ArrayList<>();
         for (Value arg : loweredArgs) {
             if (arg instanceof SSAValue) {
                 argTypes.add(irTypeToSourceType(arg.getType()));
             } else {
                 argTypes.add(ReferenceSourceType.OBJECT);
             }
+            IRType t = arg.getType();
+            argIrTypes.add(t != null ? t : new ReferenceType("java/lang/Object"));
         }
 
-        SourceType returnType = resolveMethodReturnType(call, ownerClass, argTypes);
-        String descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);
+        // Emit the method's DECLARED descriptor (the verifier resolves invokes by exact descriptor), selecting the
+        // overload by argument types. Only fall back to building one from the lowered arg types when the callee isn't
+        // in the pool - otherwise a subtype/erased argument (e.g. Map.put("k", objVal)) yields a bogus (String,String)
+        // descriptor instead of the real (Object,Object) and fails verification.
+        String declaredDescriptor =
+            ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, call.getMethodName(), argIrTypes);
+
+        // Varargs calls are decompiled as flat trailing arguments; the bytecode invoke needs them packed into the
+        // declared component[] array. Pack here (before adding to the arg list) when the resolved method is varargs.
+        loweredArgs = packVarargsIfNeeded(ownerClass, call.getMethodName(), declaredDescriptor, loweredArgs);
+        args.addAll(loweredArgs);
+
+        SourceType returnType;
+        String descriptor;
+        if (declaredDescriptor != null) {
+            descriptor = declaredDescriptor;
+            returnType = ctx.getTypeResolver().returnTypeFromDescriptor(declaredDescriptor);
+        } else {
+            returnType = resolveMethodReturnType(call, ownerClass, argTypes);
+            descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);
+        }
 
         if (invokeType == InvokeType.VIRTUAL && ctx.getTypeResolver().isInterface(ownerClass)) {
             invokeType = InvokeType.INTERFACE;
@@ -858,11 +878,45 @@ public class ExpressionLowerer {
     }
 
     /**
-     * Resolves the declared parameter types of a callee so that lambda/method-reference arguments
-     * can be target-typed to the functional interface the method expects. Uses the ClassPool
-     * descriptor when available, falling back to a table of common JDK functional-interface
-     * consumers (whose declaring classes are usually not in the pool). Returns null when unknown.
+     * Packs the trailing arguments of a varargs call into a fresh array of the declared component type (the decompiler
+     * renders varargs as flat arguments, but the invoke descriptor's last parameter is an array). Returns the original
+     * list unchanged for non-varargs calls or when an array is already passed explicitly for the varargs parameter.
      */
+    private List<Value> packVarargsIfNeeded(String ownerClass, String methodName, String declaredDescriptor,
+                                            List<Value> loweredArgs) {
+        if (declaredDescriptor == null
+                || !ctx.getTypeResolver().isVarargsMethod(ownerClass, methodName, declaredDescriptor)) {
+            return loweredArgs;
+        }
+        List<SourceType> params = ctx.getTypeResolver().paramTypesFromDescriptor(declaredDescriptor);
+        if (params.isEmpty() || !(params.get(params.size() - 1) instanceof ArraySourceType)) {
+            return loweredArgs;
+        }
+        int fixedCount = params.size() - 1;
+        if (loweredArgs.size() == params.size() && loweredArgs.get(loweredArgs.size() - 1).getType() instanceof ArrayType) {
+            return loweredArgs;   // an explicit array is already supplied for the varargs parameter
+        }
+        if (loweredArgs.size() < fixedCount) {
+            return loweredArgs;
+        }
+        IRType componentType = ((ArraySourceType) params.get(params.size() - 1)).getElementType().toIRType();
+        int count = loweredArgs.size() - fixedCount;
+
+        SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
+        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(sizeVal, IntConstant.of(count)));
+        SSAValue arrayVal = ctx.newValue(new ArrayType(componentType));
+        ctx.getCurrentBlock().addInstruction(new NewArrayInstruction(arrayVal, componentType, List.of(sizeVal)));
+        for (int i = 0; i < count; i++) {
+            SSAValue idx = ctx.newValue(PrimitiveType.INT);
+            ctx.getCurrentBlock().addInstruction(new ConstantInstruction(idx, IntConstant.of(i)));
+            ctx.getCurrentBlock().addInstruction(
+                    ArrayAccessInstruction.createStore(arrayVal, idx, loweredArgs.get(fixedCount + i)));
+        }
+        List<Value> packed = new ArrayList<>(loweredArgs.subList(0, fixedCount));
+        packed.add(arrayVal);
+        return packed;
+    }
+
     private List<SourceType> resolveCalleeParamTypes(String ownerClass, String methodName, int argCount) {
         List<SourceType> jdk = jdkConsumerParamTypes(ownerClass, methodName, argCount);
         if (jdk != null) {

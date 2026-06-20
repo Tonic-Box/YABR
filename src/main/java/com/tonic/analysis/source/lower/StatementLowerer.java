@@ -461,12 +461,26 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(tryBlock);
+        java.util.Map<String, SSAValue> preTryVars = ctx.snapshotVariables();
         int blocksBeforeTryBody = ctx.getIrMethod().getBlocks().size();
         lower(tryCatch.getTryBlock());
         IRBlock tryEnd = ctx.getCurrentBlock();
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(normalExit));
             ctx.getCurrentBlock().addSuccessor(normalExit, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        }
+
+        // Variables reassigned inside the try: an exception can fire before the reassignment, so each handler must see
+        // the PRE-try value. Re-establishing them at catch entry (below) emits a StoreLocal there - a real def that
+        // forces a correct phi at the try/catch -> finally join, instead of a trivial phi that binds to the try's
+        // post-store value (undefined on the exception path -> "Bad local variable type" at verification).
+        java.util.Map<String, SSAValue> postTryVars = ctx.snapshotVariables();
+        java.util.List<String> reassignedInTry = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, SSAValue> e : preTryVars.entrySet()) {
+            SSAValue after = postTryVars.get(e.getKey());
+            if (after != null && after != e.getValue()) {
+                reassignedInTry.add(e.getKey());
+            }
         }
 
         // The protected region is tryBlock plus every block produced while lowering the try body (including a
@@ -494,6 +508,9 @@ public class StatementLowerer {
             // otherwise it leaks onto the operand stack of whatever follows the catch.
             catchBlock.addInstruction(SimpleInstruction.createCatch(exVar));
             ctx.setVariable(exVarName, exVar);
+            for (String name : reassignedInTry) {
+                ctx.setVariable(name, preTryVars.get(name));
+            }
 
             lower(catchClause.body());
             if (ctx.getCurrentBlock().getTerminator() == null) {

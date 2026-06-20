@@ -174,7 +174,7 @@ class BlockMergingTest {
         transform.run(method);
 
         // After merging, remaining block should have all instructions (except goto)
-        assertTrue(method.getBlocks().size() > 0, "Should have at least one block after merging");
+        assertTrue(!method.getBlocks().isEmpty(), "Should have at least one block after merging");
     }
 
     @Test
@@ -187,6 +187,39 @@ class BlockMergingTest {
         boolean changed = transform.run(method);
 
         assertFalse(changed, "Transform should handle single entry block");
+    }
+
+    @Test
+    void doesNotMergeAwayLoopHeaderEntryBlock() {
+        // Regression: a while(true)-style loop whose ENTRY is the loop header. The header has two successors
+        // (loop body + exit), so it is never a merge SOURCE; the body's back-edge gotos the header, making the
+        // header a merge SUCCESSOR with a single predecessor. Merging it would delete the entry block, leaving
+        // entryBlock dangling and the lowered method empty (observed: gamepack methods gutted 117 -> 0 instrs).
+        IRBlock entry = new IRBlock("entry");
+        IRBlock body = new IRBlock("body");
+        IRBlock exit = new IRBlock("exit");
+        method.addBlock(entry);
+        method.addBlock(body);
+        method.addBlock(exit);
+        method.setEntryBlock(entry);
+
+        // entry: loop header with two successors (condition) -> not a merge source
+        entry.addSuccessor(body);
+        entry.addSuccessor(exit);
+
+        // body: real work + back-edge goto to the entry/header
+        SSAValue x = new SSAValue(PrimitiveType.INT);
+        SSAValue r = new SSAValue(PrimitiveType.INT);
+        body.addInstruction(new BinaryOpInstruction(r, BinaryOp.ADD, x, IntConstant.of(1)));
+        body.addInstruction(SimpleInstruction.createGoto(entry));
+        body.addSuccessor(entry);
+
+        transform.run(method);
+
+        assertTrue(method.getBlocks().contains(entry), "loop-header entry block must not be merged away");
+        assertSame(entry, method.getEntryBlock(), "entryBlock must still reference a live block");
+        assertTrue(method.getBlocks().contains(method.getEntryBlock()),
+                "entryBlock must remain in the method's live block list");
     }
 
     @Test

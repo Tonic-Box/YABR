@@ -32,7 +32,7 @@ public class BlockMerging implements IRTransform {
         do {
             merged = false;
             for (IRBlock block : new ArrayList<>(method.getBlocks())) {
-                if (canMergeWithSuccessor(block)) {
+                if (canMergeWithSuccessor(method, block)) {
                     IRBlock successor = getSingleSuccessor(block);
                     if (successor != null) {
                         mergeBlocks(method, block, successor);
@@ -49,7 +49,7 @@ public class BlockMerging implements IRTransform {
     /**
      * Checks if a block can be merged with its successor.
      */
-    private boolean canMergeWithSuccessor(IRBlock block) {
+    private boolean canMergeWithSuccessor(IRMethod method, IRBlock block) {
         Set<IRBlock> successors = block.getSuccessors();
         if (successors.size() != 1) {
             return false;
@@ -58,6 +58,13 @@ public class BlockMerging implements IRTransform {
         IRBlock successor = successors.iterator().next();
 
         if (successor == block) {
+            return false;
+        }
+
+        // The entry block must remain the method's entry — execution begins there. When the entry is a loop
+        // header, its only predecessor can be the back-edge source; merging the entry INTO that predecessor
+        // removes the entry block, leaving entryBlock dangling and the lowered method empty. Never merge it.
+        if (successor == method.getEntryBlock()) {
             return false;
         }
 
@@ -108,9 +115,7 @@ public class BlockMerging implements IRTransform {
             a.addSuccessor(bSucc);
 
             bSucc.getPredecessors().remove(b);
-            if (!bSucc.getPredecessors().contains(a)) {
-                bSucc.getPredecessors().add(a);
-            }
+            bSucc.getPredecessors().add(a);
 
             for (PhiInstruction phi : bSucc.getPhiInstructions()) {
                 Value incoming = phi.getIncoming(b);

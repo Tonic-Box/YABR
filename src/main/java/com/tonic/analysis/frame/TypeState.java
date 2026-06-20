@@ -310,6 +310,13 @@ public final class TypeState {
             newLocals.add(VerificationType.TOP);
         }
 
+        // Storing into slot `index` overwrites the SECOND slot of a two-slot value (long/double) occupying
+        // index-1..index, so that value is no longer valid - mark its first slot TOP. Without this, slot reuse in
+        // long/double-heavy code leaves a corrupt half-long in the frame (StackMapTable "bad type array size").
+        if (index > 0 && newLocals.get(index - 1).isTwoSlot()) {
+            newLocals.set(index - 1, VerificationType.TOP);
+        }
+
         newLocals.set(index, type);
 
         if (type.isTwoSlot() && index + 1 < newLocals.size()) {

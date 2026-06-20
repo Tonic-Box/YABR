@@ -70,29 +70,27 @@ public class RegisterAllocator {
             expireOldIntervals(active, freeRegs, interval.start);
 
             int reg;
-            if (!freeRegs.isEmpty()) {
+            if (interval.value.getType().isTwoSlot()) {
+                // A long/double needs TWO consecutive exclusive slots. Search the full free set for a free (n, n+1)
+                // pair; otherwise grow maxLocals by 2. (Previously this path first grabbed an unrelated single slot
+                // and then re-picked, leaking that slot and miscounting maxLocals -> overlapping long slots like
+                // 11-12 and 12-13 -> "bad type array size" at verification.)
+                int pair = -1;
+                for (int candidate : freeRegs) {
+                    if (freeRegs.contains(candidate + 1)) {
+                        pair = candidate;
+                        break;
+                    }
+                }
+                reg = (pair >= 0) ? pair : maxLocals;
+                freeRegs.remove(reg);
+                freeRegs.remove(reg + 1);
+                maxLocals = Math.max(maxLocals, reg + 2);
+            } else if (!freeRegs.isEmpty()) {
                 reg = freeRegs.iterator().next();
                 freeRegs.remove(reg);
             } else {
                 reg = maxLocals++;
-            }
-
-            if (interval.value.getType().isTwoSlot()) {
-                boolean foundConsecutive = false;
-                for (int candidate : new ArrayList<>(freeRegs)) {
-                    if (freeRegs.contains(candidate + 1)) {
-                        reg = candidate;
-                        foundConsecutive = true;
-                        break;
-                    }
-                }
-                if (!foundConsecutive) {
-                    reg = maxLocals;
-                    maxLocals += 2;
-                }
-                freeRegs.remove(reg);
-                freeRegs.remove(reg + 1);
-                maxLocals = Math.max(maxLocals, reg + 2);
             }
 
             allocation.put(value, reg);
