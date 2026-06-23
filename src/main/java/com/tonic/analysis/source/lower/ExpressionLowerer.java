@@ -44,10 +44,37 @@ public class ExpressionLowerer {
      * @param falseTarget block to branch to if condition is false
      */
     public void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget) {
+        // Logical NOT: branch directly with the targets swapped, rather than materializing the negation
+        // into a boolean value and branching on that (which spills to a temp local and breaks round-tripping).
+        if (condition instanceof UnaryExpr) {
+            UnaryExpr unary = (UnaryExpr) condition;
+            if (unary.getOperator() == UnaryOperator.NOT) {
+                lowerCondition(unary.getOperand(), falseTarget, trueTarget);
+                return;
+            }
+        }
+
         if (condition instanceof BinaryExpr) {
             BinaryExpr bin = (BinaryExpr) condition;
-            if (bin.getOperator().isComparison()) {
+            BinaryOperator op = bin.getOperator();
+            if (op.isComparison()) {
                 lowerComparisonForControlFlow(bin, trueTarget, falseTarget);
+                return;
+            }
+            // Short-circuit && / ||: chain the operands as branches through an intermediate block, instead of
+            // computing the whole expression as a 0/1 value first.
+            if (op == BinaryOperator.AND) {
+                IRBlock evalRight = ctx.createBlock();
+                lowerCondition(bin.getLeft(), evalRight, falseTarget);
+                ctx.setCurrentBlock(evalRight);
+                lowerCondition(bin.getRight(), trueTarget, falseTarget);
+                return;
+            }
+            if (op == BinaryOperator.OR) {
+                IRBlock evalRight = ctx.createBlock();
+                lowerCondition(bin.getLeft(), trueTarget, evalRight);
+                ctx.setCurrentBlock(evalRight);
+                lowerCondition(bin.getRight(), trueTarget, falseTarget);
                 return;
             }
         }

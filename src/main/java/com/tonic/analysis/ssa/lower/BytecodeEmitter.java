@@ -50,6 +50,10 @@ public class BytecodeEmitter {
      */
     private final Set<SSAValue> handlerExceptionCaptures;
 
+    /** Maps each {@code new} to its paired {@code <init>} so the pair emits {@code new; dup; args; invokespecial}. */
+    private final Map<NewInstruction, InvokeInstruction> newToInit;
+    private final Map<InvokeInstruction, NewInstruction> initToNew;
+
     // For fall-through optimization
     private IRBlock nextBlock;
 
@@ -73,6 +77,8 @@ public class BytecodeEmitter {
         this.inlinedConstants = new HashSet<>();
         this.inlinedConstantValue = new HashMap<>();
         this.handlerExceptionCaptures = new HashSet<>();
+        this.newToInit = new HashMap<>();
+        this.initToNew = new HashMap<>();
     }
 
     /**
@@ -87,6 +93,7 @@ public class BytecodeEmitter {
 
         analyzeInlinedConstants();
         analyzeStackResidentValues();
+        analyzeConstructorPairs();
         identifyHandlerExceptionCaptures();
 
         try {
@@ -371,6 +378,16 @@ public class BytecodeEmitter {
             return;
         }
 
+        if (instr instanceof NewInstruction && newToInit.containsKey(instr)) {
+            emitNew((NewInstruction) instr);
+            emit(Opcode.DUP.getCode());
+            return;
+        }
+        if (instr instanceof InvokeInstruction && initToNew.containsKey(instr)) {
+            emitPairedInit((InvokeInstruction) instr);
+            return;
+        }
+
         emitOperandLoads(instr);
 
         if (instr instanceof ConstantInstruction) {
@@ -421,6 +438,70 @@ public class BytecodeEmitter {
         }
 
         emitResultStore(instr);
+    }
+
+    /** Pairs each {@code new} with the same-block {@code <init>} whose receiver is the new's result. */
+    private void analyzeConstructorPairs() {
+        newToInit.clear();
+        initToNew.clear();
+        for (IRBlock block : method.getBlocksInOrder()) {
+            List<IRInstruction> instructions = block.getInstructions();
+            for (int i = 0; i < instructions.size(); i++) {
+                if (!(instructions.get(i) instanceof NewInstruction)) {
+                    continue;
+                }
+                NewInstruction newInstr = (NewInstruction) instructions.get(i);
+                SSAValue result = newInstr.getResult();
+                if (result == null) {
+                    continue;
+                }
+                for (int j = i + 1; j < instructions.size(); j++) {
+                    if (!(instructions.get(j) instanceof InvokeInstruction)) {
+                        continue;
+                    }
+                    InvokeInstruction invoke = (InvokeInstruction) instructions.get(j);
+                    List<Value> ops = invoke.getOperands();
+                    if (invoke.getInvokeType() == InvokeType.SPECIAL && "<init>".equals(invoke.getName())
+                            && !ops.isEmpty() && result.equals(ops.get(0))) {
+                        newToInit.put(newInstr, invoke);
+                        initToNew.put(invoke, newInstr);
+                        // A paired construction stores its result to a local after invokespecial; it must never be
+                        // left stack-resident, or the constructed object lingers on the stack across later branches
+                        // and joins reach inconsistent stack depths (unverifiable). Consumers load it from the local.
+                        stackResidentValues.remove(result);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Emits a paired constructor {@code <init>}: the receiver is already on the stack (from {@code new; dup}), so only
+     * the constructor arguments are loaded; after {@code invokespecial} the initialized reference is stored as the
+     * paired {@code new}'s result.
+     */
+    private void emitPairedInit(InvokeInstruction instr) throws IOException {
+        List<Value> operands = instr.getOperands();
+        for (int i = 1; i < operands.size(); i++) {
+            Value operand = operands.get(i);
+            if (operand instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) operand;
+                if (inlinedConstants.contains(ssa)) {
+                    emitConstantValue(inlinedConstantValue.get(ssa));
+                } else if (!stackResidentValues.contains(ssa)) {
+                    emitLoadValue(ssa);
+                }
+            } else if (operand instanceof Constant) {
+                emitConstantValue((Constant) operand);
+            }
+        }
+        emitInvoke(instr);
+
+        SSAValue result = initToNew.get(instr).getResult();
+        if (result != null && !stackResidentValues.contains(result)) {
+            emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), regAlloc.getRegister(result));
+        }
     }
 
     private void emitOperandLoads(IRInstruction instr) throws IOException {
