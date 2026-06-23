@@ -1,9 +1,11 @@
 package com.tonic.analysis.ssa.transform;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
+import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +67,33 @@ class RedundantCopyEliminationTest {
 
         assertTrue(changed);
         assertTrue(entry.getInstructions().size() < initialInstructionCount);
+    }
+
+    @Test
+    void preservesHandlerExceptionCaptureMarker() {
+        // The leading self-copy of a handler block is the caught-exception capture marker: the lowerer
+        // turns it into the astore that stores the JVM-pushed exception off the entry stack into its local.
+        // It IS an identity copy, but removing it as a no-op drops that astore and corrupts the handler
+        // (the exception is never stored; later loads read a stale slot). Must be preserved.
+        IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
+        IRBlock entry = new IRBlock("entry");
+        IRBlock handler = new IRBlock("handler");
+        method.addBlock(entry);
+        method.addBlock(handler);
+        method.setEntryBlock(entry);
+
+        SSAValue exc = new SSAValue(ReferenceType.THROWABLE, "exc_handler");
+        CopyInstruction marker = new CopyInstruction(exc, exc);
+        handler.addInstruction(marker);
+        SSAValue v = new SSAValue(PrimitiveType.INT);
+        handler.addInstruction(new ConstantInstruction(v, new IntConstant(1)));
+
+        method.addExceptionHandler(new ExceptionHandler(entry, entry, handler, null));
+
+        transform.run(method);
+
+        assertTrue(handler.getInstructions().contains(marker),
+                "handler exception-capture marker (leading self-copy) must be preserved, not removed as a no-op");
     }
 
     @Test

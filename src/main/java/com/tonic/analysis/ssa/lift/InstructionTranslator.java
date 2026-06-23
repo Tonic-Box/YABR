@@ -357,6 +357,18 @@ public class InstructionTranslator {
 
     private void translateALoad(int index, AbstractState state, IRBlock block) {
         Value local = state.getLocal(index);
+        // A caught-exception value (named "exc_<handler>", seeded onto the handler's entry stack) is a
+        // free-standing SSA value captured at handler entry into its OWN register by the capture marker — it
+        // is not tied to this local's index slot. Forward it directly instead of emitting a LoadLocal that
+        // would read the (separately allocated) local-index slot: otherwise the capture register and the load
+        // slot diverge and the handler body reads an unwritten slot (a corrupt, un-decompilable handler).
+        // Reassigning the local makes its current value no longer the exception, so normal loads are
+        // unaffected — only a direct re-load of the still-live caught exception is forwarded.
+        if (local instanceof SSAValue && ((SSAValue) local).getName() != null
+                && ((SSAValue) local).getName().startsWith("exc_")) {
+            state.push(local);
+            return;
+        }
         IRType type = (local != null && local.getType() instanceof ReferenceType)
                       ? local.getType() : ReferenceType.OBJECT;
         SSAValue result = new SSAValue(type);

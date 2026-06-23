@@ -94,13 +94,24 @@ public class IRMethod {
             block.removeSuccessor(succ);
         }
 
-        exceptionHandlers.removeIf(h ->
-            h.getHandlerBlock() == block || h.getTryStart() == block);
+        // Keep exception handlers consistent with the CFG: a removed block LEAVES the protected region
+        // (shrink tryBlocks) rather than leaving a stale reference that the lowerer would later drop,
+        // collapsing the try range. tryStart/tryEnd are nulled but the handler survives as long as its
+        // region (tryBlocks) is non-empty — losing tryStart must not delete a still-protected region.
         for (ExceptionHandler h : exceptionHandlers) {
+            if (h.getTryBlocks() != null) {
+                h.getTryBlocks().remove(block);
+            }
+            if (h.getTryStart() == block) {
+                h.setTryStart(null);
+            }
             if (h.getTryEnd() == block) {
                 h.setTryEnd(null);
             }
         }
+        // Drop a handler only when its catch target is gone or its protected region is now empty.
+        exceptionHandlers.removeIf(h -> h.getHandlerBlock() == block
+                || (h.getTryBlocks() != null ? h.getTryBlocks().isEmpty() : h.getTryStart() == null));
     }
 
     /**

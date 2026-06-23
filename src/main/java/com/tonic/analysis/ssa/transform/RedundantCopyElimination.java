@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.transform;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -45,11 +46,21 @@ public class RedundantCopyElimination implements IRTransform {
     private boolean removeIdentityCopies(IRMethod method) {
         boolean changed = false;
 
+        // The leading self-copy of a handler block is the caught-exception capture marker: the lowerer
+        // (BytecodeEmitter.identifyHandlerExceptionCaptures) turns it into the astore that stores the
+        // JVM-pushed exception off the handler's entry stack into its local. It is an identity copy by
+        // construction, so it must be excluded here — removing it as a no-op drops the astore and corrupts
+        // the handler (the exception is never stored; later loads of that local read a stale slot).
+        Set<IRInstruction> exceptionCaptureMarkers = handlerExceptionCaptureMarkers(method);
+
         for (IRBlock block : method.getBlocks()) {
             List<IRInstruction> toRemove = new ArrayList<>();
 
             for (IRInstruction instr : block.getInstructions()) {
                 if (instr instanceof CopyInstruction) {
+                    if (exceptionCaptureMarkers.contains(instr)) {
+                        continue;
+                    }
                     CopyInstruction copy = (CopyInstruction) instr;
                     Value source = copy.getSource();
                     SSAValue result = copy.getResult();
@@ -72,6 +83,30 @@ public class RedundantCopyElimination implements IRTransform {
         }
 
         return changed;
+    }
+
+    /**
+     * The caught-exception capture markers of {@code method}: the leading self-copy of each handler block,
+     * which the lowerer turns into the astore that stores the on-stack exception into its local. Identified
+     * exactly as {@code BytecodeEmitter.identifyHandlerExceptionCaptures} does (first instruction, a
+     * CopyInstruction whose source IS its result) so the two passes agree on which copies are critical.
+     */
+    private static Set<IRInstruction> handlerExceptionCaptureMarkers(IRMethod method) {
+        Set<IRInstruction> markers = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (ExceptionHandler handler : method.getExceptionHandlers()) {
+            IRBlock handlerBlock = handler.getHandlerBlock();
+            if (handlerBlock == null || handlerBlock.getInstructions().isEmpty()) {
+                continue;
+            }
+            IRInstruction first = handlerBlock.getInstructions().get(0);
+            if (first instanceof CopyInstruction) {
+                CopyInstruction copy = (CopyInstruction) first;
+                if (copy.getResult() != null && copy.getSource() == copy.getResult()) {
+                    markers.add(first);
+                }
+            }
+        }
+        return markers;
     }
 
     /**
@@ -240,9 +275,7 @@ public class RedundantCopyElimination implements IRTransform {
         if (instr instanceof SimpleInstruction) {
             SimpleInstruction simple = (SimpleInstruction) instr;
             SimpleOp op = simple.getOp();
-            if (op == SimpleOp.MONITORENTER || op == SimpleOp.MONITOREXIT) {
-                return true;
-            }
+            return op == SimpleOp.MONITORENTER || op == SimpleOp.MONITOREXIT;
         }
         return false;
     }

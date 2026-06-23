@@ -221,6 +221,7 @@ boolean endsWithReturn = cw.endsWithReturn();
 
 // Write changes
 cw.write();
+cw.writeWithoutMaxStack();   // serialize without the CFG max_stack pass (provisional bound only)
 
 // Frame computation
 cw.computeFrames();
@@ -489,6 +490,11 @@ under-counts; an existing larger value is left as-is). To force it explicitly:
 ```java
 int maxStack = codeWriter.computeMaxStack();   // CFG-correct; updates the CodeAttribute
 ```
+
+When a caller makes many edits across several passes and recomputes frames or `max_stack` once at the end,
+`writeWithoutMaxStack()` serializes the relinked instructions without the per-write CFG max_stack pass. It sets a
+provisional `max_stack`/`max_locals` from a linear scan only, so the final `computeFrames()` or `computeMaxStack()`
+must still run before the class is used.
 
 ---
 

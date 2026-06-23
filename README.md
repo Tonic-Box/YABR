@@ -61,6 +61,7 @@ byte[] bytes = newClass.write();
 | [SDG API](docs/sdg-api.md) | Interprocedural System Dependence Graph |
 | [CPG API](docs/cpg-api.md) | Code Property Graph with taint analysis |
 | [Query API](docs/query-api.md) | Composable query language for searching bytecode |
+| [Abstract Execution API](docs/abstract-execution-api.md) | Operand-stack and local def-use over raw bytecode |
 | [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
 | [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |

@@ -6,9 +6,7 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.constpool.*;
-import com.tonic.renamer.exception.RenameException;
 import com.tonic.renamer.hierarchy.ClassHierarchy;
-import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 import com.tonic.renamer.mapping.ClassMapping;
 import com.tonic.renamer.mapping.FieldMapping;
 import com.tonic.renamer.mapping.MappingStore;
@@ -63,6 +61,46 @@ class RenamerTest {
                 .filter(m -> m.getName().equals(name) && m.getDesc().equals(desc))
                 .findFirst()
                 .orElse(null);
+    }
+
+    /** True if the class's constant pool contains a FieldRefItem with the given owner, name and descriptor. */
+    private boolean hasFieldRef(ClassFile cf, String owner, String name, String desc) {
+        ConstPool cp = cf.getConstPool();
+        for (int i = 1; i < cp.getItems().size(); i++) {
+            Item<?> item = cp.getItems().get(i);
+            if (!(item instanceof FieldRefItem)) {
+                continue;
+            }
+            FieldRefItem ref = (FieldRefItem) item;
+            ClassRefItem classRef = (ClassRefItem) cp.getItem(ref.getValue().getClassIndex());
+            Utf8Item ownerUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
+            NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(ref.getValue().getNameAndTypeIndex());
+            nat.setConstPool(cp);
+            if (ownerUtf8.getValue().equals(owner) && nat.getName().equals(name) && nat.getDescriptor().equals(desc)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True if the class's constant pool contains a MethodRefItem with the given owner, name and descriptor. */
+    private boolean hasMethodRef(ClassFile cf, String owner, String name, String desc) {
+        ConstPool cp = cf.getConstPool();
+        for (int i = 1; i < cp.getItems().size(); i++) {
+            Item<?> item = cp.getItems().get(i);
+            if (!(item instanceof MethodRefItem)) {
+                continue;
+            }
+            MethodRefItem ref = (MethodRefItem) item;
+            ClassRefItem classRef = (ClassRefItem) cp.getItem(ref.getValue().getClassIndex());
+            Utf8Item ownerUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
+            NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(ref.getValue().getNameAndTypeIndex());
+            nat.setConstPool(cp);
+            if (ownerUtf8.getValue().equals(owner) && nat.getName().equals(name) && nat.getDescriptor().equals(desc)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Nested
@@ -664,6 +702,54 @@ class RenamerTest {
         }
 
         @Test
+        void renamesInheritedFieldRefOwnedBySubclass() throws IOException {
+            // An access to an INHERITED field names the receiver's static type (the subclass) as the ref owner:
+            // `subValue.f` where f is declared in Base emits a Fieldref `Sub.f`. Renaming Base.f must also update
+            // that subclass-owned ref, otherwise it dangles on the old name — the bug that left `class81.do:[I`
+            // pointing at a no-longer-existent `do` (a Java keyword) after the field was renamed in its declarer.
+            int access = new AccessBuilder().setPublic().build();
+            ClassFile base = pool.createNewClass("com/test/Base", access);
+            base.createNewField(access, "oldField", "[I", Collections.emptyList());
+
+            ClassFile child = pool.createNewClass("com/test/Child", access);
+            child.setSuperClassName("com/test/Base");
+            ConstPool cp = child.getConstPool();
+            cp.findOrAddFieldRef("com/test/Child", "oldField", "[I");
+
+            Renamer renamer = new Renamer(pool);
+            renamer.mapField("com/test/Base", "oldField", "[I", "newField");
+            renamer.applyUnsafe();
+
+            assertNotNull(findField(base, "newField"), "declaration should be renamed");
+            assertFalse(hasFieldRef(child, "com/test/Child", "oldField", "[I"),
+                    "subclass-owned ref to the inherited field must no longer carry the old name");
+            assertTrue(hasFieldRef(child, "com/test/Child", "newField", "[I"),
+                    "subclass-owned ref must be updated to the new name");
+        }
+
+        @Test
+        void doesNotRenameSubclassFieldRefWhenSubclassHidesField() throws IOException {
+            // If the subclass HIDES the field with its own declaration of the same name/descriptor, its
+            // self-owned ref resolves to ITS field, not Base's — renaming only Base.oldField must leave it alone.
+            int access = new AccessBuilder().setPublic().build();
+            ClassFile base = pool.createNewClass("com/test/Base2", access);
+            base.createNewField(access, "oldField", "[I", Collections.emptyList());
+
+            ClassFile child = pool.createNewClass("com/test/Child2", access);
+            child.setSuperClassName("com/test/Base2");
+            child.createNewField(access, "oldField", "[I", Collections.emptyList());
+            ConstPool cp = child.getConstPool();
+            cp.findOrAddFieldRef("com/test/Child2", "oldField", "[I");
+
+            Renamer renamer = new Renamer(pool);
+            renamer.mapField("com/test/Base2", "oldField", "[I", "newField");
+            renamer.applyUnsafe();
+
+            assertTrue(hasFieldRef(child, "com/test/Child2", "oldField", "[I"),
+                    "a subclass that hides the field keeps its own ref unchanged");
+        }
+
+        @Test
         void renamesFieldWithShadowing() throws IOException {
             int access = new AccessBuilder().setPublic().build();
             ClassFile parent = pool.createNewClass("com/test/Parent", access);
@@ -872,6 +958,54 @@ class RenamerTest {
 
             assertNotNull(findMethod(target, "newMethod"));
             assertNull(findMethod(target, "oldMethod"));
+        }
+
+        @Test
+        void renamesInheritedMethodRefOwnedBySubclass() throws IOException {
+            // A virtual call to an INHERITED method names the receiver's static type (the subclass) as the ref
+            // owner: `this.m()` in Child, where m is declared in Base, emits a Methodref `Child.m`. Renaming
+            // Base.m must also update that subclass-owned ref, otherwise it dangles on the old name (the bug
+            // that left `class104.do:(I)V` pointing at a no-longer-existent `do` after `class86.do`→method954).
+            int access = new AccessBuilder().setPublic().build();
+            ClassFile base = pool.createNewClass("com/test/Base", access);
+            base.createNewMethodWithDescriptor(access, "oldMethod", "(I)V");
+
+            ClassFile child = pool.createNewClass("com/test/Child", access);
+            child.setSuperClassName("com/test/Base");
+            ConstPool cp = child.getConstPool();
+            cp.findOrAddMethodRef("com/test/Child", "oldMethod", "(I)V");
+
+            Renamer renamer = new Renamer(pool);
+            renamer.mapMethod("com/test/Base", "oldMethod", "(I)V", "newMethod");
+            renamer.applyUnsafe();
+
+            assertNotNull(findMethod(base, "newMethod"), "declaration should be renamed");
+            assertFalse(hasMethodRef(child, "com/test/Child", "oldMethod", "(I)V"),
+                    "subclass-owned ref to the inherited method must no longer carry the old name");
+            assertTrue(hasMethodRef(child, "com/test/Child", "newMethod", "(I)V"),
+                    "subclass-owned ref must be updated to the new name");
+        }
+
+        @Test
+        void doesNotRenameSubclassRefWhenSubclassRedeclaresMethod() throws IOException {
+            // If the subclass DECLARES its own method of the same name/descriptor, its self-owned ref resolves
+            // to ITS declaration, not Base's — renaming only Base.oldMethod must leave the Child's ref untouched.
+            int access = new AccessBuilder().setPublic().build();
+            ClassFile base = pool.createNewClass("com/test/Base2", access);
+            base.createNewMethodWithDescriptor(access, "oldMethod", "(I)V");
+
+            ClassFile child = pool.createNewClass("com/test/Child2", access);
+            child.setSuperClassName("com/test/Base2");
+            child.createNewMethodWithDescriptor(access, "oldMethod", "(I)V");
+            ConstPool cp = child.getConstPool();
+            cp.findOrAddMethodRef("com/test/Child2", "oldMethod", "(I)V");
+
+            Renamer renamer = new Renamer(pool);
+            renamer.mapMethod("com/test/Base2", "oldMethod", "(I)V", "newMethod");
+            renamer.applyUnsafe();
+
+            assertTrue(hasMethodRef(child, "com/test/Child2", "oldMethod", "(I)V"),
+                    "a subclass that redeclares the method keeps its own ref unchanged");
         }
 
         @Test

@@ -1,7 +1,10 @@
 package com.tonic.analysis.ssa.transform;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import java.util.HashSet;
+import java.util.Set;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.IntConstant;
@@ -174,7 +177,7 @@ class BlockMergingTest {
         transform.run(method);
 
         // After merging, remaining block should have all instructions (except goto)
-        assertTrue(!method.getBlocks().isEmpty(), "Should have at least one block after merging");
+        assertFalse(method.getBlocks().isEmpty(), "Should have at least one block after merging");
     }
 
     @Test
@@ -220,6 +223,39 @@ class BlockMergingTest {
         assertSame(entry, method.getEntryBlock(), "entryBlock must still reference a live block");
         assertTrue(method.getBlocks().contains(method.getEntryBlock()),
                 "entryBlock must remain in the method's live block list");
+    }
+
+    @Test
+    void doesNotMergeAcrossExceptionRegionBoundary() {
+        // entry -> body -> after, where a handler protects ONLY body. Merging body (inside the try) with
+        // entry or after (outside) would create a block that is partly protected — inexpressible in the
+        // exception table and the cause of the gamepack synchronized-body coverage collapse. Must not merge.
+        IRBlock entry = new IRBlock("entry");
+        IRBlock body = new IRBlock("body");
+        IRBlock after = new IRBlock("after");
+        IRBlock handler = new IRBlock("handler");
+        method.addBlock(entry);
+        method.addBlock(body);
+        method.addBlock(after);
+        method.addBlock(handler);
+        method.setEntryBlock(entry);
+
+        entry.addInstruction(SimpleInstruction.createGoto(body));
+        entry.addSuccessor(body);
+        body.addInstruction(SimpleInstruction.createGoto(after));
+        body.addSuccessor(after);
+
+        Set<IRBlock> tryBlocks = new HashSet<>();
+        tryBlocks.add(body);
+        ExceptionHandler h = new ExceptionHandler(body, body, handler, null);
+        h.setTryBlocks(tryBlocks);
+        method.addExceptionHandler(h);
+
+        transform.run(method);
+
+        assertTrue(method.getBlocks().contains(body), "protected block must not be merged across the region boundary");
+        assertTrue(h.getTryBlocks().contains(body), "the protected region must still contain its block");
+        assertTrue(method.getExceptionHandlers().contains(h), "the handler must survive");
     }
 
     @Test

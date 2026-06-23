@@ -4,16 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Fix decompile→recompile type fidelity&#10;&#10;Resolve ctor/method/field/array/generic types via TypeResolver, not raw AST types (fixes Frame NoClassDefFound + more); emit acmp for reference ==/!=; run structured finally bodies. Add recompile-verify sweep test.">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Fix decompile→recompile type fidelity">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/frame/TypeState.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/analysis-apis.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/analysis-apis.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/bytecode-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/bytecode-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/SSA.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/SSA.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/RedundantCopyElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/analysis/ssa/transform/RedundantCopyElimination.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/FieldRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/FieldRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/MethodRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tonic/renamer/MethodRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/cfg/IRMethodTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/cfg/IRMethodTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/BlockMergingTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/BlockMergingTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/RedundantCopyEliminationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/analysis/ssa/transform/RedundantCopyEliminationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/tonic/renamer/RenamerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/tonic/renamer/RenamerTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -190,14 +199,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00016" summary="- Fix decompiler artifacts on flat methods and lambdas">
-      <option name="closed" value="true" />
-      <created>1780324196792</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1780324196792</updated>
     </task>
     <task id="LOCAL-00017" summary="- Fix variable fragmentation across exception edges and read-modify-write">
       <option name="closed" value="true" />
@@ -583,7 +584,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781899347767</updated>
     </task>
-    <option name="localTasksCounter" value="65" />
+    <task id="LOCAL-00065" summary="Fix decompile→recompile type fidelity">
+      <option name="closed" value="true" />
+      <created>1781942505771</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1781942505771</updated>
+    </task>
+    <option name="localTasksCounter" value="66" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -598,7 +607,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps" />
     <MESSAGE value="- Add field and class declaration spans to decompiler" />
     <MESSAGE value="- Map inlined lambda bodies under their own line-map key" />
     <MESSAGE value="Fix recompiler VerifyErrors and decompiler structural recovery&#10;&#10;Recompiler (source -&gt; verifiable bytecode):&#10;- switch, try/catch frames + exception table, nested try (multi-run table)&#10;- long/double increment, try/catch value continuation (SSA), caught-exception type resolution for chained calls&#10;&#10;Decompiler structural recovery:&#10;- reconstruct synchronized blocks from the monitor pattern&#10;- coalesce multi-catch into one clause; drop the redundant outer try&#10;- structural finally-gap recovery (handles a return inside finally)&#10;- reconstruct String switch from the hashCode/equals two-phase form&#10;&#10;Adds RecompileVerifyTest and StructuralRecoveryReconstructionTest." />
@@ -623,6 +631,7 @@
     <MESSAGE value="- CodeWriter::removeInstruction" />
     <MESSAGE value="- ASTLowerer ordering fix" />
     <MESSAGE value="Fix decompile→recompile type fidelity&#10;&#10;Resolve ctor/method/field/array/generic types via TypeResolver, not raw AST types (fixes Frame NoClassDefFound + more); emit acmp for reference ==/!=; run structured finally bodies. Add recompile-verify sweep test." />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix decompile→recompile type fidelity&#10;&#10;Resolve ctor/method/field/array/generic types via TypeResolver, not raw AST types (fixes Frame NoClassDefFound + more); emit acmp for reference ==/!=; run structured finally bodies. Add recompile-verify sweep test." />
+    <MESSAGE value="Fix decompile→recompile type fidelity" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix decompile→recompile type fidelity" />
   </component>
 </project>

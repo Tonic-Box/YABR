@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.transform;
 
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -68,6 +69,14 @@ public class BlockMerging implements IRTransform {
             return false;
         }
 
+        // Do not merge across an exception-region boundary. The merged block would be partly inside and
+        // partly outside a try region, which the exception table cannot express (a block is protected or it
+        // isn't). Also never merge a handler block away (it is the catch target). Only merge when both
+        // blocks belong to exactly the same set of protected regions.
+        if (!sameExceptionRegions(method, block, successor)) {
+            return false;
+        }
+
         if (successor.getPredecessors().size() != 1) {
             return false;
         }
@@ -84,6 +93,25 @@ public class BlockMerging implements IRTransform {
             }
         }
         return false;
+    }
+
+    /**
+     * True when blocks {@code a} and {@code b} belong to exactly the same set of protected (try) regions and
+     * neither is a handler block — the precondition for merging them without breaking an exception range.
+     */
+    private static boolean sameExceptionRegions(IRMethod method, IRBlock a, IRBlock b) {
+        for (ExceptionHandler h : method.getExceptionHandlers()) {
+            if (h.getHandlerBlock() == a || h.getHandlerBlock() == b) {
+                return false;
+            }
+            Set<IRBlock> region = h.getTryBlocks();
+            boolean aIn = region != null && region.contains(a);
+            boolean bIn = region != null && region.contains(b);
+            if (aIn != bIn) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

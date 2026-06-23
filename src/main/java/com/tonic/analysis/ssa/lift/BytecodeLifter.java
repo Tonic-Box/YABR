@@ -420,6 +420,63 @@ public class BytecodeLifter {
         }
     }
 
+    /**
+     * Adds an exception edge from every protected (try) block to its handler block, returning the edges added
+     * (caller → handler pairs) so they can be removed again with {@link #removeExceptionEdges}.
+     *
+     * <p>These edges are a transient scaffold for SSA construction only. Without them a handler is unreachable
+     * from the entry, so it is absent from the dominator tree: {@code PhiInserter} never places phis there and
+     * {@code VariableRenamer} never visits it, leaving the handler's {@code LoadLocal} placeholders for locals
+     * live across the exception edge (method params like {@code this}, and try-body definitions) unrenamed —
+     * the lowerer then allocates them stale registers and the handler reads slots that are never written.
+     * Modelling the edge (an exception may transfer control from any protected block to the handler) lets
+     * standard SSA construction merge those locals into the handler's entry via phis.
+     *
+     * <p>The edges are added only around phi-insertion + renaming and then removed: callers that walk the CFG
+     * for normal control flow (e.g. the source-recovery decompiler's statement reconstruction) must not see
+     * them, and the lowered exception table is rebuilt from {@code ExceptionHandler.tryBlocks}, not these
+     * edges. The operand stack is untouched — the handler entry already holds just the caught exception and
+     * renaming only resolves locals.
+     *
+     * @param irMethod the method whose handler blocks to connect
+     * @return the list of (fromBlock, handlerBlock) edges that were actually added
+     */
+    public static List<IRBlock[]> addExceptionEdges(IRMethod irMethod) {
+        List<IRBlock[]> added = new ArrayList<>();
+        for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {
+            IRBlock handlerBlock = handler.getHandlerBlock();
+            if (handlerBlock == null) {
+                continue;
+            }
+            Set<IRBlock> tryBlocks = handler.getTryBlocks();
+            if (tryBlocks == null || tryBlocks.isEmpty()) {
+                continue;
+            }
+            for (IRBlock tryBlock : tryBlocks) {
+                if (tryBlock != null && tryBlock != handlerBlock
+                        && !tryBlock.getSuccessors().contains(handlerBlock)) {
+                    tryBlock.addSuccessor(handlerBlock, EdgeType.EXCEPTION);
+                    added.add(new IRBlock[]{tryBlock, handlerBlock});
+                }
+            }
+        }
+        return added;
+    }
+
+    /**
+     * Removes the transient exception edges added by {@link #addExceptionEdges} once SSA local renaming is
+     * complete, so the final CFG carries only real control-flow edges. Each removed edge is the exact
+     * (fromBlock, handlerBlock) pair that was added, so a handler that legitimately is also a normal successor
+     * of a block keeps that normal edge.
+     *
+     * @param addedEdges the edges returned by {@link #addExceptionEdges}
+     */
+    public static void removeExceptionEdges(List<IRBlock[]> addedEdges) {
+        for (IRBlock[] edge : addedEdges) {
+            edge[0].removeSuccessor(edge[1]);
+        }
+    }
+
     private void initializeState(AbstractState state, IRMethod irMethod) {
         int localIndex = 0;
         for (SSAValue param : irMethod.getParameters()) {

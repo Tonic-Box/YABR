@@ -2,10 +2,8 @@ package com.tonic.analysis.ssa.cfg;
 
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -16,7 +14,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -167,6 +167,51 @@ class IRMethodTest {
         method.addExceptionHandler(eh);
 
         assertEquals(1, method.getExceptionHandlers().size());
+    }
+
+    @Test
+    void removeBlockShrinksProtectedRegionAndKeepsHandlerUntilEmpty() {
+        // Regression: removing a block from a try region must shrink tryBlocks (not leave a stale ref that
+        // the lowerer silently drops, collapsing the range), and must NOT delete the handler while the region
+        // still has protected blocks — only when the catch target is gone or the region is empty.
+        IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
+        IRBlock b1 = new IRBlock("b1");
+        IRBlock b2 = new IRBlock("b2");
+        IRBlock handler = new IRBlock("handler");
+        method.addBlock(b1);
+        method.addBlock(b2);
+        method.addBlock(handler);
+        ExceptionHandler eh = new ExceptionHandler(b1, b2, handler, null);
+        Set<IRBlock> region = new HashSet<>();
+        region.add(b1);
+        region.add(b2);
+        eh.setTryBlocks(region);
+        method.addExceptionHandler(eh);
+
+        method.removeBlock(b1); // b1 was tryStart and a protected block
+        assertTrue(method.getExceptionHandlers().contains(eh), "handler survives while region is non-empty");
+        assertFalse(eh.getTryBlocks().contains(b1), "removed block leaves the protected region");
+        assertTrue(eh.getTryBlocks().contains(b2), "remaining protected block stays in the region");
+
+        method.removeBlock(b2); // region now empty
+        assertFalse(method.getExceptionHandlers().contains(eh), "handler dropped once its region empties");
+    }
+
+    @Test
+    void removeHandlerBlockDropsHandler() {
+        IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
+        IRBlock body = new IRBlock("body");
+        IRBlock handler = new IRBlock("handler");
+        method.addBlock(body);
+        method.addBlock(handler);
+        ExceptionHandler eh = new ExceptionHandler(body, body, handler, null);
+        Set<IRBlock> region = new HashSet<>();
+        region.add(body);
+        eh.setTryBlocks(region);
+        method.addExceptionHandler(eh);
+
+        method.removeBlock(handler);
+        assertFalse(method.getExceptionHandlers().contains(eh), "handler dropped when its catch target is removed");
     }
 
     // ========== Block Traversal Tests ==========

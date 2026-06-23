@@ -1,6 +1,7 @@
 package com.tonic.analysis.ssa;
 
 import com.tonic.analysis.ssa.analysis.*;
+import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.lift.*;
 import com.tonic.analysis.ssa.lower.BytecodeLowerer;
@@ -31,6 +32,7 @@ public class SSA {
     private final ConstPool constPool;
     private final List<IRTransform> transforms;
     private final List<ClassTransform> classTransforms;
+    private boolean resolveExceptionLocals = false;
 
     /**
      * Creates a new SSA processor.
@@ -44,6 +46,23 @@ public class SSA {
     }
 
     /**
+     * Enables exception-local resolution during lifting: protected blocks are temporarily connected to their
+     * handlers so phi insertion + renaming propagate locals live across the exception edge (params, try-body
+     * defs) into the handler, then the edges are removed. This is needed when the IR is lowered back to
+     * bytecode (e.g. deobfuscation) so a handler that uses such a local does not read a never-written slot.
+     *
+     * <p>It is OFF by default because it adds handler phis that change control-flow shape, which the
+     * source-recovery decompiler's finally/try-catch reconstruction is sensitive to. Opt in only on paths that
+     * lift→optimize→lower.
+     *
+     * @return this for fluent chaining
+     */
+    public SSA withExceptionLocalResolution() {
+        this.resolveExceptionLocals = true;
+        return this;
+    }
+
+    /**
      * Lifts a method from bytecode to SSA-form IR.
      *
      * @param method the method to lift
@@ -54,6 +73,15 @@ public class SSA {
         IRMethod irMethod = lifter.lift(method);
 
         if (irMethod.getEntryBlock() != null) {
+            // Connect protected blocks to their handlers ONLY for SSA construction (opt-in): this makes handlers
+            // reachable in the dominator tree so phi insertion + renaming propagate locals that are live across
+            // the exception edge (params and try-body defs) into the handler. The edges are removed below so the
+            // final CFG carries only real control flow, and the exception table is rebuilt from
+            // ExceptionHandler.tryBlocks regardless. Gated by withExceptionLocalResolution() because the handler
+            // phis it introduces change control-flow shape that the source decompiler's finally recovery rejects.
+            java.util.List<IRBlock[]> exceptionEdges =
+                    resolveExceptionLocals ? BytecodeLifter.addExceptionEdges(irMethod) : null;
+
             DominatorTree domTree = new DominatorTree(irMethod);
             domTree.compute();
 
@@ -64,6 +92,10 @@ public class SSA {
             renamer.rename(irMethod);
 
             BytecodeLifter.refinePhiTypes(irMethod);
+
+            if (exceptionEdges != null) {
+                BytecodeLifter.removeExceptionEdges(exceptionEdges);
+            }
         }
 
         return irMethod;

@@ -1628,6 +1628,17 @@ public class CodeWriter {
     }
 
     /**
+     * Serializes the (already-relinked) instructions back to the method WITHOUT the dataflow max-stack pass.
+     * For callers that make many edits across passes and recompute frames/max-stack once at the end (e.g. a
+     * deferred {@code computeFrames}); avoids paying the per-write {@link #computeMaxStack} dataflow. Uses the
+     * cheap linear {@link #analyze()} for a provisional max-stack/locals bound only.
+     */
+    public void writeWithoutMaxStack() {
+        analyze();
+        rebuildBytecode();
+    }
+
+    /**
      * Checks if the CodeAttribute has a valid StackMapTable.
      *
      * @return true if a StackMapTable exists with frames

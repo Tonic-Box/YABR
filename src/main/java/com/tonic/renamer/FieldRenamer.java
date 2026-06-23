@@ -9,9 +9,13 @@ import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.parser.constpool.structure.FieldRef;
 import com.tonic.parser.constpool.structure.MethodHandle;
+import com.tonic.renamer.hierarchy.ClassHierarchy;
+import com.tonic.renamer.hierarchy.ClassNode;
 import com.tonic.renamer.mapping.FieldMapping;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Handles renaming of fields and updating all references across the ClassPool.
@@ -59,16 +63,74 @@ public class FieldRenamer {
         // type references a renamed class are never matched and keep their obfuscated names.
         String currentDescriptor = context.getDescriptorRemapper().remapFieldDescriptor(mapping.getDescriptor());
 
+        // Resolve inheriting access-site owners BEFORE renaming the declaration: a field access on a subtype
+        // that INHERITS the field names the subtype as the ref owner (e.g. an inherited `do` accessed through a
+        // class81-typed value emits `class81.do`), so matching only the declaring owner misses those refs and
+        // leaves a dangling old name. The resolution walks the superclass chain looking for the OLD name, so it
+        // must run while the declaration still carries it.
+        Set<String> refOwners = expandToInheritingOwners(currentOwner, mapping.getOldName(), currentDescriptor);
+
         // Find and rename the declaration
         ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
             renameFieldDeclaration(ownerClass, mapping.getOldName(), currentDescriptor, mapping.getNewName());
         }
 
-        // Update all access sites across all classes using the current (possibly renamed) owner
+        // Update all access sites across all classes (the declaring owner plus every inheriting descendant).
         for (ClassFile cf : context.getAllClasses()) {
-            updateFieldAccessSites(cf, currentOwner, mapping.getOldName(), currentDescriptor, mapping.getNewName());
+            for (String refOwner : refOwners) {
+                updateFieldAccessSites(cf, refOwner, mapping.getOldName(), currentDescriptor, mapping.getNewName());
+            }
         }
+    }
+
+    /**
+     * Expands a declaring owner to also include every descendant class whose resolution of {@code (name,
+     * descriptor)} reaches that owner — i.e. descendants that INHERIT the field without redeclaring (hiding)
+     * it. A subtype that accesses an inherited field through its own static type emits a constant-pool ref
+     * owned by the subtype, so those descendants must be treated as access-site owners too.
+     *
+     * <p>A descendant is included only when the nearest ancestor (itself first, then up the superclass chain)
+     * that actually declares {@code (name, descriptor)} is {@code declaringOwner}; a descendant that hides the
+     * field with its own declaration is left out, so unrelated fields that merely share the name/descriptor are
+     * never renamed.
+     */
+    private Set<String> expandToInheritingOwners(String declaringOwner, String name, String descriptor) {
+        ClassHierarchy hierarchy = context.getHierarchy();
+        Set<String> refOwners = new HashSet<>();
+        refOwners.add(declaringOwner);
+        ClassNode declaringNode = hierarchy.getNode(declaringOwner);
+        if (declaringNode == null) {
+            return refOwners;
+        }
+        for (ClassNode descendant : declaringNode.getAllDescendants()) {
+            if (refOwners.contains(descendant.getName())) {
+                continue;
+            }
+            if (declaringOwner.equals(nearestDeclaringOwner(descendant, name, descriptor))) {
+                refOwners.add(descendant.getName());
+            }
+        }
+        return refOwners;
+    }
+
+    /**
+     * Returns the name of the nearest class (starting at {@code node}, then ascending the superclass chain)
+     * that declares a field with the given name and descriptor, or null if none in the chain declares it.
+     */
+    private String nearestDeclaringOwner(ClassNode node, String name, String descriptor) {
+        for (ClassNode current = node; current != null; current = current.getSuperClass()) {
+            ClassFile cf = current.getClassFile();
+            if (cf == null) {
+                continue;
+            }
+            for (FieldEntry field : cf.getFields()) {
+                if (field.getName().equals(name) && field.getDesc().equals(descriptor)) {
+                    return current.getName();
+                }
+            }
+        }
+        return null;
     }
 
     /**

@@ -9,6 +9,7 @@ import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.parser.constpool.structure.InterfaceRef;
 import com.tonic.parser.constpool.structure.MethodHandle;
+import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.hierarchy.ClassNode;
 import com.tonic.renamer.mapping.MethodMapping;
 
@@ -70,16 +71,25 @@ public class MethodRenamer {
         // the class mappings before matching it against the live descriptors (see FieldRenamer for details).
         String currentDescriptor = context.getDescriptorRemapper().remapMethodDescriptor(mapping.getDescriptor());
 
+        // Resolve inheriting call-site owners BEFORE renaming the declaration: a virtual/special call to an
+        // INHERITED method names the receiver's static type as the ref owner (e.g. an inherited do(I)V called
+        // via `this` in a subclass emits `subclass.do:(I)V`), so matching only the declaring owner misses those
+        // refs and leaves a dangling old name. The resolution walks the superclass chain looking for the OLD
+        // name, so it must run while the declaration still carries it.
+        Set<String> refOwners = expandToInheritingOwners(
+                Set.of(currentOwner), mapping.getOldName(), currentDescriptor);
+
         // Find and rename the declaration
         ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
             renameMethodDeclaration(ownerClass, mapping.getOldName(), currentDescriptor, mapping.getNewName());
         }
 
-        // Update all call sites across all classes
-        // Use the CURRENT class name (after class rename) which matches constant pool
+        // Update all call sites across all classes (the declaring owner plus every inheriting descendant).
         for (ClassFile cf : context.getAllClasses()) {
-            updateMethodCallSites(cf, currentOwner, mapping.getOldName(), currentDescriptor, mapping.getNewName());
+            for (String refOwner : refOwners) {
+                updateMethodCallSites(cf, refOwner, mapping.getOldName(), currentDescriptor, mapping.getNewName());
+            }
         }
     }
 
@@ -109,6 +119,12 @@ public class MethodRenamer {
         // Also add the current owner
         ownerNames.add(currentOwner);
 
+        // Resolve inheriting call-site owners BEFORE renaming declarations (the resolution walks the superclass
+        // chain for the OLD name, so it must run while declarations still carry it). As in the single case, a
+        // call to an inherited member names the receiver's static type as the ref owner, so cover every
+        // descendant that resolves this method to one of the declaring owners (ownerNames is the override set).
+        Set<String> refOwners = expandToInheritingOwners(ownerNames, mapping.getOldName(), currentDescriptor);
+
         // Rename declarations in all affected classes
         for (String ownerName : ownerNames) {
             ClassFile cf = context.getClass(ownerName);
@@ -117,14 +133,57 @@ public class MethodRenamer {
             }
         }
 
-        // Update all call sites across all classes for all owner variants
-        // NOTE: ownerNames contains CURRENT class names (after class rename)
-        // which matches what's in the constant pool
+        // Update all call sites across all classes for all owner variants.
         for (ClassFile cf : context.getAllClasses()) {
-            for (String ownerName : ownerNames) {
-                updateMethodCallSites(cf, ownerName, mapping.getOldName(), currentDescriptor, mapping.getNewName());
+            for (String refOwner : refOwners) {
+                updateMethodCallSites(cf, refOwner, mapping.getOldName(), currentDescriptor, mapping.getNewName());
             }
         }
+    }
+
+    /**
+     * Expands a set of declaring owners to also include every descendant class whose virtual resolution of
+     * {@code (name, descriptor)} reaches one of those declaring owners — i.e. descendants that INHERIT the
+     * method without redeclaring it. A subclass that calls an inherited method via its own static type emits a
+     * constant-pool ref owned by the subclass, so those descendants must be treated as call-site owners too.
+     *
+     * <p>A descendant is included only when the nearest ancestor (itself first, then up the superclass chain)
+     * that actually declares {@code (name, descriptor)} is one of {@code declaringOwners}; a descendant that
+     * redeclares the method (or resolves it to some unrelated class) is left out, so unrelated methods that
+     * merely share the name/descriptor are never renamed.
+     */
+    private Set<String> expandToInheritingOwners(Set<String> declaringOwners, String name, String descriptor) {
+        ClassHierarchy hierarchy = context.getHierarchy();
+        Set<String> refOwners = new HashSet<>(declaringOwners);
+        for (String declaringOwner : declaringOwners) {
+            ClassNode declaringNode = hierarchy.getNode(declaringOwner);
+            if (declaringNode == null) {
+                continue;
+            }
+            for (ClassNode descendant : declaringNode.getAllDescendants()) {
+                if (refOwners.contains(descendant.getName())) {
+                    continue;
+                }
+                String resolved = nearestDeclaringOwner(hierarchy, descendant, name, descriptor);
+                if (resolved != null && declaringOwners.contains(resolved)) {
+                    refOwners.add(descendant.getName());
+                }
+            }
+        }
+        return refOwners;
+    }
+
+    /**
+     * Returns the name of the nearest class (starting at {@code node}, then ascending the superclass chain)
+     * that declares a method with the given name and descriptor, or null if none in the chain declares it.
+     */
+    private String nearestDeclaringOwner(ClassHierarchy hierarchy, ClassNode node, String name, String descriptor) {
+        for (ClassNode current = node; current != null; current = current.getSuperClass()) {
+            if (hierarchy.getMethod(current.getName(), name, descriptor) != null) {
+                return current.getName();
+            }
+        }
+        return null;
     }
 
     /**

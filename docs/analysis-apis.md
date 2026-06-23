@@ -2,7 +2,7 @@
 
 # Analysis APIs
 
-YABR provides fourteen high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
+YABR provides fifteen high-level analysis APIs that build on top of the SSA IR system. Each API can be used independently or combined for powerful semantic queries.
 
 ---
 
@@ -20,6 +20,7 @@ YABR provides fourteen high-level analysis APIs that build on top of the SSA IR 
 | **Method Similarity** | `similarity` | Find duplicate and similar methods | [Details](similarity-api.md) |
 | **Simulation** | `simulation` | Abstract bytecode/IR simulation with metrics | [Details](simulation-api.md) |
 | **Execution** | `execution` | Concrete bytecode execution and debugging | [Details](execution-api.md) |
+| **Abstract Execution** | `absexec` | Operand-stack and local def-use over raw bytecode | [Details](abstract-execution-api.md) |
 | **PDG** | `pdg` | Program Dependence Graph with slicing | [Details](pdg-api.md) |
 | **SDG** | `pdg.sdg` | Interprocedural System Dependence Graph | [Details](sdg-api.md) |
 | **CPG** | `cpg` | Code Property Graph with taint analysis | [Details](cpg-api.md) |
@@ -199,6 +200,26 @@ DebugState state = session.stepOver();
 **Key features:** Concrete value execution, mutable heap/stack, object simulation, native method handlers, breakpoints, step debugging, call stack inspection, full Java 11 support (invokedynamic, lambdas, string concatenation, constant dynamic, method handles).
 
 [Full documentation →](execution-api.md)
+
+---
+
+## Abstract Execution API
+
+Path-exploring operand-stack and local-variable def-use over a single method's bytecode, without an abstract value domain.
+
+```java
+List<InsnContext> contexts = new ArrayList<>();
+new Execution(method)
+    .addVisitor(contexts::add)
+    .run();
+
+StackCtx operand = contexts.get(0).getPops().get(0);
+Instruction producer = operand.getPushed().getInstruction();
+```
+
+**Key features:** Stack pop/push provenance, local store/read links, value resolution through store/load hops, per-path branch frames, intra-procedural scope, bounded loop termination with a configurable frame cap.
+
+[Full documentation](abstract-execution-api.md)
 
 ---
 
