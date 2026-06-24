@@ -16,7 +16,7 @@ import java.util.List;
 @Getter
 public class SSAValue implements Value {
 
-    private static int nextId = 0;
+    private static final ThreadLocal<int[]> NEXT_ID = ThreadLocal.withInitial(() -> new int[1]);
 
     private final int id;
     private final IRType type;
@@ -32,7 +32,7 @@ public class SSAValue implements Value {
      * @param type the IR type of this value
      */
     public SSAValue(IRType type) {
-        this.id = nextId++;
+        this.id = NEXT_ID.get()[0]++;
         this.type = type;
         this.name = "v" + id;
         this.uses = new ArrayList<>();
@@ -45,7 +45,7 @@ public class SSAValue implements Value {
      * @param name the name for this value
      */
     public SSAValue(IRType type, String name) {
-        this.id = nextId++;
+        this.id = NEXT_ID.get()[0]++;
         this.type = type;
         this.name = name;
         this.uses = new ArrayList<>();
@@ -108,7 +108,7 @@ public class SSAValue implements Value {
      * Resets the ID counter for SSA values.
      */
     public static void resetIdCounter() {
-        nextId = 0;
+        NEXT_ID.get()[0] = 0;
     }
 
     /**

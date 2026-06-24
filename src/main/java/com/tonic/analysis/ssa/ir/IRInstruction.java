@@ -16,7 +16,7 @@ import java.util.List;
 @Getter
 public abstract class IRInstruction {
 
-    private static int nextId = 0;
+    private static final ThreadLocal<int[]> NEXT_ID = ThreadLocal.withInitial(() -> new int[1]);
 
     protected final int id;
     @Setter
@@ -32,11 +32,11 @@ public abstract class IRInstruction {
     protected int bytecodeOffset = -1;
 
     protected IRInstruction() {
-        this.id = nextId++;
+        this.id = NEXT_ID.get()[0]++;
     }
 
     protected IRInstruction(SSAValue result) {
-        this.id = nextId++;
+        this.id = NEXT_ID.get()[0]++;
         this.result = result;
         if (result != null) {
             result.setDefinition(this);
@@ -107,7 +107,7 @@ public abstract class IRInstruction {
      * Resets the instruction ID counter.
      */
     public static void resetIdCounter() {
-        nextId = 0;
+        NEXT_ID.get()[0] = 0;
     }
 
     /**

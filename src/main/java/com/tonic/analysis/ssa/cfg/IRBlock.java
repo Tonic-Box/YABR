@@ -13,7 +13,7 @@ import java.util.*;
 @Getter
 public class IRBlock {
 
-    private static int nextId = 0;
+    private static final ThreadLocal<int[]> NEXT_ID = ThreadLocal.withInitial(() -> new int[1]);
 
     private final int id;
     @Setter
@@ -37,7 +37,7 @@ public class IRBlock {
      * Creates a new basic block with an auto-generated name.
      */
     public IRBlock() {
-        this.id = nextId++;
+        this.id = NEXT_ID.get()[0]++;
         this.name = "B" + id;
         this.phiInstructions = new ArrayList<>();
         this.instructions = new ArrayList<>();
@@ -265,7 +265,7 @@ public class IRBlock {
      * Resets the ID counter for basic blocks.
      */
     public static void resetIdCounter() {
-        nextId = 0;
+        NEXT_ID.get()[0] = 0;
     }
 
     /**
