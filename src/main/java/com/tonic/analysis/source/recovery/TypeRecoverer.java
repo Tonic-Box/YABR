@@ -395,6 +395,14 @@ public class TypeRecoverer {
         return parser.parseType();
     }
 
+    /** Renders a class/method signature's formal type parameters, e.g. {@code "<T extends Comparable<T>>"}, else "". */
+    public String recoverFormalTypeParameters(String signature) {
+        if (signature == null || signature.isEmpty() || signature.charAt(0) != '<') {
+            return "";
+        }
+        return new SignatureParser(signature).parseFormalTypeParameters();
+    }
+
     private static class SignatureParser {
         private final String sig;
         private int pos;
@@ -448,14 +456,55 @@ public class TypeRecoverer {
                     return parseTypeVariable();
                 case '*':
                     pos++;
-                    return new ReferenceSourceType("java/lang/Object", java.util.Collections.emptyList());
+                    return WildcardSourceType.unbounded();
                 case '+':
+                    pos++;
+                    return WildcardSourceType.extendsType(parseType());
                 case '-':
                     pos++;
-                    return parseType();
+                    return WildcardSourceType.superType(parseType());
                 default:
                     return VoidSourceType.INSTANCE;
             }
+        }
+
+        /** Parses a leading {@code <FormalTypeParameters>} and renders it as Java source. */
+        String parseFormalTypeParameters() {
+            if (pos >= sig.length() || sig.charAt(pos) != '<') {
+                return "";
+            }
+            pos++;
+            StringBuilder out = new StringBuilder("<");
+            boolean first = true;
+            while (pos < sig.length() && sig.charAt(pos) != '>') {
+                if (!first) {
+                    out.append(", ");
+                }
+                first = false;
+                StringBuilder name = new StringBuilder();
+                while (pos < sig.length() && sig.charAt(pos) != ':') {
+                    name.append(sig.charAt(pos));
+                    pos++;
+                }
+                out.append(name);
+                java.util.List<String> bounds = new java.util.ArrayList<>();
+                while (pos < sig.length() && sig.charAt(pos) == ':') {
+                    pos++; // a ':' precedes each (possibly empty) class/interface bound
+                    if (pos < sig.length() && sig.charAt(pos) != ':' && sig.charAt(pos) != '>') {
+                        String b = parseType().toJavaSource();
+                        if (!"Object".equals(b) && !"java.lang.Object".equals(b)) {
+                            bounds.add(b);
+                        }
+                    }
+                }
+                if (!bounds.isEmpty()) {
+                    out.append(" extends ").append(String.join(" & ", bounds));
+                }
+            }
+            if (pos < sig.length() && sig.charAt(pos) == '>') {
+                pos++;
+            }
+            return out.append(">").toString();
         }
 
         private SourceType parseClassType() {
@@ -499,9 +548,8 @@ public class TypeRecoverer {
             if (pos < sig.length() && sig.charAt(pos) == ';') {
                 pos++;
             }
-            return new ReferenceSourceType("java/lang/Object", java.util.Collections.singletonList(
-                new ReferenceSourceType(name.toString(), java.util.Collections.emptyList())
-            ));
+            // A type variable renders as its bare name (e.g. T), not Object<T>.
+            return new ReferenceSourceType(name.toString());
         }
     }
 }

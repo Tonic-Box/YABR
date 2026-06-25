@@ -39,6 +39,9 @@ public class ClassFile extends AbstractParser {
     private List<FieldEntry> fields;
     private List<MethodEntry> methods;
     private List<Integer> interfaces;
+    /** The pool that loaded this class, if any, so cross-class lookups can resolve siblings. */
+    @Setter
+    private ClassPool classPool;
 
     private static final int MINOR_VERSION_OFFSET = 4;
     private static final int MAJOR_VERSION_OFFSET = 6;

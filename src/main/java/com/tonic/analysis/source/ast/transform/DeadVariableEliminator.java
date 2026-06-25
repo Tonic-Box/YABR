@@ -1,7 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
 import com.tonic.analysis.source.ast.Locations;
-import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
@@ -45,11 +44,8 @@ public class DeadVariableEliminator implements ASTTransform {
             // Collect variables that are actually READ (not just written to)
             Set<String> readVariables = collectReadVariables(block);
 
-            // Collect variables that have assignment statements (not just declarations)
-            Set<String> assignedVariables = collectAssignedVariables(block);
-
             // Remove unused declarations and write-only assignments
-            if (removeUnusedCode(block.getStatements(), readVariables, assignedVariables)) {
+            if (removeUnusedCode(block.getStatements(), readVariables)) {
                 madeProgress = true;
                 changed = true;
             }
@@ -66,23 +62,6 @@ public class DeadVariableEliminator implements ASTTransform {
         Set<String> read = new HashSet<>();
         block.accept(new ReadVariableCollector(read));
         return read;
-    }
-
-    /**
-     * Collects all variable names that have assignment statements (not declarations).
-     * Uses visitor pattern to find assignment expressions.
-     */
-    private Set<String> collectAssignedVariables(BlockStmt block) {
-        Set<String> assigned = new HashSet<>();
-        ASTUtils.forEachExpression(block, expr -> {
-            if (expr instanceof BinaryExpr) {
-                BinaryExpr binary = (BinaryExpr) expr;
-                if (binary.getOperator().isAssignment() && binary.getLeft() instanceof VarRefExpr) {
-                    assigned.add(((VarRefExpr) binary.getLeft()).getName());
-                }
-            }
-        });
-        return assigned;
     }
 
     /**
@@ -153,11 +132,8 @@ public class DeadVariableEliminator implements ASTTransform {
      * - Remove the declaration if initializer has no side effects
      * - Convert to expression statement if initializer has side effects
      * - Also remove any assignment statements to the variable
-     * <p>
-     * For declarations of variables that ARE assigned later but never read,
-     * we need to keep the declaration but can remove the assignments.
      */
-    private boolean removeUnusedCode(List<Statement> stmts, Set<String> readVariables, Set<String> assignedVariables) {
+    private boolean removeUnusedCode(List<Statement> stmts, Set<String> readVariables) {
         boolean changed = false;
 
         for (int i = stmts.size() - 1; i >= 0; i--) {
@@ -209,65 +185,65 @@ public class DeadVariableEliminator implements ASTTransform {
                 }
             } else if (stmt instanceof BlockStmt) {
                 // Recurse into nested blocks
-                if (removeUnusedCode(((BlockStmt) stmt).getStatements(), readVariables, assignedVariables)) {
+                if (removeUnusedCode(((BlockStmt) stmt).getStatements(), readVariables)) {
                     changed = true;
                 }
             } else if (stmt instanceof IfStmt) {
                 IfStmt ifStmt = (IfStmt) stmt;
                 if (ifStmt.getThenBranch() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) ifStmt.getThenBranch()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) ifStmt.getThenBranch()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
                 if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) ifStmt.getElseBranch()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) ifStmt.getElseBranch()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof WhileStmt) {
                 WhileStmt whileStmt = (WhileStmt) stmt;
                 if (whileStmt.getBody() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) whileStmt.getBody()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) whileStmt.getBody()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof DoWhileStmt) {
                 DoWhileStmt doWhile = (DoWhileStmt) stmt;
                 if (doWhile.getBody() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) doWhile.getBody()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) doWhile.getBody()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof ForStmt) {
                 ForStmt forStmt = (ForStmt) stmt;
                 if (forStmt.getBody() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) forStmt.getBody()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) forStmt.getBody()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof ForEachStmt) {
                 ForEachStmt forEach = (ForEachStmt) stmt;
                 if (forEach.getBody() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) forEach.getBody()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) forEach.getBody()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof TryCatchStmt) {
                 TryCatchStmt tryCatch = (TryCatchStmt) stmt;
                 if (tryCatch.getTryBlock() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) tryCatch.getTryBlock()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) tryCatch.getTryBlock()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
                 for (CatchClause catchClause : tryCatch.getCatches()) {
                     if (catchClause.body() instanceof BlockStmt) {
-                        if (removeUnusedCode(((BlockStmt) catchClause.body()).getStatements(), readVariables, assignedVariables)) {
+                        if (removeUnusedCode(((BlockStmt) catchClause.body()).getStatements(), readVariables)) {
                             changed = true;
                         }
                     }
                 }
                 if (tryCatch.getFinallyBlock() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) tryCatch.getFinallyBlock()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) tryCatch.getFinallyBlock()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
@@ -281,12 +257,13 @@ public class DeadVariableEliminator implements ASTTransform {
                 for (int c = 0; c < cases.size(); c++) {
                     SwitchCase caseStmt = cases.get(c);
                     List<Statement> caseBody = new ArrayList<>(caseStmt.statements());
-                    if (removeUnusedCode(caseBody, readVariables, assignedVariables)) {
-                        SwitchCase rebuilt = caseStmt.isDefault()
+                    if (removeUnusedCode(caseBody, readVariables)) {
+                        SwitchCase rebuilt = (caseStmt.isDefault()
                                 ? SwitchCase.defaultCase(caseBody)
                                 : caseStmt.hasExpressionLabels()
                                     ? SwitchCase.ofExpressions(caseStmt.expressionLabels(), caseBody)
-                                    : SwitchCase.of(caseStmt.labels(), caseBody);
+                                    : SwitchCase.of(caseStmt.labels(), caseBody))
+                                .withFallsThrough(caseStmt.fallsThrough());
                         cases.set(c, rebuilt);
                         changed = true;
                     }
@@ -294,14 +271,14 @@ public class DeadVariableEliminator implements ASTTransform {
             } else if (stmt instanceof SynchronizedStmt) {
                 SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;
                 if (syncStmt.getBody() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) syncStmt.getBody()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) syncStmt.getBody()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }
             } else if (stmt instanceof LabeledStmt) {
                 LabeledStmt labeled = (LabeledStmt) stmt;
                 if (labeled.getStatement() instanceof BlockStmt) {
-                    if (removeUnusedCode(((BlockStmt) labeled.getStatement()).getStatements(), readVariables, assignedVariables)) {
+                    if (removeUnusedCode(((BlockStmt) labeled.getStatement()).getStatements(), readVariables)) {
                         changed = true;
                     }
                 }

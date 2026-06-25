@@ -52,10 +52,21 @@ Beyond ordinary methods and control flow, the AST layer recovers and re-emits mo
   `f(a, b)`, and rendering a varargs parameter as `T...` — Java 5
 - `String` `switch` - collapsing javac's two-phase `hashCode()`/`equals()` dispatch (incl. hashCode
   collisions and fall-through) back into a single `switch (s)` with string-literal cases - Java 7
+- Enum `switch` - resolving the synthetic `$SwitchMap$` ordinal-to-index table (held in a sibling class,
+  read from the pool) back into `switch (e)` with enum-constant case labels; falls back to a switch on
+  `ordinal()` when that class is not available - Java 5
 - Multi-catch (`catch (A | B e)`) - coalescing the several exception-table entries that share one
   handler block into a single clause - Java 7
 - `synchronized` blocks - recovering the `monitorenter` ... `monitorexit` + catch-all monitor-release
   pattern that javac emits as a guarded try/finally
+- `try`-with-resources - folding javac's per-resource `close()` and `Throwable.addSuppressed` cleanup
+  handlers back into `try (R r = ...) { }`, lifting the resource declarations into the header - Java 7
+- Generic types - class and method formal type parameters (`<T extends Comparable<T>>`), type-variable
+  references, and wildcard bounds, recovered from the `Signature` attribute - Java 5
+
+The recovered control flow also reconstructs labeled and mid-loop `break`/`continue` (a branch to a
+loop's exit becomes `break`, a branch to its latch becomes `continue`, with the enclosing loop labeled
+for `break label`/`continue label`), and `throws` clauses are emitted from the `Exceptions` attribute.
 
 Decompiled statements carry **bytecode-offset provenance**: the SSA lifter stamps each IR
 instruction's offset, recovery transfers it onto the statements it builds (`SourceLocation`), the

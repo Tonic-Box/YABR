@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Simplifies control flow in AST to reduce nesting depth and improve readability.
- *
  * Transformations:
  * 1. Empty if-block inversion: if(x){} else{body} -> if(!x){body}
  * 2. AND-chain merging: if(a){if(b){body}} -> if(a && b){body}
@@ -371,11 +370,12 @@ public class ControlFlowSimplifier implements ASTTransform {
             BlockStmt body = new BlockStmt(new java.util.ArrayList<>(c.statements()));
             if (transform(body)) {
                 List<Statement> newBody = new java.util.ArrayList<>(body.getStatements());
-                SwitchCase rebuilt = c.isDefault()
+                SwitchCase rebuilt = (c.isDefault()
                         ? SwitchCase.defaultCase(newBody)
                         : c.hasExpressionLabels()
                             ? SwitchCase.ofExpressions(c.expressionLabels(), newBody)
-                            : SwitchCase.of(c.labels(), newBody);
+                            : SwitchCase.of(c.labels(), newBody))
+                        .withFallsThrough(c.fallsThrough());
                 cases.set(i, rebuilt);
                 changed = true;
             }

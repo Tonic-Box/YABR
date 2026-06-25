@@ -16,6 +16,8 @@ public final class SwitchCase {
     private final List<Expression> expressionLabels;
     private final boolean isDefault;
     private final List<Statement> statements;
+    /** True when control flows off the end of this case into the next one (no break in source). */
+    private boolean fallsThrough;
 
     public SwitchCase(List<Integer> labels, boolean isDefault, List<Statement> statements) {
         this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
@@ -77,6 +79,16 @@ public final class SwitchCase {
 
     public List<Statement> statements() {
         return statements;
+    }
+
+    public boolean fallsThrough() {
+        return fallsThrough;
+    }
+
+    /** Marks this case as falling through to the next; returns {@code this} for chaining. */
+    public SwitchCase withFallsThrough(boolean value) {
+        this.fallsThrough = value;
+        return this;
     }
 
     @Override

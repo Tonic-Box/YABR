@@ -82,7 +82,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             return;
         }
         String key = methodKeyStack.peek();
-        if (key.isEmpty()) {
+        if (key == null || key.isEmpty()) {
             return;
         }
         lineMapSink.record(key, stmt, writer.getCurrentLine());
@@ -668,7 +668,13 @@ public class SourceEmitter implements SourceVisitor<Void> {
             } else if (switchCase.hasExpressionLabels()) {
                 for (Expression label : switchCase.expressionLabels()) {
                     writer.write("case ");
-                    label.accept(this);
+                    if (label instanceof FieldAccessExpr) {
+                        // An enum-constant case label must be the bare constant name; javac rejects a
+                        // qualified name (Enum.CONST) in a switch label.
+                        writer.write(((FieldAccessExpr) label).getFieldName());
+                    } else {
+                        label.accept(this);
+                    }
                     writer.writeLine(":");
                 }
             } else {
@@ -681,7 +687,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
             for (Statement s : stmts) {
                 s.accept(this);
             }
-            if (!stmts.isEmpty() && needsBreak(stmts)) {
+            if (!stmts.isEmpty() && !switchCase.fallsThrough() && needsBreak(stmts)) {
                 writer.writeLine("break;");
             }
             writer.dedent();
@@ -1658,7 +1664,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
         recordTypeUsage(internalName);
         String formatted;
         if (config.isUseFullyQualifiedNames() || internalName.contains("$")) {
-            formatted = ClassNameUtil.toSourceName(internalName);
+            formatted = ClassNameUtil.toSourceNameWithInnerClasses(internalName);
         } else {
             formatted = ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
         }
@@ -1684,11 +1690,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
             case BNOT:
                 return "~";
             case PRE_INC:
-                return "++";
-            case PRE_DEC:
-                return "--";
             case POST_INC:
                 return "++";
+            case PRE_DEC:
             case POST_DEC:
                 return "--";
             default:

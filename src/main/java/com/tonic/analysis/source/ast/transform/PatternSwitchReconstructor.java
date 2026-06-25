@@ -9,6 +9,7 @@ import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.expr.InvokeDynamicExpr;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
+import com.tonic.analysis.source.ast.expr.NewExpr;
 import com.tonic.analysis.source.ast.expr.SwitchExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
@@ -19,6 +20,7 @@ import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.SwitchCase;
 import com.tonic.analysis.source.ast.stmt.SwitchStmt;
+import com.tonic.analysis.source.ast.stmt.ThrowStmt;
 import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
 import com.tonic.analysis.source.ast.stmt.WhileStmt;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
@@ -274,11 +276,20 @@ public class PatternSwitchReconstructor implements ASTTransform {
         return new Folded(new ReturnStmt(switchExpr), deadVars);
     }
 
-    /**
-     * Folds a structured {@code switch(typeSwitch(sel,idx)) { case k: [b=(T)sel;] rv=expr; break; }}
-     * (the assignment form) into {@code rv = switch(sel){ case T b -> expr; default -> ...}}, folding
-     * a preceding {@code T rv = <default>} declaration into the initializer.
-     */
+    /** True for a {@code { throw new MatchException(...); }} body — the synthetic default of an exhaustive switch. */
+    private boolean isMatchExceptionThrow(List<Statement> stmts) {
+        if (stmts.size() != 1 || !(stmts.get(0) instanceof ThrowStmt)) {
+            return false;
+        }
+        Expression ex = ((ThrowStmt) stmts.get(0)).getException();
+        if (!(ex instanceof NewExpr)) {
+            return false;
+        }
+        String cn = ((NewExpr) ex).getClassName();
+        return cn != null && (cn.endsWith("/MatchException") || cn.equals("MatchException")
+                || cn.endsWith("$MatchException"));
+    }
+
     private boolean tryFoldStructured(List<Statement> stmts, int index, SwitchStmt sw) {
         InvokeDynamicExpr typeSwitch = (InvokeDynamicExpr) sw.getSelector();
         if (typeSwitch.getArguments().isEmpty()) {
@@ -311,6 +322,9 @@ public class PatternSwitchReconstructor implements ASTTransform {
             SwitchCase c = isDefault ? defaultCase : byLabel.get(k);
             if (c == null) {
                 return false;
+            }
+            if (isDefault && isMatchExceptionThrow(c.statements())) {
+                continue; // exhaustive (sealed) switch: the synthetic MatchException default has no source arm
             }
             ArmInfo a = analyzeStructuredArm(c.statements(), selector);
             if (a == null) {
@@ -440,7 +454,7 @@ public class PatternSwitchReconstructor implements ASTTransform {
                 }
             } else if (info.isDeconstruction && isAccessorCall(rhs, info.deconstructTemp)) {
                 // A component bound by assignment to a pre-declared local: `b = temp.comp();`
-                info.components.add(new SwitchExpr.Component(((MethodCallExpr) rhs).getType(), lhs));
+                info.components.add(new SwitchExpr.Component(rhs.getType(), lhs));
             } else {
                 info.resultVar = lhs;
                 info.result = rhs;

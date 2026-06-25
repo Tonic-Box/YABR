@@ -36,10 +36,12 @@ import com.tonic.analysis.ssa.transform.ControlFlowReducibility;
 import com.tonic.analysis.ssa.transform.DuplicateBlockMerging;
 import com.tonic.analysis.ssa.transform.IRTransform;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.ConstantValueAttribute;
+import com.tonic.parser.attribute.ExceptionsAttribute;
 import com.tonic.parser.attribute.PermittedSubclassesAttribute;
 import com.tonic.parser.attribute.RecordAttribute;
 import com.tonic.parser.attribute.RuntimeVisibleAnnotationsAttribute;
@@ -415,16 +417,12 @@ public class ClassDecompiler {
     }
 
     private void analyzeSwitchMaps() {
-        boolean hasSwitchMapField = false;
-        for (FieldEntry field : classFile.getFields()) {
-            String name = field.getName();
-            if (name != null && name.startsWith("$SwitchMap$")) {
-                hasSwitchMapField = true;
-                break;
-            }
-        }
+        analyzeOwnSwitchMap();
+        analyzeSiblingSwitchMapHolders();
+    }
 
-        if (!hasSwitchMapField) {
+    private void analyzeOwnSwitchMap() {
+        if (!declaresSwitchMapField(classFile)) {
             return;
         }
 
@@ -442,6 +440,69 @@ public class ClassDecompiler {
         } catch (Exception e) {
             // Switch map analysis failed, continue without it
         }
+    }
+
+    /**
+     * Analyzes the synthetic {@code $SwitchMap$} holder classes that javac generates alongside this class
+     * for enum switches. The holder is a nested class of the class that contains the switch; its static
+     * initializer maps each enum constant's ordinal to a dense case index. Resolving it from the default
+     * {@link ClassPool} populates the switch-map registry so the switch emits constant-name case labels.
+     * When the holder is not in the pool, the recovery falls back to a switch on {@code ordinal()}.
+     */
+    private void analyzeSiblingSwitchMapHolders() {
+        // Prefer the pool that actually loaded this class (e.g. a host's project pool); fall back to the
+        // default pool for standalone decompilation.
+        ClassPool pool = classFile.getClassPool() != null ? classFile.getClassPool() : ClassPool.getDefault();
+        if (pool == null) {
+            return;
+        }
+        String thisInternal = classFile.getClassName();
+        for (String holderInternal : nestedClassInternalNames()) {
+            if (holderInternal.equals(thisInternal) || !holderInternal.startsWith(thisInternal + "$")) {
+                continue;
+            }
+            ClassFile holder = pool.get(holderInternal);
+            if (holder == null || !declaresSwitchMapField(holder)) {
+                continue;
+            }
+            try {
+                List<MethodEntry> clinits = holder.getMethods("<clinit>");
+                if (clinits.isEmpty() || clinits.get(0).getCodeAttribute() == null) {
+                    continue;
+                }
+                IRMethod ir = new SSA(holder.getConstPool()).lift(clinits.get(0));
+                List<IRMethod> methods = new ArrayList<>();
+                methods.add(ir);
+                SwitchMapAnalyzer.analyzeClass(holder.getFields(), methods);
+            } catch (Exception ignored) {
+                // Holder unavailable or unliftable; the switch falls back to ordinal().
+            }
+        }
+    }
+
+    private boolean declaresSwitchMapField(ClassFile cf) {
+        for (FieldEntry field : cf.getFields()) {
+            String name = field.getName();
+            if (name != null && name.startsWith("$SwitchMap$")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<String> nestedClassInternalNames() {
+        List<String> names = new ArrayList<>();
+        for (Attribute attr : classFile.getClassAttributes()) {
+            if (attr instanceof InnerClassesAttribute) {
+                for (InnerClassEntry entry : ((InnerClassesAttribute) attr).getClasses()) {
+                    String inner = entry.getInnerClassName();
+                    if (inner != null) {
+                        names.add(inner.replace('.', '/'));
+                    }
+                }
+            }
+        }
+        return names;
     }
 
     private void emitClassDeclaration(IndentingWriter writer) {
@@ -477,6 +538,10 @@ public class ClassDecompiler {
         String fullName = classFile.getClassName();
         String simpleName = ClassNameUtil.getSimpleNameWithInnerClasses(fullName);
         sb.append(simpleName);
+        String classSig = getSignature(classFile.getClassAttributes());
+        if (classSig != null) {
+            sb.append(typeRecoverer.recoverFormalTypeParameters(classSig));
+        }
 
         // Record component list: `record Name(T a, U b)`
         if (record != null) {
@@ -1047,6 +1112,12 @@ public class ClassDecompiler {
         String signature = getSignature(method.getAttributes());
         String sigOrDesc = signature != null ? signature : desc;
 
+        if (signature != null) {
+            String formal = typeRecoverer.recoverFormalTypeParameters(signature);
+            if (!formal.isEmpty()) {
+                sb.append(formal).append(" ");
+            }
+        }
         String returnType = extractReturnType(sigOrDesc, signature != null);
         sb.append(returnType).append(" ");
 
@@ -1055,6 +1126,11 @@ public class ClassDecompiler {
         sb.append("(");
         sb.append(formatParameters(sigOrDesc, signature != null, Modifiers.isVarArgs(access)));
         sb.append(")");
+
+        String throwsClause = buildThrowsClause(method.getAttributes());
+        if (!throwsClause.isEmpty()) {
+            sb.append(" throws ").append(throwsClause);
+        }
 
         writer.write(sb.toString());
 
@@ -1149,6 +1225,27 @@ public class ClassDecompiler {
             return ClassNameUtil.toSourceName(internalName);
         }
         return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
+    }
+
+    /** Builds the {@code throws} clause from a member's Exceptions attribute (e.g. "IOException, SQLException"), or "". */
+    private String buildThrowsClause(List<Attribute> attributes) {
+        if (attributes == null) {
+            return "";
+        }
+        for (Attribute a : attributes) {
+            if (a instanceof ExceptionsAttribute) {
+                List<Integer> indices = ((ExceptionsAttribute) a).getExceptionIndexTable();
+                if (indices == null || indices.isEmpty()) {
+                    return "";
+                }
+                List<String> names = new ArrayList<>();
+                for (int idx : indices) {
+                    names.add(trackAndFormatType(new ReferenceSourceType(resolveClassName(idx))));
+                }
+                return String.join(", ", names);
+            }
+        }
+        return "";
     }
 
     private String resolveClassName(int classIndex) {

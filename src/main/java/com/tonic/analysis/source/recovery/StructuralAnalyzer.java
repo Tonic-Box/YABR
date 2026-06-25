@@ -213,8 +213,12 @@ public class StructuralAnalyzer {
                 if (stored instanceof SSAValue) {
                     IRInstruction storeDef = ((SSAValue) stored).getDefinition();
                     if (storeDef instanceof BinaryOpInstruction) {
-                        BinaryOp op = ((BinaryOpInstruction) storeDef).getOp();
-                        if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
+                        BinaryOpInstruction binOp = (BinaryOpInstruction) storeDef;
+                        BinaryOp op = binOp.getOp();
+                        // Only a true induction step (local = local +/- constant) is a loop counter. A
+                        // non-constant step like `total = total + x` is an accumulator, not the loop
+                        // variable; treating it as one hoists it into the for-header out of scope.
+                        if ((op == BinaryOp.ADD || op == BinaryOp.SUB) && isConstantStep(binOp)) {
                             increments.add(new IncrementInfo(store.getLocalIndex(), (SSAValue) stored));
                         }
                     }
@@ -229,6 +233,17 @@ public class StructuralAnalyzer {
             }
         }
         return increments;
+    }
+
+    /** True when a binary op is a {@code v +/- constant} step — the shape of a loop induction update. */
+    private boolean isConstantStep(BinaryOpInstruction binOp) {
+        return isConstantOperand(binOp.getLeft()) ^ isConstantOperand(binOp.getRight());
+    }
+
+    private static boolean isConstantOperand(Value v) {
+        return v instanceof Constant
+                || (v instanceof SSAValue
+                    && ((SSAValue) v).getDefinition() instanceof com.tonic.analysis.ssa.ir.ConstantInstruction);
     }
 
     private boolean usesLocal(SSAValue value, int localIndex) {
@@ -365,7 +380,8 @@ public class StructuralAnalyzer {
         // even if reachable from both branches. Multiple paths leading to the same
         // return is an OR condition pattern, not a merge after conditional logic.
         Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
-        if (reachableFromFalse.contains(trueTarget) && trueTarget.getPredecessors().size() > 1) {
+        if (reachableFromFalse.contains(trueTarget) && trueTarget.getPredecessors().size() > 1
+                && (postDominatorTree == null || postDominatorTree.postDominates(trueTarget, block))) {
             boolean indirect = isIndirectReturnBlock(trueTarget);
             boolean shortCircuit = isShortCircuitValueBlock(trueTarget);
             if (!indirect && !shortCircuit) {
@@ -378,7 +394,8 @@ public class StructuralAnalyzer {
         }
 
         Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
-        if (reachableFromTrue.contains(falseTarget) && falseTarget.getPredecessors().size() > 1) {
+        if (reachableFromTrue.contains(falseTarget) && falseTarget.getPredecessors().size() > 1
+                && (postDominatorTree == null || postDominatorTree.postDominates(falseTarget, block))) {
             if (!isIndirectReturnBlock(falseTarget) && !isShortCircuitValueBlock(falseTarget)) {
                 RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
                 info.setThenBlock(trueTarget);

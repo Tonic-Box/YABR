@@ -1107,8 +1107,10 @@ public class ExpressionRecoverer {
                 paramCount = paramTypes.size();
             }
 
+            // Key by method name only when the arity matches: "apply" is shared by Function (1 arg)
+            // and BiFunction (2 args), so the descriptor's parameter count is authoritative.
             List<String> knownNames = SAM_PARAMETER_NAMES.get(samMethodName);
-            if (knownNames != null) {
+            if (knownNames != null && knownNames.size() == paramCount) {
                 for (String name : knownNames) {
                     params.add(new LambdaParameter(name, null, true));
                 }

@@ -82,6 +82,30 @@ public final class ClassNameUtil {
     }
 
     /**
+     * Like {@link #toSourceName} but also renders a {@code $} that separates a named nested class as
+     * {@code .} (e.g. {@code com/foo/Outer$Inner} becomes {@code com.foo.Outer.Inner}). An
+     * anonymous/local marker ({@code $1}) is left intact since it cannot be named in source.
+     */
+    public static String toSourceNameWithInnerClasses(String internalName) {
+        if (internalName == null) {
+            return null;
+        }
+        String source = internalName.replace('/', '.');
+        StringBuilder sb = new StringBuilder(source.length());
+        for (int i = 0; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '$' && i + 1 < source.length()
+                    && Character.isJavaIdentifierStart(source.charAt(i + 1))
+                    && !Character.isDigit(source.charAt(i + 1))) {
+                sb.append('.');
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
      * Converts a source name to an internal name (slashes instead of dots).
      *
      * @param sourceName the source class name (e.g., "com.foo.Bar")

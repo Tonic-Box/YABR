@@ -264,7 +264,8 @@ public final class ASTMutations {
         } else if (stmt instanceof SwitchStmt) {
             SwitchStmt s = (SwitchStmt) stmt;
             List<SwitchCase> clonedCases = s.getCases().stream()
-                .map(c -> new SwitchCase(c.labels(), cloneExprList(c.expressionLabels()), c.isDefault(), cloneStmtList(c.statements())))
+                .map(c -> new SwitchCase(c.labels(), cloneExprList(c.expressionLabels()), c.isDefault(), cloneStmtList(c.statements()))
+                        .withFallsThrough(c.fallsThrough()))
                 .collect(Collectors.toList());
             return new SwitchStmt(deepClone(s.getSelector()), clonedCases, s.getLocation());
         }

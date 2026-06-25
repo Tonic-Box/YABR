@@ -34,6 +34,9 @@ public class ControlFlowContext {
     /** Labels generated for break/continue targets */
     private final Map<IRBlock, String> blockLabels = new HashMap<>();
 
+    /** Stack of enclosing loops (innermost first) for recovering break/continue (labeled to an outer loop). */
+    private final Deque<LoopFrame> loopStack = new ArrayDeque<>();
+
     /** Pending statements to be added before the next statement */
     private final List<Statement> pendingStatements = new ArrayList<>();
 
@@ -105,6 +108,59 @@ public class ControlFlowContext {
 
     public String getLabel(IRBlock block) {
         return blockLabels.get(block);
+    }
+
+    /** An enclosing loop: its header (label anchor), continue-target (latch/increment) and exit block. */
+    public static final class LoopFrame {
+        final IRBlock header;
+        final IRBlock continueTarget;
+        final IRBlock exit;
+        LoopFrame(IRBlock header, IRBlock continueTarget, IRBlock exit) {
+            this.header = header;
+            this.continueTarget = continueTarget;
+            this.exit = exit;
+        }
+    }
+
+    public enum JumpKind { BREAK, CONTINUE }
+
+    /** A break/continue jump. {@code loopHeader} is null for the innermost loop (unlabeled), else the labeled target. */
+    public static final class LoopJump {
+        public final JumpKind kind;
+        public final IRBlock loopHeader;
+        LoopJump(JumpKind kind, IRBlock loopHeader) {
+            this.kind = kind;
+            this.loopHeader = loopHeader;
+        }
+    }
+
+    public void pushLoop(IRBlock header, IRBlock continueTarget, IRBlock exit) {
+        loopStack.push(new LoopFrame(header, continueTarget, exit));
+    }
+
+    public void popLoop() {
+        if (!loopStack.isEmpty()) {
+            loopStack.pop();
+        }
+    }
+
+    /**
+     * Classifies a control-flow edge into {@code target}: a {@code break} when {@code target} is a loop's exit, a
+     * {@code continue} when it is a loop's continue-target. The innermost loop yields an unlabeled jump; an enclosing
+     * loop yields a labeled one (anchored on its header). Returns null when {@code target} is not a loop boundary.
+     */
+    public LoopJump classifyLoopJump(IRBlock target) {
+        boolean innermost = true;
+        for (LoopFrame f : loopStack) {
+            if (target == f.exit) {
+                return new LoopJump(JumpKind.BREAK, innermost ? null : f.header);
+            }
+            if (target == f.continueTarget) {
+                return new LoopJump(JumpKind.CONTINUE, innermost ? null : f.header);
+            }
+            innermost = false;
+        }
+        return null;
     }
 
     /**

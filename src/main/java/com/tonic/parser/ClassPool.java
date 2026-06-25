@@ -95,6 +95,7 @@ public class ClassPool {
      * @param classFile ClassFile to add
      */
     public void put(ClassFile classFile) {
+        classFile.setClassPool(this);
         classes.add(classFile);
     }
 
@@ -129,6 +130,7 @@ public class ClassPool {
      */
     public ClassFile loadClass(byte[] classData) {
         ClassFile cf = new ClassFile(classData);
+        cf.setClassPool(this);
         classes.add(cf);
         return cf;
     }

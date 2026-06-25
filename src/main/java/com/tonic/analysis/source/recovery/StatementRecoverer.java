@@ -103,7 +103,12 @@ public class StatementRecoverer {
 
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
         if (handlers != null && !handlers.isEmpty()) {
-            statements.addAll(recoverWithExceptionHandling(entry, handlers));
+            List<Statement> twr = recoverTryWithResources(entry, handlers);
+            if (twr != null) {
+                statements.addAll(twr);
+            } else {
+                statements.addAll(recoverWithExceptionHandling(entry, handlers));
+            }
         } else {
             statements.addAll(recoverBlockSequence(entry, new HashSet<>()));
         }
@@ -1527,8 +1532,136 @@ public class StatementRecoverer {
     }
 
     /**
-     * Recovers a try-catch statement starting at the given block.
+     * Recovers a try-with-resources statement from javac's desugaring. javac lowers
+     * {@code try (R r = init) { body }} into per-resource cleanup handlers that close the resource and
+     * re-throw, chaining suppressed exceptions via {@code Throwable.addSuppressed}. The generic try/catch
+     * recovery mangles this (dropped return value, out-of-scope exception variable, unconditional throw).
+     * When the {@code addSuppressed} signature is present this marks the cleanup handlers processed, recovers
+     * the clean normal path (the handler blocks are not normal successors), lifts the resource declarations
+     * into a {@code try (r1; r2) { ... }} header and strips the synthetic close calls. Returns null when the
+     * method is not a try-with-resources, so the caller falls back to the generic recovery.
      */
+    private List<Statement> recoverTryWithResources(IRBlock entry, List<ExceptionHandler> handlers) {
+        if (!isTryWithResourcesMethod(handlers)) {
+            return null;
+        }
+        for (ExceptionHandler h : handlers) {
+            processedTryHandlers.add(h);
+            if (h.getHandlerBlock() != null) {
+                processedHandlerBlocks.add(h.getHandlerBlock());
+            }
+        }
+        List<Statement> normalPath = recoverBlockSequence(entry, new HashSet<>());
+        return reconstructTryWithResources(normalPath);
+    }
+
+    /** True when an exception handler (transitively) calls {@code Throwable.addSuppressed} — the TWR signature. */
+    private boolean isTryWithResourcesMethod(List<ExceptionHandler> handlers) {
+        Set<IRBlock> seen = new HashSet<>();
+        Deque<IRBlock> work = new ArrayDeque<>();
+        for (ExceptionHandler h : handlers) {
+            if (h.getHandlerBlock() != null) {
+                work.add(h.getHandlerBlock());
+            }
+        }
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            for (IRInstruction instr : b.getInstructions()) {
+                if (instr instanceof InvokeInstruction && "addSuppressed".equals(((InvokeInstruction) instr).getName())) {
+                    return true;
+                }
+            }
+            work.addAll(b.getSuccessors());
+        }
+        return false;
+    }
+
+    /**
+     * Folds a recovered clean normal path of a try-with-resources method into {@code try (resources) { body }}.
+     * Resources are the locals that are {@code close()}d on the normal path; their declarations are lifted out
+     * and referenced from the try header, and the synthetic close calls are dropped.
+     */
+    private List<Statement> reconstructTryWithResources(List<Statement> normalPath) {
+        Set<String> closedVars = new LinkedHashSet<>();
+        for (Statement s : normalPath) {
+            String closed = closeReceiverName(s);
+            if (closed != null) {
+                closedVars.add(closed);
+            }
+        }
+        if (closedVars.isEmpty()) {
+            return null;
+        }
+
+        List<VarDeclStmt> resourceDecls = new ArrayList<>();
+        Set<String> resourceNames = new LinkedHashSet<>();
+        for (Statement s : normalPath) {
+            if (s instanceof VarDeclStmt) {
+                VarDeclStmt d = (VarDeclStmt) s;
+                if (closedVars.contains(d.getName()) && resourceNames.add(d.getName())) {
+                    resourceDecls.add(d);
+                }
+            }
+        }
+        if (resourceDecls.isEmpty()) {
+            return null;
+        }
+
+        int firstIdx = normalPath.size();
+        for (int i = 0; i < normalPath.size(); i++) {
+            Statement s = normalPath.get(i);
+            if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName())) {
+                firstIdx = i;
+                break;
+            }
+        }
+
+        List<Statement> pre = new ArrayList<>(normalPath.subList(0, firstIdx));
+        List<Statement> body = new ArrayList<>();
+        for (int i = firstIdx; i < normalPath.size(); i++) {
+            Statement s = normalPath.get(i);
+            if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName())) {
+                continue; // resource declaration -> lifted into the try header
+            }
+            String closed = closeReceiverName(s);
+            if (closed != null && resourceNames.contains(closed)) {
+                continue; // synthetic resource close
+            }
+            body.add(s);
+        }
+
+        List<Expression> resources = new ArrayList<>();
+        for (VarDeclStmt d : resourceDecls) {
+            resources.add(new VarRefExpr(d.getName(), d.getType()));
+        }
+        TryCatchStmt tryStmt = new TryCatchStmt(new BlockStmt(body), new ArrayList<>(), null, resources,
+                SourceLocation.UNKNOWN);
+
+        List<Statement> result = new ArrayList<>(pre);
+        result.addAll(resourceDecls);
+        result.add(tryStmt);
+        return result;
+    }
+
+    /** The receiver variable name of a {@code receiver.close()} expression statement, else null. */
+    private String closeReceiverName(Statement s) {
+        if (!(s instanceof ExprStmt)) {
+            return null;
+        }
+        Expression e = ((ExprStmt) s).getExpression();
+        if (!(e instanceof MethodCallExpr)) {
+            return null;
+        }
+        MethodCallExpr mc = (MethodCallExpr) e;
+        if (!"close".equals(mc.getMethodName())) {
+            return null;
+        }
+        return mc.getReceiver() instanceof VarRefExpr ? ((VarRefExpr) mc.getReceiver()).getName() : null;
+    }
+
     private Statement recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler,
                                           Set<IRBlock> originalStopBlocks, Set<IRBlock> visited) {
         IRMethod irMethod = context.getIrMethod();
@@ -1691,6 +1824,22 @@ public class StatementRecoverer {
             }
         }
 
+        // A path that exits this sequence into a loop's exit (break) or continue-target (continue) is an
+        // explicit jump. The innermost loop yields an unlabeled break/continue; an enclosing loop yields a
+        // labeled one. A redundant trailing `continue` to the innermost loop is stripped by the loop recovery.
+        if (current != null) {
+            ControlFlowContext.LoopJump jump = context.classifyLoopJump(current);
+            if (jump != null) {
+                String label = jump.loopHeader != null ? context.getOrCreateLabel(jump.loopHeader) : null;
+                if (jump.kind == ControlFlowContext.JumpKind.BREAK) {
+                    result.add(label != null ? new BreakStmt(label) : new BreakStmt());
+                } else {
+                    result.add(label != null ? new ContinueStmt(label) : new ContinueStmt());
+                }
+                return result;
+            }
+        }
+
         if (current != null && stopBlocks.contains(current) && !visited.contains(current)) {
             if (isSimpleTerminatorBlock(current)) {
                 List<Statement> termStmts = recoverSimpleBlock(current);
@@ -1777,7 +1926,8 @@ public class StatementRecoverer {
     }
 
     private boolean isTerminatingStatement(Statement stmt) {
-        if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
+        if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
+                || stmt instanceof BreakStmt || stmt instanceof ContinueStmt) {
             return true;
         }
         if (stmt instanceof IfStmt) {
@@ -2070,7 +2220,70 @@ public class StatementRecoverer {
         }
 
         Expression initValue = getDefaultValue(type);
+        // A loop-carried phi's declaration should be initialized with its pre-loop (entry) value, not a
+        // default: `int s = first` for `s = phi(first, s + r)`. Without this the entry value is lost
+        // (e.g. an accumulator seeded from a parameter starts at 0). Only simple entry values (constant,
+        // parameter, or a local load) are inlined, to avoid duplicating a side-effecting expression.
+        Value entryInput = findLoopEntryInput(phi);
+        if (isSafeEntryInit(entryInput)) {
+            Expression entryExpr = exprRecoverer.recoverOperand(entryInput, type);
+            if (entryExpr != null) {
+                initValue = entryExpr;
+            }
+        }
         statements.add(new VarDeclStmt(type, name, initValue));
+    }
+
+    /** For a loop-carried phi (exactly one input recurses through the phi result), returns the entry input; else null. */
+    private Value findLoopEntryInput(PhiInstruction phi) {
+        SSAValue result = phi.getResult();
+        if (result == null) {
+            return null;
+        }
+        Value entry = null;
+        int entryCount = 0;
+        int recursiveCount = 0;
+        for (Value in : phi.getIncomingValues().values()) {
+            if (valueReaches(in, result, new HashSet<>())) {
+                recursiveCount++;
+            } else {
+                entry = in;
+                entryCount++;
+            }
+        }
+        return (entryCount == 1 && recursiveCount >= 1) ? entry : null;
+    }
+
+    private boolean valueReaches(Value v, SSAValue target, Set<Value> seen) {
+        if (v == target) {
+            return true;
+        }
+        if (!(v instanceof SSAValue) || !seen.add(v)) {
+            return false;
+        }
+        IRInstruction def = ((SSAValue) v).getDefinition();
+        if (def == null) {
+            return false;
+        }
+        for (Value op : def.getOperands()) {
+            if (valueReaches(op, target, seen)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isSafeEntryInit(Value v) {
+        if (v instanceof Constant) {
+            return true;
+        }
+        if (v instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) v).getDefinition();
+            return def == null
+                    || def instanceof com.tonic.analysis.ssa.ir.ConstantInstruction
+                    || def instanceof LoadLocalInstruction;
+        }
+        return false;
     }
 
     /**
@@ -2907,6 +3120,22 @@ public class StatementRecoverer {
                     current = getNextSequentialBlock(current);
                     break;
                 }
+            }
+        }
+
+        // A path that exits this sequence into a loop's exit (break) or continue-target (continue) is an
+        // explicit jump. The innermost loop yields an unlabeled break/continue; an enclosing loop yields a
+        // labeled one. A redundant trailing `continue` to the innermost loop is stripped by the loop recovery.
+        if (current != null) {
+            ControlFlowContext.LoopJump jump = context.classifyLoopJump(current);
+            if (jump != null) {
+                String label = jump.loopHeader != null ? context.getOrCreateLabel(jump.loopHeader) : null;
+                if (jump.kind == ControlFlowContext.JumpKind.BREAK) {
+                    result.add(label != null ? new BreakStmt(label) : new BreakStmt());
+                } else {
+                    result.add(label != null ? new ContinueStmt(label) : new ContinueStmt());
+                }
+                return result;
             }
         }
 
@@ -4027,13 +4256,16 @@ public class StatementRecoverer {
 
         // Push stop blocks so inner control structures respect loop exits
         context.pushStopBlocks(stopBlocks);
+        context.pushLoop(header, header, info.getLoopExit());
         try {
             List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
+            stripTrailingContinue(bodyStmts);
             BlockStmt body = new BlockStmt(bodyStmts);
             WhileStmt whileStmt = new WhileStmt(condition, body);
             stampFromHeader(whileStmt, header);
-            return whileStmt;
+            return labelIfTargeted(header, whileStmt);
         } finally {
+            context.popLoop();
             context.popStopBlocks();
         }
     }
@@ -4067,6 +4299,37 @@ public class StatementRecoverer {
         } finally {
             context.popStopBlocks();
         }
+    }
+
+    /** Wraps a recovered loop in a {@link LabeledStmt} when an inner non-local jump created a label for its header. */
+    private Statement labelIfTargeted(IRBlock loopHeader, Statement loop) {
+        return context.hasLabel(loopHeader) ? new LabeledStmt(context.getLabel(loopHeader), loop) : loop;
+    }
+
+    /** Drops a redundant trailing unlabeled {@code continue} (the body's natural fall-through to the next iteration). */
+    private void stripTrailingContinue(List<Statement> stmts) {
+        if (!stmts.isEmpty()) {
+            Statement last = stmts.get(stmts.size() - 1);
+            if (last instanceof ContinueStmt && !((ContinueStmt) last).hasLabel()) {
+                stmts.remove(stmts.size() - 1);
+            }
+        }
+    }
+
+    /** True when a loop's increment block contains only the induction update (no merged body work). */
+    private boolean isIncrementBlockPure(IRBlock block, Set<IRInstruction> incrementInstructions) {
+        if (block == null) {
+            return true;
+        }
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr.isTerminator()) {
+                continue;
+            }
+            if (instr instanceof StoreLocalInstruction && !incrementInstructions.contains(instr)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Statement recoverForLoop(IRBlock header, RegionInfo info) {
@@ -4136,18 +4399,23 @@ public class StatementRecoverer {
 
             context.pushStopBlocks(stopBlocks);
             context.pushSkipInstructions(incrementInstructions);
+            context.pushLoop(header, incrementBlock, info.getLoopExit());
             try {
-                if (!bodyIsIncrement) {
+                // Only suppress the increment block when it is PURE (just the induction update): when a
+                // mid-loop break bypasses it, javac merges body work into it, which must be recovered.
+                if (!bodyIsIncrement && isIncrementBlockPure(incrementBlock, incrementInstructions)) {
                     context.markProcessed(incrementBlock);
                 }
 
                 List<Statement> bodyStmts = recoverBlockSequence(bodyBlock, stopBlocks);
+                stripTrailingContinue(bodyStmts);
                 BlockStmt body = new BlockStmt(bodyStmts);
 
                 ForStmt forStmt = new ForStmt(initStmts, condition, updateExprs, body);
                 stampFromHeader(forStmt, header);
-                return forStmt;
+                return labelIfTargeted(header, forStmt);
             } finally {
+                context.popLoop();
                 context.popSkipInstructions();
                 context.popStopBlocks();
             }
@@ -4635,8 +4903,17 @@ public class StatementRecoverer {
         // Detect and simplify enum switch map pattern:
         // SwitchMapClass.$SwitchMap$pkg$EnumName[enumVar.ordinal()] -> enumVar
         EnumSwitchInfo enumInfo = detectEnumSwitchPattern(selector);
+        boolean enumNamesResolved = false;
         if (enumInfo != null) {
-            selector = enumInfo.enumVariable;
+            if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo.enumClassName)) {
+                // Enum constants resolved (the $SwitchMap$ holder is available): switch (e) { case CONST: }.
+                selector = enumInfo.enumVariable;
+                enumNamesResolved = true;
+            } else {
+                // Holder class not in the pool, so the dense $SwitchMap$ indices cannot be mapped to
+                // constant names. Fall back to switch (e.ordinal()) with the raw indices, which recompiles.
+                selector = enumInfo.ordinalExpression;
+            }
         }
 
         List<SwitchCase> cases = new ArrayList<>();
@@ -4681,23 +4958,21 @@ public class StatementRecoverer {
                 context.popStopBlocks();
             }
 
-            if (enumInfo != null && enumInfo.enumClassName != null) {
+            boolean fallsThrough = caseFallsThrough(target, stopBlocks, allCaseTargets);
+
+            if (enumNamesResolved) {
                 List<Expression> enumLabels = new ArrayList<>();
                 for (Integer caseValue : labels) {
                     String constantName = EnumSwitchMapRegistry.getInstance()
                             .lookupEnumConstant(enumInfo.enumClassName, caseValue);
-                    if (constantName != null) {
-                        SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
-                        enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
-                    }
+                    SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
+                    enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
                 }
-                if (!enumLabels.isEmpty()) {
-                    cases.add(SwitchCase.ofExpressions(enumLabels, caseStmts));
-                    continue;
-                }
+                cases.add(SwitchCase.ofExpressions(enumLabels, caseStmts).withFallsThrough(fallsThrough));
+                continue;
             }
 
-            cases.add(SwitchCase.of(labels, caseStmts));
+            cases.add(SwitchCase.of(labels, caseStmts).withFallsThrough(fallsThrough));
         }
 
         if (info.getDefaultTarget() != null) {
@@ -4733,6 +5008,7 @@ public class StatementRecoverer {
 
     private static class EnumSwitchInfo {
         Expression enumVariable;
+        Expression ordinalExpression;
         String enumClassName;
     }
 
@@ -4772,8 +5048,48 @@ public class StatementRecoverer {
 
         EnumSwitchInfo info = new EnumSwitchInfo();
         info.enumVariable = enumVar;
+        info.ordinalExpression = methodCall;
         info.enumClassName = EnumSwitchMapRegistry.parseEnumClassFromFieldName(fieldName);
         return info;
+    }
+
+    /** True when every case value of an enum switch resolves to a constant name via the switch-map registry. */
+    private boolean allEnumCasesResolve(RegionInfo info, String enumClassName) {
+        EnumSwitchMapRegistry registry = EnumSwitchMapRegistry.getInstance();
+        if (!registry.hasMapping(enumClassName)) {
+            return false;
+        }
+        for (Integer caseValue : info.getSwitchCases().keySet()) {
+            if (registry.lookupEnumConstant(enumClassName, caseValue) == null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * True when a case body flows off its end into another case body (source-level fall-through), as opposed
+     * to breaking to the merge block or returning/throwing. The case region is everything reachable from
+     * {@code caseTarget} without crossing a stop block; an edge from that region into a different case target
+     * is a fall-through (javac never branches between case bodies except by falling through).
+     */
+    private boolean caseFallsThrough(IRBlock caseTarget, Set<IRBlock> stopBlocks, Set<IRBlock> caseTargets) {
+        Set<IRBlock> region = new HashSet<>();
+        Deque<IRBlock> work = new ArrayDeque<>();
+        region.add(caseTarget);
+        work.add(caseTarget);
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            for (IRBlock s : b.getSuccessors()) {
+                if (s != caseTarget && caseTargets.contains(s)) {
+                    return true;
+                }
+                if (!stopBlocks.contains(s) && region.add(s)) {
+                    work.add(s);
+                }
+            }
+        }
+        return false;
     }
 
     private Statement recoverIrreducible(IRBlock header) {
@@ -6103,7 +6419,8 @@ public class StatementRecoverer {
                     IRInstruction def = ssaVal.getDefinition();
                     if (def instanceof BinaryOpInstruction) {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) def;
-                        if (binOp.getOp() == BinaryOp.ADD || binOp.getOp() == BinaryOp.SUB) {
+                        if ((binOp.getOp() == BinaryOp.ADD || binOp.getOp() == BinaryOp.SUB)
+                                && isInductionStep(binOp, phi.getResult())) {
                             return true;
                         }
                     }
@@ -6114,6 +6431,21 @@ public class StatementRecoverer {
             }
         }
         return false;
+    }
+
+    /**
+     * True when {@code binOp} is {@code phiResult ± constant} — the canonical induction step. An
+     * accumulation like {@code s = s + element} (the addend is a variable, not a constant) is NOT an
+     * induction step and must not be mistaken for the loop counter.
+     */
+    private boolean isInductionStep(BinaryOpInstruction binOp, SSAValue phiResult) {
+        if (phiResult == null) {
+            return false;
+        }
+        Value left = binOp.getLeft();
+        Value right = binOp.getRight();
+        return (left == phiResult && isConstantOperand(right))
+                || (right == phiResult && isConstantOperand(left));
     }
 
     private boolean isValueFromLocal(SSAValue value, int localIndex) {
@@ -6165,7 +6497,15 @@ public class StatementRecoverer {
         }
 
         for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
-            if (phiReceivesValues(phi, thenBlock, elseBlock, thenValue, elseValue)) {
+            // The arms are pure single-value blocks (above) with the merge as their only join, so a phi
+            // that takes an input from each arm is a ternary. We do NOT require the phi input to be SSA-
+            // identical to the block's produced value: a redundant load of an unchanged parameter resolves
+            // to the parameter SSA value, so the arm "produces" v4=load(slot) while the phi takes the param
+            // directly. collapseToTernaryPhiExpression reads the actual phi incomings, so identity is moot.
+            Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
+            if (incomingBlocks.size() == 2
+                    && incomingBlocks.contains(thenBlock) && incomingBlocks.contains(elseBlock)
+                    && phi.getIncoming(thenBlock) != null && phi.getIncoming(elseBlock) != null) {
                 return phi;
             }
         }
@@ -6203,47 +6543,6 @@ public class StatementRecoverer {
         }
 
         return producedValue;
-    }
-
-    /**
-     * Checks if a PHI receives the given values from the then/else blocks.
-     */
-    private boolean phiReceivesValues(PhiInstruction phi, IRBlock thenBlock, IRBlock elseBlock,
-                                       SSAValue thenValue, SSAValue elseValue) {
-        Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
-
-        if (incomingBlocks.size() != 2) {
-            return false;
-        }
-
-        if (!incomingBlocks.contains(thenBlock) || !incomingBlocks.contains(elseBlock)) {
-            return false;
-        }
-
-        Value phiThenValue = phi.getIncoming(thenBlock);
-        Value phiElseValue = phi.getIncoming(elseBlock);
-
-        boolean thenMatches = valuesMatch(phiThenValue, thenValue);
-        boolean elseMatches = valuesMatch(phiElseValue, elseValue);
-
-        return thenMatches && elseMatches;
-    }
-
-    /**
-     * Checks if two values match, accounting for both direct SSAValue equality
-     * and cases where one is a constant.
-     */
-    private boolean valuesMatch(Value phiValue, SSAValue blockValue) {
-        if (phiValue == blockValue) {
-            return true;
-        }
-        if (phiValue instanceof Constant) {
-            if (blockValue != null && blockValue.getDefinition() instanceof ConstantInstruction) {
-                ConstantInstruction ci = (ConstantInstruction) blockValue.getDefinition();
-                return ci.getConstant().equals(phiValue);
-            }
-        }
-        return false;
     }
 
     /**
