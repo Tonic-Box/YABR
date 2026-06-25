@@ -1,11 +1,17 @@
 package com.tonic.analysis.source.decompile;
 
+import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.expr.BinaryExpr;
+import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.FieldAccessExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
+import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
+import com.tonic.analysis.source.ast.transform.ArrayInitializerReconstructor;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
@@ -51,6 +57,7 @@ import com.tonic.utill.Modifiers;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +88,7 @@ public class ClassDecompiler {
     private final SingleUseInliner singleUseInliner;
     private final PatternInstanceOfReconstructor patternInstanceOf;
     private final VarargsReconstructor varargsReconstructor;
+    private final ArrayInitializerReconstructor arrayInitReconstructor;
     private final Set<String> usedTypes = new TreeSet<>();
     private Map<String, NavigableMap<Integer, Integer>> lineMapsCollector;
     private Map<String, DecompileResult.MethodSpan> methodSpansCollector;
@@ -113,6 +121,7 @@ public class ClassDecompiler {
         this.singleUseInliner = new SingleUseInliner();
         this.patternInstanceOf = new PatternInstanceOfReconstructor();
         this.varargsReconstructor = new VarargsReconstructor(classFile);
+        this.arrayInitReconstructor = new ArrayInitializerReconstructor();
         this.hasInnerClasses = detectInnerClasses();
     }
 
@@ -300,9 +309,11 @@ public class ClassDecompiler {
                 nonSyntheticFields.add(field);
             }
         }
+        ClinitHoist hoist = isEnum ? null : computeClinitHoist(nonSyntheticFields);
+
         if (!nonSyntheticFields.isEmpty()) {
             for (FieldEntry field : nonSyntheticFields) {
-                emitField(writer, field);
+                emitField(writer, field, hoist);
             }
             writer.newLine();
         }
@@ -310,8 +321,14 @@ public class ClassDecompiler {
         if (!isEnum) {
             MethodEntry clinit = findMethod("<clinit>");
             if (clinit != null && clinit.getCodeAttribute() != null) {
-                emitStaticInitializer(writer, clinit);
-                writer.newLine();
+                if (hoist == null) {
+                    emitStaticInitializer(writer, clinit);   // recovery failed - emit the whole <clinit>
+                    writer.newLine();
+                } else if (hoist.hasRemaining()) {
+                    emitStaticInitializerBlock(writer, hoist.remainingBody, hoist.clinitKey);
+                    writer.newLine();
+                }
+                // else: every <clinit> assignment hoisted into field initializers - no static block needed
             }
         }
 
@@ -589,7 +606,7 @@ public class ClassDecompiler {
         return false;
     }
 
-    private void emitField(IndentingWriter writer, FieldEntry field) {
+    private void emitField(IndentingWriter writer, FieldEntry field, ClinitHoist hoist) {
         int spanStart = writer.getCurrentLine();
         emitFieldAnnotations(writer, field);
 
@@ -609,9 +626,12 @@ public class ClassDecompiler {
 
         sb.append(field.getName());
 
-        String constantValue = getConstantValue(field);
-        if (constantValue != null) {
-            sb.append(" = ").append(constantValue);
+        String initializer = hoist == null ? null : hoist.initializers.get(field.getName());
+        if (initializer == null) {
+            initializer = getConstantValue(field);
+        }
+        if (initializer != null) {
+            sb.append(" = ").append(initializer);
         }
 
         sb.append(";");
@@ -762,34 +782,148 @@ public class ClassDecompiler {
         }
     }
 
+    /** Lifts + recovers {@code <clinit>} to a fully-transformed AST body (no trailing return). Throws on failure. */
+    private BlockStmt recoverClinitBody(MethodEntry clinit) {
+        IRMethod ir = ssa.lift(clinit);
+        applyBaselineTransforms(ir);
+        applyAdditionalTransforms(ir);
+        BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
+        astSimplifier.transform(body);
+        arrayInitReconstructor.transform(body);
+        patternInstanceOf.transform(body);
+        singleUseInliner.transform(body);
+        deadStoreEliminator.transform(body);
+        deadVarEliminator.transform(body);
+        varargsReconstructor.transform(body);
+        declarationHoister.transform(body);
+        patternSwitchReconstructor.transform(body);
+        switchExprReconstructor.transform(body);
+        removeTrailingReturn(body); // Static initializers cannot have return statements
+        return body;
+    }
+
+    /** Emits a {@code static { ... }} block from an already-recovered body. */
+    private void emitStaticInitializerBlock(IndentingWriter writer, BlockStmt body, String key) {
+        int spanStart = writer.getCurrentLine();
+        writer.writeLine("static {");
+        writer.indent();
+        emitBlockContents(writer, body, key);
+        writer.dedent();
+        writer.writeLine("}");
+        recordMethodSpan(key, spanStart, writer.getCurrentLine() - 1);
+    }
+
     private void emitStaticInitializer(IndentingWriter writer, MethodEntry clinit) {
         int spanStart = writer.getCurrentLine();
         writer.writeLine("static {");
         writer.indent();
-
         try {
-            IRMethod ir = ssa.lift(clinit);
-            applyBaselineTransforms(ir);
-            applyAdditionalTransforms(ir);
-            BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
-            astSimplifier.transform(body);
-            patternInstanceOf.transform(body);
-            singleUseInliner.transform(body);
-            deadStoreEliminator.transform(body);
-            deadVarEliminator.transform(body);
-            varargsReconstructor.transform(body);
-            declarationHoister.transform(body);
-            patternSwitchReconstructor.transform(body);
-            switchExprReconstructor.transform(body);
-            removeTrailingReturn(body); // Static initializers cannot have return statements
-            emitBlockContents(writer, body, clinit.getName() + clinit.getDesc());
+            emitBlockContents(writer, recoverClinitBody(clinit), clinit.getName() + clinit.getDesc());
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile static initializer: " + e.getMessage());
         }
-
         writer.dedent();
         writer.writeLine("}");
         recordMethodSpan(clinit.getName() + clinit.getDesc(), spanStart, writer.getCurrentLine() - 1);
+    }
+
+    /** A {@code <clinit>}'s leading static-field assignments hoisted into field initializers + the leftover block. */
+    private static final class ClinitHoist {
+        final Map<String, String> initializers;   // field name -> rendered initializer source
+        final BlockStmt remainingBody;             // <clinit> body minus the hoisted prefix
+        final String clinitKey;
+
+        ClinitHoist(Map<String, String> initializers, BlockStmt remainingBody, String clinitKey) {
+            this.initializers = initializers;
+            this.remainingBody = remainingBody;
+            this.clinitKey = clinitKey;
+        }
+
+        boolean hasRemaining() {
+            return remainingBody != null && !remainingBody.getStatements().isEmpty();
+        }
+    }
+
+    /**
+     * Hoists the leading run of {@code <clinit>} statements that are simple {@code ThisClass.staticField = <expr>}
+     * assignments into the field declarations (Java field-initializer sugar). Only a contiguous prefix is taken,
+     * and only while the assigned fields are in declaration order, each assigned exactly once in {@code <clinit>},
+     * with a right-hand side that references no local (a {@code <clinit>} temp). Under those rules the emitted layout
+     * (field inits in declaration order, then the leftover {@code static {}} block) reproduces the original
+     * {@code <clinit>} execution order exactly. Returns null if there is no {@code <clinit>} or recovery fails, so the
+     * caller falls back to emitting the whole block.
+     */
+    private ClinitHoist computeClinitHoist(List<FieldEntry> emittedFields) {
+        MethodEntry clinit = findMethod("<clinit>");
+        if (clinit == null || clinit.getCodeAttribute() == null) {
+            return null;
+        }
+        BlockStmt body;
+        try {
+            body = recoverClinitBody(clinit);
+        } catch (Exception e) {
+            return null;
+        }
+        String key = clinit.getName() + clinit.getDesc();
+
+        Map<String, Integer> declIndex = new HashMap<>();
+        for (int i = 0; i < emittedFields.size(); i++) {
+            FieldEntry f = emittedFields.get(i);
+            if (Modifiers.isStatic(f.getAccess())) {
+                declIndex.putIfAbsent(f.getName(), i);
+            }
+        }
+
+        List<Statement> stmts = body.getStatements();
+        Map<String, Integer> assignCount = new HashMap<>();
+        for (Statement s : stmts) {
+            String name = staticFieldAssignmentName(s);
+            if (name != null) {
+                assignCount.merge(name, 1, Integer::sum);
+            }
+        }
+
+        Map<String, String> hoisted = new LinkedHashMap<>();
+        int maxIdx = -1;
+        int prefixEnd = 0;
+        for (Statement s : stmts) {
+            String name = staticFieldAssignmentName(s);
+            if (name == null) break;                              // not an own-static assignment - stop the prefix
+            Integer idx = declIndex.get(name);
+            if (idx == null || idx <= maxIdx) break;              // not an emitted field, or out of declaration order
+            if (assignCount.getOrDefault(name, 0) != 1) break;    // assigned more than once in <clinit>
+            Expression rhs = ((BinaryExpr) ((ExprStmt) s).getExpression()).getRight();
+            if (referencesLocal(rhs)) break;                      // RHS uses a <clinit> temp (e.g. array build)
+            hoisted.put(name, SourceEmitter.emit(rhs));
+            maxIdx = idx;
+            prefixEnd++;
+        }
+
+        BlockStmt remaining = prefixEnd == 0
+                ? body
+                : new BlockStmt(new ArrayList<>(stmts.subList(prefixEnd, stmts.size())));
+        return new ClinitHoist(hoisted, remaining, key);
+    }
+
+    /** The field name if {@code s} is {@code ThisClass.staticField = <expr>} (simple {@code =}), else null. */
+    private String staticFieldAssignmentName(Statement s) {
+        if (!(s instanceof ExprStmt)) return null;
+        Expression e = ((ExprStmt) s).getExpression();
+        if (!(e instanceof BinaryExpr)) return null;
+        BinaryExpr b = (BinaryExpr) e;
+        if (b.getOperator() != BinaryOperator.ASSIGN || !(b.getLeft() instanceof FieldAccessExpr)) return null;
+        FieldAccessExpr fa = (FieldAccessExpr) b.getLeft();
+        if (!fa.isStatic() || !classFile.getClassName().equals(fa.getOwnerClass())) return null;
+        return fa.getFieldName();
+    }
+
+    /** Whether the AST subtree references any local variable (a {@link VarRefExpr}). */
+    private static boolean referencesLocal(ASTNode node) {
+        if (node instanceof VarRefExpr) return true;
+        for (ASTNode child : node.getChildren()) {
+            if (referencesLocal(child)) return true;
+        }
+        return false;
     }
 
     /**
