@@ -28,6 +28,7 @@ import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
+import com.tonic.analysis.source.recovery.SyntheticLocalVariableTable;
 import com.tonic.analysis.source.recovery.SwitchMapAnalyzer;
 import com.tonic.analysis.source.recovery.TypeRecoverer;
 import com.tonic.analysis.ssa.SSA;
@@ -209,6 +210,30 @@ public class ClassDecompiler {
          */
         public ClassDecompiler build() {
             return new ClassDecompiler(classFile, configBuilder.build());
+        }
+    }
+
+    /**
+     * Builds a synthetic {@link LocalVariableTableAttribute} for {@code method} from the recovered slot names,
+     * keyed to the method's original bytecode offsets - for injecting named locals into a stripped class (the
+     * names match what {@link #decompile()} renders). Returns null when the method has no Code or nothing is
+     * recoverable. Does not modify any bytecode; the caller attaches the attribute and writes the class.
+     */
+    public LocalVariableTableAttribute localVariableTableFor(MethodEntry method) {
+        CodeAttribute code = method.getCodeAttribute();
+        if (code == null || code.getCode() == null) {
+            return null;
+        }
+        try {
+            IRMethod ir = ssa.lift(method);
+            applyBaselineTransforms(ir);
+            MethodRecoverer recoverer = new MethodRecoverer(ir, method);
+            recoverer.analyze();
+            recoverer.initializeRecovery();
+            return SyntheticLocalVariableTable.build(ir, recoverer.getRecoveryContext(), method,
+                    code.getCode().length, code.getMaxLocals(), classFile.getConstPool());
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -1324,10 +1349,6 @@ public class ClassDecompiler {
             ArraySourceType arrType = (ArraySourceType) type;
             recordTypeFromSourceType(arrType.getElementType());
         }
-    }
-
-    private String formatParameters(String desc, boolean isSignature, boolean varargs) {
-        return formatParameters(desc, isSignature, varargs, false, java.util.Collections.emptyMap());
     }
 
     /**

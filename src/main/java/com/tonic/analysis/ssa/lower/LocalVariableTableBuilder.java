@@ -8,6 +8,7 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
 import com.tonic.parser.attribute.table.LocalVariableTableEntry;
+import com.tonic.parser.attribute.table.LvtSupport;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,15 +62,14 @@ public final class LocalVariableTableBuilder {
             int startPc = scope[0];
             int length = scope[1] - scope[0];
             String desc = local.getType() != null ? local.getType().getDescriptor() : null;
-            if (desc == null || local.getName() == null || !valid(slot, maxLocals, startPc, length)) {
+            if (desc == null || local.getName() == null
+                    || !LvtSupport.valid(slot, maxLocals, startPc, length, codeLength)) {
                 continue;
             }
-            int nameIndex = constPool.findOrAddUtf8(local.getName()).getIndex(constPool);
-            int descIndex = constPool.findOrAddUtf8(desc).getIndex(constPool);
-            entries.add(new LocalVariableTableEntry(constPool, startPc, length, nameIndex, descIndex, slot));
+            entries.add(LvtSupport.entry(constPool, slot, local.getName(), desc, startPc, length));
         }
 
-        dropOverlaps(entries);
+        LvtSupport.dropSameSlotOverlaps(entries);
         if (entries.isEmpty()) {
             return null;
         }
@@ -124,37 +124,5 @@ public final class LocalVariableTableBuilder {
             }
         }
         return new int[]{Integer.MAX_VALUE, -1};
-    }
-
-    private boolean valid(int slot, int maxLocals, int startPc, int length) {
-        return slot >= 0 && slot < maxLocals
-                && startPc >= 0 && length >= 0 && startPc + length <= codeLength;
-    }
-
-    /** Drops any same-slot entry overlapping an already-kept one (only same-block slot reuse can collide). */
-    private void dropOverlaps(List<LocalVariableTableEntry> entries) {
-        List<LocalVariableTableEntry> kept = new ArrayList<>();
-        for (LocalVariableTableEntry e : entries) {
-            boolean overlaps = false;
-            for (LocalVariableTableEntry k : kept) {
-                if (k.getIndex() == e.getIndex() && rangesOverlap(k, e)) {
-                    overlaps = true;
-                    break;
-                }
-            }
-            if (!overlaps) {
-                kept.add(e);
-            }
-        }
-        entries.clear();
-        entries.addAll(kept);
-    }
-
-    private boolean rangesOverlap(LocalVariableTableEntry a, LocalVariableTableEntry b) {
-        int aStart = a.getStartPc();
-        int aEnd = aStart + a.getLengthPc();
-        int bStart = b.getStartPc();
-        int bEnd = bStart + b.getLengthPc();
-        return aStart < bEnd && bStart < aEnd;
     }
 }
