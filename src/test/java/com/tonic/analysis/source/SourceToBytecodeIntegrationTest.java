@@ -1273,7 +1273,7 @@ public class SourceToBytecodeIntegrationTest {
                 decompiled.indexOf(';', decompiled.indexOf(';', forIdx) + 1));
             assertTrue(condition.contains("*") && condition.contains("<="),
                 "loop condition must recover i * i <= n, not a spilled scratch reference: " + decompiled);
-            assertTrue(decompiled.contains("% local1 == 0") || decompiled.replaceAll("\\s", "").contains("%local1==0"),
+            assertTrue(decompiled.contains("% i == 0") || decompiled.replaceAll("\\s", "").contains("%i==0"),
                 "body must recover n % i == 0: " + decompiled);
             assertFalse(decompiled.contains("local2"),
                 "no scratch slot variable should be materialized: " + decompiled);

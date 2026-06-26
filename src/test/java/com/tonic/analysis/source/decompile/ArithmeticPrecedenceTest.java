@@ -61,6 +61,6 @@ public class ArithmeticPrecedenceTest {
 
         // Check the decompiled output contains proper parenthesization
         // The subtraction should happen before the division
-        assertTrue(source.contains("local11") || source.contains("endTime"), "Should have timing variables");
+        assertTrue(source.contains("startTime") || source.contains("elapsedMillis"), "Should have timing variables");
     }
 }

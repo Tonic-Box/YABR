@@ -40,6 +40,9 @@ import com.tonic.parser.ClassPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.LocalVariableTableAttribute;
+import com.tonic.parser.attribute.table.LocalVariableTableEntry;
 import com.tonic.parser.attribute.ConstantValueAttribute;
 import com.tonic.parser.attribute.ExceptionsAttribute;
 import com.tonic.parser.attribute.PermittedSubclassesAttribute;
@@ -60,6 +63,7 @@ import com.tonic.utill.Modifiers;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1046,7 +1050,8 @@ public class ClassDecompiler {
         String sigOrDesc = signature != null ? signature : desc;
 
         sb.append("(");
-        sb.append(formatParameters(sigOrDesc, signature != null, Modifiers.isVarArgs(ctor.getAccess())));
+        sb.append(formatParameters(sigOrDesc, signature != null, Modifiers.isVarArgs(ctor.getAccess()),
+                false, unambiguousLvtNames(ctor)));
         sb.append(")");
 
         // Throws clause (TODO: could extract from Exceptions attribute)
@@ -1124,7 +1129,8 @@ public class ClassDecompiler {
         sb.append(method.getName());
 
         sb.append("(");
-        sb.append(formatParameters(sigOrDesc, signature != null, Modifiers.isVarArgs(access)));
+        sb.append(formatParameters(sigOrDesc, signature != null, Modifiers.isVarArgs(access),
+                Modifiers.isStatic(access), unambiguousLvtNames(method)));
         sb.append(")");
 
         String throwsClause = buildThrowsClause(method.getAttributes());
@@ -1321,6 +1327,46 @@ public class ClassDecompiler {
     }
 
     private String formatParameters(String desc, boolean isSignature, boolean varargs) {
+        return formatParameters(desc, isSignature, varargs, false, java.util.Collections.emptyMap());
+    }
+
+    /**
+     * Maps a method's local slots to their LocalVariableTable names, keeping only slots whose every entry
+     * agrees on a single name. Lets the signature show real parameter names that match the recovered body.
+     */
+    private Map<Integer, String> unambiguousLvtNames(com.tonic.parser.MethodEntry method) {
+        Map<Integer, String> result = new HashMap<>();
+        CodeAttribute code = method.getCodeAttribute();
+        if (code == null) {
+            return result;
+        }
+        LocalVariableTableAttribute lvt = null;
+        for (Attribute attr : code.getAttributes()) {
+            if (attr instanceof LocalVariableTableAttribute) {
+                lvt = (LocalVariableTableAttribute) attr;
+                break;
+            }
+        }
+        if (lvt == null) {
+            return result;
+        }
+        Map<Integer, Set<String>> namesPerSlot = new HashMap<>();
+        for (LocalVariableTableEntry e : lvt.getLocalVariableTable()) {
+            Object item = classFile.getConstPool().getItem(e.getNameIndex());
+            if (item instanceof Utf8Item) {
+                namesPerSlot.computeIfAbsent(e.getIndex(), k -> new HashSet<>()).add(((Utf8Item) item).getValue());
+            }
+        }
+        for (Map.Entry<Integer, Set<String>> e : namesPerSlot.entrySet()) {
+            if (e.getValue().size() == 1) {
+                result.put(e.getKey(), e.getValue().iterator().next());
+            }
+        }
+        return result;
+    }
+
+    private String formatParameters(String desc, boolean isSignature, boolean varargs, boolean isStatic,
+                                    Map<Integer, String> slotNames) {
         String workDesc = desc;
         if (isSignature && workDesc.startsWith("<")) {
             int depth = 1;
@@ -1342,6 +1388,7 @@ public class ClassDecompiler {
         if (params.isEmpty()) return "";
 
         List<String> paramTypes = new ArrayList<>();
+        List<Integer> paramWidths = new ArrayList<>();
         int i = 0;
         while (i < params.length()) {
             int start = i;
@@ -1360,29 +1407,36 @@ public class ClassDecompiler {
                 } else {
                     paramTypes.add(trackAndFormatType(typeRecoverer.recoverType(typeDesc)));
                 }
+                paramWidths.add(1);
                 i = end + 1;
             } else if (c == 'T') {
                 int end = params.indexOf(';', i);
                 if (end < 0) break;
                 String typeVar = params.substring(i + 1, end);
                 paramTypes.add(typeVar);
+                paramWidths.add(1);
                 i = end + 1;
             } else {
                 String typeDesc = params.substring(start, i + 1);
                 paramTypes.add(trackAndFormatType(typeRecoverer.recoverType(typeDesc)));
+                boolean isArray = i > start;
+                paramWidths.add(!isArray && (c == 'J' || c == 'D') ? 2 : 1);
                 i++;
             }
         }
 
         StringBuilder sb = new StringBuilder();
+        int slot = isStatic ? 0 : 1;
         for (int j = 0; j < paramTypes.size(); j++) {
             if (j > 0) sb.append(", ");
             String type = paramTypes.get(j);
             if (varargs && j == paramTypes.size() - 1 && type.endsWith("[]")) {
                 type = type.substring(0, type.length() - 2) + "...";
             }
-            sb.append(type);
-            sb.append(" arg").append(j);
+            sb.append(type).append(' ');
+            String name = slotNames.get(slot);
+            sb.append(name != null ? name : "arg" + j);
+            slot += j < paramWidths.size() ? paramWidths.get(j) : 1;
         }
         return sb.toString();
     }

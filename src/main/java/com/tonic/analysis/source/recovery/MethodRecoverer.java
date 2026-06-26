@@ -9,7 +9,6 @@ import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.MethodEntry;
@@ -222,7 +221,8 @@ public class MethodRecoverer {
     private void assignVariableNames() {
         assignParameterNames();
 
-        SlotVariablePartition partition = new SlotVariablePartition(irMethod, this::baseNameForSlot);
+        SlotVariablePartition partition = new SlotVariablePartition(irMethod, this::baseNameForSlot,
+                nameRecoverer::debugNameAt);
         recoveryContext.setSlotPartition(partition);
 
         irMethod.getBlocks().forEach(block -> {
@@ -257,10 +257,14 @@ public class MethodRecoverer {
      * 'argN' for a parameter slot, or 'localN' otherwise.
      */
     private String baseNameForSlot(int slot) {
+        String debug = nameRecoverer != null ? nameRecoverer.unambiguousDebugName(slot) : null;
+        if (debug != null && !reservedNames.contains(debug)) {
+            return debug;
+        }
         if (!irMethod.isStatic() && slot == 0) {
             return "this";
         }
-        int paramSlots = computeParameterSlots();
+        int paramSlots = locals().parameterSlotCount();
         if (slot < paramSlots) {
             return "arg" + getParamIndexForSlot(slot);
         }
@@ -306,8 +310,12 @@ public class MethodRecoverer {
     private void assignParameterNames() {
         int paramIndex = 0;
         for (var param : irMethod.getParameters()) {
+            int slot = locals().slotOfParameter(param);
+            String debug = nameRecoverer != null ? nameRecoverer.unambiguousDebugName(slot) : null;
             String name;
-            if (!irMethod.isStatic() && paramIndex == 0) {
+            if (debug != null) {
+                name = debug;
+            } else if (!irMethod.isStatic() && paramIndex == 0) {
                 name = "this";
             } else {
                 int argIndex = irMethod.isStatic() ? paramIndex : paramIndex - 1;
@@ -410,23 +418,14 @@ public class MethodRecoverer {
         return types;
     }
 
-    /**
-     * Computes the number of local variable slots used by parameters.
-     * Note: irMethod.getParameters() includes 'this' for instance methods.
-     */
-    private int computeParameterSlots() {
-        int slots = 0;
-        for (var param : irMethod.getParameters()) {
-            slots++;
-            if (param.getType() instanceof PrimitiveType) {
-                PrimitiveType p = (PrimitiveType) param.getType();
-                if (p == PrimitiveType.LONG ||
-                    p == PrimitiveType.DOUBLE) {
-                    slots++;
-                }
-            }
+    private MethodLocals locals;
+
+    /** The method's parameter slot layout (lazily built); see {@link MethodLocals}. */
+    private MethodLocals locals() {
+        if (locals == null) {
+            locals = new MethodLocals(irMethod);
         }
-        return slots;
+        return locals;
     }
 
     /**

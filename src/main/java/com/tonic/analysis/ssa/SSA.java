@@ -33,6 +33,7 @@ public class SSA {
     private final List<IRTransform> transforms;
     private final List<ClassTransform> classTransforms;
     private boolean resolveExceptionLocals = false;
+    private boolean emitLocalVariableTable = true;
 
     /**
      * Creates a new SSA processor.
@@ -59,6 +60,19 @@ public class SSA {
      */
     public SSA withExceptionLocalResolution() {
         this.resolveExceptionLocals = true;
+        return this;
+    }
+
+    /**
+     * Disables LocalVariableTable emission when lowering back to bytecode. Emission is ON by default so
+     * recompiled source carries real local-variable debug names; opt out for size-sensitive or debug-free
+     * output. IR with no source-local model (e.g. the lift→lower deobfuscation path) emits no table either way,
+     * so this only affects the source-compile path.
+     *
+     * @return this for fluent chaining
+     */
+    public SSA withoutLocalVariableTable() {
+        this.emitLocalVariableTable = false;
         return this;
     }
 
@@ -108,7 +122,7 @@ public class SSA {
      * @param targetMethod the target method to write bytecode into
      */
     public void lower(IRMethod irMethod, MethodEntry targetMethod) {
-        BytecodeLowerer lowerer = new BytecodeLowerer(constPool);
+        BytecodeLowerer lowerer = new BytecodeLowerer(constPool, emitLocalVariableTable);
         lowerer.lower(irMethod, targetMethod);
     }
 

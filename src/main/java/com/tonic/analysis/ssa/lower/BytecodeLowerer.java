@@ -31,9 +31,15 @@ import java.util.Set;
 public class BytecodeLowerer {
 
     private final ConstPool constPool;
+    private final boolean emitLocalVariableTable;
 
     public BytecodeLowerer(ConstPool constPool) {
+        this(constPool, true);
+    }
+
+    public BytecodeLowerer(ConstPool constPool, boolean emitLocalVariableTable) {
         this.constPool = constPool;
+        this.emitLocalVariableTable = emitLocalVariableTable;
     }
 
     public void lower(IRMethod irMethod, MethodEntry targetMethod) {
@@ -78,6 +84,14 @@ public class BytecodeLowerer {
             codeAttr.getAttributes().removeIf(attr ->
                 attr instanceof LocalVariableTableAttribute ||
                 attr instanceof LineNumberTableAttribute);
+
+            if (emitLocalVariableTable) {
+                LocalVariableTableAttribute lvt = new LocalVariableTableBuilder(
+                        irMethod, regAlloc, emitter, bytecode.length, constPool, targetMethod).build();
+                if (lvt != null) {
+                    codeAttr.getAttributes().add(lvt);
+                }
+            }
 
             codeAttr.updateLength();
 

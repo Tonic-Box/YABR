@@ -49,7 +49,7 @@ class StructuralRecoveryReconstructionTest {
             "  public int f(Object lock, int x) { synchronized (lock) { return x * 2; } }\n" +
             "}\n";
         String out = roundTrip("SyncP", src);
-        assertTrue(out.contains("synchronized (arg0)"), "expected synchronized on the parameter:\n" + out);
+        assertTrue(out.contains("synchronized (lock)"), "expected synchronized on the parameter:\n" + out);
         assertRecompiles("SyncP", out);
     }
 
@@ -79,7 +79,7 @@ class StructuralRecoveryReconstructionTest {
             "  }\n" +
             "}\n";
         String out = roundTrip("StrSw", src);
-        assertTrue(out.contains("switch (arg0)"), "expected a switch on the string, not its hashCode:\n" + out);
+        assertTrue(out.contains("switch (s)"), "expected a switch on the string, not its hashCode:\n" + out);
         assertFalse(out.contains("hashCode()"), "the hashCode dispatch must be folded away:\n" + out);
         assertTrue(out.contains("case \"a\"") && out.contains("case \"b\""),
             "string case labels must be reconstructed:\n" + out);
@@ -100,7 +100,7 @@ class StructuralRecoveryReconstructionTest {
             "  }\n" +
             "}\n";
         String out = roundTrip("StrSw2", src);
-        assertTrue(out.contains("switch (arg0)"), "expected a switch on the string:\n" + out);
+        assertTrue(out.contains("switch (s)"), "expected a switch on the string:\n" + out);
         assertTrue(out.contains("\"a\"") && out.contains("\"b\"") && out.contains("\"c\""),
             "all string case labels must be reconstructed:\n" + out);
         assertFalse(out.contains("hashCode()"), "the hashCode dispatch must be folded away:\n" + out);
@@ -146,7 +146,7 @@ class StructuralRecoveryReconstructionTest {
             "  public static int f(int x) { try { return 100 / x; } finally { if (x < 0) return -1; } }\n" +
             "}\n";
         String out = roundTrip("FinRet", src);
-        assertTrue(out.contains("100 / arg0"), "the try's computation must be preserved:\n" + out);
+        assertTrue(out.contains("100 / x"), "the try's computation must be preserved:\n" + out);
         Method f = compileAndLoad("FinRet", out).getMethod("f", int.class);
         assertEquals(20, f.invoke(null, 5), "normal path returns the try value");
         assertEquals(-1, f.invoke(null, -2), "the finally's return overrides on the normal path");

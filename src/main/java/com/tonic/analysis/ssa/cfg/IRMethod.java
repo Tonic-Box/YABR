@@ -24,6 +24,9 @@ public class IRMethod {
     private MethodEntry sourceMethod;
 
     private final List<SSAValue> parameters;
+    /** Source-level locals (receiver, parameters, declared body variables) recorded during AST lowering,
+     *  used to emit a LocalVariableTable. Empty for IR not produced from source (e.g. the bytecode-lift path). */
+    private final List<SourceLocal> sourceLocals = new ArrayList<>();
     private final List<IRBlock> blocks;
     @Setter
     private IRBlock entryBlock;
@@ -68,6 +71,35 @@ public class IRMethod {
      */
     public void addParameter(SSAValue param) {
         parameters.add(param);
+    }
+
+    /** Records a source-level local (or appends an SSA value to an existing one); see {@link SourceLocal}. */
+    public void addSourceLocal(SourceLocal local) {
+        sourceLocals.add(local);
+    }
+
+    /**
+     * A source-declared variable (the receiver, a parameter, or a body local) and the SSA value(s) it lowered
+     * to. Carries the real source name + declared type so the lowerer can emit a LocalVariableTable; the slot
+     * and scope are resolved later from register allocation and the final bytecode layout.
+     */
+    @Getter
+    public static final class SourceLocal {
+        private final String name;
+        private final IRType type;
+        private final List<SSAValue> values = new ArrayList<>();
+        private final boolean parameter;
+
+        public SourceLocal(String name, IRType type, boolean parameter) {
+            this.name = name;
+            this.type = type;
+            this.parameter = parameter;
+        }
+
+        /** Adds another SSA value bound to this source variable (SSA splits one source var across defs). */
+        public void addValue(SSAValue value) {
+            values.add(value);
+        }
     }
 
     /**

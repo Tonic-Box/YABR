@@ -109,6 +109,7 @@ public class StatementLowerer {
         SourceType type = decl.getType();
         String name = decl.getName();
         Expression init = decl.getInitializer();
+        ctx.declareLocal(name, type.toIRType(), false);
 
         if (init != null) {
             Value value = exprLowerer.lower(init);
@@ -306,6 +307,7 @@ public class StatementLowerer {
         SSAValue elem = ctx.newValue(elemType);
         ArrayAccessInstruction loadInstr = ArrayAccessInstruction.createLoad(elem, iterable, index);
         ctx.getCurrentBlock().addInstruction(loadInstr);
+        ctx.declareLocal(forEach.getVariable().getName(), elemType, false);
         ctx.setVariable(forEach.getVariable().getName(), elem);
 
         lower(forEach.getBody());
@@ -503,10 +505,12 @@ public class StatementLowerer {
             String exVarName = catchClause.variableName();
             String exVarType = ctx.getTypeResolver().resolveClassName(
                     ((ReferenceType) catchClause.exceptionTypes().get(0).toIRType()).getInternalName());
-            SSAValue exVar = ctx.newValue(new ReferenceType(exVarType));
+            ReferenceType exVarIrType = new ReferenceType(exVarType);
+            SSAValue exVar = ctx.newValue(exVarIrType);
             // Capture the JVM-provided exception (on the stack at handler entry) into the catch variable;
             // otherwise it leaks onto the operand stack of whatever follows the catch.
             catchBlock.addInstruction(SimpleInstruction.createCatch(exVar));
+            ctx.declareLocal(exVarName, exVarIrType, false);
             ctx.setVariable(exVarName, exVar);
             for (String name : reassignedInTry) {
                 ctx.setVariable(name, preTryVars.get(name));

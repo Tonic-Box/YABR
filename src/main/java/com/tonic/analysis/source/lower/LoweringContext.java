@@ -38,6 +38,10 @@ public class LoweringContext {
     /** Map from variable names to their local slot indices */
     private final Map<String, Integer> variableLocalIndices = new HashMap<>();
 
+    /** The in-scope source-local record per name (re-created on each declaration, so disjoint same-name
+     *  declarations stay distinct), used to capture LocalVariableTable info during lowering. */
+    private final Map<String, IRMethod.SourceLocal> currentSourceLocal = new HashMap<>();
+
     /** Next available local slot index */
     private int nextLocalIndex = 0;
 
@@ -104,6 +108,27 @@ public class LoweringContext {
     public void registerParameter(String name, int localIndex, SSAValue value) {
         variableMap.put(name, value);
         variableLocalIndices.put(name, localIndex);
+        recordValue(name, value);
+    }
+
+    /**
+     * Declares a source-level local (or parameter/receiver) under {@code name} with its declared {@code type}.
+     * A fresh record is created each call so that two disjoint declarations of the same name (sequential
+     * shadowing) remain distinct LocalVariableTable entries. Subsequent assignments captured via
+     * {@link #setVariable}/{@link #registerParameter} append their SSA values to the current record.
+     */
+    public void declareLocal(String name, IRType type, boolean isParameter) {
+        IRMethod.SourceLocal local = new IRMethod.SourceLocal(name, type, isParameter);
+        currentSourceLocal.put(name, local);
+        irMethod.addSourceLocal(local);
+    }
+
+    /** Appends an SSA value to the current source-local record for {@code name}, if one was declared. */
+    private void recordValue(String name, SSAValue value) {
+        IRMethod.SourceLocal local = currentSourceLocal.get(name);
+        if (local != null && value != null) {
+            local.addValue(value);
+        }
     }
 
     /**
@@ -137,6 +162,7 @@ public class LoweringContext {
      */
     public void setVariable(String name, SSAValue value) {
         variableMap.put(name, value);
+        recordValue(name, value);
 
         if (emitLocalInstructions && currentBlock != null) {
             int localIndex = getOrAllocateLocalIndex(name);

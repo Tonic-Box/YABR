@@ -55,15 +55,17 @@ public class StatementRecoverer {
      */
     private void preDeclareParameters() {
         IRMethod method = context.getIrMethod();
-        String descriptor = method.getDescriptor();
-        if (descriptor == null) {
-            return;
-        }
-
-        List<String> paramTypes = parseParameterTypes(descriptor);
-        for (int i = 0; i < paramTypes.size(); i++) {
-            String paramName = "arg" + i;
-            context.getExpressionContext().markDeclared(paramName);
+        RecoveryContext ctx = context.getExpressionContext();
+        List<SSAValue> params = method.getParameters();
+        // Skip the receiver (slot 0 of an instance method); declare each parameter under the name it was
+        // actually given - its real LocalVariableTable name when present, else the synthetic "argN" - so a
+        // store back to a parameter slot recovers as an assignment, never a self-copy declaration.
+        int start = method.isStatic() ? 0 : 1;
+        for (int i = start; i < params.size(); i++) {
+            String paramName = ctx.getVariableName(params.get(i));
+            if (paramName != null) {
+                ctx.markDeclared(paramName);
+            }
         }
     }
 
@@ -2121,7 +2123,8 @@ public class StatementRecoverer {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 if (phi.getResult() != null && !phiValues.contains(phi.getResult())) {
                     String phiVarName = context.getExpressionContext().getVariableName(phi.getResult());
-                    if (phiVarName != null && !phiVarName.equals("this") && !phiVarName.startsWith("arg")) {
+                    if (phiVarName != null && !phiVarName.equals("this")
+                            && !isParameterOrThisRef(phi.getResult())) {
                         if (!declaredNames.contains(phiVarName) && !context.getExpressionContext().isDeclared(phiVarName)) {
                             SourceType type = computePhiUnifiedType(phi);
                             declaredNames.add(phiVarName);
@@ -2191,7 +2194,7 @@ public class StatementRecoverer {
             name = "v" + result.getId();
         }
 
-        if ("this".equals(name) || name.startsWith("arg")) {
+        if ("this".equals(name) || isParameterOrThisRef(result)) {
             return;
         }
 
@@ -2349,6 +2352,42 @@ public class StatementRecoverer {
         }
 
         return -1;
+    }
+
+    /**
+     * The local slot a value belongs to - its parameter slot, the slot it was stored to, or the slot of its
+     * defining local load/store/phi - or -1 when it is not a local-slot value. Lets a variable's role be
+     * decided from its slot layout rather than from its (now real) recovered name.
+     */
+    private int slotOfValue(SSAValue value) {
+        if (value == null) {
+            return -1;
+        }
+        RecoveryContext ctx = context.getExpressionContext();
+        int paramSlot = ctx.parameterSlot(value);
+        if (paramSlot >= 0) {
+            return paramSlot;
+        }
+        int stored = ctx.getSSAValueSlot(value);
+        if (stored >= 0) {
+            return stored;
+        }
+        IRInstruction def = value.getDefinition();
+        if (def instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) def).getLocalIndex();
+        }
+        if (def instanceof StoreLocalInstruction) {
+            return ((StoreLocalInstruction) def).getLocalIndex();
+        }
+        if (def instanceof PhiInstruction) {
+            return getLocalIndexFromPhi((PhiInstruction) def);
+        }
+        return -1;
+    }
+
+    /** True when {@code value} refers to the receiver or a parameter (decided by its local slot). */
+    private boolean isParameterOrThisRef(SSAValue value) {
+        return context.getExpressionContext().isParameterOrThisSlot(slotOfValue(value));
     }
 
     /**
@@ -3371,7 +3410,8 @@ public class StatementRecoverer {
                             }
                             if (newResult != null && targetPhi != null && targetPhi.getResult() != null) {
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
-                                if (phiVarName != null && !phiVarName.equals("this") && !phiVarName.startsWith("arg")) {
+                                if (phiVarName != null && !phiVarName.equals("this")
+                                        && !isParameterOrThisRef(targetPhi.getResult())) {
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
@@ -3391,7 +3431,8 @@ public class StatementRecoverer {
                             PhiInstruction targetPhi = getPhiUsingValue(actualNewValue);
                             if (targetPhi != null && targetPhi.getResult() != null) {
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
-                                if (phiVarName != null && !phiVarName.equals("this") && !phiVarName.startsWith("arg")) {
+                                if (phiVarName != null && !phiVarName.equals("this")
+                                        && !isParameterOrThisRef(targetPhi.getResult())) {
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
@@ -3399,7 +3440,8 @@ public class StatementRecoverer {
                             }
                         }
                         String varName = context.getExpressionContext().getVariableName(ssaReceiver);
-                        if (varName != null && !varName.equals("this") && !varName.startsWith("arg")) {
+                        if (varName != null && !varName.equals("this")
+                                && !isParameterOrThisRef(ssaReceiver)) {
                             SourceType type = expr.getType();
                             if (!context.getExpressionContext().isDeclared(varName)) {
                                 context.getExpressionContext().markDeclared(varName);
@@ -4594,7 +4636,8 @@ public class StatementRecoverer {
         }
         String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
         if (phiVarName == null || !context.getExpressionContext().isDeclared(phiVarName)
-                || phiVarName.equals("this") || phiVarName.startsWith("arg")) {
+                || phiVarName.equals("this")
+                || isParameterOrThisRef(targetPhi.getResult())) {
             return null;
         }
         SourceType type = getLocalSlotUnifiedType(phiVarName);
@@ -5224,7 +5267,8 @@ public class StatementRecoverer {
                     name = getNameForLocalSlotWithType(store.getLocalIndex(),
                         typeRecoverer.recoverType(store.getValue()));
                 }
-                if (name == null || name.equals("this") || name.startsWith("arg")) {
+                if (name == null || name.equals("this")
+                        || context.getExpressionContext().isParameterOrThisSlot(store.getLocalIndex())) {
                     continue;
                 }
                 if (!done.add(name) || context.getExpressionContext().isDeclared(name)) {
@@ -5366,7 +5410,8 @@ public class StatementRecoverer {
                 continue;
             }
             String target = context.getExpressionContext().getVariableName(result);
-            if (target == null || target.equals("this") || target.startsWith("arg")) {
+            if (target == null || target.equals("this")
+                    || isParameterOrThisRef(result)) {
                 continue;
             }
             Value incoming = phi.getIncoming(pred);
@@ -5471,17 +5516,9 @@ public class StatementRecoverer {
         }
 
         if (expr instanceof VarRefExpr) {
-            VarRefExpr vre = (VarRefExpr) expr;
-            String varName = vre.getName();
-            if (varName != null && varName.startsWith("arg")) {
-                try {
-                    int argIndex = Integer.parseInt(varName.substring(3));
-                    if (isParameterBoolean(argIndex)) {
-                        return true;
-                    }
-                } catch (NumberFormatException ignored) {
-                }
-            }
+            int slot = slotOfValue(((VarRefExpr) expr).getSsaValue());
+            return context.getExpressionContext().isParameterOrThisSlot(slot)
+                    && isParameterBoolean(context.getExpressionContext().parameterIndexForSlot(slot));
         }
 
         return false;

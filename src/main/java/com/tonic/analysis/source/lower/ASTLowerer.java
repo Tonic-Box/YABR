@@ -170,6 +170,7 @@ public class ASTLowerer {
             IRType thisType = new ReferenceType(ownerClass);
             SSAValue thisVal = ctx.newValue(thisType);
             irMethod.addParameter(thisVal);
+            ctx.declareLocal("this", thisType, true);
             if (hasLoops) {
                 ctx.registerParameter("this", paramSlot, thisVal);
             } else {
@@ -182,6 +183,7 @@ public class ASTLowerer {
             IRType paramType = resolvedParamType(parameters.get(i), typeResolver);
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
+            ctx.declareLocal(paramNames.get(i), paramType, true);
             if (hasLoops) {
                 ctx.registerParameter(paramNames.get(i), paramSlot, paramVal);
             } else {

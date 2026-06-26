@@ -41,14 +41,23 @@ import java.util.function.IntFunction;
  */
 public class SlotVariablePartition {
 
+    /** Resolves the source name in scope for a {@code (slot, bytecode offset)}, or null when unknown. */
+    @FunctionalInterface
+    public interface ScopeNameResolver {
+        String nameAt(int slot, int bytecodeOffset);
+    }
+
     private final IRMethod method;
     private final IntFunction<String> baseNameForSlot;
+    private final ScopeNameResolver scopeNameResolver;
 
     private final Map<IRInstruction, String> instructionNames = new HashMap<>();
 
-    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot) {
+    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot,
+                                 ScopeNameResolver scopeNameResolver) {
         this.method = method;
         this.baseNameForSlot = baseNameForSlot;
+        this.scopeNameResolver = scopeNameResolver;
         compute();
     }
 
@@ -123,7 +132,7 @@ public class SlotVariablePartition {
     }
 
     private void compute() {
-        int paramSlots = computeParameterSlots();
+        int paramSlots = new MethodLocals(method).parameterSlotCount();
         Map<Integer, Node> paramEntryDef = new HashMap<>();
         for (int slot = 0; slot < paramSlots; slot++) {
             paramEntryDef.put(slot, newNode(slot));
@@ -359,26 +368,74 @@ public class SlotVariablePartition {
             slotComponentOrder.put(slot, order);
         }
 
+        // Collect the bytecode offsets of each component's real instructions. Loads sit inside the
+        // variable's LocalVariableTable scope, so they identify the right name when a slot is reused.
+        Map<Integer, List<Integer>> rootOffsets = new HashMap<>();
         for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
-            IRInstruction instr = e.getKey();
-            Node node = e.getValue();
-            int root = find(node.id);
-            int index = slotComponentOrder.get(node.slot).get(root);
-            instructionNames.put(instr, nameFor(node.slot, index));
+            addOffset(rootOffsets, find(e.getValue().id), e.getKey().getBytecodeOffset());
         }
         for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet()) {
-            LoadLocalInstruction load = e.getKey();
-            int root = find(e.getValue());
-            int slot = nodes.get(root).slot;
-            int index = slotComponentOrder.get(slot).get(root);
-            instructionNames.put(load, nameFor(slot, index));
+            addOffset(rootOffsets, find(e.getValue()), e.getKey().getBytecodeOffset());
+        }
+
+        // One name per component: the LVT name covering its offsets when available, else the slot-based
+        // fallback (which keeps each split uniquely named when there is no debug info).
+        Map<Integer, String> rootName = new HashMap<>();
+        for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet()) {
+            int slot = se.getKey();
+            for (Map.Entry<Integer, Integer> ce : se.getValue().entrySet()) {
+                int root = ce.getKey();
+                String scoped = scopeName(slot, rootOffsets.get(root));
+                rootName.put(root, scoped != null ? scoped : nameFor(slot, ce.getValue()));
+            }
+        }
+
+        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
+            instructionNames.put(e.getKey(), rootName.get(find(e.getValue().id)));
+        }
+        for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet()) {
+            instructionNames.put(e.getKey(), rootName.get(find(e.getValue())));
         }
         for (Map.Entry<PhiInstruction, Integer> e : phiRepresentative.entrySet()) {
-            int root = find(e.getValue());
-            int slot = nodes.get(root).slot;
-            int index = slotComponentOrder.get(slot).get(root);
-            instructionNames.put(e.getKey(), nameFor(slot, index));
+            instructionNames.put(e.getKey(), rootName.get(find(e.getValue())));
         }
+    }
+
+    private void addOffset(Map<Integer, List<Integer>> map, int root, int offset) {
+        if (offset >= 0) {
+            map.computeIfAbsent(root, k -> new ArrayList<>()).add(offset);
+        }
+    }
+
+    /** The LVT name covering the most of a component's instruction offsets, or null if none resolve. */
+    private String scopeName(int slot, List<Integer> offsets) {
+        if (scopeNameResolver == null || offsets == null || offsets.isEmpty()) {
+            return null;
+        }
+        Map<String, Integer> votes = new HashMap<>();
+        for (int off : offsets) {
+            // Exact scope first; if a store sits one or two bytes before its variable's scope start
+            // (the slot becomes live only after the store completes), probe just past it.
+            String n = scopeNameResolver.nameAt(slot, off);
+            if (n == null) {
+                n = scopeNameResolver.nameAt(slot, off + 1);
+            }
+            if (n == null) {
+                n = scopeNameResolver.nameAt(slot, off + 2);
+            }
+            if (n != null) {
+                votes.merge(n, 1, Integer::sum);
+            }
+        }
+        String best = null;
+        int bestCount = 0;
+        for (Map.Entry<String, Integer> e : votes.entrySet()) {
+            if (e.getValue() > bestCount) {
+                best = e.getKey();
+                bestCount = e.getValue();
+            }
+        }
+        return best;
     }
 
     private String nameFor(int slot, int componentIndex) {
@@ -494,41 +551,4 @@ public class SlotVariablePartition {
         return -1;
     }
 
-    private int computeParameterSlots() {
-        int slots = method.isStatic() ? 0 : 1;
-        String descriptor = method.getDescriptor();
-        if (descriptor == null) {
-            return slots;
-        }
-        int i = descriptor.indexOf('(');
-        int end = descriptor.indexOf(')');
-        if (i < 0 || end < 0) {
-            return slots;
-        }
-        i++;
-        while (i < end) {
-            char c = descriptor.charAt(i);
-            if (c == 'J' || c == 'D') {
-                slots += 2;
-                i++;
-            } else if (c == 'L') {
-                slots += 1;
-                i = descriptor.indexOf(';', i) + 1;
-            } else if (c == '[') {
-                while (descriptor.charAt(i) == '[') {
-                    i++;
-                }
-                if (descriptor.charAt(i) == 'L') {
-                    i = descriptor.indexOf(';', i) + 1;
-                } else {
-                    i++;
-                }
-                slots += 1;
-            } else {
-                slots += 1;
-                i++;
-            }
-        }
-        return slots;
-    }
 }

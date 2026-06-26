@@ -22,6 +22,11 @@ public class LocalVariableTableAttribute extends Attribute {
         super(name, parent, nameIndex, length);
     }
 
+    /** Sets the entries (used when emitting a table during lowering rather than reading one from bytecode). */
+    public void setLocalVariableTable(List<LocalVariableTableEntry> localVariableTable) {
+        this.localVariableTable = localVariableTable;
+    }
+
     public LocalVariableTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
     }

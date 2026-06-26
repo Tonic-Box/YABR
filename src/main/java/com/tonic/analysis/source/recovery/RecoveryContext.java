@@ -18,6 +18,7 @@ public class RecoveryContext {
     private final IRMethod irMethod;
     private final MethodEntry sourceMethod;
     private final DefUseChains defUseChains;
+    private final MethodLocals locals;
 
     /** Reaching-definition partition of local slots into source variables. */
     @lombok.Setter
@@ -66,6 +67,7 @@ public class RecoveryContext {
         this.irMethod = irMethod;
         this.sourceMethod = sourceMethod;
         this.defUseChains = defUseChains;
+        this.locals = new MethodLocals(irMethod);
     }
 
     public void cacheExpression(SSAValue value, Expression expr) {
@@ -305,5 +307,26 @@ public class RecoveryContext {
      */
     public int getSSAValueSlot(SSAValue value) {
         return ssaValueSlot.getOrDefault(value, -1);
+    }
+
+    // --- Structural variable-role queries -----------------------------------------------------------
+    // Whether a local slot holds the receiver / a parameter / a body local is derived from the method's
+    // SSA parameter list and slot layout, NOT from the recovered name's prefix. This lets a variable carry
+    // its real LocalVariableTable name without breaking recovery decisions that previously keyed on the
+    // "arg"/"local"/"this" prefixes. The receiver is the first entry of getParameters() for an instance method.
+
+    /** The local slot a parameter (or receiver) SSA value occupies, or -1 when {@code value} is not one. */
+    public int parameterSlot(SSAValue value) {
+        return locals.slotOfParameter(value);
+    }
+
+    /** True when local {@code slot} holds the receiver or a parameter rather than a body local. */
+    public boolean isParameterOrThisSlot(int slot) {
+        return locals.isParameterOrThisSlot(slot);
+    }
+
+    /** The zero-based parameter index for a parameter {@code slot} (receiver excluded), or -1 otherwise. */
+    public int parameterIndexForSlot(int slot) {
+        return locals.parameterIndexForSlot(slot);
     }
 }
