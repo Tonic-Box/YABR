@@ -2,25 +2,25 @@
 
 # LLVM IR Lifting
 
-YABR can lift textual LLVM IR (`.ll`) back to SSA IR — the reverse of [LLVM Lowering](llvm-lowering.md). Together they close the loop for the **LLVM optimizer round-trip**:
+YABR can lift textual LLVM IR (`.ll`) back to SSA IR - the reverse of [LLVM Lowering](llvm-lowering.md). Together they close the loop for the **LLVM optimizer round-trip**:
 
 ```
 YABR SSA IR
     |
     v
-LlvmLowering.lower()  →  .ll text
+LlvmLowering.lower()  ->  .ll text
     |
     v  (optional: run opt -O2 -S)
 optimized .ll text
     |
     v
-LlvmLifter.lift()  →  IRMethod
+LlvmLifter.lift()  ->  IRMethod
     |
     v
-SSA.runTransforms()  →  optimize further
+SSA.runTransforms()  ->  optimize further
     |
     v
-SSA.lower()  →  bytecode
+SSA.lower()  ->  bytecode
 ```
 
 You get LLVM's scalar passes (constant propagation, loop unrolling, inlining, ...) for free, applied directly to YABR IR.
@@ -124,7 +124,7 @@ The module exposes exactly two public types; everything else is package-private.
 
 ### `LlvmLifterConfig`
 
-Currently a placeholder; exists to keep the API symmetric with `LlvmLoweringConfig`. Call `LlvmLifterConfig.defaults()` or omit it.
+A placeholder that keeps the API symmetric with `LlvmLoweringConfig`. Call `LlvmLifterConfig.defaults()` or omit it.
 
 ### `LlvmLiftException`
 
@@ -134,9 +134,9 @@ Thrown on parse errors (unknown type, undefined register, missing block label). 
 
 The lifter is a two-pass construction over the LLVM text:
 
-**Pass 1 — allocation.** Walk all instruction lines to collect every `%v<id>` assignment and its LLVM type. Allocate one `SSAValue` per register. Allocate one `IRBlock` per label line. Register method parameters from the `define` signature.
+**Pass 1 - allocation.** Walk all instruction lines to collect every `%v<id>` assignment and its LLVM type. Allocate one `SSAValue` per register. Allocate one `IRBlock` per label line. Register method parameters from the `define` signature.
 
-**Pass 2 — construction.** Walk each block's instruction lines, dispatch on opcode, and construct the corresponding `IRInstruction`. Each `BinaryOpInstruction`, `UnaryOpInstruction`, `PhiInstruction`, `BranchInstruction`, `SwitchInstruction`, `ReturnInstruction`, or `InvokeInstruction` is appended to its block and CFG edges are wired from terminators. `icmp` temporaries are buffered and consumed by the subsequent `br i1` to produce a single `BranchInstruction`. Phi incoming arms are resolved after all blocks are processed (forward refs are safe because SSA values are named by stable id).
+**Pass 2 - construction.** Walk each block's instruction lines, dispatch on opcode, and construct the corresponding `IRInstruction`. Each `BinaryOpInstruction`, `UnaryOpInstruction`, `PhiInstruction`, `BranchInstruction`, `SwitchInstruction`, `ReturnInstruction`, or `InvokeInstruction` is appended to its block and CFG edges are wired from terminators. `icmp` temporaries are buffered and consumed by the subsequent `br i1` to produce a single `BranchInstruction`. Phi incoming arms are resolved after all blocks are processed (forward refs are safe because SSA values are named by stable id).
 
 **TempFoldingPass.** After construction, a structural-pattern pass collapses the known multi-step expansions (shift mask, narrowing conversions) back to single IR instructions by inspecting the raw RHS string stored for each `%t<n>` temporary.
 
@@ -154,18 +154,18 @@ The lifter is a two-pass construction over the LLVM text:
 `com.tonic.demo.LlvmRoundTripDemo` shows the round-trip:
 
 ```bash
-# Built-in add() method — lowers, lifts, re-lowers, checks equality
-java -cp build/classes/java/main com.tonic.demo.LlvmRoundTripDemo
+# Built-in add() method - lowers, lifts, re-lowers, checks equality
+java -cp examples/build/classes/java/main com.tonic.demo.LlvmRoundTripDemo
 
-# A class file — lowers and lifts each method
-java -cp build/classes/java/main com.tonic.demo.LlvmRoundTripDemo MyClass.class
+# A class file - lowers and lifts each method
+java -cp examples/build/classes/java/main com.tonic.demo.LlvmRoundTripDemo MyClass.class
 ```
 
 If `opt` is installed the demo also runs `opt -O2 -S` and prints the lifted, optimized IR.
 
 ## Known limitations
 
-- **Computational subset only.** LLVM IR produced under `ObjectModel.RUNTIME_ABI` (the full object model) can be parsed on a best-effort basis, but `jvm_*` ABI calls and `landingpad` blocks are silently skipped — the resulting `IRMethod` will be incomplete.
+- **Computational subset only.** LLVM IR produced under `ObjectModel.RUNTIME_ABI` (the full object model) can be parsed on a best-effort basis, but `jvm_*` ABI calls and `landingpad` blocks are silently skipped - the resulting `IRMethod` will be incomplete.
 - **3-way compare expansion.** The `select`-chain produced by `lcmp`/`fcmp[lg]`/`dcmp[lg]` is not yet folded back to the originating compare op; it materializes as raw `BinaryOpInstruction` nodes. The lowerer re-emits the correct expansion on the next lower pass, so the round-trip is still lossless for the purpose of `lowerToModule`.
 - **`opt` output.** After LLVM's optimizer runs, new temporaries and restructured control flow may appear. The lifter handles them correctly for arithmetic and branches; complex LLVM idioms (e.g., vector ops, intrinsics) are skipped.
 

@@ -300,7 +300,7 @@ if (terminator instanceof SimpleInstruction) {
 
 ## API Method Mappings
 
-### GetFieldInstruction → FieldAccessInstruction
+### GetFieldInstruction -> FieldAccessInstruction
 
 | Old Method | New Method |
 |------------|------------|
@@ -311,7 +311,7 @@ if (terminator instanceof SimpleInstruction) {
 | `getObjectRef()` | `getObjectRef()` |
 | N/A | `isLoad()` (returns true) |
 
-### PutFieldInstruction → FieldAccessInstruction
+### PutFieldInstruction -> FieldAccessInstruction
 
 | Old Method | New Method |
 |------------|------------|
@@ -323,7 +323,7 @@ if (terminator instanceof SimpleInstruction) {
 | `getValue()` | `getValue()` |
 | N/A | `isStore()` (returns true) |
 
-### CastInstruction → TypeCheckInstruction
+### CastInstruction -> TypeCheckInstruction
 
 | Old Method | New Method |
 |------------|------------|
@@ -331,7 +331,7 @@ if (terminator instanceof SimpleInstruction) {
 | `getTargetType()` | `getTargetType()` |
 | N/A | `isCast()` (returns true) |
 
-### InstanceOfInstruction → TypeCheckInstruction
+### InstanceOfInstruction -> TypeCheckInstruction
 
 | Old Method | New Method |
 |------------|------------|
@@ -339,21 +339,21 @@ if (terminator instanceof SimpleInstruction) {
 | `getCheckType()` | `getTargetType()` |
 | N/A | `isInstanceOf()` (returns true) |
 
-### ThrowInstruction → SimpleInstruction
+### ThrowInstruction -> SimpleInstruction
 
 | Old Method | New Method |
 |------------|------------|
 | `getException()` | `getOperand()` |
 | N/A | `getOp()` returns `SimpleOp.ATHROW` |
 
-### GotoInstruction → SimpleInstruction
+### GotoInstruction -> SimpleInstruction
 
 | Old Method | New Method |
 |------------|------------|
 | `getTarget()` | `getTarget()` |
 | N/A | `getOp()` returns `SimpleOp.GOTO` |
 
-### ArrayLengthInstruction → SimpleInstruction
+### ArrayLengthInstruction -> SimpleInstruction
 
 | Old Method | New Method |
 |------------|------------|
@@ -373,17 +373,17 @@ if (terminator instanceof SimpleInstruction) {
 
 ### Deleted Files (migration complete)
 The following instruction classes have been removed:
-- `GetFieldInstruction.java` → replaced by `FieldAccessInstruction`
-- `PutFieldInstruction.java` → replaced by `FieldAccessInstruction`
-- `ArrayLoadInstruction.java` → replaced by `ArrayAccessInstruction`
-- `ArrayStoreInstruction.java` → replaced by `ArrayAccessInstruction`
-- `CastInstruction.java` → replaced by `TypeCheckInstruction`
-- `InstanceOfInstruction.java` → replaced by `TypeCheckInstruction`
-- `ArrayLengthInstruction.java` → replaced by `SimpleInstruction`
-- `GotoInstruction.java` → replaced by `SimpleInstruction`
-- `ThrowInstruction.java` → replaced by `SimpleInstruction`
-- `MonitorEnterInstruction.java` → replaced by `SimpleInstruction`
-- `MonitorExitInstruction.java` → replaced by `SimpleInstruction`
+- `GetFieldInstruction.java` -> replaced by `FieldAccessInstruction`
+- `PutFieldInstruction.java` -> replaced by `FieldAccessInstruction`
+- `ArrayLoadInstruction.java` -> replaced by `ArrayAccessInstruction`
+- `ArrayStoreInstruction.java` -> replaced by `ArrayAccessInstruction`
+- `CastInstruction.java` -> replaced by `TypeCheckInstruction`
+- `InstanceOfInstruction.java` -> replaced by `TypeCheckInstruction`
+- `ArrayLengthInstruction.java` -> replaced by `SimpleInstruction`
+- `GotoInstruction.java` -> replaced by `SimpleInstruction`
+- `ThrowInstruction.java` -> replaced by `SimpleInstruction`
+- `MonitorEnterInstruction.java` -> replaced by `SimpleInstruction`
+- `MonitorExitInstruction.java` -> replaced by `SimpleInstruction`
 
 ## Testing
 

@@ -9,6 +9,17 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/all" />
+            <option value="$PROJECT_DIR$/analyses" />
+            <option value="$PROJECT_DIR$/bytecode" />
+            <option value="$PROJECT_DIR$/core" />
+            <option value="$PROJECT_DIR$/examples" />
+            <option value="$PROJECT_DIR$/execution" />
+            <option value="$PROJECT_DIR$/query" />
+            <option value="$PROJECT_DIR$/renamer" />
+            <option value="$PROJECT_DIR$/source" />
+            <option value="$PROJECT_DIR$/ssa" />
+            <option value="$PROJECT_DIR$/tests" />
           </set>
         </option>
       </GradleProjectSettings>

@@ -981,67 +981,67 @@ public class ExecutionExample {
 
 ```
 com.tonic.analysis.execution/
-├── core/
-│   ├── BytecodeEngine.java       - Main execution driver
-│   ├── BytecodeContext.java      - Configuration builder
-│   ├── BytecodeResult.java       - Execution outcome
-│   ├── ExecutionMode.java        - RECURSIVE or DELEGATED
-│   └── ExecutionException.java   - Execution errors
-├── state/
-│   ├── ConcreteValue.java        - Tagged union value
-│   ├── ValueTag.java             - Value type tags
-│   ├── ConcreteStack.java        - Mutable operand stack
-│   └── ConcreteLocals.java       - Mutable local variables
-├── frame/
-│   ├── StackFrame.java           - Method activation record
-│   └── CallStack.java            - Call stack management
-├── heap/
-│   ├── HeapManager.java          - Allocation interface
-│   ├── SimpleHeapManager.java    - Default implementation
-│   ├── ObjectInstance.java       - Simulated object
-│   ├── ArrayInstance.java        - Simulated array
-│   └── StringPool.java           - String interning
-├── resolve/
-│   ├── ClassResolver.java        - Class/method resolution
-│   ├── ResolutionCache.java      - Resolution caching
-│   ├── ResolvedMethod.java       - Resolved method info
-│   └── ResolvedField.java        - Resolved field info
-├── dispatch/
-│   ├── OpcodeDispatcher.java     - Opcode execution (150+)
-│   ├── DispatchResult.java       - Dispatch outcomes
-│   ├── DispatchContext.java      - Dispatch context
-│   ├── InvokeDynamicInfo.java    - invokedynamic call site info
-│   ├── ConstantDynamicInfo.java  - CONSTANT_Dynamic info
-│   ├── MethodHandleInfo.java     - CONSTANT_MethodHandle info
-│   ├── MethodTypeInfo.java       - CONSTANT_MethodType info
-│   └── FieldInfo.java            - Resolved field info
-├── invoke/
-│   ├── InvocationHandler.java    - Invocation interface
-│   ├── InvocationResult.java     - Invocation outcome
-│   ├── RecursiveHandler.java     - Internal call handling
-│   ├── DelegatingHandler.java    - External call handling
-│   ├── NativeRegistry.java       - Native method handlers
-│   ├── NativeContext.java        - Native execution context
-│   ├── NativeException.java      - Native method errors
-│   ├── StringConcatHandler.java  - String concatenation handler
-│   └── LambdaProxyFactory.java   - Lambda proxy creation
-├── listener/
-│   ├── BytecodeListener.java     - Execution events
-│   ├── TracingListener.java      - Execution tracing
-│   └── StatisticsListener.java   - Execution metrics
-└── debug/
-    ├── DebugSession.java         - Debug controller
-    ├── DebugState.java           - State snapshot (with Builder)
-    ├── DebugSessionState.java    - Session state enum
-    ├── DebugEventListener.java   - Debug events
-    ├── Breakpoint.java           - Pause point (with factory methods)
-    ├── BreakpointManager.java    - Breakpoint collection
-    ├── StepMode.java             - Step granularity
-    ├── StackFrameInfo.java       - Lightweight frame snapshot
-    ├── ValueInfo.java            - Value snapshot with metadata
-    ├── LocalsSnapshot.java       - Immutable locals copy
-    ├── StackSnapshot.java        - Immutable stack copy
-    └── InstructionInterceptor.java - Execution interception
+|-- core/
+|   |-- BytecodeEngine.java       - Main execution driver
+|   |-- BytecodeContext.java      - Configuration builder
+|   |-- BytecodeResult.java       - Execution outcome
+|   |-- ExecutionMode.java        - RECURSIVE or DELEGATED
+|   `-- ExecutionException.java   - Execution errors
+|-- state/
+|   |-- ConcreteValue.java        - Tagged union value
+|   |-- ValueTag.java             - Value type tags
+|   |-- ConcreteStack.java        - Mutable operand stack
+|   `-- ConcreteLocals.java       - Mutable local variables
+|-- frame/
+|   |-- StackFrame.java           - Method activation record
+|   `-- CallStack.java            - Call stack management
+|-- heap/
+|   |-- HeapManager.java          - Allocation interface
+|   |-- SimpleHeapManager.java    - Default implementation
+|   |-- ObjectInstance.java       - Simulated object
+|   |-- ArrayInstance.java        - Simulated array
+|   `-- StringPool.java           - String interning
+|-- resolve/
+|   |-- ClassResolver.java        - Class/method resolution
+|   |-- ResolutionCache.java      - Resolution caching
+|   |-- ResolvedMethod.java       - Resolved method info
+|   `-- ResolvedField.java        - Resolved field info
+|-- dispatch/
+|   |-- OpcodeDispatcher.java     - Opcode execution (150+)
+|   |-- DispatchResult.java       - Dispatch outcomes
+|   |-- DispatchContext.java      - Dispatch context
+|   |-- InvokeDynamicInfo.java    - invokedynamic call site info
+|   |-- ConstantDynamicInfo.java  - CONSTANT_Dynamic info
+|   |-- MethodHandleInfo.java     - CONSTANT_MethodHandle info
+|   |-- MethodTypeInfo.java       - CONSTANT_MethodType info
+|   `-- FieldInfo.java            - Resolved field info
+|-- invoke/
+|   |-- InvocationHandler.java    - Invocation interface
+|   |-- InvocationResult.java     - Invocation outcome
+|   |-- RecursiveHandler.java     - Internal call handling
+|   |-- DelegatingHandler.java    - External call handling
+|   |-- NativeRegistry.java       - Native method handlers
+|   |-- NativeContext.java        - Native execution context
+|   |-- NativeException.java      - Native method errors
+|   |-- StringConcatHandler.java  - String concatenation handler
+|   `-- LambdaProxyFactory.java   - Lambda proxy creation
+|-- listener/
+|   |-- BytecodeListener.java     - Execution events
+|   |-- TracingListener.java      - Execution tracing
+|   `-- StatisticsListener.java   - Execution metrics
+`-- debug/
+    |-- DebugSession.java         - Debug controller
+    |-- DebugState.java           - State snapshot (with Builder)
+    |-- DebugSessionState.java    - Session state enum
+    |-- DebugEventListener.java   - Debug events
+    |-- Breakpoint.java           - Pause point (with factory methods)
+    |-- BreakpointManager.java    - Breakpoint collection
+    |-- StepMode.java             - Step granularity
+    |-- StackFrameInfo.java       - Lightweight frame snapshot
+    |-- ValueInfo.java            - Value snapshot with metadata
+    |-- LocalsSnapshot.java       - Immutable locals copy
+    |-- StackSnapshot.java        - Immutable stack copy
+    `-- InstructionInterceptor.java - Execution interception
 ```
 
 ---

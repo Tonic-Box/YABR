@@ -19,7 +19,7 @@ Visits class-level elements: constant pool items, attributes, fields, and method
 ### Basic Usage
 
 ```java
-import com.tonic.analysis.visitor.AbstractClassVisitor;
+import com.tonic.parser.visitor.AbstractClassVisitor;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
@@ -195,7 +195,7 @@ Visits SSA-form IR blocks and instructions. This is the highest level of abstrac
 ### Basic Usage
 
 ```java
-import com.tonic.analysis.visitor.AbstractBlockVisitor;
+import com.tonic.analysis.ssa.visitor.AbstractBlockVisitor;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;

@@ -28,14 +28,14 @@ Without StackMapTable, the JVM must perform type inference across all possible c
 
 ```java
 // Compute frames for all methods
-int count = classFile.computeFrames();
+int count = ClassFactory.computeFrames(classFile);
 System.out.println("Computed frames for " + count + " methods");
 
 // Compute frames for a specific method by name
-boolean found = classFile.computeFrames("myMethod", "(II)I");
+boolean found = ClassFactory.computeFrames(classFile, "myMethod", "(II)I");
 
 // Compute frames for a specific MethodEntry
-classFile.computeFrames(methodEntry);
+ClassFactory.computeFrames(classFile, methodEntry);
 ```
 
 ### Via Bytecode
@@ -136,14 +136,14 @@ The `FrameComputer` class performs the actual computation:
 
 ```java
 // Wrong - frames computed before modification
-classFile.computeFrames();
+ClassFactory.computeFrames(classFile);
 bytecode.addILoad(0);
 bytecode.finalizeBytecode();
 
 // Right - frames computed after modification
 bytecode.addILoad(0);
 bytecode.finalizeBytecode();
-classFile.computeFrames();
+ClassFactory.computeFrames(classFile);
 ```
 
 ### VerifyError: Stack map does not match
@@ -196,7 +196,7 @@ bytecode.addReturn(ReturnType.IRETURN);
 
 // Finalize and compute frames
 bytecode.finalizeBytecode();
-classFile.computeFrames(method);
+ClassFactory.computeFrames(classFile, method);
 ```
 
 ### 2. Use Class-Level Computation
@@ -212,7 +212,7 @@ for (MethodEntry method : classFile.getMethods()) {
 }
 
 // Compute all frames at once
-classFile.computeFrames();
+ClassFactory.computeFrames(classFile);
 ```
 
 ### 3. Handle Errors Gracefully
@@ -221,7 +221,7 @@ Frame computation may fail for invalid bytecode:
 
 ```java
 try {
-    classFile.computeFrames(method);
+    ClassFactory.computeFrames(classFile, method);
 } catch (Exception e) {
     System.err.println("Frame computation failed for " + method.getName());
     System.err.println("Bytecode may be invalid: " + e.getMessage());
@@ -272,7 +272,7 @@ public void modifyAndVerify(ClassFile classFile) throws IOException {
     }
 
     // Compute frames for all modified methods
-    int frameCount = classFile.computeFrames();
+    int frameCount = ClassFactory.computeFrames(classFile);
     System.out.println("Computed frames for " + frameCount + " methods");
 
     // Rebuild and write

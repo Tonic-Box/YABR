@@ -40,7 +40,7 @@ Set<MethodReference> reachable = cg.getReachableFrom(entryPoints);
 
 **Key features:** Caller/callee queries, reachability analysis, virtual call resolution, dead code detection.
 
-[Full documentation →](call-graph-api.md)
+[Full documentation ->](call-graph-api.md)
 
 ---
 
@@ -56,7 +56,7 @@ List<List<String>> cycles = deps.findCircularDependencies();
 
 **Key features:** Dependency queries, transitive closures, circular dependency detection, dependency type filtering.
 
-[Full documentation →](dependency-api.md)
+[Full documentation ->](dependency-api.md)
 
 ---
 
@@ -72,7 +72,7 @@ Nullability nullability = analyzer.getNullability(value);
 
 **Key features:** Nullability analysis, type state tracking, polymorphic type sets.
 
-[Full documentation →](type-inference-api.md)
+[Full documentation ->](type-inference-api.md)
 
 ---
 
@@ -88,7 +88,7 @@ List<SearchResult> allocs = search.findAllocations("java/lang/StringBuilder");
 
 **Key features:** Method call search, field access search, type operations, custom patterns, pattern composition.
 
-[Full documentation →](pattern-search-api.md)
+[Full documentation ->](pattern-search-api.md)
 
 ---
 
@@ -107,7 +107,7 @@ Instrumenter.forClass(classFile)
 
 **Key features:** Method entry/exit hooks, field write hooks, method call interception, annotation filtering.
 
-[Full documentation →](instrumentation-api.md)
+[Full documentation ->](instrumentation-api.md)
 
 ---
 
@@ -123,7 +123,7 @@ Set<Xref> outgoing = db.getRefsFromMethod(source);
 
 **Key features:** Incoming/outgoing reference queries, reference type filtering, unused code detection.
 
-[Full documentation →](xref-api.md)
+[Full documentation ->](xref-api.md)
 
 ---
 
@@ -139,7 +139,7 @@ Set<DataFlowNode> reachable = dfg.getReachableNodes(sourceNode);
 
 **Key features:** Taint source/sink identification, flow path queries, taint propagation.
 
-[Full documentation →](dataflow-api.md)
+[Full documentation ->](dataflow-api.md)
 
 ---
 
@@ -155,7 +155,7 @@ List<SimilarityResult> duplicates = analyzer.findDuplicates();
 
 **Key features:** Multiple similarity metrics, duplicate detection, renamed copy detection, similarity groups.
 
-[Full documentation →](similarity-api.md)
+[Full documentation ->](similarity-api.md)
 
 ---
 
@@ -172,7 +172,7 @@ SimulationResult result = engine.simulate(irMethod);
 
 **Key features:** Stack operation tracking, allocation tracking, field access tracking, method call tracking, control flow tracking, value flow queries, inter-procedural simulation.
 
-[Full documentation →](simulation-api.md)
+[Full documentation ->](simulation-api.md)
 
 ---
 
@@ -199,7 +199,7 @@ DebugState state = session.stepOver();
 
 **Key features:** Concrete value execution, mutable heap/stack, object simulation, native method handlers, breakpoints, step debugging, call stack inspection, full Java 11 support (invokedynamic, lambdas, string concatenation, constant dynamic, method handles).
 
-[Full documentation →](execution-api.md)
+[Full documentation ->](execution-api.md)
 
 ---
 
@@ -235,7 +235,7 @@ SliceResult slice = slicer.backwardSlice(criterion);
 
 **Key features:** Control dependencies via post-dominance, data dependencies via def-use chains, backward/forward slicing, chop computation, DOT export.
 
-[Full documentation →](pdg-api.md)
+[Full documentation ->](pdg-api.md)
 
 ---
 
@@ -252,7 +252,7 @@ SliceResult slice = slicer.contextSensitiveSlice(criterion);
 
 **Key features:** Interprocedural slicing, summary edges, parameter passing edges, context-sensitive analysis, call graph integration.
 
-[Full documentation →](sdg-api.md)
+[Full documentation ->](sdg-api.md)
 
 ---
 
@@ -275,13 +275,13 @@ List<TaintPath> vulns = new TaintQuery(cpg)
 
 **Key features:** Fluent query API, taint analysis, data flow tracking, DOT export, unified traversal across CFG/PDG/call edges.
 
-[Full documentation →](cpg-api.md)
+[Full documentation ->](cpg-api.md)
 
 ---
 
 ## Query API
 
-Search loaded bytecode with a composable query language — structural matches, SSA/data-flow predicates, and instruction-sequence patterns — over a `ClassPool`.
+Search loaded bytecode with a composable query language - structural matches, SSA/data-flow predicates, and instruction-sequence patterns - over a `ClassPool`.
 
 ```java
 QueryService service = new QueryService(pool);
@@ -292,15 +292,15 @@ QueryService.QueryResult result = service.execute(
 List<QueryMatch> matches = result.results();
 ```
 
-**Key features:** Textual `FIND … WHERE …` queries, quantifiers (`HAS`/`ALL`/`NONE`/`COUNT`), data flow (`flowsTo`/`flowsFrom`), `SEQUENCE` instruction patterns, class type-system predicates (`class.super`/`class.interfaces`, `class isSubtypeOf <type>`, `class.modifiers contains record`), positional `param(n).type`, navigable matches with bytecode-offset targets.
+**Key features:** Textual `FIND ... WHERE ...` queries, quantifiers (`HAS`/`ALL`/`NONE`/`COUNT`), data flow (`flowsTo`/`flowsFrom`), `SEQUENCE` instruction patterns, class type-system predicates (`class.super`/`class.interfaces`, `class isSubtypeOf <type>`, `class.modifiers contains record`), positional `param(n).type`, navigable matches with bytecode-offset targets.
 
-[Full documentation →](query-api.md)
+[Full documentation ->](query-api.md)
 
 ---
 
 ## Demo Programs
 
-Runnable demos are in `src/main/java/com/tonic/demo/`:
+Runnable demos are in `examples/src/main/java/com/tonic/demo/`:
 
 | Demo | Description |
 |------|-------------|
@@ -315,13 +315,13 @@ Runnable demos are in `src/main/java/com/tonic/demo/`:
 Run with:
 
 ```bash
-java -cp build/classes/java/main com.tonic.demo.CallGraphDemo
-java -cp build/classes/java/main com.tonic.demo.DependencyDemo
-java -cp build/classes/java/main com.tonic.demo.TypeInferenceDemo
-java -cp build/classes/java/main com.tonic.demo.PatternSearchDemo
-java -cp build/classes/java/main com.tonic.demo.InstrumentationDemo
-java -cp build/classes/java/main com.tonic.demo.SimulationDemo
-java -cp build/classes/java/main com.tonic.demo.ExecutionDemo
+java -cp examples/build/classes/java/main com.tonic.demo.CallGraphDemo
+java -cp examples/build/classes/java/main com.tonic.demo.DependencyDemo
+java -cp examples/build/classes/java/main com.tonic.demo.TypeInferenceDemo
+java -cp examples/build/classes/java/main com.tonic.demo.PatternSearchDemo
+java -cp examples/build/classes/java/main com.tonic.demo.InstrumentationDemo
+java -cp examples/build/classes/java/main com.tonic.demo.SimulationDemo
+java -cp examples/build/classes/java/main com.tonic.demo.ExecutionDemo
 ```
 
 ---

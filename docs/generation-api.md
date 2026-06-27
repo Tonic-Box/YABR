@@ -453,7 +453,7 @@ chain. To hand-assemble a fragment and splice it into a method that *already exi
 loaded class), use `CodeBuilder.detached()` and `assemble(ClassFile target)`. The snippet is resolved
 against `target`'s constant pool (so any classes, members, or `ldc` constants it references are added
 to `target` and the spliced indices are valid), and returned as a `CodeWriter.ClonedRange` whose
-branch/switch targets are carried by identity — so it relinks correctly wherever it lands.
+branch/switch targets are carried by identity - so it relinks correctly wherever it lands.
 
 ```java
 // Assemble a fragment against the class it will be spliced into.
@@ -471,8 +471,8 @@ cw.write();
 
 The relink pass recomputes offsets, branch widening, the exception table, and regenerates the
 StackMapTable. See [Bytecode API](bytecode-api.md) for the handle-keyed `insertBefore`/`replaceBody`
-splice points and `ClonedRange`. `invokedynamic` is supported on a detached builder — its bootstrap
-method is added to the `assemble` target's `BootstrapMethods` attribute — and `trycatch` regions are
+splice points and `ClonedRange`. `invokedynamic` is supported on a detached builder - its bootstrap
+method is added to the `assemble` target's `BootstrapMethods` attribute - and `trycatch` regions are
 carried by instruction identity, so they relink correctly wherever the snippet lands. The only thing a
 detached builder lacks is `end()` (it has no parent chain).
 
@@ -480,13 +480,13 @@ detached builder lacks is `end()` (it has no parent chain).
 the host method (a guard, or a loop that falls through) can branch to a target outside itself:
 
 - `externalLabel(name)` declares a target that lives in the host. Branch to it as usual (`goto_`,
-  `if*`), then bind it to a host instruction at splice time — either `range.bindLabel(name, hostInsn)`
+  `if*`), then bind it to a host instruction at splice time - either `range.bindLabel(name, hostInsn)`
   or the `insertBefore`/`insertAfter(handle, range, Map<String,Instruction>)` overload. An unbound
   external label, or a target not in the host method, throws at splice (never a silent miscompile). A
   branch to a label that is neither defined nor declared external stays a hard error.
 - A `label(name)` placed at the snippet's tail (no following op) is a **continuation** label: branches
   to it fall through into the host after the splice point, auto-bound to the insertion successor
-  (`insertBefore` → the handle; `insertAfter` → the instruction after it). `replaceBody` has no host
+  (`insertBefore` -> the handle; `insertAfter` -> the instruction after it). `replaceBody` has no host
   successor and rejects continuation branches.
 
 ```java
@@ -501,12 +501,12 @@ hostCw.write();
 Both kinds are bound into the host's identity-based relink, so they survive subsequent edits/shifts.
 
 **`ClonedRange` vs. the raw instruction list.** Every splice point also has a plain
-`List<Instruction>` overload, and `ClonedRange.instructions()` exposes the assembled list — so
+`List<Instruction>` overload, and `ClonedRange.instructions()` exposes the assembled list - so
 `cw.insertAfter(handle, snippet.instructions())` works too. Prefer this only for straight-line
 snippets or ones whose only control flow is `goto`/`if*`: the List overloads re-derive branch targets
 from stored relative offsets against the new layout, which is alignment-independent for those. A
 snippet containing an internal `tableswitch`/`lookupswitch` **must** be spliced as the `ClonedRange`
-itself — switch padding is alignment-sensitive, and only the `ClonedRange` carries the targets by
+itself - switch padding is alignment-sensitive, and only the `ClonedRange` carries the targets by
 identity so they survive landing at a different 4-byte alignment.
 
 ---

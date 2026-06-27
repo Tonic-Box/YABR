@@ -42,7 +42,7 @@ int access = new AccessBuilder()
     .setPublic()
     .build();
 
-ClassFile cf = classPool.createNewClass("com/example/NewClass", access);
+ClassFile cf = ClassFactory.createClass(classPool, "com/example/NewClass", access);
 ```
 
 ### Retrieving Classes
@@ -199,27 +199,27 @@ FieldEntry field = cf.createNewField(
 
 ```java
 // Primitives
-cf.setFieldInitialValue(field, 42);          // int
-cf.setFieldInitialValue(field, 100L);        // long
-cf.setFieldInitialValue(field, 3.14f);       // float
-cf.setFieldInitialValue(field, 2.718);       // double
-cf.setFieldInitialValue(field, "Hello");     // String
+ClassFactory.setFieldInitialValue(cf, field, 42);          // int
+ClassFactory.setFieldInitialValue(cf, field, 100L);        // long
+ClassFactory.setFieldInitialValue(cf, field, 3.14f);       // float
+ClassFactory.setFieldInitialValue(cf, field, 2.718);       // double
+ClassFactory.setFieldInitialValue(cf, field, "Hello");     // String
 ```
 
 ### Generating Accessors
 
 ```java
 // Instance field
-cf.generateGetter(field, false);  // getCounter()
-cf.generateSetter(field, false);  // setCounter(int)
+ClassFactory.generateGetter(cf, field, false);  // getCounter()
+ClassFactory.generateSetter(cf, field, false);  // setCounter(int)
 
 // Static field
-cf.generateGetter(staticField, true);  // getStaticField()
-cf.generateSetter(staticField, true);  // setStaticField(int)
+ClassFactory.generateGetter(cf, staticField, true);  // getStaticField()
+ClassFactory.generateSetter(cf, staticField, true);  // setStaticField(int)
 
 // Custom names
-cf.generateGetter(field, "readValue", false);
-cf.generateSetter(field, "writeValue", false);
+ClassFactory.generateGetter(cf, field, "readValue", false);
+ClassFactory.generateSetter(cf, field, "writeValue", false);
 ```
 
 ### Removing Fields
@@ -277,7 +277,7 @@ if (code != null) {
     byte[] bytecode = code.getCode();
 
     // Pretty print
-    System.out.println(code.prettyPrintCode());
+    System.out.println(CodePrinter.prettyPrintCode(code, ));
 }
 ```
 
@@ -294,13 +294,13 @@ import com.tonic.analysis.DisassemblyOptions;
 CodeAttribute code = method.getCodeAttribute();
 
 // Everything on
-System.out.println(code.prettyPrintCode(DisassemblyOptions.verbose()));
+System.out.println(CodePrinter.prettyPrintCode(code, DisassemblyOptions.verbose()));
 
 // Or pick enrichments (each flag has a with* toggle)
 DisassemblyOptions opts = DisassemblyOptions.terse()
         .withLineNumbers(true)
         .withExceptionTable(true);
-System.out.println(code.prettyPrintCode(opts));
+System.out.println(CodePrinter.prettyPrintCode(code, opts));
 ```
 
 The verbose profile adds, as `//` comment lines (so editors style them as comments):
@@ -363,13 +363,13 @@ For Java 7+ classes, compute StackMapTable frames after modifying bytecode:
 
 ```java
 // Compute frames for all methods
-int count = cf.computeFrames();
+int count = ClassFactory.computeFrames(cf);
 
 // Compute for specific method
-cf.computeFrames("myMethod", "(II)I");
+ClassFactory.computeFrames(cf, "myMethod", "(II)I");
 
 // Compute for a method entry
-cf.computeFrames(methodEntry);
+ClassFactory.computeFrames(cf, methodEntry);
 ```
 
 ## Complete Example
@@ -379,16 +379,16 @@ ClassPool pool = ClassPool.getDefault();
 
 // Create class
 int classAccess = new AccessBuilder().setPublic().build();
-ClassFile cf = pool.createNewClass("com/example/Counter", classAccess);
+ClassFile cf = ClassFactory.createClass(pool, "com/example/Counter", classAccess);
 
 // Add field
 int fieldAccess = new AccessBuilder().setPrivate().build();
 FieldEntry countField = cf.createNewField(fieldAccess, "count", "I", new ArrayList<>());
-cf.setFieldInitialValue(countField, 0);
+ClassFactory.setFieldInitialValue(cf, countField, 0);
 
 // Generate getter/setter
-cf.generateGetter(countField, false);
-cf.generateSetter(countField, false);
+ClassFactory.generateGetter(cf, countField, false);
+ClassFactory.generateSetter(cf, countField, false);
 
 // Add increment method
 int methodAccess = new AccessBuilder().setPublic().build();

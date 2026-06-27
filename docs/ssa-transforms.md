@@ -103,9 +103,9 @@ ssa.transform(method);
 ```
 
 **Supported patterns:**
-- `x * 2^n` → `x << n` (multiplication by power of 2)
-- `x / 2^n` → `x >> n` (division by power of 2, positive values)
-- `x % 2^n` → `x & (2^n - 1)` (remainder by power of 2)
+- `x * 2^n` -> `x << n` (multiplication by power of 2)
+- `x / 2^n` -> `x >> n` (division by power of 2, positive values)
+- `x % 2^n` -> `x & (2^n - 1)` (remainder by power of 2)
 
 ### Algebraic Simplification
 
@@ -135,12 +135,12 @@ ssa.transform(method);
 ```
 
 **Supported patterns:**
-- **Additive identity:** `x + 0` → `x`, `0 + x` → `x`, `x - 0` → `x`
-- **Multiplicative identity:** `x * 1` → `x`, `1 * x` → `x`
-- **Zero annihilator:** `x * 0` → `0`, `0 * x` → `0`, `x & 0` → `0`
-- **Self-operations:** `x - x` → `0`, `x ^ x` → `0`
-- **Bitwise identity:** `x | 0` → `x`, `x & -1` → `x`, `x ^ 0` → `x`
-- **Shift identity:** `x << 0` → `x`, `x >> 0` → `x`, `x >>> 0` → `x`
+- **Additive identity:** `x + 0` -> `x`, `0 + x` -> `x`, `x - 0` -> `x`
+- **Multiplicative identity:** `x * 1` -> `x`, `1 * x` -> `x`
+- **Zero annihilator:** `x * 0` -> `0`, `0 * x` -> `0`, `x & 0` -> `0`
+- **Self-operations:** `x - x` -> `0`, `x ^ x` -> `0`
+- **Bitwise identity:** `x | 0` -> `x`, `x & -1` -> `x`, `x ^ 0` -> `x`
+- **Shift identity:** `x << 0` -> `x`, `x >> 0` -> `x`, `x >>> 0` -> `x`
 
 ### Reassociate
 
@@ -174,7 +174,7 @@ ssa.transform(method);
 - Bitwise: AND, OR, XOR
 
 **Benefits:**
-- Groups constants together for folding: `(x + 5) + 10` → `x + 15`
+- Groups constants together for folding: `(x + 5) + 10` -> `x + 15`
 - Creates canonical form for pattern matching
 - Enables better CSE by normalizing operand order
 
@@ -208,8 +208,8 @@ ssa.transform(method);
 ```
 
 **Supported patterns:**
-- All incoming values are the same constant → replace with constant
-- All incoming values are the same SSA value → replace with copy
+- All incoming values are the same constant -> replace with constant
+- All incoming values are the same SSA value -> replace with copy
 
 ### Peephole Optimizations
 
@@ -238,10 +238,10 @@ ssa.transform(method);
 ```
 
 **Supported patterns:**
-- **Double negation:** `NEG(NEG(x))` → `x`
-- **Shift normalization:** `x << 32` → `x` (for int), `x << 64` → `x` (for long)
-- **Zero shift:** `x << 0` → `x`, `x >> 0` → `x`
-- **Consecutive shifts:** `(x << a) << b` → `x << (a+b)` when safe
+- **Double negation:** `NEG(NEG(x))` -> `x`
+- **Shift normalization:** `x << 32` -> `x` (for int), `x << 64` -> `x` (for long)
+- **Zero shift:** `x << 0` -> `x`, `x >> 0` -> `x`
+- **Consecutive shifts:** `(x << a) << b` -> `x << (a+b)` when safe
 
 ### Common Subexpression Elimination
 
@@ -327,8 +327,8 @@ ssa.transform(method);
 ```
 
 **Supported patterns:**
-- Boolean constant conditions → eliminate dead branch
-- Integer comparison with constants → evaluate at compile time
+- Boolean constant conditions -> eliminate dead branch
+- Integer comparison with constants -> evaluate at compile time
 - Cascading elimination of unreachable blocks
 
 ### Correlated Value Propagation
@@ -363,7 +363,7 @@ ssa.transform(method);
 1. Computes dominator tree for the method
 2. Propagates value ranges through CFG in dominator order
 3. At each branch, derives constraints from the comparison:
-   - `if (x < 10)` → true branch: x ∈ [MIN, 9], false branch: x ∈ [10, MAX]
+   - `if (x < 10)` -> true branch: x in [MIN, 9], false branch: x in [10, MAX]
 4. Intersects inherited ranges from dominator with edge constraints
 5. When a comparison's result is provable from ranges, replaces branch with goto
 
@@ -372,9 +372,9 @@ ssa.transform(method);
 - Unary: `IFLT`, `IFLE`, `IFGT`, `IFGE`, `IFEQ`, `IFNE` (x op 0)
 
 **Example transformations:**
-- `if (x < 10) { if (x < 20) }` → inner check eliminated (x is [MIN, 9])
-- `if (x >= 10) { if (x < 5) }` → inner check eliminated (always false)
-- Nested constraints intersect: `if (x > 0) { if (x < 100) }` → x is [1, 99]
+- `if (x < 10) { if (x < 20) }` -> inner check eliminated (x is [MIN, 9])
+- `if (x >= 10) { if (x < 5) }` -> inner check eliminated (always false)
+- Nested constraints intersect: `if (x > 0) { if (x < 100) }` -> x is [1, 99]
 
 ### Loop-Invariant Code Motion
 
@@ -533,8 +533,8 @@ ssa.transform(method);
 ```
 
 **Supported patterns:**
-- `goto A; A: goto B` → `goto B`
-- `if (cond) goto A; A: goto B` → `if (cond) goto B`
+- `goto A; A: goto B` -> `goto B`
+- `if (cond) goto A; A: goto B` -> `if (cond) goto B`
 - Empty blocks (only a goto) in switch targets
 
 ### Block Merging
@@ -657,8 +657,8 @@ ssa.transform(method);
 
 **Eliminates:**
 - **Identity copies:** `x = x` (no-ops)
-- **Redundant load-store pairs:** `store x, v; load x` → `v` (when no intervening store)
-- **Copy chains:** `a = b; c = a` → `c = b` (propagates through chains)
+- **Redundant load-store pairs:** `store x, v; load x` -> `v` (when no intervening store)
+- **Copy chains:** `a = b; c = a` -> `c = b` (propagates through chains)
 
 ### Bit-Tracking Dead Code Elimination (BDCE)
 
@@ -806,7 +806,7 @@ for (MethodEntry method : classFile.getMethods()) {
 }
 
 // Rebuild class file
-classFile.computeFrames();
+ClassFactory.computeFrames(classFile);
 classFile.rebuild();
 ```
 
@@ -1016,7 +1016,7 @@ ssa.runTransforms(ir);
 ssa.lower(ir, method);
 
 // Don't forget to compute frames if needed
-classFile.computeFrames(method);
+ClassFactory.computeFrames(classFile, method);
 ```
 
 The lowerer handles:
@@ -1060,7 +1060,7 @@ public void optimizeClass(ClassFile classFile) {
     }
 
     // Compute frames for all methods
-    classFile.computeFrames();
+    ClassFactory.computeFrames(classFile);
 }
 ```
 
@@ -1128,7 +1128,7 @@ ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
 |-----------|---------|
 | `ConstantFolding` | Simplifies constant expressions to literals |
 | `CopyPropagation` | Eliminates redundant temporary variables |
-| `AlgebraicSimplification` | Cleans up arithmetic (x+0 → x, x*1 → x) |
+| `AlgebraicSimplification` | Cleans up arithmetic (x+0 -> x, x*1 -> x) |
 | `DeadCodeElimination` | Removes unreachable/unused code |
 | `CommonSubexpressionElimination` | Reduces redundant computations |
 | `RedundantCopyElimination` | Cleaner variable assignments |

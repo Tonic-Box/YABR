@@ -118,7 +118,7 @@ SSA ssa = new SSA(cp)
 ssa.transformClass(classFile);
 
 // Rebuild the class file after transformation
-classFile.computeFrames();
+ClassFactory.computeFrames(classFile);
 classFile.rebuild();
 ```
 
@@ -409,7 +409,7 @@ public void optimizeMethod(MethodEntry method) {
 ## Integration with Visitors
 
 ```java
-import com.tonic.analysis.visitor.AbstractBlockVisitor;
+import com.tonic.analysis.ssa.visitor.AbstractBlockVisitor;
 
 public class IRAnalyzer extends AbstractBlockVisitor {
 

@@ -572,34 +572,34 @@ editor.apply();
 
 ```
 com.tonic.analysis.source.editor/
-├── ASTEditor.java                  # Main orchestrating class
-├── ExpressionEditor.java           # Expression-focused convenience API
-├── StatementEditor.java            # Statement-focused convenience API
-├── EditorContext.java              # Context during traversal
-├── Replacement.java                # Replacement result types
-├── handler/
-│   ├── ExpressionHandler.java      # Base expression handler
-│   ├── StatementHandler.java       # Base statement handler
-│   ├── MethodCallHandler.java      # Method call expressions
-│   ├── FieldAccessHandler.java     # Field access expressions
-│   ├── NewExprHandler.java         # new Object() expressions
-│   ├── NewArrayHandler.java        # new Type[] expressions
-│   ├── CastHandler.java            # Cast expressions
-│   ├── InstanceOfHandler.java      # instanceof expressions
-│   ├── BinaryExprHandler.java      # Binary operators
-│   ├── UnaryExprHandler.java       # Unary operators
-│   ├── ArrayAccessHandler.java     # Array access with read/store
-│   ├── ReturnHandler.java          # Return statements
-│   ├── ThrowHandler.java           # Throw statements
-│   ├── IfHandler.java              # If statements
-│   ├── LoopHandler.java            # For/while/do-while/for-each
-│   ├── TryCatchHandler.java        # Try-catch statements
-│   └── AssignmentHandler.java      # Assignment statements
-├── matcher/
-│   ├── ExprMatcher.java            # Expression predicate matching
-│   └── StmtMatcher.java            # Statement predicate matching
-└── util/
-    └── ASTFactory.java             # AST node creation factory
+|-- ASTEditor.java                  # Main orchestrating class
+|-- ExpressionEditor.java           # Expression-focused convenience API
+|-- StatementEditor.java            # Statement-focused convenience API
+|-- EditorContext.java              # Context during traversal
+|-- Replacement.java                # Replacement result types
+|-- handler/
+|   |-- ExpressionHandler.java      # Base expression handler
+|   |-- StatementHandler.java       # Base statement handler
+|   |-- MethodCallHandler.java      # Method call expressions
+|   |-- FieldAccessHandler.java     # Field access expressions
+|   |-- NewExprHandler.java         # new Object() expressions
+|   |-- NewArrayHandler.java        # new Type[] expressions
+|   |-- CastHandler.java            # Cast expressions
+|   |-- InstanceOfHandler.java      # instanceof expressions
+|   |-- BinaryExprHandler.java      # Binary operators
+|   |-- UnaryExprHandler.java       # Unary operators
+|   |-- ArrayAccessHandler.java     # Array access with read/store
+|   |-- ReturnHandler.java          # Return statements
+|   |-- ThrowHandler.java           # Throw statements
+|   |-- IfHandler.java              # If statements
+|   |-- LoopHandler.java            # For/while/do-while/for-each
+|   |-- TryCatchHandler.java        # Try-catch statements
+|   `-- AssignmentHandler.java      # Assignment statements
+|-- matcher/
+|   |-- ExprMatcher.java            # Expression predicate matching
+|   `-- StmtMatcher.java            # Statement predicate matching
+`-- util/
+    `-- ASTFactory.java             # AST node creation factory
 ```
 
 ## Example: Logging Injection

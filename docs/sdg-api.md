@@ -118,10 +118,10 @@ caller() {                    callee(x) {
 ```
 
 The SDG creates:
-1. `PARAMETER_IN` edge: `actual_in(a)` → `formal_in(x)`
-2. Data flow in callee: `formal_in(x)` → `formal_out(return)`
-3. `PARAMETER_OUT` edge: `formal_out(return)` → `actual_out(b)`
-4. `SUMMARY` edge: `actual_in(a)` → `actual_out(b)` (transitive)
+1. `PARAMETER_IN` edge: `actual_in(a)` -> `formal_in(x)`
+2. Data flow in callee: `formal_in(x)` -> `formal_out(return)`
+3. `PARAMETER_OUT` edge: `formal_out(return)` -> `actual_out(b)`
+4. `SUMMARY` edge: `actual_in(a)` -> `actual_out(b)` (transitive)
 
 Summary edges allow efficient slicing without repeatedly analyzing callees.
 

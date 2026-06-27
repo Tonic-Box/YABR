@@ -837,50 +837,50 @@ public class SimulationExample {
 
 ```
 com.tonic.analysis.simulation/
-├── core/
-│   ├── SimulationContext.java      - Configuration
-│   ├── SimulationState.java        - Immutable execution state
-│   ├── SimulationEngine.java       - Main simulation driver
-│   ├── SimulationResult.java       - Results container
-│   ├── SimulationMode.java         - INSTRUCTION or BLOCK
-│   ├── StateSnapshot.java          - Lightweight snapshot
-│   └── InterProceduralEngine.java  - Cross-method simulation
-├── state/
-│   ├── SimValue.java               - Simulated value (with points-to)
-│   ├── StackState.java             - Operand stack
-│   ├── LocalState.java             - Local variables
-│   └── CallStackState.java         - Inter-procedural call stack
-├── heap/
-│   ├── AllocationSite.java         - Unique allocation identity
-│   ├── FieldKey.java               - Field identifier
-│   ├── HeapMode.java               - Heap configuration mode
-│   ├── SimObject.java              - Abstract heap object
-│   ├── SimArray.java               - Abstract heap array
-│   ├── SimHeap.java                - Central heap manager
-│   ├── SimValueBuilder.java        - Value construction API
-│   ├── ConstructorAnalyzer.java    - Constructor analysis
-│   ├── EscapeAnalyzer.java         - Escape analysis
-│   └── PointsToQuery.java          - Points-to query interface
-├── listener/
-│   ├── SimulationListener.java     - Event interface (with heap events)
-│   ├── AbstractListener.java       - Base implementation
-│   ├── CompositeListener.java      - Multi-listener adapter
-│   ├── StackOperationListener.java - Stack tracking
-│   ├── AllocationListener.java     - Allocation tracking
-│   ├── FieldAccessListener.java    - Field access tracking
-│   ├── MethodCallListener.java     - Call tracking
-│   └── ControlFlowListener.java    - Control flow tracking
-├── metrics/
-│   ├── StackMetrics.java           - Stack statistics
-│   ├── AllocationMetrics.java      - Allocation statistics
-│   ├── AccessMetrics.java          - Field/array statistics
-│   ├── CallMetrics.java            - Call statistics
-│   └── PathMetrics.java            - Control flow statistics
-├── query/
-│   ├── ValueFlowQuery.java         - Value flow analysis
-│   └── PathQuery.java              - Path analysis
-└── util/
-    └── StateTransitions.java       - Instruction effects
+|-- core/
+|   |-- SimulationContext.java      - Configuration
+|   |-- SimulationState.java        - Immutable execution state
+|   |-- SimulationEngine.java       - Main simulation driver
+|   |-- SimulationResult.java       - Results container
+|   |-- SimulationMode.java         - INSTRUCTION or BLOCK
+|   |-- StateSnapshot.java          - Lightweight snapshot
+|   `-- InterProceduralEngine.java  - Cross-method simulation
+|-- state/
+|   |-- SimValue.java               - Simulated value (with points-to)
+|   |-- StackState.java             - Operand stack
+|   |-- LocalState.java             - Local variables
+|   `-- CallStackState.java         - Inter-procedural call stack
+|-- heap/
+|   |-- AllocationSite.java         - Unique allocation identity
+|   |-- FieldKey.java               - Field identifier
+|   |-- HeapMode.java               - Heap configuration mode
+|   |-- SimObject.java              - Abstract heap object
+|   |-- SimArray.java               - Abstract heap array
+|   |-- SimHeap.java                - Central heap manager
+|   |-- SimValueBuilder.java        - Value construction API
+|   |-- ConstructorAnalyzer.java    - Constructor analysis
+|   |-- EscapeAnalyzer.java         - Escape analysis
+|   `-- PointsToQuery.java          - Points-to query interface
+|-- listener/
+|   |-- SimulationListener.java     - Event interface (with heap events)
+|   |-- AbstractListener.java       - Base implementation
+|   |-- CompositeListener.java      - Multi-listener adapter
+|   |-- StackOperationListener.java - Stack tracking
+|   |-- AllocationListener.java     - Allocation tracking
+|   |-- FieldAccessListener.java    - Field access tracking
+|   |-- MethodCallListener.java     - Call tracking
+|   `-- ControlFlowListener.java    - Control flow tracking
+|-- metrics/
+|   |-- StackMetrics.java           - Stack statistics
+|   |-- AllocationMetrics.java      - Allocation statistics
+|   |-- AccessMetrics.java          - Field/array statistics
+|   |-- CallMetrics.java            - Call statistics
+|   `-- PathMetrics.java            - Control flow statistics
+|-- query/
+|   |-- ValueFlowQuery.java         - Value flow analysis
+|   `-- PathQuery.java              - Path analysis
+`-- util/
+    `-- StateTransitions.java       - Instruction effects
 ```
 
 ---

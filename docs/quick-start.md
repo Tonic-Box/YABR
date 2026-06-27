@@ -42,7 +42,7 @@ try (InputStream is = getClass().getResourceAsStream("MyClass.class")) {
 ```java
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ClassFile;
-import com.tonic.utill.AccessBuilder;
+import com.tonic.util.AccessBuilder;
 
 ClassPool classPool = ClassPool.getDefault();
 
@@ -50,7 +50,7 @@ int access = new AccessBuilder()
     .setPublic()
     .build();
 
-ClassFile classFile = classPool.createNewClass("com/example/MyClass", access);
+ClassFile classFile = ClassFactory.createClass(classPool, "com/example/MyClass", access);
 classFile.rebuild();
 
 // Write to bytes
@@ -74,11 +74,11 @@ FieldEntry field = classFile.createNewField(
 );
 
 // Set initial value
-classFile.setFieldInitialValue(field, 42);
+ClassFactory.setFieldInitialValue(classFile, field, 42);
 
 // Generate getter and setter
-classFile.generateGetter(field, false);
-classFile.generateSetter(field, false);
+ClassFactory.generateGetter(classFile, field, false);
+ClassFactory.generateSetter(classFile, field, false);
 ```
 
 ### Adding a Method
@@ -86,7 +86,7 @@ classFile.generateSetter(field, false);
 ```java
 import com.tonic.parser.MethodEntry;
 import com.tonic.analysis.Bytecode;
-import com.tonic.utill.ReturnType;
+import com.tonic.util.ReturnType;
 
 int methodAccess = new AccessBuilder()
     .setPublic()
@@ -118,10 +118,10 @@ YABR includes several demo programs to help you understand the API:
 ./gradlew build
 
 # Run a demo
-java -cp build/classes/java/main com.tonic.demo.TestBlocks
+java -cp examples/build/classes/java/main com.tonic.demo.TestBlocks
 ```
 
-Available demos in `src/main/java/com/tonic/demo/`:
+Available demos in `examples/src/main/java/com/tonic/demo/`:
 - `TestBlocks.java` - SSA IR block visitor pattern
 - `TestBytecodeVisitor.java` - Bytecode-level visitor pattern
 - `TestClassCreation.java` - Creating classes programmatically

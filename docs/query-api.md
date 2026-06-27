@@ -134,7 +134,7 @@ public interface ProgressListener {
 ## Results and navigation
 
 Each `QueryMatch` carries a `QueryTarget` (where it points), an attribute map, and nested `evidence`
-matches (the bytecode sites that satisfied the query). It is a pure domain model — format display
+matches (the bytecode sites that satisfied the query). It is a pure domain model - format display
 labels yourself from the attributes.
 
 ```java
@@ -149,7 +149,7 @@ for (QueryMatch hit : match.getEvidence()) {     // one per matched bytecode sit
 }
 ```
 
-`QueryTarget` is a sealed-style interface with three variants — switch on the concrete type to
+`QueryTarget` is a sealed-style interface with three variants - switch on the concrete type to
 resolve a location (e.g. to navigate an IDE to the exact bytecode offset):
 
 | Variant | Carries |
@@ -205,8 +205,8 @@ rows. The two clauses may appear in either order.
 | sequence | `SEQUENCE [ step, step, .. ]` (see [Instruction patterns](#instruction-patterns)) |
 
 A bare accessor is truthy (e.g. `WHERE recursive`). Quantifier bodies rebind the subject: inside
-`HAS call WHERE (…)` the bare atoms (`name`, `owner`, `arg`, …) refer to that call; inside
-`HAS arg WHERE (…)` they refer to that argument. Quantifiers nest freely.
+`HAS call WHERE (...)` the bare atoms (`name`, `owner`, `arg`, ...) refer to that call; inside
+`HAS arg WHERE (...)` they refer to that argument. Quantifiers nest freely.
 
 ## Accessors
 
@@ -225,8 +225,8 @@ A bare accessor is truthy (e.g. `WHERE recursive`). Quantifier bodies rebind the
 
 `class.super` and `class.interfaces` are type values (`class.super == java.lang.Object`,
 `class.interfaces contains java.lang.Comparable`). `class.modifiers` is a set that includes the access
-keywords plus type kinds — `enum`, `interface`, `annotation`, `abstract`, and `record` (records have no
-access flag; the `record` member is synthesized from the `Record` attribute) — so
+keywords plus type kinds - `enum`, `interface`, `annotation`, `abstract`, and `record` (records have no
+access flag; the `record` member is synthesized from the `Record` attribute) - so
 `class.modifiers contains record` works. **`class.*` is reachable inside a `FIND methods` query**, resolving
 against the method's declaring class (e.g. `class.super == java.lang.Applet`). `param(n)` gives a method
 parameter's declared type by position (`param(0).type == int`), distinct from `arg(n)` (a call's argument)
@@ -237,7 +237,7 @@ and from the `param(n)` data-flow endpoint below.
 `switch`, `record`, `other`; `recipe` is the readable `StringConcatFactory` recipe (`{arg}`/`{const}`
 markers) and is absent unless `category == "stringconcat"`. `bsm*` describe the bootstrap method handle.
 A `bsmArg` exposes `kind` (`int`/`long`/.../`condy`) + `value`; a `condy`-valued arg has `kind == "condy"`
-and rebinds to a nested `condy` subject (so its own `bsmName`/`category`/`bsmArg` are reachable) — e.g.
+and rebinds to a nested `condy` subject (so its own `bsmName`/`category`/`bsmArg` are reachable) - e.g.
 `HAS indy WHERE (HAS bsmArg WHERE (kind == "condy" AND bsmName matches /.../))`.
 
 ## Selectors
@@ -245,7 +245,7 @@ and rebinds to a nested `condy` subject (so its own `bsmName`/`category`/`bsmArg
 `call` &nbsp; `arg` &nbsp; `insn` &nbsp; `field` &nbsp; `indy` &nbsp; `condy` &nbsp; `bsmArg` -
 quantify over these with `HAS`/`ANY`/`ALL`/`NONE`/`COUNT`. `bsmArg` is nested under `indy`/`condy`;
 a `bsmArg` that is itself a dynamic constant rebinds to a (nested) `condy` subject. A `class` query can
-also quantify over its declared `method`s (`FIND classes WHERE HAS method WHERE (…)`).
+also quantify over its declared `method`s (`FIND classes WHERE HAS method WHERE (...)`).
 
 ### Bootstrap examples
 
@@ -265,7 +265,7 @@ isSubtypeOf <type>
 ```
 
 **`isSubtypeOf`:** `class isSubtypeOf java.lang.Applet` is true when the class is the type or a transitive
-subtype — superclass chain **or** interfaces (`extends`/`implements` at any depth). It walks the loaded class
+subtype - superclass chain **or** interfaces (`extends`/`implements` at any depth). It walks the loaded class
 hierarchy (`ClassHierarchy`), so unresolved (not-loaded) ancestors stop the walk. `class.super == X` is the
 exact one-level superclass check.
 
@@ -276,10 +276,10 @@ SSA form (forward def-use reachability). Endpoints:
 |---|---|
 | `param(n)` | the method's nth parameter value |
 | `return` | any value the method returns |
-| `arg(n)` | the nth argument of the current call (inside a `HAS call WHERE (…)` body) |
-| `insn` | the value the current instruction defines (inside a `HAS insn WHERE (…)` body) |
+| `arg(n)` | the nth argument of the current call (inside a `HAS call WHERE (...)` body) |
+| `insn` | the value the current instruction defines (inside a `HAS insn WHERE (...)` body) |
 
-`A flowsTo B` ≡ `B flowsFrom A`.
+`A flowsTo B` == `B flowsFrom A`.
 
 ## Operands
 
@@ -293,7 +293,7 @@ SSA form (forward def-use reachability). Endpoints:
 
 ## Instruction patterns
 
-`SEQUENCE [ … ]` (alias `SEQ`) matches an ordered run of instructions appearing *anywhere* in a
+`SEQUENCE [ ... ]` (alias `SEQ`) matches an ordered run of instructions appearing *anywhere* in a
 method. Steps are adjacent by default; use `..` for a gap.
 
 | Step | Meaning |
@@ -301,12 +301,12 @@ method. Steps are adjacent by default; use `..` for a gap.
 | `new` | an opcode mnemonic (case-insensitive) |
 | `_` | any single instruction |
 | `..` | a gap of any length (zero or more) |
-| `( … )` | a full predicate on the instruction, e.g. `(opcode matches /^invoke/)` |
+| `( ... )` | a full predicate on the instruction, e.g. `(opcode matches /^invoke/)` |
 
 Repetition (suffix any step): `*` 0+ &nbsp; `+` 1+ &nbsp; `{n}` exactly n &nbsp; `{n,m}` n..m &nbsp; `{n,}` n+
 
 **`opcodes` shorthand:** `opcodes` is the method's space-joined mnemonics, so a quick opcode-only
-shape is just a regex: `opcodes matches /new dup .* invokespecial/`
+shape is a regex: `opcodes matches /new dup .* invokespecial/`
 
 ## Examples
 
@@ -335,7 +335,7 @@ Abstract subtypes of a base (transitive), excluding interfaces:
 FIND classes WHERE class isSubtypeOf java.lang.Applet AND class.modifiers contains abstract AND NOT class.modifiers contains interface
 ```
 
-A static method `(int, int, String, ?)` in an abstract `Applet` subtype — class + method + param predicates together:
+A static method `(int, int, String, ?)` in an abstract `Applet` subtype - class + method + param predicates together:
 ```
 FIND methods WHERE method.modifiers contains static AND method.arity == 4
   AND param(0).type == int AND param(1).type == int AND param(2).type == java.lang.String
@@ -415,7 +415,7 @@ Field round-trip with a bounded gap - read a field, then write one within four i
 FIND methods WHERE SEQUENCE [ getfield, _{0,4}, putfield ]
 ```
 
-Load, 1–3 chained invokes, then a field write - predicate steps with repetition:
+Load, 1-3 chained invokes, then a field write - predicate steps with repetition:
 ```
 FIND methods WHERE SEQUENCE [ (opcode matches /^aload/), (opcode matches /^invoke/){1,3}, putfield ]
 ```

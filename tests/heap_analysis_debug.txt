@@ -1,0 +1,194 @@
+package osrs.dev;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+public class HeapAnalysisTest {
+
+	public HeapAnalysisTest() {
+	}
+
+	public static Object testHeapAllocations() {
+		int x = 5;
+		int y = 10;
+		Object result = null;
+		String s = null;
+		if (x >= y) {
+			result = new Integer(999);
+		}
+		else {
+			result = new String("hello");
+			s = new String("hello");
+			result = s;
+		}
+		ArrayList list = new ArrayList();
+		for (int i = 0; i < 3; i++) {
+			if (i != 0) {
+				if (i != 1) {
+					((List) list).add(new int[10]);
+					continue;
+				}
+				else {
+					((List) list).add(new HashMap());
+					continue;
+				}
+			}
+			else {
+				((List) list).add(new StringBuilder("first"));
+				continue;
+			}
+		}
+		int sum = 5 + 10;
+		Object conditional = null;
+		if (sum >= 10) {
+			if (sum >= 20) {
+				conditional = new TreeMap();
+			}
+			else {
+				conditional = new HashSet();
+			}
+		}
+		else {
+			conditional = new LinkedList();
+		}
+		Object[][] matrix = new Object[2][2];
+		int j = 0;
+		for (int i = 0; i < 2; i++) {
+			for (j = 0; j < 2; j++) {
+				if (i != j) {
+					if (i >= j) {
+						matrix[i][j] = new HashMap();
+						continue;
+					}
+					else {
+						matrix[i][j] = new ArrayList();
+						continue;
+					}
+				}
+				else {
+					matrix[i][j] = new StringBuilder("diag_" + i);
+					continue;
+				}
+			}
+		}
+		int product = 5 * 10;
+		Object chained = null;
+		if (product <= 100) {
+			if (product <= 40) {
+				chained = new Object();
+			}
+			else {
+				chained = new ArrayList();
+				ArrayList complex = new ArrayList();
+				((List) complex).add(new HashMap());
+				((List) complex).add(new LinkedHashMap());
+				chained = complex;
+			}
+		}
+		else {
+			Object[] local7_2 = new Object[2];
+			local7_2[0] = new String("a");
+			local7_2[1] = new String("b");
+			chained = local7_2;
+		}
+		int computed = HeapAnalysisTest.computeValue(x, y);
+		if (computed != 15) {
+			if (computed != 50) {
+				new String("other");
+			}
+			else {
+				new StringBuilder("product");
+			}
+		}
+		else {
+			new StringBuffer("computed");
+		}
+		osrs.dev.HeapAnalysisTest.Node root = new osrs.dev.HeapAnalysisTest.Node(1);
+		root.left = new osrs.dev.HeapAnalysisTest.Node(2);
+		root.right = new osrs.dev.HeapAnalysisTest.Node(3);
+		root.left.left = new osrs.dev.HeapAnalysisTest.Node(4);
+		root.left.right = new osrs.dev.HeapAnalysisTest.Node(5);
+		if (x == 5) {
+			root.right.left = new osrs.dev.HeapAnalysisTest.Node(6);
+			root.right.right = new osrs.dev.HeapAnalysisTest.Node(7);
+		}
+		Object fromFactory = HeapAnalysisTest.createObject(sum % 3);
+		Object[] mixedArray = new Object[5];
+		for (int i = 0; i < 5; i++) {
+			switch (i % 3) {
+				case 0:
+					mixedArray[i] = new Byte((byte) i);
+					continue;
+				case 1:
+					mixedArray[i] = new Short((short) i);
+					continue;
+				case 2:
+					mixedArray[i] = new Long((long) i);
+					continue;
+				default:
+			}
+		}
+		Object exceptionRelated = null;
+		int div = 0;
+		if (y == 0) {
+			exceptionRelated = new NullPointerException("also fake");
+		}
+		else {
+			div = 5 / 10;
+			if (div != 0) {
+				exceptionRelated = new IllegalStateException("unreachable");
+			}
+			else {
+				exceptionRelated = new ArithmeticException("fake");
+			}
+		}
+		Boolean boolWrapper = null;
+		if ((x & 1) != 1) {
+			boolWrapper = Boolean.FALSE;
+			new Character('E');
+		}
+		else {
+			boolWrapper = Boolean.TRUE;
+			new Character('O');
+		}
+		LinkedHashMap resultMap = new LinkedHashMap();
+		((Map) resultMap).put("result", result);
+		((Map) resultMap).put("conditional", conditional);
+		((Map) resultMap).put("chained", chained);
+		((Map) resultMap).put("root", root);
+		((Map) resultMap).put("factory", fromFactory);
+		((Map) resultMap).put("exception", exceptionRelated);
+		((Map) resultMap).put("bool", boolWrapper);
+		if (((Map) resultMap).size() != 7) {
+			((Map) resultMap).put("error", new Error("wrong size"));
+		}
+		else {
+			((Map) resultMap).put("final", new Object());
+		}
+		return resultMap;
+	}
+
+	static int computeValue(int a, int b) {
+		return Integer.valueOf(a).intValue() + b;
+	}
+
+	static Object createObject(int type) {
+		switch (type) {
+			case 0:
+				return new ArrayList();
+			case 1:
+				return new HashSet();
+			case 2:
+				return new HashMap();
+			default:
+				return new Object();
+		}
+	}
+
+}

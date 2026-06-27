@@ -233,7 +233,7 @@ cw.forceComputeFrames();
 Beyond offset-based insertion, `CodeWriter` supports editing keyed on an instruction **handle** (the
 `Instruction` object itself). Every structural edit runs a relink/layout pass that recomputes
 instruction offsets, branch/switch targets, switch padding, the exception table, and the StackMapTable
-— all **by identity**, so jumps and try/catch boundaries survive arbitrary shifts. (This also fixes
+- all **by identity**, so jumps and try/catch boundaries survive arbitrary shifts. (This also fixes
 former hazards where inserting inside a branch span left stale branch offsets, and where a spliced
 block's offsets collided with the host's and corrupted the exception table.)
 
@@ -262,7 +262,7 @@ targets **and** any try/catch regions by identity, so `replaceBody(cr)` / `inser
 A `ClonedRange` can also carry branches that exit into the host: **external labels** (bind to a host
 instruction before splicing via `cr.bindLabel(name, hostInsn)` or the
 `insertBefore`/`insertAfter(handle, cr, Map<String,Instruction>)` overloads) and **continuation
-branches** (auto-bound to the splice successor — `insertBefore` → the handle, `insertAfter` → the
+branches** (auto-bound to the splice successor - `insertBefore` -> the handle, `insertAfter` -> the
 instruction after it; `replaceBody` has no successor and rejects them). See
 [Generation API](generation-api.md) for authoring these via `CodeBuilder.externalLabel` / a tail label,
 and the cloning section below for `redirectReturns()`.
@@ -271,17 +271,17 @@ and the cloning section below for `redirectReturns()`.
 
 `cloneRange` copies a contiguous instruction range into a fresh, self-contained list, shifting every
 local-variable index by `localOffset` and recomputing internal branch/switch targets for the cloned
-block — the mechanical building block for inlining a method body.
+block - the mechanical building block for inlining a method body.
 
 ```java
 List<Instruction> body = cw.cloneRange(first, last, localOffset);
 host.insertBefore(callSite, body);   // splice the cloned body in; relink wires it up
 ```
 Shifted local-variable ops use the narrowest valid encoding: the compact `xload_<n>` form for index
-0–3, the general form for 4–255, and the `wide` form beyond 255.
+0-3, the general form for 4-255, and the `wide` form beyond 255.
 
 To splice a body **across constant pools** into a method the target already owns (e.g. merging into an
-existing `<clinit>`), drive the public `ConstPoolRemapper` directly — it re-resolves every operand
+existing `<clinit>`), drive the public `ConstPoolRemapper` directly - it re-resolves every operand
 (including bootstrap methods) into the target pool:
 ```java
 ConstPoolRemapper remap = new ConstPoolRemapper(sourceClass, targetClass);
@@ -299,20 +299,20 @@ identity-based splice binding:
   `VerifyError`. (Cross-method relocation of an exiting branch isn't supported; rebind with
   `setBranchTarget` if you must.)
 - **Returns** can be redirected so an inlined body continues after the splice point instead of
-  returning from the host — opt in on the produced range:
+  returning from the host - opt in on the produced range:
   ```java
   CodeWriter.ClonedRange body = sourceCw.cloneRangeWithTargets(first, last, base, pool, remap::remap);
   body.redirectReturns();                  // cloned returns -> continuation gotos
   hostCw.insertBefore(continuationPoint, body);   // they bind to the splice successor
   ```
-  Each cloned `return` becomes a continuation branch (bound like a tail label: `insertBefore` → the
-  handle, `insertAfter` → the instruction after it); `replaceBody` has no successor and rejects them.
+  Each cloned `return` becomes a continuation branch (bound like a tail label: `insertBefore` -> the
+  handle, `insertAfter` -> the instruction after it); `replaceBody` has no successor and rejects them.
   A value-returning body leaves its result on the stack at the continuation. Leave `redirectReturns()`
   off to relocate a body whose returns should stay returns.
 
-To fold **several** redirected bodies before one instruction, use `insertChainBefore(at, bodies)` — it
+To fold **several** redirected bodies before one instruction, use `insertChainBefore(at, bodies)` - it
 chains them so each body's continuation falls through into the next and the last into `at`. Do **not**
-hand-stack them with repeated `insertBefore(at, …)`: that binds every body's continuation to `at`, so
+hand-stack them with repeated `insertBefore(at, ...)`: that binds every body's continuation to `at`, so
 earlier bodies skip later ones (a silent miscompile).
 ```java
 hostCw.insertChainBefore(callSuccessor, List.of(bodyA.redirectReturns(), bodyB.redirectReturns()));
@@ -345,14 +345,14 @@ share a `CONSTANT_Class`: `new`/`checkcast`/`instanceof`/`anewarray` operands, e
 member-ref owners, `invokedynamic` bootstrap handle/arg classes, **and** class names embedded in
 method/field/`MethodType` descriptors and array class refs (`[LB;`). The `ClassFile` form also refreshes
 the cached descriptor/owner on its fields and methods. **Not** rewritten: class names in generic
-`Signature` attributes — use the [Renamer](renamer-api.md) for generic-aware full renames.
+`Signature` attributes - use the [Renamer](renamer-api.md) for generic-aware full renames.
 
 `graftMethod` and `replaceMethodBody` remap method/field/interface/class references, `ldc` constants
-(String/Class/int/float/long/double/MethodHandle/MethodType), and `invokedynamic`/dynamic constants —
+(String/Class/int/float/long/double/MethodHandle/MethodType), and `invokedynamic`/dynamic constants -
 for the latter the referenced bootstrap method (handle + static arguments) is copied and remapped into
 the target's `BootstrapMethods` attribute. Structural edits (including the relink after a graft) also
-**widen branches automatically** (`goto`→`goto_w`, and an over-long conditional becomes an inverted
-conditional skipping a `goto_w`) when an edit pushes a branch span past ±32 KB.
+**widen branches automatically** (`goto`->`goto_w`, and an over-long conditional becomes an inverted
+conditional skipping a `goto_w`) when an edit pushes a branch span past +/-32 KB.
 
 The bootstrap-method table is reachable directly on `ClassFile`, which is what the graft path and
 hand-built `invokedynamic` (e.g. `CodeBuilder.assemble`) both use:
@@ -363,12 +363,12 @@ int index = classFile.addBootstrapMethod(methodHandleIndex, argIndices);    // f
 ```
 
 `addBootstrapMethod` creates the `BootstrapMethods` attribute on first use, returns an existing entry's
-index when the handle and static arguments already match, and otherwise appends — so repeated calls
+index when the handle and static arguments already match, and otherwise appends - so repeated calls
 never duplicate an identical bootstrap.
 
 Verbose disassembly (`DisassemblyOptions.verbose()` / `withResolveBootstraps`, see
 [class-files.md](class-files.md#verbose-disassembly)) resolves these bootstraps for both
-`invokedynamic` (`// BSM: …`) and `CONSTANT_Dynamic` loads (`// condy BSM: …`), rendering a
+`invokedynamic` (`// BSM: ...`) and `CONSTANT_Dynamic` loads (`// condy BSM: ...`), rendering a
 `StringConcatFactory` recipe with readable `{arg}`/`{const}` markers.
 
 ### Frameless write
@@ -451,7 +451,7 @@ YABR supports all JVM instructions through the `com.tonic.analysis.instruction` 
 | Reference | `GetFieldInstruction`, `PutFieldInstruction`, `NewInstruction` |
 | Invoke | `InvokeVirtualInstruction`, `InvokeStaticInstruction` |
 
-The four owner-bearing invokes — `Invoke{Virtual,Special,Static,Interface}Instruction` — implement the
+The four owner-bearing invokes - `Invoke{Virtual,Special,Static,Interface}Instruction` - implement the
 common interface **`InvokeInsn`** (`getOwnerClass()`/`getMethodName()`/`getMethodDescriptor()`, plus
 `isStatic()`/`isInterface()`), so a call site of any kind is handled uniformly:
 ```java
@@ -459,7 +459,7 @@ if (insn instanceof InvokeInsn call) {
     cg.addEdge(call.getOwnerClass(), call.getMethodName(), call.getMethodDescriptor());
 }
 ```
-`invokedynamic` (`InvokeDynamicInstruction`) is intentionally excluded — it has no owning class.
+`invokedynamic` (`InvokeDynamicInstruction`) is intentionally excluded - it has no owning class.
 
 ## Stack Frame Computation
 
@@ -473,15 +473,15 @@ bytecode.computeFrames();
 codeWriter.computeFrames();
 
 // Via ClassFile (all methods)
-classFile.computeFrames();
+ClassFactory.computeFrames(classFile);
 
 // Via ClassFile (specific method)
-classFile.computeFrames("methodName", "(II)I");
+ClassFactory.computeFrames(classFile, "methodName", "(II)I");
 ```
 
 ### max_stack
 
-`max_stack` is computed over the control-flow graph, not a linear scan — it accounts for every
+`max_stack` is computed over the control-flow graph, not a linear scan - it accounts for every
 reachable path (loop back-edges, joins, and exception-handler entry states, where the JVM pushes the
 caught exception). `write()` and the relink after any structural edit apply it automatically, so you
 no longer need to set `max_stack` by hand after generating branches or loops. It is raise-only (never

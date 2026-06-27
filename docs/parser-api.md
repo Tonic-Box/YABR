@@ -352,28 +352,28 @@ String output = SourceEmitter.emit(cu);
 
 ```
 com.tonic.analysis.source.parser/
-├── JavaParser.java           # Main facade
-├── Parser.java               # Recursive descent parser
-├── Lexer.java                # Tokenizer
-├── Token.java                # Token with location
-├── TokenType.java            # Token type enum
-├── Precedence.java           # Operator precedence
-├── ParseException.java       # Error with location
-├── ParseErrorListener.java   # Error callback
-└── SourcePosition.java       # Line/column tracking
+|-- JavaParser.java           # Main facade
+|-- Parser.java               # Recursive descent parser
+|-- Lexer.java                # Tokenizer
+|-- Token.java                # Token with location
+|-- TokenType.java            # Token type enum
+|-- Precedence.java           # Operator precedence
+|-- ParseException.java       # Error with location
+|-- ParseErrorListener.java   # Error callback
+`-- SourcePosition.java       # Line/column tracking
 
 com.tonic.analysis.source.ast.decl/
-├── CompilationUnit.java      # Root node
-├── ImportDecl.java           # Import statement
-├── TypeDecl.java             # Base interface
-├── ClassDecl.java            # Class declaration
-├── InterfaceDecl.java        # Interface declaration
-├── EnumDecl.java             # Enum declaration
-├── EnumConstantDecl.java     # Enum constant
-├── MethodDecl.java           # Method declaration
-├── ConstructorDecl.java      # Constructor declaration
-├── FieldDecl.java            # Field declaration
-├── ParameterDecl.java        # Parameter declaration
-├── AnnotationExpr.java       # @Annotation
-└── Modifier.java             # Access modifiers
+|-- CompilationUnit.java      # Root node
+|-- ImportDecl.java           # Import statement
+|-- TypeDecl.java             # Base interface
+|-- ClassDecl.java            # Class declaration
+|-- InterfaceDecl.java        # Interface declaration
+|-- EnumDecl.java             # Enum declaration
+|-- EnumConstantDecl.java     # Enum constant
+|-- MethodDecl.java           # Method declaration
+|-- ConstructorDecl.java      # Constructor declaration
+|-- FieldDecl.java            # Field declaration
+|-- ParameterDecl.java        # Parameter declaration
+|-- AnnotationExpr.java       # @Annotation
+`-- Modifier.java             # Access modifiers
 ```

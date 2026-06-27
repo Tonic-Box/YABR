@@ -2,7 +2,7 @@
 
 # LLVM IR Lowering
 
-YABR can lower SSA IR to **textual LLVM IR** (`.ll`). This is a leaf backend that sits at the end of the SSA pipeline, parallel to the bytecode lowerer: where `BytecodeLowerer` targets the JVM, `LlvmLowering` targets LLVM. It is the first building block of an eventual Java -> native / WebAssembly pipeline.
+YABR can lower SSA IR to **textual LLVM IR** (`.ll`). This is a leaf backend that sits at the end of the SSA pipeline, parallel to the bytecode lowerer: where `BytecodeLowerer` targets the JVM, `LlvmLowering` targets LLVM.
 
 ```
                           +--[BytecodeLowerer]--> Bytecode (JVM)
@@ -10,26 +10,26 @@ Bytecode --[lift]--> SSA IR
                           +--[LlvmLowering]-----> LLVM IR (.ll)  ->  lli / clang / wasm
 ```
 
-Output is pure text, so the module adds **no native dependency** — you can emit `.ll` without LLVM installed, then feed it to `lli`, `clang`, or any LLVM toolchain.
+Output is pure text, so the module adds **no native dependency** - you can emit `.ll` without LLVM installed, then feed it to `lli`, `clang`, or any LLVM toolchain.
 
 ## Two object models
 
 The lowering is gated by `LlvmLoweringConfig.ObjectModel`:
 
-- **`NONE`** (default) — the **computational subset**: arithmetic, conversions, control flow, phis, and static primitive calls. Anything touching the object/reference/runtime model routes to `UnsupportedLowering` (`UnsupportedOperationException: "LLVM lowering: <op> not yet supported"`). Output is self-contained and `lli`-runnable. This is the strict, sound boundary.
-- **`RUNTIME_ABI`** (`LlvmLoweringConfig.fullObjectModel()`) — the **full construct set**: references map to opaque `ptr`, and object operations lower to `call`s into a documented `jvm_*` runtime ABI. Output is valid IR but **not runnable standalone** — a runtime library must implement the ABI + EH personality.
+- **`NONE`** (default) - the **computational subset**: arithmetic, conversions, control flow, phis, and static primitive calls. Anything touching the object/reference/runtime model routes to `UnsupportedLowering` (`UnsupportedOperationException: "LLVM lowering: <op> not yet supported"`). Output is self-contained and `lli`-runnable. This is the strict, sound boundary.
+- **`RUNTIME_ABI`** (`LlvmLoweringConfig.fullObjectModel()`) - the **full construct set**: references map to opaque `ptr`, and object operations lower to `call`s into a documented `jvm_*` runtime ABI. Output is valid IR but **not runnable standalone** - a runtime library must implement the ABI + EH personality.
 
 | Construct | `NONE` | `RUNTIME_ABI` |
 |---|---|---|
-| Arithmetic, conversions, phis, branches, `switch`, `goto`, `return`, static calls | ✅ | ✅ |
-| Reference / array params & returns, instance methods (`this`) | rejected | ✅ (`ptr`) |
-| `null`, reference compares (`if_acmp*`, `ifnull`) | rejected | ✅ (`icmp … ptr`) |
-| Static fields (`getstatic`/`putstatic`) | rejected | ✅ (LLVM globals) |
-| Instance fields, arrays, `arraylength`, `new`, `newarray` | rejected | ✅ (`jvm_*` ABI) |
-| Virtual / interface / special / dynamic invoke | rejected | ✅ (vtable/itable lookup, indy ABI) |
-| `checkcast` / `instanceof`, `athrow`, monitors | rejected | ✅ (`jvm_*` ABI) |
-| String / Class `ldc` | rejected | ✅ (`jvm_intern_string` / `jvm_class_object`) |
-| try/catch (exception handlers) | rejected | ✅ (`invoke`/`landingpad` + personality) |
+| Arithmetic, conversions, phis, branches, `switch`, `goto`, `return`, static calls | yes | yes |
+| Reference / array params & returns, instance methods (`this`) | rejected | yes (`ptr`) |
+| `null`, reference compares (`if_acmp*`, `ifnull`) | rejected | yes (`icmp ... ptr`) |
+| Static fields (`getstatic`/`putstatic`) | rejected | yes (LLVM globals) |
+| Instance fields, arrays, `arraylength`, `new`, `newarray` | rejected | yes (`jvm_*` ABI) |
+| Virtual / interface / special / dynamic invoke | rejected | yes (vtable/itable lookup, indy ABI) |
+| `checkcast` / `instanceof`, `athrow`, monitors | rejected | yes (`jvm_*` ABI) |
+| String / Class `ldc` | rejected | yes (`jvm_intern_string` / `jvm_class_object`) |
+| try/catch (exception handlers) | rejected | yes (`invoke`/`landingpad` + personality) |
 
 ### Runtime ABI (the `RUNTIME_ABI` contract)
 
@@ -40,19 +40,19 @@ References are opaque `ptr`; class/field/method identities are interned C-string
 | `new C` | `%o = call ptr @jvm_new(ptr @.str.C)` |
 | `newarray` / `anewarray` | `call ptr @jvm_newarray_<kind>(i32 len)` / `@jvm_anewarray(ptr elem, i32 len)` (multi-dim: `@jvm_multianewarray`) |
 | `arraylength` | `call i32 @jvm_arraylength(ptr a)` |
-| array load/store | `call <t> @jvm_aload_<kind>(ptr a, i32 i)` / `call void @jvm_astore_<kind>(ptr a, i32 i, <t> v)` (`kind` ∈ z/b/c/s/i/j/f/d/a) |
-| getfield/putfield | `call <t> @"jvm.gf owner.name desc"(ptr obj)` / `call void @"jvm.pf …"(ptr obj, <t> v)` |
-| getstatic/putstatic | LLVM global `@"owner.name"` — `load`/`store`; defined `zeroinitializer` if the owner is lowered in the module, else `external global` |
-| invokevirtual / interface | `%fp = call ptr @jvm_vtable_lookup(ptr recv, ptr methodId)` (or `@jvm_itable_lookup`) then `call <ret> %fp(ptr recv, …)` |
-| invokespecial / static | direct `call <ret> @mangled(<recv?>, …)` |
-| invokedynamic | per-call-site extern `call <ret> @"jvm.indy owner.name desc #cp"(…)` |
+| array load/store | `call <t> @jvm_aload_<kind>(ptr a, i32 i)` / `call void @jvm_astore_<kind>(ptr a, i32 i, <t> v)` (`kind` in z/b/c/s/i/j/f/d/a) |
+| getfield/putfield | `call <t> @"jvm.gf owner.name desc"(ptr obj)` / `call void @"jvm.pf ..."(ptr obj, <t> v)` |
+| getstatic/putstatic | LLVM global `@"owner.name"` - `load`/`store`; defined `zeroinitializer` if the owner is lowered in the module, else `external global` |
+| invokevirtual / interface | `%fp = call ptr @jvm_vtable_lookup(ptr recv, ptr methodId)` (or `@jvm_itable_lookup`) then `call <ret> %fp(ptr recv, ...)` |
+| invokespecial / static | direct `call <ret> @mangled(<recv?>, ...)` |
+| invokedynamic | per-call-site extern `call <ret> @"jvm.indy owner.name desc #cp"(...)` |
 | checkcast / instanceof | `call ptr @jvm_checkcast(ptr o, ptr T)` / `call i32 @jvm_instanceof(ptr o, ptr T)` |
 | String / Class `ldc` | `call ptr @jvm_intern_string(ptr bytes, i32 len)` / `call ptr @jvm_class_object(ptr name)` |
 | athrow | `call void @jvm_throw(ptr e)` then `unreachable` |
 | monitorenter / exit | `@jvm_monitor_enter(ptr)` / `@jvm_monitor_exit(ptr)` |
-| try/catch | covered-region calls become `invoke … unwind label %Lpad`; `landingpad { ptr, i32 } cleanup`; `@jvm_match_catch(ptr exc, ptr T)` dispatch; the handler reads its exception via `@jvm_current_exception()`; the `define` carries `personality ptr @jvm_personality` |
+| try/catch | covered-region calls become `invoke ... unwind label %Lpad`; `landingpad { ptr, i32 } cleanup`; `@jvm_match_catch(ptr exc, ptr T)` dispatch; the handler reads its exception via `@jvm_current_exception()`; the `define` carries `personality ptr @jvm_personality` |
 
-**Approximations (honest scope).** invokedynamic is emitted as a **per-call-site ABI symbol**, not desugared into synthetic lambda classes — lambda/string-concat semantics live behind the runtime. Exception handling emits structurally valid `invoke`/`landingpad` IR against `@jvm_personality`, but is validated by **IR shape, not execution**, and only converts in-region `call`s (the common thrower) to `invoke`; nested/complex handler tables may need refinement. Static fields of `byte`/`short`/`char`/`boolean` collapse to `i32` globals (consistent with the operand-stack model).
+**Approximations (honest scope).** invokedynamic is emitted as a **per-call-site ABI symbol**, not desugared into synthetic lambda classes - lambda/string-concat semantics live behind the runtime. Exception handling emits structurally valid `invoke`/`landingpad` IR against `@jvm_personality`, but is validated by **IR shape, not execution**, and only converts in-region `call`s (the common thrower) to `invoke`; nested/complex handler tables may need refinement. Static fields of `byte`/`short`/`char`/`boolean` collapse to `i32` globals (consistent with the operand-stack model).
 
 ## Quick Start
 
@@ -91,7 +91,7 @@ B0:
 }
 ```
 
-Parameters are bound to their SSA value names (`%v0`, `%v1`); blocks are labelled `B<id>` from the CFG; the function symbol is the mangled method reference (see [Symbol mangling](#symbol-mangling)). Dead `load local` / `store local` artifacts left over from lifting emit nothing — data flow is carried entirely by SSA values and phis.
+Parameters are bound to their SSA value names (`%v0`, `%v1`); blocks are labelled `B<id>` from the CFG; the function symbol is the mangled method reference (see [Symbol mangling](#symbol-mangling)). Dead `load local` / `store local` artifacts left over from lifting emit nothing - data flow is carried entirely by SSA values and phis.
 
 ## Public API
 
@@ -189,7 +189,7 @@ The JVM masks the shift count (`& 31` for `int`, `& 63` for `long`), but LLVM sh
 
 ### Phi functions
 
-Phis lower to **native LLVM `phi`** — no SSA destruction, no parallel-copy insertion (unlike the JVM bytecode lowerer, which must destruct SSA). Because every SSA value is named `%v<id>` by its stable id before any block is walked, loop back-edge and forward references resolve symbolically with no ordering or fix-up pass:
+Phis lower to **native LLVM `phi`** - no SSA destruction, no parallel-copy insertion (unlike the JVM bytecode lowerer, which must destruct SSA). Because every SSA value is named `%v<id>` by its stable id before any block is walked, loop back-edge and forward references resolve symbolically with no ordering or fix-up pass:
 
 ```llvm
 %v7 = phi i32 [%v2, %B0], [%v9, %B2]
@@ -215,8 +215,8 @@ Output is byte-identical across runs: value and label names come from stable ids
 
 These are documented gaps where raw LLVM differs from JVM semantics, each with a designed extension point:
 
-- **Integer division** — `sdiv`/`srem` are undefined behaviour on divide-by-zero and on `INT_MIN / -1`, where the JVM throws `ArithmeticException` or wraps. `LlvmLoweringConfig.emitDivisionGuards` (default `false`) is the seam for emitting JVM-faithful guards.
-- **`fptosi`** — undefined on overflow / NaN, where the JVM saturates or returns `0`. The future fix swaps in `llvm.fptosi.sat.*` behind the same conversion arm.
+- **Integer division** - `sdiv`/`srem` are undefined behaviour on divide-by-zero and on `INT_MIN / -1`, where the JVM throws `ArithmeticException` or wraps. `LlvmLoweringConfig.emitDivisionGuards` (default `false`) is the seam for emitting JVM-faithful guards.
+- **`fptosi`** - undefined on overflow / NaN, where the JVM saturates or returns `0`. The future fix swaps in `llvm.fptosi.sat.*` behind the same conversion arm.
 - **Shift masking** is always emitted (cheap), so shift counts do not diverge.
 
 ## Lowering multiple methods
@@ -238,7 +238,7 @@ All `define`s share one set of `declare`s, and intra-module callees are resolved
 `com.tonic.demo.LlvmLoweringDemo` loads a class file, lifts each method, and prints the lowered LLVM IR (reporting the methods it skips as out of subset):
 
 ```bash
-java -cp build/classes/java/main com.tonic.demo.LlvmLoweringDemo MyClass.class
+java -cp examples/build/classes/java/main com.tonic.demo.LlvmLoweringDemo MyClass.class
 ```
 
 ## Extending past the subset

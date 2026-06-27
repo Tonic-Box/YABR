@@ -2,327 +2,131 @@
 
 # Architecture Overview
 
-YABR (Yet Another Bytecode Reader/Writer) is a Java bytecode manipulation library organized into two main subsystems: **parsing** and **analysis**.
+YABR is a Java bytecode library built as a set of Gradle subprojects whose dependencies form an
+acyclic layering. Each subproject owns a slice of the `com.tonic` package space; the build forbids
+upward or cyclic dependencies, so the layering cannot decay. All subprojects are merged into a
+single published artifact (`com.tonic:YABR`), so consumers depend on one jar.
 
-## System Architecture
+## Module Layering
 
-```
-+------------------+     +-------------------+     +------------------+
-|   Parser Layer   |     |  Analysis Layer   |     |   SSA Pipeline   |
-+------------------+     +-------------------+     +------------------+
-|                  |     |                   |     |                  |
-|  ClassPool       |     |  MethodEntry --+  |     |  SSA             |
-|      |           |     |       |        |  |     |   |              |
-|      v           |     |       v        |  |     |   v              |
-|  ClassFile ---+  |     |  Bytecode API  |  |     |  Lifter          |
-|      |        |  |     |       |        |  |     |   |              |
-|      +-----+  |  |     |       v        |  |     |   v              |
-|      |     |  |  |     |  CodeWriter    |  |     |  IRMethod        |
-|      v     v  v  |     |                |  |     |   |              |
-| Methods Fields   |     |  Visitors <----+  |     |   v              |
-|      |           |     |                |  |     |  Transforms      |
-|      v           |     |  SSA System <--+  |     |   |              |
-|  ConstPool       |     |                   |     |   v              |
-|  Attributes      |     |                   |     |  Lowerer -> Back |
-+------------------+     +-------------------+     +------------------+
-```
-
-## Package Structure
-
-| Package | Purpose |
-|---------|---------|
-| `com.tonic.parser` | Class file parsing and representation |
-| `com.tonic.parser.constpool` | Constant pool items and management |
-| `com.tonic.parser.attribute` | Class file attributes (Code, StackMapTable, etc.) |
-| `com.tonic.analysis` | Bytecode manipulation (Bytecode, CodeWriter) |
-| `com.tonic.analysis.instruction` | Individual bytecode instructions |
-| `com.tonic.analysis.visitor` | Visitor patterns for traversal |
-| `com.tonic.analysis.ssa` | SSA IR system |
-| `com.tonic.analysis.ssa.ir` | IR instruction types |
-| `com.tonic.analysis.ssa.cfg` | Control flow graph (IRMethod, IRBlock) |
-| `com.tonic.analysis.ssa.lift` | Bytecode to SSA lifting |
-| `com.tonic.analysis.ssa.lower` | SSA to bytecode lowering |
-| `com.tonic.analysis.ssa.llvm` | SSA to LLVM IR lowering (leaf backend) |
-| `com.tonic.analysis.ssa.llvm.lift` | LLVM IR to SSA lifting (optimizer round-trip) |
-| `com.tonic.analysis.ssa.transform` | IR optimizations |
-| `com.tonic.analysis.ssa.analysis` | Analysis passes (dominators, liveness) |
-| `com.tonic.analysis.source.ast` | Source-level AST node definitions |
-| `com.tonic.analysis.source.recovery` | IR to AST recovery |
-| `com.tonic.analysis.source.lower` | AST to IR lowering |
-| `com.tonic.analysis.source.emit` | Java source code generation |
-| `com.tonic.analysis.frame` | StackMapTable frame computation |
-| `com.tonic.analysis.source.decompile` | Full class decompilation |
-| `com.tonic.analysis.source.editor` | AST expression/statement editing |
-| `com.tonic.analysis.xref` | Cross-reference tracking (who calls what) |
-| `com.tonic.analysis.dataflow` | Data flow graphs and taint analysis |
-| `com.tonic.analysis.similarity` | Method similarity and duplicate detection |
-| `com.tonic.analysis.callgraph` | Call graph construction and queries |
-| `com.tonic.analysis.dependency` | Class dependency analysis |
-| `com.tonic.analysis.typeinference` | Type and nullability inference |
-| `com.tonic.analysis.pattern` | Code pattern search |
-| `com.tonic.analysis.query` | Composable query language for searching bytecode |
-| `com.tonic.analysis.instrumentation` | Bytecode instrumentation hooks |
-| `com.tonic.analysis.simulation` | Abstract bytecode simulation and metrics |
-| `com.tonic.analysis.execution` | Concrete bytecode execution and debugging |
-| `com.tonic.renamer` | Class/method/field renaming |
-| `com.tonic.utill` | Utilities (AccessBuilder, Logger, etc.) |
-| `com.tonic.demo` | Example programs |
-
-## Core Components
-
-### Parser Layer
-
-**ClassPool** - Container for loaded classes. Automatically loads `java.base` classes on initialization.
-
-```java
-ClassPool pool = ClassPool.getDefault();
-ClassFile cf = pool.get("java/lang/String");
-```
-
-**ClassFile** - Represents a complete `.class` file with fields, methods, and attributes.
-
-**ConstPool** - Manages the constant pool entries (strings, class refs, method refs, etc.).
-
-**MethodEntry / FieldEntry** - Individual method and field definitions.
-
-### Analysis Layer
-
-**Bytecode** - High-level API for adding common bytecode instructions:
-```java
-Bytecode bc = new Bytecode(method);
-bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-bc.addLdc("Hello");
-bc.addInvokeVirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
-bc.finalizeBytecode();
-```
-
-**CodeWriter** - Low-level bytecode manipulation with direct instruction access.
-
-**Visitors** - Three visitor patterns for different analysis levels:
-- `AbstractClassVisitor` - Class-level (fields, methods, attributes)
-- `AbstractBytecodeVisitor` - Instruction-level bytecode
-- `AbstractBlockVisitor` - SSA IR block-level
-
-### SSA System
-
-**SSA** - Main entry point for SSA operations:
+Each module depends only on the modules below it.
 
 ```
-Bytecode --[lift]--> SSA IR --[transform]--> Optimized IR --[lower]--> Bytecode
+query      analyses      execution      source
+   |           |             |            |
+   |           +------+------+------------+
+   |                  |
+   +--- ssa <---------+
+         |
+         +--- bytecode <--- renamer
+                 |             |
+                 +------+------+
+                        |
+                       core
 ```
 
-The SSA pipeline:
-1. **Lift** - Convert stack-based bytecode to register-based IR
-2. **Transform** - Apply optimizations (constant folding, copy propagation, DCE)
-3. **Lower** - Convert IR back to bytecode
+| Module | Depends on | Contents |
+|--------|------------|----------|
+| `core` | (none) | `parser`, `parser.constpool`, `parser.attribute`, `parser.util`, `parser.visitor`, `util`, `exception`, `type` |
+| `renamer` | core | `renamer` |
+| `bytecode` | core | `analysis` (Bytecode, CodeWriter, CodePrinter, ClassFactory, ...), `analysis.instruction`, `analysis.visitor`, `analysis.frame`, `analysis.common`, `builder` |
+| `ssa` | core, bytecode | `analysis.ssa` and sub-packages (ir, cfg, lift, lower, transform, analysis, llvm, visitor) |
+| `source` | core, bytecode, ssa | `analysis.source` and sub-packages (ast, recovery, lower, emit, decompile, editor, parser) |
+| `analyses` | core, bytecode, ssa, source, renamer | `analysis.callgraph`, `.xref`, `.dataflow`, `.dependency`, `.similarity`, `.pattern`, `.typeinference`, `.cpg`, `.pdg`, `.graph`, `.fingerprint` |
+| `execution` | core, bytecode, ssa, analyses, renamer | `analysis.execution`, `.absexec`, `.simulation`, `.instrumentation`, `.verifier` |
+| `query` | core, bytecode, ssa, renamer | `analysis.query` |
 
-**IRMethod** - SSA-form method containing IRBlocks
+The `all` subproject aggregates the above into the shadow jar; `examples` holds runnable demos and
+is not published.
 
-**IRBlock** - Basic block with phi instructions and regular instructions
+## Layers
 
-**IRInstruction** - 29 instruction types representing all JVM operations
+### core
 
-**LLVM Backend** - An alternative leaf backend lowers SSA IR to textual LLVM IR (`.ll`) instead of bytecode, covering the computational subset (arithmetic, conversions, control flow, phis, static calls). It is the first building block of a Java -> native / WebAssembly pipeline:
+The structural model of a class file. `ClassPool` loads classes (from the JRT image on Java 9+ or
+`rt.jar` on Java 8); `ClassFile`, `MethodEntry`, `FieldEntry`, `ConstPool`, and the attribute types
+parse and hold the `.class` contents. This layer is purely structural: it has no dependency on the
+bytecode-emission API. Generating members (default constructors, accessors, method bodies) lives in
+`bytecode` via `ClassFactory`.
 
-```java
-String ll = new LlvmLowering().lower(ssa.lift(method));
-```
+### bytecode
 
-See [LLVM Lowering](llvm-lowering.md) for the supported subset, semantics, and extension seams.
+Bytecode reading, writing, and disassembly. `Bytecode` is the high-level instruction-builder API;
+`CodeWriter` is the low-level instruction-list editor with branch relinking and offset layout;
+`CodePrinter` disassembles; `ClassFactory` generates members on a `ClassFile`; `builder` provides
+fluent class/method builders. `analysis.frame` computes StackMapTable frames.
 
-## Data Flow
+### ssa
 
-### Loading and Parsing
+SSA-form IR. `SSA` lifts bytecode to `IRMethod` (a CFG of `IRBlock`s holding phi and value
+instructions), runs transforms, and lowers back to bytecode. An alternative leaf backend lowers the
+computational subset of the IR to textual LLVM IR (see [LLVM Lowering](llvm-lowering.md)).
 
-```
-.class file bytes
-    |
-    v
-ClassFile(bytes) - verifies magic number (0xCAFEBABE)
-    |
-    v
-ConstPool - parses constant pool entries
-    |
-    v
-Fields, Methods, Attributes - parsed with CP references
-    |
-    v
-ClassFile ready for manipulation
-```
+### source
 
-### Bytecode Modification
+Source-level representation. Recovery turns SSA IR into an AST; the emitter renders the AST as Java;
+the lowerer turns an AST back into IR. `ClassDecompiler` runs the full pipeline; `ASTEditor` applies
+targeted AST transformations.
 
-```
-MethodEntry
-    |
-    v
-CodeWriter - wraps CodeAttribute
-    |
-    v
-Insert/append instructions
-    |
-    v
-write() - updates CodeAttribute bytes
-    |
-    v
-ClassFile.write() - produces modified .class
-```
+### analyses, execution, query
 
-### SSA Transformation
+Higher-level analyses built on the IR and bytecode: call graphs, cross-references, data flow, code
+property and program dependence graphs, similarity, pattern search, and type inference (`analyses`);
+concrete execution, abstract simulation, instrumentation, and verification (`execution`); and a
+composable bytecode query language (`query`).
 
-```
-MethodEntry
-    |
-    v
-BytecodeLifter.lift() - creates CFG, translates instructions
-    |
-    v
-PhiInserter.insertPhis() - adds phi nodes at join points
-    |
-    v
-VariableRenamer.rename() - converts to SSA form
-    |
-    v
-IRTransforms - optimizations
-    |
-    v
-BytecodeLowerer.lower() - back to bytecode
-```
+### renamer
 
-### Source AST System
+Class, method, and field renaming with constant-pool updates, hierarchy-aware method renaming, and
+descriptor remapping. Depends only on `core`.
 
-The AST layer provides source-level representation for bytecode analysis and transformation:
+## Pipelines
+
+### Parse
 
 ```
-+--------------------------------------------------------------+
-|                      Source AST Layer                         |
-+----------------+-----------------+---------------------------+
-|    Recovery    |    AST Nodes    |        Emission           |
-|   (IR -> AST)  |   (expr/stmt)   |    (AST -> Source)        |
-+----------------+-----------------+---------------------------+
-|                        Lowering                               |
-|                      (AST -> IR)                              |
-+--------------------------------------------------------------+
+.class bytes -> ClassFile (verifies 0xCAFEBABE) -> ConstPool -> fields, methods, attributes
 ```
 
-**MethodRecoverer** - Converts SSA IR to structured AST:
-```java
-BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, methodEntry);
+### Bytecode edit
+
+```
+MethodEntry -> CodeWriter (wraps CodeAttribute) -> insert/replace instructions -> write() -> ClassFile.write()
 ```
 
-**SourceEmitter** - Generates readable Java source:
-```java
-String source = SourceEmitter.emit(ast);
+### SSA round-trip
+
+```
+MethodEntry -> lift (CFG + phi insertion + renaming) -> transforms -> lower -> bytecode
 ```
 
-**ASTLowerer** - Converts AST back to SSA IR:
-```java
-new ASTLowerer(constPool).replaceBody(ast, irMethod);
+### Decompile
+
 ```
-
-The AST system enables:
-- Source-level code analysis
-- High-level code transformations
-- Decompilation to readable Java
-- Round-trip bytecode modification
-
-### AST Editor
-
-**ASTEditor** - ExprEditor-style API for targeted AST transformations:
-```java
-ASTEditor editor = new ASTEditor(methodBody, "methodName", "()V", "com/example/Class");
-editor.onMethodCall((ctx, call) -> {
-    if (call.getMethodName().equals("deprecated")) {
-        return Replacement.with(ctx.factory().methodCall("newMethod").build());
-    }
-    return Replacement.keep();
-});
-editor.apply();
+MethodEntry -> SSA IR -> recovery -> AST -> emit -> Java source
 ```
-
-The editor system provides:
-- Handler-based interception of expressions and statements
-- Type-safe replacement with AST nodes
-- Predicate-based matchers for flexible filtering
-- Factory for building new AST nodes
-
-### Renamer
-
-**Renamer** - High-level API for renaming classes, methods, and fields:
-```java
-Renamer renamer = new Renamer(classPool);
-renamer.mapClass("com/old/MyClass", "com/new/RenamedClass")
-       .mapMethodInHierarchy("com/old/Service", "process", "(I)V", "handle")
-       .mapField("com/old/Model", "data", "Ljava/lang/String;", "content")
-       .apply();
-```
-
-The renamer handles:
-- Constant pool reference updates across all classes
-- Hierarchy-aware method renaming
-- Descriptor and signature remapping
-- Pre-application validation
-
-### Execution Engine
-
-**BytecodeEngine** - Concrete bytecode execution for debugging and REPL:
-```java
-BytecodeContext ctx = new BytecodeContext.Builder()
-    .heapManager(new SimpleHeapManager())
-    .classResolver(new ClassResolver(pool))
-    .maxInstructions(100000)
-    .build();
-
-BytecodeEngine engine = new BytecodeEngine(ctx);
-BytecodeResult result = engine.execute(method, ConcreteValue.intValue(42));
-```
-
-The execution system provides:
-- Mutable stack/locals with concrete values (not abstract types)
-- Full heap simulation with objects and arrays
-- Native method handlers for JDK core methods
-- Two invocation modes: recursive (internal) and delegated (external callback)
-
-**DebugSession** - Interactive debugging support:
-```java
-DebugSession session = new DebugSession(ctx);
-session.addBreakpoint(new Breakpoint("MyClass", "method", "()V", 10));
-session.start(method);
-DebugState state = session.stepOver();
-```
-
-The debugging system enables:
-- Breakpoints at specific bytecode offsets
-- Step into/over/out execution control
-- Call stack and variable inspection
-- Execution state snapshots for UI display
 
 ## Key Design Decisions
 
-1. **Lazy Loading** - ClassPool loads built-in classes on demand from JRT (Java 9+) or rt.jar (Java 8)
-
-2. **Mutable Model** - ClassFile and its components are mutable for easy manipulation
-
-3. **Visitor Pattern** - Multiple visitor types allow analysis at different granularities
-
-4. **SSA for Optimization** - SSA form simplifies dataflow analysis and enables powerful optimizations
-
-5. **Frame Computation** - Automatic StackMapTable generation for Java 7+ verification
+1. Lazy loading: `ClassPool` loads built-in classes on demand.
+2. Mutable model: `ClassFile` and its components are mutable.
+3. Layered modules: dependencies are acyclic and build-enforced.
+4. SSA for analysis: SSA form simplifies data flow and optimization.
+5. Automatic frames: StackMapTable generation for Java 7+ verification.
 
 ## Related Documentation
 
-- [Working with Class Files](class-files.md) - ClassPool, ClassFile, ConstPool details
-- [Bytecode API](bytecode-api.md) - Bytecode and CodeWriter usage
-- [Visitors](visitors.md) - Traversal and transformation patterns
-- [SSA Guide](ssa-guide.md) - SSA IR system in depth
-- [LLVM Lowering](llvm-lowering.md) - Lower SSA IR to textual LLVM IR
-- [LLVM Lifting](llvm-lifting.md) - Lift LLVM IR back to SSA (optimizer round-trip)
-- [AST Guide](ast-guide.md) - Source-level AST recovery, mutation, and emission
-- [AST Editor](ast-editor.md) - ExprEditor-style AST transformations
-- [Analysis APIs](analysis-apis.md) - Call graph, xrefs, data flow, simulation, execution, and more
-- [Execution API](execution-api.md) - Concrete bytecode execution and debugging
-- [Renamer API](renamer-api.md) - Class, method, and field renaming
-- [Frame Computation](frame-computation.md) - StackMapTable generation
+- [Working with Class Files](class-files.md)
+- [Bytecode API](bytecode-api.md)
+- [Visitors](visitors.md)
+- [SSA Guide](ssa-guide.md)
+- [LLVM Lowering](llvm-lowering.md)
+- [AST Guide](ast-guide.md)
+- [AST Editor](ast-editor.md)
+- [Analysis APIs](analysis-apis.md)
+- [Execution API](execution-api.md)
+- [Renamer API](renamer-api.md)
+- [Frame Computation](frame-computation.md)
 
 ---
 

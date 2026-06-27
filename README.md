@@ -1,25 +1,24 @@
 # YABR - Yet Another Bytecode Reader/Writer
 
-A Java bytecode manipulation library with SSA-form intermediate representation for analysis and optimization.
-
-A comprehensive alternative to ASM, Javassist, and other bytecode libraries.
+A Java bytecode library with class-file parsing, bytecode editing, an SSA-form IR, decompilation,
+and a set of higher-level analyses.
 
 ## Features
 
-- **Class file parsing** - Read and write Java `.class` files
-- **Bytecode generation** - Fluent builder API for creating classes from scratch
-- **Bytecode manipulation** - High-level and low-level APIs for modifying bytecode: handle-keyed
-  insert/remove/replace, range cloning, cross-class method grafting, and owner retargeting, with
-  automatic relink (branch widening) and StackMapTable regeneration
-- **SSA IR system** - Lift bytecode to SSA form, optimize, and lower back
-- **Source AST system** - Recover, mutate, and emit Java source from bytecode
-- **Class decompilation** - Full class decompilation with imports, fields, and methods, including
-  modern constructs (records, sealed types, switch expressions, try-with-resources, generic signatures,
-  and Java 21 pattern-matching switch), with optional bytecode-offset-to-source-line maps for PC-to-line
-  navigation
-- **Analysis APIs** - Call graph, dependency, type inference, pattern search, query language, xrefs, data flow, similarity, PDG, SDG, CPG, taint analysis
-- **Visitor patterns** - Traverse classes at multiple abstraction levels
-- **Frame computation** - Automatic StackMapTable generation for Java 7+
+- **Class file parsing** - read and write Java `.class` files
+- **Bytecode generation** - fluent builder API for creating classes from scratch
+- **Bytecode editing** - high- and low-level APIs: handle-keyed insert/remove/replace, range cloning,
+  cross-class method grafting, owner retargeting, with automatic branch widening and StackMapTable
+  regeneration
+- **SSA IR** - lift bytecode to SSA form, optimize, and lower back; optional textual LLVM IR backend
+- **Source AST** - recover, mutate, and emit Java source from bytecode
+- **Decompilation** - full class decompilation including records, sealed types, switch expressions,
+  try-with-resources, generic signatures, and Java 21 pattern-matching switch, with optional
+  bytecode-offset-to-source-line maps
+- **Analyses** - call graph, dependency, type inference, pattern search, query language, xrefs, data
+  flow, similarity, PDG, SDG, CPG, taint
+- **Visitors** - traverse classes at multiple abstraction levels
+- **Frame computation** - automatic StackMapTable generation for Java 7+
 
 ## Quick Start
 
@@ -28,14 +27,14 @@ A comprehensive alternative to ASM, Javassist, and other bytecode libraries.
 ClassPool pool = ClassPool.getDefault();
 ClassFile cf = pool.loadClass(inputStream);
 
-// Create a new class
+// Create a new class with a default constructor
 int access = new AccessBuilder().setPublic().build();
-ClassFile newClass = pool.createNewClass("com/example/MyClass", access);
+ClassFile newClass = ClassFactory.createClass(pool, "com/example/MyClass", access);
 
-// Add a field with getter/setter
+// Add a field with a getter and setter
 FieldEntry field = newClass.createNewField(access, "value", "I", new ArrayList<>());
-newClass.generateGetter(field, false);
-newClass.generateSetter(field, false);
+ClassFactory.generateGetter(newClass, field, false);
+ClassFactory.generateSetter(newClass, field, false);
 
 // Write the class
 newClass.rebuild();
@@ -46,47 +45,29 @@ byte[] bytes = newClass.write();
 
 | Guide | Description |
 |-------|-------------|
-| [Quick Start](docs/quick-start.md) | Get running in 5 minutes |
-| [Architecture](docs/architecture.md) | System overview and design |
+| [Quick Start](docs/quick-start.md) | Getting started |
+| [Architecture](docs/architecture.md) | Module structure and design |
 | [Class Files](docs/class-files.md) | ClassPool, ClassFile, ConstPool |
-| [Bytecode API](docs/bytecode-api.md) | Bytecode manipulation |
-| [Generation API](docs/generation-api.md) | Fluent bytecode generation from scratch |
+| [Bytecode API](docs/bytecode-api.md) | Bytecode editing |
+| [Generation API](docs/generation-api.md) | Fluent class generation |
 | [Visitors](docs/visitors.md) | Traversal patterns |
 | [SSA Guide](docs/ssa-guide.md) | SSA intermediate representation |
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
-| [LLVM Lowering](docs/llvm-lowering.md) | Lower SSA IR to textual LLVM IR (`.ll`) |
-| [LLVM Lifting](docs/llvm-lifting.md) | Lift LLVM IR back to SSA (optimizer round-trip) |
-| [SSA IR Migration](docs/SSA_IR_MIGRATION.md) | API changes from SSA IR redesign |
-| [Analysis APIs](docs/analysis-apis.md) | High-level code analysis and semantic queries |
+| [LLVM Lowering](docs/llvm-lowering.md) | Lower SSA IR to textual LLVM IR |
+| [LLVM Lifting](docs/llvm-lifting.md) | Lift LLVM IR back to SSA |
+| [SSA IR Migration](docs/SSA_IR_MIGRATION.md) | API changes from the SSA IR redesign |
+| [Analysis APIs](docs/analysis-apis.md) | Code analysis and semantic queries |
 | [PDG API](docs/pdg-api.md) | Program Dependence Graph with slicing |
 | [SDG API](docs/sdg-api.md) | Interprocedural System Dependence Graph |
 | [CPG API](docs/cpg-api.md) | Code Property Graph with taint analysis |
-| [Query API](docs/query-api.md) | Composable query language for searching bytecode |
-| [Abstract Execution API](docs/abstract-execution-api.md) | Operand-stack and local def-use over raw bytecode |
-| [AST Guide](docs/ast-guide.md) | Source-level AST recovery, mutation, and emission |
+| [Query API](docs/query-api.md) | Bytecode query language |
+| [Abstract Execution API](docs/abstract-execution-api.md) | Operand-stack and local def-use |
+| [AST Guide](docs/ast-guide.md) | AST recovery, mutation, and emission |
 | [AST Editor](docs/ast-editor.md) | ExprEditor-style AST transformation |
 | [Renamer API](docs/renamer-api.md) | Class, method, and field renaming |
 | [Frame Computation](docs/frame-computation.md) | StackMapTable generation |
 
-## Examples
-
-Runnable examples are in [`src/main/java/com/tonic/demo/`](src/main/java/com/tonic/demo/):
-
-- `TestBlocks.java` - SSA IR block visitor
-- `TestBytecodeVisitor.java` - Bytecode-level visitor
-- `TestClassCreation.java` - Creating classes programmatically
-- `TestSSADemo.java` - Complete SSA transformation
-- `LlvmLoweringDemo.java` - Lower SSA IR to LLVM IR
-- `LlvmRoundTripDemo.java` - LLVM IR round-trip (lower → lift → re-lower, or via opt -O2)
-- `ASTMutationDemo.java` - AST recovery, mutation, and recompilation
-- `SourceASTDemo.java` - AST node construction and source emission
-- `ast/Decompile.java` - Command-line class decompiler
-- `CallGraphDemo.java` - Build and query method call graph
-- `DependencyDemo.java` - Analyze class dependencies
-- `TypeInferenceDemo.java` - Type and nullability inference
-- `PatternSearchDemo.java` - Search for code patterns
-
-### Bytecode Generation
+## Bytecode Generation
 
 ```java
 import com.tonic.builder.ClassBuilder;
@@ -95,7 +76,6 @@ import com.tonic.type.AccessFlags;
 byte[] bytes = ClassBuilder.create("com/example/Calculator")
     .version(AccessFlags.V11, 0)
     .access(AccessFlags.ACC_PUBLIC)
-
     .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "add", "(II)I")
     .code()
         .iload(0)
@@ -104,13 +84,10 @@ byte[] bytes = ClassBuilder.create("com/example/Calculator")
         .ireturn()
     .end()
     .end()
-
     .toByteArray();
 ```
 
 ## SSA Pipeline
-
-YABR includes a full SSA transformation system:
 
 ```
 Bytecode -> Lift -> SSA IR -> Optimize -> Lower -> Bytecode
@@ -127,115 +104,45 @@ SSA ssa = new SSA(constPool)
     .withCopyPropagation()
     .withDeadCodeElimination();
 
-ssa.transform(method);  // Lift, optimize, and lower
+ssa.transform(method);  // lift, optimize, and lower
 ```
 
-The IR can also be lowered to **textual LLVM IR** (`.ll`) and lifted back, enabling an LLVM optimizer round-trip. See [LLVM Lowering](docs/llvm-lowering.md) and [LLVM Lifting](docs/llvm-lifting.md).
+The IR can also be lowered to textual LLVM IR (`.ll`) and lifted back. See
+[LLVM Lowering](docs/llvm-lowering.md) and [LLVM Lifting](docs/llvm-lifting.md).
 
-```java
-// Lower to LLVM IR
-String ll = new LlvmLowering().lower(ssa.lift(method));
-
-// Optionally run: opt -O2 -S on ll
-
-// Lift back to SSA and lower to bytecode
-IRMethod lifted = new LlvmLifter().lift(ll);
-ssa.lower(lifted, method);
-```
-
-The AST path enables source-level transformations:
-
-```java
-// Recover AST from IR
-BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, method);
-System.out.println(SourceEmitter.emit(ast));  // Print as Java source
-
-// Mutate and recompile
-ast.getStatements().forEach(stmt -> { /* modify */ });
-new ASTLowerer(constPool).replaceBody(ast, irMethod);
-ssa.lower(irMethod, method);
-```
-
-## Class Decompilation
-
-Decompile entire class files to Java source with imports:
+## Decompilation
 
 ```java
 import com.tonic.analysis.source.decompile.ClassDecompiler;
 
-// Simple one-liner
 String source = ClassDecompiler.decompile(classFile);
 
-// With configuration
-SourceEmitterConfig config = SourceEmitterConfig.builder()
-    .useFullyQualifiedNames(false)  // Use simple names + imports
-    .alwaysUseBraces(true)
-    .build();
-
-String source = ClassDecompiler.decompile(classFile, config);
-
-// With per-method bytecode-offset -> source-line maps (PC-to-line navigation)
+// With per-method bytecode-offset-to-source-line maps
 DecompileResult result = new ClassDecompiler(classFile).decompileWithLineMap();
-```
-
-Command-line usage:
-
-```bash
-java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
-java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn
 ```
 
 ## Analysis APIs
 
-YABR provides high-level APIs for code analysis:
+Call graph, dependency, type inference, pattern search, xrefs, data flow, similarity, and graph
+analyses (PDG, SDG, CPG) are documented in [Analysis APIs](docs/analysis-apis.md).
 
-```java
-// Call Graph - find method callers/callees
-CallGraph cg = CallGraph.build(classPool);
-Set<MethodReference> callers = cg.getCallers(methodRef);
+## Examples
 
-// Dependency Analysis - track class dependencies
-DependencyAnalyzer deps = new DependencyAnalyzer(classPool);
-Set<String> dependencies = deps.getDependencies("com/example/MyClass");
-List<List<String>> cycles = deps.findCircularDependencies();
+Runnable examples are in [`examples/src/main/java/com/tonic/demo/`](examples/src/main/java/com/tonic/demo/),
+including class creation, SSA transformation, LLVM lowering, AST mutation, decompilation, call
+graphs, dependency analysis, type inference, and pattern search.
 
-// Type Inference - nullability analysis
-TypeInferenceAnalyzer types = new TypeInferenceAnalyzer(irMethod);
-types.analyze();
-Nullability nullState = types.getNullability(ssaValue);
+## Project Layout
 
-// Pattern Search - find code patterns
-PatternSearch search = new PatternSearch(classPool)
-    .inAllMethodsOf(classFile)
-    .withCallGraph();
-List<SearchResult> results = search.findMethodCalls("java/io/PrintStream", "println");
-
-// Cross-References - track all references to/from symbols
-XrefDatabase xrefs = new XrefBuilder(classPool).build();
-Set<Xref> callers = xrefs.getRefsToMethod(methodRef);  // Who calls this?
-Set<Xref> outgoing = xrefs.getRefsFromClass(className); // What does this reference?
-
-// Data Flow - build flow graphs for taint analysis
-DataFlowGraph dfg = new DataFlowGraph(irMethod);
-dfg.build();
-Set<DataFlowNode> reachable = dfg.getReachableNodes(paramNode);
-
-// Method Similarity - find duplicates and similar methods
-MethodSimilarityAnalyzer similarity = new MethodSimilarityAnalyzer(classPool);
-similarity.buildIndex();
-List<SimilarityResult> duplicates = similarity.findDuplicates();
-List<SimilarityResult> renamed = similarity.findRenamedCopies();  // Obfuscation detection
-```
-
-See [Analysis APIs](docs/analysis-apis.md) for complete documentation.
+YABR is a Gradle multi-project. Production code is split into layered modules (`core`, `bytecode`,
+`renamer`, `ssa`, `source`, `analyses`, `execution`, `query`) whose dependencies are acyclic and
+build-enforced; the `all` module merges them into a single jar. See
+[Architecture](docs/architecture.md).
 
 ## Installation
 
-### Gradle (JitPack)
+The published artifact is the merged jar from the `all` module. Via JitPack:
 
-Add JitPack repository and the dependency to your `build.gradle` or `build.gradle.kts`:
-
-**Kotlin DSL (`build.gradle.kts`):**
 ```kotlin
 repositories {
     mavenCentral()
@@ -243,28 +150,15 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.Tonic-Box:YABR:main-SNAPSHOT")
+    implementation("com.github.Tonic-Box.YABR:all:<version>")
 }
 ```
-
-**Groovy DSL (`build.gradle`):**
-```groovy
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-}
-
-dependencies {
-    implementation 'com.github.Tonic-Box:YABR:main-SNAPSHOT'
-}
-```
-
-For specific releases or commit hashes, see [JitPack - YABR](https://jitpack.io/private#Tonic-Box/YABR).
 
 ## Building
 
 ```bash
-./gradlew build
+./gradlew build              # build and test all modules
+./gradlew :all:shadowJar     # produce the merged jar
 ```
 
 ## Requirements
@@ -278,5 +172,3 @@ Inspired by [classpooly](https://github.com/d-o-g/classpooly).
 ## License
 
 MIT
-
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Tonic-Box/YABR)

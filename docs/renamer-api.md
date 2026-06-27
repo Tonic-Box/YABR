@@ -214,31 +214,31 @@ for (MethodEntry method : overrides) {
 
 ```
 com.tonic.renamer/
-├── Renamer.java                    # Main API entry point
-├── RenamerContext.java             # Internal context for operations
-├── ClassRenamer.java               # Handles class renaming
-├── MethodRenamer.java              # Handles method renaming
-├── FieldRenamer.java               # Handles field renaming
-├── mapping/
-│   ├── MappingStore.java           # Stores all mappings
-│   ├── RenameMapping.java          # Base mapping interface
-│   ├── ClassMapping.java           # Class name mapping
-│   ├── MethodMapping.java          # Method name mapping
-│   └── FieldMapping.java           # Field name mapping
-├── descriptor/
-│   ├── DescriptorRemapper.java     # Remaps type descriptors
-│   └── SignatureRemapper.java      # Remaps generic signatures
-├── hierarchy/
-│   ├── ClassHierarchy.java         # Complete class hierarchy
-│   ├── ClassHierarchyBuilder.java  # Builds hierarchy from pool
-│   └── ClassNode.java              # Node in hierarchy graph
-├── validation/
-│   ├── RenameValidator.java        # Validates mappings
-│   └── ValidationResult.java       # Validation results
-└── exception/
-    ├── RenameException.java        # General rename error
-    ├── NameConflictException.java  # Name already exists
-    └── InvalidNameException.java   # Invalid identifier
+|-- Renamer.java                    # Main API entry point
+|-- RenamerContext.java             # Internal context for operations
+|-- ClassRenamer.java               # Handles class renaming
+|-- MethodRenamer.java              # Handles method renaming
+|-- FieldRenamer.java               # Handles field renaming
+|-- mapping/
+|   |-- MappingStore.java           # Stores all mappings
+|   |-- RenameMapping.java          # Base mapping interface
+|   |-- ClassMapping.java           # Class name mapping
+|   |-- MethodMapping.java          # Method name mapping
+|   `-- FieldMapping.java           # Field name mapping
+|-- descriptor/
+|   |-- DescriptorRemapper.java     # Remaps type descriptors
+|   `-- SignatureRemapper.java      # Remaps generic signatures
+|-- hierarchy/
+|   |-- ClassHierarchy.java         # Complete class hierarchy
+|   |-- ClassHierarchyBuilder.java  # Builds hierarchy from pool
+|   `-- ClassNode.java              # Node in hierarchy graph
+|-- validation/
+|   |-- RenameValidator.java        # Validates mappings
+|   `-- ValidationResult.java       # Validation results
+`-- exception/
+    |-- RenameException.java        # General rename error
+    |-- NameConflictException.java  # Name already exists
+    `-- InvalidNameException.java   # Invalid identifier
 ```
 
 ## Descriptor Remapping

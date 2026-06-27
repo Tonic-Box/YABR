@@ -41,15 +41,15 @@ Beyond ordinary methods and control flow, the AST layer recovers and re-emits mo
 
 **Decompilation** reconstructs, from the desugared bytecode:
 
-- Switch expressions (arrow/`yield`, in both `return` and assignment forms) — Java 14
-- Pattern `instanceof` with a bound variable — Java 16
-- `sealed` / `non-sealed` classes and their `permits` clause — Java 17
+- Switch expressions (arrow/`yield`, in both `return` and assignment forms) - Java 14
+- Pattern `instanceof` with a bound variable - Java 16
+- `sealed` / `non-sealed` classes and their `permits` clause - Java 17
 - `record` headers, suppressing the compiler-generated canonical constructor, accessors and
-  `equals`/`hashCode`/`toString` — Java 16
+  `equals`/`hashCode`/`toString` - Java 16
 - Pattern-matching `switch` (`SwitchBootstraps.typeSwitch`): type patterns, `when` guards, and
-  record-deconstruction patterns (`case Point(int x, int y) ->`) — Java 21
-- Varargs calls — collapsing the compiler-packed trailing array (`f(new T[]{a, b})`) back into
-  `f(a, b)`, and rendering a varargs parameter as `T...` — Java 5
+  record-deconstruction patterns (`case Point(int x, int y) ->`) - Java 21
+- Varargs calls - collapsing the compiler-packed trailing array (`f(new T[]{a, b})`) back into
+  `f(a, b)`, and rendering a varargs parameter as `T...` - Java 5
 - `String` `switch` - collapsing javac's two-phase `hashCode()`/`equals()` dispatch (incl. hashCode
   collisions and fall-through) back into a single `switch (s)` with string-literal cases - Java 7
 - Enum `switch` - resolving the synthetic `$SwitchMap$` ordinal-to-index table (held in a sibling class,
@@ -73,10 +73,10 @@ instruction's offset, recovery transfers it onto the statements it builds (`Sour
 AST transform pipeline preserves it across rewrites, and `decompileWithLineMap()` exposes the
 result as per-method offset-to-line maps (see [ClassDecompiler](#classdecompiler) below).
 
-**Recompilation** (front-end parse → lower → bytecode) handles end-to-end, verified by running the
+**Recompilation** (front-end parse -> lower -> bytecode) handles end-to-end, verified by running the
 emitted class on a real JDK:
 
-- Text blocks (`"""…"""`, with incidental-whitespace and escape normalization) — Java 15
+- Text blocks (`"""..."""`, with incidental-whitespace and escape normalization) - Java 15
 - Switch expressions, pattern `instanceof`, and pattern-matching `switch` (type, guarded, and
   record-deconstruction patterns)
 
@@ -126,14 +126,14 @@ This produces complete Java source with:
 
 ```bash
 # Basic usage
-java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
+java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
 
 # With fully qualified names
-java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn
+java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn
 
 # With transform preset (none, minimal, standard, aggressive)
-java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=standard
-java -cp build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=aggressive --fqn
+java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=standard
+java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=aggressive --fqn
 ```
 
 ### Recovering AST from Bytecode
@@ -469,7 +469,7 @@ GenericSourceType listOfString = new GenericSourceType(
     "java/util/List",
     List.of(new ReferenceSourceType("java/lang/String"))
 );
-// toJavaSource() → "List<String>"
+// toJavaSource() -> "List<String>"
 
 // Wildcard types: ?, ? extends Number, ? super Integer
 WildcardSourceType unbounded = WildcardSourceType.unbounded();           // ?
@@ -481,14 +481,14 @@ IntersectionSourceType intersection = new IntersectionSourceType(
     new ReferenceSourceType("java/io/Serializable"),
     new ReferenceSourceType("java/lang/Comparable")
 );
-// toJavaSource() → "Serializable & Comparable"
+// toJavaSource() -> "Serializable & Comparable"
 
 // Union types: catch (IOException | SQLException e)
 UnionSourceType union = new UnionSourceType(
     new ReferenceSourceType("java/io/IOException"),
     new ReferenceSourceType("java/sql/SQLException")
 );
-// toJavaSource() → "IOException | SQLException"
+// toJavaSource() -> "IOException | SQLException"
 ```
 
 #### TypeUtils
@@ -508,8 +508,8 @@ TypeUtils.isArray(type);
 TypeUtils.isBoxedType(type);     // Integer, Long, etc.
 
 // Boxing/unboxing
-SourceType boxed = TypeUtils.box(PrimitiveSourceType.INT);      // → Integer
-SourceType unboxed = TypeUtils.unbox(integerType);               // → int
+SourceType boxed = TypeUtils.box(PrimitiveSourceType.INT);      // -> Integer
+SourceType unboxed = TypeUtils.unbox(integerType);               // -> int
 
 // Type relationships
 SourceType common = TypeUtils.commonSupertype(typeA, typeB);
@@ -688,7 +688,7 @@ import com.tonic.analysis.source.recovery.MethodRecoverer;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.*;
-import com.tonic.utill.ClassFileUtil;
+import com.tonic.util.ClassFileUtil;
 
 public class ASTRoundtrip {
 
@@ -818,7 +818,7 @@ String source = ClassDecompiler.decompile(classFile);
 // later-offset consumer statement, so prefer ceiling). Statements whose provenance did not
 // survive recovery/transforms simply have no entry. An inlined lambda body's statements are
 // keyed under the lambda's own synthetic impl method (e.g. "lambda$doWork$0" + desc), not the
-// enclosing method, since they carry that method's offsets — so a PC inside a lambda resolves
+// enclosing method, since they carry that method's offsets - so a PC inside a lambda resolves
 // via getLineMap("lambda$doWork$0", "()V").
 DecompileResult result = new ClassDecompiler(classFile).decompileWithLineMap();
 NavigableMap<Integer, Integer> lineMap = result.getLineMap("doWork", "(I)V");
@@ -944,7 +944,7 @@ When `useFullyQualifiedNames` is `false` (the default), the decompiler automatic
 3. Filtering out classes in the same package as the decompiled class
 4. Sorting imports alphabetically
 
-Note that subpackages of `java.lang` (like `java.lang.invoke.*` or `java.lang.reflect.*`) are NOT implicitly imported and will be included in the import list.
+Subpackages of `java.lang` (like `java.lang.invoke.*` or `java.lang.reflect.*`) are NOT implicitly imported and will be included in the import list.
 
 Example output:
 
