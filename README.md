@@ -1,24 +1,7 @@
 # YABR - Yet Another Bytecode Reader/Writer
 
-A Java bytecode library with class-file parsing, bytecode editing, an SSA-form IR, decompilation,
+A Java bytecode library with class-file parsing, bytecode editing, mutable IRs, (de)compilation,
 and a set of higher-level analyses.
-
-## Features
-
-- **Class file parsing** - read and write Java `.class` files
-- **Bytecode generation** - fluent builder API for creating classes from scratch
-- **Bytecode editing** - high- and low-level APIs: handle-keyed insert/remove/replace, range cloning,
-  cross-class method grafting, owner retargeting, with automatic branch widening and StackMapTable
-  regeneration
-- **SSA IR** - lift bytecode to SSA form, optimize, and lower back; optional textual LLVM IR backend
-- **Source AST** - recover, mutate, and emit Java source from bytecode
-- **Decompilation** - full class decompilation including records, sealed types, switch expressions,
-  try-with-resources, generic signatures, and Java 21 pattern-matching switch, with optional
-  bytecode-offset-to-source-line maps
-- **Analyses** - call graph, dependency, type inference, pattern search, query language, xrefs, data
-  flow, similarity, PDG, SDG, CPG, taint
-- **Visitors** - traverse classes at multiple abstraction levels
-- **Frame computation** - automatic StackMapTable generation for Java 7+
 
 ## Quick Start
 
