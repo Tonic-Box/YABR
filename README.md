@@ -3,6 +3,7 @@
 A Java bytecode library with class-file parsing, bytecode editing, mutable IRs, (de)compilation,
 and a set of higher-level analyses.
 
+[![](https://www.jitpack.io/v/Tonic-Box/YABR.svg)](https://www.jitpack.io/#Tonic-Box/YABR)
 ## Quick Start
 
 ```java
