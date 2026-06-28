@@ -128,16 +128,33 @@ public class SingleUseInliner implements ASTTransform {
     }
 
     private boolean isInLoop(Statement stmt, String varName) {
+        // A use is "in a loop" - and so must NOT be inlined - if it is re-evaluated every iteration: the
+        // body, but ALSO the loop CONDITION and the for-update. Inlining a once-computed loop-invariant
+        // (e.g. a method call like abs(b)) into `for (; i < absB; )` would recompute it each iteration,
+        // which changes call frequency and breaks decompile/recompile round-trip stability.
         if (stmt instanceof WhileStmt) {
             WhileStmt whileStmt = (WhileStmt) stmt;
-            return usesVar(whileStmt.getBody(), varName);
+            return usesVar(whileStmt.getBody(), varName)
+                || usesInExpr(whileStmt.getCondition(), varName);
         } else if (stmt instanceof DoWhileStmt) {
             DoWhileStmt doWhile = (DoWhileStmt) stmt;
-            return usesVar(doWhile.getBody(), varName);
+            return usesVar(doWhile.getBody(), varName)
+                || usesInExpr(doWhile.getCondition(), varName);
         } else if (stmt instanceof ForStmt) {
             ForStmt forStmt = (ForStmt) stmt;
-            return usesVar(forStmt.getBody(), varName);
+            if (usesVar(forStmt.getBody(), varName) || usesInExpr(forStmt.getCondition(), varName)) {
+                return true;
+            }
+            if (forStmt.getUpdate() != null) {
+                for (Expression update : forStmt.getUpdate()) {
+                    if (usesInExpr(update, varName)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         } else if (stmt instanceof ForEachStmt) {
+            // The iterable is evaluated once (inlining there is safe); only the body re-runs.
             ForEachStmt forEach = (ForEachStmt) stmt;
             return usesVar(forEach.getBody(), varName);
         }
@@ -147,6 +164,15 @@ public class SingleUseInliner implements ASTTransform {
     private boolean usesVar(Statement stmt, String varName) {
         UsageCounter counter = new UsageCounter(varName);
         stmt.accept(counter);
+        return counter.count > 0;
+    }
+
+    private boolean usesInExpr(Expression expr, String varName) {
+        if (expr == null) {
+            return false;
+        }
+        UsageCounter counter = new UsageCounter(varName);
+        expr.accept(counter);
         return counter.count > 0;
     }
 

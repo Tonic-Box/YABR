@@ -4,8 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt13 (Final)&#10;- core">
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/parser/attribute/CodeAttributeTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/parser/attribute/CodeAttributeTest.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)">
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripStabilityTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/ast/transform/SingleUseInlinerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/lower/ArrayInitLoweringTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/lower/ConstructorLoweringTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeInference.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeInference.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeState.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/ANewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/ANewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/Verifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/Verifier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/type/TypeVerifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/type/TypeVerifier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/SingleUseInliner.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/SingleUseInliner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,13 +72,14 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "settings.editor.selected.configurable": "Errors"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Gradle.YABR-fixed [build]">
     <configuration name="YABR-fixed [build]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
@@ -152,14 +168,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00039" summary="Add bytecode-offset -&gt; source-line maps to the decompiler&#10;- Stamp IR offset provenance onto recovered statements; preserve through AST transforms&#10;- New ClassDecompiler.decompileWithLineMap() -&gt; DecompileResult with per-method offset-&gt;line maps&#10;- Xref now records real bytecode offsets">
-      <option name="closed" value="true" />
-      <created>1781239206538</created>
-      <option name="number" value="00039" />
-      <option name="presentableId" value="LOCAL-00039" />
-      <option name="project" value="LOCAL" />
-      <updated>1781239206538</updated>
     </task>
     <task id="LOCAL-00040" summary="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps">
       <option name="closed" value="true" />
@@ -545,7 +553,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782626531091</updated>
     </task>
-    <option name="localTasksCounter" value="88" />
+    <task id="LOCAL-00088" summary="- Update some stale docs">
+      <option name="closed" value="true" />
+      <created>1782627583835</created>
+      <option name="number" value="00088" />
+      <option name="presentableId" value="LOCAL-00088" />
+      <option name="project" value="LOCAL" />
+      <updated>1782627583835</updated>
+    </task>
+    <option name="localTasksCounter" value="89" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -560,8 +576,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- ASTLowerer ordering fix" />
-    <MESSAGE value="Fix decompile→recompile type fidelity&#10;&#10;Resolve ctor/method/field/array/generic types via TypeResolver, not raw AST types (fixes Frame NoClassDefFound + more); emit acmp for reference ==/!=; run structured finally bodies. Add recompile-verify sweep test." />
     <MESSAGE value="Fix decompile→recompile type fidelity" />
     <MESSAGE value="- Abstract Execution API" />
     <MESSAGE value="Fix decompile -&gt; recompile fidelity for constructors and boolean conditions&#10;- BytecodeEmitter: emit the idiomatic new;dup;args;invokespecial for constructor calls (storing the result to a local), so new X(args) round-trips instead of spilling and decompiling back to new X() with dropped args&#10;- ExpressionLowerer: lower !, &amp;&amp; and || in conditions as direct branches rather than materializing them into a 0/1 value over a temp local (which decompiled to `cond ? local : local`)&#10;- Add round-trip regression tests" />
@@ -585,6 +599,12 @@
     <MESSAGE value="Removal of Lombok: pt12&#10;- source" />
     <MESSAGE value="Removal of Lombok: pt13 (Final&#10;- core" />
     <MESSAGE value="Removal of Lombok: pt13 (Final)&#10;- core" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt13 (Final)&#10;- core" />
+    <MESSAGE value="- Update some stale docs" />
+    <MESSAGE value="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>

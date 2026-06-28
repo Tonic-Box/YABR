@@ -86,7 +86,7 @@ public final class Verifier {
         }
 
         if (config.isStrictTypeChecking() && !collector.shouldStop()) {
-            TypeVerifier typeVerifier = new TypeVerifier(classFile, classPool, config);
+            TypeVerifier typeVerifier = new TypeVerifier(classFile, classPool);
             typeVerifier.verify(method, collector);
         }
 

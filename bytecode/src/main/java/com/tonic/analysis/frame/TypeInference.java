@@ -181,35 +181,37 @@ public class TypeInference {
             return state.pop(2);
         }
 
+        // The dup/swap family operate on raw stack SLOTS (a long/double occupies two: {VALUE, TOP}).
+        // They reconstruct the stack from peek() results with pushRaw (not push) so a duplicated long's
+        // value slot is not re-expanded into a second {VALUE, TOP} pair, which would inflate the depth.
         if (opcode == DUP.getCode()) {
-            VerificationType top = state.peek();
-            return state.push(top);
+            return state.pushRaw(state.peek(0));
         }
 
         if (opcode == DUP_X1.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
-            return state.pop(2).push(v1).push(v2).push(v1);
+            return state.pop(2).pushRaw(v1).pushRaw(v2).pushRaw(v1);
         }
 
         if (opcode == DUP_X2.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
-            return state.pop(3).push(v1).push(v3).push(v2).push(v1);
+            return state.pop(3).pushRaw(v1).pushRaw(v3).pushRaw(v2).pushRaw(v1);
         }
 
         if (opcode == DUP2.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
-            return state.push(v2).push(v1);
+            return state.pushRaw(v2).pushRaw(v1);
         }
 
         if (opcode == DUP2_X1.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
-            return state.pop(3).push(v2).push(v1).push(v3).push(v2).push(v1);
+            return state.pop(3).pushRaw(v2).pushRaw(v1).pushRaw(v3).pushRaw(v2).pushRaw(v1);
         }
 
         if (opcode == DUP2_X2.getCode()) {
@@ -217,13 +219,13 @@ public class TypeInference {
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
             VerificationType v4 = state.peek(3);
-            return state.pop(4).push(v2).push(v1).push(v4).push(v3).push(v2).push(v1);
+            return state.pop(4).pushRaw(v2).pushRaw(v1).pushRaw(v4).pushRaw(v3).pushRaw(v2).pushRaw(v1);
         }
 
         if (opcode == SWAP.getCode()) {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
-            return state.pop(2).push(v1).push(v2);
+            return state.pop(2).pushRaw(v1).pushRaw(v2);
         }
 
         if (opcode == IADD.getCode() || opcode == ISUB.getCode() || opcode == IMUL.getCode() || opcode == IDIV.getCode() ||

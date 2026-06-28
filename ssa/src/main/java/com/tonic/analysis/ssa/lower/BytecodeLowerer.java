@@ -99,6 +99,13 @@ public class BytecodeLowerer {
 
             FrameGenerator frameGen = new FrameGenerator(constPool);
             frameGen.updateStackMapTable(targetMethod);
+            // The StackScheduler max_stack (set above) is an SSA-value-level estimate that misses the
+            // dups the emitter inserts (e.g. the new/<init> pairing's dup), so it can under-count, leaving
+            // an invalid too-small max_stack. computeMaxStack does a full CFG abstract interpretation over
+            // the emitted bytecode (the true peak, including transient mid-block peaks like a constructor
+            // argument pushed between dup and invokespecial); raise to it. (getMaxStack() alone is only
+            // populated for methods that emit frames, so it is unreliable for straight-line methods.)
+            codeAttr.setMaxStack(Math.max(codeAttr.getMaxStack(), frameGen.computeMaxStack(targetMethod)));
         }
     }
 

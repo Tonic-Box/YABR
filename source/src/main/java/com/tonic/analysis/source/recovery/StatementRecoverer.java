@@ -4404,6 +4404,8 @@ public class StatementRecoverer {
                 }
             }
 
+            List<Statement> headerStmts = recoverHeaderLeadingStatements(header, targetLocal);
+
             Expression condition = recoverCondition(header, info.isConditionNegated());
 
             List<Expression> updateExprs = new ArrayList<>();
@@ -4451,9 +4453,25 @@ public class StatementRecoverer {
 
                 List<Statement> bodyStmts = recoverBlockSequence(bodyBlock, stopBlocks);
                 stripTrailingContinue(bodyStmts);
-                BlockStmt body = new BlockStmt(bodyStmts);
 
-                ForStmt forStmt = new ForStmt(initStmts, condition, updateExprs, body);
+                ForStmt forStmt;
+                if (headerStmts.isEmpty()) {
+                    forStmt = new ForStmt(initStmts, condition, updateExprs, new BlockStmt(bodyStmts));
+                } else {
+                    // The header recomputes a value each iteration (e.g. a loop bound like min(x,10) the
+                    // emitter materialized into a header local because the operand stack must be empty at the
+                    // back-edge) - it cannot sit in the for-condition slot. Emit those statements at the top
+                    // of the body and turn the loop condition into an early break, keeping the loop
+                    // structured and round-trip stable instead of dropping the call (which would force the
+                    // whole method into the $pc$ dispatch fallback on refresh).
+                    List<Statement> merged = new ArrayList<>(headerStmts);
+                    Expression breakCond = recoverCondition(header, !info.isConditionNegated());
+                    List<Statement> breakBody = new ArrayList<>();
+                    breakBody.add(new BreakStmt());
+                    merged.add(new IfStmt(breakCond, new BlockStmt(breakBody)));
+                    merged.addAll(bodyStmts);
+                    forStmt = new ForStmt(initStmts, null, updateExprs, new BlockStmt(merged));
+                }
                 stampFromHeader(forStmt, header);
                 return labelIfTargeted(header, forStmt);
             } finally {
@@ -4464,6 +4482,51 @@ public class StatementRecoverer {
         } finally {
             context.getExpressionContext().popForLoopScope();
         }
+    }
+
+    /**
+     * Recovers a loop header's leading statements - non-induction local stores. Normally empty (a clean
+     * header is just the condition and induction phi); non-empty only when the emitter materialized a
+     * per-iteration computation (e.g. a re-evaluated loop bound) into a header local, which the standard
+     * for-loop shape would otherwise drop.
+     */
+    private List<Statement> recoverHeaderLeadingStatements(IRBlock header, int inductionLocal) {
+        List<Statement> stmts = new ArrayList<>();
+        for (IRInstruction instr : header.getInstructions()) {
+            if (!(instr instanceof StoreLocalInstruction)) {
+                continue;
+            }
+            StoreLocalInstruction st = (StoreLocalInstruction) instr;
+            if (st.getLocalIndex() == inductionLocal || context.shouldSkipInstruction(instr)) {
+                continue;
+            }
+
+            // Recover the stored VALUE from its defining expression (the materialized call), not the slot
+            // variable: the value is named after its own slot, so the usual store recovery collapses it to a
+            // dropped self-assignment (local = local) and loses the call. Recovering the definition yields
+            // the actual `min(x, 10)`.
+            com.tonic.analysis.ssa.value.Value value = st.getValue();
+            Expression valueExpr;
+            if (value instanceof SSAValue && ((SSAValue) value).getDefinition() != null) {
+                valueExpr = exprRecoverer.recover(((SSAValue) value).getDefinition());
+            } else {
+                valueExpr = exprRecoverer.recoverOperand(value);
+            }
+
+            SourceType type = typeRecoverer.recoverType(value);
+            String name = context.getExpressionContext().getLocalSlotName(st.getLocalIndex());
+            if (name == null) {
+                name = getNameForLocalSlotWithType(st.getLocalIndex(), type);
+            }
+            if (context.getExpressionContext().isDeclared(name)) {
+                stmts.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                        new VarRefExpr(name, type, null), valueExpr, type)));
+            } else {
+                context.getExpressionContext().markDeclared(name);
+                stmts.add(new VarDeclStmt(type, name, valueExpr));
+            }
+        }
+        return stmts;
     }
 
     private Statement recoverWhileLoopFallback(IRBlock header, RegionInfo info) {

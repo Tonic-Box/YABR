@@ -18,14 +18,10 @@ import static com.tonic.util.Opcode.*;
 
 public class TypeVerifier {
     private final ClassFile classFile;
-    private final ClassPool classPool;
-    private final VerifierConfig config;
     private final TypeConstraint typeConstraint;
 
-    public TypeVerifier(ClassFile classFile, ClassPool classPool, VerifierConfig config) {
+    public TypeVerifier(ClassFile classFile, ClassPool classPool) {
         this.classFile = classFile;
-        this.classPool = classPool;
-        this.config = config;
         this.typeConstraint = new TypeConstraint(classPool);
     }
 
@@ -68,7 +64,7 @@ public class TypeVerifier {
         while (!worklist.isEmpty()) {
             if (collector.shouldStop()) return;
 
-            int offset = worklist.poll();
+            int offset = worklist.removeFirst();
             if (visited.contains(offset)) {
                 continue;
             }
@@ -88,8 +84,7 @@ public class TypeVerifier {
             }
 
             if (instr.getOffset() != offset) {
-                for (Map.Entry<Integer, Instruction> entry : ((TreeMap<Integer, Instruction>)
-                        getInstructionsMap(codeWriter)).entrySet()) {
+                for (Map.Entry<Integer, Instruction> entry : getInstructionsMap(codeWriter).entrySet()) {
                     if (entry.getKey() == offset) {
                         instr = entry.getValue();
                         break;
@@ -134,7 +129,6 @@ public class TypeVerifier {
             verifyReturnType(instr, state, method, offset, constPool, collector);
             if (collector.shouldStop()) return;
 
-            int opcode = instr.getOpcode();
             List<Integer> successors = getSuccessors(instr, offset, bytecode);
 
             for (int succ : successors) {
@@ -155,8 +149,8 @@ public class TypeVerifier {
     }
 
     private TypeState createInitialState(MethodEntry method, ConstPool constPool) {
-        if (method instanceof MethodEntry) {
-            return TypeState.fromMethodEntry((MethodEntry) method, constPool);
+        if (method != null) {
+            return TypeState.fromMethodEntry(method, constPool);
         }
         return TypeState.empty();
     }
@@ -263,7 +257,22 @@ public class TypeVerifier {
             return;
         }
 
-        VerificationType actualReturn = state.peek();
+        // A long/double on the operand stack occupies two entries: {VALUE, TOP}. peek() returns the TOP
+        // companion, so for a two-slot return the actual value is one entry below it.
+        VerificationType actualReturn;
+        if (expectedReturn.isTwoSlot()) {
+            if (state.getStackSize() < 2) {
+                collector.addError(new VerificationError(
+                        VerificationErrorType.STACK_UNDERFLOW,
+                        offset,
+                        "Stack underflow at return instruction"
+                ));
+                return;
+            }
+            actualReturn = state.peek(1);
+        } else {
+            actualReturn = state.peek();
+        }
         if (!typeConstraint.isAssignableTo(actualReturn, expectedReturn)) {
             collector.addError(new VerificationError(
                     VerificationErrorType.INCOMPATIBLE_RETURN_TYPE,

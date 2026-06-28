@@ -228,6 +228,21 @@ public final class TypeState {
     }
 
     /**
+     * Pushes a single raw stack entry, WITHOUT the category-2 {@code TOP} companion that {@link #push}
+     * appends for a long/double. Used by the stack-manipulation opcodes (dup/swap families) which
+     * reconstruct the stack slot by slot from {@link #peek(int)} results: re-{@link #push}ing a long's
+     * value slot would re-expand it into a {@code {VALUE, TOP}} pair and inflate the stack depth.
+     *
+     * @param type the raw slot entry to push
+     * @return new state with the entry pushed
+     */
+    public TypeState pushRaw(VerificationType type) {
+        List<VerificationType> newStack = new ArrayList<>(stack);
+        newStack.add(type);
+        return new TypeState(locals, newStack);
+    }
+
+    /**
      * Pops a single type from the stack.
      *
      * @return new state with top type removed

@@ -817,6 +817,13 @@ public class ExpressionLowerer {
                         ownerClass = "java/lang/Object";
                     }
                 }
+            } else if (receiver instanceof ThisExpr && "<init>".equals(call.getMethodName())) {
+                // this(...) constructor chaining: invokespecial on the current class.
+                args.add(lower(receiver));
+                invokeType = InvokeType.SPECIAL;
+                if (ownerClass == null || ownerClass.isEmpty()) {
+                    ownerClass = ctx.getOwnerClass();
+                }
             } else if (receiver != null) {
                 Value receiverValue = lower(receiver);
                 args.add(receiverValue);
@@ -1500,6 +1507,13 @@ public class ExpressionLowerer {
     }
 
     private Value lowerNewArray(NewArrayExpr newArr) {
+        // new T[]{...}: no dimension expression, an inline initializer instead. Emit the length from the
+        // element count, allocate, then store each element - otherwise NEWARRAY gets no count on the stack
+        // (stack underflow) and the elements are dropped.
+        if (newArr.hasInitializer()) {
+            return lowerNewArrayWithInitializer(newArr);
+        }
+
         List<Value> dims = new ArrayList<>();
         for (Expression dim : newArr.getDimensions()) {
             dims.add(lower(dim));
@@ -1511,6 +1525,30 @@ public class ExpressionLowerer {
 
         NewArrayInstruction instr = new NewArrayInstruction(result, elementType, dims);
         ctx.getCurrentBlock().addInstruction(instr);
+
+        return result;
+    }
+
+    private Value lowerNewArrayWithInitializer(NewArrayExpr newArr) {
+        List<Expression> elements = newArr.getInitializer().getElements();
+        int size = elements.size();
+        IRType elementType = getElementType(newArr.getType());
+        IRType arrayType = newArr.getType().toIRType();
+
+        SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
+        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(sizeVal, IntConstant.of(size)));
+
+        SSAValue result = ctx.newValue(arrayType);
+        ctx.getCurrentBlock().addInstruction(new NewArrayInstruction(result, elementType, List.of(sizeVal)));
+
+        int i = 0;
+        for (Expression elem : elements) {
+            Value elemVal = lower(elem);
+            SSAValue indexVal = ctx.newValue(PrimitiveType.INT);
+            ctx.getCurrentBlock().addInstruction(new ConstantInstruction(indexVal, IntConstant.of(i)));
+            ctx.getCurrentBlock().addInstruction(ArrayAccessInstruction.createStore(result, indexVal, elemVal));
+            i++;
+        }
 
         return result;
     }

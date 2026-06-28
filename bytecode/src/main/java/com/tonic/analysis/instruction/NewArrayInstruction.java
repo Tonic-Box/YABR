@@ -102,11 +102,11 @@ public class NewArrayInstruction extends Instruction {
     /**
      * Returns the change in stack size caused by this instruction.
      *
-     * @return The stack size change (pushes a new array reference).
+     * @return The stack size change: pops the element count and pushes the array reference (net 0).
      */
     @Override
     public int getStackChange() {
-        return 1;
+        return 0;
     }
 
     /**

@@ -5,9 +5,13 @@ import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.MethodCallExpr;
+import com.tonic.analysis.source.ast.expr.SuperExpr;
+import com.tonic.analysis.source.ast.expr.ThisExpr;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.SwitchStmt;
@@ -83,12 +87,18 @@ public class ASTLowerer {
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
 
+        String superClassName = resolveSuperClassName(typeResolver);
+        if ("<init>".equals(methodName)) {
+            ensureConstructorChainCall(body, superClassName);
+        }
+
         String descriptor = buildDescriptor(parameters, returnType, typeResolver);
         IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
 
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setOwnerClass(ownerClass);
         ctx.setCurrentMethodName(methodName);
+        ctx.setSuperClassName(superClassName);
 
         IRBlock entryBlock = ctx.createBlock();
         irMethod.setEntryBlock(entryBlock);
@@ -146,12 +156,18 @@ public class ASTLowerer {
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
 
+        String superClassName = resolveSuperClassName(typeResolver);
+        if ("<init>".equals(methodName)) {
+            ensureConstructorChainCall(body, superClassName);
+        }
+
         String descriptor = buildDescriptor(parameters, returnType, typeResolver);
         IRMethod irMethod = new IRMethod(ownerClass, methodName, descriptor, isStatic);
 
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setOwnerClass(ownerClass);
         ctx.setCurrentMethodName(methodName);
+        ctx.setSuperClassName(superClassName);
 
         // Use the slot-based form + real SSA construction not only for loops but for any branch
         // merge (if/else, switch): the direct-value path inserts no phi at a merge, so a variable
@@ -218,6 +234,61 @@ public class ASTLowerer {
 
         drainSynthetics(ctx);
         return irMethod;
+    }
+
+    /**
+     * Internal name of the lowered class's superclass, or {@code java/lang/Object} when none is declared
+     * (an implicit-Object class). Lets {@code super(...)}/{@code super.x} resolve to the real superclass
+     * instead of always defaulting to Object.
+     */
+    private String resolveSuperClassName(TypeResolver typeResolver) {
+        SourceType superType = currentClassDecl != null ? currentClassDecl.getSuperclass() : null;
+        if (superType == null) {
+            return "java/lang/Object";
+        }
+        String descriptor = typeResolver.descriptorOf(superType);
+        if (descriptor != null && descriptor.startsWith("L") && descriptor.endsWith(";")) {
+            return descriptor.substring(1, descriptor.length() - 1);
+        }
+        return "java/lang/Object";
+    }
+
+    /**
+     * Ensures a constructor body begins with a {@code super(...)}/{@code this(...)} chain call. The
+     * decompiler strips the implicit no-arg {@code super()}, so a body that lacks an explicit chain call
+     * would lower to an unverifiable {@code <init>}; this prepends a synthetic {@code super()} targeting
+     * {@code superClassName}.
+     */
+    private void ensureConstructorChainCall(BlockStmt body, String superClassName) {
+        if (beginsWithConstructorChainCall(body)) {
+            return;
+        }
+        MethodCallExpr superCall = new MethodCallExpr(
+                new SuperExpr(ReferenceSourceType.OBJECT), "<init>", superClassName,
+                new ArrayList<>(), false, VoidSourceType.INSTANCE);
+        body.getStatements().add(0, new ExprStmt(superCall));
+    }
+
+    /** Whether {@code body}'s first statement is a {@code super(...)}/{@code this(...)} constructor call. */
+    private boolean beginsWithConstructorChainCall(BlockStmt body) {
+        if (body.getStatements().isEmpty()) {
+            return false;
+        }
+        Statement first = body.getStatements().get(0);
+        if (!(first instanceof ExprStmt)) {
+            return false;
+        }
+        Expression expr = ((ExprStmt) first).getExpression();
+        if (!(expr instanceof MethodCallExpr)) {
+            return false;
+        }
+        MethodCallExpr call = (MethodCallExpr) expr;
+        Expression receiver = call.getReceiver();
+        if (receiver instanceof SuperExpr || receiver instanceof ThisExpr) {
+            return true;
+        }
+        return receiver == null
+                && ("super".equals(call.getMethodName()) || "this".equals(call.getMethodName()));
     }
 
     /**
