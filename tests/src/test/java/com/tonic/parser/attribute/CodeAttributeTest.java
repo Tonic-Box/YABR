@@ -4,6 +4,7 @@ import com.tonic.analysis.CodePrinter;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
+import com.tonic.parser.visitor.AbstractMethodVisitor;
 import com.tonic.testutil.BytecodeBuilder;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -632,7 +633,7 @@ class CodeAttributeTest {
     class AcceptVisitorTests {
 
         @Test
-        void acceptVisitorDoesNotThrow() throws IOException {
+        void acceptInvokesVisitor() throws IOException {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Visitor")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -641,7 +642,15 @@ class CodeAttributeTest {
             MethodEntry method = cf.getMethods().get(0);
             CodeAttribute code = method.getCodeAttribute();
 
-            assertDoesNotThrow(() -> code.accept(null));
+            boolean[] visited = {false};
+            code.accept(new AbstractMethodVisitor() {
+                @Override
+                public void visit(CodeAttribute codeAttribute) {
+                    visited[0] = true;
+                }
+            });
+
+            assertTrue(visited[0]);
         }
     }
 
