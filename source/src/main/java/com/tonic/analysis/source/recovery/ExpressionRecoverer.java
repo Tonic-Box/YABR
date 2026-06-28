@@ -671,7 +671,6 @@ public class ExpressionRecoverer {
                                                     SourceType returnType) {
             MethodHandleConstant bsm = bsInfo.getBootstrapMethod();
 
-            // Recover arguments
             List<Expression> args = new ArrayList<>();
             for (Value arg : instr.getArguments()) {
                 args.add(recoverOperand(arg));

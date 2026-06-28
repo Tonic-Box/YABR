@@ -740,7 +740,6 @@ public class InstructionTranslator {
         int subroutineEntry = jsrOffset + instr.getBranchOffset();
         int continuationOffset = jsrOffset + instr.getLength();
 
-        // Get target blocks
         IRBlock subroutineBlock = offsetToBlock.get(subroutineEntry);
         IRBlock continuationBlock = offsetToBlock.get(continuationOffset);
 
@@ -759,7 +758,6 @@ public class InstructionTranslator {
         block.addInstruction(new ConstantInstruction(returnAddr, IntConstant.of(continuationOffset)));
         state.push(returnAddr);
 
-        // Jump to the subroutine
         block.addInstruction(SimpleInstruction.createGoto(subroutineBlock));
     }
 

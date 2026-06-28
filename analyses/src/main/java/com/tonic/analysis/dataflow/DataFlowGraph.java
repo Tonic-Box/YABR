@@ -4,7 +4,6 @@ import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
@@ -45,7 +44,6 @@ public class DataFlowGraph {
         incomingEdges.clear();
         nextNodeId = 0;
 
-        // Compute def-use chains
         DefUseChains defUse = new DefUseChains(method);
         defUse.compute();
 
@@ -53,13 +51,11 @@ public class DataFlowGraph {
         for (IRBlock block : method.getBlocks()) {
             int instrIndex = 0;
 
-            // Process phi instructions
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 createNodeForInstruction(phi, block.getId(), instrIndex);
                 instrIndex++;
             }
 
-            // Process regular instructions
             for (IRInstruction instr : block.getInstructions()) {
                 createNodeForInstruction(instr, block.getId(), instrIndex);
                 instrIndex++;
@@ -77,7 +73,7 @@ public class DataFlowGraph {
             for (IRInstruction useInstr : uses) {
                 DataFlowNode targetNode = findNodeForInstruction(useInstr);
                 if (targetNode != null && !sourceNode.equals(targetNode)) {
-                    DataFlowEdgeType edgeType = determineEdgeType(useInstr, defValue);
+                    DataFlowEdgeType edgeType = determineEdgeType(useInstr);
                     addEdge(sourceNode, targetNode, edgeType);
                 }
             }
@@ -146,7 +142,6 @@ public class DataFlowGraph {
         outgoingEdges.put(node, new ArrayList<>());
         incomingEdges.put(node, new ArrayList<>());
 
-        // Create edges from operands to this sink
         for (Value operand : instr.getOperands()) {
             if (operand instanceof SSAValue) {
                 DataFlowNode sourceNode = valueToNode.get(operand);
@@ -165,7 +160,6 @@ public class DataFlowGraph {
         } else if (instr instanceof ConstantInstruction) {
             return DataFlowNodeType.CONSTANT;
         } else if (instr instanceof LoadLocalInstruction) {
-            // Check if it's a parameter (slot 0-n in first block)
             return DataFlowNodeType.PARAM;
         } else if (instr instanceof InvokeInstruction) {
             return DataFlowNodeType.INVOKE_RESULT;
@@ -188,7 +182,7 @@ public class DataFlowGraph {
         }
     }
 
-    private DataFlowEdgeType determineEdgeType(IRInstruction useInstr, SSAValue value) {
+    private DataFlowEdgeType determineEdgeType(IRInstruction useInstr) {
         if (useInstr instanceof PhiInstruction) {
             return DataFlowEdgeType.PHI_INPUT;
         } else if (useInstr instanceof InvokeInstruction) {

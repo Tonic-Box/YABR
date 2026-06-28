@@ -137,11 +137,11 @@ public class RegisterAllocator {
         }
     }
 
-    private SSAValue find(Map<SSAValue, SSAValue> parent, SSAValue x) {
-        if (!parent.get(x).equals(x)) {
-            parent.put(x, find(parent, parent.get(x)));
+    private SSAValue find(Map<SSAValue, SSAValue> parent, SSAValue value) {
+        if (!parent.get(value).equals(value)) {
+            parent.put(value, find(parent, parent.get(value)));
         }
-        return parent.get(x);
+        return parent.get(value);
     }
 
     private void union(Map<SSAValue, SSAValue> parent, SSAValue x, SSAValue y) {
@@ -311,7 +311,7 @@ public class RegisterAllocator {
             // For instance methods, slot 0 is 'this' (object reference)
             // Reusing these slots could cause type conflicts after inlining
             if (reg < reservedSlotCount) {
-                continue; // Don't release reserved slots
+                continue;
             }
 
             freeRegs.add(reg);
@@ -369,11 +369,9 @@ public class RegisterAllocator {
             LiveInterval phiInterval = intervals.get(phiResult);
             if (phiInterval == null) continue;
 
-            // Find the maximum end position among all phi copy values
             for (CopyInfo copyInfo : entry.getValue()) {
                 LiveInterval copyInterval = intervals.get(copyInfo.copyValue());
                 if (copyInterval != null) {
-                    // Extend phi result's interval to cover the copy's position
                     phiInterval.end = Math.max(phiInterval.end, copyInterval.end);
                 }
             }

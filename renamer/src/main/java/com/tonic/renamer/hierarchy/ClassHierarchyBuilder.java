@@ -22,7 +22,6 @@ public class ClassHierarchyBuilder {
     public static ClassHierarchy build(ClassPool classPool) {
         ClassHierarchy hierarchy = new ClassHierarchy();
 
-        // Get access to classMap via reflection since there's no getClasses()
         List<ClassFile> classes = getClassList(classPool);
         if (classes == null) {
             return hierarchy;
@@ -37,7 +36,6 @@ public class ClassHierarchyBuilder {
         for (ClassFile cf : classes) {
             ClassNode node = hierarchy.getNode(cf.getClassName());
 
-            // Set superclass
             String superName = cf.getSuperClassName();
             if (superName != null && !superName.equals("java/lang/Object")) {
                 ClassFile superFile = classPool.get(superName);

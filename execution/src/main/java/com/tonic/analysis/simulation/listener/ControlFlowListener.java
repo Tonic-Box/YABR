@@ -1,6 +1,5 @@
 package com.tonic.analysis.simulation.listener;
 
-import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -41,7 +40,7 @@ public class ControlFlowListener extends AbstractListener {
     private final Map<IRBlock, Integer> blockVisitCounts;
     private final Map<BlockTransition, Integer> transitionCounts;
     private final List<IRBlock> blockSequence;
-    private boolean trackSequence;
+    private final boolean trackSequence;
 
     private IRBlock currentBlock;
 
@@ -72,13 +71,11 @@ public class ControlFlowListener extends AbstractListener {
 
     @Override
     public void onBlockEntry(IRBlock block, SimulationState state) {
-        // Track transition from previous block
         if (currentBlock != null) {
             BlockTransition transition = new BlockTransition(currentBlock, block);
             transitionCounts.merge(transition, 1, Integer::sum);
         }
 
-        // Track block visit
         blockVisitCounts.merge(block, 1, Integer::sum);
 
         if (trackSequence) {

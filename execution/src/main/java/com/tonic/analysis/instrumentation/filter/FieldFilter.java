@@ -61,7 +61,6 @@ public class FieldFilter implements InstrumentationFilter {
 
     @Override
     public boolean matchesField(String owner, String name, String descriptor) {
-        // Check owner
         if (ownerPattern != null) {
             if (ownerRegex != null) {
                 if (!ownerRegex.matcher(owner).matches()) {
@@ -72,7 +71,6 @@ public class FieldFilter implements InstrumentationFilter {
             }
         }
 
-        // Check name
         if (namePattern != null) {
             if (nameRegex != null) {
                 if (!nameRegex.matcher(name).matches()) {
@@ -83,15 +81,11 @@ public class FieldFilter implements InstrumentationFilter {
             }
         }
 
-        // Check type
         if (typePattern != null) {
             if (typeRegex != null) {
-                if (!typeRegex.matcher(descriptor).matches()) {
-                    return false;
-                }
-            } else if (!descriptor.equals(typePattern)) {
-                return false;
+                return typeRegex.matcher(descriptor).matches();
             }
+            else return descriptor.equals(typePattern);
         }
 
         return true;

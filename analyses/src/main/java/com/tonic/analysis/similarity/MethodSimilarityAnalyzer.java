@@ -117,7 +117,6 @@ public class MethodSimilarityAnalyzer {
      */
     public List<SimilarityResult> findSimilarTo(String className, String methodName, String descriptor,
                                                 SimilarityMetric metric, double minScore) {
-        // Find the target signature
         MethodSignature target = null;
         for (MethodSignature sig : signatures) {
             if (sig.getClassName().equals(className) &&
@@ -160,7 +159,6 @@ public class MethodSimilarityAnalyzer {
     public SimilarityResult compare(MethodSignature sig1, MethodSignature sig2, SimilarityMetric primaryMetric) {
         Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
 
-        // Compute all individual metrics
         scores.put(SimilarityMetric.EXACT_BYTECODE, sig1.compareExactBytecode(sig2));
         scores.put(SimilarityMetric.OPCODE_SEQUENCE, sig1.compareOpcodeSequence(sig2));
         scores.put(SimilarityMetric.STRUCTURAL, sig1.compareStructural(sig2));
@@ -197,7 +195,6 @@ public class MethodSimilarityAnalyzer {
     public List<List<MethodSignature>> findSimilarityGroups(SimilarityMetric metric, double minScore) {
         List<SimilarityResult> pairs = findAllSimilar(metric, minScore);
 
-        // Build adjacency map
         Map<MethodSignature, Set<MethodSignature>> adjacency = new HashMap<>();
         for (SimilarityResult result : pairs) {
             adjacency.computeIfAbsent(result.getMethod1(), k -> new HashSet<>()).add(result.getMethod2());
@@ -231,7 +228,6 @@ public class MethodSimilarityAnalyzer {
             }
         }
 
-        // Sort groups by size (largest first)
         groups.sort((a, b) -> Integer.compare(b.size(), a.size()));
 
         return groups;

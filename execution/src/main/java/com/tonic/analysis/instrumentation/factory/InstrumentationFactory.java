@@ -2,7 +2,6 @@ package com.tonic.analysis.instrumentation.factory;
 
 import com.tonic.analysis.instrumentation.HookDescriptor;
 import com.tonic.analysis.instrumentation.hook.*;
-import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
@@ -64,27 +63,21 @@ public class InstrumentationFactory {
             int startIdx = isStatic(sourceMethod) ? 0 : 1;  // Skip 'this' for instance methods
             int paramCount = params.size() - startIdx;
 
-            // Create array size constant
             SSAValue arraySizeValue = new SSAValue(PrimitiveType.INT);
             instructions.add(new ConstantInstruction(arraySizeValue, IntConstant.of(paramCount)));
 
-            // Create Object[] array
             SSAValue arrayRef = new SSAValue(new ArrayType(ReferenceType.OBJECT));
             instructions.add(new NewArrayInstruction(arrayRef, ReferenceType.OBJECT, arraySizeValue));
 
-            // Store each parameter into the array
             for (int i = startIdx; i < params.size(); i++) {
                 SSAValue param = params.get(i);
                 int arrayIndex = i - startIdx;
 
-                // Create index constant
                 SSAValue indexValue = new SSAValue(PrimitiveType.INT);
                 instructions.add(new ConstantInstruction(indexValue, IntConstant.of(arrayIndex)));
 
-                // Box primitive if needed
                 Value boxedValue = boxIfPrimitive(param, instructions);
 
-                // Store in array
                 instructions.add(ArrayAccessInstruction.createStore(arrayRef, indexValue, boxedValue));
             }
 
@@ -106,7 +99,6 @@ public class InstrumentationFactory {
             }
         }
 
-        // Create the invoke instruction
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
         if (!returnType.equals("V")) {
@@ -177,7 +169,6 @@ public class InstrumentationFactory {
             }
         }
 
-        // Create the invoke instruction
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
         if (!returnType.equals("V")) {
@@ -200,9 +191,7 @@ public class InstrumentationFactory {
 
     public List<IRInstruction> createFieldWriteHook(
             FieldWriteHook hook,
-            FieldAccessInstruction fieldAccess,
-            IRMethod irMethod,
-            String className) {
+            FieldAccessInstruction fieldAccess) {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
@@ -265,8 +254,7 @@ public class InstrumentationFactory {
 
     public List<IRInstruction> createArrayStoreHook(
             ArrayStoreHook hook,
-            ArrayAccessInstruction arrayAccess,
-            IRMethod irMethod) {
+            ArrayAccessInstruction arrayAccess) {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
@@ -307,9 +295,7 @@ public class InstrumentationFactory {
 
     public List<IRInstruction> createFieldReadHook(
             FieldReadHook hook,
-            FieldAccessInstruction fieldAccess,
-            IRMethod irMethod,
-            String className) {
+            FieldAccessInstruction fieldAccess) {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
@@ -359,8 +345,7 @@ public class InstrumentationFactory {
 
     public List<IRInstruction> createArrayLoadHook(
             ArrayLoadHook hook,
-            ArrayAccessInstruction arrayAccess,
-            IRMethod irMethod) {
+            ArrayAccessInstruction arrayAccess) {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
@@ -406,16 +391,12 @@ public class InstrumentationFactory {
      *
      * @param hook the method call hook configuration
      * @param invoke the invoke instruction being hooked
-     * @param irMethod the IR method
-     * @param className the class name
      * @param isBefore true if this is a before-call hook
      * @return list of IR instructions to insert
      */
     public List<IRInstruction> createMethodCallHook(
             MethodCallHook hook,
             InvokeInstruction invoke,
-            IRMethod irMethod,
-            String className,
             boolean isBefore) {
 
         List<IRInstruction> instructions = new ArrayList<>();
@@ -445,27 +426,21 @@ public class InstrumentationFactory {
             int startIdx = invoke.getInvokeType() == InvokeType.STATIC ? 0 : 1;  // Skip receiver for instance methods
             int argCount = invokeArgs.size() - startIdx;
 
-            // Create array size constant
             SSAValue arraySizeValue = new SSAValue(PrimitiveType.INT);
             instructions.add(new ConstantInstruction(arraySizeValue, IntConstant.of(argCount)));
 
-            // Create Object[] array
             SSAValue arrayRef = new SSAValue(new ArrayType(ReferenceType.OBJECT));
             instructions.add(new NewArrayInstruction(arrayRef, ReferenceType.OBJECT, arraySizeValue));
 
-            // Store each argument into the array
             for (int i = startIdx; i < invokeArgs.size(); i++) {
                 Value arg = invokeArgs.get(i);
                 int arrayIndex = i - startIdx;
 
-                // Create index constant
                 SSAValue indexValue = new SSAValue(PrimitiveType.INT);
                 instructions.add(new ConstantInstruction(indexValue, IntConstant.of(arrayIndex)));
 
-                // Box primitive if needed
                 Value boxedValue = boxIfPrimitive(arg, instructions);
 
-                // Store in array
                 instructions.add(ArrayAccessInstruction.createStore(arrayRef, indexValue, boxedValue));
             }
 
@@ -483,7 +458,6 @@ public class InstrumentationFactory {
             }
         }
 
-        // Create the hook invoke instruction
         SSAValue hookResult = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
         if (!returnType.equals("V")) {
@@ -508,7 +482,6 @@ public class InstrumentationFactory {
      *
      * @param hook the exception hook configuration
      * @param exceptionValue the exception value
-     * @param irMethod the IR method
      * @param className the class name
      * @param methodName the method name
      * @return list of IR instructions to insert
@@ -516,7 +489,6 @@ public class InstrumentationFactory {
     public List<IRInstruction> createExceptionHook(
             ExceptionHook hook,
             SSAValue exceptionValue,
-            IRMethod irMethod,
             String className,
             String methodName) {
 
@@ -540,7 +512,6 @@ public class InstrumentationFactory {
             arguments.add(methodNameValue);
         }
 
-        // Create the invoke instruction
         SSAValue result = null;
         if (hook.isCanSuppress()) {
             // Hook returns boolean - true to suppress

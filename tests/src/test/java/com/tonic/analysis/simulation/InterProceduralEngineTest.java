@@ -6,7 +6,6 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -483,6 +482,69 @@ class InterProceduralEngineTest {
 
             assertNotNull(result);
             assertTrue(result.getTotalInstructions() >= 0);
+        }
+    }
+
+    // ========== Inter-Procedural Following Tests ==========
+
+    @Nested
+    class FollowCallTests {
+
+        private void registerCallee(String className, String name, String desc) throws IOException {
+            ClassFile callee = BytecodeBuilder.forClass(className)
+                .publicStaticMethod(name, desc)
+                    .vreturn()
+                .build();
+            pool.put(callee);
+        }
+
+        private IRMethod callerInvoking(String owner, String name, String desc) {
+            IRMethod caller = new IRMethod("com/test/Caller", "run", "()V", true);
+            IRBlock entry = new IRBlock("entry");
+            caller.addBlock(entry);
+            caller.setEntryBlock(entry);
+            entry.addInstruction(new InvokeInstruction(InvokeType.STATIC, owner, name, desc, List.of()));
+            entry.addInstruction(new ReturnInstruction(null));
+            return caller;
+        }
+
+        @Test
+        void followsResolvableCallWhenInterProcedural() throws IOException {
+            registerCallee("com/test/Callee", "foo", "()V");
+            IRMethod caller = callerInvoking("com/test/Callee", "foo", "()V");
+
+            InterProceduralEngine engine = new InterProceduralEngine(
+                SimulationContext.forPool(pool).withMaxCallDepth(3));
+            engine.simulate(caller);
+
+            assertEquals(2, engine.getMethodsSimulated(),
+                "engine follows into the resolved callee (caller + callee)");
+        }
+
+        @Test
+        void doesNotFollowCallWhenIntraProcedural() throws IOException {
+            registerCallee("com/test/Callee", "foo", "()V");
+            IRMethod caller = callerInvoking("com/test/Callee", "foo", "()V");
+
+            // maxCallDepth defaults to 0 => intra-procedural only.
+            InterProceduralEngine engine = new InterProceduralEngine(SimulationContext.forPool(pool));
+            engine.simulate(caller);
+
+            assertEquals(1, engine.getMethodsSimulated(),
+                "without inter-procedural depth the call is not followed");
+        }
+
+        @Test
+        void doesNotFollowUnresolvableCall() {
+            // No callee registered: resolveMethod returns null, so the call is not followed.
+            IRMethod caller = callerInvoking("com/test/Missing", "foo", "()V");
+
+            InterProceduralEngine engine = new InterProceduralEngine(
+                SimulationContext.forPool(pool).withMaxCallDepth(3));
+            engine.simulate(caller);
+
+            assertEquals(1, engine.getMethodsSimulated(),
+                "an unresolvable call is not followed");
         }
     }
 

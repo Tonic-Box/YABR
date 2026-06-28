@@ -5711,7 +5711,6 @@ public class StatementRecoverer {
      * is not directly set (when both loop header successors are in the loop).
      */
     private IRBlock findLoopExit(RegionInfo info, Set<IRBlock> visited, Set<IRBlock> stopBlocks) {
-        // If there's an explicit exit, use it
         if (info.getLoopExit() != null) {
             return info.getLoopExit();
         }

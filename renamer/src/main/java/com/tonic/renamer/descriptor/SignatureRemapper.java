@@ -4,14 +4,6 @@ import java.util.function.Function;
 
 /**
  * Remaps class references within generic signatures.
- *
- * Handles complex signature syntax including:
- * - Class signatures: <T:Ljava/lang/Object;>Ljava/util/List<TT;>;
- * - Method signatures: <T:Ljava/lang/Object;>(TT;)TT;
- * - Field signatures: Ljava/util/List<Lcom/example/Entity;>;
- * - Type arguments: +Lcom/example/Type; (extends), -Lcom/example/Type; (super), *
- * - Inner classes: Lcom/example/Outer.Inner;
- * - Array types: [Lcom/example/Type;
  */
 public class SignatureRemapper {
 
@@ -76,13 +68,10 @@ public class SignatureRemapper {
                 case '+':
                 case '-':
                 case '*':
-                    // Wildcard indicators
+                    // Wildcard indicators: append and continue. '+'/'-' (bounded) are followed by a
+                    // type that the next iteration remaps; '*' (unbounded) stands alone.
                     out.append(c);
                     pos++;
-                    if (c == '*') {
-                        // Unbounded wildcard, nothing follows
-                    }
-                    // For + and -, a type follows
                     break;
 
                 case '(':
@@ -177,7 +166,6 @@ public class SignatureRemapper {
                 out.append('L').append(mapped).append('.');
                 pos++;
                 className = new StringBuilder();
-                // Continue to get inner class name
                 while (pos < sig.length()) {
                     c = sig.charAt(pos);
                     if (c == ';' || c == '<' || c == '.') {
@@ -187,11 +175,7 @@ public class SignatureRemapper {
                     pos++;
                 }
                 // Append inner class name (not remapped separately)
-                out.deleteCharAt(out.length() - 1); // Remove trailing '.'
-                // Actually for inner classes, we need the full path
-                // Let's reconsider: Outer$Inner or Outer.Inner in signatures
-                // The full name including inner should be mapped together
-                // For now, append inner name
+                out.deleteCharAt(out.length() - 1);
                 if (className.length() > 0) {
                     out.append('.').append(className);
                 }

@@ -701,7 +701,7 @@ public class ClassFile extends AbstractParser {
      */
     public MethodEntry createNewMethodWithDescriptor(int accessFlags, String methodName, String methodDescriptor) {
         Logger.info("Creating method: " + methodName + " with descriptor: " + methodDescriptor);
-        // Count parameters from descriptor for maxLocals calculation
+        // for maxLocals sizing
         int paramCount = countParametersFromDescriptor(methodDescriptor);
         return createMethodStructure(accessFlags, methodName, methodDescriptor, new Object[paramCount]);
     }

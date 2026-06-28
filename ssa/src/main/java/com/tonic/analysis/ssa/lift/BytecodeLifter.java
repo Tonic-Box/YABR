@@ -82,6 +82,8 @@ public class BytecodeLifter {
         // Fix up PHI uses - ensure instructions use PHI values instead of raw incoming values
         fixupPhiUses(irMethod);
 
+        irMethod.setHandlerExceptionValues(handlerExceptionValues);
+
         return irMethod;
     }
 
@@ -557,10 +559,8 @@ public class BytecodeLifter {
             // Check if there's already a PHI for this stack slot
             PhiInstruction existingPhi = findStackPhi(targetBlock, i);
             if (existingPhi != null) {
-                // Add the incoming value to the existing PHI
                 existingPhi.addIncoming(incomingVal, incomingBlock);
             } else {
-                // Create a new PHI for this stack slot
                 IRType type;
                 if (incomingVal instanceof SSAValue) {
                     SSAValue ssaVal = (SSAValue) incomingVal;

@@ -48,11 +48,11 @@ public final class StateTransitions {
         } else if (instr instanceof InvokeInstruction) {
             return applyInvoke(state, (InvokeInstruction) instr);
         } else if (instr instanceof ReturnInstruction) {
-            return applyReturn(state, (ReturnInstruction) instr);
+            return applyReturn(state);
         } else if (instr instanceof BranchInstruction) {
             return applyBranch(state, (BranchInstruction) instr);
         } else if (instr instanceof SwitchInstruction) {
-            return applySwitch(state, (SwitchInstruction) instr);
+            return applySwitch(state);
         } else if (instr instanceof TypeCheckInstruction) {
             return applyTypeCheck(state, (TypeCheckInstruction) instr);
         } else if (instr instanceof SimpleInstruction) {
@@ -60,7 +60,7 @@ public final class StateTransitions {
         } else if (instr instanceof PhiInstruction) {
             return applyPhi(state, (PhiInstruction) instr);
         } else if (instr instanceof CopyInstruction) {
-            return applyCopy(state, (CopyInstruction) instr);
+            return applyCopy(state);
         }
 
         // Unknown instruction - return state unchanged
@@ -70,7 +70,6 @@ public final class StateTransitions {
     // ========== Instruction Handlers ==========
 
     private static SimulationState applyConstant(SimulationState state, ConstantInstruction instr) {
-        // Push constant value onto stack
         IRType type = instr.getResultType();
         Object value = instr.getConstant() != null ? instr.getConstant().getValue() : null;
         SimValue simValue = SimValue.constant(value, type, instr);
@@ -82,12 +81,8 @@ public final class StateTransitions {
     }
 
     private static SimulationState applyLoadLocal(SimulationState state, LoadLocalInstruction instr) {
-        // Load value from local and push onto stack
         int index = instr.getLocalIndex();
         SimValue value = state.getLocal(index);
-        if (value == null) {
-            value = SimValue.ofType(instr.getResultType(), instr);
-        }
 
         if (isWideType(instr.getResultType())) {
             return state.pushWide(value);
@@ -96,7 +91,6 @@ public final class StateTransitions {
     }
 
     private static SimulationState applyStoreLocal(SimulationState state, StoreLocalInstruction instr) {
-        // Pop value from stack and store in local
         int index = instr.getLocalIndex();
         SimValue value = state.peek();
 
@@ -108,7 +102,6 @@ public final class StateTransitions {
     }
 
     private static SimulationState applyBinaryOp(SimulationState state, BinaryOpInstruction instr) {
-        // Pop two operands, push result
         IRType type = instr.getResultType();
         boolean wide = isWideType(type);
 
@@ -129,7 +122,6 @@ public final class StateTransitions {
     }
 
     private static SimulationState applyUnaryOp(SimulationState state, UnaryOpInstruction instr) {
-        // Pop operand, push result
         IRType inputType = instr.getOperand() != null ? instr.getOperand().getType() : null;
         IRType resultType = instr.getResultType();
 
@@ -149,13 +141,11 @@ public final class StateTransitions {
 
 
     private static SimulationState applyNew(SimulationState state, NewInstruction instr) {
-        // Push new object reference
         IRType type = instr.getResultType();
         return state.push(SimValue.ofType(type, instr));
     }
 
     private static SimulationState applyNewArray(SimulationState state, NewArrayInstruction instr) {
-        // Pop count(s), push array reference
         int dimensions = instr.getDimensions().size();
         SimulationState newState = state.pop(dimensions);
 
@@ -164,21 +154,17 @@ public final class StateTransitions {
     }
 
     private static SimulationState applyInvoke(SimulationState state, InvokeInstruction instr) {
-        // Pop arguments (and receiver for instance methods)
         String descriptor = instr.getDescriptor();
         int argSlots = DescriptorUtil.countParameterSlots(descriptor);
 
         SimulationState newState = state;
 
-        // Pop arguments
         newState = popSlots(newState, argSlots);
 
-        // Pop receiver for non-static calls
         if (instr.getInvokeType() != InvokeType.STATIC) {
             newState = newState.pop();
         }
 
-        // Push return value if not void
         String returnDesc = DescriptorUtil.parseReturnDescriptor(descriptor);
         if (!"V".equals(returnDesc)) {
             IRType returnType = getTypeFromDescriptor(returnDesc);
@@ -193,15 +179,13 @@ public final class StateTransitions {
         return newState;
     }
 
-    private static SimulationState applyReturn(SimulationState state, ReturnInstruction instr) {
-        // For non-void returns, the value is on the stack
-        // We don't modify the state as control flow leaves the method
+    private static SimulationState applyReturn(SimulationState state) {
+        // The return value (if any) stays on the stack; control flow leaves the method.
         return state;
     }
 
     private static SimulationState applyBranch(SimulationState state, BranchInstruction instr) {
-        // Pop comparison operands
-        // The number depends on whether it's a single-value or two-value comparison
+        // Pop count depends on whether it's a single-value or two-value comparison
         Value left = instr.getLeft();
         Value right = instr.getRight();
 
@@ -212,8 +196,8 @@ public final class StateTransitions {
         return state.pop(popCount);
     }
 
-    private static SimulationState applySwitch(SimulationState state, SwitchInstruction instr) {
-        // Pop the key value
+    private static SimulationState applySwitch(SimulationState state) {
+        // Pop the key value.
         return state.pop();
     }
 
@@ -229,9 +213,8 @@ public final class StateTransitions {
         return state.push(result);
     }
 
-    private static SimulationState applyCopy(SimulationState state, CopyInstruction instr) {
-        // Copy instruction moves a value (no stack effect in SSA)
-        // Treat as identity
+    private static SimulationState applyCopy(SimulationState state) {
+        // Copy has no stack effect in SSA; treat as identity.
         return state;
     }
 
@@ -387,7 +370,7 @@ public final class StateTransitions {
             return isWideType(type) ? 2 : 1;
         }
         if (instr instanceof BinaryOpInstruction) {
-            IRType type = ((BinaryOpInstruction) instr).getResultType();
+            IRType type = instr.getResultType();
             return isWideType(type) ? 4 : 2;
         }
         if (instr instanceof UnaryOpInstruction) {
@@ -457,16 +440,16 @@ public final class StateTransitions {
      */
     public static int getPushCount(IRInstruction instr) {
         if (instr instanceof ConstantInstruction) {
-            return isWideType(((ConstantInstruction) instr).getResultType()) ? 2 : 1;
+            return isWideType(instr.getResultType()) ? 2 : 1;
         }
         if (instr instanceof LoadLocalInstruction) {
-            return isWideType(((LoadLocalInstruction) instr).getResultType()) ? 2 : 1;
+            return isWideType(instr.getResultType()) ? 2 : 1;
         }
         if (instr instanceof BinaryOpInstruction) {
-            return isWideType(((BinaryOpInstruction) instr).getResultType()) ? 2 : 1;
+            return isWideType(instr.getResultType()) ? 2 : 1;
         }
         if (instr instanceof UnaryOpInstruction) {
-            return isWideType(((UnaryOpInstruction) instr).getResultType()) ? 2 : 1;
+            return isWideType(instr.getResultType()) ? 2 : 1;
         }
         if (instr instanceof FieldAccessInstruction) {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
@@ -510,7 +493,7 @@ public final class StateTransitions {
             return 0;
         }
         if (instr instanceof PhiInstruction) {
-            return isWideType(((PhiInstruction) instr).getResultType()) ? 2 : 1;
+            return isWideType(instr.getResultType()) ? 2 : 1;
         }
         return 0;
     }

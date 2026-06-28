@@ -9,12 +9,16 @@ import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.parser.MethodEntry;
+import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -115,6 +119,21 @@ class SimulationEngineTest {
             SimulationResult result = engine.simulate(method);
 
             assertNotNull(result);
+        }
+
+        @Test
+        void simulateMethodEntryLiftsAndSimulates() throws IOException {
+            ClassFile cf = BytecodeBuilder.forClass("com/test/Lifted")
+                .publicStaticMethod("run", "()V")
+                    .vreturn()
+                .build();
+            MethodEntry method = cf.getMethods().get(0);
+
+            SimulationEngine engine = new SimulationEngine(context);
+            SimulationResult result = engine.simulate(method);
+
+            assertNotNull(result);
+            assertTrue(result.getTotalInstructions() > 0);
         }
 
         @Test

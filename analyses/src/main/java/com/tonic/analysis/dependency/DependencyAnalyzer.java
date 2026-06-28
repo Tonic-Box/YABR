@@ -50,13 +50,11 @@ public class DependencyAnalyzer {
         String className = cf.getClassName();
         DependencyNode node = getOrCreateNode(className, cf);
 
-        // Superclass dependency
         String superName = cf.getSuperClassName();
         if (superName != null && !superName.equals(className)) {
             addDependency(node, superName, DependencyType.EXTENDS);
         }
 
-        // Interface dependencies
         ConstPool cp = cf.getConstPool();
         for (Integer ifaceIndex : cf.getInterfaces()) {
             String ifaceName = resolveClassName(cp, ifaceIndex);
@@ -65,20 +63,17 @@ public class DependencyAnalyzer {
             }
         }
 
-        // Field type dependencies
         for (FieldEntry field : cf.getFields()) {
             extractTypesFromDescriptor(field.getDesc()).forEach(type ->
                     addDependency(node, type, DependencyType.FIELD_TYPE));
         }
 
-        // Method dependencies
         for (MethodEntry method : cf.getMethods()) {
             // Parameter and return types
             extractTypesFromDescriptor(method.getDesc()).forEach(type ->
                     addDependency(node, type, DependencyType.PARAMETER_TYPE));
         }
 
-        // Constant pool dependencies
         analyzeConstantPool(node, cp);
     }
 

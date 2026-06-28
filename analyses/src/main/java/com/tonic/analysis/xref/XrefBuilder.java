@@ -75,7 +75,6 @@ public class XrefBuilder {
             return database;
         }
 
-        // Process each class
         for (ClassFile cf : classPool.getClasses()) {
             try {
                 processClass(cf);
@@ -107,7 +106,6 @@ public class XrefBuilder {
     private void processClass(ClassFile cf) {
         String className = cf.getClassName();
 
-        // Class-level references: extends
         String superClass = cf.getSuperClassName();
         if (superClass != null && !superClass.equals("java/lang/Object") && !superClass.isEmpty()) {
             database.addXref(Xref.builder()
@@ -117,7 +115,6 @@ public class XrefBuilder {
                 .build());
         }
 
-        // Class-level references: implements
         if (cf.getInterfaces() != null) {
             for (Integer ifaceIndex : cf.getInterfaces()) {
                 String ifaceName = resolveClassName(cf, ifaceIndex);
@@ -131,7 +128,6 @@ public class XrefBuilder {
             }
         }
 
-        // Process fields for type references
         if (cf.getFields() != null) {
             for (FieldEntry field : cf.getFields()) {
                 String fieldType = extractTypeFromDescriptor(field.getDesc());
@@ -145,7 +141,6 @@ public class XrefBuilder {
             }
         }
 
-        // Process each method
         if (cf.getMethods() != null) {
             for (MethodEntry method : cf.getMethods()) {
                 processMethod(cf, method);
@@ -170,7 +165,6 @@ public class XrefBuilder {
         String methodDesc = method.getDesc();
 
         try {
-            // Use SSA to get IR representation
             SSA ssa = new SSA(cf.getConstPool());
             IRMethod irMethod = ssa.lift(method);
 

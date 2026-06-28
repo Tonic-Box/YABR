@@ -20,10 +20,12 @@ public class InnerClassesAttribute extends Attribute {
 
     public InnerClassesAttribute(String name, MemberEntry parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+        this.classes = new ArrayList<>();
     }
 
     public InnerClassesAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+        this.classes = new ArrayList<>();
     }
 
     @Override

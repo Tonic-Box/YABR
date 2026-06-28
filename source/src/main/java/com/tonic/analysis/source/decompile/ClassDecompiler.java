@@ -1055,7 +1055,6 @@ public class ClassDecompiler {
 
     private void emitConstructor(IndentingWriter writer, MethodEntry ctor) {
         int spanStart = writer.getCurrentLine();
-        // Constructor annotations
         emitMethodAnnotations(writer, ctor);
 
         int access = ctor.getAccess();
@@ -1120,7 +1119,6 @@ public class ClassDecompiler {
 
     private void emitMethod(IndentingWriter writer, MethodEntry method) {
         int spanStart = writer.getCurrentLine();
-        // Method annotations
         emitMethodAnnotations(writer, method);
 
         int access = method.getAccess();
@@ -1598,7 +1596,6 @@ public class ClassDecompiler {
         StringBuilder sb = new StringBuilder();
         sb.append("@");
 
-        // Get annotation type name
         String typeName = resolveAnnotationType(ann.getTypeIndex());
 
         // Track the annotation type for imports
@@ -1653,7 +1650,6 @@ public class ClassDecompiler {
             typeName = typeName.substring(1, typeName.length() - 1);
         }
 
-        // Convert slashes to dots
         typeName = typeName.replace('/', '.');
 
         // Use simple name if not using fully qualified names

@@ -41,10 +41,8 @@ public class DeadVariableEliminator implements ASTTransform {
         do {
             madeProgress = false;
 
-            // Collect variables that are actually READ (not just written to)
             Set<String> readVariables = collectReadVariables(block);
 
-            // Remove unused declarations and write-only assignments
             if (removeUnusedCode(block.getStatements(), readVariables)) {
                 madeProgress = true;
                 changed = true;
@@ -56,7 +54,6 @@ public class DeadVariableEliminator implements ASTTransform {
 
     /**
      * Collects all variable names that are READ (not just written to).
-     * Uses visitor pattern to traverse all expressions in the AST.
      */
     private Set<String> collectReadVariables(BlockStmt block) {
         Set<String> read = new HashSet<>();
@@ -119,7 +116,6 @@ public class DeadVariableEliminator implements ASTTransform {
             } else {
                 array.accept(this);
             }
-            // Visit the index expression
             expr.getIndex().accept(this);
         }
     }
@@ -143,7 +139,6 @@ public class DeadVariableEliminator implements ASTTransform {
                 VarDeclStmt decl = (VarDeclStmt) stmt;
                 String varName = decl.getName();
 
-                // Check if the variable is ever READ
                 if (!readVariables.contains(varName)) {
                     // Variable is never read - it's dead code
                     // Even if there are assignments, we'll remove those too
@@ -184,7 +179,6 @@ public class DeadVariableEliminator implements ASTTransform {
                     }
                 }
             } else if (stmt instanceof BlockStmt) {
-                // Recurse into nested blocks
                 if (removeUnusedCode(((BlockStmt) stmt).getStatements(), readVariables)) {
                     changed = true;
                 }

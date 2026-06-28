@@ -94,11 +94,9 @@ public class DeadCodeElimination implements IRTransform {
             }
         }
 
-        // The leading self-copy of a handler block is the caught-exception capture marker: the lowerer
-        // (BytecodeEmitter.identifyHandlerExceptionCaptures) turns it into the astore that stores the
-        // JVM-pushed exception off the handler's entry stack into the exception value's register. The caught
-        // exception has no defining instruction, so ordinary liveness never reaches the marker — without
-        // pinning it here the sweep drops it and the capturing astore is lost, corrupting the handler.
+        // Pin the leading self-copy of each handler block: the lowerer turns it into the astore that captures
+        // the JVM-pushed exception. The caught exception has no defining instruction, so liveness never reaches
+        // the marker; without pinning it the sweep drops it and the capturing astore is lost.
         for (ExceptionHandler handler : method.getExceptionHandlers()) {
             IRBlock handlerBlock = handler.getHandlerBlock();
             if (handlerBlock == null || handlerBlock.getInstructions().isEmpty()) {

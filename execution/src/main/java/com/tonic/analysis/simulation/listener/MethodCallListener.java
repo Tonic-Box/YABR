@@ -1,11 +1,9 @@
 package com.tonic.analysis.simulation.listener;
 
-import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.InvokeType;
-import com.tonic.analysis.ssa.ir.ReturnInstruction;
 
 import java.util.*;
 
@@ -43,7 +41,7 @@ public class MethodCallListener extends AbstractListener {
 
     private final Map<MethodReference, Integer> callCounts;
     private final List<CallSite> callSequence;
-    private boolean trackSequence;
+    private final boolean trackSequence;
 
     public MethodCallListener() {
         this(true);
@@ -72,7 +70,6 @@ public class MethodCallListener extends AbstractListener {
     public void onMethodCall(InvokeInstruction instr, SimulationState state) {
         totalCalls++;
 
-        // Count by invoke type
         InvokeType type = instr.getInvokeType();
         switch (type) {
             case VIRTUAL:
@@ -92,7 +89,6 @@ public class MethodCallListener extends AbstractListener {
                 break;
         }
 
-        // Track per-method counts
         MethodReference ref = new MethodReference(
             instr.getOwner(),
             instr.getName(),
@@ -100,7 +96,6 @@ public class MethodCallListener extends AbstractListener {
         );
         callCounts.merge(ref, 1, Integer::sum);
 
-        // Track sequence
         if (trackSequence) {
             callSequence.add(new CallSite(instr, ref, type, state.stackDepth()));
         }

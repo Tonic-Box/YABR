@@ -1105,14 +1105,12 @@ public class StructuralAnalyzer {
      * @return true if this is a flat if-chain pattern
      */
     private boolean isFlatIfChainPattern(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
-        // Get the branch instruction from this block
         IRInstruction terminator = block.getTerminator();
         if (!(terminator instanceof BranchInstruction)) {
             return false;
         }
         BranchInstruction branch = (BranchInstruction) terminator;
 
-        // Extract the comparison variable from this block's branch
         SSAValue conditionVar = extractComparisonVariable(branch);
         if (conditionVar == null) {
             return false;

@@ -686,7 +686,6 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     /**
      * Checks if a statement uses (reads or declares) the given variable.
-     * Uses visitor pattern for complete traversal.
      */
     private boolean usesVariable(Statement stmt, String varName) {
         if (stmt == null) return false;
@@ -792,7 +791,6 @@ public class ControlFlowSimplifier implements ASTTransform {
             @Override
             public Void visitBinary(BinaryExpr e) {
                 if (skipAssignLeft && e.getOperator() == BinaryOperator.ASSIGN) {
-                    // Skip left side of assignment
                     e.getRight().accept(this);
                     return null;
                 }
@@ -988,7 +986,6 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     /**
      * Counts how many times a variable is referenced in an expression.
-     * Uses visitor pattern for complete traversal.
      */
     private int countVariableUses(Expression expr, String varName) {
         AtomicInteger count = new AtomicInteger(0);

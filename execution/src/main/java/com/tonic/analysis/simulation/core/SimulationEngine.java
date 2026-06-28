@@ -6,6 +6,7 @@ import com.tonic.analysis.simulation.state.LocalState;
 import com.tonic.analysis.simulation.state.SimValue;
 import com.tonic.analysis.simulation.state.StackState;
 import com.tonic.analysis.simulation.util.StateTransitions;
+import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -95,17 +96,9 @@ public class SimulationEngine {
         long startTime = System.nanoTime();
         SimulationResult.Builder resultBuilder = SimulationResult.builder().method(method);
 
-        // Notify start
         listeners.onSimulationStart(method);
 
-        // Initialize state with method parameters
         SimulationState state = createInitialState(method);
-
-        // Get blocks in execution order
-        List<IRBlock> blocks = method.getReversePostOrder();
-        if (blocks.isEmpty() && method.getEntryBlock() != null) {
-            blocks = List.of(method.getEntryBlock());
-        }
 
         // Track visited blocks for loop detection
         Map<IRBlock, SimulationState> blockEntryStates = new HashMap<>();
@@ -132,25 +125,20 @@ public class SimulationEngine {
                 continue;
             }
 
-            // Simulate the block
             state = entryState.atBlock(block);
             listeners.onBlockEntry(block, state);
 
-            // Record entry state
             if (context.isInstructionLevel()) {
                 resultBuilder.addState(state.snapshot());
             }
 
             // Execute phi instructions first
             for (PhiInstruction phi : block.getPhiInstructions()) {
-                SimulationState before = state;
                 state = executeInstruction(phi, state, resultBuilder);
                 instructionCount++;
             }
 
-            // Execute regular instructions
             for (IRInstruction instr : block.getInstructions()) {
-                SimulationState before = state;
                 state = executeInstruction(instr, state, resultBuilder);
                 instructionCount++;
 
@@ -168,7 +156,6 @@ public class SimulationEngine {
             listeners.onBlockExit(block, state);
             completed.add(block);
 
-            // Add successor blocks to worklist
             for (IRBlock successor : block.getSuccessors()) {
                 SimulationState existingState = blockEntryStates.get(successor);
                 if (existingState == null) {
@@ -185,7 +172,6 @@ public class SimulationEngine {
             }
         }
 
-        // Build result
         resultBuilder.totalInstructions(instructionCount);
         resultBuilder.maxStackDepth(state.maxStackDepth());
         resultBuilder.simulationTime(System.nanoTime() - startTime);
@@ -200,11 +186,11 @@ public class SimulationEngine {
      * Simulates a single method entry (creates IR method on the fly).
      */
     public SimulationResult simulate(MethodEntry method) {
-        // This requires building the IR method first
-        // For now, we just return an empty result
-        // In a full implementation, this would use the IR lifter
-        throw new UnsupportedOperationException(
-            "Direct MethodEntry simulation requires IR lifting. Use simulate(IRMethod) instead.");
+        if (method.getCodeAttribute() == null) {
+            throw new IllegalArgumentException("Cannot simulate a method with no body: " + method.getName());
+        }
+        IRMethod irMethod = new SSA(method.getClassFile().getConstPool()).lift(method);
+        return simulate(irMethod);
     }
 
     /**
@@ -279,7 +265,6 @@ public class SimulationEngine {
     // ========== Private Helpers ==========
 
     private SimulationState createInitialState(IRMethod method) {
-        // Initialize locals with method parameters
         LocalState locals = LocalState.empty();
 
         int localIndex = 0;
@@ -290,7 +275,6 @@ public class SimulationEngine {
             locals = locals.set(localIndex++, thisValue);
         }
 
-        // Add parameter values
         for (SSAValue param : method.getParameters()) {
             SimValue paramValue = SimValue.fromSSA(param, null);
             if (param.getType() != null && param.getType().isTwoSlot()) {
@@ -309,24 +293,16 @@ public class SimulationEngine {
 
     private SimulationState executeInstruction(IRInstruction instr, SimulationState state,
                                                 SimulationResult.Builder resultBuilder) {
-        // Notify before
         listeners.onBeforeInstruction(instr, state);
 
-        // Track stack changes for listener notifications
-        int stackBefore = state.stackDepth();
-
-        // Apply state transition
         SimulationState newState = StateTransitions.apply(state, instr);
 
-        // Notify specific instruction events
         notifyInstructionEvents(instr, state, newState);
 
-        // Record state if instruction-level tracking
         if (context.isInstructionLevel() && resultBuilder != null) {
             resultBuilder.addState(newState.snapshot());
         }
 
-        // Notify after
         listeners.onAfterInstruction(instr, state, newState);
 
         return newState.nextInstruction();

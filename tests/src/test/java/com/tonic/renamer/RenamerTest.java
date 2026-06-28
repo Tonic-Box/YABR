@@ -5,6 +5,8 @@ import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.InnerClassesAttribute;
+import com.tonic.parser.attribute.table.InnerClassEntry;
 import com.tonic.parser.constpool.*;
 import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.mapping.ClassMapping;
@@ -24,7 +26,6 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SuppressWarnings("OptionalGetWithoutIsPresent")
 
 class RenamerTest {
 
@@ -393,6 +394,30 @@ class RenamerTest {
 
             MethodEntry method = findMethod(cf, "process");
             assertEquals("(Lcom/new/Input;)Lcom/new/Output;", method.getDesc());
+        }
+
+        @Test
+        void updatesInnerClassesSimpleNameForRenamedInnerClass() throws IOException {
+            int access = new AccessBuilder().setPublic().build();
+            ClassFile outer = pool.createNewClass("com/old/Outer", access);
+            pool.createNewClass("com/old/Outer$Inner", access);
+
+            ConstPool cp = outer.getConstPool();
+            int innerRefIdx = cp.getIndexOf(cp.findOrAddClass("com/old/Outer$Inner"));
+            int simpleNameIdx = cp.getIndexOf(cp.findOrAddUtf8("Inner"));
+            int attrNameIdx = cp.getIndexOf(cp.findOrAddUtf8("InnerClasses"));
+            InnerClassesAttribute ica = new InnerClassesAttribute("InnerClasses", outer, attrNameIdx, 0);
+            ica.getClasses().add(new InnerClassEntry(cp, innerRefIdx, 0, simpleNameIdx, access));
+            outer.getClassAttributes().add(ica);
+
+            Renamer renamer = new Renamer(pool);
+            renamer.mapClass("com/old/Outer$Inner", "com/new/Outer$Renamed");
+            renamer.applyUnsafe();
+
+            InnerClassEntry entry = ica.getClasses().get(0);
+            Utf8Item innerName = (Utf8Item) cp.getItem(entry.getInnerNameIndex());
+            assertEquals("Renamed", innerName.getValue(),
+                "InnerClasses simple name follows the renamed inner class");
         }
     }
 

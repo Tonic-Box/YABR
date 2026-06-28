@@ -340,10 +340,9 @@ class TypeInferenceAnalyzerTest {
         entry.addInstruction(newInstr);
 
         analyzer.analyze();
-        boolean precise = analyzer.hasPreciseType(v0);
 
-        // May or may not be precise depending on implementation
-        assertTrue(precise || !precise);
+        assertTrue(analyzer.hasPreciseType(v0),
+            "a NEW instruction produces a value of precise (exact) type");
     }
 
     // ========== Instruction Processing Tests ==========
@@ -522,5 +521,89 @@ class TypeInferenceAnalyzerTest {
         analyzer.analyze();
 
         assertNotNull(analyzer.getAllTypeStates());
+    }
+
+    // ========== Narrowing Tests ==========
+
+    @Test
+    void narrowsNullabilityAcrossIfNonNullBranch() {
+        IRMethod m = new IRMethod("com/test/T", "f", "(Ljava/lang/String;)I", true);
+        IRBlock entry = new IRBlock("entry");
+        IRBlock thenB = new IRBlock("then");
+        IRBlock elseB = new IRBlock("else");
+        m.addBlock(entry);
+        m.addBlock(thenB);
+        m.addBlock(elseB);
+        m.setEntryBlock(entry);
+
+        SSAValue p = new SSAValue(new ReferenceType("java/lang/String"), "p");
+        m.addParameter(p);
+        entry.addInstruction(new BranchInstruction(CompareOp.IFNONNULL, p, thenB, elseB));
+        entry.addSuccessor(thenB);
+        entry.addSuccessor(elseB);
+
+        TypeInferenceAnalyzer a = new TypeInferenceAnalyzer(m);
+        a.analyze();
+
+        assertTrue(a.getTypeStateAtBlockEntry(thenB, p).isDefinitelyNotNull(),
+            "p is non-null on the ifnonnull-true edge");
+        assertTrue(a.getTypeStateAtBlockEntry(elseB, p).isDefinitelyNull(),
+            "p is null on the ifnonnull-false edge");
+    }
+
+    @Test
+    void narrowsNullabilityAcrossIfNullBranch() {
+        IRMethod m = new IRMethod("com/test/T", "f", "(Ljava/lang/String;)I", true);
+        IRBlock entry = new IRBlock("entry");
+        IRBlock thenB = new IRBlock("then");
+        IRBlock elseB = new IRBlock("else");
+        m.addBlock(entry);
+        m.addBlock(thenB);
+        m.addBlock(elseB);
+        m.setEntryBlock(entry);
+
+        SSAValue p = new SSAValue(new ReferenceType("java/lang/String"), "p");
+        m.addParameter(p);
+        entry.addInstruction(new BranchInstruction(CompareOp.IFNULL, p, thenB, elseB));
+        entry.addSuccessor(thenB);
+        entry.addSuccessor(elseB);
+
+        TypeInferenceAnalyzer a = new TypeInferenceAnalyzer(m);
+        a.analyze();
+
+        assertTrue(a.getTypeStateAtBlockEntry(thenB, p).isDefinitelyNull(),
+            "p is null on the ifnull-true edge");
+        assertTrue(a.getTypeStateAtBlockEntry(elseB, p).isDefinitelyNotNull(),
+            "p is non-null on the ifnull-false edge");
+    }
+
+    @Test
+    void narrowsTypeAndNullabilityAcrossInstanceofBranch() {
+        IRMethod m = new IRMethod("com/test/T", "g", "(Ljava/lang/Object;)I", true);
+        IRBlock entry = new IRBlock("entry");
+        IRBlock isStr = new IRBlock("isStr");
+        IRBlock notStr = new IRBlock("notStr");
+        m.addBlock(entry);
+        m.addBlock(isStr);
+        m.addBlock(notStr);
+        m.setEntryBlock(entry);
+
+        SSAValue x = new SSAValue(new ReferenceType("java/lang/Object"), "x");
+        m.addParameter(x);
+        SSAValue iof = new SSAValue(PrimitiveType.INT, "iof");
+        entry.addInstruction(TypeCheckInstruction.createInstanceOf(iof, x, new ReferenceType("java/lang/String")));
+        entry.addInstruction(new BranchInstruction(CompareOp.IFNE, iof, isStr, notStr));
+        entry.addSuccessor(isStr);
+        entry.addSuccessor(notStr);
+
+        TypeInferenceAnalyzer a = new TypeInferenceAnalyzer(m);
+        a.analyze();
+
+        TypeState narrowed = a.getTypeStateAtBlockEntry(isStr, x);
+        assertTrue(narrowed.isDefinitelyNotNull(), "x is non-null where instanceof holds");
+        IRType t = narrowed.getAnyType();
+        assertTrue(t instanceof ReferenceType, "x narrowed to a reference type");
+        assertEquals(new ReferenceType("java/lang/String").getDescriptor(),
+            ((ReferenceType) t).getDescriptor(), "x narrowed to String on the instanceof-true edge");
     }
 }

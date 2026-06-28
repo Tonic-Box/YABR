@@ -4,7 +4,70 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="The BIG one&#10;- Refactored the gigantic MAMMOTH of a monolithic module into multiple submodules for project health.&#10;&#10;# Breaking Changes&#10;&#10;Package Renames:&#10;- com.tonic.utill -&gt; com.tonic.util&#10;- com.tonic.parser.attribute.anotation -&gt; com.tonic.parser.attribute.annotation&#10;&#10;Class Relocations:&#10;- com.tonic.analysis.visitor.Visitor -&gt; com.tonic.parser.visitor.Visitor&#10;- com.tonic.analysis.visitor.AbstractClassVisitor -&gt; com.tonic.parser.visitor.AbstractClassVisitor&#10;- com.tonic.analysis.visitor.AbstractMethodVisitor -&gt; com.tonic.parser.visitor.AbstractMethodVisitor&#10;- com.tonic.analysis.visitor.AbstractBlockVisitor -&gt; com.tonic.analysis.ssa.visitor.AbstractBlockVisitor&#10;&#10;Method Relocations:&#10;- ClassFile.generateGetter(...) -&gt; com.tonic.analysis.ClassFactory.generateGetter(classFile, ...)&#10;- ClassFile.generateSetter(...) -&gt; com.tonic.analysis.ClassFactory.generateSetter(classFile, ...)&#10;- ClassFile.setFieldInitialValue(...) -&gt; com.tonic.analysis.ClassFactory.setFieldInitialValue(classFile, ...)&#10;- ClassFile.computeFrames(...) -&gt; com.tonic.analysis.ClassFactory.computeFrames(classFile, ...)&#10;- ClassFile.createNewMethod(boolean addDefaultBody, ...) -&gt; com.tonic.analysis.ClassFactory.createMethodWithBody(classFile, ...)&#10;- ClassPool.createNewClass(...) (auto ctor/clinit) -&gt; com.tonic.analysis.ClassFactory.createClass(pool, ...) (now bare without it)&#10;- CodeAttribute.prettyPrintCode([opts]) -&gt; com.tonic.analysis.CodePrinter.prettyPrintCode(codeAttr[, opts])&#10;- CodeWriter.toSSA()/fromSSA(ir)/optimizeSSA() -&gt; com.tonic.analysis.ssa.SSABridge.toSSA(cw)/fromSSA(cw, ir)/optimizeSSA(cw)&#10;- BootstrapMethodInfo.isStringConcat/isLambda/isRecord/isSwitch(...) + the LAMBDA_METAFACTORY/STRING_CONCAT_FACTORY/OBJECT_METHODS/SWITCH_BOOTSTRAPS constants -&gt; com.tonic.analysis.BootstrapFamilies.*" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup">
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/instrumentation/InstrumentationWireupTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSignature.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSignature.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSimilarityAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSimilarityAnalyzer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefDatabase.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/InnerClassesAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/InnerClassesAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/InnerClassEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/InnerClassEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/TypeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/TypeUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/simulation-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/simulation-api.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/factory/InstrumentationFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/factory/InstrumentationFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/FieldFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/FieldFilter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/MethodFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/MethodFilter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/transform/InstrumentationTransform.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/transform/InstrumentationTransform.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/InterProceduralEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/InterProceduralEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/SimulationEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/SimulationEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/ControlFlowListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/ControlFlowListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/MethodCallListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/MethodCallListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/StackOperationListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/StackOperationListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/PathQuery.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/PathQuery.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/ValueFlowQuery.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/ValueFlowQuery.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/util/StateTransitions.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/util/StateTransitions.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/ClassRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/ClassRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/FieldRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/FieldRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/MethodRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/MethodRenamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/Renamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/Renamer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/RenamerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/RenamerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/DescriptorRemapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/DescriptorRemapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/SignatureRemapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/SignatureRemapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchy.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/validation/RenameValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/validation/RenameValidator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/lift/TempFoldingPass.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/lift/TempFoldingPass.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/RedundantCopyElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/RedundantCopyElimination.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/util/IRMethodCloner.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/util/IRMethodCloner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/MethodHandleConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/MethodHandleConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/InterProceduralEngineTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/InterProceduralEngineTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/core/SimulationEngineTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/core/SimulationEngineTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/query/ValueFlowQueryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/query/ValueFlowQueryTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/renamer/RenamerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/renamer/RenamerTest.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -150,30 +213,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00022" summary="- Fix loop-variable miscompilation, support multi-var declarations, tidy codegen">
-      <option name="closed" value="true" />
-      <created>1780775938464</created>
-      <option name="number" value="00022" />
-      <option name="presentableId" value="LOCAL-00022" />
-      <option name="project" value="LOCAL" />
-      <updated>1780775938464</updated>
-    </task>
-    <task id="LOCAL-00023" summary="- Codegen: emit single-use literal constants inline at their use site (iconst/ldc) instead of materializing them to a local slot and reloading. Matches javac, shrinks bytecode, and removes the spurious slot variables that round-tripped as `boolean localN = true`.&#10;&#10;- Decompiler: attribute a loop-header phi to its own home slot rather than the first store-use of its result, so a body copy like `a = b`no longer conflates the two variables or drops the body store.">
-      <option name="closed" value="true" />
-      <created>1780794635087</created>
-      <option name="number" value="00023" />
-      <option name="presentableId" value="LOCAL-00023" />
-      <option name="project" value="LOCAL" />
-      <updated>1780794635087</updated>
-    </task>
-    <task id="LOCAL-00024" summary="Keep single-use values on the stack; drop dead field read on inc/dec&#10;- Codegen: fix isSimpleOperand so a single-use value feeding a comparison (e.g. i*i in i*i &lt;= n) stays stack-resident instead of spilling to a scratch slot the decompiler then mangled.&#10;- Lowering: dispatch inc/dec before lowerUnary's eager operand lowering so a field increment reads the field once, not twice.">
-      <option name="closed" value="true" />
-      <created>1780806063747</created>
-      <option name="number" value="00024" />
-      <option name="presentableId" value="LOCAL-00024" />
-      <option name="project" value="LOCAL" />
-      <updated>1780806063747</updated>
     </task>
     <task id="LOCAL-00025" summary="- don't un-materialize a value already emitted as an array-initializer declaration; reference the temp instead.">
       <option name="closed" value="true" />
@@ -543,7 +582,31 @@
       <option name="project" value="LOCAL" />
       <updated>1782568253284</updated>
     </task>
-    <option name="localTasksCounter" value="71" />
+    <task id="LOCAL-00071" summary="Stale tasks cleanup">
+      <option name="closed" value="true" />
+      <created>1782568312838</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1782568312838</updated>
+    </task>
+    <task id="LOCAL-00072" summary="Clean up README">
+      <option name="closed" value="true" />
+      <created>1782568505573</created>
+      <option name="number" value="00072" />
+      <option name="presentableId" value="LOCAL-00072" />
+      <option name="project" value="LOCAL" />
+      <updated>1782568505573</updated>
+    </task>
+    <task id="LOCAL-00073" summary="Jitpack badge">
+      <option name="closed" value="true" />
+      <created>1782570676712</created>
+      <option name="number" value="00073" />
+      <option name="presentableId" value="LOCAL-00073" />
+      <option name="project" value="LOCAL" />
+      <updated>1782570676712</updated>
+    </task>
+    <option name="localTasksCounter" value="74" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -558,11 +621,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Add MethodGrafter.replaceMethodBody for in-place body swaps" />
-    <MESSAGE value="Resolve reference types in descriptors and qualified static field access&#10;&#10;descriptorOf/resolveInternalName apply imports and fix nested $ so descriptors match the originals; recognize a.b.Outer$Inner.CONST as a static field access instead of resolving its owner to Object." />
-    <MESSAGE value="- update docs" />
-    <MESSAGE value="- Fix bug where query wasn't considering DynamicSubject condys" />
-    <MESSAGE value="- Fixed bytecode printer for nested BSMs" />
     <MESSAGE value="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type" />
     <MESSAGE value="- Fixed issue with ClassRenamer erroneously renaming unrelated Utf8 attributes" />
     <MESSAGE value="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8" />
@@ -583,6 +641,11 @@
     <MESSAGE value="- Abstract Execution API" />
     <MESSAGE value="Fix decompile -&gt; recompile fidelity for constructors and boolean conditions&#10;- BytecodeEmitter: emit the idiomatic new;dup;args;invokespecial for constructor calls (storing the result to a local), so new X(args) round-trips instead of spilling and decompiling back to new X() with dropped args&#10;- ExpressionLowerer: lower !, &amp;&amp; and || in conditions as direct branches rather than materializing them into a 0/1 value over a temp local (which decompiled to `cond ? local : local`)&#10;- Add round-trip regression tests" />
     <MESSAGE value="The BIG one&#10;- Refactored the gigantic MAMMOTH of a monolithic module into multiple submodules for project health.&#10;&#10;# Breaking Changes&#10;&#10;Package Renames:&#10;- com.tonic.utill -&gt; com.tonic.util&#10;- com.tonic.parser.attribute.anotation -&gt; com.tonic.parser.attribute.annotation&#10;&#10;Class Relocations:&#10;- com.tonic.analysis.visitor.Visitor -&gt; com.tonic.parser.visitor.Visitor&#10;- com.tonic.analysis.visitor.AbstractClassVisitor -&gt; com.tonic.parser.visitor.AbstractClassVisitor&#10;- com.tonic.analysis.visitor.AbstractMethodVisitor -&gt; com.tonic.parser.visitor.AbstractMethodVisitor&#10;- com.tonic.analysis.visitor.AbstractBlockVisitor -&gt; com.tonic.analysis.ssa.visitor.AbstractBlockVisitor&#10;&#10;Method Relocations:&#10;- ClassFile.generateGetter(...) -&gt; com.tonic.analysis.ClassFactory.generateGetter(classFile, ...)&#10;- ClassFile.generateSetter(...) -&gt; com.tonic.analysis.ClassFactory.generateSetter(classFile, ...)&#10;- ClassFile.setFieldInitialValue(...) -&gt; com.tonic.analysis.ClassFactory.setFieldInitialValue(classFile, ...)&#10;- ClassFile.computeFrames(...) -&gt; com.tonic.analysis.ClassFactory.computeFrames(classFile, ...)&#10;- ClassFile.createNewMethod(boolean addDefaultBody, ...) -&gt; com.tonic.analysis.ClassFactory.createMethodWithBody(classFile, ...)&#10;- ClassPool.createNewClass(...) (auto ctor/clinit) -&gt; com.tonic.analysis.ClassFactory.createClass(pool, ...) (now bare without it)&#10;- CodeAttribute.prettyPrintCode([opts]) -&gt; com.tonic.analysis.CodePrinter.prettyPrintCode(codeAttr[, opts])&#10;- CodeWriter.toSSA()/fromSSA(ir)/optimizeSSA() -&gt; com.tonic.analysis.ssa.SSABridge.toSSA(cw)/fromSSA(cw, ir)/optimizeSSA(cw)&#10;- BootstrapMethodInfo.isStringConcat/isLambda/isRecord/isSwitch(...) + the LAMBDA_METAFACTORY/STRING_CONCAT_FACTORY/OBJECT_METHODS/SWITCH_BOOTSTRAPS constants -&gt; com.tonic.analysis.BootstrapFamilies.*" />
-    <option name="LAST_COMMIT_MESSAGE" value="The BIG one&#10;- Refactored the gigantic MAMMOTH of a monolithic module into multiple submodules for project health.&#10;&#10;# Breaking Changes&#10;&#10;Package Renames:&#10;- com.tonic.utill -&gt; com.tonic.util&#10;- com.tonic.parser.attribute.anotation -&gt; com.tonic.parser.attribute.annotation&#10;&#10;Class Relocations:&#10;- com.tonic.analysis.visitor.Visitor -&gt; com.tonic.parser.visitor.Visitor&#10;- com.tonic.analysis.visitor.AbstractClassVisitor -&gt; com.tonic.parser.visitor.AbstractClassVisitor&#10;- com.tonic.analysis.visitor.AbstractMethodVisitor -&gt; com.tonic.parser.visitor.AbstractMethodVisitor&#10;- com.tonic.analysis.visitor.AbstractBlockVisitor -&gt; com.tonic.analysis.ssa.visitor.AbstractBlockVisitor&#10;&#10;Method Relocations:&#10;- ClassFile.generateGetter(...) -&gt; com.tonic.analysis.ClassFactory.generateGetter(classFile, ...)&#10;- ClassFile.generateSetter(...) -&gt; com.tonic.analysis.ClassFactory.generateSetter(classFile, ...)&#10;- ClassFile.setFieldInitialValue(...) -&gt; com.tonic.analysis.ClassFactory.setFieldInitialValue(classFile, ...)&#10;- ClassFile.computeFrames(...) -&gt; com.tonic.analysis.ClassFactory.computeFrames(classFile, ...)&#10;- ClassFile.createNewMethod(boolean addDefaultBody, ...) -&gt; com.tonic.analysis.ClassFactory.createMethodWithBody(classFile, ...)&#10;- ClassPool.createNewClass(...) (auto ctor/clinit) -&gt; com.tonic.analysis.ClassFactory.createClass(pool, ...) (now bare without it)&#10;- CodeAttribute.prettyPrintCode([opts]) -&gt; com.tonic.analysis.CodePrinter.prettyPrintCode(codeAttr[, opts])&#10;- CodeWriter.toSSA()/fromSSA(ir)/optimizeSSA() -&gt; com.tonic.analysis.ssa.SSABridge.toSSA(cw)/fromSSA(cw, ir)/optimizeSSA(cw)&#10;- BootstrapMethodInfo.isStringConcat/isLambda/isRecord/isSwitch(...) + the LAMBDA_METAFACTORY/STRING_CONCAT_FACTORY/OBJECT_METHODS/SWITCH_BOOTSTRAPS constants -&gt; com.tonic.analysis.BootstrapFamilies.*" />
+    <MESSAGE value="Stale tasks cleanup" />
+    <MESSAGE value="Clean up README" />
+    <MESSAGE value="Jitpack badge" />
+    <MESSAGE value="Cleanup" />
+    <MESSAGE value="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup" />
+    <option name="LAST_COMMIT_MESSAGE" value="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup" />
   </component>
 </project>

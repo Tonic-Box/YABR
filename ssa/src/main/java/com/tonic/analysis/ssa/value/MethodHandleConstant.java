@@ -24,7 +24,6 @@ import java.util.Objects;
 @Getter
 public final class MethodHandleConstant extends Constant {
 
-    // Reference kind constants
     public static final int REF_getField = 1;
     public static final int REF_getStatic = 2;
     public static final int REF_putField = 3;

@@ -45,24 +45,20 @@ public class RenameValidator {
         Set<String> newNames = new HashSet<>();
 
         for (ClassMapping mapping : mappings.getClassMappings()) {
-            // Check that the old class exists
             if (classPool.get(mapping.getOldName()) == null) {
                 result.addError("Class not found: " + mapping.getOldName());
             }
 
-            // Check that the new name is a valid identifier
             String newName = mapping.getNewName();
             if (!isValidClassName(newName)) {
                 result.addError("Invalid class name: " + newName);
             }
 
-            // Check for duplicate target names
             if (!newNames.add(newName)) {
                 result.addError("Duplicate target class name: " + newName);
             }
 
-            // Check that the new name doesn't conflict with existing classes
-            // (unless that class is also being renamed)
+            // Not a conflict if the existing class is also being renamed
             ClassFile existing = classPool.get(newName);
             if (existing != null && !mappings.hasClassMapping(newName)) {
                 result.addError("Class name conflict: " + newName + " already exists");
@@ -77,14 +73,12 @@ public class RenameValidator {
             String descriptor = mapping.getDescriptor();
             String newName = mapping.getNewName();
 
-            // Check that the owning class exists
             ClassFile cf = classPool.get(owner);
             if (cf == null) {
                 result.addError("Class not found for method: " + owner);
                 continue;
             }
 
-            // Check that the method exists
             boolean found = false;
             for (MethodEntry method : cf.getMethods()) {
                 if (method.getName().equals(oldName) && method.getDesc().equals(descriptor)) {
@@ -96,12 +90,10 @@ public class RenameValidator {
                 result.addError("Method not found: " + owner + "." + oldName + descriptor);
             }
 
-            // Check that the new name is a valid identifier
             if (!isValidMethodName(newName)) {
                 result.addError("Invalid method name: " + newName);
             }
 
-            // Check for naming conflicts (same name and descriptor in same class)
             for (MethodEntry method : cf.getMethods()) {
                 if (method.getName().equals(newName) && method.getDesc().equals(descriptor)) {
                     // Only a conflict if not the same method being renamed
@@ -119,14 +111,12 @@ public class RenameValidator {
             String oldName = mapping.getOldName();
             String newName = mapping.getNewName();
 
-            // Check that the owning class exists
             ClassFile cf = classPool.get(owner);
             if (cf == null) {
                 result.addError("Class not found for field: " + owner);
                 continue;
             }
 
-            // Check that the field exists
             boolean found = false;
             for (FieldEntry field : cf.getFields()) {
                 if (field.getName().equals(oldName)) {
@@ -138,12 +128,10 @@ public class RenameValidator {
                 result.addError("Field not found: " + owner + "." + oldName);
             }
 
-            // Check that the new name is a valid identifier
             if (!isValidFieldName(newName)) {
                 result.addError("Invalid field name: " + newName);
             }
 
-            // Check for naming conflicts
             for (FieldEntry field : cf.getFields()) {
                 if (field.getName().equals(newName)) {
                     if (!field.getName().equals(oldName)) {
@@ -160,7 +148,6 @@ public class RenameValidator {
             String oldName = mapping.getOldName();
             String newName = mapping.getNewName();
 
-            // Check if newName is also being renamed to something else
             String nextTarget = mappings.getClassMapping(newName);
             if (nextTarget != null) {
                 if (nextTarget.equals(oldName)) {

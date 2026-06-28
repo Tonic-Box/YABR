@@ -135,7 +135,6 @@ final class TempFoldingPass {
             if (srcVal == null) {
                 continue;
             }
-            // Replace the instruction in the block
             SSAValue result = instr.getResult();
             IRInstruction replacement = new UnaryOpInstruction(result, foldedOp, srcVal);
             block.removeInstruction(instr);

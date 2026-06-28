@@ -83,15 +83,12 @@ public class ClassHierarchy {
             return result;
         }
 
-        // Find the original declaration (walk up)
         ClassNode declaringClass = findOriginalDeclaration(startNode, methodName, descriptor);
         if (declaringClass != null) {
             result.add(declaringClass);
-            // Find all overrides (walk down from declaring class)
             collectOverrides(declaringClass, methodName, descriptor, result);
         }
 
-        // Also check if the method is declared in this class
         if (hasMethod(startNode, methodName, descriptor)) {
             result.add(startNode);
             collectOverrides(startNode, methodName, descriptor, result);
@@ -106,7 +103,6 @@ public class ClassHierarchy {
     private ClassNode findOriginalDeclaration(ClassNode node, String methodName, String descriptor) {
         ClassNode original = null;
 
-        // Check superclass chain
         ClassNode current = node.getSuperClass();
         while (current != null) {
             if (hasMethod(current, methodName, descriptor)) {
@@ -115,7 +111,6 @@ public class ClassHierarchy {
             current = current.getSuperClass();
         }
 
-        // Check interfaces
         for (ClassNode iface : node.getAllAncestors()) {
             if (iface.isInterface() && hasMethod(iface, methodName, descriptor)) {
                 if (original == null) {
@@ -144,7 +139,7 @@ public class ClassHierarchy {
     private boolean hasMethod(ClassNode node, String methodName, String descriptor) {
         ClassFile cf = node.getClassFile();
         if (cf == null) {
-            // External class, assume it might have the method
+            // External class, methods not visible
             return false;
         }
         for (MethodEntry method : cf.getMethods()) {

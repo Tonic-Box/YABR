@@ -62,17 +62,14 @@ public class BlockMerging implements IRTransform {
             return false;
         }
 
-        // The entry block must remain the method's entry — execution begins there. When the entry is a loop
-        // header, its only predecessor can be the back-edge source; merging the entry INTO that predecessor
-        // removes the entry block, leaving entryBlock dangling and the lowered method empty. Never merge it.
+        // Never merge the entry block away: it could be merged into its back-edge predecessor, leaving
+        // entryBlock dangling and the lowered method empty.
         if (successor == method.getEntryBlock()) {
             return false;
         }
 
-        // Do not merge across an exception-region boundary. The merged block would be partly inside and
-        // partly outside a try region, which the exception table cannot express (a block is protected or it
-        // isn't). Also never merge a handler block away (it is the catch target). Only merge when both
-        // blocks belong to exactly the same set of protected regions.
+        // Only merge blocks in exactly the same set of try regions: the exception table cannot express a
+        // block that is half-inside a region, and a handler block (the catch target) must never be merged away.
         if (!sameExceptionRegions(method, block, successor)) {
             return false;
         }

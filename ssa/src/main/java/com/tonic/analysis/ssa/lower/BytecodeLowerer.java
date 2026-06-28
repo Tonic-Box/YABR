@@ -43,10 +43,7 @@ public class BytecodeLowerer {
     }
 
     public void lower(IRMethod irMethod, MethodEntry targetMethod) {
-        // Remove LoadLocalInstruction and StoreLocalInstruction artifacts.
-        // After SSA conversion, these are dead - VariableRenamer replaces their
-        // results with actual SSA values. Keeping them causes incorrect bytecode
-        // because they reference stale local variable indices.
+        // Remove now-dead LoadLocal/StoreLocal artifacts that reference stale local indices.
         removeLocalInstructionArtifacts(irMethod);
 
         // Drop blocks unreachable from entry/handlers (e.g. the fall-through join after an exhaustive

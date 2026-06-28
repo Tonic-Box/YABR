@@ -1,6 +1,5 @@
 package com.tonic.analysis.simulation.listener;
 
-import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.simulation.state.SimValue;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -40,7 +39,7 @@ public class StackOperationListener extends AbstractListener {
     private int maxDepth;
     private int currentDepth;
     private List<DepthChange> depthHistory;
-    private boolean trackHistory;
+    private final boolean trackHistory;
 
     public StackOperationListener() {
         this(false);
@@ -90,7 +89,6 @@ public class StackOperationListener extends AbstractListener {
 
     @Override
     public void onAfterInstruction(IRInstruction instr, SimulationState before, SimulationState after) {
-        // Track actual stack depth from state
         currentDepth = after.stackDepth();
         if (currentDepth > maxDepth) {
             maxDepth = currentDepth;

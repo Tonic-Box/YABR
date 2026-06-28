@@ -30,10 +30,7 @@ public class FieldRenamer {
 
     private final RenamerContext context;
 
-    // Reference kinds for field handles
     private static final int REF_getField = 1;
-    private static final int REF_getStatic = 2;
-    private static final int REF_putField = 3;
     private static final int REF_putStatic = 4;
 
     public FieldRenamer(RenamerContext context) {
@@ -70,7 +67,6 @@ public class FieldRenamer {
         // must run while the declaration still carries it.
         Set<String> refOwners = expandToInheritingOwners(currentOwner, mapping.getOldName(), currentDescriptor);
 
-        // Find and rename the declaration
         ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
             renameFieldDeclaration(ownerClass, mapping.getOldName(), currentDescriptor, mapping.getNewName());
@@ -139,10 +135,8 @@ public class FieldRenamer {
     private void renameFieldDeclaration(ClassFile cf, String oldName, String descriptor, String newName) {
         for (FieldEntry field : cf.getFields()) {
             if (field.getName().equals(oldName) && field.getDesc().equals(descriptor)) {
-                // Update the FieldEntry
                 field.setName(newName);
 
-                // Update the constant pool name Utf8
                 ConstPool cp = cf.getConstPool();
                 int nameIndex = field.getNameIndex();
                 Utf8Item nameUtf8 = (Utf8Item) cp.getItem(nameIndex);
@@ -158,7 +152,6 @@ public class FieldRenamer {
     private void updateFieldAccessSites(ClassFile cf, String owner, String oldName, String descriptor, String newName) {
         ConstPool cp = cf.getConstPool();
 
-        // Update FieldRefItem entries
         for (int i = 1; i < cp.getItems().size(); i++) {
             Item<?> item = cp.getItems().get(i);
             if (item == null) continue;
@@ -172,7 +165,6 @@ public class FieldRenamer {
             }
         }
 
-        // Update MethodHandle items that reference fields
         updateFieldHandles(cf, owner, oldName, descriptor, newName);
 
         // Update bootstrap method arguments (for field handles)
@@ -183,14 +175,12 @@ public class FieldRenamer {
      * Checks if a FieldRefItem matches the target field.
      */
     private boolean matchesFieldRef(ConstPool cp, FieldRefItem fieldRef, String owner, String name, String descriptor) {
-        // Get owner class name
         ClassRefItem classRef = (ClassRefItem) cp.getItem(fieldRef.getValue().getClassIndex());
         Utf8Item ownerUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
         if (!ownerUtf8.getValue().equals(owner)) {
             return false;
         }
 
-        // Get name and descriptor
         NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(fieldRef.getValue().getNameAndTypeIndex());
         nat.setConstPool(cp);
         return nat.getName().equals(name) && nat.getDescriptor().equals(descriptor);

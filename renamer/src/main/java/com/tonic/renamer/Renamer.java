@@ -126,13 +126,11 @@ public class Renamer {
             return;
         }
 
-        // Validate first
         ValidationResult result = validate();
         if (!result.isValid()) {
             throw new RenameException("Validation failed:\n" + result.getReport());
         }
 
-        // Create the context
         context = new RenamerContext(classPool, mappings);
 
         // Apply class renames first (updates all class references)
@@ -142,11 +140,9 @@ public class Renamer {
         // Rebuild hierarchy after class renames
         context.rebuildHierarchy();
 
-        // Apply method renames
         MethodRenamer methodRenamer = new MethodRenamer(context);
         methodRenamer.applyRenames();
 
-        // Apply field renames
         FieldRenamer fieldRenamer = new FieldRenamer(context);
         fieldRenamer.applyRenames();
     }

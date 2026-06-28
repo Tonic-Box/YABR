@@ -27,15 +27,10 @@ public class TypeUtil
                 return desc; // Malformed, return as-is
             }
             String elementType = desc.substring(arrayDepth);
-            // Recursively validate the element type
             String validatedElement = validateDescriptorFormat(elementType);
             // Rebuild the array descriptor
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < arrayDepth; i++) {
-                sb.append('[');
-            }
-            sb.append(validatedElement);
-            return sb.toString();
+            return "[".repeat(arrayDepth) +
+                    validatedElement;
         }
 
         // Handle primitive types

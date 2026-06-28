@@ -59,9 +59,7 @@ public class DeadStoreEliminator implements ASTTransform {
                 String varName = decl.getName();
                 Expression init = decl.getInitializer();
 
-                // Only process if initializer has no side effects
                 if (init != null && !hasSideEffects(init)) {
-                    // Look for immediate reassignment
                     int reassignIndex = findImmediateReassignment(stmts, i + 1, varName);
                     if (reassignIndex != -1) {
                         // Found pattern: int x = val; ... x = newVal;
@@ -70,7 +68,6 @@ public class DeadStoreEliminator implements ASTTransform {
                         BinaryExpr assign = (BinaryExpr) assignStmt.getExpression();
                         Expression newValue = assign.getRight();
 
-                        // Create new declaration with the reassigned value
                         VarDeclStmt newDecl = new VarDeclStmt(
                             decl.getType(),
                             varName,
@@ -85,7 +82,6 @@ public class DeadStoreEliminator implements ASTTransform {
                 }
             }
 
-            // Recurse into nested blocks
             if (stmt instanceof BlockStmt) {
                 if (eliminateDeadStores(((BlockStmt) stmt).getStatements())) {
                     changed = true;
@@ -188,7 +184,6 @@ public class DeadStoreEliminator implements ASTTransform {
                         if (binary.getLeft() instanceof VarRefExpr) {
                             String assignTarget = ((VarRefExpr) binary.getLeft()).getName();
                             if (assignTarget.equals(varName)) {
-                                // Check that the RHS doesn't read the variable
                                 if (!readsVariable(binary.getRight(), varName)) {
                                     return i;
                                 }
@@ -200,7 +195,6 @@ public class DeadStoreEliminator implements ASTTransform {
                 }
             }
 
-            // Check if this statement reads the variable
             if (readsVariable(stmt, varName)) {
                 return -1;
             }
@@ -221,7 +215,6 @@ public class DeadStoreEliminator implements ASTTransform {
 
     /**
      * Checks if a statement reads the given variable.
-     * Uses visitor pattern for expression traversal.
      */
     private boolean readsVariable(Statement stmt, String varName) {
         if (stmt instanceof VarDeclStmt) {
@@ -245,7 +238,6 @@ public class DeadStoreEliminator implements ASTTransform {
 
     /**
      * Checks if an expression reads the given variable.
-     * Uses visitor pattern to traverse all VarRefExpr nodes.
      */
     private boolean readsVariable(Expression expr, String varName) {
         AtomicBoolean found = new AtomicBoolean(false);
@@ -280,7 +272,6 @@ public class DeadStoreEliminator implements ASTTransform {
 
             // For simple assignment, LHS is a write not a read
             if (expr.getOperator() == BinaryOperator.ASSIGN && expr.getLeft() instanceof VarRefExpr) {
-                // Only check RHS
                 expr.getRight().accept(this);
                 return null;
             }
@@ -290,7 +281,6 @@ public class DeadStoreEliminator implements ASTTransform {
 
     /**
      * Determines if an expression has side effects that must be preserved.
-     * Uses visitor pattern for consistent implementation.
      */
     private boolean hasSideEffects(Expression expr) {
         return expr.accept(SideEffectDetector.INSTANCE);

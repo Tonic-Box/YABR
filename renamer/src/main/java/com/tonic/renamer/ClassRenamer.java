@@ -7,6 +7,7 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.InnerClassesAttribute;
 import com.tonic.parser.attribute.SignatureAttribute;
+import com.tonic.parser.attribute.table.InnerClassEntry;
 import com.tonic.parser.constpool.*;
 import com.tonic.renamer.mapping.ClassMapping;
 
@@ -34,7 +35,6 @@ public class ClassRenamer {
      * Applies all class renames across the ClassPool.
      */
     public void applyRenames() {
-        // Process each class in the pool
         for (ClassFile cf : context.getAllClasses()) {
             renameClassReferences(cf);
         }
@@ -46,22 +46,16 @@ public class ClassRenamer {
     private void renameClassReferences(ClassFile cf) {
         ConstPool cp = cf.getConstPool();
 
-        // First pass: Update all ClassRefItem entries
         updateClassRefItems(cp);
 
-        // Second pass: Update all descriptors in Utf8 items
         updateDescriptors(cp);
 
-        // Third pass: Update method and field owner names
         updateMemberOwners(cf);
 
-        // Fourth pass: Update InnerClasses attribute
         updateInnerClasses(cf);
 
-        // Fifth pass: Update generic signatures
         updateSignatures(cf);
 
-        // Sixth pass: Refresh cached descriptor values on member entries
         refreshMemberDescriptors(cf);
     }
 
@@ -164,27 +158,68 @@ public class ClassRenamer {
      * Updates InnerClasses attribute entries.
      */
     private void updateInnerClasses(ClassFile cf) {
+        ConstPool cp = cf.getConstPool();
         for (Attribute attr : cf.getClassAttributes()) {
-            if (attr instanceof InnerClassesAttribute) {
-                // The inner class references are stored as ClassRefItem indices,
-                // which we already updated in updateClassRefItems.
-                // The entries themselves hold indices, not names, so they don't need updating.
+            if (!(attr instanceof InnerClassesAttribute)) {
+                continue;
+            }
+            // updateClassRefItems already remapped the inner/outer class-ref indices. The simple-name
+            // Utf8 is not a class ref, so a renamed inner class needs its simple name re-derived from
+            // the (now updated) binary name.
+            for (InnerClassEntry entry : ((InnerClassesAttribute) attr).getClasses()) {
+                if (entry.getInnerNameIndex() == 0) {
+                    continue;
+                }
+                String simpleName = simpleName(innerBinaryName(cp, entry));
+                if (simpleName == null || simpleName.isEmpty()) {
+                    continue;
+                }
+                if (!simpleName.equals(utf8Value(cp, entry.getInnerNameIndex()))) {
+                    entry.setInnerNameIndex(cp.getIndexOf(cp.findOrAddUtf8(simpleName)));
+                }
             }
         }
+    }
+
+    private static String innerBinaryName(ConstPool cp, InnerClassEntry entry) {
+        Item<?> ref = cp.getItem(entry.getInnerClassInfoIndex());
+        return ref instanceof ClassRefItem ? utf8Value(cp, ((ClassRefItem) ref).getNameIndex()) : null;
+    }
+
+    private static String utf8Value(ConstPool cp, int index) {
+        Item<?> item = cp.getItem(index);
+        return item instanceof Utf8Item ? ((Utf8Item) item).getValue() : null;
+    }
+
+    /**
+     * The source simple name of a binary class name: the segment after the last '$' (or '/' if none),
+     * with the numeric prefix that local classes carry (Outer$1Local) stripped.
+     */
+    private static String simpleName(String binaryName) {
+        if (binaryName == null) {
+            return null;
+        }
+        int dollar = binaryName.lastIndexOf('$');
+        String tail = dollar >= 0
+            ? binaryName.substring(dollar + 1)
+            : binaryName.substring(binaryName.lastIndexOf('/') + 1);
+        int start = 0;
+        while (start < tail.length() && Character.isDigit(tail.charAt(start))) {
+            start++;
+        }
+        return tail.substring(start);
     }
 
     /**
      * Updates generic Signature attributes on the class, methods, and fields.
      */
     private void updateSignatures(ClassFile cf) {
-        // Class-level signature
         for (Attribute attr : cf.getClassAttributes()) {
             if (attr instanceof SignatureAttribute) {
                 updateSignatureAttribute((SignatureAttribute) attr, cf.getConstPool());
             }
         }
 
-        // Method-level signatures
         for (MethodEntry method : cf.getMethods()) {
             for (Attribute attr : method.getAttributes()) {
                 if (attr instanceof SignatureAttribute) {
@@ -193,7 +228,6 @@ public class ClassRenamer {
             }
         }
 
-        // Field-level signatures
         for (FieldEntry field : cf.getFields()) {
             for (Attribute attr : field.getAttributes()) {
                 if (attr instanceof SignatureAttribute) {
@@ -227,7 +261,6 @@ public class ClassRenamer {
      * @param mapping The class mapping to apply
      */
     public void renameClass(ClassMapping mapping) {
-        // Find the class being renamed
         ClassFile targetClass = context.getClass(mapping.getOldName());
         if (targetClass == null) {
             return;
@@ -238,13 +271,11 @@ public class ClassRenamer {
             renameClassReferencesForMapping(cf, mapping);
         }
 
-        // Update the target class's own name
         ConstPool targetCp = targetClass.getConstPool();
         ClassRefItem thisClassRef = (ClassRefItem) targetCp.getItem(targetClass.getThisClass());
         Utf8Item nameUtf8 = (Utf8Item) targetCp.getItem(thisClassRef.getNameIndex());
         nameUtf8.setValue(mapping.getNewName());
 
-        // Update method and field owner names
         for (MethodEntry method : targetClass.getMethods()) {
             method.setOwnerName(mapping.getNewName());
         }

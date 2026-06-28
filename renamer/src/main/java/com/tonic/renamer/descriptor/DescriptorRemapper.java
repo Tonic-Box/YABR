@@ -5,11 +5,6 @@ import java.util.function.Function;
 
 /**
  * Remaps class references within method and field descriptors.
- *
- * Handles transformations like:
- * - (Lcom/old/Type;I)Lcom/old/Result; -> (Lcom/new/Type;I)Lcom/new/Result;
- * - [Lcom/old/Type; -> [Lcom/new/Type;
- * - [[Lcom/old/Type; -> [[Lcom/new/Type;
  */
 public class DescriptorRemapper {
 

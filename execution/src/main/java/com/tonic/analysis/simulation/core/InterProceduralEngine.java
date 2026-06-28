@@ -1,6 +1,5 @@
 package com.tonic.analysis.simulation.core;
 
-import com.tonic.analysis.callgraph.CallGraph;
 import com.tonic.analysis.simulation.listener.CompositeListener;
 import com.tonic.analysis.simulation.listener.SimulationListener;
 import com.tonic.analysis.simulation.state.CallStackState;
@@ -8,26 +7,25 @@ import com.tonic.analysis.simulation.state.LocalState;
 import com.tonic.analysis.simulation.state.SimValue;
 import com.tonic.analysis.simulation.state.StackState;
 import com.tonic.analysis.simulation.util.StateTransitions;
+import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassPool;
-import com.tonic.parser.MethodEntry;
-
 import java.util.*;
 
 /**
  * Simulation engine with inter-procedural analysis support.
  *
  * <p>Extends the basic simulation engine to follow method calls up to a
- * configurable depth. Uses the CallGraph for method resolution when available.
+ * configurable depth. Callees are resolved from the ClassPool and their bodies
+ * lifted to IR on demand.
  *
  * <p>Example usage:
  * <pre>
  * SimulationContext ctx = SimulationContext.forPool(classPool)
- *     .withMaxCallDepth(3)
- *     .withCallGraph(callGraph);
+ *     .withMaxCallDepth(3);
  *
  * InterProceduralEngine engine = new InterProceduralEngine(ctx);
  * SimulationResult result = engine.simulate(entryMethod);
@@ -102,17 +100,14 @@ public class InterProceduralEngine {
         long startTime = System.nanoTime();
         SimulationResult.Builder resultBuilder = SimulationResult.builder().method(method);
 
-        // Reset state
         callStack = CallStackState.empty();
         methodsSimulated = 0;
         maxDepthReached = 0;
 
         listeners.onSimulationStart(method);
 
-        // Create initial state
         SimulationState state = createInitialState(method);
 
-        // Simulate the method
         int instructionCount = simulateMethod(method, state, resultBuilder, 0);
 
         resultBuilder.totalInstructions(instructionCount);
@@ -162,13 +157,11 @@ public class InterProceduralEngine {
                 resultBuilder.addState(state.snapshot());
             }
 
-            // Execute phi instructions
             for (PhiInstruction phi : block.getPhiInstructions()) {
-                state = executeInstruction(phi, state, currentDepth, resultBuilder);
+                state = executeInstruction(phi, state, resultBuilder);
                 instructionCount++;
             }
 
-            // Execute regular instructions
             for (IRInstruction instr : block.getInstructions()) {
                 // Handle method calls specially for inter-procedural analysis
                 if (instr instanceof InvokeInstruction && shouldFollowCall(currentDepth)) {
@@ -176,7 +169,7 @@ public class InterProceduralEngine {
                     state = handleMethodCall(invoke, state, currentDepth, resultBuilder);
                     instructionCount++; // Count the invoke itself
                 } else {
-                    state = executeInstruction(instr, state, currentDepth, resultBuilder);
+                    state = executeInstruction(instr, state, resultBuilder);
                     instructionCount++;
                 }
 
@@ -193,7 +186,6 @@ public class InterProceduralEngine {
             listeners.onBlockExit(block, state);
             completed.add(block);
 
-            // Add successors
             for (IRBlock successor : block.getSuccessors()) {
                 SimulationState existingState = blockEntryStates.get(successor);
                 if (existingState == null) {
@@ -220,27 +212,21 @@ public class InterProceduralEngine {
                                               int currentDepth, SimulationResult.Builder resultBuilder) {
         listeners.onMethodCall(invoke, state);
 
-        // Try to resolve the called method
         IRMethod calledMethod = resolveMethod(invoke);
 
         if (calledMethod != null && !callStack.contains(calledMethod)) {
-            // Push call frame
             CallStackState.CallFrame frame = new CallStackState.CallFrame(
                 calledMethod, invoke, state,
                 state.getCurrentBlock(), state.getInstructionIndex()
             );
             callStack = callStack.push(frame);
 
-            // Create state for called method
             SimulationState calleeState = createCalleeState(invoke, state, calledMethod);
 
-            // Simulate the called method
             simulateMethod(calledMethod, calleeState, resultBuilder, currentDepth + 1);
 
-            // Pop call frame
             callStack = callStack.pop();
 
-            // Apply return effect
             state = applyReturnEffect(invoke, state);
         } else {
             // Can't follow call - just apply state transition
@@ -251,40 +237,42 @@ public class InterProceduralEngine {
     }
 
     private IRMethod resolveMethod(InvokeInstruction invoke) {
-        // Check cache first
         String key = invoke.getOwner() + "." + invoke.getName() + invoke.getDescriptor();
         if (methodCache.containsKey(key)) {
             return methodCache.get(key);
         }
 
-        // Try to resolve using CallGraph
-        CallGraph callGraph = context.getCallGraph();
-        if (callGraph != null) {
-            // Use call graph for resolution
-            // This is a simplified version - real implementation would use proper resolution
-        }
+        IRMethod resolved = liftCallee(invoke);
+        methodCache.put(key, resolved);
+        return resolved;
+    }
 
-        // Try to resolve using ClassPool
+    /**
+     * Resolves the invoked method from the ClassPool and lifts its body to IR, or null when the
+     * class/method cannot be resolved or has no body (abstract/native).
+     */
+    private IRMethod liftCallee(InvokeInstruction invoke) {
         ClassPool classPool = context.getClassPool();
-        if (classPool != null) {
-            try {
-                var classFile = classPool.get(invoke.getOwner());
-                if (classFile != null) {
-                    for (var method : classFile.getMethods()) {
-                        if (method.getName().equals(invoke.getName()) &&
-                            method.getDesc().equals(invoke.getDescriptor())) {
-                            // Would need to build IR here - for now return null
-                            // IRMethod irMethod = buildIR(method);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                // Class not found - return null
-            }
+        if (classPool == null) {
+            return null;
         }
-
-        methodCache.put(key, null);
-        return null;
+        try {
+            var classFile = classPool.get(invoke.getOwner());
+            if (classFile == null) {
+                return null;
+            }
+            for (var method : classFile.getMethods()) {
+                if (method.getName().equals(invoke.getName())
+                        && method.getDesc().equals(invoke.getDescriptor())) {
+                    return method.getCodeAttribute() != null
+                            ? new SSA(classFile.getConstPool()).lift(method)
+                            : null;
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private SimulationState createCalleeState(InvokeInstruction invoke, SimulationState callerState,
@@ -295,12 +283,10 @@ public class InterProceduralEngine {
 
         // For instance methods, slot 0 is 'this' (receiver from stack)
         if (!calledMethod.isStatic()) {
-            // Pop receiver from caller stack
             SimValue receiver = callerState.peek(argCount);
             locals = locals.set(localIndex++, receiver);
         }
 
-        // Copy arguments from stack to locals
         for (int i = 0; i < argCount; i++) {
             SimValue arg = callerState.peek(argCount - 1 - i);
             if (arg != null && arg.isWide()) {
@@ -316,7 +302,6 @@ public class InterProceduralEngine {
     }
 
     private SimulationState applyReturnEffect(InvokeInstruction invoke, SimulationState state) {
-        // Apply the normal state transition for the invoke
         return StateTransitions.apply(state, invoke);
     }
 
@@ -344,12 +329,11 @@ public class InterProceduralEngine {
     }
 
     private SimulationState executeInstruction(IRInstruction instr, SimulationState state,
-                                                int depth, SimulationResult.Builder resultBuilder) {
+                                                SimulationResult.Builder resultBuilder) {
         listeners.onBeforeInstruction(instr, state);
 
         SimulationState newState = StateTransitions.apply(state, instr);
 
-        // Notify specific events
         notifyInstructionEvents(instr, state, newState);
 
         if (context.isInstructionLevel() && resultBuilder != null) {

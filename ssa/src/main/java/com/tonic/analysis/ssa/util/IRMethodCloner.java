@@ -52,7 +52,6 @@ public class IRMethodCloner {
                 source.isStatic()
         );
 
-        // Clone parameters
         for (SSAValue param : source.getParameters()) {
             SSAValue clonedParam = cloneValue(param);
             cloned.addParameter(clonedParam);
@@ -65,7 +64,6 @@ public class IRMethodCloner {
             cloned.addBlock(clonedBlock);
         }
 
-        // Set entry block
         if (source.getEntryBlock() != null) {
             cloned.setEntryBlock(blockMapping.get(source.getEntryBlock()));
         }
@@ -74,19 +72,16 @@ public class IRMethodCloner {
         for (IRBlock block : source.getBlocks()) {
             IRBlock clonedBlock = blockMapping.get(block);
 
-            // Clone phi instructions
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 PhiInstruction clonedPhi = clonePhi(phi);
                 clonedBlock.addPhi(clonedPhi);
             }
 
-            // Clone regular instructions
             for (IRInstruction instr : block.getInstructions()) {
                 IRInstruction clonedInstr = cloneInstruction(instr);
                 clonedBlock.addInstruction(clonedInstr);
             }
 
-            // Set up successor edges
             for (IRBlock succ : block.getSuccessors()) {
                 IRBlock clonedSucc = blockMapping.get(succ);
                 EdgeType edgeType = block.getEdgeType(succ);
@@ -158,7 +153,6 @@ public class IRMethodCloner {
             if (valueMapping.containsKey(ssa)) {
                 return valueMapping.get(ssa);
             }
-            // Create new mapping if not exists
             return cloneValue(ssa);
         }
         // Constants are immutable, return as-is
@@ -188,7 +182,6 @@ public class IRMethodCloner {
      * Clones an instruction, creating a fresh copy with mapped values.
      */
     private IRInstruction cloneInstruction(IRInstruction instr) {
-        // Handle each instruction type
         if (instr instanceof ConstantInstruction) {
             ConstantInstruction ci = (ConstantInstruction) instr;
             return new ConstantInstruction(
@@ -240,7 +233,7 @@ public class IRMethodCloner {
                 case ATHROW:
                     return SimpleInstruction.createThrow(mapValue(si.getOperand()));
                 case ARRAYLENGTH:
-                    return SimpleInstruction.createArrayLength(cloneValue((SSAValue) si.getResult()), mapValue(si.getOperand()));
+                    return SimpleInstruction.createArrayLength(cloneValue(si.getResult()), mapValue(si.getOperand()));
                 case MONITORENTER:
                     return SimpleInstruction.createMonitorEnter(mapValue(si.getOperand()));
                 case MONITOREXIT:
@@ -326,7 +319,7 @@ public class IRMethodCloner {
             ArrayAccessInstruction aai = (ArrayAccessInstruction) instr;
             if (aai.isLoad()) {
                 return ArrayAccessInstruction.createLoad(
-                        cloneValue((SSAValue) aai.getResult()),
+                        cloneValue(aai.getResult()),
                         mapValue(aai.getArray()),
                         mapValue(aai.getIndex())
                 );
@@ -344,14 +337,14 @@ public class IRMethodCloner {
             if (fai.isLoad()) {
                 if (fai.isStatic()) {
                     return FieldAccessInstruction.createStaticLoad(
-                            cloneValue((SSAValue) fai.getResult()),
+                            cloneValue(fai.getResult()),
                             fai.getOwner(),
                             fai.getName(),
                             fai.getDescriptor()
                     );
                 } else {
                     return FieldAccessInstruction.createLoad(
-                            cloneValue((SSAValue) fai.getResult()),
+                            cloneValue(fai.getResult()),
                             fai.getOwner(),
                             fai.getName(),
                             fai.getDescriptor(),
@@ -382,13 +375,13 @@ public class IRMethodCloner {
             TypeCheckInstruction tci = (TypeCheckInstruction) instr;
             if (tci.isCast()) {
                 return TypeCheckInstruction.createCast(
-                        cloneValue((SSAValue) tci.getResult()),
+                        cloneValue(tci.getResult()),
                         mapValue(tci.getOperand()),
                         tci.getTargetType()
                 );
             } else {
                 return TypeCheckInstruction.createInstanceOf(
-                        cloneValue((SSAValue) tci.getResult()),
+                        cloneValue(tci.getResult()),
                         mapValue(tci.getOperand()),
                         tci.getTargetType()
                 );

@@ -346,7 +346,6 @@ public class ASTEditor {
             }
         }
 
-        // Call handlers
         Replacement replacement = Replacement.keep();
         for (HandlerEntry<IfHandler, IfStmt> entry : ifHandlers) {
             Replacement r = entry.handler.handle(context, stmt);

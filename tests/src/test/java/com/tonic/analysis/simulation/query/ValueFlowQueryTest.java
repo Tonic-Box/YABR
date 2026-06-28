@@ -7,6 +7,8 @@ import com.tonic.analysis.simulation.state.LocalState;
 import com.tonic.analysis.simulation.state.SimValue;
 import com.tonic.analysis.simulation.state.StackState;
 import com.tonic.analysis.ssa.cfg.IRBlock;
+import com.tonic.analysis.ssa.ir.BinaryOp;
+import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
 import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.type.PrimitiveType;
@@ -213,6 +215,35 @@ class ValueFlowQueryTest {
 
         assertNotNull(dependents, "Should return non-null set");
         assertTrue(dependents.isEmpty(), "Should return empty set when no dependents");
+    }
+
+    @Test
+    void tracksUsesDependenciesAndFlowAcrossAnOperation() {
+        // sum = instr1.result + instr2.result, appended to the shared test block (index 3).
+        SSAValue sumResult = new SSAValue(PrimitiveType.INT);
+        BinaryOpInstruction add = new BinaryOpInstruction(
+            sumResult, BinaryOp.ADD, instr1.getResult(), instr2.getResult());
+        testBlock.addInstruction(add);
+
+        SimValue a = SimValue.constant(42, PrimitiveType.INT, instr1);
+        SimValue b = SimValue.constant(100, PrimitiveType.INT, instr2);
+        SimValue sum = SimValue.ofType(PrimitiveType.INT, add);
+
+        SimulationResult result = createResultWithValues(
+            createStateWithStack(0, a),
+            createStateWithStack(1, b),
+            createStateWithStack(3, sum)
+        );
+
+        ValueFlowQuery query = ValueFlowQuery.from(result);
+
+        assertEquals(Set.of(a, b), query.getDependencies(sum), "sum depends on both operands");
+        assertTrue(query.getUses(a).contains(add), "a is used by the add");
+        assertTrue(query.getUses(b).contains(add), "b is used by the add");
+        assertTrue(query.flowsTo(a, sum), "a flows to sum");
+        assertTrue(query.flowsTo(b, sum), "b flows to sum");
+        assertFalse(query.flowsTo(sum, a), "sum does not flow back to a");
+        assertEquals(List.of(a, sum), query.getFlowPath(a, sum), "flow path is a -> sum");
     }
 
     // ========== Flow Analysis Tests ==========

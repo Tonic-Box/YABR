@@ -57,18 +57,14 @@ public class MethodSignature {
             return;
         }
 
-        // Basic metrics
         this.maxStack = code.getMaxStack();
         this.maxLocals = code.getMaxLocals();
 
-        // Hash the bytecode
         this.bytecodeHash = hashBytecode(bytecode);
 
-        // Extract opcode sequence
         this.opcodeSequence = extractOpcodes(bytecode);
         this.instructionCount = opcodeSequence.length;
 
-        // Count patterns
         analyzeOpcodes(opcodeSequence);
     }
 
@@ -139,18 +135,21 @@ public class MethodSignature {
     private int getInstructionLength(int opcode, byte[] code, int offset) {
         // Handle variable-length instructions
         switch (opcode) {
-            case 170: // tableswitch
+            case 170: { // tableswitch
                 int padding = (4 - ((offset + 1) % 4)) % 4;
                 int low = readInt(code, offset + 1 + padding + 4);
                 int high = readInt(code, offset + 1 + padding + 8);
                 return 1 + padding + 12 + (high - low + 1) * 4;
-            case 171: // lookupswitch
-                padding = (4 - ((offset + 1) % 4)) % 4;
+            }
+            case 171: { // lookupswitch
+                int padding = (4 - ((offset + 1) % 4)) % 4;
                 int npairs = readInt(code, offset + 1 + padding + 4);
                 return 1 + padding + 8 + npairs * 8;
-            case 196: // wide
+            }
+            case 196: { // wide
                 int wideopcode = code[offset + 1] & 0xFF;
                 return (wideopcode == 132) ? 6 : 4; // iinc vs others
+            }
             default:
                 return INSTRUCTION_LENGTHS[opcode];
         }
@@ -180,7 +179,7 @@ public class MethodSignature {
                                 198, 199}) {
             INSTRUCTION_LENGTHS[op] = 3;
         }
-        // 4-byte instructions
+        // 4-5 byte instructions
         INSTRUCTION_LENGTHS[185] = 5; // invokeinterface
         INSTRUCTION_LENGTHS[186] = 5; // invokedynamic
         INSTRUCTION_LENGTHS[197] = 4; // multianewarray
@@ -221,7 +220,6 @@ public class MethodSignature {
         double score = 0.0;
         int comparisons = 0;
 
-        // Compare instruction count (allow 20% variance)
         if (instructionCount > 0 && other.instructionCount > 0) {
             double ratio = (double) Math.min(instructionCount, other.instructionCount) /
                           Math.max(instructionCount, other.instructionCount);
@@ -229,19 +227,17 @@ public class MethodSignature {
             comparisons++;
         }
 
-        // Compare branch count
         if (branchCount > 0 || other.branchCount > 0) {
             int maxBranch = Math.max(branchCount, other.branchCount);
             int minBranch = Math.min(branchCount, other.branchCount);
-            score += (maxBranch == 0) ? 1.0 : (double) minBranch / maxBranch;
+            score += (double) minBranch / maxBranch;
             comparisons++;
         }
 
-        // Compare call count
         if (callCount > 0 || other.callCount > 0) {
             int maxCall = Math.max(callCount, other.callCount);
             int minCall = Math.min(callCount, other.callCount);
-            score += (maxCall == 0) ? 1.0 : (double) minCall / maxCall;
+            score += (double) minCall / maxCall;
             comparisons++;
         }
 
@@ -282,8 +278,8 @@ public class MethodSignature {
 
         for (int i = 0; i < sampleSize && i < a.length; i++) {
             int idx = (i * a.length) / sampleSize;
-            for (int j = 0; j < b.length; j++) {
-                if (a[idx] == b[j]) {
+            for (int k : b) {
+                if (a[idx] == k) {
                     matches++;
                     break;
                 }

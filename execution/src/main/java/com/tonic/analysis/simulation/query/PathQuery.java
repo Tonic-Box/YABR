@@ -54,7 +54,6 @@ public class PathQuery {
     private void buildGraphs() {
         if (method == null) return;
 
-        // Build successor and predecessor maps
         for (IRBlock block : method.getBlocks()) {
             successors.computeIfAbsent(block, k -> new HashSet<>())
                 .addAll(block.getSuccessors());
@@ -64,7 +63,6 @@ public class PathQuery {
             }
         }
 
-        // Track which blocks were visited during simulation
         for (StateSnapshot snapshot : result.getAllStates()) {
             if (snapshot.getBlock() != null) {
                 visitedBlocks.add(snapshot.getBlock());
@@ -100,7 +98,6 @@ public class PathQuery {
      * Checks if one instruction can reach another.
      */
     public boolean canReach(IRInstruction from, IRInstruction to) {
-        // Find blocks containing these instructions
         IRBlock fromBlock = findBlockContaining(from);
         IRBlock toBlock = findBlockContaining(to);
 

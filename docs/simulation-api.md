@@ -457,16 +457,16 @@ int maxDepthOnPath = query.getMaxStackDepthOnPath(path, result);
 For cross-method analysis, use `InterProceduralEngine`:
 
 ```java
-SimulationContext ctx = SimulationContext.defaults()
-    .withMaxCallDepth(3);  // Follow calls up to 3 levels
+SimulationContext ctx = SimulationContext.forPool(classPool)
+    .withMaxCallDepth(3);  // follow calls up to 3 levels; callees are resolved from the pool
 
-InterProceduralEngine engine = new InterProceduralEngine(ctx, classPool);
+InterProceduralEngine engine = new InterProceduralEngine(ctx);
 engine.addListener(new MethodCallListener());
 
 SimulationResult result = engine.simulate(entryMethod);
 
-// Transitive call metrics
-CallMetrics metrics = result.getCallMetrics();
+// number of methods simulated, including followed callees
+int methodsSimulated = engine.getMethodsSimulated();
 ```
 
 ---

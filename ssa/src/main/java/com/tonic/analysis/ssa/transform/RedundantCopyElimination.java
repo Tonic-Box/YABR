@@ -32,10 +32,6 @@ public class RedundantCopyElimination implements IRTransform {
 
         changed |= removeRedundantLoadStore(method);
 
-        // Note: eliminateCopyChains() is intentionally not called here.
-        // CopyPropagation transform handles copy chain elimination.
-        // Calling it here would duplicate that work.
-
         return changed;
     }
 
@@ -46,11 +42,9 @@ public class RedundantCopyElimination implements IRTransform {
     private boolean removeIdentityCopies(IRMethod method) {
         boolean changed = false;
 
-        // The leading self-copy of a handler block is the caught-exception capture marker: the lowerer
-        // (BytecodeEmitter.identifyHandlerExceptionCaptures) turns it into the astore that stores the
-        // JVM-pushed exception off the handler's entry stack into its local. It is an identity copy by
-        // construction, so it must be excluded here — removing it as a no-op drops the astore and corrupts
-        // the handler (the exception is never stored; later loads of that local read a stale slot).
+        // Exclude the leading self-copy of each handler block: the lowerer turns it into the astore that
+        // captures the JVM-pushed exception. It is an identity copy by construction, so removing it as a
+        // no-op would drop the astore and corrupt the handler.
         Set<IRInstruction> exceptionCaptureMarkers = handlerExceptionCaptureMarkers(method);
 
         for (IRBlock block : method.getBlocks()) {
@@ -139,7 +133,6 @@ public class RedundantCopyElimination implements IRTransform {
                             toRemove.add(instr);
                         }
                     }
-                } else if (hasSideEffects(instr)) {
                 }
             }
 
@@ -156,72 +149,6 @@ public class RedundantCopyElimination implements IRTransform {
             for (IRInstruction instr : toRemove) {
                 block.removeInstruction(instr);
                 changed = true;
-            }
-        }
-
-        return changed;
-    }
-
-    /**
-     * Eliminates chains of copies by propagating the original source.
-     *
-     * Pattern: a = x; b = a; c = b -> replaces uses of b with a, uses of c with a
-     */
-    private boolean eliminateCopyChains(IRMethod method) {
-        boolean changed = false;
-
-        Map<SSAValue, Value> copyChains = new HashMap<>();
-
-        for (IRBlock block : method.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof CopyInstruction) {
-                    CopyInstruction copy = (CopyInstruction) instr;
-                    Value source = copy.getSource();
-                    SSAValue result = copy.getResult();
-
-                    Value ultimateSource = source;
-                    while (ultimateSource instanceof SSAValue) {
-                        SSAValue ssa = (SSAValue) ultimateSource;
-                        if (!copyChains.containsKey(ssa)) {
-                            break;
-                        }
-                        ultimateSource = copyChains.get(ssa);
-                    }
-
-                    if (!ultimateSource.equals(result)) {
-                        copyChains.put(result, ultimateSource);
-                    }
-                }
-            }
-        }
-
-        for (IRBlock block : method.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks())) {
-                    Value incoming = phi.getIncoming(pred);
-                    if (incoming instanceof SSAValue) {
-                        SSAValue ssa = (SSAValue) incoming;
-                        if (copyChains.containsKey(ssa)) {
-                            Value replacement = copyChains.get(ssa);
-                            phi.removeIncoming(pred);
-                            phi.addIncoming(replacement, pred);
-                            changed = true;
-                        }
-                    }
-                }
-            }
-
-            for (IRInstruction instr : block.getInstructions()) {
-                for (Value operand : new ArrayList<>(instr.getOperands())) {
-                    if (operand instanceof SSAValue) {
-                        SSAValue ssa = (SSAValue) operand;
-                        if (copyChains.containsKey(ssa)) {
-                            Value replacement = copyChains.get(ssa);
-                            instr.replaceOperand(operand, replacement);
-                            changed = true;
-                        }
-                    }
-                }
             }
         }
 
@@ -253,30 +180,4 @@ public class RedundantCopyElimination implements IRTransform {
         }
     }
 
-    /**
-     * Checks if an instruction has side effects that could affect local variables.
-     */
-    private boolean hasSideEffects(IRInstruction instr) {
-        if (instr instanceof InvokeInstruction) {
-            return true;
-        }
-        if (instr instanceof FieldAccessInstruction) {
-            FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-            if (fieldAccess.isStore()) {
-                return true;
-            }
-        }
-        if (instr instanceof ArrayAccessInstruction) {
-            ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
-            if (arrayAccess.isStore()) {
-                return true;
-            }
-        }
-        if (instr instanceof SimpleInstruction) {
-            SimpleInstruction simple = (SimpleInstruction) instr;
-            SimpleOp op = simple.getOp();
-            return op == SimpleOp.MONITORENTER || op == SimpleOp.MONITOREXIT;
-        }
-        return false;
-    }
 }

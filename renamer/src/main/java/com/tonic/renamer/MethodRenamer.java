@@ -32,15 +32,7 @@ public class MethodRenamer {
 
     private final RenamerContext context;
 
-    // Reference kinds for method handles
-    private static final int REF_getField = 1;
-    private static final int REF_getStatic = 2;
-    private static final int REF_putField = 3;
-    private static final int REF_putStatic = 4;
     private static final int REF_invokeVirtual = 5;
-    private static final int REF_invokeStatic = 6;
-    private static final int REF_invokeSpecial = 7;
-    private static final int REF_newInvokeSpecial = 8;
     private static final int REF_invokeInterface = 9;
 
     public MethodRenamer(RenamerContext context) {
@@ -79,7 +71,6 @@ public class MethodRenamer {
         Set<String> refOwners = expandToInheritingOwners(
                 Set.of(currentOwner), mapping.getOldName(), currentDescriptor);
 
-        // Find and rename the declaration
         ClassFile ownerClass = context.getClass(currentOwner);
         if (ownerClass != null) {
             renameMethodDeclaration(ownerClass, mapping.getOldName(), currentDescriptor, mapping.getNewName());
@@ -116,7 +107,6 @@ public class MethodRenamer {
             ownerNames.add(node.getName());
         }
 
-        // Also add the current owner
         ownerNames.add(currentOwner);
 
         // Resolve inheriting call-site owners BEFORE renaming declarations (the resolution walks the superclass
@@ -125,7 +115,6 @@ public class MethodRenamer {
         // descendant that resolves this method to one of the declaring owners (ownerNames is the override set).
         Set<String> refOwners = expandToInheritingOwners(ownerNames, mapping.getOldName(), currentDescriptor);
 
-        // Rename declarations in all affected classes
         for (String ownerName : ownerNames) {
             ClassFile cf = context.getClass(ownerName);
             if (cf != null) {
@@ -192,10 +181,8 @@ public class MethodRenamer {
     private void renameMethodDeclaration(ClassFile cf, String oldName, String descriptor, String newName) {
         for (MethodEntry method : cf.getMethods()) {
             if (method.getName().equals(oldName) && method.getDesc().equals(descriptor)) {
-                // Update the MethodEntry
                 method.setName(newName);
 
-                // Update the constant pool name Utf8
                 ConstPool cp = cf.getConstPool();
                 int nameIndex = method.getNameIndex();
                 Utf8Item nameUtf8 = (Utf8Item) cp.getItem(nameIndex);
@@ -211,7 +198,6 @@ public class MethodRenamer {
     private void updateMethodCallSites(ClassFile cf, String owner, String oldName, String descriptor, String newName) {
         ConstPool cp = cf.getConstPool();
 
-        // Update MethodRefItem entries
         for (int i = 1; i < cp.getItems().size(); i++) {
             Item<?> item = cp.getItems().get(i);
             if (item == null) continue;
@@ -230,7 +216,6 @@ public class MethodRenamer {
             }
         }
 
-        // Update MethodHandle items that reference methods
         updateMethodHandles(cf, owner, oldName, descriptor, newName);
 
         // Update bootstrap method arguments (for lambdas)
@@ -241,14 +226,12 @@ public class MethodRenamer {
      * Checks if a MethodRefItem matches the target method.
      */
     private boolean matchesMethodRef(ConstPool cp, MethodRefItem methodRef, String owner, String name, String descriptor) {
-        // Get owner class name
         ClassRefItem classRef = (ClassRefItem) cp.getItem(methodRef.getValue().getClassIndex());
         Utf8Item ownerUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
         if (!ownerUtf8.getValue().equals(owner)) {
             return false;
         }
 
-        // Get name and descriptor
         NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(methodRef.getValue().getNameAndTypeIndex());
         nat.setConstPool(cp);
         return nat.getName().equals(name) && nat.getDescriptor().equals(descriptor);
@@ -258,14 +241,12 @@ public class MethodRenamer {
      * Checks if an InterfaceRefItem matches the target method.
      */
     private boolean matchesInterfaceRef(ConstPool cp, InterfaceRefItem ifaceRef, String owner, String name, String descriptor) {
-        // Get owner class name
         ClassRefItem classRef = (ClassRefItem) cp.getItem(ifaceRef.getValue().getClassIndex());
         Utf8Item ownerUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
         if (!ownerUtf8.getValue().equals(owner)) {
             return false;
         }
 
-        // Get name and descriptor
         NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(ifaceRef.getValue().getNameAndTypeIndex());
         nat.setConstPool(cp);
         return nat.getName().equals(name) && nat.getDescriptor().equals(descriptor);

@@ -32,6 +32,7 @@ public class IRMethod {
     private IRBlock entryBlock;
 
     private final List<ExceptionHandler> exceptionHandlers;
+    private final Map<IRBlock, SSAValue> handlerExceptionValues = new HashMap<>();
 
     private IRType returnType;
     @Setter
@@ -153,6 +154,26 @@ public class IRMethod {
      */
     public void addExceptionHandler(ExceptionHandler handler) {
         exceptionHandlers.add(handler);
+    }
+
+    /**
+     * Records the caught-exception value for each handler block, as recovered by the bytecode lifter.
+     *
+     * @param values map from handler block to the SSA value holding the caught exception
+     */
+    public void setHandlerExceptionValues(Map<IRBlock, SSAValue> values) {
+        handlerExceptionValues.clear();
+        handlerExceptionValues.putAll(values);
+    }
+
+    /**
+     * Returns the caught-exception value for a handler block, or null if none is known.
+     *
+     * @param handlerBlock the handler block
+     * @return the SSA value holding the caught exception, or null
+     */
+    public SSAValue getHandlerExceptionValue(IRBlock handlerBlock) {
+        return handlerExceptionValues.get(handlerBlock);
     }
 
     /**

@@ -85,7 +85,6 @@ public class RenamerContext {
      * @return the ClassFile, or null if not found
      */
     public ClassFile getClass(String internalName) {
-        // First try direct lookup
         ClassFile cf = classPool.get(internalName);
         if (cf != null) {
             return cf;

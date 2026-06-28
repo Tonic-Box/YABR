@@ -5,6 +5,7 @@ import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Represents an entry in the InnerClasses attribute.
@@ -13,7 +14,10 @@ import lombok.Getter;
 public class InnerClassEntry {
     private final ConstPool constPool;
     @Getter
-    private final int innerClassInfoIndex, outerClassInfoIndex, innerNameIndex, innerClassAccessFlags;
+    private final int innerClassInfoIndex, outerClassInfoIndex, innerClassAccessFlags;
+    @Getter
+    @Setter
+    private int innerNameIndex;
 
     /**
      * Constructs an inner class entry.

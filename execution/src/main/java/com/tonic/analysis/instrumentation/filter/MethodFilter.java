@@ -63,7 +63,6 @@ public class MethodFilter implements InstrumentationFilter {
         String methodName = method.getName();
         String methodDesc = method.getDesc();
 
-        // Check name
         if (nameRegex != null) {
             if (!nameRegex.matcher(methodName).matches()) {
                 return false;
@@ -72,15 +71,11 @@ public class MethodFilter implements InstrumentationFilter {
             return false;
         }
 
-        // Check descriptor if specified
         if (descriptorPattern != null) {
             if (descriptorRegex != null) {
-                if (!descriptorRegex.matcher(methodDesc).matches()) {
-                    return false;
-                }
-            } else if (!methodDesc.equals(descriptorPattern)) {
-                return false;
+                return descriptorRegex.matcher(methodDesc).matches();
             }
+            else return methodDesc.equals(descriptorPattern);
         }
 
         return true;

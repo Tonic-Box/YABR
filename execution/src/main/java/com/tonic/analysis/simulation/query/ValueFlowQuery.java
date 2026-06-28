@@ -4,6 +4,7 @@ import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.StateSnapshot;
 import com.tonic.analysis.simulation.state.SimValue;
 import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
 
@@ -49,23 +50,54 @@ public class ValueFlowQuery {
     }
 
     private void buildFlowGraph() {
-        // Build def-use chains from state snapshots
+        // Reverse maps used to bridge the IR-level def-use (instruction operands) to SimValues:
+        // which SimValue each instruction produced, and which instruction defines each SSA value.
+        Map<IRInstruction, SimValue> producedBy = new HashMap<>();
+        Map<Value, IRInstruction> ssaDef = new HashMap<>();
+
         for (StateSnapshot snapshot : result.getAllStates()) {
+            indexSsaDefs(snapshot, ssaDef);
+
             IRInstruction instr = getCurrentInstruction(snapshot);
             if (instr == null) continue;
 
-            // Track stack values produced by this instruction
-            for (SimValue stackValue : snapshot.getStackValues()) {
-                if (stackValue != null && stackValue.getSourceInstruction() == instr) {
-                    definitions.put(stackValue, instr);
+            for (SimValue value : valuesIn(snapshot)) {
+                if (value != null && value.getSourceInstruction() == instr) {
+                    definitions.put(value, instr);
+                    producedBy.putIfAbsent(instr, value);
                 }
             }
+        }
 
-            // Track local values produced by this instruction
-            for (SimValue localValue : snapshot.getLocalValues().values()) {
-                if (localValue != null && localValue.getSourceInstruction() == instr) {
-                    definitions.put(localValue, instr);
+        // An instruction's IR operands resolve (through their producing instruction) to the SimValues
+        // it consumes: each produced value depends on those inputs, and each input is used by the
+        // consuming instruction.
+        for (Map.Entry<IRInstruction, SimValue> produced : producedBy.entrySet()) {
+            for (Value operand : produced.getKey().getOperands()) {
+                IRInstruction def = ssaDef.get(operand);
+                SimValue input = def == null ? null : producedBy.get(def);
+                if (input == null || input == produced.getValue()) {
+                    continue;
                 }
+                dependencies.computeIfAbsent(produced.getValue(), k -> new HashSet<>()).add(input);
+                uses.computeIfAbsent(input, k -> new ArrayList<>()).add(produced.getKey());
+            }
+        }
+    }
+
+    private List<SimValue> valuesIn(StateSnapshot snapshot) {
+        List<SimValue> values = new ArrayList<>(snapshot.getStackValues());
+        values.addAll(snapshot.getLocalValues().values());
+        return values;
+    }
+
+    private void indexSsaDefs(StateSnapshot snapshot, Map<Value, IRInstruction> ssaDef) {
+        if (snapshot.getBlock() == null) {
+            return;
+        }
+        for (IRInstruction instr : snapshot.getBlock().getInstructions()) {
+            if (instr.getResult() != null) {
+                ssaDef.putIfAbsent(instr.getResult(), instr);
             }
         }
     }
@@ -85,7 +117,6 @@ public class ValueFlowQuery {
      */
     public IRInstruction getDefiningInstruction(SimValue value) {
         if (value == null) return null;
-        // First check our tracked definitions
         IRInstruction def = definitions.get(value);
         if (def != null) return def;
         // Fall back to the source instruction stored in the value

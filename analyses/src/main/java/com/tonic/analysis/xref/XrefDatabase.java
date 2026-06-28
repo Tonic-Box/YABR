@@ -5,7 +5,6 @@ import com.tonic.analysis.common.MethodReference;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Indexed database for cross-references with fast lookup capabilities.
@@ -50,15 +49,12 @@ public class XrefDatabase {
     public void addXref(Xref xref) {
         allXrefs.add(xref);
 
-        // Index by target class
         byTargetClass.computeIfAbsent(xref.getTargetClass(), k ->
             Collections.synchronizedList(new ArrayList<>())).add(xref);
 
-        // Index by source class
         bySourceClass.computeIfAbsent(xref.getSourceClass(), k ->
             Collections.synchronizedList(new ArrayList<>())).add(xref);
 
-        // Index by target method
         if (xref.isMethodRef()) {
             MethodReference targetMethod = xref.getTargetMethodRef();
             if (targetMethod != null) {
@@ -67,14 +63,12 @@ public class XrefDatabase {
             }
         }
 
-        // Index by source method
         MethodReference sourceMethod = xref.getSourceMethodRef();
         if (sourceMethod != null && sourceMethod.getName() != null) {
             bySourceMethod.computeIfAbsent(sourceMethod, k ->
                 Collections.synchronizedList(new ArrayList<>())).add(xref);
         }
 
-        // Index by target field
         if (xref.isFieldRef()) {
             FieldReference targetField = xref.getTargetFieldRef();
             if (targetField != null) {
@@ -83,7 +77,6 @@ public class XrefDatabase {
             }
         }
 
-        // Index by type
         byType.computeIfAbsent(xref.getType(), k ->
             Collections.synchronizedList(new ArrayList<>())).add(xref);
     }

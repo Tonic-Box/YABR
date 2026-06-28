@@ -135,7 +135,6 @@ public class BytecodeEmitter {
             placed.add(block);
             order.add(block);
 
-            // Determine preferred fall-through successor
             IRBlock fallThrough = getFallThroughSuccessor(block);
 
             // Add fall-through first (will be processed next)
@@ -143,7 +142,6 @@ public class BytecodeEmitter {
                 worklist.addFirst(fallThrough);
             }
 
-            // Add other successors to back of queue
             for (IRBlock succ : block.getSuccessors()) {
                 if (!placed.contains(succ)) {
                     worklist.addLast(succ);
