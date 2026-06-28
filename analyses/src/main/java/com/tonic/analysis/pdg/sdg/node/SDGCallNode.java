@@ -7,28 +7,47 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@Getter
 public class SDGCallNode extends PDGNode {
 
     private final InvokeInstruction invokeInstruction;
     private final CallSite callSite;
     private final List<SDGActualInNode> actualIns = new ArrayList<>();
-    @Setter
     private SDGActualOutNode actualOut;
-    @Setter
     private SDGEntryNode targetEntry;
 
     public SDGCallNode(int id, InvokeInstruction invokeInstruction, CallSite callSite, IRBlock block) {
         super(id, PDGNodeType.CALL_SITE, block);
         this.invokeInstruction = invokeInstruction;
         this.callSite = callSite;
+    }
+
+    public InvokeInstruction getInvokeInstruction() {
+        return invokeInstruction;
+    }
+
+    public CallSite getCallSite() {
+        return callSite;
+    }
+
+    public SDGActualOutNode getActualOut() {
+        return actualOut;
+    }
+
+    public void setActualOut(SDGActualOutNode actualOut) {
+        this.actualOut = actualOut;
+    }
+
+    public SDGEntryNode getTargetEntry() {
+        return targetEntry;
+    }
+
+    public void setTargetEntry(SDGEntryNode targetEntry) {
+        this.targetEntry = targetEntry;
     }
 
     public void addActualIn(SDGActualInNode actualIn) {

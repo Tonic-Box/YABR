@@ -5,11 +5,8 @@ import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-
 import java.util.List;
 
-@Getter
 public class PDGInstructionNode extends PDGNode {
 
     private final IRInstruction instruction;
@@ -26,6 +23,14 @@ public class PDGInstructionNode extends PDGNode {
             return PDGNodeType.PHI;
         }
         return PDGNodeType.INSTRUCTION;
+    }
+
+    public IRInstruction getInstruction() {
+        return instruction;
+    }
+
+    public int getInstructionIndex() {
+        return instructionIndex;
     }
 
     @Override

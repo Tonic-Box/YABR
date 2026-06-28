@@ -3,14 +3,12 @@ package com.tonic.analysis.pdg.node;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
 public class PDGRegionNode extends PDGNode {
 
     private final String regionName;
@@ -23,6 +21,14 @@ public class PDGRegionNode extends PDGNode {
         if (primaryBlock != null) {
             coveredBlocks.add(primaryBlock);
         }
+    }
+
+    public String getRegionName() {
+        return regionName;
+    }
+
+    public Set<IRBlock> getCoveredBlocks() {
+        return coveredBlocks;
     }
 
     public static PDGRegionNode createEntry(int id, String methodName, IRBlock entryBlock) {

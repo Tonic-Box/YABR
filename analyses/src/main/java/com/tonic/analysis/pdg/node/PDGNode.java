@@ -4,33 +4,59 @@ import com.tonic.analysis.pdg.edge.PDGEdge;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@Getter
 public abstract class PDGNode {
 
     private final int id;
     private final PDGNodeType type;
-    @Setter
     private IRBlock block;
 
     private final List<PDGEdge> incomingEdges = new ArrayList<>();
     private final List<PDGEdge> outgoingEdges = new ArrayList<>();
 
-    @Setter
     private boolean tainted;
-    @Setter
     private String taintLabel;
 
     protected PDGNode(int id, PDGNodeType type, IRBlock block) {
         this.id = id;
         this.type = type;
         this.block = block;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public PDGNodeType getType() {
+        return type;
+    }
+
+    public IRBlock getBlock() {
+        return block;
+    }
+
+    public void setBlock(IRBlock block) {
+        this.block = block;
+    }
+
+    public boolean isTainted() {
+        return tainted;
+    }
+
+    public void setTainted(boolean tainted) {
+        this.tainted = tainted;
+    }
+
+    public String getTaintLabel() {
+        return taintLabel;
+    }
+
+    public void setTaintLabel(String taintLabel) {
+        this.taintLabel = taintLabel;
     }
 
     public abstract String getLabel();

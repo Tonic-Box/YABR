@@ -5,16 +5,12 @@ import com.tonic.analysis.pdg.node.PDGNodeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Collections;
 import java.util.List;
 
-@Getter
 public class SDGFormalInNode extends PDGNode {
 
-    @Setter
     private SDGEntryNode entryNode;
     private final int parameterIndex;
     private final SSAValue formalParameter;
@@ -26,6 +22,26 @@ public class SDGFormalInNode extends PDGNode {
         this.parameterIndex = parameterIndex;
         this.formalParameter = formalParameter;
         this.parameterType = parameterType;
+    }
+
+    public SDGEntryNode getEntryNode() {
+        return entryNode;
+    }
+
+    public void setEntryNode(SDGEntryNode entryNode) {
+        this.entryNode = entryNode;
+    }
+
+    public int getParameterIndex() {
+        return parameterIndex;
+    }
+
+    public SSAValue getFormalParameter() {
+        return formalParameter;
+    }
+
+    public String getParameterType() {
+        return parameterType;
     }
 
     @Override

@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt5&#10;- analyses" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt6&#10;- analyses" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -150,14 +150,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00031" summary="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly">
-      <option name="closed" value="true" />
-      <created>1780969996921</created>
-      <option name="number" value="00031" />
-      <option name="presentableId" value="LOCAL-00031" />
-      <option name="project" value="LOCAL" />
-      <updated>1780969996921</updated>
     </task>
     <task id="LOCAL-00032" summary="- constant guard for force inlining">
       <option name="closed" value="true" />
@@ -543,7 +535,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782616266482</updated>
     </task>
-    <option name="localTasksCounter" value="80" />
+    <task id="LOCAL-00080" summary="Removal of Lombok: pt6&#10;- analyses">
+      <option name="closed" value="true" />
+      <created>1782616669891</created>
+      <option name="number" value="00080" />
+      <option name="presentableId" value="LOCAL-00080" />
+      <option name="project" value="LOCAL" />
+      <updated>1782616669891</updated>
+    </task>
+    <option name="localTasksCounter" value="81" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -558,7 +558,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- TypeInference: handle WIDE-prefixed load/store (locals &gt; 255) instead of treating them as frame no-ops&#10;- BytecodeLifter: propagate primitive type around phi cycles (long loop var seeded by a const was mis-typed int)&#10;- BytecodeLifter/BytecodeEmitter: emit the caught-exception astore at handler entry; mark it via the real exception value (SSA IR unchanged)&#10;- BytecodeLifter: populate ExceptionHandler.tryBlocks so the regenerated table no longer spans the handler&#10;- Fix two tests that codified the old bugs (testWide, removeMethodCall)" />
     <MESSAGE value="CodeWriter.replaceInstructions" />
     <MESSAGE value="Fix unresolved class constants in .class literals, casts, and instanceof&#10;&#10;lowerClass/lowerCast/lowerInstanceOf emitted bare simple names (e.g. Main instead of osrs/dev/Main) for same-package/imported types, causing NoClassDefFoundError at runtime. Resolve the type name through the TypeResolver via a shared helper. Adds ClassLiteralResolutionTest." />
     <MESSAGE value="- Fix recompile fidelity: qualified class constants + JDK return types" />
@@ -583,6 +582,7 @@
     <MESSAGE value="Removal of Lombok: pt3&#10;- execution" />
     <MESSAGE value="Removal of Lombok: pt4&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt5&#10;- analyses" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt5&#10;- analyses" />
+    <MESSAGE value="Removal of Lombok: pt6&#10;- analyses" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt6&#10;- analyses" />
   </component>
 </project>

@@ -5,16 +5,12 @@ import com.tonic.analysis.pdg.node.PDGNodeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Collections;
 import java.util.List;
 
-@Getter
 public class SDGActualInNode extends PDGNode {
 
-    @Setter
     private SDGCallNode callNode;
     private final int parameterIndex;
     private final Value actualValue;
@@ -23,6 +19,22 @@ public class SDGActualInNode extends PDGNode {
         super(id, PDGNodeType.ACTUAL_IN, block);
         this.parameterIndex = parameterIndex;
         this.actualValue = actualValue;
+    }
+
+    public SDGCallNode getCallNode() {
+        return callNode;
+    }
+
+    public void setCallNode(SDGCallNode callNode) {
+        this.callNode = callNode;
+    }
+
+    public int getParameterIndex() {
+        return parameterIndex;
+    }
+
+    public Value getActualValue() {
+        return actualValue;
     }
 
     @Override
