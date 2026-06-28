@@ -4,12 +4,10 @@ import com.tonic.analysis.cpg.CodePropertyGraph;
 import com.tonic.analysis.cpg.edge.CPGEdge;
 import com.tonic.analysis.cpg.edge.CPGEdgeType;
 import com.tonic.analysis.cpg.node.*;
-import lombok.Getter;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-@Getter
 public class TaintQuery {
 
     private final CodePropertyGraph cpg;
@@ -26,6 +24,30 @@ public class TaintQuery {
         this.sanitizers = new LinkedHashSet<>();
         this.maxPathLength = 50;
         this.interprocedural = true;
+    }
+
+    public CodePropertyGraph getCpg() {
+        return cpg;
+    }
+
+    public List<TaintSource> getSources() {
+        return sources;
+    }
+
+    public List<TaintSink> getSinks() {
+        return sinks;
+    }
+
+    public Set<Sanitizer> getSanitizers() {
+        return sanitizers;
+    }
+
+    public int getMaxPathLength() {
+        return maxPathLength;
+    }
+
+    public boolean isInterprocedural() {
+        return interprocedural;
     }
 
     public TaintQuery addSource(TaintSource source) {
@@ -292,7 +314,6 @@ public class TaintQuery {
         }
     }
 
-    @Getter
     public static class Sanitizer {
         private final String ownerPattern;
         private final String methodPattern;
@@ -304,6 +325,22 @@ public class TaintQuery {
             this.methodPattern = methodPattern;
             this.compiledOwner = Pattern.compile(ownerPattern);
             this.compiledMethod = Pattern.compile(methodPattern);
+        }
+
+        public String getOwnerPattern() {
+            return ownerPattern;
+        }
+
+        public String getMethodPattern() {
+            return methodPattern;
+        }
+
+        public Pattern getCompiledOwner() {
+            return compiledOwner;
+        }
+
+        public Pattern getCompiledMethod() {
+            return compiledMethod;
         }
 
         public boolean matches(String owner, String method) {

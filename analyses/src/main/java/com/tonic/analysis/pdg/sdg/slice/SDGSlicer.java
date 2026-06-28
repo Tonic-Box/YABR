@@ -7,11 +7,9 @@ import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.pdg.sdg.SDG;
 import com.tonic.analysis.pdg.sdg.node.*;
 import com.tonic.analysis.pdg.slice.SliceResult;
-import lombok.Getter;
 
 import java.util.*;
 
-@Getter
 public class SDGSlicer {
 
     private final SDG sdg;
@@ -20,6 +18,18 @@ public class SDGSlicer {
 
     public SDGSlicer(SDG sdg) {
         this.sdg = sdg;
+    }
+
+    public SDG getSdg() {
+        return sdg;
+    }
+
+    public boolean isUseSummaryEdges() {
+        return useSummaryEdges;
+    }
+
+    public boolean isContextSensitive() {
+        return contextSensitive;
     }
 
     public SDGSlicer withSummaryEdges(boolean use) {

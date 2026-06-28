@@ -27,7 +27,6 @@ import com.tonic.parser.constpool.MethodRefItem;
 import com.tonic.parser.constpool.structure.MethodHandle;
 import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
-import lombok.Getter;
 
 import java.util.List;
 import java.util.Set;
@@ -36,15 +35,11 @@ import java.util.Set;
  * Builds a CallGraph from a ClassPool by scanning all methods for invocations.
  */
 public class CallGraphBuilder {
-
-    /**
-     * Builds a complete call graph from the given ClassPool.
-     *
-     * @param classPool the ClassPool containing all classes to analyze
-     * @return the built CallGraph
-     */
-    @Getter
     private static String currentMethod = null;
+
+    public static String getCurrentMethod() {
+        return currentMethod;
+    }
 
     public static CallGraph build(ClassPool classPool) {
         ClassHierarchy hierarchy = ClassHierarchyBuilder.build(classPool);

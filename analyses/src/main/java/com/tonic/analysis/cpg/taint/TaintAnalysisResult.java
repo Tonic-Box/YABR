@@ -1,11 +1,8 @@
 package com.tonic.analysis.cpg.taint;
 
-import lombok.Getter;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Getter
 public class TaintAnalysisResult {
 
     private final List<TaintPath> paths;
@@ -16,6 +13,18 @@ public class TaintAnalysisResult {
         this.paths = new ArrayList<>();
         this.pathsByVulnerability = new EnumMap<>(VulnerabilityType.class);
         this.pathsBySeverity = new EnumMap<>(Severity.class);
+    }
+
+    public List<TaintPath> getPaths() {
+        return paths;
+    }
+
+    public Map<VulnerabilityType, List<TaintPath>> getPathsByVulnerability() {
+        return pathsByVulnerability;
+    }
+
+    public Map<Severity, List<TaintPath>> getPathsBySeverity() {
+        return pathsBySeverity;
     }
 
     public void addPath(TaintPath path) {

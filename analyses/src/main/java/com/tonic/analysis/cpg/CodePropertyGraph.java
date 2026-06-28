@@ -6,12 +6,10 @@ import com.tonic.analysis.cpg.node.*;
 import com.tonic.analysis.cpg.query.CPGQuery;
 import com.tonic.parser.ClassPool;
 import com.tonic.analysis.ssa.ir.IRInstruction;
-import lombok.Getter;
 
 import java.util.*;
 import java.util.stream.Stream;
 
-@Getter
 public class CodePropertyGraph {
 
     private final ClassPool classPool;
@@ -23,6 +21,26 @@ public class CodePropertyGraph {
 
     public CodePropertyGraph(ClassPool classPool) {
         this.classPool = classPool;
+    }
+
+    public ClassPool getClassPool() {
+        return classPool;
+    }
+
+    public Map<Long, CPGNode> getNodes() {
+        return nodes;
+    }
+
+    public Set<CPGEdge> getEdges() {
+        return edges;
+    }
+
+    public CPGIndex getIndex() {
+        return index;
+    }
+
+    public long getNextNodeId() {
+        return nextNodeId;
     }
 
     public long allocateNodeId() {

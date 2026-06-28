@@ -22,12 +22,10 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
-import lombok.Getter;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Getter
 public class CPGBuilder {
 
     private final ClassPool classPool;
@@ -44,6 +42,46 @@ public class CPGBuilder {
 
     public CPGBuilder(ClassPool classPool) {
         this.classPool = classPool;
+    }
+
+    public ClassPool getClassPool() {
+        return classPool;
+    }
+
+    public CodePropertyGraph getCpg() {
+        return cpg;
+    }
+
+    public CallGraph getCallGraph() {
+        return callGraph;
+    }
+
+    public boolean isIncludeCallGraph() {
+        return includeCallGraph;
+    }
+
+    public boolean isIncludePDG() {
+        return includePDG;
+    }
+
+    public boolean isIncludeSDG() {
+        return includeSDG;
+    }
+
+    public Map<MethodReference, IRMethod> getIrMethods() {
+        return irMethods;
+    }
+
+    public Map<IRInstruction, InstructionNode> getInstructionNodes() {
+        return instructionNodes;
+    }
+
+    public Map<IRBlock, BlockNode> getBlockNodes() {
+        return blockNodes;
+    }
+
+    public Map<MethodReference, MethodNode> getMethodNodes() {
+        return methodNodes;
     }
 
     public static CPGBuilder forClassPool(ClassPool pool) {

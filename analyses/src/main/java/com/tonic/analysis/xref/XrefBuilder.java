@@ -22,7 +22,6 @@ import com.tonic.parser.constpool.InterfaceRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodHandleItem;
 import com.tonic.parser.constpool.MethodRefItem;
-import lombok.Getter;
 
 import java.util.function.Consumer;
 
@@ -41,11 +40,6 @@ import java.util.function.Consumer;
 public class XrefBuilder {
 
     private final ClassPool classPool;
-    /**
-     * -- GETTER --
-     *  Get the database being built (for incremental access).
-     */
-    @Getter
     private final XrefDatabase database;
     private Consumer<String> progressCallback;
     private int methodsProcessed;
@@ -53,6 +47,11 @@ public class XrefBuilder {
     public XrefBuilder(ClassPool classPool) {
         this.classPool = classPool;
         this.database = new XrefDatabase();
+    }
+
+    /** Returns the database being built (for incremental access). */
+    public XrefDatabase getDatabase() {
+        return database;
     }
 
     /**

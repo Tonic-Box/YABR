@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt6&#10;- analyses" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt7&#10;- analyses" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -150,14 +150,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00032" summary="- constant guard for force inlining">
-      <option name="closed" value="true" />
-      <created>1781058293739</created>
-      <option name="number" value="00032" />
-      <option name="presentableId" value="LOCAL-00032" />
-      <option name="project" value="LOCAL" />
-      <updated>1781058293739</updated>
     </task>
     <task id="LOCAL-00033" summary="Enrich bytecode disassembly via single decoder + verbose options&#10;- CodePrinter now parses via InstructionFactory + renders via InstructionRenderer visitor (drops duplicate 542-line decoder, debug logs, dead helpers)&#10;- Add DisassemblyOptions (terse default = byte-identical legacy; verbose = all enrichments) + CodeAttribute.prettyPrintCode(options)&#10;- Verbose: resolved invokedynamic + bootstrap, line numbers, local names/types, stack-frame markers, exception table with resolved catch types&#10;- Centralize CP-reference resolution in ConstPoolFormat&#10;- Fix invokedynamic/invokeinterface resolution (were mislabeled/UnknownReference)&#10;- Fix latent bugs: empty InvokeStaticInstruction.accept(), JSR_W crash, NewArray bad-atype crash, wide loads mis-modeled as ILoadInstruction, UnknownInstruction zero-fill write() corruption, getLength()/factory log spam&#10;- Update docs">
       <option name="closed" value="true" />
@@ -543,7 +535,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782616669891</updated>
     </task>
-    <option name="localTasksCounter" value="81" />
+    <task id="LOCAL-00081" summary="Removal of Lombok: pt7&#10;- analyses">
+      <option name="closed" value="true" />
+      <created>1782617289786</created>
+      <option name="number" value="00081" />
+      <option name="presentableId" value="LOCAL-00081" />
+      <option name="project" value="LOCAL" />
+      <updated>1782617289786</updated>
+    </task>
+    <option name="localTasksCounter" value="82" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -558,7 +558,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="CodeWriter.replaceInstructions" />
     <MESSAGE value="Fix unresolved class constants in .class literals, casts, and instanceof&#10;&#10;lowerClass/lowerCast/lowerInstanceOf emitted bare simple names (e.g. Main instead of osrs/dev/Main) for same-package/imported types, causing NoClassDefFoundError at runtime. Resolve the type name through the TypeResolver via a shared helper. Adds ClassLiteralResolutionTest." />
     <MESSAGE value="- Fix recompile fidelity: qualified class constants + JDK return types" />
     <MESSAGE value="- BinaryOpInstruction.swapOperands" />
@@ -583,6 +582,7 @@
     <MESSAGE value="Removal of Lombok: pt4&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt5&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt6&#10;- analyses" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt6&#10;- analyses" />
+    <MESSAGE value="Removal of Lombok: pt7&#10;- analyses" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt7&#10;- analyses" />
   </component>
 </project>

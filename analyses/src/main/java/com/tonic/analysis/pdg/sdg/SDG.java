@@ -7,11 +7,9 @@ import com.tonic.analysis.pdg.edge.PDGDependenceType;
 import com.tonic.analysis.pdg.edge.PDGEdge;
 import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.pdg.sdg.node.*;
-import lombok.Getter;
 
 import java.util.*;
 
-@Getter
 public class SDG {
 
     private final CallGraph callGraph;
@@ -30,6 +28,34 @@ public class SDG {
 
     public SDG(CallGraph callGraph) {
         this.callGraph = callGraph;
+    }
+
+    public CallGraph getCallGraph() {
+        return callGraph;
+    }
+
+    public Map<MethodReference, PDG> getMethodPDGs() {
+        return methodPDGs;
+    }
+
+    public Map<MethodReference, SDGEntryNode> getMethodEntries() {
+        return methodEntries;
+    }
+
+    public List<PDGEdge> getParameterEdges() {
+        return parameterEdges;
+    }
+
+    public List<PDGEdge> getSummaryEdges() {
+        return summaryEdges;
+    }
+
+    public Map<SDGCallNode, Set<SDGEntryNode>> getCallToTargets() {
+        return callToTargets;
+    }
+
+    public int getNextNodeId() {
+        return nextNodeId;
     }
 
     public int allocateNodeId() {

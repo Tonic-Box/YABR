@@ -18,11 +18,9 @@ import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.util.DescriptorUtil;
-import lombok.Getter;
 
 import java.util.*;
 
-@Getter
 public class SDGBuilder {
 
     private final CallGraph callGraph;
@@ -34,6 +32,22 @@ public class SDGBuilder {
     public SDGBuilder(CallGraph callGraph, Map<MethodReference, IRMethod> irMethods) {
         this.callGraph = callGraph;
         this.irMethods = irMethods;
+    }
+
+    public CallGraph getCallGraph() {
+        return callGraph;
+    }
+
+    public Map<MethodReference, IRMethod> getIrMethods() {
+        return irMethods;
+    }
+
+    public SDG getSdg() {
+        return sdg;
+    }
+
+    public Map<InvokeInstruction, SDGCallNode> getInvokeToCallNode() {
+        return invokeToCallNode;
     }
 
     public static SDG build(CallGraph callGraph, Map<MethodReference, IRMethod> irMethods) {

@@ -16,11 +16,9 @@ import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
 
 import java.util.*;
 
-@Getter
 public class PDGBuilder {
 
     private final IRMethod method;
@@ -34,6 +32,26 @@ public class PDGBuilder {
         this.method = method;
         this.postDomTree = new PostDominatorTree(method);
         this.defUseChains = new DefUseChains(method);
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public PostDominatorTree getPostDomTree() {
+        return postDomTree;
+    }
+
+    public DefUseChains getDefUseChains() {
+        return defUseChains;
+    }
+
+    public PDG getPdg() {
+        return pdg;
+    }
+
+    public Map<IRBlock, PDGNode> getBlockTerminatorNodes() {
+        return blockTerminatorNodes;
     }
 
     public static PDG build(IRMethod method) {

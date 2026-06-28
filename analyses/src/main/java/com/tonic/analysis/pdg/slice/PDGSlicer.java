@@ -3,12 +3,10 @@ package com.tonic.analysis.pdg.slice;
 import com.tonic.analysis.pdg.PDG;
 import com.tonic.analysis.pdg.edge.PDGEdge;
 import com.tonic.analysis.pdg.node.PDGNode;
-import lombok.Getter;
 
 import java.util.*;
 import java.util.function.Predicate;
 
-@Getter
 public class PDGSlicer {
 
     private final PDG pdg;
@@ -17,6 +15,18 @@ public class PDGSlicer {
 
     public PDGSlicer(PDG pdg) {
         this.pdg = pdg;
+    }
+
+    public PDG getPdg() {
+        return pdg;
+    }
+
+    public boolean isIncludeControlDependencies() {
+        return includeControlDependencies;
+    }
+
+    public boolean isIncludeDataDependencies() {
+        return includeDataDependencies;
     }
 
     public PDGSlicer withControlDependencies(boolean include) {

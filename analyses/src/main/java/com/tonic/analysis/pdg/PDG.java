@@ -10,11 +10,9 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
-import lombok.Getter;
 
 import java.util.*;
 
-@Getter
 public class PDG {
 
     private final IRMethod method;
@@ -34,6 +32,38 @@ public class PDG {
     public PDG(IRMethod method) {
         this.method = method;
         this.methodName = method.getName();
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public PDGRegionNode getEntryNode() {
+        return entryNode;
+    }
+
+    public PDGRegionNode getExitNode() {
+        return exitNode;
+    }
+
+    public Map<IRInstruction, PDGInstructionNode> getInstructionToNode() {
+        return instructionToNode;
+    }
+
+    public Map<SSAValue, PDGNode> getValueToNode() {
+        return valueToNode;
+    }
+
+    public Map<IRBlock, List<PDGNode>> getBlockToNodes() {
+        return blockToNodes;
+    }
+
+    public int getNextNodeId() {
+        return nextNodeId;
     }
 
     public int allocateNodeId() {

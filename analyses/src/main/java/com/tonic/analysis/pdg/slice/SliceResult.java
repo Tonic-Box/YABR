@@ -5,11 +5,9 @@ import com.tonic.analysis.pdg.node.PDGInstructionNode;
 import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.IRInstruction;
-import lombok.Getter;
 
 import java.util.*;
 
-@Getter
 public class SliceResult {
 
     public enum SliceType {
@@ -36,6 +34,14 @@ public class SliceResult {
         this.criterion.add(singleCriterion);
         this.nodes = new LinkedHashSet<>();
         this.edges = new LinkedHashSet<>();
+    }
+
+    public SliceType getType() {
+        return type;
+    }
+
+    public Set<PDGNode> getCriterion() {
+        return criterion;
     }
 
     public void addNode(PDGNode node) {

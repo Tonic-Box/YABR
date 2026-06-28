@@ -1,11 +1,9 @@
 package com.tonic.analysis.cpg.taint;
 
 import com.tonic.analysis.cpg.node.CPGNode;
-import lombok.Getter;
 
 import java.util.*;
 
-@Getter
 public class TaintPath {
 
     private final TaintSource source;
@@ -23,6 +21,30 @@ public class TaintPath {
         this.sinkNode = sinkNode;
         this.path = Collections.unmodifiableList(new ArrayList<>(path));
         this.sanitizers = new LinkedHashSet<>();
+    }
+
+    public TaintSource getSource() {
+        return source;
+    }
+
+    public TaintSink getSink() {
+        return sink;
+    }
+
+    public CPGNode getSourceNode() {
+        return sourceNode;
+    }
+
+    public CPGNode getSinkNode() {
+        return sinkNode;
+    }
+
+    public List<CPGNode> getPath() {
+        return path;
+    }
+
+    public Set<String> getSanitizers() {
+        return sanitizers;
     }
 
     public static Builder builder() {

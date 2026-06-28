@@ -5,7 +5,6 @@ import com.tonic.analysis.cpg.edge.CPGEdge;
 import com.tonic.analysis.cpg.edge.CPGEdgeType;
 import com.tonic.analysis.cpg.node.*;
 import com.tonic.analysis.ssa.ir.IRInstruction;
-import lombok.Getter;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -15,7 +14,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Getter
 public class CPGQuery {
 
     private final CodePropertyGraph cpg;
@@ -29,6 +27,14 @@ public class CPGQuery {
     private CPGQuery(CodePropertyGraph cpg, Stream<CPGNode> nodes) {
         this.cpg = cpg;
         this.currentNodes = nodes;
+    }
+
+    public CodePropertyGraph getCpg() {
+        return cpg;
+    }
+
+    public Stream<CPGNode> getCurrentNodes() {
+        return currentNodes;
     }
 
     public CPGQuery methods() {
