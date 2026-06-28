@@ -4,20 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt2&#10;- execution">
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/core/BytecodeEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/debug/DebugSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/frame/StackFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/heap/ObjectInstance.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/heap/ObjectInstance.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/resolve/ClassResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/execution/resolve/ClassResolver.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/ClassFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/ClassFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/FieldFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/FieldFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/MethodFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/MethodFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/PackageFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/PackageFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/VerificationError.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/VerificationError.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/VerificationResult.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/VerificationResult.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/Verifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/Verifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/VerifierConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/VerifierConfig.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt3&#10;- execution">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -164,14 +152,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00028" summary="- Fixed: standard UTF-8 was used for CONSTANT_Utf8 instead of JVMS modified UTF-8">
-      <option name="closed" value="true" />
-      <created>1780883648183</created>
-      <option name="number" value="00028" />
-      <option name="presentableId" value="LOCAL-00028" />
-      <option name="project" value="LOCAL" />
-      <updated>1780883648183</updated>
     </task>
     <task id="LOCAL-00029" summary="- CodeWriter: handle-keyed insertBefore/insertAfter/removeInstruction/replaceInstruction/replaceBody + cloneRange/cloneRangeWithTargets, all via a relink pass (branch/switch retarget, branch widening, exception table, frame regen). New ConstPoolRemapper + MethodGrafter for cross-pool method grafting (incl. invokedynamic bootstraps); ClassFile.redirectOwner and stripStackMapTables. Local-var clones use the narrowest encoding.&#10;&#10;- Fix CONSTANT_Utf8 to use JVMS modified UTF-8 (read + write) and FrameGenerator goto_w target computation.">
       <option name="closed" value="true" />
@@ -557,7 +537,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782614755095</updated>
     </task>
-    <option name="localTasksCounter" value="77" />
+    <task id="LOCAL-00077" summary="Removal of Lombok: pt3&#10;- execution">
+      <option name="closed" value="true" />
+      <created>1782615598037</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1782615598037</updated>
+    </task>
+    <option name="localTasksCounter" value="78" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -572,7 +560,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8" />
     <MESSAGE value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
     <MESSAGE value="- CopyPropagation replaced both chain-followers with one resolve()" />
     <MESSAGE value="- TypeInference: handle WIDE-prefixed load/store (locals &gt; 255) instead of treating them as frame no-ops&#10;- BytecodeLifter: propagate primitive type around phi cycles (long loop var seeded by a const was mis-typed int)&#10;- BytecodeLifter/BytecodeEmitter: emit the caught-exception astore at handler entry; mark it via the real exception value (SSA IR unchanged)&#10;- BytecodeLifter: populate ExceptionHandler.tryBlocks so the regenerated table no longer spans the handler&#10;- Fix two tests that codified the old bugs (testWide, removeMethodCall)" />
@@ -597,6 +584,7 @@
     <MESSAGE value="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup" />
     <MESSAGE value="Removal of Lombok: pt1&#10;- query module&#10;- renamer module" />
     <MESSAGE value="Removal of Lombok: pt2&#10;- execution" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt2&#10;- execution" />
+    <MESSAGE value="Removal of Lombok: pt3&#10;- execution" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt3&#10;- execution" />
   </component>
 </project>

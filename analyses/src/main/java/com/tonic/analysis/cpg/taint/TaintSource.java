@@ -1,11 +1,7 @@
 package com.tonic.analysis.cpg.taint;
 
-import lombok.Builder;
-import lombok.Getter;
 import java.util.regex.Pattern;
 
-@Getter
-@Builder
 public class TaintSource {
 
     private final String name;
@@ -19,6 +15,44 @@ public class TaintSource {
     private transient Pattern compiledOwnerPattern;
     private transient Pattern compiledMethodPattern;
     private transient Pattern compiledDescriptorPattern;
+
+    private TaintSource(Builder builder) {
+        this.name = builder.name;
+        this.ownerPattern = builder.ownerPattern;
+        this.methodPattern = builder.methodPattern;
+        this.descriptorPattern = builder.descriptorPattern;
+        this.taintedArgumentIndex = builder.taintedArgumentIndex;
+        this.taintsReturnValue = builder.taintsReturnValue;
+        this.taintType = builder.taintType;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getOwnerPattern() {
+        return ownerPattern;
+    }
+
+    public String getMethodPattern() {
+        return methodPattern;
+    }
+
+    public String getDescriptorPattern() {
+        return descriptorPattern;
+    }
+
+    public int getTaintedArgumentIndex() {
+        return taintedArgumentIndex;
+    }
+
+    public boolean isTaintsReturnValue() {
+        return taintsReturnValue;
+    }
+
+    public TaintType getTaintType() {
+        return taintType;
+    }
 
     public boolean matchesOwner(String owner) {
         if (ownerPattern == null) return true;
@@ -138,8 +172,61 @@ public class TaintSource {
             .build();
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     @Override
     public String toString() {
         return String.format("TaintSource[%s: %s.%s]", name, ownerPattern, methodPattern);
+    }
+
+    public static class Builder {
+        private String name;
+        private String ownerPattern;
+        private String methodPattern;
+        private String descriptorPattern;
+        private int taintedArgumentIndex;
+        private boolean taintsReturnValue;
+        private TaintType taintType;
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder ownerPattern(String ownerPattern) {
+            this.ownerPattern = ownerPattern;
+            return this;
+        }
+
+        public Builder methodPattern(String methodPattern) {
+            this.methodPattern = methodPattern;
+            return this;
+        }
+
+        public Builder descriptorPattern(String descriptorPattern) {
+            this.descriptorPattern = descriptorPattern;
+            return this;
+        }
+
+        public Builder taintedArgumentIndex(int taintedArgumentIndex) {
+            this.taintedArgumentIndex = taintedArgumentIndex;
+            return this;
+        }
+
+        public Builder taintsReturnValue(boolean taintsReturnValue) {
+            this.taintsReturnValue = taintsReturnValue;
+            return this;
+        }
+
+        public Builder taintType(TaintType taintType) {
+            this.taintType = taintType;
+            return this;
+        }
+
+        public TaintSource build() {
+            return new TaintSource(this);
+        }
     }
 }

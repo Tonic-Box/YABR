@@ -1,12 +1,7 @@
 package com.tonic.analysis.cpg.taint;
 
-import lombok.Builder;
-import lombok.Getter;
-
 import java.util.regex.Pattern;
 
-@Getter
-@Builder
 public class TaintSink {
 
     private final String name;
@@ -20,6 +15,44 @@ public class TaintSink {
     private transient Pattern compiledOwnerPattern;
     private transient Pattern compiledMethodPattern;
     private transient Pattern compiledDescriptorPattern;
+
+    private TaintSink(Builder builder) {
+        this.name = builder.name;
+        this.ownerPattern = builder.ownerPattern;
+        this.methodPattern = builder.methodPattern;
+        this.descriptorPattern = builder.descriptorPattern;
+        this.sensitiveArgumentIndex = builder.sensitiveArgumentIndex;
+        this.vulnerabilityType = builder.vulnerabilityType;
+        this.severity = builder.severity;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getOwnerPattern() {
+        return ownerPattern;
+    }
+
+    public String getMethodPattern() {
+        return methodPattern;
+    }
+
+    public String getDescriptorPattern() {
+        return descriptorPattern;
+    }
+
+    public int getSensitiveArgumentIndex() {
+        return sensitiveArgumentIndex;
+    }
+
+    public VulnerabilityType getVulnerabilityType() {
+        return vulnerabilityType;
+    }
+
+    public Severity getSeverity() {
+        return severity;
+    }
 
     public boolean matchesOwner(String owner) {
         if (ownerPattern == null) return true;
@@ -171,9 +204,62 @@ public class TaintSink {
             .build();
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     @Override
     public String toString() {
         return String.format("TaintSink[%s: %s.%s (%s)]",
             name, ownerPattern, methodPattern, severity);
+    }
+
+    public static class Builder {
+        private String name;
+        private String ownerPattern;
+        private String methodPattern;
+        private String descriptorPattern;
+        private int sensitiveArgumentIndex;
+        private VulnerabilityType vulnerabilityType;
+        private Severity severity;
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder ownerPattern(String ownerPattern) {
+            this.ownerPattern = ownerPattern;
+            return this;
+        }
+
+        public Builder methodPattern(String methodPattern) {
+            this.methodPattern = methodPattern;
+            return this;
+        }
+
+        public Builder descriptorPattern(String descriptorPattern) {
+            this.descriptorPattern = descriptorPattern;
+            return this;
+        }
+
+        public Builder sensitiveArgumentIndex(int sensitiveArgumentIndex) {
+            this.sensitiveArgumentIndex = sensitiveArgumentIndex;
+            return this;
+        }
+
+        public Builder vulnerabilityType(VulnerabilityType vulnerabilityType) {
+            this.vulnerabilityType = vulnerabilityType;
+            return this;
+        }
+
+        public Builder severity(Severity severity) {
+            this.severity = severity;
+            return this;
+        }
+
+        public TaintSink build() {
+            return new TaintSink(this);
+        }
     }
 }
