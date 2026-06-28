@@ -1,7 +1,5 @@
 package com.tonic.analysis.absexec;
 
-import lombok.Getter;
-
 /**
  * The abstract operand stack: a growable array of {@link StackCtx} (one logical entry per value; a long/double
  * is a single wide entry). Copy-constructed when a {@link Frame} forks at a branch.
@@ -9,7 +7,6 @@ import lombok.Getter;
 public final class Stack {
 
     private StackCtx[] slots;
-    @Getter
     private int size;
 
     public Stack(int maxStack) {
@@ -39,6 +36,10 @@ public final class Stack {
 
     public StackCtx peek() {
         return slots[size - 1];
+    }
+
+    public int getSize() {
+        return size;
     }
 
 }

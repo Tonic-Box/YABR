@@ -1,7 +1,5 @@
 package com.tonic.analysis.absexec;
 
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,21 +10,27 @@ import java.util.List;
  */
 public final class StackCtx {
 
-    /**
-     * -- GETTER --
-     * The instruction-execution that pushed this value.
-     */
-    @Getter
     private final InsnContext pushed;
-    @Getter
     private final boolean wide; // long/double occupy a logical wide slot
-    @Getter
     private final List<InsnContext> popped = new ArrayList<>();
     boolean removed;
 
     public StackCtx(InsnContext pushed, boolean wide) {
         this.pushed = pushed;
         this.wide = wide;
+    }
+
+    /** Returns the instruction-execution that pushed this value. */
+    public InsnContext getPushed() {
+        return pushed;
+    }
+
+    public boolean isWide() {
+        return wide;
+    }
+
+    public List<InsnContext> getPopped() {
+        return popped;
     }
 
     public void addPopped(InsnContext ctx) {

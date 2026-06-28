@@ -3,8 +3,6 @@ package com.tonic.analysis.instrumentation.hook;
 import com.tonic.analysis.instrumentation.HookDescriptor;
 import com.tonic.analysis.instrumentation.InstrumentationTarget;
 import com.tonic.analysis.instrumentation.filter.InstrumentationFilter;
-import lombok.Builder;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,39 +11,70 @@ import java.util.List;
  * Configuration for array store instrumentation.
  * Hooks are called before array store instructions (*ASTORE).
  */
-@Getter
-@Builder
 public class ArrayStoreHook implements Hook {
 
     private final HookDescriptor hookDescriptor;
-
-    @Builder.Default
-    private final List<InstrumentationFilter> filters = new ArrayList<>();
-
-    @Builder.Default
-    private final boolean enabled = true;
-
-    @Builder.Default
-    private final int priority = 100;
-
-    /** Whether to pass the array reference */
-    @Builder.Default
-    private final boolean passArray = false;
-
-    /** Whether to pass the index */
-    @Builder.Default
-    private final boolean passIndex = false;
-
-    /** Whether to pass the value being stored (boxed if primitive) */
-    @Builder.Default
-    private final boolean passValue = false;
-
-    /** Whether the hook can modify the value (hook returns new value) */
-    @Builder.Default
-    private final boolean canModifyValue = false;
-
-    /** Array element type filter (e.g., "[Ljava/lang/Object;" for Object[]) */
+    private final List<InstrumentationFilter> filters;
+    private final boolean enabled;
+    private final int priority;
+    private final boolean passArray;
+    private final boolean passIndex;
+    private final boolean passValue;
+    private final boolean canModifyValue;
     private final String arrayTypeFilter;
+
+    private ArrayStoreHook(Builder builder) {
+        this.hookDescriptor = builder.hookDescriptor;
+        this.filters = builder.filters;
+        this.enabled = builder.enabled;
+        this.priority = builder.priority;
+        this.passArray = builder.passArray;
+        this.passIndex = builder.passIndex;
+        this.passValue = builder.passValue;
+        this.canModifyValue = builder.canModifyValue;
+        this.arrayTypeFilter = builder.arrayTypeFilter;
+    }
+
+    public HookDescriptor getHookDescriptor() {
+        return hookDescriptor;
+    }
+
+    public List<InstrumentationFilter> getFilters() {
+        return filters;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    /** Returns whether the array reference is passed to the hook. */
+    public boolean isPassArray() {
+        return passArray;
+    }
+
+    /** Returns whether the array index is passed to the hook. */
+    public boolean isPassIndex() {
+        return passIndex;
+    }
+
+    /** Returns whether the stored value (boxed if primitive) is passed to the hook. */
+    public boolean isPassValue() {
+        return passValue;
+    }
+
+    /** Returns whether the hook can replace the stored value (by returning a new one). */
+    public boolean isCanModifyValue() {
+        return canModifyValue;
+    }
+
+    /** Returns the array element type filter (e.g. {@code "[Ljava/lang/Object;"}), or null for no filter. */
+    public String getArrayTypeFilter() {
+        return arrayTypeFilter;
+    }
 
     @Override
     public InstrumentationTarget getTarget() {
@@ -59,5 +88,70 @@ public class ArrayStoreHook implements Hook {
         return ArrayStoreHook.builder()
                 .hookDescriptor(HookDescriptor.staticHook(hookOwner, hookName, hookDescriptor))
                 .build();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private HookDescriptor hookDescriptor;
+        private List<InstrumentationFilter> filters = new ArrayList<>();
+        private boolean enabled = true;
+        private int priority = 100;
+        private boolean passArray = false;
+        private boolean passIndex = false;
+        private boolean passValue = false;
+        private boolean canModifyValue = false;
+        private String arrayTypeFilter;
+
+        public Builder hookDescriptor(HookDescriptor hookDescriptor) {
+            this.hookDescriptor = hookDescriptor;
+            return this;
+        }
+
+        public Builder filters(List<InstrumentationFilter> filters) {
+            this.filters = filters;
+            return this;
+        }
+
+        public Builder enabled(boolean enabled) {
+            this.enabled = enabled;
+            return this;
+        }
+
+        public Builder priority(int priority) {
+            this.priority = priority;
+            return this;
+        }
+
+        public Builder passArray(boolean passArray) {
+            this.passArray = passArray;
+            return this;
+        }
+
+        public Builder passIndex(boolean passIndex) {
+            this.passIndex = passIndex;
+            return this;
+        }
+
+        public Builder passValue(boolean passValue) {
+            this.passValue = passValue;
+            return this;
+        }
+
+        public Builder canModifyValue(boolean canModifyValue) {
+            this.canModifyValue = canModifyValue;
+            return this;
+        }
+
+        public Builder arrayTypeFilter(String arrayTypeFilter) {
+            this.arrayTypeFilter = arrayTypeFilter;
+            return this;
+        }
+
+        public ArrayStoreHook build() {
+            return new ArrayStoreHook(this);
+        }
     }
 }

@@ -1,7 +1,5 @@
 package com.tonic.analysis.absexec;
 
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,10 +11,8 @@ import java.util.List;
 public final class VarCtx {
 
     private final InsnContext storedBy; // the instruction that stored this (null for entry parameters)
-    @Getter
     private final boolean wide;
     private final List<InsnContext> reads = new ArrayList<>();
-    @Getter
     private boolean parameter;
 
     /** A value stored into a local by {@code storedBy}. */
@@ -33,6 +29,14 @@ public final class VarCtx {
 
     public InsnContext getInstructionWhichStored() {
         return storedBy;
+    }
+
+    public boolean isWide() {
+        return wide;
+    }
+
+    public boolean isParameter() {
+        return parameter;
     }
 
     public void addRead(InsnContext ctx) {

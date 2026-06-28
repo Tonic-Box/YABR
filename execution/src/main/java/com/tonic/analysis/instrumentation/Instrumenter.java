@@ -36,7 +36,7 @@ public class Instrumenter {
 
     private final List<ClassFile> targetClasses;
     private final List<Hook> hooks;
-    private final InstrumentationConfig.InstrumentationConfigBuilder configBuilder;
+    private final InstrumentationConfig.Builder configBuilder;
 
     @Getter
     private InstrumentationReport lastReport;
@@ -302,7 +302,7 @@ public class Instrumenter {
      */
     public static class MethodEntryHookBuilder {
         private final Instrumenter instrumenter;
-        private final MethodEntryHook.MethodEntryHookBuilder hookBuilder;
+        private final MethodEntryHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         MethodEntryHookBuilder(Instrumenter instrumenter) {
@@ -382,7 +382,7 @@ public class Instrumenter {
      */
     public static class MethodExitHookBuilder {
         private final Instrumenter instrumenter;
-        private final MethodExitHook.MethodExitHookBuilder hookBuilder;
+        private final MethodExitHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         MethodExitHookBuilder(Instrumenter instrumenter) {
@@ -452,7 +452,7 @@ public class Instrumenter {
      */
     public static class FieldWriteHookBuilder {
         private final Instrumenter instrumenter;
-        private final FieldWriteHook.FieldWriteHookBuilder hookBuilder;
+        private final FieldWriteHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         FieldWriteHookBuilder(Instrumenter instrumenter) {
@@ -544,7 +544,7 @@ public class Instrumenter {
      */
     public static class FieldReadHookBuilder {
         private final Instrumenter instrumenter;
-        private final FieldReadHook.FieldReadHookBuilder hookBuilder;
+        private final FieldReadHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         FieldReadHookBuilder(Instrumenter instrumenter) {
@@ -616,7 +616,7 @@ public class Instrumenter {
      */
     public static class ArrayStoreHookBuilder {
         private final Instrumenter instrumenter;
-        private final ArrayStoreHook.ArrayStoreHookBuilder hookBuilder;
+        private final ArrayStoreHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         ArrayStoreHookBuilder(Instrumenter instrumenter) {
@@ -763,7 +763,7 @@ public class Instrumenter {
      */
     public static class MethodCallHookBuilder {
         private final Instrumenter instrumenter;
-        private final MethodCallHook.MethodCallHookBuilder hookBuilder;
+        private final MethodCallHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         MethodCallHookBuilder(Instrumenter instrumenter) {
@@ -848,7 +848,7 @@ public class Instrumenter {
      */
     public static class ExceptionHookBuilder {
         private final Instrumenter instrumenter;
-        private final ExceptionHook.ExceptionHookBuilder hookBuilder;
+        private final ExceptionHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         ExceptionHookBuilder(Instrumenter instrumenter) {

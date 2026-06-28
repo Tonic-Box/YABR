@@ -4,11 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt1&#10;- query module&#10;- renamer module">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/InsnContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/InsnContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/Stack.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/Stack.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/StackCtx.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/StackCtx.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/VarCtx.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/absexec/VarCtx.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/HookDescriptor.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/HookDescriptor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/InstrumentationConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/InstrumentationConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/Instrumenter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/Instrumenter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ArrayLoadHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ArrayLoadHook.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/parser/ParseException.java" beforeDir="false" afterPath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/parser/ParseException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/planner/QueryMatch.java" beforeDir="false" afterPath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/planner/QueryMatch.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/AnnotationFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/AnnotationFilter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ArrayStoreHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ArrayStoreHook.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ExceptionHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ExceptionHook.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/FieldReadHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/FieldReadHook.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/FieldWriteHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/FieldWriteHook.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/MethodCallHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/MethodCallHook.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/MethodEntryHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/MethodEntryHook.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/MethodExitHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/MethodExitHook.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -155,14 +167,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00026" summary="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner.">
-      <option name="closed" value="true" />
-      <created>1780866277953</created>
-      <option name="number" value="00026" />
-      <option name="presentableId" value="LOCAL-00026" />
-      <option name="project" value="LOCAL" />
-      <updated>1780866277953</updated>
     </task>
     <task id="LOCAL-00027" summary="- Bytecode editor: branch widening, indy graft, clone alignment">
       <option name="closed" value="true" />
@@ -548,7 +552,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782612251224</updated>
     </task>
-    <option name="localTasksCounter" value="75" />
+    <task id="LOCAL-00075" summary="Removal of Lombok: pt1&#10;- query module&#10;- renamer module">
+      <option name="closed" value="true" />
+      <created>1782613735833</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1782613735833</updated>
+    </task>
+    <option name="localTasksCounter" value="76" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -563,7 +575,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type" />
     <MESSAGE value="- Fixed issue with ClassRenamer erroneously renaming unrelated Utf8 attributes" />
     <MESSAGE value="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8" />
     <MESSAGE value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
@@ -588,6 +599,7 @@
     <MESSAGE value="Jitpack badge" />
     <MESSAGE value="Cleanup" />
     <MESSAGE value="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup" />
-    <option name="LAST_COMMIT_MESSAGE" value="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup" />
+    <MESSAGE value="Removal of Lombok: pt1&#10;- query module&#10;- renamer module" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt1&#10;- query module&#10;- renamer module" />
   </component>
 </project>

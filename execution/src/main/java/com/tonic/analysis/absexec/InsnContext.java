@@ -1,7 +1,6 @@
 package com.tonic.analysis.absexec;
 
 import com.tonic.analysis.instruction.Instruction;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,24 +18,36 @@ import java.util.List;
 public final class InsnContext {
 
     private final Instruction insn;
-    @Getter
     private final Frame frame;
-    /**
-     * -- GETTER --
-     * Stack values this instruction popped, in pop order (index 0 = top of stack).
-     */
-    @Getter
     private final List<StackCtx> pops = new ArrayList<>();
-    @Getter
     private final List<StackCtx> pushes = new ArrayList<>();
-    @Getter
     private final List<VarCtx> reads = new ArrayList<>();
-    @Getter
     private final List<Frame> branches = new ArrayList<>();
 
     public InsnContext(Instruction insn, Frame frame) {
         this.insn = insn;
         this.frame = frame;
+    }
+
+    public Frame getFrame() {
+        return frame;
+    }
+
+    /** Returns the stack values this instruction popped, in pop order (index 0 = top of stack). */
+    public List<StackCtx> getPops() {
+        return pops;
+    }
+
+    public List<StackCtx> getPushes() {
+        return pushes;
+    }
+
+    public List<VarCtx> getReads() {
+        return reads;
+    }
+
+    public List<Frame> getBranches() {
+        return branches;
     }
 
     /** Records each popped stack value and back-links it to this instruction (which popped it). */

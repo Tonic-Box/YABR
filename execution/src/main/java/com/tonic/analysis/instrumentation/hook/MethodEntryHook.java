@@ -3,8 +3,6 @@ package com.tonic.analysis.instrumentation.hook;
 import com.tonic.analysis.instrumentation.HookDescriptor;
 import com.tonic.analysis.instrumentation.InstrumentationTarget;
 import com.tonic.analysis.instrumentation.filter.InstrumentationFilter;
-import lombok.Builder;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,40 +11,70 @@ import java.util.List;
  * Configuration for method entry instrumentation.
  * Hooks are called at the beginning of methods, before any user code executes.
  */
-@Getter
-@Builder
 public class MethodEntryHook implements Hook {
 
     private final HookDescriptor hookDescriptor;
+    private final List<InstrumentationFilter> filters;
+    private final boolean enabled;
+    private final int priority;
+    private final boolean passThis;
+    private final boolean passMethodName;
+    private final boolean passClassName;
+    private final boolean passAllParameters;
+    private final List<Integer> parameterIndices;
 
-    @Builder.Default
-    private final List<InstrumentationFilter> filters = new ArrayList<>();
+    private MethodEntryHook(Builder builder) {
+        this.hookDescriptor = builder.hookDescriptor;
+        this.filters = builder.filters;
+        this.enabled = builder.enabled;
+        this.priority = builder.priority;
+        this.passThis = builder.passThis;
+        this.passMethodName = builder.passMethodName;
+        this.passClassName = builder.passClassName;
+        this.passAllParameters = builder.passAllParameters;
+        this.parameterIndices = builder.parameterIndices;
+    }
 
-    @Builder.Default
-    private final boolean enabled = true;
+    public HookDescriptor getHookDescriptor() {
+        return hookDescriptor;
+    }
 
-    @Builder.Default
-    private final int priority = 100;
+    public List<InstrumentationFilter> getFilters() {
+        return filters;
+    }
 
-    /** Whether to pass 'this' reference (null for static methods) */
-    @Builder.Default
-    private final boolean passThis = false;
+    public boolean isEnabled() {
+        return enabled;
+    }
 
-    /** Whether to pass method name as String */
-    @Builder.Default
-    private final boolean passMethodName = false;
+    public int getPriority() {
+        return priority;
+    }
 
-    /** Whether to pass class name as String */
-    @Builder.Default
-    private final boolean passClassName = false;
+    /** Returns whether the {@code this} reference (null for static methods) is passed to the hook. */
+    public boolean isPassThis() {
+        return passThis;
+    }
 
-    /** Whether to pass all parameters as Object[] */
-    @Builder.Default
-    private final boolean passAllParameters = false;
+    /** Returns whether the method name is passed to the hook. */
+    public boolean isPassMethodName() {
+        return passMethodName;
+    }
 
-    /** Specific parameter indices to pass (boxed if primitive) */
-    @Builder.Default
-    private final List<Integer> parameterIndices = new ArrayList<>();
+    /** Returns whether the class name is passed to the hook. */
+    public boolean isPassClassName() {
+        return passClassName;
+    }
+
+    /** Returns whether all parameters are passed to the hook as an {@code Object[]}. */
+    public boolean isPassAllParameters() {
+        return passAllParameters;
+    }
+
+    /** Returns the specific parameter indices to pass (boxed if primitive). */
+    public List<Integer> getParameterIndices() {
+        return parameterIndices;
+    }
 
     @Override
     public InstrumentationTarget getTarget() {
@@ -60,5 +88,70 @@ public class MethodEntryHook implements Hook {
         return MethodEntryHook.builder()
                 .hookDescriptor(HookDescriptor.staticHook(hookOwner, hookName, hookDescriptor))
                 .build();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private HookDescriptor hookDescriptor;
+        private List<InstrumentationFilter> filters = new ArrayList<>();
+        private boolean enabled = true;
+        private int priority = 100;
+        private boolean passThis = false;
+        private boolean passMethodName = false;
+        private boolean passClassName = false;
+        private boolean passAllParameters = false;
+        private List<Integer> parameterIndices = new ArrayList<>();
+
+        public Builder hookDescriptor(HookDescriptor hookDescriptor) {
+            this.hookDescriptor = hookDescriptor;
+            return this;
+        }
+
+        public Builder filters(List<InstrumentationFilter> filters) {
+            this.filters = filters;
+            return this;
+        }
+
+        public Builder enabled(boolean enabled) {
+            this.enabled = enabled;
+            return this;
+        }
+
+        public Builder priority(int priority) {
+            this.priority = priority;
+            return this;
+        }
+
+        public Builder passThis(boolean passThis) {
+            this.passThis = passThis;
+            return this;
+        }
+
+        public Builder passMethodName(boolean passMethodName) {
+            this.passMethodName = passMethodName;
+            return this;
+        }
+
+        public Builder passClassName(boolean passClassName) {
+            this.passClassName = passClassName;
+            return this;
+        }
+
+        public Builder passAllParameters(boolean passAllParameters) {
+            this.passAllParameters = passAllParameters;
+            return this;
+        }
+
+        public Builder parameterIndices(List<Integer> parameterIndices) {
+            this.parameterIndices = parameterIndices;
+            return this;
+        }
+
+        public MethodEntryHook build() {
+            return new MethodEntryHook(this);
+        }
     }
 }

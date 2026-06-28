@@ -1,8 +1,6 @@
 package com.tonic.analysis.instrumentation;
 
 import com.tonic.analysis.ssa.ir.InvokeType;
-import lombok.Builder;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,42 +8,53 @@ import java.util.List;
 /**
  * Describes a hook method to be called at instrumentation points.
  */
-@Getter
-@Builder
 public class HookDescriptor {
 
-    /**
-     * The owner class of the hook method (internal name, e.g., "com/example/Hooks").
-     */
     private final String owner;
-
-    /**
-     * The name of the hook method.
-     */
     private final String name;
-
-    /**
-     * The method descriptor.
-     */
     private final String descriptor;
+    private final InvokeType invokeType;
+    private final List<HookParameter> parameters;
+    private final boolean replacesValue;
 
-    /**
-     * The invocation type (typically STATIC).
-     */
-    @Builder.Default
-    private final InvokeType invokeType = InvokeType.STATIC;
+    private HookDescriptor(Builder builder) {
+        this.owner = builder.owner;
+        this.name = builder.name;
+        this.descriptor = builder.descriptor;
+        this.invokeType = builder.invokeType;
+        this.parameters = builder.parameters;
+        this.replacesValue = builder.replacesValue;
+    }
 
-    /**
-     * The parameters to pass to the hook method.
-     */
-    @Builder.Default
-    private final List<HookParameter> parameters = new ArrayList<>();
+    /** Returns the owner class of the hook method (internal name, e.g. {@code "com/example/Hooks"}). */
+    public String getOwner() {
+        return owner;
+    }
 
-    /**
-     * Whether the hook method returns a value that should replace the original.
-     */
-    @Builder.Default
-    private final boolean replacesValue = false;
+    /** Returns the name of the hook method. */
+    public String getName() {
+        return name;
+    }
+
+    /** Returns the hook method descriptor. */
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    /** Returns the invocation type (typically STATIC). */
+    public InvokeType getInvokeType() {
+        return invokeType;
+    }
+
+    /** Returns the parameters to pass to the hook method. */
+    public List<HookParameter> getParameters() {
+        return parameters;
+    }
+
+    /** Returns whether the hook's return value should replace the original value. */
+    public boolean isReplacesValue() {
+        return replacesValue;
+    }
 
     /**
      * Creates a static hook descriptor.
@@ -57,6 +66,53 @@ public class HookDescriptor {
                 .descriptor(descriptor)
                 .invokeType(InvokeType.STATIC)
                 .build();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String owner;
+        private String name;
+        private String descriptor;
+        private InvokeType invokeType = InvokeType.STATIC;
+        private List<HookParameter> parameters = new ArrayList<>();
+        private boolean replacesValue = false;
+
+        public Builder owner(String owner) {
+            this.owner = owner;
+            return this;
+        }
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder descriptor(String descriptor) {
+            this.descriptor = descriptor;
+            return this;
+        }
+
+        public Builder invokeType(InvokeType invokeType) {
+            this.invokeType = invokeType;
+            return this;
+        }
+
+        public Builder parameters(List<HookParameter> parameters) {
+            this.parameters = parameters;
+            return this;
+        }
+
+        public Builder replacesValue(boolean replacesValue) {
+            this.replacesValue = replacesValue;
+            return this;
+        }
+
+        public HookDescriptor build() {
+            return new HookDescriptor(this);
+        }
     }
 
     /**

@@ -1,48 +1,101 @@
 package com.tonic.analysis.instrumentation;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-
 /**
  * Configuration holder for instrumentation settings.
  */
-@Getter
-@Setter
-@Builder
 public class InstrumentationConfig {
 
-    /** Whether to skip abstract methods (default: true) */
-    @Builder.Default
-    private boolean skipAbstract = true;
+    private boolean skipAbstract;
+    private boolean skipNative;
+    private boolean skipSynthetic;
+    private boolean skipConstructors;
+    private boolean skipStaticInitializers;
+    private boolean skipBridge;
+    private boolean verbose;
+    private boolean failOnError;
 
-    /** Whether to skip native methods (default: true) */
-    @Builder.Default
-    private boolean skipNative = true;
+    private InstrumentationConfig(Builder builder) {
+        this.skipAbstract = builder.skipAbstract;
+        this.skipNative = builder.skipNative;
+        this.skipSynthetic = builder.skipSynthetic;
+        this.skipConstructors = builder.skipConstructors;
+        this.skipStaticInitializers = builder.skipStaticInitializers;
+        this.skipBridge = builder.skipBridge;
+        this.verbose = builder.verbose;
+        this.failOnError = builder.failOnError;
+    }
 
-    /** Whether to skip synthetic methods (default: true) */
-    @Builder.Default
-    private boolean skipSynthetic = true;
+    /** Returns whether abstract methods are skipped. */
+    public boolean isSkipAbstract() {
+        return skipAbstract;
+    }
 
-    /** Whether to skip constructors (default: false) */
-    @Builder.Default
-    private boolean skipConstructors = false;
+    public void setSkipAbstract(boolean skipAbstract) {
+        this.skipAbstract = skipAbstract;
+    }
 
-    /** Whether to skip static initializers (default: false) */
-    @Builder.Default
-    private boolean skipStaticInitializers = false;
+    /** Returns whether native methods are skipped. */
+    public boolean isSkipNative() {
+        return skipNative;
+    }
 
-    /** Whether to skip bridge methods (default: true) */
-    @Builder.Default
-    private boolean skipBridge = true;
+    public void setSkipNative(boolean skipNative) {
+        this.skipNative = skipNative;
+    }
 
-    /** Whether to log instrumentation progress (default: false) */
-    @Builder.Default
-    private boolean verbose = false;
+    /** Returns whether synthetic methods are skipped. */
+    public boolean isSkipSynthetic() {
+        return skipSynthetic;
+    }
 
-    /** Whether to fail on errors or continue (default: false - continue) */
-    @Builder.Default
-    private boolean failOnError = false;
+    public void setSkipSynthetic(boolean skipSynthetic) {
+        this.skipSynthetic = skipSynthetic;
+    }
+
+    /** Returns whether constructors are skipped. */
+    public boolean isSkipConstructors() {
+        return skipConstructors;
+    }
+
+    public void setSkipConstructors(boolean skipConstructors) {
+        this.skipConstructors = skipConstructors;
+    }
+
+    /** Returns whether static initializers are skipped. */
+    public boolean isSkipStaticInitializers() {
+        return skipStaticInitializers;
+    }
+
+    public void setSkipStaticInitializers(boolean skipStaticInitializers) {
+        this.skipStaticInitializers = skipStaticInitializers;
+    }
+
+    /** Returns whether bridge methods are skipped. */
+    public boolean isSkipBridge() {
+        return skipBridge;
+    }
+
+    public void setSkipBridge(boolean skipBridge) {
+        this.skipBridge = skipBridge;
+    }
+
+    /** Returns whether instrumentation progress is logged. */
+    public boolean isVerbose() {
+        return verbose;
+    }
+
+    public void setVerbose(boolean verbose) {
+        this.verbose = verbose;
+    }
+
+    /** Returns whether instrumentation fails on the first error rather than continuing. */
+    public boolean isFailOnError() {
+        return failOnError;
+    }
+
+    public void setFailOnError(boolean failOnError) {
+        this.failOnError = failOnError;
+    }
 
     /**
      * Creates a default configuration.
@@ -63,5 +116,64 @@ public class InstrumentationConfig {
                 .skipStaticInitializers(false)
                 .skipBridge(false)
                 .build();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private boolean skipAbstract = true;
+        private boolean skipNative = true;
+        private boolean skipSynthetic = true;
+        private boolean skipConstructors = false;
+        private boolean skipStaticInitializers = false;
+        private boolean skipBridge = true;
+        private boolean verbose = false;
+        private boolean failOnError = false;
+
+        public Builder skipAbstract(boolean skipAbstract) {
+            this.skipAbstract = skipAbstract;
+            return this;
+        }
+
+        public Builder skipNative(boolean skipNative) {
+            this.skipNative = skipNative;
+            return this;
+        }
+
+        public Builder skipSynthetic(boolean skipSynthetic) {
+            this.skipSynthetic = skipSynthetic;
+            return this;
+        }
+
+        public Builder skipConstructors(boolean skipConstructors) {
+            this.skipConstructors = skipConstructors;
+            return this;
+        }
+
+        public Builder skipStaticInitializers(boolean skipStaticInitializers) {
+            this.skipStaticInitializers = skipStaticInitializers;
+            return this;
+        }
+
+        public Builder skipBridge(boolean skipBridge) {
+            this.skipBridge = skipBridge;
+            return this;
+        }
+
+        public Builder verbose(boolean verbose) {
+            this.verbose = verbose;
+            return this;
+        }
+
+        public Builder failOnError(boolean failOnError) {
+            this.failOnError = failOnError;
+            return this;
+        }
+
+        public InstrumentationConfig build() {
+            return new InstrumentationConfig(this);
+        }
     }
 }
