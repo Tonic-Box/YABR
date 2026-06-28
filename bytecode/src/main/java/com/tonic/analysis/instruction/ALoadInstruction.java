@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,14 +10,7 @@ import static com.tonic.util.Opcode.*;
 /**
  * Represents the ALOAD instructions (0x19, 0x2A-0x2D).
  */
-@Getter
 public class ALoadInstruction extends Instruction implements LocalVarInstruction {
-    /**
-     * -- GETTER --
-     *  Returns the local variable index being loaded.
-     *
-     * @return The local variable index.
-     */
     private final int varIndex;
 
     /**
@@ -31,6 +23,11 @@ public class ALoadInstruction extends Instruction implements LocalVarInstruction
     public ALoadInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, isShortForm(opcode) ? 1 : 2);
         this.varIndex = varIndex;
+    }
+
+    /** Returns the local variable index being loaded. */
+    public int getVarIndex() {
+        return varIndex;
     }
 
     @Override

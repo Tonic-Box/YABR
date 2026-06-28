@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import static com.tonic.util.Opcode.*;
 /**
  * Represents the LSTORE instructions (0x37, 0x3F-0x42).
  */
-@Getter
 public class LStoreInstruction extends Instruction implements LocalVarInstruction {
     private final int varIndex;
 
@@ -25,6 +23,10 @@ public class LStoreInstruction extends Instruction implements LocalVarInstructio
     public LStoreInstruction(int opcode, int offset, int varIndex) {
         super(opcode, offset, (opcode == LSTORE.getCode()) ? 2 : 1);
         this.varIndex = varIndex;
+    }
+
+    public int getVarIndex() {
+        return varIndex;
     }
 
     @Override

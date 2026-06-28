@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,17 +8,9 @@ import java.io.IOException;
 /**
  * Represents a single bytecode instruction.
  */
-@Getter
 public abstract class Instruction {
     protected int opcode;
     protected int offset;
-    /**
-     * -- GETTER --
-     *  Returns the length of the instruction in bytes.
-     *
-     * @return The instruction length.
-     */
-    @Getter
     protected int length;
 
     /**
@@ -33,6 +24,19 @@ public abstract class Instruction {
         this.opcode = opcode;
         this.offset = offset;
         this.length = length;
+    }
+
+    public int getOpcode() {
+        return opcode;
+    }
+
+    public int getOffset() {
+        return offset;
+    }
+
+    /** Returns the length of the instruction in bytes. */
+    public int getLength() {
+        return length;
     }
 
     /**
