@@ -43,7 +43,6 @@ import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.listener.CapableListener;
 import com.tonic.analysis.execution.listener.ListenerCapability;
 import com.tonic.util.Modifiers;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -54,7 +53,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class BytecodeEngine {
 
     private final BytecodeContext context;
-    @Getter
     private final CallStack callStack;
     private final OpcodeDispatcher dispatcher;
     private final List<BytecodeListener> listeners;
@@ -63,9 +61,7 @@ public final class BytecodeEngine {
     private final Set<String> initializedClasses;
 
     private volatile boolean interrupted;
-    @Getter
     private long instructionCount;
-    @Getter
     private ConcreteValue lastReturnValue;
     private ObjectInstance lastException;
 
@@ -95,6 +91,18 @@ public final class BytecodeEngine {
         } else {
             this.invocationHandler = null;
         }
+    }
+
+    public CallStack getCallStack() {
+        return callStack;
+    }
+
+    public long getInstructionCount() {
+        return instructionCount;
+    }
+
+    public ConcreteValue getLastReturnValue() {
+        return lastReturnValue;
     }
 
     public BytecodeResult execute(MethodEntry method, ConcreteValue... args) {

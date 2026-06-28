@@ -8,7 +8,6 @@ import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.MethodEntry;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,9 +19,7 @@ public final class DebugSession {
     private final BreakpointManager breakpointManager;
     private final List<DebugEventListener> listeners;
 
-    @Getter
     private BytecodeEngine engine;
-    @Getter
     private DebugSessionState state;
     private StepMode currentStepMode;
     private int stepStartDepth;
@@ -55,6 +52,14 @@ public final class DebugSession {
         this.runToCursorPC = -1;
         this.runToCursorMethod = null;
         this.pauseRequested = false;
+    }
+
+    public BytecodeEngine getEngine() {
+        return engine;
+    }
+
+    public DebugSessionState getState() {
+        return state;
     }
 
     public void start(MethodEntry method, ConcreteValue... args) {

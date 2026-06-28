@@ -1,14 +1,11 @@
 package com.tonic.analysis.verifier;
 
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Getter
 public final class VerificationResult {
     private final boolean valid;
     private final List<VerificationError> errors;
@@ -23,6 +20,26 @@ public final class VerificationResult {
         this.warnings = Collections.unmodifiableList(new ArrayList<>(warnings));
         this.className = className;
         this.methodName = methodName;
+    }
+
+    public boolean isValid() {
+        return valid;
+    }
+
+    public List<VerificationError> getErrors() {
+        return errors;
+    }
+
+    public List<VerificationError> getWarnings() {
+        return warnings;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public String getMethodName() {
+        return methodName;
     }
 
     public static VerificationResult success() {
@@ -124,7 +141,7 @@ public final class VerificationResult {
             return sb.toString();
         }
 
-        if (valid && !warnings.isEmpty()) {
+        if (valid) {
             sb.append("Verification PASSED with ").append(warnings.size()).append(" warning(s).\n\n");
         } else {
             sb.append("Verification FAILED with ").append(errors.size()).append(" error(s)");

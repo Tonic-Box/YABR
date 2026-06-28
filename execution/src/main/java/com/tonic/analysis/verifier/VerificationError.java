@@ -1,10 +1,7 @@
 package com.tonic.analysis.verifier;
 
-import lombok.Getter;
-
 import java.util.Objects;
 
-@Getter
 public final class VerificationError {
     private final VerificationErrorType type;
     private final int bytecodeOffset;
@@ -38,6 +35,30 @@ public final class VerificationError {
 
     public VerificationError withLocation(String className, String methodName) {
         return new VerificationError(type, bytecodeOffset, message, severity, className, methodName);
+    }
+
+    public VerificationErrorType getType() {
+        return type;
+    }
+
+    public int getBytecodeOffset() {
+        return bytecodeOffset;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Severity getSeverity() {
+        return severity;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public String getClassName() {
+        return className;
     }
 
     public boolean isError() {

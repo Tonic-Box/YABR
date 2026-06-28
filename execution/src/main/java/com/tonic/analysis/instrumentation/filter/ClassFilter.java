@@ -1,7 +1,6 @@
 package com.tonic.analysis.instrumentation.filter;
 
 import com.tonic.parser.ClassFile;
-import lombok.Getter;
 
 import java.util.regex.Pattern;
 
@@ -9,7 +8,6 @@ import java.util.regex.Pattern;
  * Filter by class name pattern.
  * Supports exact match or wildcard patterns using '*'.
  */
-@Getter
 public class ClassFilter implements InstrumentationFilter {
 
     private final String pattern;
@@ -35,6 +33,18 @@ public class ClassFilter implements InstrumentationFilter {
         } else {
             this.regex = null;
         }
+    }
+
+    public String getPattern() {
+        return pattern;
+    }
+
+    public boolean isWildcard() {
+        return isWildcard;
+    }
+
+    public Pattern getRegex() {
+        return regex;
     }
 
     @Override

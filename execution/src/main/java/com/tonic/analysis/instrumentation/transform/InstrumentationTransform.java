@@ -14,7 +14,6 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.util.Modifiers;
-import lombok.Getter;
 
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -29,13 +28,16 @@ public class InstrumentationTransform {
     private final InstrumentationConfig config;
     private final InstrumentationFactory factory;
 
-    @Getter
     private int lastInstrumentationCount;
 
     public InstrumentationTransform(List<Hook> hooks, InstrumentationConfig config) {
         this.hooks = hooks;
         this.config = config;
         this.factory = new InstrumentationFactory();
+    }
+
+    public int getLastInstrumentationCount() {
+        return lastInstrumentationCount;
     }
 
     /**

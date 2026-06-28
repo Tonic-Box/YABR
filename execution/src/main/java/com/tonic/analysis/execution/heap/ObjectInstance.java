@@ -1,16 +1,12 @@
 package com.tonic.analysis.execution.heap;
 
-import lombok.Getter;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 public class ObjectInstance {
 
-    @Getter
     private final int id;
-    @Getter
     private final String className;
     private final Map<FieldKey, Object> fields;
     private Object classResolver;
@@ -19,6 +15,14 @@ public class ObjectInstance {
         this.id = id;
         this.className = className;
         this.fields = new HashMap<>();
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getClassName() {
+        return className;
     }
 
     public Object getField(String owner, String name, String descriptor) {

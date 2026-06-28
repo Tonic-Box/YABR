@@ -8,7 +8,6 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-import lombok.Getter;
 
 import java.util.*;
 
@@ -38,13 +37,16 @@ public class Instrumenter {
     private final List<Hook> hooks;
     private final InstrumentationConfig.Builder configBuilder;
 
-    @Getter
     private InstrumentationReport lastReport;
 
     private Instrumenter(List<ClassFile> targetClasses) {
         this.targetClasses = new ArrayList<>(targetClasses);
         this.hooks = new ArrayList<>();
         this.configBuilder = InstrumentationConfig.builder();
+    }
+
+    public InstrumentationReport getLastReport() {
+        return lastReport;
     }
 
     /**

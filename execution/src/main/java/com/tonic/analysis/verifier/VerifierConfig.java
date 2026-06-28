@@ -1,8 +1,5 @@
 package com.tonic.analysis.verifier;
 
-import lombok.Getter;
-
-@Getter
 public final class VerifierConfig {
 
     public enum ErrorMode {
@@ -26,6 +23,34 @@ public final class VerifierConfig {
         this.verifyStructure = builder.verifyStructure;
         this.maxErrors = builder.maxErrors;
         this.treatWarningsAsErrors = builder.treatWarningsAsErrors;
+    }
+
+    public ErrorMode getErrorMode() {
+        return errorMode;
+    }
+
+    public boolean isVerifyStackMapTable() {
+        return verifyStackMapTable;
+    }
+
+    public boolean isStrictTypeChecking() {
+        return strictTypeChecking;
+    }
+
+    public boolean isVerifyControlFlow() {
+        return verifyControlFlow;
+    }
+
+    public boolean isVerifyStructure() {
+        return verifyStructure;
+    }
+
+    public int getMaxErrors() {
+        return maxErrors;
+    }
+
+    public boolean isTreatWarningsAsErrors() {
+        return treatWarningsAsErrors;
     }
 
     public static VerifierConfig defaults() {

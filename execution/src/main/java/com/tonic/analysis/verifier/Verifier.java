@@ -8,13 +8,11 @@ import com.tonic.analysis.verifier.type.TypeVerifier;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-@Getter
 public final class Verifier {
     private final VerifierConfig config;
     private final ClassPool classPool;
@@ -22,6 +20,14 @@ public final class Verifier {
     private Verifier(Builder builder) {
         this.config = builder.config != null ? builder.config : VerifierConfig.defaults();
         this.classPool = builder.classPool;
+    }
+
+    public VerifierConfig getConfig() {
+        return config;
+    }
+
+    public ClassPool getClassPool() {
+        return classPool;
     }
 
     public static Builder builder() {

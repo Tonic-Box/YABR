@@ -1,14 +1,11 @@
 package com.tonic.analysis.instrumentation.filter;
 
-import lombok.Getter;
-
 import java.util.regex.Pattern;
 
 /**
  * Filter by field name and/or type pattern.
  * Supports exact match or wildcard patterns using '*'.
  */
-@Getter
 public class FieldFilter implements InstrumentationFilter {
 
     private final String ownerPattern;
@@ -57,6 +54,30 @@ public class FieldFilter implements InstrumentationFilter {
             return Pattern.compile("^" + regex + "$");
         }
         return null;
+    }
+
+    public String getOwnerPattern() {
+        return ownerPattern;
+    }
+
+    public String getNamePattern() {
+        return namePattern;
+    }
+
+    public String getTypePattern() {
+        return typePattern;
+    }
+
+    public Pattern getOwnerRegex() {
+        return ownerRegex;
+    }
+
+    public Pattern getNameRegex() {
+        return nameRegex;
+    }
+
+    public Pattern getTypeRegex() {
+        return typeRegex;
     }
 
     @Override

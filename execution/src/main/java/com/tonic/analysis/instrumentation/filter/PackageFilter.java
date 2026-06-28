@@ -1,13 +1,11 @@
 package com.tonic.analysis.instrumentation.filter;
 
 import com.tonic.parser.ClassFile;
-import lombok.Getter;
 
 /**
  * Filter by package prefix.
  * Matches all classes in a package or its subpackages.
  */
-@Getter
 public class PackageFilter implements InstrumentationFilter {
 
     private final String packagePrefix;
@@ -35,6 +33,14 @@ public class PackageFilter implements InstrumentationFilter {
         }
         this.packagePrefix = normalized;
         this.includeSubpackages = includeSubpackages;
+    }
+
+    public String getPackagePrefix() {
+        return packagePrefix;
+    }
+
+    public boolean isIncludeSubpackages() {
+        return includeSubpackages;
     }
 
     @Override

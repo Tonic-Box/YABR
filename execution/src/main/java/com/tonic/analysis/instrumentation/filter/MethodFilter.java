@@ -1,7 +1,6 @@
 package com.tonic.analysis.instrumentation.filter;
 
 import com.tonic.parser.MethodEntry;
-import lombok.Getter;
 
 import java.util.regex.Pattern;
 
@@ -9,7 +8,6 @@ import java.util.regex.Pattern;
  * Filter by method name pattern.
  * Supports exact match or wildcard patterns using '*'.
  */
-@Getter
 public class MethodFilter implements InstrumentationFilter {
 
     private final String namePattern;
@@ -56,6 +54,26 @@ public class MethodFilter implements InstrumentationFilter {
         } else {
             this.descriptorRegex = null;
         }
+    }
+
+    public String getNamePattern() {
+        return namePattern;
+    }
+
+    public String getDescriptorPattern() {
+        return descriptorPattern;
+    }
+
+    public boolean isWildcard() {
+        return isWildcard;
+    }
+
+    public Pattern getNameRegex() {
+        return nameRegex;
+    }
+
+    public Pattern getDescriptorRegex() {
+        return descriptorRegex;
     }
 
     @Override

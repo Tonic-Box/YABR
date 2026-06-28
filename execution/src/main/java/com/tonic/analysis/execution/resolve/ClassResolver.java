@@ -9,16 +9,13 @@ import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 import com.tonic.renamer.hierarchy.ClassNode;
 import com.tonic.util.DescriptorUtil;
 import com.tonic.util.Modifiers;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ClassResolver {
 
-    @Getter
     private final ClassPool classPool;
-    @Getter
     private final ClassHierarchy hierarchy;
     private final ResolutionCache cache;
 
@@ -32,6 +29,14 @@ public class ClassResolver {
         this.classPool = classPool;
         this.hierarchy = hierarchy;
         this.cache = new ResolutionCache();
+    }
+
+    public ClassPool getClassPool() {
+        return classPool;
+    }
+
+    public ClassHierarchy getHierarchy() {
+        return hierarchy;
     }
 
     public ClassFile resolveClass(String className) {
