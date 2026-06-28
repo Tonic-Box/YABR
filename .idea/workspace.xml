@@ -5,68 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup">
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/instrumentation/InstrumentationWireupTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dataflow/DataFlowGraph.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/dependency/DependencyAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSignature.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSignature.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSimilarityAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/similarity/MethodSimilarityAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/analyses/src/main/java/com/tonic/analysis/xref/XrefDatabase.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/InnerClassesAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/InnerClassesAttribute.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/InnerClassEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/InnerClassEntry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/TypeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/TypeUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/simulation-api.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/simulation-api.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/factory/InstrumentationFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/factory/InstrumentationFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/FieldFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/FieldFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/MethodFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/filter/MethodFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/transform/InstrumentationTransform.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/transform/InstrumentationTransform.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/InterProceduralEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/InterProceduralEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/SimulationEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/core/SimulationEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/ControlFlowListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/ControlFlowListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/MethodCallListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/MethodCallListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/StackOperationListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/listener/StackOperationListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/PathQuery.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/PathQuery.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/ValueFlowQuery.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/query/ValueFlowQuery.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/util/StateTransitions.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/simulation/util/StateTransitions.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/ClassRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/ClassRenamer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/FieldRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/FieldRenamer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/MethodRenamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/MethodRenamer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/Renamer.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/Renamer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/RenamerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/RenamerContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/DescriptorRemapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/DescriptorRemapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/SignatureRemapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/descriptor/SignatureRemapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchy.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/hierarchy/ClassHierarchyBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/validation/RenameValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/renamer/src/main/java/com/tonic/renamer/validation/RenameValidator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadStoreEliminator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeadVariableEliminator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/editor/ASTEditor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/ExpressionRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StructuralAnalyzer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/cfg/IRMethod.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/lift/TempFoldingPass.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/lift/TempFoldingPass.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/BlockMerging.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/DeadCodeElimination.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/RedundantCopyElimination.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/transform/RedundantCopyElimination.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/util/IRMethodCloner.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/util/IRMethodCloner.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/MethodHandleConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/MethodHandleConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/InterProceduralEngineTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/InterProceduralEngineTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/core/SimulationEngineTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/core/SimulationEngineTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/query/ValueFlowQueryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/simulation/query/ValueFlowQueryTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/typeinference/TypeInferenceAnalyzerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/renamer/RenamerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/renamer/RenamerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/Instrumenter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/Instrumenter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ArrayLoadHook.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/hook/ArrayLoadHook.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/parser/ParseException.java" beforeDir="false" afterPath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/parser/ParseException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/planner/QueryMatch.java" beforeDir="false" afterPath="$PROJECT_DIR$/query/src/main/java/com/tonic/analysis/query/planner/QueryMatch.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -213,14 +155,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00025" summary="- don't un-materialize a value already emitted as an array-initializer declaration; reference the temp instead.">
-      <option name="closed" value="true" />
-      <created>1780810658495</created>
-      <option name="number" value="00025" />
-      <option name="presentableId" value="LOCAL-00025" />
-      <option name="project" value="LOCAL" />
-      <updated>1780810658495</updated>
     </task>
     <task id="LOCAL-00026" summary="Java 21 pattern switch: decompile + recompile&#10;- Decompile: reconstruct type-pattern, record-deconstruction, and guarded (when) arms from typeSwitch. Strip synthetic MatchException handlers, force the $pc$ dispatch form for guard restart loops, fold pass/failstates.&#10;- Recompile: parse pattern/guard/deconstruction case labels and lower them to a SwitchBootstraps.typeSwitch indy + dispatch (restart loop for guards,accessor decls for deconstruction). Emit case-type Class bootstrap args.&#10;- Also fixes: BinaryOp/UnaryOp results feeding a declared merge phi were dropped; nested-class names now render Outer.Inner not Outer$Inner.">
       <option name="closed" value="true" />
@@ -606,7 +540,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782570676712</updated>
     </task>
-    <option name="localTasksCounter" value="74" />
+    <task id="LOCAL-00074" summary="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup">
+      <option name="closed" value="true" />
+      <created>1782612251224</created>
+      <option name="number" value="00074" />
+      <option name="presentableId" value="LOCAL-00074" />
+      <option name="project" value="LOCAL" />
+      <updated>1782612251224</updated>
+    </task>
+    <option name="localTasksCounter" value="75" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

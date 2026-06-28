@@ -1,7 +1,5 @@
 package com.tonic.analysis.query.planner;
 
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -16,16 +14,22 @@ import java.util.Map;
  */
 public class QueryMatch {
 
-    @Getter
     private final QueryTarget target;
     private final Map<String, Object> attributes;
-    @Getter
     private final List<QueryMatch> evidence;
 
     public QueryMatch(QueryTarget target, Map<String, Object> attributes, List<QueryMatch> evidence) {
         this.target = target;
         this.attributes = attributes != null ? new LinkedHashMap<>(attributes) : new LinkedHashMap<>();
         this.evidence = evidence != null ? List.copyOf(evidence) : List.of();
+    }
+
+    public QueryTarget getTarget() {
+        return target;
+    }
+
+    public List<QueryMatch> getEvidence() {
+        return evidence;
     }
 
     public Map<String, Object> getAttributes() {

@@ -703,7 +703,7 @@ public class Instrumenter {
      */
     public static class ArrayLoadHookBuilder {
         private final Instrumenter instrumenter;
-        private final ArrayLoadHook.ArrayLoadHookBuilder hookBuilder;
+        private final ArrayLoadHook.Builder hookBuilder;
         private final List<InstrumentationFilter> filters = new ArrayList<>();
 
         ArrayLoadHookBuilder(Instrumenter instrumenter) {

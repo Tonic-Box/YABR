@@ -1,7 +1,5 @@
 package com.tonic.renamer.mapping;
 
-import lombok.Getter;
-
 import java.util.Objects;
 
 /**
@@ -9,10 +7,8 @@ import java.util.Objects;
  */
 public final class FieldMapping implements RenameMapping {
 
-    @Getter
     private final String owner;
     private final String oldName;
-    @Getter
     private final String descriptor;
     private final String newName;
 
@@ -44,6 +40,14 @@ public final class FieldMapping implements RenameMapping {
         this.oldName = oldName;
         this.descriptor = descriptor;
         this.newName = newName;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
     }
 
     @Override

@@ -9,7 +9,6 @@ import com.tonic.renamer.descriptor.SignatureRemapper;
 import com.tonic.renamer.hierarchy.ClassHierarchy;
 import com.tonic.renamer.hierarchy.ClassHierarchyBuilder;
 import com.tonic.renamer.mapping.MappingStore;
-import lombok.Getter;
 
 import java.util.*;
 import java.util.function.Function;
@@ -18,43 +17,12 @@ import java.util.function.Function;
  * Shared context for rename operations.
  * Contains the ClassPool, mappings, hierarchy, and utility methods.
  */
-@Getter
 public class RenamerContext {
 
-    /**
-     * -- GETTER --
-     *  Returns the ClassPool being used for rename operations.
-     *
-     * @return the ClassPool
-     */
     private final ClassPool classPool;
-    /**
-     * -- GETTER --
-     *  Returns the MappingStore containing all rename mappings.
-     *
-     * @return the MappingStore
-     */
     private final MappingStore mappings;
-    /**
-     * -- GETTER --
-     *  Returns the class hierarchy for the pool.
-     *
-     * @return the ClassHierarchy
-     */
     private ClassHierarchy hierarchy;
-    /**
-     * -- GETTER --
-     *  Returns the descriptor remapper for updating type descriptors.
-     *
-     * @return the DescriptorRemapper
-     */
     private DescriptorRemapper descriptorRemapper;
-    /**
-     * -- GETTER --
-     *  Returns the signature remapper for updating generic signatures.
-     *
-     * @return the SignatureRemapper
-     */
     private SignatureRemapper signatureRemapper;
 
     public RenamerContext(ClassPool classPool, MappingStore mappings) {
@@ -68,6 +36,31 @@ public class RenamerContext {
         Function<String, String> classMapper = mappings::getClassMapping;
         this.descriptorRemapper = new DescriptorRemapper(classMapper);
         this.signatureRemapper = new SignatureRemapper(classMapper);
+    }
+
+    /** Returns the ClassPool used for rename operations. */
+    public ClassPool getClassPool() {
+        return classPool;
+    }
+
+    /** Returns the MappingStore containing all rename mappings. */
+    public MappingStore getMappings() {
+        return mappings;
+    }
+
+    /** Returns the class hierarchy for the pool. */
+    public ClassHierarchy getHierarchy() {
+        return hierarchy;
+    }
+
+    /** Returns the descriptor remapper for updating type descriptors. */
+    public DescriptorRemapper getDescriptorRemapper() {
+        return descriptorRemapper;
+    }
+
+    /** Returns the signature remapper for updating generic signatures. */
+    public SignatureRemapper getSignatureRemapper() {
+        return signatureRemapper;
     }
 
     /**
