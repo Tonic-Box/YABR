@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import java.io.IOException;
 /**
  * Represents the SIPUSH instruction (0x11).
  */
-@Getter
 public class SipushInstruction extends Instruction {
     private final short value;
 
@@ -23,6 +21,10 @@ public class SipushInstruction extends Instruction {
     public SipushInstruction(int opcode, int offset, int value) {
         super(opcode, offset, 3);
         this.value = (short) value;
+    }
+
+    public short getValue() {
+        return value;
     }
 
     @Override

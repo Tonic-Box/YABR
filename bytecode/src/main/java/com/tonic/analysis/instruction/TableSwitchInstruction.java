@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,7 +9,6 @@ import java.util.Map;
 /**
  * Represents the TABLESWITCH instruction (0xAA).
  */
-@Getter
 public class TableSwitchInstruction extends Instruction {
     private final int padding;
     private final int defaultOffset;
@@ -39,6 +37,26 @@ public class TableSwitchInstruction extends Instruction {
         this.low = low;
         this.high = high;
         this.jumpOffsets = jumpOffsets;
+    }
+
+    public int getPadding() {
+        return padding;
+    }
+
+    public int getDefaultOffset() {
+        return defaultOffset;
+    }
+
+    public int getLow() {
+        return low;
+    }
+
+    public int getHigh() {
+        return high;
+    }
+
+    public Map<Integer, Integer> getJumpOffsets() {
+        return jumpOffsets;
     }
 
     @Override

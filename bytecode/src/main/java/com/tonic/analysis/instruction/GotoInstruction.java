@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,12 +11,10 @@ import static com.tonic.util.Opcode.*;
  * Represents the JVM GOTO and GOTO_W instructions.
  */
 public class GotoInstruction extends Instruction {
-    @Getter
     private final GotoType type;
     private final int branchOffsetInt;
     private final short branchOffsetShort;
 
-    @Getter
     public enum GotoType {
         GOTO_NORMAL(GOTO.getCode(), "goto"),
         GOTO_WIDE(GOTO_W.getCode(), "goto_w");
@@ -28,6 +25,14 @@ public class GotoInstruction extends Instruction {
         GotoType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
+        }
+
+        public int getOpcode() {
+            return opcode;
+        }
+
+        public String getMnemonic() {
+            return mnemonic;
         }
 
         public static GotoType fromOpcode(int opcode) {
@@ -77,6 +82,10 @@ public class GotoInstruction extends Instruction {
         }
         this.branchOffsetShort = branchOffset;
         this.branchOffsetInt = -1;
+    }
+
+    public GotoType getType() {
+        return type;
     }
 
     /**

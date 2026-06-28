@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,7 +14,6 @@ public class CompareInstruction extends Instruction {
     /**
      * Enum representing the types of compare operations.
      */
-    @Getter
     public enum CompareType {
         LCMP(0x94, "lcmp"),
         FCMPL(0x95, "fcmpl"),
@@ -29,6 +27,14 @@ public class CompareInstruction extends Instruction {
         CompareType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
+        }
+
+        public int getOpcode() {
+            return opcode;
+        }
+
+        public String getMnemonic() {
+            return mnemonic;
         }
 
         public static CompareType fromOpcode(int opcode) {

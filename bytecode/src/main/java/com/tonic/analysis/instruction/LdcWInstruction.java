@@ -3,7 +3,6 @@ package com.tonic.analysis.instruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.io.IOException;
  * Represents the LDC_W instruction (0x13).
  */
 public class LdcWInstruction extends Instruction {
-    @Getter
     private final int cpIndex;
     private final ConstPool constPool;
 
@@ -28,6 +26,10 @@ public class LdcWInstruction extends Instruction {
         super(opcode, offset, 3);
         this.constPool = constPool;
         this.cpIndex = cpIndex;
+    }
+
+    public int getCpIndex() {
+        return cpIndex;
     }
 
     @Override

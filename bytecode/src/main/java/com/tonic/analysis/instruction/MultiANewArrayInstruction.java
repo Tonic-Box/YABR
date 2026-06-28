@@ -3,7 +3,6 @@ package com.tonic.analysis.instruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,9 +11,7 @@ import java.io.IOException;
  * Represents the MULTIANEWARRAY instruction (0xC5).
  */
 public class MultiANewArrayInstruction extends Instruction {
-    @Getter
     private final int classIndex;
-    @Getter
     private final int dimensions;
     private final ConstPool constPool;
 
@@ -35,6 +32,14 @@ public class MultiANewArrayInstruction extends Instruction {
         this.classIndex = classIndex;
         this.dimensions = dimensions;
         this.constPool = constPool;
+    }
+
+    public int getClassIndex() {
+        return classIndex;
+    }
+
+    public int getDimensions() {
+        return dimensions;
     }
 
     @Override

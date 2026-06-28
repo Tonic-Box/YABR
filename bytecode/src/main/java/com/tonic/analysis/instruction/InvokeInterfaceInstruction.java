@@ -6,7 +6,6 @@ import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.InterfaceRefItem;
 import com.tonic.parser.constpool.NameAndTypeRefItem;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,9 +14,7 @@ import java.io.IOException;
  * Represents the INVOKEINTERFACE instruction (0xB9).
  */
 public class InvokeInterfaceInstruction extends Instruction implements InvokeInsn {
-    @Getter
     private final int methodIndex;
-    @Getter
     private final int count;
     private final ConstPool constPool;
 
@@ -38,6 +35,14 @@ public class InvokeInterfaceInstruction extends Instruction implements InvokeIns
         this.methodIndex = methodIndex;
         this.count = count;
         this.constPool = constPool;
+    }
+
+    public int getMethodIndex() {
+        return methodIndex;
+    }
+
+    public int getCount() {
+        return count;
     }
 
     @Override

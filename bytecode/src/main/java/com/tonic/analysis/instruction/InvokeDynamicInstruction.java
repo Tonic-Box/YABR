@@ -3,7 +3,6 @@ package com.tonic.analysis.instruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.InvokeDynamicItem;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -18,7 +17,6 @@ import java.io.IOException;
  * Total: 5 bytes
  */
 public class InvokeDynamicInstruction extends Instruction {
-    @Getter
     private final int cpIndex;
     private final ConstPool constPool;
 
@@ -37,6 +35,10 @@ public class InvokeDynamicInstruction extends Instruction {
         }
         this.cpIndex = cpIndex;
         this.constPool = constPool;
+    }
+
+    public int getCpIndex() {
+        return cpIndex;
     }
 
     /**

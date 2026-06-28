@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,14 +8,7 @@ import java.io.IOException;
 /**
  * Represents an unknown or unhandled instruction.
  */
-@Getter
 public class UnknownInstruction extends Instruction {
-    /**
-     * -- GETTER --
-     *  Returns the raw operand bytes following the opcode.
-     *
-     * @return The operand bytes.
-     */
     private final byte[] operands;
 
     /**
@@ -46,6 +38,11 @@ public class UnknownInstruction extends Instruction {
         int available = bytecode.length - (offset + 1);
         int copy = Math.min(operands.length, Math.max(0, available));
         System.arraycopy(bytecode, offset + 1, operands, 0, copy);
+    }
+
+    /** Returns the raw operand bytes following the opcode. */
+    public byte[] getOperands() {
+        return operands;
     }
 
     @Override

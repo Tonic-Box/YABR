@@ -4,7 +4,36 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt8&#10;- analyses" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt9&#10;- bytecode">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/DisassemblyOptions.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/DisassemblyOptions.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/ArithmeticInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/ArithmeticInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/CompareInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/CompareInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/DupInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/DupInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/GetFieldInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/GetFieldInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/GotoInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/GotoInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/IConstInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/IConstInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/IIncInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/IIncInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeDynamicInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeDynamicInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeInterfaceInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeInterfaceInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeSpecialInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeSpecialInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeStaticInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/InvokeVirtualInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/JsrInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/JsrInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LConstInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LConstInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/Ldc2WInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LdcInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LdcWInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LookupSwitchInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/LookupSwitchInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/MultiANewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/MultiANewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NarrowingConversionInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NarrowingConversionInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/SipushInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/SipushInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/TableSwitchInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/TableSwitchInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/UnknownInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/UnknownInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/WideInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/WideInstruction.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -150,14 +179,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00034" summary="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer">
-      <option name="closed" value="true" />
-      <created>1781068208430</created>
-      <option name="number" value="00034" />
-      <option name="presentableId" value="LOCAL-00034" />
-      <option name="project" value="LOCAL" />
-      <updated>1781068208430</updated>
     </task>
     <task id="LOCAL-00035" summary="- Fixed signing of conditional branches, jsr, and sipush in bytecode printer">
       <option name="closed" value="true" />
@@ -543,7 +564,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782618462015</updated>
     </task>
-    <option name="localTasksCounter" value="83" />
+    <task id="LOCAL-00083" summary="Removal of Lombok: pt9&#10;- bytecode">
+      <option name="closed" value="true" />
+      <created>1782619042598</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1782619042598</updated>
+    </task>
+    <option name="localTasksCounter" value="84" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -558,7 +587,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fix recompile fidelity: qualified class constants + JDK return types" />
     <MESSAGE value="- BinaryOpInstruction.swapOperands" />
     <MESSAGE value="- Renamer ordering fix" />
     <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types" />
@@ -583,6 +611,7 @@
     <MESSAGE value="Removal of Lombok: pt6&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt7&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt8&#10;- analyses" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt8&#10;- analyses" />
+    <MESSAGE value="Removal of Lombok: pt9&#10;- bytecode" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt9&#10;- bytecode" />
   </component>
 </project>

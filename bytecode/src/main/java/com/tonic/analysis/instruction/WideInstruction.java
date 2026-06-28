@@ -2,14 +2,12 @@ package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.util.Opcode;
-import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
  * Represents the WIDE instruction (0xC4).
  */
-@Getter
 public class WideInstruction extends Instruction implements LocalVarInstruction {
     private final Opcode modifiedOpcode;
     private final int varIndex;
@@ -44,6 +42,18 @@ public class WideInstruction extends Instruction implements LocalVarInstruction 
         this.modifiedOpcode = modifiedOpcode;
         this.varIndex = varIndex;
         this.constValue = constValue;
+    }
+
+    public Opcode getModifiedOpcode() {
+        return modifiedOpcode;
+    }
+
+    public int getVarIndex() {
+        return varIndex;
+    }
+
+    public int getConstValue() {
+        return constValue;
     }
 
     @Override

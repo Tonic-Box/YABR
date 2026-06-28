@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,20 +8,12 @@ import java.io.IOException;
 /**
  * Represents arithmetic instructions (IADD, LADD, FADD, DADD, ISUB, LSUB, FSUB, DSUB, IMUL, LMUL, FMUL, DMUL, IDIV, LDIV, FDIV, DDIV, IREM, LREM, FREM, DREM).
  */
-@Getter
 public class ArithmeticInstruction extends Instruction {
-    /**
-     * -- GETTER --
-     *  Returns the type of arithmetic operation.
-     *
-     * @return The ArithmeticType enum value.
-     */
     private final ArithmeticType type;
 
     /**
      * Enum representing the types of arithmetic operations.
      */
-    @Getter
     public enum ArithmeticType {
         IADD(0x60, "iadd"),
         LADD(0x61, "ladd"),
@@ -53,6 +44,14 @@ public class ArithmeticInstruction extends Instruction {
             this.mnemonic = mnemonic;
         }
 
+        public int getOpcode() {
+            return opcode;
+        }
+
+        public String getMnemonic() {
+            return mnemonic;
+        }
+
         public static ArithmeticType fromOpcode(int opcode) {
             for (ArithmeticType type : ArithmeticType.values()) {
                 if (type.opcode == opcode) {
@@ -75,6 +74,11 @@ public class ArithmeticInstruction extends Instruction {
         if (this.type == null) {
             throw new IllegalArgumentException("Invalid Arithmetic opcode: " + opcode);
         }
+    }
+
+    /** Returns the type of arithmetic operation. */
+    public ArithmeticType getType() {
+        return type;
     }
 
     @Override

@@ -8,7 +8,6 @@ import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodRefItem;
 import com.tonic.parser.constpool.NameAndTypeRefItem;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import java.io.IOException;
  * Represents the INVOKESPECIAL instruction (0xB7).
  */
 public class InvokeSpecialInstruction extends Instruction implements InvokeInsn {
-    @Getter
     private final int methodIndex;
     private final ConstPool constPool;
 
@@ -36,6 +34,10 @@ public class InvokeSpecialInstruction extends Instruction implements InvokeInsn 
         }
         this.methodIndex = methodIndex;
         this.constPool = constPool;
+    }
+
+    public int getMethodIndex() {
+        return methodIndex;
     }
 
     @Override

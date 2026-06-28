@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import java.io.IOException;
 /**
  * Represents the JVM ICONST_M1, ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, and ICONST_5 instructions.
  */
-@Getter
 public class IConstInstruction extends Instruction {
     private final int value;
 
@@ -23,6 +21,10 @@ public class IConstInstruction extends Instruction {
     public IConstInstruction(int opcode, int offset, int value) {
         super(opcode, offset, 1);
         this.value = value;
+    }
+
+    public int getValue() {
+        return value;
     }
 
     @Override

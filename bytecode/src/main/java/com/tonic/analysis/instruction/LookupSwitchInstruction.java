@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,11 +11,8 @@ import java.util.Map;
  */
 public class LookupSwitchInstruction extends Instruction {
     private final int padding;
-    @Getter
     private final int defaultOffset;
-    @Getter
     private final int npairs;
-    @Getter
     private final Map<Integer, Integer> matchOffsets;
 
     /**
@@ -38,6 +34,18 @@ public class LookupSwitchInstruction extends Instruction {
         this.defaultOffset = defaultOffset;
         this.npairs = npairs;
         this.matchOffsets = matchOffsets;
+    }
+
+    public int getDefaultOffset() {
+        return defaultOffset;
+    }
+
+    public int getNpairs() {
+        return npairs;
+    }
+
+    public Map<Integer, Integer> getMatchOffsets() {
+        return matchOffsets;
     }
 
     @Override

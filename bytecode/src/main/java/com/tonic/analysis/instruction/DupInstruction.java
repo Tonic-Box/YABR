@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,11 +8,9 @@ import java.io.IOException;
 /**
  * Represents the JVM DUP instruction and its variants.
  */
-@Getter
 public class DupInstruction extends Instruction {
     private final DupType type;
 
-    @Getter
     public enum DupType {
         DUP(0x59, "dup"),
         DUP_X1(0x5A, "dup_x1"),
@@ -28,6 +25,14 @@ public class DupInstruction extends Instruction {
         DupType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
+        }
+
+        public int getOpcode() {
+            return opcode;
+        }
+
+        public String getMnemonic() {
+            return mnemonic;
         }
 
         public static DupType fromOpcode(int opcode) {

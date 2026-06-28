@@ -8,7 +8,6 @@ import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodRefItem;
 import com.tonic.parser.constpool.NameAndTypeRefItem;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -16,7 +15,6 @@ import java.io.IOException;
  * Represents the INVOKEVIRTUAL instruction (0xB6).
  */
 public class InvokeVirtualInstruction extends Instruction implements InvokeInsn {
-    @Getter
     private final int methodIndex;
     private final ConstPool constPool;
 
@@ -35,6 +33,10 @@ public class InvokeVirtualInstruction extends Instruction implements InvokeInsn 
         }
         this.methodIndex = methodIndex;
         this.constPool = constPool;
+    }
+
+    public int getMethodIndex() {
+        return methodIndex;
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,7 +8,6 @@ import java.io.IOException;
 /**
  * Represents the NEWARRAY instruction (0xBC).
  */
-@Getter
 public class NewArrayInstruction extends Instruction {
     private final ArrayType arrayType;
     private final int typeCode;
@@ -18,7 +16,6 @@ public class NewArrayInstruction extends Instruction {
     /**
      * Enum representing the types of array creation.
      */
-    @Getter
     public enum ArrayType {
         T_BOOLEAN(4, "newarray [boolean]"),
         T_CHAR(5, "newarray [char]"),
@@ -35,6 +32,14 @@ public class NewArrayInstruction extends Instruction {
         ArrayType(int code, String description) {
             this.code = code;
             this.description = description;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getDescription() {
+            return description;
         }
 
         public static ArrayType fromCode(int code) {
@@ -63,6 +68,18 @@ public class NewArrayInstruction extends Instruction {
         this.typeCode = typeCode;
         this.arrayType = ArrayType.fromCode(typeCode);
         this.count = count;
+    }
+
+    public ArrayType getArrayType() {
+        return arrayType;
+    }
+
+    public int getTypeCode() {
+        return typeCode;
+    }
+
+    public int getCount() {
+        return count;
     }
 
     @Override

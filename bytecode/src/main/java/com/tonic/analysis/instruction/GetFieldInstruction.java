@@ -6,7 +6,6 @@ import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.FieldRefItem;
 import com.tonic.parser.constpool.NameAndTypeRefItem;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -16,11 +15,9 @@ import java.io.IOException;
  */
 public class GetFieldInstruction extends Instruction {
     private final FieldType type;
-    @Getter
     private final int fieldIndex;
     private final ConstPool constPool;
 
-    @Getter
     public enum FieldType {
         GETFIELD(0xB4, "getfield"),
         GETSTATIC(0xB2, "getstatic");
@@ -31,6 +28,14 @@ public class GetFieldInstruction extends Instruction {
         FieldType(int opcode, String mnemonic) {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
+        }
+
+        public int getOpcode() {
+            return opcode;
+        }
+
+        public String getMnemonic() {
+            return mnemonic;
         }
 
         public static FieldType fromOpcode(int opcode) {
@@ -59,6 +64,10 @@ public class GetFieldInstruction extends Instruction {
         }
         this.fieldIndex = fieldIndex;
         this.constPool = constPool;
+    }
+
+    public int getFieldIndex() {
+        return fieldIndex;
     }
 
     @Override

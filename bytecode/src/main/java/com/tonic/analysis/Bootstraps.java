@@ -10,7 +10,6 @@ import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodHandleItem;
 import com.tonic.parser.constpool.MethodRefItem;
 import com.tonic.parser.constpool.structure.MethodHandle;
-import lombok.Getter;
 
 import java.util.Collections;
 import java.util.List;
@@ -132,7 +131,6 @@ public final class Bootstraps {
      * owner/name/descriptor of its target member, and the constant-pool indices of its static
      * arguments.
      */
-    @Getter
     public static final class BootstrapRef {
         private final String kind;
         private final String owner;
@@ -146,6 +144,26 @@ public final class Bootstraps {
             this.name = name;
             this.descriptor = descriptor;
             this.argCpIndices = List.copyOf(argCpIndices);
+        }
+
+        public String getKind() {
+            return kind;
+        }
+
+        public String getOwner() {
+            return owner;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getDescriptor() {
+            return descriptor;
+        }
+
+        public List<Integer> getArgCpIndices() {
+            return argCpIndices;
         }
 
         /**
