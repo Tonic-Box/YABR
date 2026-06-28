@@ -2,9 +2,7 @@ package com.tonic.analysis.cpg.node;
 
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.InvokeType;
-import lombok.Getter;
 
-@Getter
 public class CallSiteNode extends CPGNode {
 
     private final InvokeInstruction invoke;
@@ -23,6 +21,22 @@ public class CallSiteNode extends CPGNode {
         setProperty("targetName", targetName);
         setProperty("targetDescriptor", targetDescriptor);
         setProperty("invokeType", invoke.getInvokeType().name());
+    }
+
+    public InvokeInstruction getInvoke() {
+        return invoke;
+    }
+
+    public String getTargetOwner() {
+        return targetOwner;
+    }
+
+    public String getTargetName() {
+        return targetName;
+    }
+
+    public String getTargetDescriptor() {
+        return targetDescriptor;
     }
 
     @Override

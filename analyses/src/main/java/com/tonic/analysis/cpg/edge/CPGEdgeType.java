@@ -1,8 +1,5 @@
 package com.tonic.analysis.cpg.edge;
 
-import lombok.Getter;
-
-@Getter
 public enum CPGEdgeType {
     AST_CHILD("AST", "AST parent to child"),
     AST_PARENT("AST↑", "AST child to parent"),
@@ -46,6 +43,14 @@ public enum CPGEdgeType {
     CPGEdgeType(String shortName, String description) {
         this.shortName = shortName;
         this.description = description;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public boolean isASTEdge() {

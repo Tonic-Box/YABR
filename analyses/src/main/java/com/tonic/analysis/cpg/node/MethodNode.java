@@ -1,9 +1,7 @@
 package com.tonic.analysis.cpg.node;
 
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import lombok.Getter;
 
-@Getter
 public class MethodNode extends CPGNode {
 
     private final IRMethod method;
@@ -22,6 +20,22 @@ public class MethodNode extends CPGNode {
         setProperty("name", name);
         setProperty("descriptor", descriptor);
         setProperty("isStatic", method.isStatic());
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
     }
 
     @Override

@@ -2,12 +2,9 @@ package com.tonic.analysis.cpg.node;
 
 import com.tonic.analysis.cpg.edge.CPGEdge;
 import com.tonic.analysis.cpg.edge.CPGEdgeType;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.*;
 
-@Getter
 public abstract class CPGNode {
 
     private final long id;
@@ -17,14 +14,48 @@ public abstract class CPGNode {
     private final Set<CPGEdge> outgoingEdges = new LinkedHashSet<>();
     private final Set<CPGEdge> incomingEdges = new LinkedHashSet<>();
 
-    @Setter
     private boolean tainted;
-    @Setter
     private String taintLabel;
 
     protected CPGNode(long id, CPGNodeType nodeType) {
         this.id = id;
         this.nodeType = nodeType;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public CPGNodeType getNodeType() {
+        return nodeType;
+    }
+
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    public Set<CPGEdge> getOutgoingEdges() {
+        return outgoingEdges;
+    }
+
+    public Set<CPGEdge> getIncomingEdges() {
+        return incomingEdges;
+    }
+
+    public boolean isTainted() {
+        return tainted;
+    }
+
+    public String getTaintLabel() {
+        return taintLabel;
+    }
+
+    public void setTainted(boolean tainted) {
+        this.tainted = tainted;
+    }
+
+    public void setTaintLabel(String taintLabel) {
+        this.taintLabel = taintLabel;
     }
 
     public abstract String getLabel();

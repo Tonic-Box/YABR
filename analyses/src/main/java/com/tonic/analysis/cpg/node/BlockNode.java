@@ -1,9 +1,7 @@
 package com.tonic.analysis.cpg.node;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import lombok.Getter;
 
-@Getter
 public class BlockNode extends CPGNode {
 
     private final IRBlock block;
@@ -17,6 +15,14 @@ public class BlockNode extends CPGNode {
         setProperty("blockId", blockId);
         setProperty("name", block.getName());
         setProperty("isEntry", block.isEntry());
+    }
+
+    public IRBlock getBlock() {
+        return block;
+    }
+
+    public int getBlockId() {
+        return blockId;
     }
 
     @Override

@@ -1,9 +1,7 @@
 package com.tonic.analysis.cpg.node;
 
 import com.tonic.analysis.ssa.ir.*;
-import lombok.Getter;
 
-@Getter
 public class InstructionNode extends CPGNode {
 
     private final IRInstruction instruction;
@@ -34,6 +32,18 @@ public class InstructionNode extends CPGNode {
             NewInstruction newInstr = (NewInstruction) instruction;
             setProperty("allocType", newInstr.getClassName());
         }
+    }
+
+    public IRInstruction getInstruction() {
+        return instruction;
+    }
+
+    public int getInstructionIndex() {
+        return instructionIndex;
+    }
+
+    public int getBlockId() {
+        return blockId;
     }
 
     @Override

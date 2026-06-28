@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt3&#10;- execution">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt5&#10;- analyses" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -152,22 +150,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00029" summary="- CodeWriter: handle-keyed insertBefore/insertAfter/removeInstruction/replaceInstruction/replaceBody + cloneRange/cloneRangeWithTargets, all via a relink pass (branch/switch retarget, branch widening, exception table, frame regen). New ConstPoolRemapper + MethodGrafter for cross-pool method grafting (incl. invokedynamic bootstraps); ClassFile.redirectOwner and stripStackMapTables. Local-var clones use the narrowest encoding.&#10;&#10;- Fix CONSTANT_Utf8 to use JVMS modified UTF-8 (read + write) and FrameGenerator goto_w target computation.">
-      <option name="closed" value="true" />
-      <created>1780895682551</created>
-      <option name="number" value="00029" />
-      <option name="presentableId" value="LOCAL-00029" />
-      <option name="project" value="LOCAL" />
-      <updated>1780895682551</updated>
-    </task>
-    <task id="LOCAL-00030" summary="Detached snippet assembly + cloned-range inlining primitives&#10;- CodeBuilder.detached()/assemble() produces a spliceable ClonedRange: invokedynamic (bootstrap added to the target's BootstrapMethods), try/catch, and branches into the host via externalLabel/bindLabel or a tail continuation label.&#10;- CodeWriter: exception-table relink is now identity-based (fixes host table corruption when a spliced block's offsets collide on insert); max_stack is computed over the CFG via FrameGenerator (computeMaxStack, applied in relink + write) so handler/loop peaks no longer under-count; cloneRangeWithTargets carries out-of-range branch targets by identity (same-method, guarded loud against cross-method misuse); ClonedRange.redirectReturns() turns cloned returns into continuation exits and insertChainBefore folds several bodies without the skip hazard.&#10;- ClassFile.addBootstrapMethod/getBootstrapMethodsAttribute (ConstPoolRemapper now delegates to them). New tests: CodeBuilderSnippetTest, CodeBuilderExternalBranchTest, MaxStackTest, ClonedRangeExitsTest.">
-      <option name="closed" value="true" />
-      <created>1780963758078</created>
-      <option name="number" value="00030" />
-      <option name="presentableId" value="LOCAL-00030" />
-      <option name="project" value="LOCAL" />
-      <updated>1780963758078</updated>
     </task>
     <task id="LOCAL-00031" summary="Complete class-ref redirect, list view, lookups, InvokeInsn&#10;&#10;redirectClassReferences(ConstPool/ClassFile) canonicalizes every reference to a class — bare CONSTANT_Class operands (new/checkcast/instanceof/anewarray), catch_type, member-ref owners, indy bootstrap classes, and L&lt;name&gt;; tokens in descriptors — so no live constant names the old class after a relocate/merge.&#10;&#10;redirectOwner now delegates to it (was member-ref-only; left dangling operand refs that VerifyError'd on use). Generic Signature attrs stay out of scope (Renamer's job). Drops the now-dead memberRef{,Set}ClassIndex helpers.&#10;&#10;Added:&#10;- CodeWriter.getInstructionList() — offset-ordered, identity-indexed snapshot&#10;- ClassFile.getMethod(name[, desc]) / getMethods(name) / getConstructors() / getStaticInitializer() / getField(name) / getInterfaceNames()&#10;- InvokeInsn interface implemented by the four owner-bearing invokes (not invokedynamic), so call sites can extract the callee uniformly">
       <option name="closed" value="true" />
@@ -545,7 +527,23 @@
       <option name="project" value="LOCAL" />
       <updated>1782615598037</updated>
     </task>
-    <option name="localTasksCounter" value="78" />
+    <task id="LOCAL-00078" summary="Removal of Lombok: pt4&#10;- analyses">
+      <option name="closed" value="true" />
+      <created>1782616010458</created>
+      <option name="number" value="00078" />
+      <option name="presentableId" value="LOCAL-00078" />
+      <option name="project" value="LOCAL" />
+      <updated>1782616010458</updated>
+    </task>
+    <task id="LOCAL-00079" summary="Removal of Lombok: pt5&#10;- analyses">
+      <option name="closed" value="true" />
+      <created>1782616266482</created>
+      <option name="number" value="00079" />
+      <option name="presentableId" value="LOCAL-00079" />
+      <option name="project" value="LOCAL" />
+      <updated>1782616266482</updated>
+    </task>
+    <option name="localTasksCounter" value="80" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -560,8 +558,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write()." />
-    <MESSAGE value="- CopyPropagation replaced both chain-followers with one resolve()" />
     <MESSAGE value="- TypeInference: handle WIDE-prefixed load/store (locals &gt; 255) instead of treating them as frame no-ops&#10;- BytecodeLifter: propagate primitive type around phi cycles (long loop var seeded by a const was mis-typed int)&#10;- BytecodeLifter/BytecodeEmitter: emit the caught-exception astore at handler entry; mark it via the real exception value (SSA IR unchanged)&#10;- BytecodeLifter: populate ExceptionHandler.tryBlocks so the regenerated table no longer spans the handler&#10;- Fix two tests that codified the old bugs (testWide, removeMethodCall)" />
     <MESSAGE value="CodeWriter.replaceInstructions" />
     <MESSAGE value="Fix unresolved class constants in .class literals, casts, and instanceof&#10;&#10;lowerClass/lowerCast/lowerInstanceOf emitted bare simple names (e.g. Main instead of osrs/dev/Main) for same-package/imported types, causing NoClassDefFoundError at runtime. Resolve the type name through the TypeResolver via a shared helper. Adds ClassLiteralResolutionTest." />
@@ -585,6 +581,8 @@
     <MESSAGE value="Removal of Lombok: pt1&#10;- query module&#10;- renamer module" />
     <MESSAGE value="Removal of Lombok: pt2&#10;- execution" />
     <MESSAGE value="Removal of Lombok: pt3&#10;- execution" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt3&#10;- execution" />
+    <MESSAGE value="Removal of Lombok: pt4&#10;- analyses" />
+    <MESSAGE value="Removal of Lombok: pt5&#10;- analyses" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt5&#10;- analyses" />
   </component>
 </project>
