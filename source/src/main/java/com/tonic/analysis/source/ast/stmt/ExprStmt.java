@@ -4,8 +4,6 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
@@ -13,13 +11,10 @@ import java.util.Objects;
  * Represents an expression statement: expression;
  * Typically used for method calls, assignments, and increment/decrement operations.
  */
-@Getter
 public final class ExprStmt implements Statement {
 
-    @Setter
     private Expression expression;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ExprStmt(Expression expression, SourceLocation location) {
@@ -31,6 +26,26 @@ public final class ExprStmt implements Statement {
 
     public ExprStmt(Expression expression) {
         this(expression, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getExpression() {
+        return expression;
+    }
+
+    public void setExpression(Expression expression) {
+        this.expression = expression;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public ExprStmt withExpression(Expression expression) {

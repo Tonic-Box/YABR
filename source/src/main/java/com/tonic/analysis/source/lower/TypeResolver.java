@@ -15,8 +15,6 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.util.Modifiers;
 
 import java.lang.reflect.Method;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +22,6 @@ import java.util.List;
 public class TypeResolver {
 
     private final ClassPool classPool;
-    @Getter
     private final String currentClass;
 
     public TypeResolver(ClassPool classPool, String currentClass) {
@@ -33,6 +30,18 @@ public class TypeResolver {
         // Frame generation merges reference types at control-flow joins; give it a real
         // common-superclass lookup (backed by the class pool) instead of collapsing to Object.
         TypeState.setSuperclassResolver(this::getSuperclassName);
+    }
+
+    public String getCurrentClass() {
+        return currentClass;
+    }
+
+    public void setCurrentClassDecl(ClassDecl currentClassDecl) {
+        this.currentClassDecl = currentClassDecl;
+    }
+
+    public void setImports(List<ImportDecl> imports) {
+        this.imports = imports;
     }
 
     /**
@@ -61,9 +70,7 @@ public class TypeResolver {
             return null;
         }
     }
-    @Setter
     private ClassDecl currentClassDecl;
-    @Setter
     private List<ImportDecl> imports = new ArrayList<>();
 
     public SourceType resolveFieldType(String ownerClass, String fieldName) {

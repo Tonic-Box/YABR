@@ -4,8 +4,6 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.*;
 
@@ -31,7 +29,6 @@ import java.util.*;
  * // END UNSTRUCTURED REGION
  * </pre>
  */
-@Getter
 public final class IRRegionStmt implements Statement {
 
     /**
@@ -47,11 +44,9 @@ public final class IRRegionStmt implements Statement {
     /**
      * Optional description of why this region is irreducible.
      */
-    @Setter
     private String reason;
 
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public IRRegionStmt(List<IRBlock> blocks, Map<IRBlock, String> blockLabels, SourceLocation location) {
@@ -62,6 +57,34 @@ public final class IRRegionStmt implements Statement {
 
     public IRRegionStmt(List<IRBlock> blocks) {
         this(blocks, null, SourceLocation.UNKNOWN);
+    }
+
+    public List<IRBlock> getBlocks() {
+        return blocks;
+    }
+
+    public Map<IRBlock, String> getBlockLabels() {
+        return blockLabels;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

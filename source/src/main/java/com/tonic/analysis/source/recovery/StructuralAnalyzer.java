@@ -11,7 +11,6 @@ import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
-import lombok.Getter;
 
 import java.util.*;
 
@@ -19,7 +18,6 @@ import java.util.*;
  * Analyzes CFG structure to identify high-level control flow patterns.
  * Detects if-then-else, while, do-while, for, and switch constructs.
  */
-@Getter
 public class StructuralAnalyzer {
 
     private final IRMethod method;
@@ -29,13 +27,37 @@ public class StructuralAnalyzer {
 
     private final Map<IRBlock, Set<IRBlock>> reachabilityCache = new HashMap<>();
 
-    /** Analysis results */
     private final Map<IRBlock, RegionInfo> regionInfos = new HashMap<>();
 
     public StructuralAnalyzer(IRMethod method, DominatorTree dominatorTree, LoopAnalysis loopAnalysis) {
         this.method = method;
         this.dominatorTree = dominatorTree;
         this.loopAnalysis = loopAnalysis;
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public DominatorTree getDominatorTree() {
+        return dominatorTree;
+    }
+
+    public LoopAnalysis getLoopAnalysis() {
+        return loopAnalysis;
+    }
+
+    public PostDominatorTree getPostDominatorTree() {
+        return postDominatorTree;
+    }
+
+    public Map<IRBlock, Set<IRBlock>> getReachabilityCache() {
+        return reachabilityCache;
+    }
+
+    /** Analysis results */
+    public Map<IRBlock, RegionInfo> getRegionInfos() {
+        return regionInfos;
     }
 
     /**
@@ -1448,7 +1470,6 @@ public class StructuralAnalyzer {
     /**
      * Information about a structured region.
      */
-    @Getter
     public static class RegionInfo {
         private final StructuredRegion type;
         private final IRBlock header;
@@ -1465,19 +1486,86 @@ public class StructuralAnalyzer {
 
         private Map<Integer, IRBlock> switchCases;
         private IRBlock defaultTarget;
-        /** Selector for a comparison-chain switch (header terminator is a branch, not a SwitchInstruction). */
         private SSAValue switchSelector;
-        /** Comparison blocks forming the dispatch spine; used as stop blocks so case bodies cannot bleed into them. */
         private Set<IRBlock> switchSpineBlocks;
 
         private SSAValue inductionVariable;
         private IRBlock incrementBlock;
-        @Getter
         private int inductionLocalIndex = -1;
 
         public RegionInfo(StructuredRegion type, IRBlock header) {
             this.type = type;
             this.header = header;
+        }
+
+        public StructuredRegion getType() {
+            return type;
+        }
+
+        public IRBlock getHeader() {
+            return header;
+        }
+
+        public IRBlock getThenBlock() {
+            return thenBlock;
+        }
+
+        public IRBlock getElseBlock() {
+            return elseBlock;
+        }
+
+        public IRBlock getMergeBlock() {
+            return mergeBlock;
+        }
+
+        public boolean isConditionNegated() {
+            return conditionNegated;
+        }
+
+        public IRBlock getLoopBody() {
+            return loopBody;
+        }
+
+        public IRBlock getLoopExit() {
+            return loopExit;
+        }
+
+        public LoopAnalysis.Loop getLoop() {
+            return loop;
+        }
+
+        public IRBlock getContinueTarget() {
+            return continueTarget;
+        }
+
+        public Map<Integer, IRBlock> getSwitchCases() {
+            return switchCases;
+        }
+
+        public IRBlock getDefaultTarget() {
+            return defaultTarget;
+        }
+
+        /** Selector for a comparison-chain switch (header terminator is a branch, not a SwitchInstruction). */
+        public SSAValue getSwitchSelector() {
+            return switchSelector;
+        }
+
+        /** Comparison blocks forming the dispatch spine; used as stop blocks so case bodies cannot bleed into them. */
+        public Set<IRBlock> getSwitchSpineBlocks() {
+            return switchSpineBlocks;
+        }
+
+        public SSAValue getInductionVariable() {
+            return inductionVariable;
+        }
+
+        public IRBlock getIncrementBlock() {
+            return incrementBlock;
+        }
+
+        public int getInductionLocalIndex() {
+            return inductionLocalIndex;
         }
 
         public void setThenBlock(IRBlock thenBlock) {

@@ -4,7 +4,6 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.util.ClassNameUtil;
-import lombok.Getter;
 
 import java.util.Collections;
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.Objects;
  * Represents a reference type (class or interface) in the source AST.
  * Supports generic type arguments for representing parameterized types.
  */
-@Getter
 public final class ReferenceSourceType implements SourceType {
 
     /**
@@ -48,6 +46,18 @@ public final class ReferenceSourceType implements SourceType {
         this.internalName = Objects.requireNonNull(internalName);
         this.typeArguments = typeArguments != null ? List.copyOf(typeArguments) : Collections.emptyList();
         this.useSimpleName = useSimpleName;
+    }
+
+    public String getInternalName() {
+        return internalName;
+    }
+
+    public List<SourceType> getTypeArguments() {
+        return typeArguments;
+    }
+
+    public boolean isUseSimpleName() {
+        return useSimpleName;
     }
 
     /**

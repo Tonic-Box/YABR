@@ -4,23 +4,17 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a synchronized statement: synchronized (lock) { body }
  */
-@Getter
 public final class SynchronizedStmt implements Statement {
 
-    @Setter
     private Expression lock;
-    @Setter
     private Statement body;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public SynchronizedStmt(Expression lock, Statement body, SourceLocation location) {
@@ -34,6 +28,34 @@ public final class SynchronizedStmt implements Statement {
 
     public SynchronizedStmt(Expression lock, Statement body) {
         this(lock, body, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getLock() {
+        return lock;
+    }
+
+    public void setLock(Expression lock) {
+        this.lock = lock;
+    }
+
+    public Statement getBody() {
+        return body;
+    }
+
+    public void setBody(Statement body) {
+        this.body = body;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public SynchronizedStmt withLock(Expression lock) {

@@ -3,14 +3,12 @@ package com.tonic.analysis.source.ast.type;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.type.ArrayType;
 import com.tonic.analysis.ssa.type.IRType;
-import lombok.Getter;
 
 import java.util.Objects;
 
 /**
  * Represents an array type in the source AST.
  */
-@Getter
 public final class ArraySourceType implements SourceType {
 
     /**
@@ -35,6 +33,14 @@ public final class ArraySourceType implements SourceType {
         this.dimensions = dimensions;
     }
 
+    public SourceType getComponentType() {
+        return componentType;
+    }
+
+    public int getDimensions() {
+        return dimensions;
+    }
+
     /**
      * Gets the element type (base type for multi-dimensional arrays).
      * For int[][], this returns int.
@@ -56,12 +62,8 @@ public final class ArraySourceType implements SourceType {
 
     @Override
     public String toJavaSource() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(getElementType().toJavaSource());
-        for (int i = 0; i < getTotalDimensions(); i++) {
-            sb.append("[]");
-        }
-        return sb.toString();
+        return getElementType().toJavaSource() +
+                "[]".repeat(Math.max(0, getTotalDimensions()));
     }
 
     /**

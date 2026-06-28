@@ -1,10 +1,7 @@
 package com.tonic.analysis.source.parser;
 
-import lombok.Getter;
-
 import java.util.Objects;
 
-@Getter
 public final class Token {
     private final TokenType type;
     private final String text;
@@ -20,6 +17,22 @@ public final class Token {
 
     public Token(TokenType type, String text, SourcePosition position) {
         this(type, text, null, position);
+    }
+
+    public TokenType getType() {
+        return type;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public Object getValue() {
+        return value;
+    }
+
+    public SourcePosition getPosition() {
+        return position;
     }
 
     public boolean is(TokenType type) {

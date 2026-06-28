@@ -6,7 +6,6 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-import lombok.Getter;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -22,7 +21,6 @@ public class SourceEmitter implements SourceVisitor<Void> {
     private final IndentingWriter writer;
     private final SourceEmitterConfig config;
     private final IdentifierNormalizer normalizer;
-    @Getter
     private final Set<String> usedTypes = new HashSet<>();
 
     /** Receives each provenance-carrying statement's (owning method key, statement, 1-based line). */
@@ -53,6 +51,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
         this.writer = writer;
         this.config = config;
         this.normalizer = new IdentifierNormalizer(config.getIdentifierMode());
+    }
+
+    public Set<String> getUsedTypes() {
+        return usedTypes;
     }
 
     public void clearUsedTypes() {

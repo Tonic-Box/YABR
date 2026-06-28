@@ -6,27 +6,20 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
 public final class FieldDecl implements ASTNode {
 
-    @Setter
     private String name;
     private final Set<Modifier> modifiers;
     private final NodeList<AnnotationExpr> annotations;
-    @Setter
     private SourceType type;
-    @Setter
     private Expression initializer;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public FieldDecl(String name, SourceType type, SourceLocation location) {
@@ -39,6 +32,50 @@ public final class FieldDecl implements ASTNode {
 
     public FieldDecl(String name, SourceType type) {
         this(name, type, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Set<Modifier> getModifiers() {
+        return modifiers;
+    }
+
+    public NodeList<AnnotationExpr> getAnnotations() {
+        return annotations;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public void setType(SourceType type) {
+        this.type = type;
+    }
+
+    public Expression getInitializer() {
+        return initializer;
+    }
+
+    public void setInitializer(Expression initializer) {
+        this.initializer = initializer;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public FieldDecl withName(String name) {

@@ -5,23 +5,18 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a method reference expression: Type::method or expr::method
  */
-@Getter
 public final class MethodRefExpr implements Expression {
 
     /**
      * The receiver expression (for bound references) or null (for static/instance references).
      */
-    @Setter
     private Expression receiver;
-    @Setter
     private String methodName;
     /**
      * The class that declares the method (in internal format).
@@ -30,7 +25,6 @@ public final class MethodRefExpr implements Expression {
     private final MethodRefKind kind;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public MethodRefExpr(Expression receiver, String methodName, String ownerClass,
@@ -50,6 +44,46 @@ public final class MethodRefExpr implements Expression {
     public MethodRefExpr(Expression receiver, String methodName, String ownerClass,
                          MethodRefKind kind, SourceType type) {
         this(receiver, methodName, ownerClass, kind, type, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getReceiver() {
+        return receiver;
+    }
+
+    public void setReceiver(Expression receiver) {
+        this.receiver = receiver;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
+    }
+
+    public String getOwnerClass() {
+        return ownerClass;
+    }
+
+    public MethodRefKind getKind() {
+        return kind;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

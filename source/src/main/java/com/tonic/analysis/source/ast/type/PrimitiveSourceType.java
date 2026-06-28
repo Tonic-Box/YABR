@@ -3,12 +3,10 @@ package com.tonic.analysis.source.ast.type;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
-import lombok.Getter;
 
 /**
  * Represents a primitive type in the source AST.
  */
-@Getter
 public final class PrimitiveSourceType implements SourceType {
 
     private final PrimitiveKind kind;
@@ -51,6 +49,10 @@ public final class PrimitiveSourceType implements SourceType {
 
     private PrimitiveSourceType(PrimitiveKind kind) {
         this.kind = kind;
+    }
+
+    public PrimitiveKind getKind() {
+        return kind;
     }
 
     /**

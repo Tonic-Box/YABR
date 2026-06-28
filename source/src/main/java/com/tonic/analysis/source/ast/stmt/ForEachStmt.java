@@ -4,27 +4,19 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents an enhanced for loop (foreach): for (Type var : iterable) body
  */
-@Getter
 public final class ForEachStmt implements Statement {
 
-    @Setter
     private VarDeclStmt variable;
-    @Setter
     private Expression iterable;
-    @Setter
     private Statement body;
-    @Setter
     private String label;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ForEachStmt(VarDeclStmt variable, Expression iterable, Statement body,
@@ -42,6 +34,46 @@ public final class ForEachStmt implements Statement {
 
     public ForEachStmt(VarDeclStmt variable, Expression iterable, Statement body) {
         this(variable, iterable, body, null, SourceLocation.UNKNOWN);
+    }
+
+    public VarDeclStmt getVariable() {
+        return variable;
+    }
+
+    public void setVariable(VarDeclStmt variable) {
+        this.variable = variable;
+    }
+
+    public Expression getIterable() {
+        return iterable;
+    }
+
+    public void setIterable(Expression iterable) {
+        this.iterable = iterable;
+    }
+
+    public Statement getBody() {
+        return body;
+    }
+
+    public void setBody(Statement body) {
+        this.body = body;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     @Override

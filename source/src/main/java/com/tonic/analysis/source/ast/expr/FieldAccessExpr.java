@@ -5,23 +5,18 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a field access expression: obj.field or Type.staticField
  */
-@Getter
 public final class FieldAccessExpr implements Expression {
 
     /**
      * The receiver expression (null for static access).
      */
-    @Setter
     private Expression receiver;
-    @Setter
     private String fieldName;
     /**
      * The class that declares the field (in internal format).
@@ -30,7 +25,6 @@ public final class FieldAccessExpr implements Expression {
     private final boolean isStatic;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public FieldAccessExpr(Expression receiver, String fieldName, String ownerClass,
@@ -50,6 +44,46 @@ public final class FieldAccessExpr implements Expression {
     public FieldAccessExpr(Expression receiver, String fieldName, String ownerClass,
                            boolean isStatic, SourceType type) {
         this(receiver, fieldName, ownerClass, isStatic, type, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getReceiver() {
+        return receiver;
+    }
+
+    public void setReceiver(Expression receiver) {
+        this.receiver = receiver;
+    }
+
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public void setFieldName(String fieldName) {
+        this.fieldName = fieldName;
+    }
+
+    public String getOwnerClass() {
+        return ownerClass;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

@@ -1,10 +1,7 @@
 package com.tonic.analysis.source.parser;
 
-import lombok.Getter;
-
 import java.util.Objects;
 
-@Getter
 public final class SourcePosition {
     private final int line;
     private final int column;
@@ -16,6 +13,18 @@ public final class SourcePosition {
         this.line = line;
         this.column = column;
         this.offset = offset;
+    }
+
+    public int getLine() {
+        return line;
+    }
+
+    public int getColumn() {
+        return column;
+    }
+
+    public int getOffset() {
+        return offset;
     }
 
     public static SourcePosition of(int line, int column) {

@@ -6,22 +6,17 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
 public final class ClassDecl implements TypeDecl {
 
-    @Setter
     private String name;
     private final Set<Modifier> modifiers;
     private final NodeList<AnnotationExpr> annotations;
-    @Setter
     private SourceType superclass;
     private final NodeList<SourceType> interfaces;
     private final NodeList<SourceType> typeParameters;
@@ -32,7 +27,6 @@ public final class ClassDecl implements TypeDecl {
     private final List<BlockStmt> staticInitializers;
     private final List<BlockStmt> instanceInitializers;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ClassDecl(String name, SourceLocation location) {
@@ -52,6 +46,74 @@ public final class ClassDecl implements TypeDecl {
 
     public ClassDecl(String name) {
         this(name, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Set<Modifier> getModifiers() {
+        return modifiers;
+    }
+
+    public NodeList<AnnotationExpr> getAnnotations() {
+        return annotations;
+    }
+
+    public SourceType getSuperclass() {
+        return superclass;
+    }
+
+    public void setSuperclass(SourceType superclass) {
+        this.superclass = superclass;
+    }
+
+    public NodeList<SourceType> getInterfaces() {
+        return interfaces;
+    }
+
+    public NodeList<SourceType> getTypeParameters() {
+        return typeParameters;
+    }
+
+    public NodeList<FieldDecl> getFields() {
+        return fields;
+    }
+
+    public NodeList<MethodDecl> getMethods() {
+        return methods;
+    }
+
+    public NodeList<ConstructorDecl> getConstructors() {
+        return constructors;
+    }
+
+    public NodeList<TypeDecl> getInnerTypes() {
+        return innerTypes;
+    }
+
+    public List<BlockStmt> getStaticInitializers() {
+        return staticInitializers;
+    }
+
+    public List<BlockStmt> getInstanceInitializers() {
+        return instanceInitializers;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public ClassDecl withName(String name) {

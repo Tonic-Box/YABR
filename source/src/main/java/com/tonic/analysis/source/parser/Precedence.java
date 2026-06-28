@@ -1,8 +1,5 @@
 package com.tonic.analysis.source.parser;
 
-import lombok.Getter;
-
-@Getter
 public enum Precedence {
     NONE(0),
     ASSIGNMENT(1),
@@ -25,6 +22,10 @@ public enum Precedence {
 
     Precedence(int level) {
         this.level = level;
+    }
+
+    public int getLevel() {
+        return level;
     }
 
     public static Precedence of(TokenType type) {

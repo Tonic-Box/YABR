@@ -5,18 +5,14 @@ import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
 public final class EnumDecl implements TypeDecl {
 
-    @Setter
     private String name;
     private final Set<Modifier> modifiers;
     private final NodeList<AnnotationExpr> annotations;
@@ -27,7 +23,6 @@ public final class EnumDecl implements TypeDecl {
     private final NodeList<ConstructorDecl> constructors;
     private final NodeList<TypeDecl> innerTypes;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public EnumDecl(String name, SourceLocation location) {
@@ -45,6 +40,58 @@ public final class EnumDecl implements TypeDecl {
 
     public EnumDecl(String name) {
         this(name, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Set<Modifier> getModifiers() {
+        return modifiers;
+    }
+
+    public NodeList<AnnotationExpr> getAnnotations() {
+        return annotations;
+    }
+
+    public NodeList<SourceType> getInterfaces() {
+        return interfaces;
+    }
+
+    public NodeList<EnumConstantDecl> getConstants() {
+        return constants;
+    }
+
+    public NodeList<FieldDecl> getFields() {
+        return fields;
+    }
+
+    public NodeList<MethodDecl> getMethods() {
+        return methods;
+    }
+
+    public NodeList<ConstructorDecl> getConstructors() {
+        return constructors;
+    }
+
+    public NodeList<TypeDecl> getInnerTypes() {
+        return innerTypes;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public EnumDecl withName(String name) {

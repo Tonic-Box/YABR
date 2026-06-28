@@ -4,24 +4,18 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents an array access expression: array[index]
  */
-@Getter
 public final class ArrayAccessExpr implements Expression {
 
-    @Setter
     private Expression array;
-    @Setter
     private Expression index;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ArrayAccessExpr(Expression array, Expression index, SourceType type, SourceLocation location) {
@@ -36,6 +30,38 @@ public final class ArrayAccessExpr implements Expression {
 
     public ArrayAccessExpr(Expression array, Expression index, SourceType type) {
         this(array, index, type, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getArray() {
+        return array;
+    }
+
+    public void setArray(Expression array) {
+        this.array = array;
+    }
+
+    public Expression getIndex() {
+        return index;
+    }
+
+    public void setIndex(Expression index) {
+        this.index = index;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public ArrayAccessExpr withArray(Expression array) {

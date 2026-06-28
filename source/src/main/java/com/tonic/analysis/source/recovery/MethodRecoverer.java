@@ -12,29 +12,24 @@ import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.MethodEntry;
-import lombok.Getter;
 import java.util.List;
 
 /**
  * Facade for recovering source-level AST from an IR method.
  * Coordinates expression recovery, control flow analysis, and statement recovery.
  */
-@Getter
 public class MethodRecoverer {
 
     private final IRMethod irMethod;
     private final MethodEntry sourceMethod;
     private final NameRecoveryStrategy nameStrategy;
-    /** Names reserved by the caller (e.g. captured outer variables); {@code baseNameForSlot} skips these. */
     private final java.util.Set<String> reservedNames = new java.util.HashSet<>();
-    /** Cast results that are a record deconstruction's synthetic temp (the {@code (T) selector}). */
     private final java.util.Set<SSAValue> recordDeconstructionTemps = new java.util.HashSet<>();
 
     private DominatorTree dominatorTree;
     private LoopAnalysis loopAnalysis;
     private DefUseChains defUseChains;
 
-    @Getter
     private RecoveryContext recoveryContext;
     private ControlFlowContext controlFlowContext;
     private NameRecoverer nameRecoverer;
@@ -50,6 +45,64 @@ public class MethodRecoverer {
         this.irMethod = irMethod;
         this.sourceMethod = sourceMethod;
         this.nameStrategy = nameStrategy;
+    }
+
+    public IRMethod getIrMethod() {
+        return irMethod;
+    }
+
+    public MethodEntry getSourceMethod() {
+        return sourceMethod;
+    }
+
+    public NameRecoveryStrategy getNameStrategy() {
+        return nameStrategy;
+    }
+
+    /** Names reserved by the caller (e.g. captured outer variables); {@code baseNameForSlot} skips these. */
+    public java.util.Set<String> getReservedNames() {
+        return reservedNames;
+    }
+
+    /** Cast results that are a record deconstruction's synthetic temp (the {@code (T) selector}). */
+    public java.util.Set<SSAValue> getRecordDeconstructionTemps() {
+        return recordDeconstructionTemps;
+    }
+
+    public DominatorTree getDominatorTree() {
+        return dominatorTree;
+    }
+
+    public LoopAnalysis getLoopAnalysis() {
+        return loopAnalysis;
+    }
+
+    public DefUseChains getDefUseChains() {
+        return defUseChains;
+    }
+
+    public RecoveryContext getRecoveryContext() {
+        return recoveryContext;
+    }
+
+    public ControlFlowContext getControlFlowContext() {
+        return controlFlowContext;
+    }
+
+    public NameRecoverer getNameRecoverer() {
+        return nameRecoverer;
+    }
+
+    public ExpressionRecoverer getExpressionRecoverer() {
+        return expressionRecoverer;
+    }
+
+    public StructuralAnalyzer getStructuralAnalyzer() {
+        return structuralAnalyzer;
+    }
+
+    public StatementRecoverer getStatementRecoverer() {
+        return statementRecoverer;
     }
 
     /**

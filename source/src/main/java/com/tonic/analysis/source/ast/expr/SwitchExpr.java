@@ -4,8 +4,6 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +13,6 @@ import java.util.List;
  * Each arm yields a value; the expression's type is the common type of the arm results. Only the
  * arrow/yield value form is modeled (block-bodied arms reduce to a single result expression here).
  */
-@Getter
 public final class SwitchExpr implements Expression {
 
     /**
@@ -23,7 +20,6 @@ public final class SwitchExpr implements Expression {
      * arm (Java 21) instead has a {@code patternType} and optional {@code patternBinding}, rendered as
      * {@code case Type binding -> result}.
      */
-    @Getter
     public static final class Arm {
         private final List<Expression> labels;
         private final boolean isDefault;
@@ -62,6 +58,34 @@ public final class SwitchExpr implements Expression {
             this.result = result;
         }
 
+        public List<Expression> getLabels() {
+            return labels;
+        }
+
+        public boolean isDefault() {
+            return isDefault;
+        }
+
+        public SourceType getPatternType() {
+            return patternType;
+        }
+
+        public String getPatternBinding() {
+            return patternBinding;
+        }
+
+        public List<Component> getDeconstructionComponents() {
+            return deconstructionComponents;
+        }
+
+        public Expression getGuard() {
+            return guard;
+        }
+
+        public Expression getResult() {
+            return result;
+        }
+
         public boolean isTypePattern() {
             return patternType != null;
         }
@@ -77,7 +101,6 @@ public final class SwitchExpr implements Expression {
     }
 
     /** One component of a record-deconstruction pattern: {@code type binding}. */
-    @Getter
     public static final class Component {
         private final SourceType type;
         private final String binding;
@@ -86,14 +109,20 @@ public final class SwitchExpr implements Expression {
             this.type = type;
             this.binding = binding;
         }
+
+        public SourceType getType() {
+            return type;
+        }
+
+        public String getBinding() {
+            return binding;
+        }
     }
 
-    @Setter
     private Expression selector;
     private final List<Arm> arms;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public SwitchExpr(Expression selector, List<Arm> arms, SourceType type, SourceLocation location) {
@@ -114,6 +143,30 @@ public final class SwitchExpr implements Expression {
 
     public SwitchExpr(Expression selector, List<Arm> arms, SourceType type) {
         this(selector, arms, type, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getSelector() {
+        return selector;
+    }
+
+    public void setSelector(Expression selector) {
+        this.selector = selector;
+    }
+
+    public List<Arm> getArms() {
+        return arms;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     @Override

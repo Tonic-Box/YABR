@@ -1,8 +1,5 @@
 package com.tonic.analysis.source.parser;
 
-import lombok.Getter;
-
-@Getter
 public class ParseException extends RuntimeException {
     private final SourcePosition position;
     private final String source;
@@ -23,6 +20,14 @@ public class ParseException extends RuntimeException {
 
     public ParseException(String message, Token token) {
         this(message, token.getPosition(), null);
+    }
+
+    public SourcePosition getPosition() {
+        return position;
+    }
+
+    public String getSource() {
+        return source;
     }
 
     public int getLine() {

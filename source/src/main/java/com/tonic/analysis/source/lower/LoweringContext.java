@@ -7,8 +7,6 @@ import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ConstPool;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.*;
 
@@ -16,49 +14,32 @@ import java.util.*;
  * Shared state during AST to IR lowering.
  * Tracks variables, blocks, and control flow targets.
  */
-@Getter
 public class LoweringContext {
 
-    /** The IR method being built */
     private final IRMethod irMethod;
 
-    /** Constant pool for creating constants and references */
     private final ConstPool constPool;
 
-    /** Type resolver for looking up field/method types from ClassPool */
     private final TypeResolver typeResolver;
 
-    /** Current block where instructions are being emitted */
-    @Setter
     private IRBlock currentBlock;
 
-    /** Map from variable names to their current SSA values */
     private final Map<String, SSAValue> variableMap = new HashMap<>();
 
-    /** Map from variable names to their local slot indices */
     private final Map<String, Integer> variableLocalIndices = new HashMap<>();
 
-    /** The in-scope source-local record per name (re-created on each declaration, so disjoint same-name
-     *  declarations stay distinct), used to capture LocalVariableTable info during lowering. */
     private final Map<String, IRMethod.SourceLocal> currentSourceLocal = new HashMap<>();
 
-    /** Next available local slot index */
     private int nextLocalIndex = 0;
 
-    /** Whether to emit Load/Store instructions for variables (needed for loops) */
-    @Setter
     private boolean emitLocalInstructions = false;
 
-    /** Stack of loop targets for break/continue */
     private final Deque<LoopTargets> loopStack = new ArrayDeque<>();
 
-    /** Map from labels to their loop targets */
     private final Map<String, LoopTargets> labelMap = new HashMap<>();
 
-    /** Map from switch labels to their target blocks */
     private final Map<String, IRBlock> switchLabelMap = new HashMap<>();
 
-    /** Counter for generating temporary variable names */
     private int tempCounter = 0;
 
     /** Synthetic lambda methods generated during lowering */
@@ -67,22 +48,14 @@ public class LoweringContext {
     /** Synthetic array constructor methods generated during lowering */
     private final List<SyntheticArrayConstructor> arrayConstructors = new ArrayList<>();
 
-    /** Counter for generating unique lambda method names */
     private int lambdaCounter = 0;
 
-    /** Counter for generating unique array constructor method names */
     private int arrayConstructorCounter = 0;
 
-    /** The name of the current method being lowered */
-    @Setter
     private String currentMethodName = "method";
 
-    /** The owner class of the current method */
-    @Setter
     private String ownerClass;
 
-    /** The superclass of the owner class */
-    @Setter
     private String superClassName;
 
     /**
@@ -92,6 +65,117 @@ public class LoweringContext {
         this.irMethod = irMethod;
         this.constPool = constPool;
         this.typeResolver = typeResolver;
+    }
+
+    /** The IR method being built */
+    public IRMethod getIrMethod() {
+        return irMethod;
+    }
+
+    /** Constant pool for creating constants and references */
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
+    /** Type resolver for looking up field/method types from ClassPool */
+    public TypeResolver getTypeResolver() {
+        return typeResolver;
+    }
+
+    /** Current block where instructions are being emitted */
+    public IRBlock getCurrentBlock() {
+        return currentBlock;
+    }
+
+    public void setCurrentBlock(IRBlock currentBlock) {
+        this.currentBlock = currentBlock;
+    }
+
+    /** Map from variable names to their current SSA values */
+    public Map<String, SSAValue> getVariableMap() {
+        return variableMap;
+    }
+
+    /** Map from variable names to their local slot indices */
+    public Map<String, Integer> getVariableLocalIndices() {
+        return variableLocalIndices;
+    }
+
+    /** The in-scope source-local record per name (re-created on each declaration, so disjoint same-name
+     *  declarations stay distinct), used to capture LocalVariableTable info during lowering. */
+    public Map<String, IRMethod.SourceLocal> getCurrentSourceLocal() {
+        return currentSourceLocal;
+    }
+
+    /** Next available local slot index */
+    public int getNextLocalIndex() {
+        return nextLocalIndex;
+    }
+
+    /** Whether to emit Load/Store instructions for variables (needed for loops) */
+    public boolean isEmitLocalInstructions() {
+        return emitLocalInstructions;
+    }
+
+    public void setEmitLocalInstructions(boolean emitLocalInstructions) {
+        this.emitLocalInstructions = emitLocalInstructions;
+    }
+
+    /** Stack of loop targets for break/continue */
+    public Deque<LoopTargets> getLoopStack() {
+        return loopStack;
+    }
+
+    /** Map from labels to their loop targets */
+    public Map<String, LoopTargets> getLabelMap() {
+        return labelMap;
+    }
+
+    /** Map from switch labels to their target blocks */
+    public Map<String, IRBlock> getSwitchLabelMap() {
+        return switchLabelMap;
+    }
+
+    /** Counter for generating temporary variable names */
+    public int getTempCounter() {
+        return tempCounter;
+    }
+
+    /** Counter for generating unique lambda method names */
+    public int getLambdaCounter() {
+        return lambdaCounter;
+    }
+
+    /** Counter for generating unique array constructor method names */
+    public int getArrayConstructorCounter() {
+        return arrayConstructorCounter;
+    }
+
+    /** The name of the current method being lowered */
+    public String getCurrentMethodName() {
+        return currentMethodName;
+    }
+
+    public void setCurrentMethodName(String currentMethodName) {
+        this.currentMethodName = currentMethodName;
+    }
+
+    /** The owner class of the current method */
+    public String getOwnerClass() {
+        return ownerClass;
+    }
+
+    public void setOwnerClass(String ownerClass) {
+        this.ownerClass = ownerClass;
+    }
+
+    /** The superclass of the owner class */
+    public String getSuperClassName() {
+        return superClassName;
+    }
+
+    public void setSuperClassName(String superClassName) {
+        this.superClassName = superClassName;
     }
 
     /**

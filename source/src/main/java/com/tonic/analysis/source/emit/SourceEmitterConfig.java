@@ -1,54 +1,155 @@
 package com.tonic.analysis.source.emit;
 
-import lombok.Builder;
-import lombok.Getter;
-
 /**
- * Configuration options for source code emission.
+ * Configuration options for source code emission. Instances are created via {@link #builder()} or one
+ * of the presets ({@link #defaults()}, {@link #debug()}, {@link #compact()}).
  */
-@Getter
-@Builder
 public class SourceEmitterConfig {
 
-    /** Use 'var' keyword for local variables when possible (Java 10+) */
-    @Builder.Default
-    private boolean useVarKeyword = false;
+    private final boolean useVarKeyword;
+    private final boolean includeIRComments;
+    private final boolean includeLineNumbers;
+    private final String indentString;
+    private final boolean alwaysUseBraces;
+    private final boolean blankLinesBetweenMethods;
+    private final int maxLineLength;
+    private final boolean useFullyQualifiedNames;
+    private final IdentifierMode identifierMode;
+    private final boolean resolveBootstrapMethods;
 
-    /** Include comments showing IR instructions */
-    @Builder.Default
-    private boolean includeIRComments = false;
+    private SourceEmitterConfig(Builder b) {
+        this.useVarKeyword = b.useVarKeyword;
+        this.includeIRComments = b.includeIRComments;
+        this.includeLineNumbers = b.includeLineNumbers;
+        this.indentString = b.indentString;
+        this.alwaysUseBraces = b.alwaysUseBraces;
+        this.blankLinesBetweenMethods = b.blankLinesBetweenMethods;
+        this.maxLineLength = b.maxLineLength;
+        this.useFullyQualifiedNames = b.useFullyQualifiedNames;
+        this.identifierMode = b.identifierMode;
+        this.resolveBootstrapMethods = b.resolveBootstrapMethods;
+    }
 
-    /** Include line number comments */
-    @Builder.Default
-    private boolean includeLineNumbers = false;
+    /** Use 'var' keyword for local variables when possible (Java 10+). */
+    public boolean isUseVarKeyword() {
+        return useVarKeyword;
+    }
 
-    /** Indent string (default tab) */
-    @Builder.Default
-    private String indentString = "\t";
+    /** Include comments showing IR instructions. */
+    public boolean isIncludeIRComments() {
+        return includeIRComments;
+    }
 
-    /** Use braces for single-statement blocks */
-    @Builder.Default
-    private boolean alwaysUseBraces = true;
+    /** Include line number comments. */
+    public boolean isIncludeLineNumbers() {
+        return includeLineNumbers;
+    }
 
-    /** Add blank lines between methods */
-    @Builder.Default
-    private boolean blankLinesBetweenMethods = true;
+    /** Indent string (default tab). */
+    public String getIndentString() {
+        return indentString;
+    }
 
-    /** Maximum line length before wrapping (0 = no limit) */
-    @Builder.Default
-    private int maxLineLength = 120;
+    /** Use braces for single-statement blocks. */
+    public boolean isAlwaysUseBraces() {
+        return alwaysUseBraces;
+    }
 
-    /** Use fully qualified class names */
-    @Builder.Default
-    private boolean useFullyQualifiedNames = false;
+    /** Add blank lines between methods. */
+    public boolean isBlankLinesBetweenMethods() {
+        return blankLinesBetweenMethods;
+    }
 
-    /** How to handle non-standard/obfuscated identifiers */
-    @Builder.Default
-    private IdentifierMode identifierMode = IdentifierMode.RAW;
+    /** Maximum line length before wrapping (0 = no limit). */
+    public int getMaxLineLength() {
+        return maxLineLength;
+    }
 
-    /** Whether to resolve bootstrap methods to actual method calls */
-    @Builder.Default
-    private boolean resolveBootstrapMethods = false;
+    /** Use fully qualified class names. */
+    public boolean isUseFullyQualifiedNames() {
+        return useFullyQualifiedNames;
+    }
+
+    /** How to handle non-standard/obfuscated identifiers. */
+    public IdentifierMode getIdentifierMode() {
+        return identifierMode;
+    }
+
+    /** Whether to resolve bootstrap methods to actual method calls. */
+    public boolean isResolveBootstrapMethods() {
+        return resolveBootstrapMethods;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private boolean useVarKeyword = false;
+        private boolean includeIRComments = false;
+        private boolean includeLineNumbers = false;
+        private String indentString = "\t";
+        private boolean alwaysUseBraces = true;
+        private boolean blankLinesBetweenMethods = true;
+        private int maxLineLength = 120;
+        private boolean useFullyQualifiedNames = false;
+        private IdentifierMode identifierMode = IdentifierMode.RAW;
+        private boolean resolveBootstrapMethods = false;
+
+        public Builder useVarKeyword(boolean useVarKeyword) {
+            this.useVarKeyword = useVarKeyword;
+            return this;
+        }
+
+        public Builder includeIRComments(boolean includeIRComments) {
+            this.includeIRComments = includeIRComments;
+            return this;
+        }
+
+        public Builder includeLineNumbers(boolean includeLineNumbers) {
+            this.includeLineNumbers = includeLineNumbers;
+            return this;
+        }
+
+        public Builder indentString(String indentString) {
+            this.indentString = indentString;
+            return this;
+        }
+
+        public Builder alwaysUseBraces(boolean alwaysUseBraces) {
+            this.alwaysUseBraces = alwaysUseBraces;
+            return this;
+        }
+
+        public Builder blankLinesBetweenMethods(boolean blankLinesBetweenMethods) {
+            this.blankLinesBetweenMethods = blankLinesBetweenMethods;
+            return this;
+        }
+
+        public Builder maxLineLength(int maxLineLength) {
+            this.maxLineLength = maxLineLength;
+            return this;
+        }
+
+        public Builder useFullyQualifiedNames(boolean useFullyQualifiedNames) {
+            this.useFullyQualifiedNames = useFullyQualifiedNames;
+            return this;
+        }
+
+        public Builder identifierMode(IdentifierMode identifierMode) {
+            this.identifierMode = identifierMode;
+            return this;
+        }
+
+        public Builder resolveBootstrapMethods(boolean resolveBootstrapMethods) {
+            this.resolveBootstrapMethods = resolveBootstrapMethods;
+            return this;
+        }
+
+        public SourceEmitterConfig build() {
+            return new SourceEmitterConfig(this);
+        }
+    }
 
     /**
      * Default configuration.

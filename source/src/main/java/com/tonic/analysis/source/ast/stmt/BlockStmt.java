@@ -4,20 +4,16 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 
 /**
  * Represents a block of statements: { stmt1; stmt2; ... }
  */
-@Getter
 public final class BlockStmt implements Statement {
 
     private final NodeList<Statement> statements;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public BlockStmt(List<Statement> statements, SourceLocation location) {
@@ -38,6 +34,22 @@ public final class BlockStmt implements Statement {
 
     public BlockStmt() {
         this(List.of(), SourceLocation.UNKNOWN);
+    }
+
+    public NodeList<Statement> getStatements() {
+        return statements;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

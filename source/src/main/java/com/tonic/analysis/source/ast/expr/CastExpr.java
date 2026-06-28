@@ -4,29 +4,23 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a cast expression: (Type) expression
  */
-@Getter
 public final class CastExpr implements Expression {
 
     private final SourceType targetType;
-    @Setter
     private Expression expression;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
     /**
      * True when this cast is a record deconstruction's synthetic temp ({@code (T) selector} whose
      * component accessors were protected by a MatchException handler). The pattern-switch
      * reconstructor uses this to fold the arm into {@code case T(...)} rather than a type pattern.
      */
-    @Setter
     private boolean recordDeconstruction;
 
     public CastExpr(SourceType targetType, Expression expression, SourceLocation location) {
@@ -39,6 +33,38 @@ public final class CastExpr implements Expression {
 
     public CastExpr(SourceType targetType, Expression expression) {
         this(targetType, expression, SourceLocation.UNKNOWN);
+    }
+
+    public SourceType getTargetType() {
+        return targetType;
+    }
+
+    public Expression getExpression() {
+        return expression;
+    }
+
+    public void setExpression(Expression expression) {
+        this.expression = expression;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
+    }
+
+    public boolean isRecordDeconstruction() {
+        return recordDeconstruction;
+    }
+
+    public void setRecordDeconstruction(boolean recordDeconstruction) {
+        this.recordDeconstruction = recordDeconstruction;
     }
 
     @Override

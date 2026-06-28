@@ -3,22 +3,17 @@ package com.tonic.analysis.source.ast.stmt;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a labeled statement: label: statement
  */
-@Getter
 public final class LabeledStmt implements Statement {
 
     private final String label;
-    @Setter
     private Statement statement;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public LabeledStmt(String label, Statement statement, SourceLocation location) {
@@ -31,6 +26,26 @@ public final class LabeledStmt implements Statement {
 
     public LabeledStmt(String label, Statement statement) {
         this(label, statement, SourceLocation.UNKNOWN);
+    }
+
+    public Statement getStatement() {
+        return statement;
+    }
+
+    public void setStatement(Statement statement) {
+        this.statement = statement;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public LabeledStmt withStatement(Statement statement) {

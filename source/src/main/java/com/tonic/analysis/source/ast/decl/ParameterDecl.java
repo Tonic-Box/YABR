@@ -5,26 +5,18 @@ import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 public final class ParameterDecl implements ASTNode {
 
-    @Setter
     private String name;
-    @Setter
     private SourceType type;
-    @Setter
     private boolean isFinal;
-    @Setter
     private boolean isVarArgs;
     private final NodeList<AnnotationExpr> annotations;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ParameterDecl(String name, SourceType type, SourceLocation location) {
@@ -38,6 +30,54 @@ public final class ParameterDecl implements ASTNode {
 
     public ParameterDecl(String name, SourceType type) {
         this(name, type, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public void setType(SourceType type) {
+        this.type = type;
+    }
+
+    public boolean isFinal() {
+        return isFinal;
+    }
+
+    public void setFinal(boolean isFinal) {
+        this.isFinal = isFinal;
+    }
+
+    public boolean isVarArgs() {
+        return isVarArgs;
+    }
+
+    public void setVarArgs(boolean isVarArgs) {
+        this.isVarArgs = isVarArgs;
+    }
+
+    public NodeList<AnnotationExpr> getAnnotations() {
+        return annotations;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public ParameterDecl withName(String name) {

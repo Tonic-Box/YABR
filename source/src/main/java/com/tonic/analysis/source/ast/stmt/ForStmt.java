@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 import java.util.Objects;
@@ -14,19 +12,14 @@ import java.util.Objects;
 /**
  * Represents a for loop: for (init; condition; update) body
  */
-@Getter
 public final class ForStmt implements Statement {
 
     private final NodeList<Statement> init;
-    @Setter
     private Expression condition;
     private final NodeList<Expression> update;
-    @Setter
     private Statement body;
-    @Setter
     private String label;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ForStmt(List<Statement> init, Expression condition, List<Expression> update,
@@ -61,6 +54,46 @@ public final class ForStmt implements Statement {
 
     public ForStmt(List<Statement> init, Expression condition, List<Expression> update, Statement body) {
         this(init, condition, update, body, null, SourceLocation.UNKNOWN);
+    }
+
+    public NodeList<Statement> getInit() {
+        return init;
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public NodeList<Expression> getUpdate() {
+        return update;
+    }
+
+    public Statement getBody() {
+        return body;
+    }
+
+    public void setBody(Statement body) {
+        this.body = body;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

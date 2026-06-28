@@ -4,24 +4,18 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a unary expression: op operand (prefix) or operand op (postfix)
  */
-@Getter
 public final class UnaryExpr implements Expression {
 
-    @Setter
     private UnaryOperator operator;
-    @Setter
     private Expression operand;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public UnaryExpr(UnaryOperator operator, Expression operand, SourceType type, SourceLocation location) {
@@ -35,6 +29,38 @@ public final class UnaryExpr implements Expression {
 
     public UnaryExpr(UnaryOperator operator, Expression operand, SourceType type) {
         this(operator, operand, type, SourceLocation.UNKNOWN);
+    }
+
+    public UnaryOperator getOperator() {
+        return operator;
+    }
+
+    public void setOperator(UnaryOperator operator) {
+        this.operator = operator;
+    }
+
+    public Expression getOperand() {
+        return operand;
+    }
+
+    public void setOperand(Expression operand) {
+        this.operand = operand;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

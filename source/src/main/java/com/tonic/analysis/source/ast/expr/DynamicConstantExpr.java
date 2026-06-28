@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Represents an unresolved dynamic constant (condy) with bootstrap method information.
@@ -17,7 +15,6 @@ import lombok.Setter;
  * <p>
  * Output format: {@code /* condy:"name" descriptor @bsm owner.method *\/}
  */
-@Getter
 public final class DynamicConstantExpr implements Expression {
 
     /** The name of the dynamic constant. */
@@ -39,14 +36,12 @@ public final class DynamicConstantExpr implements Expression {
     private final String bootstrapDescriptor;
 
     /** The inferred type. */
-    @Setter
     private SourceType type;
 
     /** Source location. */
     private final SourceLocation location;
 
     /** Parent AST node. */
-    @Setter
     private ASTNode parent;
 
     /**
@@ -70,6 +65,50 @@ public final class DynamicConstantExpr implements Expression {
      */
     public DynamicConstantExpr(String name, String descriptor, int bootstrapMethodIndex, SourceType type) {
         this(name, descriptor, bootstrapMethodIndex, "unknown", "unknown", "", type);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public int getBootstrapMethodIndex() {
+        return bootstrapMethodIndex;
+    }
+
+    public String getBootstrapOwner() {
+        return bootstrapOwner;
+    }
+
+    public String getBootstrapName() {
+        return bootstrapName;
+    }
+
+    public String getBootstrapDescriptor() {
+        return bootstrapDescriptor;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public void setType(SourceType type) {
+        this.type = type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     @Override

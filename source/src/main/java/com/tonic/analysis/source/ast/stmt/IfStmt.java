@@ -4,25 +4,18 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents an if statement: if (condition) thenBranch [else elseBranch]
  */
-@Getter
 public final class IfStmt implements Statement {
 
-    @Setter
     private Expression condition;
-    @Setter
     private Statement thenBranch;
-    @Setter
     private Statement elseBranch;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public IfStmt(Expression condition, Statement thenBranch, Statement elseBranch, SourceLocation location) {
@@ -44,6 +37,42 @@ public final class IfStmt implements Statement {
 
     public IfStmt(Expression condition, Statement thenBranch) {
         this(condition, thenBranch, null, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public Statement getThenBranch() {
+        return thenBranch;
+    }
+
+    public void setThenBranch(Statement thenBranch) {
+        this.thenBranch = thenBranch;
+    }
+
+    public Statement getElseBranch() {
+        return elseBranch;
+    }
+
+    public void setElseBranch(Statement elseBranch) {
+        this.elseBranch = elseBranch;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

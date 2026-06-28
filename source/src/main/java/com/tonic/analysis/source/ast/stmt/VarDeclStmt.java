@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
@@ -14,21 +12,14 @@ import java.util.Objects;
  * Represents a local variable declaration: Type name [= initializer]
  * Also supports Java 10+ var keyword.
  */
-@Getter
 public final class VarDeclStmt implements Statement {
 
-    @Setter
     private SourceType type;
-    @Setter
     private String name;
-    @Setter
     private Expression initializer;
-    @Setter
     private boolean useVarKeyword;
-    @Setter
     private boolean isFinal;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public VarDeclStmt(SourceType type, String name, Expression initializer,
@@ -51,6 +42,58 @@ public final class VarDeclStmt implements Statement {
 
     public VarDeclStmt(SourceType type, String name) {
         this(type, name, null, false, false, SourceLocation.UNKNOWN);
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public void setType(SourceType type) {
+        this.type = type;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Expression getInitializer() {
+        return initializer;
+    }
+
+    public void setInitializer(Expression initializer) {
+        this.initializer = initializer;
+    }
+
+    public boolean isUseVarKeyword() {
+        return useVarKeyword;
+    }
+
+    public void setUseVarKeyword(boolean useVarKeyword) {
+        this.useVarKeyword = useVarKeyword;
+    }
+
+    public boolean isFinal() {
+        return isFinal;
+    }
+
+    public void setFinal(boolean isFinal) {
+        this.isFinal = isFinal;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

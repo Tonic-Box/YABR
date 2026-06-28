@@ -13,7 +13,6 @@ import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.util.ClassNameUtil;
-import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +22,6 @@ import java.util.Map;
  */
 public class NameRecoverer {
 
-    @Getter
     private final NameRecoveryStrategy strategy;
     private final IRMethod irMethod;
     private final MethodEntry sourceMethod;
@@ -40,6 +38,10 @@ public class NameRecoverer {
         this.constPool = sourceMethod.getClassFile().getConstPool();
         this.lvt = findLocalVariableTable();
         buildSlotNameMap();
+    }
+
+    public NameRecoveryStrategy getStrategy() {
+        return strategy;
     }
 
     private LocalVariableTableAttribute findLocalVariableTable() {

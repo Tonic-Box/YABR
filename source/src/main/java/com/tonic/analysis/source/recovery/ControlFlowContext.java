@@ -7,14 +7,12 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
-import lombok.Getter;
 
 import java.util.*;
 
 /**
  * Shared context for control flow recovery operations.
  */
-@Getter
 public class ControlFlowContext {
 
     private final IRMethod irMethod;
@@ -22,46 +20,32 @@ public class ControlFlowContext {
     private final LoopAnalysis loopAnalysis;
     private final RecoveryContext expressionContext;
 
-    /** Blocks that have been processed */
     private final Set<IRBlock> processedBlocks = new HashSet<>();
 
-    /** Recovered statements keyed by block */
     private final Map<IRBlock, List<Statement>> blockStatements = new HashMap<>();
 
-    /** Block to structured region mapping */
     private final Map<IRBlock, StructuredRegion> blockToRegion = new HashMap<>();
 
-    /** Labels generated for break/continue targets */
     private final Map<IRBlock, String> blockLabels = new HashMap<>();
 
-    /** Stack of enclosing loops (innermost first) for recovering break/continue (labeled to an outer loop). */
     private final Deque<LoopFrame> loopStack = new ArrayDeque<>();
 
-    /** Pending statements to be added before the next statement */
     private final List<Statement> pendingStatements = new ArrayList<>();
 
-    /** Stack of stop blocks from outer control structures (e.g., loop exits) */
     private final Deque<Set<IRBlock>> stopBlocksStack = new ArrayDeque<>();
 
-    /** Stack of SSAValues known to be false/zero in current context */
     private final Deque<Set<SSAValue>> knownFalseValuesStack = new ArrayDeque<>();
 
-    /** Stack of fields (by owner+name) known to be false/zero in current context */
     private final Deque<Set<FieldKey>> knownFalseFieldsStack = new ArrayDeque<>();
 
-    /** Stack of instructions to skip during recovery (e.g., for-loop increment) */
     private final Deque<Set<IRInstruction>> skipInstructionsStack = new ArrayDeque<>();
 
-    /** Permanent set of instructions to skip (e.g., for-loop initializers claimed by for-loops) */
     private final Set<IRInstruction> forLoopInitInstructions = new HashSet<>();
 
-    /** Local indices that are for-loop induction variables (their PHI declarations should be skipped) */
     private final Set<Integer> forLoopInductionLocalIndices = new HashSet<>();
 
-    /** PHI results for for-loop induction variables (these should not be declared early) */
     private final Set<SSAValue> forLoopInductionPhis = new HashSet<>();
 
-    /** Blocks that are for-loop headers (used to scope local index checks) */
     private final Set<IRBlock> forLoopHeaderBlocks = new HashSet<>();
 
     private int labelCounter = 0;
@@ -72,6 +56,96 @@ public class ControlFlowContext {
         this.dominatorTree = dominatorTree;
         this.loopAnalysis = loopAnalysis;
         this.expressionContext = expressionContext;
+    }
+
+    public IRMethod getIrMethod() {
+        return irMethod;
+    }
+
+    public DominatorTree getDominatorTree() {
+        return dominatorTree;
+    }
+
+    public LoopAnalysis getLoopAnalysis() {
+        return loopAnalysis;
+    }
+
+    public RecoveryContext getExpressionContext() {
+        return expressionContext;
+    }
+
+    /** Blocks that have been processed */
+    public Set<IRBlock> getProcessedBlocks() {
+        return processedBlocks;
+    }
+
+    /** Recovered statements keyed by block */
+    public Map<IRBlock, List<Statement>> getBlockStatements() {
+        return blockStatements;
+    }
+
+    /** Block to structured region mapping */
+    public Map<IRBlock, StructuredRegion> getBlockToRegion() {
+        return blockToRegion;
+    }
+
+    /** Labels generated for break/continue targets */
+    public Map<IRBlock, String> getBlockLabels() {
+        return blockLabels;
+    }
+
+    /** Stack of enclosing loops (innermost first) for recovering break/continue (labeled to an outer loop). */
+    public Deque<LoopFrame> getLoopStack() {
+        return loopStack;
+    }
+
+    /** Pending statements to be added before the next statement */
+    public List<Statement> getPendingStatements() {
+        return pendingStatements;
+    }
+
+    /** Stack of stop blocks from outer control structures (e.g., loop exits) */
+    public Deque<Set<IRBlock>> getStopBlocksStack() {
+        return stopBlocksStack;
+    }
+
+    /** Stack of SSAValues known to be false/zero in current context */
+    public Deque<Set<SSAValue>> getKnownFalseValuesStack() {
+        return knownFalseValuesStack;
+    }
+
+    /** Stack of fields (by owner+name) known to be false/zero in current context */
+    public Deque<Set<FieldKey>> getKnownFalseFieldsStack() {
+        return knownFalseFieldsStack;
+    }
+
+    /** Stack of instructions to skip during recovery (e.g., for-loop increment) */
+    public Deque<Set<IRInstruction>> getSkipInstructionsStack() {
+        return skipInstructionsStack;
+    }
+
+    /** Permanent set of instructions to skip (e.g., for-loop initializers claimed by for-loops) */
+    public Set<IRInstruction> getForLoopInitInstructions() {
+        return forLoopInitInstructions;
+    }
+
+    /** Local indices that are for-loop induction variables (their PHI declarations should be skipped) */
+    public Set<Integer> getForLoopInductionLocalIndices() {
+        return forLoopInductionLocalIndices;
+    }
+
+    /** PHI results for for-loop induction variables (these should not be declared early) */
+    public Set<SSAValue> getForLoopInductionPhis() {
+        return forLoopInductionPhis;
+    }
+
+    /** Blocks that are for-loop headers (used to scope local index checks) */
+    public Set<IRBlock> getForLoopHeaderBlocks() {
+        return forLoopHeaderBlocks;
+    }
+
+    public int getLabelCounter() {
+        return labelCounter;
     }
 
     public void markProcessed(IRBlock block) {
@@ -369,7 +443,6 @@ public class ControlFlowContext {
      * Represents a field by its owner class and field name.
      * Used for semantic identity tracking across SSAValues.
      */
-    @Getter
     public static class FieldKey {
         private final String owner;
         private final String fieldName;
@@ -377,6 +450,14 @@ public class ControlFlowContext {
         public FieldKey(String owner, String fieldName) {
             this.owner = owner;
             this.fieldName = fieldName;
+        }
+
+        public String getOwner() {
+            return owner;
+        }
+
+        public String getFieldName() {
+            return fieldName;
         }
 
         @Override

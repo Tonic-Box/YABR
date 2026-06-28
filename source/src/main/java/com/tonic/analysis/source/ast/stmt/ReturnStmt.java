@@ -5,21 +5,15 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Represents a return statement: return [expression]
  */
-@Getter
 public final class ReturnStmt implements Statement {
 
-    @Setter
     private Expression value;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
-    @Setter
     private SourceType methodReturnType;
 
     public ReturnStmt(Expression value, SourceLocation location) {
@@ -40,6 +34,34 @@ public final class ReturnStmt implements Statement {
      */
     public ReturnStmt() {
         this(null, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getValue() {
+        return value;
+    }
+
+    public void setValue(Expression value) {
+        this.value = value;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
+    }
+
+    public SourceType getMethodReturnType() {
+        return methodReturnType;
+    }
+
+    public void setMethodReturnType(SourceType methodReturnType) {
+        this.methodReturnType = methodReturnType;
     }
 
     /**

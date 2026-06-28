@@ -6,20 +6,15 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 public final class AnnotationExpr implements Expression {
 
-    @Setter
     private SourceType annotationType;
     private final NodeList<AnnotationValue> values;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public AnnotationExpr(SourceType annotationType, SourceLocation location) {
@@ -30,6 +25,30 @@ public final class AnnotationExpr implements Expression {
 
     public AnnotationExpr(SourceType annotationType) {
         this(annotationType, SourceLocation.UNKNOWN);
+    }
+
+    public SourceType getAnnotationType() {
+        return annotationType;
+    }
+
+    public void setAnnotationType(SourceType annotationType) {
+        this.annotationType = annotationType;
+    }
+
+    public NodeList<AnnotationValue> getValues() {
+        return values;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public AnnotationExpr withAnnotationType(SourceType annotationType) {

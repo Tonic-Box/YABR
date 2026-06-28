@@ -4,22 +4,17 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Getter
 public final class CompilationUnit implements ASTNode {
 
-    @Setter
     private String packageName;
     private final NodeList<ImportDecl> imports;
     private final NodeList<TypeDecl> types;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public CompilationUnit(SourceLocation location) {
@@ -30,6 +25,34 @@ public final class CompilationUnit implements ASTNode {
 
     public CompilationUnit() {
         this(SourceLocation.UNKNOWN);
+    }
+
+    public String getPackageName() {
+        return packageName;
+    }
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
+
+    public NodeList<ImportDecl> getImports() {
+        return imports;
+    }
+
+    public NodeList<TypeDecl> getTypes() {
+        return types;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public CompilationUnit withPackageName(String packageName) {

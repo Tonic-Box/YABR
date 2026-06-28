@@ -4,20 +4,14 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 
-@Getter
 public final class AnnotationValue implements ASTNode {
 
-    @Setter
     private String name;
-    @Setter
     private Expression value;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public AnnotationValue(String name, Expression value, SourceLocation location) {
@@ -31,6 +25,34 @@ public final class AnnotationValue implements ASTNode {
 
     public AnnotationValue(String name, Expression value) {
         this(name, value, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Expression getValue() {
+        return value;
+    }
+
+    public void setValue(Expression value) {
+        this.value = value;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public AnnotationValue withName(String name) {

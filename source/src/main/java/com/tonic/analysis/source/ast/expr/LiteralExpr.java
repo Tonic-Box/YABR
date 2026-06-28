@@ -6,21 +6,15 @@ import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Represents a literal value: integers, floats, strings, booleans, chars, null.
  */
-@Getter
 public final class LiteralExpr implements Expression {
 
-    @Setter
     private Object value;
-    @Setter
     private SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public LiteralExpr(Object value, SourceType type, SourceLocation location) {
@@ -31,6 +25,34 @@ public final class LiteralExpr implements Expression {
 
     public LiteralExpr(Object value, SourceType type) {
         this(value, type, SourceLocation.UNKNOWN);
+    }
+
+    public Object getValue() {
+        return value;
+    }
+
+    public void setValue(Object value) {
+        this.value = value;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public void setType(SourceType type) {
+        this.type = type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public static LiteralExpr ofInt(int value) {

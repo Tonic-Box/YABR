@@ -1288,12 +1288,6 @@ public class CodeWriter {
         }
     }
 
-
-
-
-
-
-
     private List<Instruction> resolveTargets(Instruction instr) {
         return resolveTargetsUsing(instr, instr.getOffset(), instructions);
     }

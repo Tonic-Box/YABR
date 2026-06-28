@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
@@ -14,19 +12,15 @@ import java.util.Objects;
  * Represents an instanceof expression: expression instanceof Type [patternVariable]
  * Supports Java 16+ pattern matching instanceof.
  */
-@Getter
 public final class InstanceOfExpr implements Expression {
 
-    @Setter
     private Expression expression;
     private final SourceType checkType;
     /**
      * Pattern variable name (Java 16+), or null for classic instanceof.
      */
-    @Setter
     private String patternVariable;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public InstanceOfExpr(Expression expression, SourceType checkType, String patternVariable,
@@ -45,6 +39,38 @@ public final class InstanceOfExpr implements Expression {
 
     public InstanceOfExpr(Expression expression, SourceType checkType) {
         this(expression, checkType, null, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getExpression() {
+        return expression;
+    }
+
+    public void setExpression(Expression expression) {
+        this.expression = expression;
+    }
+
+    public SourceType getCheckType() {
+        return checkType;
+    }
+
+    public String getPatternVariable() {
+        return patternVariable;
+    }
+
+    public void setPatternVariable(String patternVariable) {
+        this.patternVariable = patternVariable;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public InstanceOfExpr withExpression(Expression expression) {

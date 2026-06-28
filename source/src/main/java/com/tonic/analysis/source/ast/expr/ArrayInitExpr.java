@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,13 +13,11 @@ import java.util.Objects;
 /**
  * Represents an array initializer expression: {elem1, elem2, ...}
  */
-@Getter
 public final class ArrayInitExpr implements Expression {
 
     private final List<Expression> elements;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ArrayInitExpr(List<Expression> elements, SourceType type, SourceLocation location) {
@@ -36,6 +32,26 @@ public final class ArrayInitExpr implements Expression {
 
     public ArrayInitExpr(List<Expression> elements, SourceType type) {
         this(elements, type, SourceLocation.UNKNOWN);
+    }
+
+    public List<Expression> getElements() {
+        return elements;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

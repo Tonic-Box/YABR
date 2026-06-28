@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,7 +19,6 @@ import java.util.List;
  * <p>
  * Output format: {@code invokedynamic("name", args) /* @bsm owner.method *\/}
  */
-@Getter
 public final class InvokeDynamicExpr implements Expression {
 
     /** The name of the invoked method. */
@@ -40,14 +37,12 @@ public final class InvokeDynamicExpr implements Expression {
     private final String bootstrapName;
 
     /** The inferred return type. */
-    @Setter
     private SourceType type;
 
     /** Source location. */
     private final SourceLocation location;
 
     /** Parent AST node. */
-    @Setter
     private ASTNode parent;
 
     /**
@@ -55,7 +50,6 @@ public final class InvokeDynamicExpr implements Expression {
      * bootstrap static arguments in declaration order (e.g. {@code [java/lang/Integer, java/lang/String]}).
      * Empty for other bootstraps. Used to reconstruct pattern-switch case types.
      */
-    @Setter
     private List<String> bootstrapClassArgs = Collections.emptyList();
 
     /**
@@ -77,6 +71,54 @@ public final class InvokeDynamicExpr implements Expression {
      */
     public InvokeDynamicExpr(String name, String descriptor, List<Expression> arguments, SourceType type) {
         this(name, descriptor, arguments, "unknown", "unknown", type);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public List<Expression> getArguments() {
+        return arguments;
+    }
+
+    public String getBootstrapOwner() {
+        return bootstrapOwner;
+    }
+
+    public String getBootstrapName() {
+        return bootstrapName;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public void setType(SourceType type) {
+        this.type = type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
+    }
+
+    public List<String> getBootstrapClassArgs() {
+        return bootstrapClassArgs;
+    }
+
+    public void setBootstrapClassArgs(List<String> bootstrapClassArgs) {
+        this.bootstrapClassArgs = bootstrapClassArgs;
     }
 
     @Override

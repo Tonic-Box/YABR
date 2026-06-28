@@ -3,19 +3,14 @@ package com.tonic.analysis.source.ast.stmt;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Represents a continue statement: continue [label]
  */
-@Getter
 public final class ContinueStmt implements Statement {
 
-    @Setter
     private String targetLabel;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ContinueStmt(String targetLabel, SourceLocation location) {
@@ -32,6 +27,26 @@ public final class ContinueStmt implements Statement {
      */
     public ContinueStmt() {
         this(null, SourceLocation.UNKNOWN);
+    }
+
+    public String getTargetLabel() {
+        return targetLabel;
+    }
+
+    public void setTargetLabel(String targetLabel) {
+        this.targetLabel = targetLabel;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

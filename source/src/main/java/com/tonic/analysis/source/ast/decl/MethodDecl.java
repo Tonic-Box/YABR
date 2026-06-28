@@ -6,30 +6,23 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
 public final class MethodDecl implements ASTNode {
 
-    @Setter
     private String name;
     private final Set<Modifier> modifiers;
     private final NodeList<AnnotationExpr> annotations;
-    @Setter
     private SourceType returnType;
     private final NodeList<ParameterDecl> parameters;
     private final NodeList<SourceType> typeParameters;
     private final NodeList<SourceType> throwsTypes;
-    @Setter
     private BlockStmt body;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public MethodDecl(String name, SourceType returnType, SourceLocation location) {
@@ -45,6 +38,62 @@ public final class MethodDecl implements ASTNode {
 
     public MethodDecl(String name, SourceType returnType) {
         this(name, returnType, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Set<Modifier> getModifiers() {
+        return modifiers;
+    }
+
+    public NodeList<AnnotationExpr> getAnnotations() {
+        return annotations;
+    }
+
+    public SourceType getReturnType() {
+        return returnType;
+    }
+
+    public void setReturnType(SourceType returnType) {
+        this.returnType = returnType;
+    }
+
+    public NodeList<ParameterDecl> getParameters() {
+        return parameters;
+    }
+
+    public NodeList<SourceType> getTypeParameters() {
+        return typeParameters;
+    }
+
+    public NodeList<SourceType> getThrowsTypes() {
+        return throwsTypes;
+    }
+
+    public BlockStmt getBody() {
+        return body;
+    }
+
+    public void setBody(BlockStmt body) {
+        this.body = body;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public MethodDecl withName(String name) {

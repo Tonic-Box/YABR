@@ -30,8 +30,6 @@ import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,14 +38,11 @@ import java.util.List;
  * Main facade for lowering AST back to IR.
  * Converts source-level AST statements into SSA IR that can be lowered to bytecode.
  */
-@RequiredArgsConstructor
 public class ASTLowerer {
 
     private final ConstPool constPool;
     private final ClassPool classPool;
-    @Setter
     private ClassDecl currentClassDecl;
-    @Setter
     private List<ImportDecl> imports = new ArrayList<>();
 
     /** Synthetic lambda methods produced by lowering, awaiting materialization into the class. */
@@ -55,6 +50,19 @@ public class ASTLowerer {
 
     /** Synthetic array-constructor methods produced by lowering, awaiting materialization. */
     private final List<SyntheticArrayConstructor> pendingArrayConstructors = new ArrayList<>();
+
+    public ASTLowerer(ConstPool constPool, ClassPool classPool) {
+        this.constPool = constPool;
+        this.classPool = classPool;
+    }
+
+    public void setCurrentClassDecl(ClassDecl currentClassDecl) {
+        this.currentClassDecl = currentClassDecl;
+    }
+
+    public void setImports(List<ImportDecl> imports) {
+        this.imports = imports;
+    }
 
     /**
      * Lowers an AST method body to a new IRMethod.

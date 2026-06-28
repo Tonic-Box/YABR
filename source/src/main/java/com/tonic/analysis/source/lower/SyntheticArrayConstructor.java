@@ -2,9 +2,7 @@ package com.tonic.analysis.source.lower;
 
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-import lombok.Getter;
 
-@Getter
 public class SyntheticArrayConstructor {
 
     private final String name;
@@ -17,6 +15,22 @@ public class SyntheticArrayConstructor {
         this.elementType = elementType;
         this.dimensions = dimensions;
         this.descriptor = buildDescriptor();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public SourceType getElementType() {
+        return elementType;
+    }
+
+    public int getDimensions() {
+        return dimensions;
     }
 
     private String buildDescriptor() {

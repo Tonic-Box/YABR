@@ -5,18 +5,14 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.value.SSAValue;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a local variable reference.
  */
-@Getter
 public final class VarRefExpr implements Expression {
 
-    @Setter
     private String name;
     private final SourceType type;
     /**
@@ -24,7 +20,6 @@ public final class VarRefExpr implements Expression {
      */
     private final SSAValue ssaValue;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public VarRefExpr(String name, SourceType type, SSAValue ssaValue, SourceLocation location) {
@@ -40,6 +35,34 @@ public final class VarRefExpr implements Expression {
 
     public VarRefExpr(String name, SourceType type) {
         this(name, type, null, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SSAValue getSsaValue() {
+        return ssaValue;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public VarRefExpr withName(String name) {

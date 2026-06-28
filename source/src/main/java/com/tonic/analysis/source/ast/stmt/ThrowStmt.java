@@ -4,21 +4,16 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a throw statement: throw expression
  */
-@Getter
 public final class ThrowStmt implements Statement {
 
-    @Setter
     private Expression exception;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ThrowStmt(Expression exception, SourceLocation location) {
@@ -30,6 +25,26 @@ public final class ThrowStmt implements Statement {
 
     public ThrowStmt(Expression exception) {
         this(exception, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getException() {
+        return exception;
+    }
+
+    public void setException(Expression exception) {
+        this.exception = exception;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public ThrowStmt withExpression(Expression exception) {

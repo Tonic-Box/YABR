@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 import java.util.Objects;
@@ -14,7 +12,6 @@ import java.util.Objects;
 /**
  * Represents a class literal expression: Type.class
  */
-@Getter
 public final class ClassExpr implements Expression {
 
     /**
@@ -23,7 +20,6 @@ public final class ClassExpr implements Expression {
     private final SourceType classType;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ClassExpr(SourceType classType, SourceLocation location) {
@@ -34,6 +30,26 @@ public final class ClassExpr implements Expression {
 
     public ClassExpr(SourceType classType) {
         this(classType, SourceLocation.UNKNOWN);
+    }
+
+    public SourceType getClassType() {
+        return classType;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     @Override

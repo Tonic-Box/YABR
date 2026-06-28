@@ -1,7 +1,5 @@
 package com.tonic.analysis.source.decompile;
 
-import lombok.Getter;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -17,7 +15,6 @@ import java.util.NavigableMap;
  * {@link #getFieldSpan}, {@link #getClassSpan}) — the 1-based first/last line of its full
  * declaration in {@link #getSource()} — for slicing or locating a declaration without parsing text.
  */
-@Getter
 public final class DecompileResult {
 
     private final String source;
@@ -34,6 +31,26 @@ public final class DecompileResult {
         this.methodSpans = Collections.unmodifiableMap(methodSpans);
         this.fieldSpans = Collections.unmodifiableMap(fieldSpans);
         this.classSpan = classSpan;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public Map<String, NavigableMap<Integer, Integer>> getLineMaps() {
+        return lineMaps;
+    }
+
+    public Map<String, MethodSpan> getMethodSpans() {
+        return methodSpans;
+    }
+
+    public Map<String, MemberSpan> getFieldSpans() {
+        return fieldSpans;
+    }
+
+    public MemberSpan getClassSpan() {
+        return classSpan;
     }
 
     /**
@@ -62,7 +79,6 @@ public final class DecompileResult {
      * and signature through the closing brace (or the declaration line for abstract/native members
      * and fields).
      */
-    @Getter
     public static class MemberSpan {
         private final int startLine;
         private final int endLine;
@@ -70,6 +86,14 @@ public final class DecompileResult {
         MemberSpan(int startLine, int endLine) {
             this.startLine = startLine;
             this.endLine = endLine;
+        }
+
+        public int getStartLine() {
+            return startLine;
+        }
+
+        public int getEndLine() {
+            return endLine;
         }
 
         public boolean contains(int line) {

@@ -5,29 +5,23 @@ import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
 public final class InterfaceDecl implements TypeDecl {
 
-    @Setter
     private String name;
     private final Set<Modifier> modifiers;
     private final NodeList<AnnotationExpr> annotations;
-    @Getter
     private final NodeList<SourceType> extendedInterfaces;
     private final NodeList<SourceType> typeParameters;
     private final NodeList<FieldDecl> fields;
     private final NodeList<MethodDecl> methods;
     private final NodeList<TypeDecl> innerTypes;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public InterfaceDecl(String name, SourceLocation location) {
@@ -44,6 +38,54 @@ public final class InterfaceDecl implements TypeDecl {
 
     public InterfaceDecl(String name) {
         this(name, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Set<Modifier> getModifiers() {
+        return modifiers;
+    }
+
+    public NodeList<AnnotationExpr> getAnnotations() {
+        return annotations;
+    }
+
+    public NodeList<SourceType> getExtendedInterfaces() {
+        return extendedInterfaces;
+    }
+
+    public NodeList<SourceType> getTypeParameters() {
+        return typeParameters;
+    }
+
+    public NodeList<FieldDecl> getFields() {
+        return fields;
+    }
+
+    public NodeList<MethodDecl> getMethods() {
+        return methods;
+    }
+
+    public NodeList<TypeDecl> getInnerTypes() {
+        return innerTypes;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public InterfaceDecl withName(String name) {

@@ -4,25 +4,18 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a while loop: while (condition) body
  */
-@Getter
 public final class WhileStmt implements Statement {
 
-    @Setter
     private Expression condition;
-    @Setter
     private Statement body;
-    @Setter
     private String label;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public WhileStmt(Expression condition, Statement body, String label, SourceLocation location) {
@@ -41,6 +34,38 @@ public final class WhileStmt implements Statement {
 
     public WhileStmt(Expression condition, Statement body) {
         this(condition, body, null, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public Statement getBody() {
+        return body;
+    }
+
+    public void setBody(Statement body) {
+        this.body = body;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     @Override

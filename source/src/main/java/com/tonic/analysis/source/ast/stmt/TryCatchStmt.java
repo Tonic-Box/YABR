@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,17 +13,13 @@ import java.util.Objects;
 /**
  * Represents a try-catch statement with optional finally block and resources (try-with-resources).
  */
-@Getter
 public final class TryCatchStmt implements Statement {
 
-    @Setter
     private Statement tryBlock;
     private final List<CatchClause> catches;
-    @Setter
     private Statement finallyBlock;
     private final NodeList<Expression> resources;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public TryCatchStmt(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock,
@@ -54,6 +48,42 @@ public final class TryCatchStmt implements Statement {
 
     public TryCatchStmt(Statement tryBlock, List<CatchClause> catches) {
         this(tryBlock, catches, null, List.of(), SourceLocation.UNKNOWN);
+    }
+
+    public Statement getTryBlock() {
+        return tryBlock;
+    }
+
+    public void setTryBlock(Statement tryBlock) {
+        this.tryBlock = tryBlock;
+    }
+
+    public List<CatchClause> getCatches() {
+        return catches;
+    }
+
+    public Statement getFinallyBlock() {
+        return finallyBlock;
+    }
+
+    public void setFinallyBlock(Statement finallyBlock) {
+        this.finallyBlock = finallyBlock;
+    }
+
+    public NodeList<Expression> getResources() {
+        return resources;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

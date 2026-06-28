@@ -4,20 +4,16 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents the 'super' expression.
  */
-@Getter
 public final class SuperExpr implements Expression {
 
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public SuperExpr(SourceType type, SourceLocation location) {
@@ -27,6 +23,22 @@ public final class SuperExpr implements Expression {
 
     public SuperExpr(SourceType type) {
         this(type, SourceLocation.UNKNOWN);
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     @Override

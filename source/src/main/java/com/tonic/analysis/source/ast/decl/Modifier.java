@@ -1,11 +1,8 @@
 package com.tonic.analysis.source.ast.decl;
 
-import lombok.Getter;
-
 import java.util.EnumSet;
 import java.util.Set;
 
-@Getter
 public enum Modifier {
     PUBLIC("public"),
     PROTECTED("protected"),
@@ -24,6 +21,10 @@ public enum Modifier {
 
     Modifier(String keyword) {
         this.keyword = keyword;
+    }
+
+    public String getKeyword() {
+        return keyword;
     }
 
     public static Set<Modifier> fromAccessFlags(int flags) {

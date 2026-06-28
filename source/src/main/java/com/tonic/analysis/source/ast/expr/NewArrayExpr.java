@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +13,6 @@ import java.util.Objects;
 /**
  * Represents a new array expression: new int[size] or new int[]{1,2,3}
  */
-@Getter
 public final class NewArrayExpr implements Expression {
 
     /**
@@ -29,11 +26,9 @@ public final class NewArrayExpr implements Expression {
     /**
      * Array initializer, if any.
      */
-    @Setter
     private ArrayInitExpr initializer;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public NewArrayExpr(SourceType elementType, List<Expression> dimensions,
@@ -59,6 +54,38 @@ public final class NewArrayExpr implements Expression {
 
     public NewArrayExpr(SourceType elementType, ArrayInitExpr initializer) {
         this(elementType, List.of(), initializer, null, SourceLocation.UNKNOWN);
+    }
+
+    public SourceType getElementType() {
+        return elementType;
+    }
+
+    public List<Expression> getDimensions() {
+        return dimensions;
+    }
+
+    public ArrayInitExpr getInitializer() {
+        return initializer;
+    }
+
+    public void setInitializer(ArrayInitExpr initializer) {
+        this.initializer = initializer;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

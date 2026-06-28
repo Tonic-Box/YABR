@@ -5,23 +5,18 @@ import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 public final class EnumConstantDecl implements ASTNode {
 
-    @Setter
     private String name;
     private final NodeList<AnnotationExpr> annotations;
     private final NodeList<Expression> arguments;
     private final NodeList<MethodDecl> methods;
     private final NodeList<FieldDecl> fields;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public EnumConstantDecl(String name, SourceLocation location) {
@@ -35,6 +30,42 @@ public final class EnumConstantDecl implements ASTNode {
 
     public EnumConstantDecl(String name) {
         this(name, SourceLocation.UNKNOWN);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public NodeList<AnnotationExpr> getAnnotations() {
+        return annotations;
+    }
+
+    public NodeList<Expression> getArguments() {
+        return arguments;
+    }
+
+    public NodeList<MethodDecl> getMethods() {
+        return methods;
+    }
+
+    public NodeList<FieldDecl> getFields() {
+        return fields;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public EnumConstantDecl withName(String name) {

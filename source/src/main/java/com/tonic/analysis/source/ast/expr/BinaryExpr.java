@@ -4,26 +4,19 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a binary expression: left op right
  */
-@Getter
 public final class BinaryExpr implements Expression {
 
-    @Setter
     private BinaryOperator operator;
-    @Setter
     private Expression left;
-    @Setter
     private Expression right;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public BinaryExpr(BinaryOperator operator, Expression left, Expression right,
@@ -40,6 +33,46 @@ public final class BinaryExpr implements Expression {
 
     public BinaryExpr(BinaryOperator operator, Expression left, Expression right, SourceType type) {
         this(operator, left, right, type, SourceLocation.UNKNOWN);
+    }
+
+    public BinaryOperator getOperator() {
+        return operator;
+    }
+
+    public void setOperator(BinaryOperator operator) {
+        this.operator = operator;
+    }
+
+    public Expression getLeft() {
+        return left;
+    }
+
+    public void setLeft(Expression left) {
+        this.left = left;
+    }
+
+    public Expression getRight() {
+        return right;
+    }
+
+    public void setRight(Expression right) {
+        this.right = right;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

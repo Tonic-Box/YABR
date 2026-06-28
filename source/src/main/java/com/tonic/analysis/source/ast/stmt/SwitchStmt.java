@@ -4,8 +4,6 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,14 +12,11 @@ import java.util.Objects;
 /**
  * Represents a switch statement: switch (selector) { cases... }
  */
-@Getter
 public final class SwitchStmt implements Statement {
 
-    @Setter
     private Expression selector;
     private final List<SwitchCase> cases;
     private SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public SwitchStmt(Expression selector, List<SwitchCase> cases, SourceLocation location) {
@@ -38,6 +33,30 @@ public final class SwitchStmt implements Statement {
 
     public SwitchStmt(Expression selector) {
         this(selector, List.of(), SourceLocation.UNKNOWN);
+    }
+
+    public Expression getSelector() {
+        return selector;
+    }
+
+    public void setSelector(Expression selector) {
+        this.selector = selector;
+    }
+
+    public List<SwitchCase> getCases() {
+        return cases;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

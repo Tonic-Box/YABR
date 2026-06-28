@@ -6,8 +6,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 import java.util.Objects;
@@ -15,15 +13,12 @@ import java.util.Objects;
 /**
  * Represents a method call expression: obj.method(args) or Type.staticMethod(args)
  */
-@Getter
 public final class MethodCallExpr implements Expression {
 
     /**
      * The receiver expression (null for static calls or implicit this).
      */
-    @Setter
     private Expression receiver;
-    @Setter
     private String methodName;
     /**
      * The class that declares the method (in internal format).
@@ -33,7 +28,6 @@ public final class MethodCallExpr implements Expression {
     private final boolean isStatic;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public MethodCallExpr(Expression receiver, String methodName, String ownerClass,
@@ -58,6 +52,50 @@ public final class MethodCallExpr implements Expression {
     public MethodCallExpr(Expression receiver, String methodName, String ownerClass,
                           List<Expression> arguments, boolean isStatic, SourceType type) {
         this(receiver, methodName, ownerClass, arguments, isStatic, type, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getReceiver() {
+        return receiver;
+    }
+
+    public void setReceiver(Expression receiver) {
+        this.receiver = receiver;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
+    }
+
+    public String getOwnerClass() {
+        return ownerClass;
+    }
+
+    public NodeList<Expression> getArguments() {
+        return arguments;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

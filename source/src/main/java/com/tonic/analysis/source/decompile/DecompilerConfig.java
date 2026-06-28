@@ -2,7 +2,6 @@ package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.ssa.transform.IRTransform;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,7 +11,6 @@ import java.util.List;
  * Configuration for the ClassDecompiler.
  * Combines source emission settings with transform pipeline configuration.
  */
-@Getter
 public class DecompilerConfig {
 
     /**
@@ -30,6 +28,14 @@ public class DecompilerConfig {
     private DecompilerConfig(Builder builder) {
         this.emitterConfig = builder.emitterConfig;
         this.additionalTransforms = Collections.unmodifiableList(new ArrayList<>(builder.transforms));
+    }
+
+    public SourceEmitterConfig getEmitterConfig() {
+        return emitterConfig;
+    }
+
+    public List<IRTransform> getAdditionalTransforms() {
+        return additionalTransforms;
     }
 
     /**

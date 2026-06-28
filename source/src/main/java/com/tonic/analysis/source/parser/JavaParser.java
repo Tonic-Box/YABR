@@ -5,20 +5,22 @@ import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.type.SourceType;
-import lombok.Getter;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@Getter
 public final class JavaParser {
 
     private final ParseErrorListener errorListener;
 
     private JavaParser(ParseErrorListener errorListener) {
         this.errorListener = errorListener;
+    }
+
+    public ParseErrorListener getErrorListener() {
+        return errorListener;
     }
 
     public static JavaParser create() {

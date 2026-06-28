@@ -5,8 +5,6 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,18 +14,15 @@ import java.util.Objects;
  * Represents a lambda expression: (params) -> body
  * Body can be either an Expression or a Statement (block).
  */
-@Getter
 public final class LambdaExpr implements Expression {
 
     private final List<LambdaParameter> parameters;
     /**
      * The lambda body - can be Expression (single expression) or Statement (block).
      */
-    @Setter
     private ASTNode body;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
     /**
      * The synthetic implementation method this lambda was reconstructed from, as {@code name + desc}
@@ -48,6 +43,38 @@ public final class LambdaExpr implements Expression {
 
     public LambdaExpr(List<LambdaParameter> parameters, ASTNode body, SourceType type) {
         this(parameters, body, type, SourceLocation.UNKNOWN);
+    }
+
+    public List<LambdaParameter> getParameters() {
+        return parameters;
+    }
+
+    public ASTNode getBody() {
+        return body;
+    }
+
+    public void setBody(ASTNode body) {
+        this.body = body;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
+    }
+
+    public String getImplMethodKey() {
+        return implMethodKey;
     }
 
     public LambdaExpr withBody(ASTNode body) {

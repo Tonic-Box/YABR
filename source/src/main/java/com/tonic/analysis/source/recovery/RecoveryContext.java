@@ -5,14 +5,12 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.MethodEntry;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
-import lombok.Getter;
 
 import java.util.*;
 
 /**
  * Holds shared state during expression recovery.
  */
-@Getter
 public class RecoveryContext {
 
     private final IRMethod irMethod;
@@ -20,47 +18,32 @@ public class RecoveryContext {
     private final DefUseChains defUseChains;
     private final MethodLocals locals;
 
-    /** Reaching-definition partition of local slots into source variables. */
-    @lombok.Setter
     private SlotVariablePartition slotPartition;
 
-    /** Recovered expressions keyed by SSA value */
     private final Map<SSAValue, Expression> recoveredExpressions = new HashMap<>();
 
-    /** Values that have been inlined (single-use optimization) */
     private final Set<SSAValue> inlinedValues = new HashSet<>();
 
-    /** Generated variable names */
     private final Map<SSAValue, String> variableNames = new HashMap<>();
 
-    /** Counter for synthetic names */
     private int syntheticCounter = 0;
 
-    /** Pending NewInstruction results waiting for <init> call */
     private final Map<SSAValue, String> pendingNewInstructions = new HashMap<>();
 
-    /** Local slots that contain pending new values (slot index -> class name) */
     private final Map<Integer, String> pendingNewLocalSlots = new HashMap<>();
 
-    /** Declared variable names in current scope */
     private final Set<String> declaredVariables = new HashSet<>();
 
-    /** Types of declared variables */
     private final Map<String, com.tonic.analysis.source.ast.type.SourceType> declaredVariableTypes = new HashMap<>();
 
-    /** Maps local slot indices to their current variable names */
     private final Map<Integer, String> localSlotNames = new HashMap<>();
 
-    /** SSA values that have been assigned to variables (should use var ref, not inline) */
     private final Set<SSAValue> materializedValues = new HashSet<>();
 
-    /** Stack of variables declared in for-loop init (scoped to loop body) */
     private final Deque<Set<String>> forLoopScopedVariables = new ArrayDeque<>();
 
-    /** Stack of variables declared in if-then-else branches (scoped to branch) */
     private final Deque<Set<String>> branchScopedVariables = new ArrayDeque<>();
 
-    /** Cast results that are a record deconstruction's synthetic temp (the {@code (T) selector}). */
     private final Set<SSAValue> recordDeconstructionTemps = new HashSet<>();
 
     public RecoveryContext(IRMethod irMethod, MethodEntry sourceMethod, DefUseChains defUseChains) {
@@ -68,6 +51,101 @@ public class RecoveryContext {
         this.sourceMethod = sourceMethod;
         this.defUseChains = defUseChains;
         this.locals = new MethodLocals(irMethod);
+    }
+
+    public IRMethod getIrMethod() {
+        return irMethod;
+    }
+
+    public MethodEntry getSourceMethod() {
+        return sourceMethod;
+    }
+
+    public DefUseChains getDefUseChains() {
+        return defUseChains;
+    }
+
+    public MethodLocals getLocals() {
+        return locals;
+    }
+
+    /** Reaching-definition partition of local slots into source variables. */
+    public SlotVariablePartition getSlotPartition() {
+        return slotPartition;
+    }
+
+    public void setSlotPartition(SlotVariablePartition slotPartition) {
+        this.slotPartition = slotPartition;
+    }
+
+    /** Recovered expressions keyed by SSA value */
+    public Map<SSAValue, Expression> getRecoveredExpressions() {
+        return recoveredExpressions;
+    }
+
+    /** Values that have been inlined (single-use optimization) */
+    public Set<SSAValue> getInlinedValues() {
+        return inlinedValues;
+    }
+
+    /** Generated variable names */
+    public Map<SSAValue, String> getVariableNames() {
+        return variableNames;
+    }
+
+    /** Counter for synthetic names */
+    public int getSyntheticCounter() {
+        return syntheticCounter;
+    }
+
+    /** Pending NewInstruction results waiting for <init> call */
+    public Map<SSAValue, String> getPendingNewInstructions() {
+        return pendingNewInstructions;
+    }
+
+    /** Local slots that contain pending new values (slot index -> class name) */
+    public Map<Integer, String> getPendingNewLocalSlots() {
+        return pendingNewLocalSlots;
+    }
+
+    /** Declared variable names in current scope */
+    public Set<String> getDeclaredVariables() {
+        return declaredVariables;
+    }
+
+    /** Types of declared variables */
+    public Map<String, com.tonic.analysis.source.ast.type.SourceType> getDeclaredVariableTypes() {
+        return declaredVariableTypes;
+    }
+
+    /** Maps local slot indices to their current variable names */
+    public Map<Integer, String> getLocalSlotNames() {
+        return localSlotNames;
+    }
+
+    /** SSA values that have been assigned to variables (should use var ref, not inline) */
+    public Set<SSAValue> getMaterializedValues() {
+        return materializedValues;
+    }
+
+    /** Stack of variables declared in for-loop init (scoped to loop body) */
+    public Deque<Set<String>> getForLoopScopedVariables() {
+        return forLoopScopedVariables;
+    }
+
+    /** Stack of variables declared in if-then-else branches (scoped to branch) */
+    public Deque<Set<String>> getBranchScopedVariables() {
+        return branchScopedVariables;
+    }
+
+    /** Cast results that are a record deconstruction's synthetic temp (the {@code (T) selector}). */
+    public Set<SSAValue> getRecordDeconstructionTemps() {
+        return recordDeconstructionTemps;
+    }
+
+    /** Maps SSA values to the slot index they were first stored to */
+    public Map<SSAValue, Integer> getSsaValueSlot() {
+        return ssaValueSlot;
     }
 
     public void cacheExpression(SSAValue value, Expression expr) {
@@ -290,7 +368,6 @@ public class RecoveryContext {
         return localSlotNames.get(slotIndex);
     }
 
-    /** Maps SSA values to the slot index they were first stored to */
     private final Map<SSAValue, Integer> ssaValueSlot = new HashMap<>();
 
     /**

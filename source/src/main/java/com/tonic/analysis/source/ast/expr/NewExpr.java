@@ -7,8 +7,6 @@ import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 import java.util.Objects;
@@ -16,14 +14,12 @@ import java.util.Objects;
 /**
  * Represents a new object expression: new Type(args) or outer.new Inner(args)
  */
-@Getter
 public final class NewExpr implements Expression {
 
     /**
      * The enclosing instance for inner class creation (e.g., outer.new Inner()).
      * Null for regular class instantiation.
      */
-    @Setter
     private Expression enclosingInstance;
     /**
      * The class being instantiated (in internal format).
@@ -32,7 +28,6 @@ public final class NewExpr implements Expression {
     private final NodeList<Expression> arguments;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public NewExpr(Expression enclosingInstance, String className, List<Expression> arguments,
@@ -65,6 +60,38 @@ public final class NewExpr implements Expression {
 
     public NewExpr(String className) {
         this(className, List.of(), null, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getEnclosingInstance() {
+        return enclosingInstance;
+    }
+
+    public void setEnclosingInstance(Expression enclosingInstance) {
+        this.enclosingInstance = enclosingInstance;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public NodeList<Expression> getArguments() {
+        return arguments;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     /**

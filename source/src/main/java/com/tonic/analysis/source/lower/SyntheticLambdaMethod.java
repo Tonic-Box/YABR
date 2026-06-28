@@ -3,12 +3,10 @@ package com.tonic.analysis.source.lower;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.LambdaParameter;
 import com.tonic.analysis.source.ast.type.SourceType;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 public class SyntheticLambdaMethod {
 
     private final String name;
@@ -31,11 +29,38 @@ public class SyntheticLambdaMethod {
         this.returnType = returnType;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public List<CapturedVariable> getCaptures() {
+        return captures;
+    }
+
+    public ASTNode getBody() {
+        return body;
+    }
+
+    public List<LambdaParameter> getParameters() {
+        return parameters;
+    }
+
+    public SourceType getReturnType() {
+        return returnType;
+    }
+
     public int getTotalParameterCount() {
         return captures.size() + parameters.size();
     }
 
-    @Getter
     public static class CapturedVariable {
         private final String name;
         private final SourceType type;
@@ -43,6 +68,14 @@ public class SyntheticLambdaMethod {
         public CapturedVariable(String name, SourceType type) {
             this.name = name;
             this.type = type;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public SourceType getType() {
+            return type;
         }
     }
 }

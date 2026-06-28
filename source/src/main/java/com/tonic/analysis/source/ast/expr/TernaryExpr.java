@@ -4,26 +4,19 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Objects;
 
 /**
  * Represents a ternary conditional expression: condition ? thenExpr : elseExpr
  */
-@Getter
 public final class TernaryExpr implements Expression {
 
-    @Setter
     private Expression condition;
-    @Setter
     private Expression thenExpr;
-    @Setter
     private Expression elseExpr;
     private final SourceType type;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public TernaryExpr(Expression condition, Expression thenExpr, Expression elseExpr,
@@ -41,6 +34,46 @@ public final class TernaryExpr implements Expression {
 
     public TernaryExpr(Expression condition, Expression thenExpr, Expression elseExpr, SourceType type) {
         this(condition, thenExpr, elseExpr, type, SourceLocation.UNKNOWN);
+    }
+
+    public Expression getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Expression condition) {
+        this.condition = condition;
+    }
+
+    public Expression getThenExpr() {
+        return thenExpr;
+    }
+
+    public void setThenExpr(Expression thenExpr) {
+        this.thenExpr = thenExpr;
+    }
+
+    public Expression getElseExpr() {
+        return elseExpr;
+    }
+
+    public void setElseExpr(Expression elseExpr) {
+        this.elseExpr = elseExpr;
+    }
+
+    public SourceType getType() {
+        return type;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public TernaryExpr withCondition(Expression condition) {

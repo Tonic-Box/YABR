@@ -3,20 +3,13 @@ package com.tonic.analysis.source.ast.decl;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
-import java.util.List;
-
-@Getter
 public final class ImportDecl implements ASTNode {
 
-    @Setter
     private String name;
     private final boolean isStatic;
     private final boolean isWildcard;
     private final SourceLocation location;
-    @Setter
     private ASTNode parent;
 
     public ImportDecl(String name, boolean isStatic, boolean isWildcard, SourceLocation location) {
@@ -32,6 +25,34 @@ public final class ImportDecl implements ASTNode {
 
     public ImportDecl(String name) {
         this(name, false, false);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public boolean isWildcard() {
+        return isWildcard;
+    }
+
+    public SourceLocation getLocation() {
+        return location;
+    }
+
+    public ASTNode getParent() {
+        return parent;
+    }
+
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
     }
 
     public static ImportDecl regular(String name) {
