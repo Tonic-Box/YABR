@@ -1,8 +1,5 @@
 package com.tonic.analysis.pdg.edge;
 
-import lombok.Getter;
-
-@Getter
 public enum PDGDependenceType {
     CONTROL_TRUE("Ctrl-T", "Control dependency - true branch", true, false),
     CONTROL_FALSE("Ctrl-F", "Control dependency - false branch", true, false),
@@ -23,9 +20,7 @@ public enum PDGDependenceType {
 
     private final String shortName;
     private final String description;
-    @Getter
     private final boolean controlDependence;
-    @Getter
     private final boolean dataDependence;
 
     PDGDependenceType(String shortName, String description, boolean controlDependence, boolean dataDependence) {
@@ -33,6 +28,22 @@ public enum PDGDependenceType {
         this.description = description;
         this.controlDependence = controlDependence;
         this.dataDependence = dataDependence;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isControlDependence() {
+        return controlDependence;
+    }
+
+    public boolean isDataDependence() {
+        return dataDependence;
     }
 
     public boolean isInterproceduralEdge() {

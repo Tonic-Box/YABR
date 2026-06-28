@@ -1,12 +1,9 @@
 package com.tonic.analysis.xref;
 
-import lombok.Getter;
-
 /**
  * Types of cross-references tracked in the xref database.
  * Each type represents a different kind of reference relationship.
  */
-@Getter
 public enum XrefType {
     // Method references
     METHOD_CALL("Method Call", "Direct method invocation"),
@@ -39,6 +36,14 @@ public enum XrefType {
     XrefType(String displayName, String description) {
         this.displayName = displayName;
         this.description = description;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     /**

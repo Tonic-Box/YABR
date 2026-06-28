@@ -1,8 +1,5 @@
 package com.tonic.analysis.cpg.node;
 
-import lombok.Getter;
-
-@Getter
 public enum CPGNodeType {
     METHOD("Method", "Method definition"),
     BLOCK("Block", "Basic block"),
@@ -31,6 +28,14 @@ public enum CPGNodeType {
     CPGNodeType(String shortName, String description) {
         this.shortName = shortName;
         this.description = description;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public boolean isIRNode() {

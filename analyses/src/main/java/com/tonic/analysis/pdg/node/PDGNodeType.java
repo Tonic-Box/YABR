@@ -1,8 +1,5 @@
 package com.tonic.analysis.pdg.node;
 
-import lombok.Getter;
-
-@Getter
 public enum PDGNodeType {
     ENTRY("Entry", "Method entry point", true, false),
     EXIT("Exit", "Method exit point", false, true),
@@ -28,6 +25,22 @@ public enum PDGNodeType {
         this.description = description;
         this.canBeSource = canBeSource;
         this.canBeSink = canBeSink;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isCanBeSource() {
+        return canBeSource;
+    }
+
+    public boolean isCanBeSink() {
+        return canBeSink;
     }
 
     public boolean isInterprocedural() {

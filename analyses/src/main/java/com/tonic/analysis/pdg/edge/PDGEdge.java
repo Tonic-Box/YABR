@@ -2,10 +2,7 @@ package com.tonic.analysis.pdg.edge;
 
 import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.ssa.value.SSAValue;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
 public class PDGEdge {
 
     private final PDGNode source;
@@ -15,7 +12,6 @@ public class PDGEdge {
     private final SSAValue dependentValue;
     private final boolean branchCondition;
 
-    @Setter
     private boolean tainted;
 
     public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type) {
@@ -38,6 +34,38 @@ public class PDGEdge {
         this.label = label;
         this.dependentValue = dependentValue;
         this.branchCondition = branchCondition;
+    }
+
+    public PDGNode getSource() {
+        return source;
+    }
+
+    public PDGNode getTarget() {
+        return target;
+    }
+
+    public PDGDependenceType getType() {
+        return type;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public SSAValue getDependentValue() {
+        return dependentValue;
+    }
+
+    public boolean isBranchCondition() {
+        return branchCondition;
+    }
+
+    public boolean isTainted() {
+        return tainted;
+    }
+
+    public void setTainted(boolean tainted) {
+        this.tainted = tainted;
     }
 
     public static PDGEdge controlEdge(PDGNode source, PDGNode target, boolean condition) {

@@ -1,13 +1,10 @@
 package com.tonic.analysis.cpg.edge;
 
 import com.tonic.analysis.cpg.node.CPGNode;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Getter
 public class CPGEdge {
 
     private final CPGNode source;
@@ -15,7 +12,6 @@ public class CPGEdge {
     private final CPGEdgeType type;
     private final Map<String, Object> properties = new LinkedHashMap<>();
 
-    @Setter
     private boolean tainted;
 
     public CPGEdge(CPGNode source, CPGNode target, CPGEdgeType type) {
@@ -31,6 +27,30 @@ public class CPGEdge {
         if (properties != null) {
             this.properties.putAll(properties);
         }
+    }
+
+    public CPGNode getSource() {
+        return source;
+    }
+
+    public CPGNode getTarget() {
+        return target;
+    }
+
+    public CPGEdgeType getType() {
+        return type;
+    }
+
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    public boolean isTainted() {
+        return tainted;
+    }
+
+    public void setTainted(boolean tainted) {
+        this.tainted = tainted;
     }
 
     public Object getProperty(String key) {
