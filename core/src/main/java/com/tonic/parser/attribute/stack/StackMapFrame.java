@@ -3,7 +3,6 @@ package com.tonic.parser.attribute.stack;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.util.Logger;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.io.IOException;
  * Base class for stack map frames in the StackMapTable attribute.
  * Stack map frames describe the type state at specific bytecode offsets.
  */
-@Getter
 public abstract class StackMapFrame {
     protected int frameType;
 
@@ -23,6 +21,10 @@ public abstract class StackMapFrame {
      */
     public StackMapFrame(int frameType) {
         this.frameType = frameType;
+    }
+
+    public int getFrameType() {
+        return frameType;
     }
 
     /**
@@ -46,9 +48,9 @@ public abstract class StackMapFrame {
         } else if (frameType == 247) {
             frame = new SameLocals1StackItemFrameExtended(frameType, classFile, constPool);
         } else if (frameType >= 248 && frameType <= 250) {
-            frame = new ChopFrame(frameType, classFile, constPool);
+            frame = new ChopFrame(frameType, classFile);
         } else if (frameType == 251) {
-            frame = new SameFrameExtended(frameType, classFile, constPool);
+            frame = new SameFrameExtended(frameType, classFile);
         } else if (frameType >= 252 && frameType <= 254) {
             frame = new AppendFrame(frameType, classFile, constPool);
         } else if (frameType == 255) {

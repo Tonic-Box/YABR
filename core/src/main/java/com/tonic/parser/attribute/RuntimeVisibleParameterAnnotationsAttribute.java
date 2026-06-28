@@ -4,7 +4,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.annotation.Annotation;
 import com.tonic.util.Logger;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import java.util.List;
  * Represents the RuntimeVisibleParameterAnnotations or RuntimeInvisibleParameterAnnotations attribute.
  * Stores annotations for method parameters that are either visible or invisible at runtime.
  */
-@Getter
 public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute {
     private List<List<Annotation>> parameterAnnotations;
     private final boolean visible;
@@ -28,6 +26,14 @@ public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute {
     public RuntimeVisibleParameterAnnotationsAttribute(String name, ClassFile parent, boolean visible, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
         this.visible = visible;
+    }
+
+    public List<List<Annotation>> getParameterAnnotations() {
+        return parameterAnnotations;
+    }
+
+    public boolean isVisible() {
+        return visible;
     }
 
     @Override

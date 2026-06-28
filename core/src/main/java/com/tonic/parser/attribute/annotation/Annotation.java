@@ -4,7 +4,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,11 +14,8 @@ import java.util.List;
  */
 public class Annotation {
     private final ConstPool constPool;
-    @Getter
     private final int typeIndex;
-    @Getter
     private final int numElementValuePairs;
-    @Getter
     private final List<ElementValuePair> elementValuePairs;
 
     public Annotation(ConstPool constPool, int typeIndex, int numElementValuePairs, List<ElementValuePair> elementValuePairs) {
@@ -27,6 +23,18 @@ public class Annotation {
         this.typeIndex = typeIndex;
         this.numElementValuePairs = numElementValuePairs;
         this.elementValuePairs = elementValuePairs;
+    }
+
+    public int getTypeIndex() {
+        return typeIndex;
+    }
+
+    public int getNumElementValuePairs() {
+        return numElementValuePairs;
+    }
+
+    public List<ElementValuePair> getElementValuePairs() {
+        return elementValuePairs;
     }
 
     /**

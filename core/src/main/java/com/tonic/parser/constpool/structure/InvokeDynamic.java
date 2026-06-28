@@ -1,11 +1,8 @@
 package com.tonic.parser.constpool.structure;
 
-import lombok.Getter;
-
 /**
  * Represents an InvokeDynamic in the constant pool.
  */
-@Getter
 public class InvokeDynamic {
     private final int bootstrapMethodAttrIndex;
     private final int nameAndTypeIndex;
@@ -13,6 +10,14 @@ public class InvokeDynamic {
     public InvokeDynamic(int bootstrapMethodAttrIndex, int nameAndTypeIndex) {
         this.bootstrapMethodAttrIndex = bootstrapMethodAttrIndex;
         this.nameAndTypeIndex = nameAndTypeIndex;
+    }
+
+    public int getBootstrapMethodAttrIndex() {
+        return bootstrapMethodAttrIndex;
+    }
+
+    public int getNameAndTypeIndex() {
+        return nameAndTypeIndex;
     }
 
     @Override

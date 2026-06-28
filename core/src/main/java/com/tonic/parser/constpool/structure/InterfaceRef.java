@@ -1,11 +1,8 @@
 package com.tonic.parser.constpool.structure;
 
-import lombok.Getter;
-
 /**
  * Represents an Interface Method Reference in the constant pool.
  */
-@Getter
 public class InterfaceRef {
     private int classIndex;
     private final int nameAndTypeIndex;
@@ -13,6 +10,14 @@ public class InterfaceRef {
     public InterfaceRef(int classIndex, int nameAndTypeIndex) {
         this.classIndex = classIndex;
         this.nameAndTypeIndex = nameAndTypeIndex;
+    }
+
+    public int getClassIndex() {
+        return classIndex;
+    }
+
+    public int getNameAndTypeIndex() {
+        return nameAndTypeIndex;
     }
 
     /**

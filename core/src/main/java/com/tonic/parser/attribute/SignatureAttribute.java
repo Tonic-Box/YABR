@@ -1,11 +1,9 @@
 package com.tonic.parser.attribute;
 
 import com.tonic.parser.ClassFile;
-import com.tonic.parser.ConstPool;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +12,6 @@ import java.io.IOException;
  * Represents the Signature attribute.
  * Used to store generic type information.
  */
-@Getter
 public class SignatureAttribute extends Attribute {
     private int signatureIndex;
 
@@ -24,6 +21,10 @@ public class SignatureAttribute extends Attribute {
 
     public SignatureAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public int getSignatureIndex() {
+        return signatureIndex;
     }
 
     @Override

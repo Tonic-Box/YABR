@@ -3,7 +3,6 @@ package com.tonic.parser.attribute.module;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,9 +12,7 @@ import java.util.List;
  */
 public class Exports {
     private final ConstPool constPool;
-    @Getter
     private final int exportsIndex, exportsFlags;
-    @Getter
     private final List<Integer> exportsTo;
 
     public Exports(ConstPool constPool, int exportsIndex, int exportsFlags, List<Integer> exportsTo) {
@@ -23,6 +20,18 @@ public class Exports {
         this.exportsIndex = exportsIndex;
         this.exportsFlags = exportsFlags;
         this.exportsTo = exportsTo;
+    }
+
+    public int getExportsIndex() {
+        return exportsIndex;
+    }
+
+    public int getExportsFlags() {
+        return exportsFlags;
+    }
+
+    public List<Integer> getExportsTo() {
+        return exportsTo;
     }
 
     @Override

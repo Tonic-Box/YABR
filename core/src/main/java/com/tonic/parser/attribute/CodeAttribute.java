@@ -6,8 +6,6 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.util.Logger;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -18,14 +16,10 @@ import java.util.List;
  * Represents the Code attribute.
  * Contains the bytecode and related information for a method.
  */
-@Getter
 public class CodeAttribute extends Attribute {
-    @Setter
     private int maxStack, maxLocals;
-    @Setter
     private byte[] code;
     private List<ExceptionTableEntry> exceptionTable = new ArrayList<>();
-    @Setter
     private List<Attribute> attributes = new ArrayList<>();
 
     public CodeAttribute(String name, MemberEntry parent, int nameIndex, int length) {
@@ -34,6 +28,42 @@ public class CodeAttribute extends Attribute {
 
     public CodeAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public int getMaxStack() {
+        return maxStack;
+    }
+
+    public int getMaxLocals() {
+        return maxLocals;
+    }
+
+    public byte[] getCode() {
+        return code;
+    }
+
+    public List<ExceptionTableEntry> getExceptionTable() {
+        return exceptionTable;
+    }
+
+    public List<Attribute> getAttributes() {
+        return attributes;
+    }
+
+    public void setMaxStack(int maxStack) {
+        this.maxStack = maxStack;
+    }
+
+    public void setMaxLocals(int maxLocals) {
+        this.maxLocals = maxLocals;
+    }
+
+    public void setCode(byte[] code) {
+        this.code = code;
+    }
+
+    public void setAttributes(List<Attribute> attributes) {
+        this.attributes = attributes;
     }
 
     @Override
@@ -170,5 +200,6 @@ public class CodeAttribute extends Attribute {
      */
     public void accept(AbstractMethodVisitor abstractMethodVisitor)
     {
+        abstractMethodVisitor.visit(this);
     }
 }

@@ -1,14 +1,16 @@
 package com.tonic.util;
 
-import lombok.Setter;
-
 /**
  * Simple logging utility for information and error messages.
  */
 public class Logger
 {
-    @Setter
     private static boolean log = false;
+
+    public static void setLog(boolean log)
+    {
+        Logger.log = log;
+    }
 
     /**
      * Logs an informational message to standard output.

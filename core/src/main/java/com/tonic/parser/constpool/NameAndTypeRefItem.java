@@ -3,8 +3,6 @@ package com.tonic.parser.constpool;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.structure.NameAndType;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,11 +11,20 @@ import java.io.IOException;
  * Represents a CONSTANT_NameAndType entry in the constant pool.
  */
 public class NameAndTypeRefItem extends Item<NameAndType> {
-    @Setter
-    @Getter
     private ConstPool constPool;
-    @Setter
     private NameAndType value;
+
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
+    public void setConstPool(ConstPool constPool) {
+        this.constPool = constPool;
+    }
+
+    public void setValue(NameAndType value) {
+        this.value = value;
+    }
 
     @Override
     public void read(ClassFile classFile) {

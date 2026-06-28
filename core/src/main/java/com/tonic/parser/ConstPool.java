@@ -8,7 +8,6 @@ import com.tonic.parser.constpool.structure.MethodHandle;
 import com.tonic.parser.constpool.structure.MethodRef;
 import com.tonic.parser.constpool.structure.NameAndType;
 import com.tonic.util.Logger;
-import lombok.Getter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +15,6 @@ import java.util.List;
  * Represents the Constant Pool of a Java class file.
  * Parses and stores all constant pool entries.
  */
-@Getter
 public class ConstPool {
     private ClassFile classFile;
     private final List<Item<?>> items;
@@ -114,6 +112,14 @@ public class ConstPool {
         this.classFile = null;
         this.items = new ArrayList<>();
         this.items.add(null);
+    }
+
+    public ClassFile getClassFile() {
+        return classFile;
+    }
+
+    public List<Item<?>> getItems() {
+        return items;
     }
 
     /**

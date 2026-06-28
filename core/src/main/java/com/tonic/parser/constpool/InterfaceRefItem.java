@@ -3,8 +3,6 @@ package com.tonic.parser.constpool;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.structure.InterfaceRef;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,11 +12,21 @@ import static com.tonic.parser.constpool.structure.InvokeParameterUtil.*;
 /**
  * Represents a CONSTANT_InterfaceMethodref entry in the constant pool.
  */
-@Getter
-@Setter
 public class InterfaceRefItem extends Item<InterfaceRef> {
     private ConstPool constPool;
     private InterfaceRef value;
+
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
+    public void setConstPool(ConstPool constPool) {
+        this.constPool = constPool;
+    }
+
+    public void setValue(InterfaceRef value) {
+        this.value = value;
+    }
 
     @Override
     public void read(ClassFile classFile) {

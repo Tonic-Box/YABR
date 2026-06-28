@@ -5,7 +5,6 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -16,7 +15,6 @@ import java.util.List;
  * Represents the Exceptions attribute.
  * Lists the exceptions that a method can throw.
  */
-@Getter
 public class ExceptionsAttribute extends Attribute {
     private List<Integer> exceptionIndexTable;
 
@@ -26,6 +24,10 @@ public class ExceptionsAttribute extends Attribute {
 
     public ExceptionsAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public List<Integer> getExceptionIndexTable() {
+        return exceptionIndexTable;
     }
 
     @Override
@@ -61,8 +63,7 @@ public class ExceptionsAttribute extends Attribute {
     public String toString() {
         StringBuilder sb = new StringBuilder("ExceptionsAttribute{");
         sb.append("exceptions=[");
-        for (int i = 0; i < exceptionIndexTable.size(); i++) {
-            int index = exceptionIndexTable.get(i);
+        for (int index : exceptionIndexTable) {
             ClassRefItem classRef = (ClassRefItem) getClassFile().getConstPool().getItem(index);
             sb.append(classRef.getValue()).append(":").append(getClassName(classRef.getValue())).append(", ");
         }

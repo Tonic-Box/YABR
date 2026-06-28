@@ -1,7 +1,6 @@
 package com.tonic.parser;
 
 import com.tonic.exception.IncorrectFormatException;
-import lombok.Getter;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -10,7 +9,6 @@ import java.math.BigInteger;
  * An abstract parser for reading various data types from a byte array.
  * Supports both signed and unsigned read operations.
  */
-@Getter
 public abstract class AbstractParser {
     private byte[] bytes;
     private int index;
@@ -46,6 +44,14 @@ public abstract class AbstractParser {
         if (parse) {
             process();
         }
+    }
+
+    public byte[] getBytes() {
+        return bytes;
+    }
+
+    public int getIndex() {
+        return index;
     }
 
     /**

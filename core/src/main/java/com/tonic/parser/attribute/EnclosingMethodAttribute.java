@@ -3,7 +3,6 @@ package com.tonic.parser.attribute;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.*;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.io.IOException;
  * Represents the EnclosingMethod attribute.
  * Indicates the method that encloses a local or anonymous class.
  */
-@Getter
 public class EnclosingMethodAttribute extends Attribute {
     private int classIndex;
     private int methodIndex;
@@ -23,6 +21,14 @@ public class EnclosingMethodAttribute extends Attribute {
 
     public EnclosingMethodAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public int getClassIndex() {
+        return classIndex;
+    }
+
+    public int getMethodIndex() {
+        return methodIndex;
     }
 
     @Override

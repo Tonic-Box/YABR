@@ -1,11 +1,8 @@
 package com.tonic.util;
 
-import lombok.Getter;
-
 /**
  * Enum representing JVM return instruction types.
  */
-@Getter
 public enum ReturnType {
     /** Integer return instruction. */
     IRETURN(0xAC, "ireturn"),
@@ -26,6 +23,14 @@ public enum ReturnType {
     ReturnType(int opcode, String mnemonic) {
         this.opcode = opcode;
         this.mnemonic = mnemonic;
+    }
+
+    public int getOpcode() {
+        return opcode;
+    }
+
+    public String getMnemonic() {
+        return mnemonic;
     }
 
     /**

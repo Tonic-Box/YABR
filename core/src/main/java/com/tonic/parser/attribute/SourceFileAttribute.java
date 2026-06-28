@@ -4,7 +4,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,14 +12,21 @@ import java.io.IOException;
  * Represents the SourceFile attribute.
  * Indicates the source file name from which the class was compiled.
  */
-@Getter
 public class SourceFileAttribute extends Attribute {
     private int sourceFileIndex;
-    private ClassFile classFile;
+    private final ClassFile classFile;
 
     public SourceFileAttribute(ClassFile classFile, String name, MemberEntry parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
         this.classFile = classFile;
+    }
+
+    public int getSourceFileIndex() {
+        return sourceFileIndex;
+    }
+
+    public ClassFile getClassFile() {
+        return classFile;
     }
 
     @Override

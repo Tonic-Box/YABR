@@ -2,9 +2,6 @@ package com.tonic.parser.attribute.stack;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import com.tonic.parser.attribute.StackMapTableAttribute;
-import lombok.Getter;
-
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -12,7 +9,6 @@ import java.io.IOException;
  * Represents a SameLocals1StackItemFrame in the StackMapTable attribute.
  * Used when the frame has the same locals as the previous frame and one stack item.
  */
-@Getter
 public class SameLocals1StackItemFrame extends StackMapFrame {
     private final VerificationTypeInfo stack;
 
@@ -24,6 +20,10 @@ public class SameLocals1StackItemFrame extends StackMapFrame {
     public SameLocals1StackItemFrame(int offsetDelta, VerificationTypeInfo stack) {
         super(64 + offsetDelta);
         this.stack = stack;
+    }
+
+    public VerificationTypeInfo getStack() {
+        return stack;
     }
 
     @Override

@@ -7,8 +7,6 @@ import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.util.*;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -22,27 +20,19 @@ import java.util.List;
  * Represents a Java class file with full parsing and manipulation capabilities.
  * Provides access to constant pool, fields, methods, and class attributes.
  */
-@Getter
 public class ClassFile extends AbstractParser {
-    @Setter
     private int minorVersion;
-    @Setter
     private int majorVersion;
     private int access;
     private int thisClass;
     private int superClass;
-    @Setter
     private ConstPool constPool;
     private List<Attribute> classAttributes;
     private List<FieldEntry> fields;
     private List<MethodEntry> methods;
     private List<Integer> interfaces;
-    /** The pool that loaded this class, if any, so cross-class lookups can resolve siblings. */
-    @Setter
     private ClassPool classPool;
 
-    private static final int MINOR_VERSION_OFFSET = 4;
-    private static final int MAJOR_VERSION_OFFSET = 6;
     public static final int CLASS_MAGIC = 0xCAFEBABE;
 
     /**
@@ -98,8 +88,68 @@ public class ClassFile extends AbstractParser {
         this.majorVersion = 55;
     }
 
+    public int getMinorVersion() {
+        return minorVersion;
+    }
 
+    public int getMajorVersion() {
+        return majorVersion;
+    }
 
+    public int getAccess() {
+        return access;
+    }
+
+    public int getThisClass() {
+        return thisClass;
+    }
+
+    public int getSuperClass() {
+        return superClass;
+    }
+
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
+    public List<Attribute> getClassAttributes() {
+        return classAttributes;
+    }
+
+    public List<FieldEntry> getFields() {
+        return fields;
+    }
+
+    public List<MethodEntry> getMethods() {
+        return methods;
+    }
+
+    public List<Integer> getInterfaces() {
+        return interfaces;
+    }
+
+    /**
+     * The pool that loaded this class, if any, so cross-class lookups can resolve siblings.
+     */
+    public ClassPool getClassPool() {
+        return classPool;
+    }
+
+    public void setMinorVersion(int minorVersion) {
+        this.minorVersion = minorVersion;
+    }
+
+    public void setMajorVersion(int majorVersion) {
+        this.majorVersion = majorVersion;
+    }
+
+    public void setConstPool(ConstPool constPool) {
+        this.constPool = constPool;
+    }
+
+    public void setClassPool(ClassPool classPool) {
+        this.classPool = classPool;
+    }
 
     @Override
     protected void process() {

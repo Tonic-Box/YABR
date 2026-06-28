@@ -4,7 +4,6 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,15 +13,21 @@ import java.util.List;
  */
 public class Provides {
     private final ConstPool constPool;
-    @Getter
     private final int providesWithIndex;
-    @Getter
     private final List<Integer> providesWithArguments;
 
     public Provides(ConstPool constPool, int providesWithIndex, List<Integer> providesWithArguments) {
         this.constPool = constPool;
         this.providesWithIndex = providesWithIndex;
         this.providesWithArguments = providesWithArguments;
+    }
+
+    public int getProvidesWithIndex() {
+        return providesWithIndex;
+    }
+
+    public List<Integer> getProvidesWithArguments() {
+        return providesWithArguments;
     }
 
     @Override

@@ -64,9 +64,10 @@ class InstrumenterTest {
     }
 
     @Test
-    void forClassPoolThrowsUnsupportedOperation() {
-        assertThrows(UnsupportedOperationException.class, () ->
-                Instrumenter.forClassPool(pool));
+    void forClassPoolCreatesInstrumenter() {
+        Instrumenter instrumenter = Instrumenter.forClassPool(pool);
+
+        assertNotNull(instrumenter);
     }
 
     // ========== Method Entry Hook Tests ==========

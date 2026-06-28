@@ -3,7 +3,6 @@ package com.tonic.parser.attribute.table;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 /**
  * Represents an entry in the LocalVariableTable attribute.
@@ -11,7 +10,6 @@ import lombok.Getter;
  */
 public class LocalVariableTableEntry {
     private final ConstPool constPool;
-    @Getter
     private final int startPc, lengthPc, nameIndex, descriptorIndex, index;
 
     /**
@@ -31,6 +29,26 @@ public class LocalVariableTableEntry {
         this.nameIndex = nameIndex;
         this.descriptorIndex = descriptorIndex;
         this.index = index;
+    }
+
+    public int getStartPc() {
+        return startPc;
+    }
+
+    public int getLengthPc() {
+        return lengthPc;
+    }
+
+    public int getNameIndex() {
+        return nameIndex;
+    }
+
+    public int getDescriptorIndex() {
+        return descriptorIndex;
+    }
+
+    public int getIndex() {
+        return index;
     }
 
     @Override

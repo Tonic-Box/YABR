@@ -5,7 +5,6 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.util.Logger;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -16,7 +15,6 @@ import java.util.List;
  * Represents the BootstrapMethods attribute.
  * Stores bootstrap method information for invokedynamic instructions.
  */
-@Getter
 public class BootstrapMethodsAttribute extends Attribute {
     private List<BootstrapMethod> bootstrapMethods;
 
@@ -36,6 +34,10 @@ public class BootstrapMethodsAttribute extends Attribute {
     public BootstrapMethodsAttribute(ConstPool constPool) {
         super("BootstrapMethods", (ClassFile) null, constPool.findOrAddUtf8("BootstrapMethods").getIndex(constPool), 2);
         this.bootstrapMethods = new ArrayList<>();
+    }
+
+    public List<BootstrapMethod> getBootstrapMethods() {
+        return bootstrapMethods;
     }
 
     /**

@@ -4,14 +4,12 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 /**
  * Represents a requires entry in the Module attribute.
  */
 public class Requires {
     private final ConstPool constPool;
-    @Getter
     private final int requiresIndex, requiresFlags, requiresVersionIndex;
 
     public Requires(ConstPool constPool, int requiresIndex, int requiresFlags, int requiresVersionIndex) {
@@ -19,6 +17,18 @@ public class Requires {
         this.requiresIndex = requiresIndex;
         this.requiresFlags = requiresFlags;
         this.requiresVersionIndex = requiresVersionIndex;
+    }
+
+    public int getRequiresIndex() {
+        return requiresIndex;
+    }
+
+    public int getRequiresFlags() {
+        return requiresFlags;
+    }
+
+    public int getRequiresVersionIndex() {
+        return requiresVersionIndex;
     }
 
     @Override

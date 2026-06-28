@@ -5,7 +5,6 @@ import com.tonic.parser.visitor.AbstractMethodVisitor;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import java.util.List;
 /**
  * Represents a method entry in the class file.
  */
-@Getter
 public class MethodEntry extends MemberEntry {
 
     /**
@@ -71,7 +69,7 @@ public class MethodEntry extends MemberEntry {
 
     @Override
     public void setName(String newName) {
-        Utf8Item newNameUtf8 = (Utf8Item) classFile.getConstPool().findOrAddUtf8(newName);
+        Utf8Item newNameUtf8 = classFile.getConstPool().findOrAddUtf8(newName);
         this.nameIndex = classFile.getConstPool().getIndexOf(newNameUtf8);
         this.name = newName;
         this.key = computeKey();

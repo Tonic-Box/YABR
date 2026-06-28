@@ -1,8 +1,6 @@
 package com.tonic.parser.attribute.stack;
 
 import com.tonic.parser.ClassFile;
-import com.tonic.parser.ConstPool;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,11 +9,10 @@ import java.io.IOException;
  * Represents a SameFrameExtended in the StackMapTable attribute.
  * Extended version of SameFrame with explicit offset delta.
  */
-@Getter
 public class SameFrameExtended extends StackMapFrame {
     private final int offsetDelta;
 
-    public SameFrameExtended(int frameType, ClassFile classFile, ConstPool constPool) {
+    public SameFrameExtended(int frameType, ClassFile classFile) {
         super(frameType);
         this.offsetDelta = classFile.readUnsignedShort();
     }

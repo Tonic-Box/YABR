@@ -1,11 +1,9 @@
 package com.tonic.parser.attribute;
 
 import com.tonic.parser.ClassFile;
-import com.tonic.parser.ConstPool;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.stack.StackMapFrame;
 import com.tonic.util.Logger;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -16,7 +14,6 @@ import java.util.List;
  * Represents the StackMapTable attribute.
  * Provides type information for verification.
  */
-@Getter
 public class StackMapTableAttribute extends Attribute {
     private int numberOfEntries;
     private List<StackMapFrame> frames;
@@ -29,6 +26,14 @@ public class StackMapTableAttribute extends Attribute {
     public StackMapTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
         this.frames = new ArrayList<>();
+    }
+
+    public int getNumberOfEntries() {
+        return numberOfEntries;
+    }
+
+    public List<StackMapFrame> getFrames() {
+        return frames;
     }
 
     /**

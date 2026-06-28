@@ -3,7 +3,6 @@ package com.tonic.parser;
 import com.tonic.parser.visitor.AbstractClassVisitor;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.util.ArrayList;
 /**
  * Represents a field entry in the class file.
  */
-@Getter
 public class FieldEntry extends MemberEntry {
 
     /**

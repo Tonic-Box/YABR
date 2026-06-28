@@ -4,7 +4,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.annotation.ElementValue;
 import com.tonic.util.Logger;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import java.io.IOException;
  * Represents the AnnotationDefault attribute.
  * Specifies the default value for an annotation element.
  */
-@Getter
 public class AnnotationDefaultAttribute extends Attribute {
     private ElementValue defaultValue;
 
@@ -23,6 +21,10 @@ public class AnnotationDefaultAttribute extends Attribute {
 
     public AnnotationDefaultAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public ElementValue getDefaultValue() {
+        return defaultValue;
     }
 
     @Override

@@ -3,7 +3,6 @@ package com.tonic.parser.attribute;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.table.MethodParameter;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.util.List;
  * Represents the MethodParameters attribute.
  * Provides information about method parameters.
  */
-@Getter
 public class MethodParametersAttribute extends Attribute {
     private List<MethodParameter> parameters;
 
@@ -24,6 +22,10 @@ public class MethodParametersAttribute extends Attribute {
 
     public MethodParametersAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public List<MethodParameter> getParameters() {
+        return parameters;
     }
 
     @Override

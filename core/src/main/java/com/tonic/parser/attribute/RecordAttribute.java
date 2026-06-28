@@ -4,7 +4,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -22,10 +21,8 @@ import java.util.List;
  * indices stay modeled. Modeled (rather than opaque) so the decompiler can reconstruct the
  * {@code record Name(T a, U b)} header.
  */
-@Getter
 public class RecordAttribute extends Attribute {
 
-    @Getter
     public static class Component {
         private final int nameIndex;
         private final int descriptorIndex;
@@ -35,6 +32,18 @@ public class RecordAttribute extends Attribute {
             this.nameIndex = nameIndex;
             this.descriptorIndex = descriptorIndex;
             this.attributes = attributes;
+        }
+
+        public int getNameIndex() {
+            return nameIndex;
+        }
+
+        public int getDescriptorIndex() {
+            return descriptorIndex;
+        }
+
+        public List<Attribute> getAttributes() {
+            return attributes;
         }
     }
 
@@ -46,6 +55,10 @@ public class RecordAttribute extends Attribute {
 
     public RecordAttribute(String name, ClassFile hostClass, int nameIndex, int length) {
         super(name, hostClass, nameIndex, length);
+    }
+
+    public List<Component> getComponents() {
+        return components;
     }
 
     @Override

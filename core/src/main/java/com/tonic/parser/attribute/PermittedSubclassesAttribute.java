@@ -5,7 +5,6 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -20,7 +19,6 @@ import java.util.List;
  * constant-pool indices. Modeled (rather than opaque) so the decompiler can render the
  * {@code permits} clause and so class-rename transforms can update the references.
  */
-@Getter
 public class PermittedSubclassesAttribute extends Attribute {
     private List<Integer> classes;
 
@@ -30,6 +28,10 @@ public class PermittedSubclassesAttribute extends Attribute {
 
     public PermittedSubclassesAttribute(String name, ClassFile hostClass, int nameIndex, int length) {
         super(name, hostClass, nameIndex, length);
+    }
+
+    public List<Integer> getClasses() {
+        return classes;
     }
 
     @Override

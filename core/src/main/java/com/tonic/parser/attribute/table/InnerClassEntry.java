@@ -4,8 +4,6 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Represents an entry in the InnerClasses attribute.
@@ -13,10 +11,7 @@ import lombok.Setter;
  */
 public class InnerClassEntry {
     private final ConstPool constPool;
-    @Getter
     private final int innerClassInfoIndex, outerClassInfoIndex, innerClassAccessFlags;
-    @Getter
-    @Setter
     private int innerNameIndex;
 
     /**
@@ -34,6 +29,26 @@ public class InnerClassEntry {
         this.outerClassInfoIndex = outerClassInfoIndex;
         this.innerNameIndex = innerNameIndex;
         this.innerClassAccessFlags = innerClassAccessFlags;
+    }
+
+    public int getInnerClassInfoIndex() {
+        return innerClassInfoIndex;
+    }
+
+    public int getOuterClassInfoIndex() {
+        return outerClassInfoIndex;
+    }
+
+    public int getInnerClassAccessFlags() {
+        return innerClassAccessFlags;
+    }
+
+    public int getInnerNameIndex() {
+        return innerNameIndex;
+    }
+
+    public void setInnerNameIndex(int innerNameIndex) {
+        this.innerNameIndex = innerNameIndex;
     }
 
     public String getOuterClassName() {

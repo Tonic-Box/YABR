@@ -1,11 +1,8 @@
 package com.tonic.parser.attribute.annotation;
 
-import lombok.Getter;
-
 /**
  * Represents an element-value pair in an annotation.
  */
-@Getter
 public class ElementValuePair {
     private final int nameIndex;
     private final String elementName;
@@ -15,6 +12,18 @@ public class ElementValuePair {
         this.nameIndex = nameIndex;
         this.elementName = elementName;
         this.value = value;
+    }
+
+    public int getNameIndex() {
+        return nameIndex;
+    }
+
+    public String getElementName() {
+        return elementName;
+    }
+
+    public ElementValue getValue() {
+        return value;
     }
 
     @Override

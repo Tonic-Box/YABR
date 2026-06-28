@@ -4,19 +4,21 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 /**
  * Represents a uses entry in the Module attribute.
  */
 public class Uses {
     private final ConstPool constPool;
-    @Getter
     private final int usesIndex;
 
     public Uses(ConstPool constPool, int usesIndex) {
         this.constPool = constPool;
         this.usesIndex = usesIndex;
+    }
+
+    public int getUsesIndex() {
+        return usesIndex;
     }
 
     @Override

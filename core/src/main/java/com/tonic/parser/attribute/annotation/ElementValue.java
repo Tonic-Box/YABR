@@ -2,7 +2,6 @@ package com.tonic.parser.attribute.annotation;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.util.List;
 /**
  * Represents an element value in an annotation.
  */
-@Getter
 public class ElementValue {
     private final int tag;
     private final Object value;
@@ -20,6 +18,14 @@ public class ElementValue {
     public ElementValue(int tag, Object value) {
         this.tag = tag;
         this.value = value;
+    }
+
+    public int getTag() {
+        return tag;
+    }
+
+    public Object getValue() {
+        return value;
     }
 
     /**

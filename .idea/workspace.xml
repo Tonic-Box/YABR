@@ -4,9 +4,90 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt11&#10;- ssa">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Removal of Lombok: pt13 (Final&#10;- core">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/CodeWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/CodeWriter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/AbstractParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/AbstractParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ClassPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ConstPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/ConstPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/FieldEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/FieldEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/MemberEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/MemberEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/MethodEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/MethodEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/AnnotationDefaultAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/AnnotationDefaultAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/BootstrapMethodsAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/BootstrapMethodsAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/CodeAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/ConstantValueAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/ConstantValueAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/EnclosingMethodAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/EnclosingMethodAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/ExceptionsAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/ExceptionsAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/GenericAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/GenericAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/InnerClassesAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/InnerClassesAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/LineNumberTableAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/LineNumberTableAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/LocalVariableTableAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/LocalVariableTableAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/LocalVariableTypeTableAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/LocalVariableTypeTableAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/MethodParametersAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/MethodParametersAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/ModuleAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/ModuleAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/NestHostAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/NestHostAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/NestMembersAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/NestMembersAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/PermittedSubclassesAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/PermittedSubclassesAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/RecordAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/RecordAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/RuntimeVisibleAnnotationsAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/RuntimeVisibleAnnotationsAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/RuntimeVisibleParameterAnnotationsAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/RuntimeVisibleParameterAnnotationsAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/SignatureAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/SignatureAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/SourceDebugExtensionAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/SourceDebugExtensionAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/SourceFileAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/SourceFileAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/StackMapTableAttribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/StackMapTableAttribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/Annotation.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/Annotation.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/ElementValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/ElementValue.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/ElementValuePair.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/ElementValuePair.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/EnumConst.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/annotation/EnumConst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Exports.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Exports.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Opens.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Opens.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Provides.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Provides.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Requires.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Requires.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Uses.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/module/Uses.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/AppendFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/AppendFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/ChopFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/ChopFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/FullFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/FullFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/SameFrameExtended.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/SameFrameExtended.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrameExtended.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/SameLocals1StackItemFrameExtended.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/StackMapFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/StackMapFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/VerificationTypeInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/stack/VerificationTypeInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/BootstrapMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/BootstrapMethod.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/InnerClassEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/InnerClassEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/LineNumberTableEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/LineNumberTableEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/LocalVariableTableEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/LocalVariableTableEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/LocalVariableTypeTableEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/LocalVariableTypeTableEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/MethodParameter.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/attribute/table/MethodParameter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/ClassRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/ClassRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/DoubleItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/DoubleItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/FieldRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/FieldRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/FloatItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/FloatItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/IntegerItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/IntegerItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/InterfaceRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/InterfaceRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/Item.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/Item.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/LongItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/LongItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/MethodRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/MethodRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/ModuleItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/ModuleItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/NameAndTypeRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/NameAndTypeRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/PackageItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/PackageItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/StringRefItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/StringRefItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/Utf8Item.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/Utf8Item.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/ConstantDynamic.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/ConstantDynamic.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/FieldRef.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/FieldRef.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/InterfaceRef.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/InterfaceRef.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/InvokeDynamic.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/InvokeDynamic.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/MethodHandle.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/MethodHandle.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/MethodRef.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/MethodRef.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/NameAndType.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/parser/constpool/structure/NameAndType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/Logger.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/Logger.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/Opcode.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/Opcode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/ReturnType.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/java/com/tonic/util/ReturnType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/Instrumenter.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/instrumentation/Instrumenter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/tests/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/instrumentation/InstrumenterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/instrumentation/InstrumenterTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/emit/SourceEmitterTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/emit/SourceEmitterTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,14 +234,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00037" summary="Fix decompiler call/array reconstruction&#10;- Don't materialize single-use call results (fixes orphaned re-inlined statements)&#10;- Collapse varargs array packing back into individual arguments (materialized + inline forms)&#10;- Render varargs method parameters as T... instead of T[]&#10;- Fix multidim anewarray: parse array-descriptor element types and emit dimensions in valid order (new int[2][] not new int[][2])">
-      <option name="closed" value="true" />
-      <created>1781205882952</created>
-      <option name="number" value="00037" />
-      <option name="presentableId" value="LOCAL-00037" />
-      <option name="project" value="LOCAL" />
-      <updated>1781205882952</updated>
     </task>
     <task id="LOCAL-00038" summary="Query API (Migrated over from JStudio)">
       <option name="closed" value="true" />
@@ -546,7 +619,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782622525503</updated>
     </task>
-    <option name="localTasksCounter" value="86" />
+    <task id="LOCAL-00086" summary="Removal of Lombok: pt12&#10;- source">
+      <option name="closed" value="true" />
+      <created>1782624020402</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1782624020402</updated>
+    </task>
+    <option name="localTasksCounter" value="87" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -561,8 +642,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types" />
-    <MESSAGE value="- Fix decompile-&gt;recompile fidelity: qualified names + return types for wildcard imports" />
     <MESSAGE value="- CodeWriter::removeInstruction" />
     <MESSAGE value="- ASTLowerer ordering fix" />
     <MESSAGE value="Fix decompile→recompile type fidelity&#10;&#10;Resolve ctor/method/field/array/generic types via TypeResolver, not raw AST types (fixes Frame NoClassDefFound + more); emit acmp for reference ==/!=; run structured finally bodies. Add recompile-verify sweep test." />
@@ -586,6 +665,8 @@
     <MESSAGE value="Removal of Lombok: pt9&#10;- bytecode" />
     <MESSAGE value="Removal of Lombok: pt10&#10;- bytecode" />
     <MESSAGE value="Removal of Lombok: pt11&#10;- ssa" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt11&#10;- ssa" />
+    <MESSAGE value="Removal of Lombok: pt12&#10;- source" />
+    <MESSAGE value="Removal of Lombok: pt13 (Final&#10;- core" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removal of Lombok: pt13 (Final&#10;- core" />
   </component>
 </project>

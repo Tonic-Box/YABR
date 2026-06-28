@@ -3,7 +3,6 @@ package com.tonic.parser.attribute;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.table.LineNumberTableEntry;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.util.List;
  * Represents the LineNumberTable attribute.
  * Maps bytecode instructions to source code line numbers.
  */
-@Getter
 public class LineNumberTableAttribute extends Attribute {
     private List<LineNumberTableEntry> lineNumberTable;
 
@@ -24,6 +22,10 @@ public class LineNumberTableAttribute extends Attribute {
 
     public LineNumberTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public List<LineNumberTableEntry> getLineNumberTable() {
+        return lineNumberTable;
     }
 
     @Override

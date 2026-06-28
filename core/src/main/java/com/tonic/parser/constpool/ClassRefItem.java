@@ -2,7 +2,6 @@ package com.tonic.parser.constpool;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,8 +10,6 @@ import java.io.IOException;
  * Represents a CONSTANT_Class entry in the constant pool.
  */
 public class ClassRefItem extends Item<Integer> {
-    @Setter
-    private ClassFile classFile;
     private Integer value;
 
     @Override

@@ -1,7 +1,6 @@
 package com.tonic.parser;
 
 import com.tonic.util.Logger;
-import lombok.Getter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,7 +14,6 @@ import java.util.stream.Stream;
 /**
  * Pool for storing and retrieving ClassFile objects by internal name.
  */
-@Getter
 public class ClassPool {
     private static ClassPool Default;
 
@@ -47,6 +45,10 @@ public class ClassPool {
      * @param empty ignored parameter to differentiate from default constructor
      */
     public ClassPool(boolean empty) {
+    }
+
+    public List<ClassFile> getClasses() {
+        return classes;
     }
 
     private void loadAllJavaBuiltInClasses() throws IOException {

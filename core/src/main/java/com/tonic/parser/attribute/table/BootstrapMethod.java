@@ -1,14 +1,11 @@
 package com.tonic.parser.attribute.table;
 
-import lombok.Getter;
-
 import java.util.List;
 
 /**
  * Represents a bootstrap method entry in the BootstrapMethods attribute.
  * Used for invokedynamic instructions and constant dynamic constants.
  */
-@Getter
 public class BootstrapMethod {
     private final int bootstrapMethodRef;
     private final List<Integer> bootstrapArguments;
@@ -22,6 +19,14 @@ public class BootstrapMethod {
     public BootstrapMethod(int bootstrapMethodRef, List<Integer> bootstrapArguments) {
         this.bootstrapMethodRef = bootstrapMethodRef;
         this.bootstrapArguments = bootstrapArguments;
+    }
+
+    public int getBootstrapMethodRef() {
+        return bootstrapMethodRef;
+    }
+
+    public List<Integer> getBootstrapArguments() {
+        return bootstrapArguments;
     }
 
     @Override

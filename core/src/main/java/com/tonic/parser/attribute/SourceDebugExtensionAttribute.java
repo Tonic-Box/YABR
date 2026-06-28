@@ -2,7 +2,6 @@ package com.tonic.parser.attribute;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import java.io.IOException;
  * Represents the SourceDebugExtension attribute.
  * Provides additional debugging information.
  */
-@Getter
 public class SourceDebugExtensionAttribute extends Attribute {
     private byte[] debugExtension;
 
@@ -21,6 +19,10 @@ public class SourceDebugExtensionAttribute extends Attribute {
 
     public SourceDebugExtensionAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public byte[] getDebugExtension() {
+        return debugExtension;
     }
 
     @Override

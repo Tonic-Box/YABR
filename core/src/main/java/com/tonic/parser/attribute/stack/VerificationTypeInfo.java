@@ -2,7 +2,6 @@ package com.tonic.parser.attribute.stack;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import java.io.IOException;
  * Represents verification type information used in stack map frames.
  * Encodes the type of a local variable or operand stack entry.
  */
-@Getter
 public class VerificationTypeInfo {
     private final int tag;
     private final Object info;
@@ -25,6 +23,14 @@ public class VerificationTypeInfo {
     public VerificationTypeInfo(int tag, Object info) {
         this.tag = tag;
         this.info = info;
+    }
+
+    public int getTag() {
+        return tag;
+    }
+
+    public Object getInfo() {
+        return info;
     }
 
     /**

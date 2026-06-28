@@ -3,20 +3,26 @@ package com.tonic.parser.attribute.annotation;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 /**
  * Represents an enum constant in an annotation.
  */
 public class EnumConst {
     private final ConstPool constPool;
-    @Getter
-    private final int typeNameIndex, constNameIndex;;
+    private final int typeNameIndex, constNameIndex;
 
     public EnumConst(ConstPool constPool, int typeNameIndex, int constNameIndex) {
         this.constPool = constPool;
         this.typeNameIndex = typeNameIndex;
         this.constNameIndex = constNameIndex;
+    }
+
+    public int getTypeNameIndex() {
+        return typeNameIndex;
+    }
+
+    public int getConstNameIndex() {
+        return constNameIndex;
     }
 
     @Override

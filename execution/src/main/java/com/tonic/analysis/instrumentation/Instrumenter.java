@@ -57,10 +57,7 @@ public class Instrumenter {
      * @return a new Instrumenter instance
      */
     public static Instrumenter forClassPool(ClassPool pool) {
-        // ClassPool doesn't expose iteration, so we need to work around it
-        // This is a limitation - in a real implementation, ClassPool would expose getAll()
-        throw new UnsupportedOperationException(
-                "ClassPool iteration not supported directly. Use forClasses() with explicit class list.");
+        return forClasses(pool.getClasses());
     }
 
     /**
@@ -238,7 +235,7 @@ public class Instrumenter {
         InstrumentationConfig config = configBuilder.build();
         InstrumentationTransform transform = new InstrumentationTransform(hooks, config);
 
-        InstrumentationReport.InstrumentationReportBuilder reportBuilder = InstrumentationReport.builder();
+        InstrumentationReport.Builder reportBuilder = InstrumentationReport.builder();
 
         int totalPoints = 0;
         int classesInstrumented = 0;
@@ -359,11 +356,6 @@ public class Instrumenter {
 
         public MethodEntryHookBuilder withAllParameters() {
             hookBuilder.passAllParameters(true);
-            return this;
-        }
-
-        public MethodEntryHookBuilder withParameter(int index) {
-            // Need to track parameter indices
             return this;
         }
 
@@ -915,18 +907,74 @@ public class Instrumenter {
     /**
      * Report of instrumentation results.
      */
-    @lombok.Builder
-    @lombok.Getter
     public static class InstrumentationReport {
         private final int totalInstrumentationPoints;
         private final int classesInstrumented;
         private final int methodsInstrumented;
         private final int errors;
 
+        private InstrumentationReport(Builder b) {
+            this.totalInstrumentationPoints = b.totalInstrumentationPoints;
+            this.classesInstrumented = b.classesInstrumented;
+            this.methodsInstrumented = b.methodsInstrumented;
+            this.errors = b.errors;
+        }
+
+        public int getTotalInstrumentationPoints() {
+            return totalInstrumentationPoints;
+        }
+
+        public int getClassesInstrumented() {
+            return classesInstrumented;
+        }
+
+        public int getMethodsInstrumented() {
+            return methodsInstrumented;
+        }
+
+        public int getErrors() {
+            return errors;
+        }
+
+        public static Builder builder() {
+            return new Builder();
+        }
+
         @Override
         public String toString() {
             return String.format("InstrumentationReport{points=%d, classes=%d, methods=%d, errors=%d}",
                     totalInstrumentationPoints, classesInstrumented, methodsInstrumented, errors);
+        }
+
+        public static final class Builder {
+            private int totalInstrumentationPoints;
+            private int classesInstrumented;
+            private int methodsInstrumented;
+            private int errors;
+
+            public Builder totalInstrumentationPoints(int totalInstrumentationPoints) {
+                this.totalInstrumentationPoints = totalInstrumentationPoints;
+                return this;
+            }
+
+            public Builder classesInstrumented(int classesInstrumented) {
+                this.classesInstrumented = classesInstrumented;
+                return this;
+            }
+
+            public Builder methodsInstrumented(int methodsInstrumented) {
+                this.methodsInstrumented = methodsInstrumented;
+                return this;
+            }
+
+            public Builder errors(int errors) {
+                this.errors = errors;
+                return this;
+            }
+
+            public InstrumentationReport build() {
+                return new InstrumentationReport(this);
+            }
         }
     }
 }

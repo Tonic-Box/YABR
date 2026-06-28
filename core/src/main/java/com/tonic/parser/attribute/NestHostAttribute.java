@@ -5,7 +5,6 @@ import com.tonic.parser.MemberEntry;
 import com.tonic.parser.constpool.ClassRefItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.io.IOException;
  * Represents the NestHost attribute.
  * Specifies the host class of a nest.
  */
-@Getter
 public class NestHostAttribute extends Attribute {
     private int hostClassIndex;
 
@@ -24,6 +22,10 @@ public class NestHostAttribute extends Attribute {
 
     public NestHostAttribute(String name, ClassFile hostClass, int nameIndex, int length) {
         super(name, hostClass, nameIndex, length);
+    }
+
+    public int getHostClassIndex() {
+        return hostClassIndex;
     }
 
     @Override

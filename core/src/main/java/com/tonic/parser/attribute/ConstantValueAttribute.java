@@ -2,7 +2,6 @@ package com.tonic.parser.attribute;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import java.io.IOException;
  * Represents the ConstantValue attribute.
  * Used in fields to represent the constant value assigned to the field.
  */
-@Getter
 public class ConstantValueAttribute extends Attribute {
     private int constantValueIndex;
 
@@ -25,6 +23,10 @@ public class ConstantValueAttribute extends Attribute {
 
     public ConstantValueAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public int getConstantValueIndex() {
+        return constantValueIndex;
     }
 
     @Override

@@ -3,7 +3,6 @@ package com.tonic.parser.attribute.table;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
-import lombok.Getter;
 
 /**
  * Represents a method parameter in the MethodParameters attribute.
@@ -11,7 +10,6 @@ import lombok.Getter;
  */
 public class MethodParameter {
     private final ConstPool constPool;
-    @Getter
     private final int nameIndex, accessFlags;
 
     /**
@@ -25,6 +23,14 @@ public class MethodParameter {
         this.constPool = constPool;
         this.nameIndex = nameIndex;
         this.accessFlags = accessFlags;
+    }
+
+    public int getNameIndex() {
+        return nameIndex;
+    }
+
+    public int getAccessFlags() {
+        return accessFlags;
     }
 
     /**

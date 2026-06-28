@@ -3,7 +3,6 @@ package com.tonic.parser.constpool;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.structure.FieldRef;
-import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,10 +10,12 @@ import java.io.IOException;
 /**
  * Represents a CONSTANT_Fieldref entry in the constant pool.
  */
-@Setter
 public class FieldRefItem extends Item<FieldRef> {
-    private ClassFile classFile;
     private FieldRef value;
+
+    public void setValue(FieldRef value) {
+        this.value = value;
+    }
 
     @Override
     public void read(ClassFile classFile) {

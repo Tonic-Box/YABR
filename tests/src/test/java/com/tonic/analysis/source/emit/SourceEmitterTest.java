@@ -641,7 +641,7 @@ class SourceEmitterTest {
 
     @Test
     void emitWithCustomConfig() {
-        // SourceEmitterConfig uses Lombok @Builder, create with builder pattern
+        // SourceEmitterConfig uses the builder pattern
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .alwaysUseBraces(true)
             .build();
@@ -875,10 +875,6 @@ class SourceEmitterTest {
 
     @Test
     void emitWithSemanticRenameMode() {
-        SourceEmitterConfig config = SourceEmitterConfig.builder()
-            .identifierMode(IdentifierMode.SEMANTIC_RENAME)
-            .build();
-
         // Method call with invalid name
         List<Expression> args = new ArrayList<>();
         Expression expr = new MethodCallExpr(

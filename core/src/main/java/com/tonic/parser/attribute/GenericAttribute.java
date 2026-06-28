@@ -2,7 +2,6 @@ package com.tonic.parser.attribute;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import java.io.IOException;
  * Represents a generic attribute for unknown attribute types.
  * It stores the raw data as a byte array.
  */
-@Getter
 public class GenericAttribute extends Attribute {
     private final byte[] info;
 
@@ -23,6 +21,10 @@ public class GenericAttribute extends Attribute {
     public GenericAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
         this.info = new byte[length];
+    }
+
+    public byte[] getInfo() {
+        return info;
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.tonic.parser.constpool;
 
 import com.tonic.parser.ClassFile;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -9,9 +8,12 @@ import java.io.IOException;
 /**
  * Represents a CONSTANT_Module entry in the constant pool.
  */
-@Getter
 public class ModuleItem extends Item<Integer> {
     private int nameIndex;
+
+    public int getNameIndex() {
+        return nameIndex;
+    }
 
     @Override
     public void read(ClassFile classFile) {

@@ -2,7 +2,6 @@ package com.tonic.parser.attribute.stack;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,7 +12,6 @@ import java.util.List;
  * Represents a FullFrame in the StackMapTable attribute.
  * Contains complete type information for all local variables and stack items.
  */
-@Getter
 public class FullFrame extends StackMapFrame {
     private final int offsetDelta;
     private final List<VerificationTypeInfo> locals;
@@ -51,6 +49,14 @@ public class FullFrame extends StackMapFrame {
         this.offsetDelta = offsetDelta;
         this.locals = new ArrayList<>(locals);
         this.stack = new ArrayList<>(stack);
+    }
+
+    public List<VerificationTypeInfo> getLocals() {
+        return locals;
+    }
+
+    public List<VerificationTypeInfo> getStack() {
+        return stack;
     }
 
     @Override

@@ -6,7 +6,6 @@ import com.tonic.parser.attribute.module.*;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.util.Logger;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import java.util.List;
  * Represents the Module attribute.
  * Provides module information for the class.
  */
-@Getter
 public class ModuleAttribute extends Attribute {
     private int moduleNameIndex;
     private int moduleFlags;
@@ -34,6 +32,38 @@ public class ModuleAttribute extends Attribute {
 
     public ModuleAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public int getModuleNameIndex() {
+        return moduleNameIndex;
+    }
+
+    public int getModuleFlags() {
+        return moduleFlags;
+    }
+
+    public int getModuleVersionIndex() {
+        return moduleVersionIndex;
+    }
+
+    public List<Requires> getRequires() {
+        return requires;
+    }
+
+    public List<Exports> getExports() {
+        return exports;
+    }
+
+    public List<Opens> getOpens() {
+        return opens;
+    }
+
+    public List<Uses> getUses() {
+        return uses;
+    }
+
+    public List<Provides> getProvides() {
+        return provides;
     }
 
     @Override

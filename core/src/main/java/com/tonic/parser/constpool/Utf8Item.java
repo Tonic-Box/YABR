@@ -1,7 +1,6 @@
 package com.tonic.parser.constpool;
 
 import com.tonic.parser.ClassFile;
-import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,8 +10,11 @@ import java.io.IOException;
  */
 public class Utf8Item extends Item<String> {
 
-    @Setter
     private String value;
+
+    public void setValue(String value) {
+        this.value = value;
+    }
 
     @Override
     public void read(ClassFile classFile) {

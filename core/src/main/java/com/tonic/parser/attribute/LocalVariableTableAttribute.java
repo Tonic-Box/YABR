@@ -3,7 +3,6 @@ package com.tonic.parser.attribute;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.table.LocalVariableTableEntry;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.util.List;
  * Represents the LocalVariableTable attribute.
  * Provides information about local variables within a method.
  */
-@Getter
 public class LocalVariableTableAttribute extends Attribute {
     private List<LocalVariableTableEntry> localVariableTable;
 
@@ -29,6 +27,10 @@ public class LocalVariableTableAttribute extends Attribute {
 
     public LocalVariableTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
+    }
+
+    public List<LocalVariableTableEntry> getLocalVariableTable() {
+        return localVariableTable;
     }
 
     @Override

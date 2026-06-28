@@ -1,11 +1,8 @@
 package com.tonic.util;
 
-import lombok.Getter;
-
 /**
  * Enum representing all JVM opcodes as per Java 11 Specification.
  */
-@Getter
 public enum Opcode {
     NOP(0x00, "nop", 0),
     ACONST_NULL(0x01, "aconst_null", 0),
@@ -222,6 +219,18 @@ public enum Opcode {
         this.code = code;
         this.mnemonic = mnemonic;
         this.operandCount = operandCount;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getMnemonic() {
+        return mnemonic;
+    }
+
+    public int getOperandCount() {
+        return operandCount;
     }
 
     /**

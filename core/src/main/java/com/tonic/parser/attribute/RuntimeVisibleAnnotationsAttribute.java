@@ -4,8 +4,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.annotation.Annotation;
 import com.tonic.util.Logger;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -16,9 +14,7 @@ import java.util.List;
  * Represents the RuntimeVisibleAnnotations or RuntimeInvisibleAnnotations attribute.
  * Stores annotations that are either visible or invisible at runtime.
  */
-@Getter
 public class RuntimeVisibleAnnotationsAttribute extends Attribute {
-    @Setter
     private List<Annotation> annotations;
     private final boolean visible;
 
@@ -30,6 +26,18 @@ public class RuntimeVisibleAnnotationsAttribute extends Attribute {
     public RuntimeVisibleAnnotationsAttribute(String name, ClassFile parent, boolean visible, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
         this.visible = visible;
+    }
+
+    public List<Annotation> getAnnotations() {
+        return annotations;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setAnnotations(List<Annotation> annotations) {
+        this.annotations = annotations;
     }
 
     @Override

@@ -3,7 +3,6 @@ package com.tonic.parser.attribute;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.table.InnerClassEntry;
-import lombok.Getter;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.util.List;
  * Represents the InnerClasses attribute.
  * Lists inner classes and their relationships.
  */
-@Getter
 public class InnerClassesAttribute extends Attribute {
     private List<InnerClassEntry> classes;
 
@@ -26,6 +24,10 @@ public class InnerClassesAttribute extends Attribute {
     public InnerClassesAttribute(String name, ClassFile parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);
         this.classes = new ArrayList<>();
+    }
+
+    public List<InnerClassEntry> getClasses() {
+        return classes;
     }
 
     @Override
