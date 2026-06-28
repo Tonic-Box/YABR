@@ -38,6 +38,10 @@ public class BytecodeEmitter {
     private int currentOffset;
 
     private final Set<SSAValue> stackResidentValues;
+    /** Per-block register operand pushed at the block head so a condition's bound stays on the stack. */
+    private final Map<IRBlock, SSAValue> blockHeadPreload;
+    /** Values already pushed onto the stack ahead of their use (a head preload), to be skipped at the use. */
+    private final Set<SSAValue> preloadedOnStack;
     private final Set<SSAValue> inlinedConstants;
     private final Map<SSAValue, Constant> inlinedConstantValue;
     /**
@@ -71,6 +75,8 @@ public class BytecodeEmitter {
         this.blockEndOffsets = new HashMap<>();
         this.pendingJumps = new ArrayList<>();
         this.stackResidentValues = new HashSet<>();
+        this.blockHeadPreload = new HashMap<>();
+        this.preloadedOnStack = new HashSet<>();
         this.inlinedConstants = new HashSet<>();
         this.inlinedConstantValue = new HashMap<>();
         this.handlerExceptionCaptures = new HashSet<>();
@@ -345,6 +351,8 @@ public class BytecodeEmitter {
      */
     private void analyzeStackResidentValues() {
         stackResidentValues.clear();
+        blockHeadPreload.clear();
+        preloadedOnStack.clear();
 
         Map<SSAValue, Integer> useCounts = new HashMap<>();
         for (IRBlock block : method.getBlocksInOrder()) {
@@ -361,8 +369,13 @@ public class BytecodeEmitter {
         for (IRBlock block : method.getBlocksInOrder()) {
             List<IRInstruction> instructions = block.getInstructions();
             Map<IRInstruction, Integer> indexOf = new HashMap<>();
+            Map<SSAValue, Integer> defIdxOf = new HashMap<>();
             for (int k = 0; k < instructions.size(); k++) {
                 indexOf.put(instructions.get(k), k);
+                SSAValue r = instructions.get(k).getResult();
+                if (r != null) {
+                    defIdxOf.put(r, k);
+                }
             }
 
             for (int i = 0; i < instructions.size() - 1; i++) {
@@ -382,14 +395,135 @@ public class BytecodeEmitter {
                 List<Value> nextOperands = next.getOperands();
                 if (nextOperands.isEmpty()) continue;
 
-                if (nextOperands.get(0).equals(result)
-                        && (nextOperands.size() == 1 || isSimpleOperand(nextOperands.get(1)))) {
+                int p = nextOperands.indexOf(result);
+                if (p >= 0 && prefixResidentInOrder(nextOperands, p, defIdxOf, i)
+                        && suffixSimple(nextOperands, p)) {
                     stackResidentValues.add(result);
-                } else if (isReceiverStackResident(instructions, indexOf, useCounts, i, result)) {
+                } else if (isReceiverStackResident(instructions, defIdxOf, useCounts, i, result)) {
                     stackResidentValues.add(result);
                 }
             }
         }
+
+        computeBlockHeadPreloads(useCounts);
+    }
+
+    /**
+     * For a condition block ending in a two-operand comparison branch {@code if reg <cmp> bound} where the
+     * bound is a closed sub-computation filling the rest of the block and the first operand is loaded from a
+     * register (e.g. a loop induction variable), the register operand is pushed at the block head so the bound
+     * stays on the operand stack - matching javac's {@code iload i; <bound>; if_icmplt} rather than spilling
+     * the bound to a header local. That spill is what forces the decompiler into a {@code while(true)}+break
+     * loop (and reuses the bound's slot) on round trip. Safe because the emitter never emits a {@code dup_x}
+     * or {@code swap}, so the preloaded register stays at the bottom while the bound's closed sub-tree is
+     * computed above it.
+     */
+    private void computeBlockHeadPreloads(Map<SSAValue, Integer> useCounts) {
+        for (IRBlock block : method.getBlocksInOrder()) {
+            List<IRInstruction> instrs = block.getInstructions();
+            if (instrs.size() < 2) {
+                continue;
+            }
+            IRInstruction term = instrs.get(instrs.size() - 1);
+            if (!(term instanceof BranchInstruction)) {
+                continue;
+            }
+            List<Value> ops = term.getOperands();
+            if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue)) {
+                continue;
+            }
+            SSAValue reg = (SSAValue) ops.get(0);
+            SSAValue bound = (SSAValue) ops.get(1);
+            if (useCounts.getOrDefault(bound, 0) != 1) {
+                continue; // the bound must be consumed only by this branch
+            }
+
+            Set<SSAValue> blockResults = new HashSet<>();
+            for (IRInstruction in : instrs) {
+                if (in.getResult() != null) {
+                    blockResults.add(in.getResult());
+                }
+            }
+            if (blockResults.contains(reg) || !blockResults.contains(bound)) {
+                continue; // reg must be a plain register load; bound must be computed in this block
+            }
+
+            // Transitive closure of the bound over its operands, within this block.
+            Set<SSAValue> closure = new HashSet<>();
+            List<SSAValue> work = new ArrayList<>();
+            work.add(bound);
+            while (!work.isEmpty()) {
+                SSAValue v = work.remove(work.size() - 1);
+                if (!closure.add(v)) {
+                    continue;
+                }
+                for (int k = 0; k < instrs.size() - 1; k++) {
+                    if (v.equals(instrs.get(k).getResult())) {
+                        for (Value o : instrs.get(k).getOperands()) {
+                            if (o instanceof SSAValue) {
+                                work.add((SSAValue) o);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Every non-terminator instruction must feed the bound and stay on the stack (be resident), and
+            // none may consume reg early, so emitting the block leaves exactly the bound above the preloaded reg.
+            boolean clean = true;
+            for (int k = 0; k < instrs.size() - 1; k++) {
+                IRInstruction in = instrs.get(k);
+                SSAValue r = in.getResult();
+                // Each non-terminator must feed the bound and either stay on the stack (be the bound or a
+                // resident value) or emit nothing at its position (an inlined constant, pushed at its use);
+                // and none may consume the preloaded register early.
+                if (r == null || !closure.contains(r)
+                        || !(r.equals(bound) || stackResidentValues.contains(r) || inlinedConstants.contains(r))
+                        || in.getOperands().contains(reg)) {
+                    clean = false;
+                    break;
+                }
+            }
+            if (!clean) {
+                continue;
+            }
+
+            stackResidentValues.add(bound);
+            blockHeadPreload.put(block, reg);
+        }
+    }
+
+    /**
+     * Whether operands 0..p-1 of an instruction are all stack-resident and defined in strictly increasing order
+     * ending just before {@code resultDefIdx} - so this value (operand p, computed last) sits on top of them in
+     * the exact operand order the instruction needs. This lets a call argument stay on the stack once its
+     * receiver (and earlier arguments) are already resident, instead of being spilled to a local and reloaded.
+     */
+    private boolean prefixResidentInOrder(List<Value> ops, int p, Map<SSAValue, Integer> defIdxOf,
+                                          int resultDefIdx) {
+        int prev = -1;
+        for (int q = 0; q < p; q++) {
+            Value o = ops.get(q);
+            if (!(o instanceof SSAValue) || !stackResidentValues.contains((SSAValue) o)) {
+                return false;
+            }
+            Integer di = defIdxOf.get((SSAValue) o);
+            if (di == null || di <= prev || di >= resultDefIdx) {
+                return false;
+            }
+            prev = di;
+        }
+        return true;
+    }
+
+    /** Whether operands after position p are all simple - loaded fresh at the use, on top of operand p. */
+    private boolean suffixSimple(List<Value> ops, int p) {
+        for (int q = p + 1; q < ops.size(); q++) {
+            if (!isSimpleOperand(ops.get(q))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -403,7 +537,7 @@ public class BytecodeEmitter {
      * the use's later operands and leaves the receiver undisturbed at the bottom. The later operands must all
      * be produced within the window, in operand order, so the use sees {@code [receiver, op1, op2, ...]}.
      */
-    private boolean isReceiverStackResident(List<IRInstruction> instructions, Map<IRInstruction, Integer> indexOf,
+    private boolean isReceiverStackResident(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
                                             Map<SSAValue, Integer> useCounts, int defIdx, SSAValue result) {
         // The single use, found by scanning operands (the emitter's reliable use source - getUses() can be stale).
         IRInstruction use = null;
@@ -434,7 +568,7 @@ public class BytecodeEmitter {
             if (!(ops.get(k) instanceof SSAValue)) {
                 return false;
             }
-            Integer opDefIdx = indexOf.get(((SSAValue) ops.get(k)).getDefinition());
+            Integer opDefIdx = defIdxOf.get((SSAValue) ops.get(k));
             if (opDefIdx == null || opDefIdx < wStart || opDefIdx >= wEnd || opDefIdx <= prevDefIdx) {
                 return false;
             }
@@ -498,6 +632,12 @@ public class BytecodeEmitter {
 
     private void emitBlock(IRBlock block) throws IOException {
         blockOffsets.put(block, currentOffset);
+
+        SSAValue preload = blockHeadPreload.get(block);
+        if (preload != null) {
+            emitLoadValue(preload);
+            preloadedOnStack.add(preload);
+        }
 
         for (IRInstruction instr : block.getInstructions()) {
             emitInstruction(instr);
@@ -654,6 +794,9 @@ public class BytecodeEmitter {
         for (Value operand : instr.getOperands()) {
             if (operand instanceof SSAValue) {
                 SSAValue ssa = (SSAValue) operand;
+                if (preloadedOnStack.remove(ssa)) {
+                    continue; // pushed at the block head, already on the stack
+                }
                 if (inlinedConstants.contains(ssa)) {
                     emitConstantValue(inlinedConstantValue.get(ssa));
                     continue;

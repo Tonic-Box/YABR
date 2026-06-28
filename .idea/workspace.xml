@@ -4,12 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Keep call receivers on the stack + type-aware slot reuse">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripStabilityTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripStabilityTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -157,14 +154,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00041" summary="- Add field and class declaration spans to decompiler">
-      <option name="closed" value="true" />
-      <created>1781296423018</created>
-      <option name="number" value="00041" />
-      <option name="presentableId" value="LOCAL-00041" />
-      <option name="project" value="LOCAL" />
-      <updated>1781296423018</updated>
     </task>
     <task id="LOCAL-00042" summary="- Map inlined lambda bodies under their own line-map key">
       <option name="closed" value="true" />
@@ -550,7 +539,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782665032730</updated>
     </task>
-    <option name="localTasksCounter" value="90" />
+    <task id="LOCAL-00090" summary="- Keep call receivers on the stack + type-aware slot reuse">
+      <option name="closed" value="true" />
+      <created>1782671911725</created>
+      <option name="number" value="00090" />
+      <option name="presentableId" value="LOCAL-00090" />
+      <option name="project" value="LOCAL" />
+      <updated>1782671911726</updated>
+    </task>
+    <option name="localTasksCounter" value="91" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -565,7 +562,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Fix decompile→recompile type fidelity" />
     <MESSAGE value="- Abstract Execution API" />
     <MESSAGE value="Fix decompile -&gt; recompile fidelity for constructors and boolean conditions&#10;- BytecodeEmitter: emit the idiomatic new;dup;args;invokespecial for constructor calls (storing the result to a local), so new X(args) round-trips instead of spilling and decompiling back to new X() with dropped args&#10;- ExpressionLowerer: lower !, &amp;&amp; and || in conditions as direct branches rather than materializing them into a 0/1 value over a temp local (which decompiled to `cond ? local : local`)&#10;- Add round-trip regression tests" />
     <MESSAGE value="The BIG one&#10;- Refactored the gigantic MAMMOTH of a monolithic module into multiple submodules for project health.&#10;&#10;# Breaking Changes&#10;&#10;Package Renames:&#10;- com.tonic.utill -&gt; com.tonic.util&#10;- com.tonic.parser.attribute.anotation -&gt; com.tonic.parser.attribute.annotation&#10;&#10;Class Relocations:&#10;- com.tonic.analysis.visitor.Visitor -&gt; com.tonic.parser.visitor.Visitor&#10;- com.tonic.analysis.visitor.AbstractClassVisitor -&gt; com.tonic.parser.visitor.AbstractClassVisitor&#10;- com.tonic.analysis.visitor.AbstractMethodVisitor -&gt; com.tonic.parser.visitor.AbstractMethodVisitor&#10;- com.tonic.analysis.visitor.AbstractBlockVisitor -&gt; com.tonic.analysis.ssa.visitor.AbstractBlockVisitor&#10;&#10;Method Relocations:&#10;- ClassFile.generateGetter(...) -&gt; com.tonic.analysis.ClassFactory.generateGetter(classFile, ...)&#10;- ClassFile.generateSetter(...) -&gt; com.tonic.analysis.ClassFactory.generateSetter(classFile, ...)&#10;- ClassFile.setFieldInitialValue(...) -&gt; com.tonic.analysis.ClassFactory.setFieldInitialValue(classFile, ...)&#10;- ClassFile.computeFrames(...) -&gt; com.tonic.analysis.ClassFactory.computeFrames(classFile, ...)&#10;- ClassFile.createNewMethod(boolean addDefaultBody, ...) -&gt; com.tonic.analysis.ClassFactory.createMethodWithBody(classFile, ...)&#10;- ClassPool.createNewClass(...) (auto ctor/clinit) -&gt; com.tonic.analysis.ClassFactory.createClass(pool, ...) (now bare without it)&#10;- CodeAttribute.prettyPrintCode([opts]) -&gt; com.tonic.analysis.CodePrinter.prettyPrintCode(codeAttr[, opts])&#10;- CodeWriter.toSSA()/fromSSA(ir)/optimizeSSA() -&gt; com.tonic.analysis.ssa.SSABridge.toSSA(cw)/fromSSA(cw, ir)/optimizeSSA(cw)&#10;- BootstrapMethodInfo.isStringConcat/isLambda/isRecord/isSwitch(...) + the LAMBDA_METAFACTORY/STRING_CONCAT_FACTORY/OBJECT_METHODS/SWITCH_BOOTSTRAPS constants -&gt; com.tonic.analysis.BootstrapFamilies.*" />
@@ -590,7 +586,8 @@
     <MESSAGE value="Removal of Lombok: pt13 (Final)&#10;- core" />
     <MESSAGE value="- Update some stale docs" />
     <MESSAGE value="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)" />
+    <MESSAGE value="- Keep call receivers on the stack + type-aware slot reuse" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Keep call receivers on the stack + type-aware slot reuse" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
