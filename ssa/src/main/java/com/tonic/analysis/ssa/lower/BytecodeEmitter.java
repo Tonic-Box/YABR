@@ -360,6 +360,10 @@ public class BytecodeEmitter {
 
         for (IRBlock block : method.getBlocksInOrder()) {
             List<IRInstruction> instructions = block.getInstructions();
+            Map<IRInstruction, Integer> indexOf = new HashMap<>();
+            for (int k = 0; k < instructions.size(); k++) {
+                indexOf.put(instructions.get(k), k);
+            }
 
             for (int i = 0; i < instructions.size() - 1; i++) {
                 IRInstruction current = instructions.get(i);
@@ -381,9 +385,79 @@ public class BytecodeEmitter {
                 if (nextOperands.get(0).equals(result)
                         && (nextOperands.size() == 1 || isSimpleOperand(nextOperands.get(1)))) {
                     stackResidentValues.add(result);
+                } else if (isReceiverStackResident(instructions, indexOf, useCounts, i, result)) {
+                    stackResidentValues.add(result);
                 }
             }
         }
+    }
+
+    /**
+     * Whether a single-use value that is the FIRST operand (the receiver) of a later instruction can stay on
+     * the operand stack across the instructions that compute that instruction's remaining operands - matching
+     * how javac keeps a call receiver below its arguments, instead of spilling it to a (type-reused) local.
+     *
+     * <p>Safe because (a) the emitter never emits {@code dup_x*}/{@code swap}, so nothing computed on top of
+     * the receiver can reach below it, and (b) the window between the receiver's definition and its use is
+     * "closed" - every value it produces is consumed inside the window or by the use - so it computes exactly
+     * the use's later operands and leaves the receiver undisturbed at the bottom. The later operands must all
+     * be produced within the window, in operand order, so the use sees {@code [receiver, op1, op2, ...]}.
+     */
+    private boolean isReceiverStackResident(List<IRInstruction> instructions, Map<IRInstruction, Integer> indexOf,
+                                            Map<SSAValue, Integer> useCounts, int defIdx, SSAValue result) {
+        // The single use, found by scanning operands (the emitter's reliable use source - getUses() can be stale).
+        IRInstruction use = null;
+        int useIdx = -1;
+        for (int j = defIdx + 1; j < instructions.size(); j++) {
+            if (instructions.get(j).getOperands().contains(result)) {
+                use = instructions.get(j);
+                useIdx = j;
+                break;
+            }
+        }
+        if (use == null || (use instanceof InvokeInstruction && initToNew.containsKey((InvokeInstruction) use))) {
+            return false; // use not in this block, or a new/<init> pairing we must not disturb
+        }
+        if (useIdx <= defIdx + 1) {
+            return false; // empty window - the adjacent case is handled above
+        }
+        List<Value> ops = use.getOperands();
+        if (ops.isEmpty() || !result.equals(ops.get(0))) {
+            return false; // result must be the receiver (first operand)
+        }
+
+        int wStart = defIdx + 1, wEnd = useIdx;
+        // Every later operand must be produced inside the window, strictly in operand order, so the use sees
+        // [receiver, op1, op2, ...] with nothing loaded out of order on top.
+        int prevDefIdx = defIdx;
+        for (int k = 1; k < ops.size(); k++) {
+            if (!(ops.get(k) instanceof SSAValue)) {
+                return false;
+            }
+            Integer opDefIdx = indexOf.get(((SSAValue) ops.get(k)).getDefinition());
+            if (opDefIdx == null || opDefIdx < wStart || opDefIdx >= wEnd || opDefIdx <= prevDefIdx) {
+                return false;
+            }
+            prevDefIdx = opDefIdx;
+        }
+        // Window closed: every value the window produces is consumed inside the window or by the use - so it
+        // computes exactly the use's later operands and leaves the receiver undisturbed below them.
+        for (int j = wStart; j < wEnd; j++) {
+            SSAValue r = instructions.get(j).getResult();
+            if (r == null) {
+                continue;
+            }
+            int within = 0;
+            for (int q = wStart; q <= wEnd; q++) {
+                for (Value op : instructions.get(q).getOperands()) {
+                    if (r.equals(op)) within++;
+                }
+            }
+            if (within != useCounts.getOrDefault(r, 0)) {
+                return false; // some use escapes the window
+            }
+        }
+        return true;
     }
 
     /**

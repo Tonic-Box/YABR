@@ -5,22 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)">
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripStabilityTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/ast/transform/SingleUseInlinerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/lower/ArrayInitLoweringTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/lower/ConstructorLoweringTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeInference.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeInference.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeState.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/TypeState.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/ANewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/ANewArrayInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/instruction/NewArrayInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/Verifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/Verifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/type/TypeVerifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/execution/src/main/java/com/tonic/analysis/verifier/type/TypeVerifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/SingleUseInliner.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/SingleUseInliner.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ASTLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripStabilityTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripStabilityTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -168,14 +157,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00040" summary="Add per-method text spans to DecompileResult&#10;- ClassDecompiler records each member's exact start/end line (signature through closing brace) alongside the line maps">
-      <option name="closed" value="true" />
-      <created>1781242915599</created>
-      <option name="number" value="00040" />
-      <option name="presentableId" value="LOCAL-00040" />
-      <option name="project" value="LOCAL" />
-      <updated>1781242915599</updated>
     </task>
     <task id="LOCAL-00041" summary="- Add field and class declaration spans to decompiler">
       <option name="closed" value="true" />
@@ -561,7 +542,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782627583835</updated>
     </task>
-    <option name="localTasksCounter" value="89" />
+    <task id="LOCAL-00089" summary="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)">
+      <option name="closed" value="true" />
+      <created>1782665032730</created>
+      <option name="number" value="00089" />
+      <option name="presentableId" value="LOCAL-00089" />
+      <option name="project" value="LOCAL" />
+      <updated>1782665032730</updated>
+    </task>
+    <option name="localTasksCounter" value="90" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

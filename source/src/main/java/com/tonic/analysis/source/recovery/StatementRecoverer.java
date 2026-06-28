@@ -4513,10 +4513,17 @@ public class StatementRecoverer {
                 valueExpr = exprRecoverer.recoverOperand(value);
             }
 
-            SourceType type = typeRecoverer.recoverType(value);
-            String name = context.getExpressionContext().getLocalSlotName(st.getLocalIndex());
+            // Name + type via the reaching-definition partition (NOT the slot's last name), so a reused slot
+            // resolves to the SAME variable the condition's load uses - otherwise the bound assigns to a
+            // different (wrongly-typed) partition than the comparison reads.
+            SourceType valueType = typeRecoverer.recoverType(value);
+            String name = partitionName(st);
             if (name == null) {
-                name = getNameForLocalSlotWithType(st.getLocalIndex(), type);
+                name = getNameForLocalSlotWithType(st.getLocalIndex(), valueType);
+            }
+            SourceType type = getLocalSlotUnifiedType(name);
+            if (type == null) {
+                type = valueType;
             }
             if (context.getExpressionContext().isDeclared(name)) {
                 stmts.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
@@ -5495,10 +5502,55 @@ public class StatementRecoverer {
         return copies;
     }
 
+    /**
+     * Folds a three-way-compare result tested against zero into a direct relational comparison:
+     * {@code lcmp/fcmp/dcmp(a, b) <branchCond> 0} becomes {@code a <branchCond> b}. Returns null when the
+     * branch's left operand is not a three-way compare, leaving the generic compare-to-zero handling.
+     */
+    private Expression recoverThreeWayCompare(BranchInstruction branch, boolean negate) {
+        if (!(branch.getLeft() instanceof SSAValue)) {
+            return null;
+        }
+        IRInstruction def = ((SSAValue) branch.getLeft()).getDefinition();
+        if (!(def instanceof BinaryOpInstruction)) {
+            return null;
+        }
+        BinaryOpInstruction cmp = (BinaryOpInstruction) def;
+        switch (cmp.getOp()) {
+            case LCMP:
+            case FCMPL:
+            case FCMPG:
+            case DCMPL:
+            case DCMPG:
+                break;
+            default:
+                return null;
+        }
+        Expression a = exprRecoverer.recoverOperand(cmp.getLeft());
+        Expression b = exprRecoverer.recoverOperand(cmp.getRight());
+        BinaryOperator op = OperatorMapper.mapCompareOp(branch.getCondition());
+        if (negate) {
+            op = negateOperator(op);
+        }
+        return new BinaryExpr(op, a, b, PrimitiveSourceType.BOOLEAN);
+    }
+
     private Expression recoverCondition(IRBlock block, boolean negate) {
         IRInstruction terminator = block.getTerminator();
         if (terminator instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) terminator;
+
+            // `Xcmp(a,b) <cond> 0` - an lcmp/fcmp/dcmp result tested by a compare-to-zero branch - is the
+            // direct relational comparison `a <cond> b`. Recovering it as `(a - b) <cond> 0` is wrong-looking
+            // and non-idempotent: it re-lowers to `lcmp((a-b), 0L)`, which then recovers as `(a - b - 0)
+            // <cond> 0`, accumulating a spurious `- 0` on every round trip.
+            if (branch.getRight() == null) {
+                Expression threeWay = recoverThreeWayCompare(branch, negate);
+                if (threeWay != null) {
+                    return threeWay;
+                }
+            }
+
             Expression left = exprRecoverer.recoverOperand(branch.getLeft());
             CompareOp condition = branch.getCondition();
 

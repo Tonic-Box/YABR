@@ -6,8 +6,11 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
+import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
-import com.tonic.analysis.ssa.value.Value;import java.util.*;
+import com.tonic.analysis.ssa.value.Value;
+import java.util.*;
 
 /**
  * Linear scan register allocator.
@@ -19,6 +22,7 @@ public class RegisterAllocator {
     private final LivenessAnalysis liveness;
     private final Map<SSAValue, Integer> allocation;
     private final Map<SSAValue, LiveInterval> intervalByValue = new HashMap<>();
+    private final Map<Integer, IRType> slotType = new HashMap<>();
     private int maxLocals;
     private int reservedSlotCount; // Slots reserved for parameters, never released
 
@@ -103,16 +107,52 @@ public class RegisterAllocator {
                 freeRegs.remove(reg);
                 freeRegs.remove(reg + 1);
                 maxLocals = Math.max(maxLocals, reg + 2);
-            } else if (!freeRegs.isEmpty()) {
-                reg = freeRegs.iterator().next();
-                freeRegs.remove(reg);
             } else {
-                reg = maxLocals++;
+                // Reuse a free slot only when its last occupant has the same storage kind. Sharing a slot
+                // between a primitive and a reference (or e.g. int and float) is legal bytecode, but forces the
+                // decompiler to widen the slot's variable to Object - producing ugly, non-idempotent
+                // `Object x = ...` locals on round trip. A fresh slot keeps each variable cleanly typed.
+                int want = storageKind(value.getType());
+                int reuse = -1;
+                for (int candidate : freeRegs) {
+                    IRType last = slotType.get(candidate);
+                    if (last == null || storageKind(last) == want) {
+                        reuse = candidate;
+                        break;
+                    }
+                }
+                if (reuse >= 0) {
+                    reg = reuse;
+                    freeRegs.remove(reg);
+                } else {
+                    reg = maxLocals++;
+                }
             }
 
             allocation.put(value, reg);
+            slotType.put(reg, value.getType());
+            if (value.getType().isTwoSlot()) {
+                slotType.put(reg + 1, value.getType());
+            }
             active.add(interval);
             active.sort(Comparator.comparingInt(a -> a.end));
+        }
+    }
+
+    /**
+     * A slot's "storage kind" for reuse compatibility: all references share one kind, and each primitive
+     * family (the JVM int family, long, float, double) is its own, so a slot is never shared across a
+     * primitive/reference (or e.g. int/float) boundary.
+     */
+    private static int storageKind(IRType type) {
+        if (!(type instanceof PrimitiveType)) {
+            return 0;
+        }
+        switch ((PrimitiveType) type) {
+            case LONG: return 1;
+            case FLOAT: return 2;
+            case DOUBLE: return 3;
+            default: return 4; // int / boolean / byte / char / short
         }
     }
 

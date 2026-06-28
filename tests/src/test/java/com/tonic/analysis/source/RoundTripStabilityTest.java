@@ -54,19 +54,16 @@ class RoundTripStabilityTest {
             catch (Throwable t) { continue; }
             String name = cf.getClassName();
 
-            String src1;
-            try { src1 = ClassDecompiler.decompile(cf); }
-            catch (Throwable t) { continue; }
-            try { recompileMethods(cf, pool, src1); }
-            catch (Throwable t) { continue; }
-            String src2;
-            try { src2 = ClassDecompiler.decompile(cf); }
-            catch (Throwable t) { continue; }
+            String src1, src2;
+            try {
+                src1 = ClassDecompiler.decompile(cf);
+                recompileMethods(cf, pool, src1);
+                src2 = ClassDecompiler.decompile(cf);
+            } catch (Throwable t) { continue; }
 
             for (String method : methodNames(src1)) {
-                boolean before = methodBody(src1, method).contains("$dispatch$");
-                boolean after = methodBody(src2, method).contains("$dispatch$");
-                if (after && !before) {
+                if (methodBody(src2, method).contains("$dispatch$")
+                        && !methodBody(src1, method).contains("$dispatch$")) {
                     drifts.add(name + "#" + method);
                 }
             }
