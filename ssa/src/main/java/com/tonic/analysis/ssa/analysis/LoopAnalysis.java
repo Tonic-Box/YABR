@@ -3,21 +3,18 @@ package com.tonic.analysis.ssa.analysis;
 import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import lombok.Getter;
-
 import java.util.*;
 
 /**
  * Detects loops and computes loop nesting information.
  */
-@Getter
 public class LoopAnalysis {
 
     private final IRMethod method;
     private final DominatorTree dominatorTree;
-    private List<Loop> loops;
-    private Map<IRBlock, Loop> blockToLoop;
-    private Map<IRBlock, Set<IRBlock>> backEdges;
+    private final List<Loop> loops;
+    private final Map<IRBlock, Loop> blockToLoop;
+    private final Map<IRBlock, Set<IRBlock>> backEdges;
 
     public LoopAnalysis(IRMethod method, DominatorTree dominatorTree) {
         this.method = method;
@@ -25,6 +22,26 @@ public class LoopAnalysis {
         this.loops = new ArrayList<>();
         this.blockToLoop = new HashMap<>();
         this.backEdges = new HashMap<>();
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public DominatorTree getDominatorTree() {
+        return dominatorTree;
+    }
+
+    public List<Loop> getLoops() {
+        return loops;
+    }
+
+    public Map<IRBlock, Loop> getBlockToLoop() {
+        return blockToLoop;
+    }
+
+    public Map<IRBlock, Set<IRBlock>> getBackEdges() {
+        return backEdges;
     }
 
     /**
@@ -165,7 +182,6 @@ public class LoopAnalysis {
     /**
      * Represents a loop in the control flow graph.
      */
-    @Getter
     public static class Loop {
         private final IRBlock header;
         private final Set<IRBlock> blocks;
@@ -176,6 +192,22 @@ public class LoopAnalysis {
             this.header = header;
             this.blocks = blocks;
             this.depth = 1;
+        }
+
+        public IRBlock getHeader() {
+            return header;
+        }
+
+        public Set<IRBlock> getBlocks() {
+            return blocks;
+        }
+
+        public Loop getParent() {
+            return parent;
+        }
+
+        public int getDepth() {
+            return depth;
         }
 
         public void setParent(Loop parent) {

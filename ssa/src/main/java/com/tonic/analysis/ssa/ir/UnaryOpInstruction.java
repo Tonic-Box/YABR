@@ -3,14 +3,12 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
 /**
  * Unary operation (negation, type conversion).
  */
-@Getter
 public class UnaryOpInstruction extends IRInstruction {
 
     private final UnaryOp op;
@@ -24,6 +22,14 @@ public class UnaryOpInstruction extends IRInstruction {
             SSAValue ssa = (SSAValue) operand;
             ssa.addUse(this);
         }
+    }
+
+    public UnaryOp getOp() {
+        return op;
+    }
+
+    public Value getOperand() {
+        return operand;
     }
 
     @Override

@@ -4,14 +4,12 @@ import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
 /**
  * Instruction that loads a constant value.
  */
-@Getter
 public class ConstantInstruction extends IRInstruction {
 
     private final Constant constant;
@@ -19,6 +17,10 @@ public class ConstantInstruction extends IRInstruction {
     public ConstantInstruction(SSAValue result, Constant constant) {
         super(result);
         this.constant = constant;
+    }
+
+    public Constant getConstant() {
+        return constant;
     }
 
     @Override

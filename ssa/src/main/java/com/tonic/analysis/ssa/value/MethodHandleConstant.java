@@ -2,7 +2,6 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-import lombok.Getter;
 
 import java.util.Objects;
 
@@ -21,7 +20,6 @@ import java.util.Objects;
  * 8: REF_newInvokeSpecial
  * 9: REF_invokeInterface
  */
-@Getter
 public final class MethodHandleConstant extends Constant {
 
     public static final int REF_getField = 1;
@@ -55,6 +53,22 @@ public final class MethodHandleConstant extends Constant {
         this.owner = owner;
         this.name = name;
         this.descriptor = descriptor;
+    }
+
+    public int getReferenceKind() {
+        return referenceKind;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
     }
 
     @Override

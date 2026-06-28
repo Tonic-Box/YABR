@@ -1,14 +1,12 @@
 package com.tonic.analysis.ssa.type;
 
 import com.tonic.util.ClassNameUtil;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+
+import java.util.Objects;
 
 /**
  * Represents a reference type (class or interface).
  */
-@Getter
-@EqualsAndHashCode
 public final class ReferenceType implements IRType {
 
     public static final ReferenceType OBJECT = new ReferenceType("java/lang/Object");
@@ -24,6 +22,10 @@ public final class ReferenceType implements IRType {
      */
     public ReferenceType(String internalName) {
         this.internalName = internalName.replace('.', '/');
+    }
+
+    public String getInternalName() {
+        return internalName;
     }
 
     @Override
@@ -72,5 +74,18 @@ public final class ReferenceType implements IRType {
     @Override
     public String toString() {
         return internalName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ReferenceType)) return false;
+        ReferenceType that = (ReferenceType) o;
+        return Objects.equals(internalName, that.internalName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(internalName);
     }
 }

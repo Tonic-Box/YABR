@@ -7,15 +7,12 @@ import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
-import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-import java.util.*;
+import com.tonic.analysis.ssa.value.Value;import java.util.*;
 
 /**
  * Linear scan register allocator.
  * Assigns local variable slots to SSA values.
  */
-@Getter
 public class RegisterAllocator {
 
     private final IRMethod method;
@@ -30,6 +27,26 @@ public class RegisterAllocator {
         this.liveness = liveness;
         this.allocation = new HashMap<>();
         this.maxLocals = 0;
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public LivenessAnalysis getLiveness() {
+        return liveness;
+    }
+
+    public Map<SSAValue, Integer> getAllocation() {
+        return allocation;
+    }
+
+    public int getMaxLocals() {
+        return maxLocals;
+    }
+
+    public int getReservedSlotCount() {
+        return reservedSlotCount;
     }
 
     public void allocate() {

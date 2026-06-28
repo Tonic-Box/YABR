@@ -9,8 +9,6 @@ import com.tonic.analysis.ssa.transform.*;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,13 +20,6 @@ public class SSA {
 
     private static final int EXPENSIVE_TRANSFORM_THRESHOLD = 200;
 
-    /**
-     * -- GETTER --
-     *  Gets the constant pool associated with this SSA processor.
-     *
-     * @return the constant pool
-     */
-    @Getter
     private final ConstPool constPool;
     private final List<IRTransform> transforms;
     private final List<ClassTransform> classTransforms;
@@ -44,6 +35,15 @@ public class SSA {
         this.constPool = constPool;
         this.transforms = new ArrayList<>();
         this.classTransforms = new ArrayList<>();
+    }
+
+    /**
+     * Gets the constant pool associated with this SSA processor.
+     *
+     * @return the constant pool
+     */
+    public ConstPool getConstPool() {
+        return constPool;
     }
 
     /**

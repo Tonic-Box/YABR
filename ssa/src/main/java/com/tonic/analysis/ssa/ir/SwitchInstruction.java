@@ -4,8 +4,6 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,11 +12,9 @@ import java.util.Map;
 /**
  * Switch instruction (tableswitch or lookupswitch).
  */
-@Getter
 public class SwitchInstruction extends IRInstruction {
 
     private Value key;
-    @Setter
     private IRBlock defaultTarget;
     private final Map<Integer, IRBlock> cases;
 
@@ -31,6 +27,22 @@ public class SwitchInstruction extends IRInstruction {
             SSAValue ssa = (SSAValue) key;
             ssa.addUse(this);
         }
+    }
+
+    public Value getKey() {
+        return key;
+    }
+
+    public IRBlock getDefaultTarget() {
+        return defaultTarget;
+    }
+
+    public void setDefaultTarget(IRBlock defaultTarget) {
+        this.defaultTarget = defaultTarget;
+    }
+
+    public Map<Integer, IRBlock> getCases() {
+        return cases;
     }
 
     /**

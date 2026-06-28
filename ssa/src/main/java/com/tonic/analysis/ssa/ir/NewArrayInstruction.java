@@ -4,7 +4,6 @@ import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +11,6 @@ import java.util.List;
 /**
  * Array allocation instruction (NEWARRAY, ANEWARRAY, MULTIANEWARRAY).
  */
-@Getter
 public class NewArrayInstruction extends IRInstruction {
 
     private final IRType elementType;
@@ -39,6 +37,14 @@ public class NewArrayInstruction extends IRInstruction {
                 ssa.addUse(this);
             }
         }
+    }
+
+    public IRType getElementType() {
+        return elementType;
+    }
+
+    public List<Value> getDimensions() {
+        return dimensions;
     }
 
     /**

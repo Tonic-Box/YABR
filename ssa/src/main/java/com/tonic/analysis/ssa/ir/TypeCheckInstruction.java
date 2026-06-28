@@ -4,11 +4,9 @@ import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
-@Getter
 public class TypeCheckInstruction extends IRInstruction {
 
     private final TypeCheckOp op;
@@ -31,6 +29,18 @@ public class TypeCheckInstruction extends IRInstruction {
         if (operand instanceof SSAValue) {
             ((SSAValue) operand).addUse(this);
         }
+    }
+
+    public TypeCheckOp getOp() {
+        return op;
+    }
+
+    public Value getOperand() {
+        return operand;
+    }
+
+    public IRType getTargetType() {
+        return targetType;
     }
 
     public boolean isCast() {

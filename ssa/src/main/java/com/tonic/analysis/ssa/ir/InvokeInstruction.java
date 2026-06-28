@@ -3,7 +3,6 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.List;
 /**
  * Method invocation instruction.
  */
-@Getter
 public class InvokeInstruction extends IRInstruction {
 
     private final InvokeType invokeType;
@@ -69,6 +67,34 @@ public class InvokeInstruction extends IRInstruction {
                 ssa.addUse(this);
             }
         }
+    }
+
+    public InvokeType getInvokeType() {
+        return invokeType;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public List<Value> getArguments() {
+        return arguments;
+    }
+
+    public int getOriginalCpIndex() {
+        return originalCpIndex;
+    }
+
+    public BootstrapMethodInfo getBootstrapInfo() {
+        return bootstrapInfo;
     }
 
     /**

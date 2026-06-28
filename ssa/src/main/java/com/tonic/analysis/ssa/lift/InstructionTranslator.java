@@ -13,8 +13,6 @@ import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.parser.constpool.structure.MethodHandle;
-import lombok.Getter;
-
 import java.util.*;
 
 import static com.tonic.util.Opcode.*;
@@ -26,7 +24,6 @@ public class InstructionTranslator {
 
     private final ConstPool constPool;
     private final BootstrapMethodsAttribute bsmAttr;
-    @Getter
     private final Map<Integer, IRBlock> offsetToBlock;
 
     public InstructionTranslator(ConstPool constPool) {
@@ -37,6 +34,10 @@ public class InstructionTranslator {
         this.constPool = constPool;
         this.bsmAttr = bsmAttr;
         this.offsetToBlock = new HashMap<>();
+    }
+
+    public Map<Integer, IRBlock> getOffsetToBlock() {
+        return offsetToBlock;
     }
 
     /**

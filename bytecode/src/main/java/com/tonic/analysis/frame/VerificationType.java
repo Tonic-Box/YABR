@@ -1,7 +1,6 @@
 package com.tonic.analysis.frame;
 
 import com.tonic.parser.attribute.stack.VerificationTypeInfo;
-import lombok.Getter;
 
 import java.util.Objects;
 
@@ -10,7 +9,6 @@ import java.util.Objects;
  * This is a sealed hierarchy allowing for both primitive types (as enum constants)
  * and reference types (as subclasses with additional data).
  */
-@Getter
 public abstract class VerificationType {
 
     public static final int TAG_TOP = 0;
@@ -23,13 +21,28 @@ public abstract class VerificationType {
     public static final int TAG_OBJECT = 7;
     public static final int TAG_UNINITIALIZED = 8;
 
-    public static final VerificationType TOP = new PrimitiveType(TAG_TOP, "top");
-    public static final VerificationType INTEGER = new PrimitiveType(TAG_INTEGER, "int");
-    public static final VerificationType FLOAT = new PrimitiveType(TAG_FLOAT, "float");
-    public static final VerificationType DOUBLE = new PrimitiveType(TAG_DOUBLE, "double");
-    public static final VerificationType LONG = new PrimitiveType(TAG_LONG, "long");
-    public static final VerificationType NULL = new PrimitiveType(TAG_NULL, "null");
-    public static final VerificationType UNINITIALIZED_THIS = new PrimitiveType(TAG_UNINITIALIZED_THIS, "uninitializedThis");
+    public static final VerificationType TOP = Primitives.TOP;
+    public static final VerificationType INTEGER = Primitives.INTEGER;
+    public static final VerificationType FLOAT = Primitives.FLOAT;
+    public static final VerificationType DOUBLE = Primitives.DOUBLE;
+    public static final VerificationType LONG = Primitives.LONG;
+    public static final VerificationType NULL = Primitives.NULL;
+    public static final VerificationType UNINITIALIZED_THIS = Primitives.UNINITIALIZED_THIS;
+
+    /**
+     * Holds the primitive singletons. Constructing the {@link PrimitiveType} instances here, rather than in
+     * {@code VerificationType}'s own static initializer, keeps the superclass initializer free of subclass
+     * references and so avoids the class-loading deadlock that pattern can introduce.
+     */
+    private static final class Primitives {
+        static final VerificationType TOP = new PrimitiveType(TAG_TOP, "top");
+        static final VerificationType INTEGER = new PrimitiveType(TAG_INTEGER, "int");
+        static final VerificationType FLOAT = new PrimitiveType(TAG_FLOAT, "float");
+        static final VerificationType DOUBLE = new PrimitiveType(TAG_DOUBLE, "double");
+        static final VerificationType LONG = new PrimitiveType(TAG_LONG, "long");
+        static final VerificationType NULL = new PrimitiveType(TAG_NULL, "null");
+        static final VerificationType UNINITIALIZED_THIS = new PrimitiveType(TAG_UNINITIALIZED_THIS, "uninitializedThis");
+    }
 
     protected final int tag;
 
@@ -40,6 +53,10 @@ public abstract class VerificationType {
      */
     protected VerificationType(int tag) {
         this.tag = tag;
+    }
+
+    public int getTag() {
+        return tag;
     }
 
     /**
@@ -150,13 +167,16 @@ public abstract class VerificationType {
     /**
      * Primitive verification type implementation.
      */
-    @Getter
     public static final class PrimitiveType extends VerificationType {
         private final String name;
 
         private PrimitiveType(int tag, String name) {
             super(tag);
             this.name = name;
+        }
+
+        public String getName() {
+            return name;
         }
 
         @Override
@@ -186,7 +206,6 @@ public abstract class VerificationType {
     /**
      * Object verification type implementation.
      */
-    @Getter
     public static final class ObjectType extends VerificationType {
         private final int classIndex;
         private final String className;
@@ -201,6 +220,14 @@ public abstract class VerificationType {
             super(TAG_OBJECT);
             this.classIndex = classIndex;
             this.className = className;
+        }
+
+        public int getClassIndex() {
+            return classIndex;
+        }
+
+        public String getClassName() {
+            return className;
         }
 
         @Override
@@ -230,13 +257,16 @@ public abstract class VerificationType {
     /**
      * Uninitialized verification type implementation.
      */
-    @Getter
     public static final class UninitializedType extends VerificationType {
         private final int newInstructionOffset;
 
         public UninitializedType(int newInstructionOffset) {
             super(TAG_UNINITIALIZED);
             this.newInstructionOffset = newInstructionOffset;
+        }
+
+        public int getNewInstructionOffset() {
+            return newInstructionOffset;
         }
 
         @Override

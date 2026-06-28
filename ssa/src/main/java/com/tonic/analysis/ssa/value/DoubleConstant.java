@@ -2,12 +2,10 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
-import lombok.Getter;
 
 /**
  * Represents a double constant.
  */
-@Getter
 public final class DoubleConstant extends Constant {
 
     public static final DoubleConstant ZERO = new DoubleConstant(0.0);

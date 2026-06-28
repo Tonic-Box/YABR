@@ -2,7 +2,6 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-import lombok.Getter;
 
 import java.util.Objects;
 
@@ -13,7 +12,6 @@ import java.util.Objects;
  * A MethodType represents a method signature (parameter types and return type)
  * and is commonly used with invokedynamic and method handles.
  */
-@Getter
 public final class MethodTypeConstant extends Constant {
 
     private final String descriptor;  // Method descriptor, e.g., "(II)V"
@@ -25,6 +23,10 @@ public final class MethodTypeConstant extends Constant {
      */
     public MethodTypeConstant(String descriptor) {
         this.descriptor = descriptor;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
     }
 
     @Override

@@ -4,7 +4,6 @@ import com.tonic.analysis.BootstrapFamilies;
 
 import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.MethodHandleConstant;
-import lombok.Getter;
 
 import java.util.List;
 import java.util.Objects;
@@ -13,7 +12,6 @@ import java.util.Objects;
  * Represents bootstrap method information for invokedynamic and constant dynamic.
  * Contains the bootstrap method handle and its static arguments.
  */
-@Getter
 public class BootstrapMethodInfo {
 
     private final MethodHandleConstant bootstrapMethod;
@@ -28,6 +26,14 @@ public class BootstrapMethodInfo {
     public BootstrapMethodInfo(MethodHandleConstant bootstrapMethod, List<Constant> bootstrapArguments) {
         this.bootstrapMethod = Objects.requireNonNull(bootstrapMethod, "bootstrapMethod cannot be null");
         this.bootstrapArguments = List.copyOf(bootstrapArguments);
+    }
+
+    public MethodHandleConstant getBootstrapMethod() {
+        return bootstrapMethod;
+    }
+
+    public List<Constant> getBootstrapArguments() {
+        return bootstrapArguments;
     }
 
 

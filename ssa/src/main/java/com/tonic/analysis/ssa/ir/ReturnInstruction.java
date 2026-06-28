@@ -3,14 +3,12 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
 /**
  * Return instruction.
  */
-@Getter
 public class ReturnInstruction extends IRInstruction {
 
     private Value returnValue;
@@ -27,6 +25,10 @@ public class ReturnInstruction extends IRInstruction {
             SSAValue ssa = (SSAValue) returnValue;
             ssa.addUse(this);
         }
+    }
+
+    public Value getReturnValue() {
+        return returnValue;
     }
 
     /**

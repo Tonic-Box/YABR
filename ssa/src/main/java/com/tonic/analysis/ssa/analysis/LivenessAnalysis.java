@@ -6,26 +6,39 @@ import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-
 import java.util.*;
 
 /**
  * Computes liveness information for SSA values.
  */
-@Getter
 public class LivenessAnalysis {
 
     private final IRMethod method;
-    private Map<IRBlock, Set<SSAValue>> liveIn;
-    private Map<IRBlock, Set<SSAValue>> liveOut;
-    private Map<SSAValue, Set<IRBlock>> liveBlocks;
+    private final Map<IRBlock, Set<SSAValue>> liveIn;
+    private final Map<IRBlock, Set<SSAValue>> liveOut;
+    private final Map<SSAValue, Set<IRBlock>> liveBlocks;
 
     public LivenessAnalysis(IRMethod method) {
         this.method = method;
         this.liveIn = new HashMap<>();
         this.liveOut = new HashMap<>();
         this.liveBlocks = new HashMap<>();
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public Map<IRBlock, Set<SSAValue>> getLiveIn() {
+        return liveIn;
+    }
+
+    public Map<IRBlock, Set<SSAValue>> getLiveOut() {
+        return liveOut;
+    }
+
+    public Map<SSAValue, Set<IRBlock>> getLiveBlocks() {
+        return liveBlocks;
     }
 
     /**

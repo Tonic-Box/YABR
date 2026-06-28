@@ -2,12 +2,10 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
-import lombok.Getter;
 
 /**
  * Represents a float constant.
  */
-@Getter
 public final class FloatConstant extends Constant {
 
     public static final FloatConstant ZERO = new FloatConstant(0.0f);

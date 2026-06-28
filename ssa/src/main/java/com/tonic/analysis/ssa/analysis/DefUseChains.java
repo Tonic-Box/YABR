@@ -6,21 +6,18 @@ import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-
 import java.util.*;
 
 /**
  * Computes def-use chains for SSA values.
  */
-@Getter
 public class DefUseChains {
 
     private final IRMethod method;
-    private Map<SSAValue, IRInstruction> definitions;
-    private Map<SSAValue, Set<IRInstruction>> uses;
-    private Map<IRInstruction, Set<SSAValue>> instrUses;
-    private Map<IRInstruction, SSAValue> instrDefs;
+    private final Map<SSAValue, IRInstruction> definitions;
+    private final Map<SSAValue, Set<IRInstruction>> uses;
+    private final Map<IRInstruction, Set<SSAValue>> instrUses;
+    private final Map<IRInstruction, SSAValue> instrDefs;
 
     public DefUseChains(IRMethod method) {
         this.method = method;
@@ -28,6 +25,26 @@ public class DefUseChains {
         this.uses = new HashMap<>();
         this.instrUses = new HashMap<>();
         this.instrDefs = new HashMap<>();
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public Map<SSAValue, IRInstruction> getDefinitions() {
+        return definitions;
+    }
+
+    public Map<SSAValue, Set<IRInstruction>> getUses() {
+        return uses;
+    }
+
+    public Map<IRInstruction, Set<SSAValue>> getInstrUses() {
+        return instrUses;
+    }
+
+    public Map<IRInstruction, SSAValue> getInstrDefs() {
+        return instrDefs;
     }
 
     /**

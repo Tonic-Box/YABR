@@ -1,13 +1,10 @@
 package com.tonic.analysis.ssa.type;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import java.util.Objects;
 
 /**
  * Represents an array type.
  */
-@Getter
-@EqualsAndHashCode
 public final class ArrayType implements IRType {
 
     private final IRType elementType;
@@ -32,6 +29,14 @@ public final class ArrayType implements IRType {
      */
     public ArrayType(IRType elementType) {
         this(elementType, 1);
+    }
+
+    public IRType getElementType() {
+        return elementType;
+    }
+
+    public int getDimensions() {
+        return dimensions;
     }
 
     /**
@@ -103,5 +108,18 @@ public final class ArrayType implements IRType {
     @Override
     public String toString() {
         return elementType.toString() + "[]".repeat(dimensions);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ArrayType)) return false;
+        ArrayType that = (ArrayType) o;
+        return dimensions == that.dimensions && Objects.equals(elementType, that.elementType);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(elementType, dimensions);
     }
 }

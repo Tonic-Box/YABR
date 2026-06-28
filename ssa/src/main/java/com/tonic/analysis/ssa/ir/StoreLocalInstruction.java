@@ -3,14 +3,12 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
 /**
  * Store to local variable slot (used during lifting before SSA conversion).
  */
-@Getter
 public class StoreLocalInstruction extends IRInstruction {
 
     private final int localIndex;
@@ -24,6 +22,14 @@ public class StoreLocalInstruction extends IRInstruction {
             SSAValue ssa = (SSAValue) value;
             ssa.addUse(this);
         }
+    }
+
+    public int getLocalIndex() {
+        return localIndex;
+    }
+
+    public Value getValue() {
+        return value;
     }
 
     @Override

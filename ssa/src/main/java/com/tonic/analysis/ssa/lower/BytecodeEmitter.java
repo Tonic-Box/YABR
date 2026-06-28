@@ -15,8 +15,6 @@ import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.type.AccessFlags;
 import com.tonic.util.Opcode;
-import lombok.Getter;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -25,7 +23,6 @@ import java.util.*;
 /**
  * Emits JVM bytecode from IR instructions.
  */
-@Getter
 public class BytecodeEmitter {
 
     private final IRMethod method;
@@ -79,6 +76,70 @@ public class BytecodeEmitter {
         this.handlerExceptionCaptures = new HashSet<>();
         this.newToInit = new HashMap<>();
         this.initToNew = new HashMap<>();
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
+    public RegisterAllocator getRegAlloc() {
+        return regAlloc;
+    }
+
+    public StackScheduler getScheduler() {
+        return scheduler;
+    }
+
+    public ByteArrayOutputStream getBytecode() {
+        return bytecode;
+    }
+
+    public DataOutputStream getDos() {
+        return dos;
+    }
+
+    public Map<IRBlock, Integer> getBlockOffsets() {
+        return blockOffsets;
+    }
+
+    public Map<IRBlock, Integer> getBlockEndOffsets() {
+        return blockEndOffsets;
+    }
+
+    public int getCurrentOffset() {
+        return currentOffset;
+    }
+
+    public Set<SSAValue> getStackResidentValues() {
+        return stackResidentValues;
+    }
+
+    public Set<SSAValue> getInlinedConstants() {
+        return inlinedConstants;
+    }
+
+    public Map<SSAValue, Constant> getInlinedConstantValue() {
+        return inlinedConstantValue;
+    }
+
+    public Set<SSAValue> getHandlerExceptionCaptures() {
+        return handlerExceptionCaptures;
+    }
+
+    public Map<NewInstruction, InvokeInstruction> getNewToInit() {
+        return newToInit;
+    }
+
+    public Map<InvokeInstruction, NewInstruction> getInitToNew() {
+        return initToNew;
+    }
+
+    public IRBlock getNextBlock() {
+        return nextBlock;
     }
 
     /**

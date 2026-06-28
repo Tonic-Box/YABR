@@ -1,13 +1,8 @@
 package com.tonic.analysis.ssa.type;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
 /**
  * Represents JVM primitive types.
  */
-@Getter
-@RequiredArgsConstructor
 public enum PrimitiveType implements IRType {
     BOOLEAN("Z", 1),
     BYTE("B", 1),
@@ -20,6 +15,21 @@ public enum PrimitiveType implements IRType {
 
     private final String descriptor;
     private final int size;
+
+    PrimitiveType(String descriptor, int size) {
+        this.descriptor = descriptor;
+        this.size = size;
+    }
+
+    @Override
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    @Override
+    public int getSize() {
+        return size;
+    }
 
     @Override
     public boolean isReference() {

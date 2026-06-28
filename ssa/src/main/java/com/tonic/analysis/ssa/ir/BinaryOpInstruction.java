@@ -3,14 +3,12 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
 /**
  * Binary arithmetic/logical operation.
  */
-@Getter
 public class BinaryOpInstruction extends IRInstruction {
 
     private final BinaryOp op;
@@ -34,6 +32,18 @@ public class BinaryOpInstruction extends IRInstruction {
             SSAValue ssa = (SSAValue) right;
             ssa.addUse(this);
         }
+    }
+
+    public BinaryOp getOp() {
+        return op;
+    }
+
+    public Value getLeft() {
+        return left;
+    }
+
+    public Value getRight() {
+        return right;
     }
 
     @Override

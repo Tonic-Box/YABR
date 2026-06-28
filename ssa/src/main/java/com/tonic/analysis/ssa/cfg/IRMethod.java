@@ -4,15 +4,12 @@ import com.tonic.analysis.ssa.lower.CopyInfo;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.MethodEntry;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.*;
 
 /**
  * Represents a method in SSA form with control flow graph and instructions.
  */
-@Getter
 public class IRMethod {
 
     private final String ownerClass;
@@ -20,31 +17,20 @@ public class IRMethod {
     private final String descriptor;
     private final boolean isStatic;
 
-    @Setter
     private MethodEntry sourceMethod;
 
     private final List<SSAValue> parameters;
-    /** Source-level locals (receiver, parameters, declared body variables) recorded during AST lowering,
-     *  used to emit a LocalVariableTable. Empty for IR not produced from source (e.g. the bytecode-lift path). */
     private final List<SourceLocal> sourceLocals = new ArrayList<>();
     private final List<IRBlock> blocks;
-    @Setter
     private IRBlock entryBlock;
 
     private final List<ExceptionHandler> exceptionHandlers;
     private final Map<IRBlock, SSAValue> handlerExceptionValues = new HashMap<>();
 
     private IRType returnType;
-    @Setter
     private int maxLocals;
-    @Setter
     private int maxStack;
 
-    /**
-     * Mapping from phi results to their copy instructions for register coalescing.
-     * Used by RegisterAllocator to coalesce phi copies into the same register.
-     */
-    @Setter
     private Map<SSAValue, List<CopyInfo>> phiCopyMapping;
 
     /**
@@ -63,6 +49,94 @@ public class IRMethod {
         this.parameters = new ArrayList<>();
         this.blocks = new ArrayList<>();
         this.exceptionHandlers = new ArrayList<>();
+    }
+
+    public String getOwnerClass() {
+        return ownerClass;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public MethodEntry getSourceMethod() {
+        return sourceMethod;
+    }
+
+    public void setSourceMethod(MethodEntry sourceMethod) {
+        this.sourceMethod = sourceMethod;
+    }
+
+    public List<SSAValue> getParameters() {
+        return parameters;
+    }
+
+    /**
+     * Source-level locals (receiver, parameters, declared body variables) recorded during AST lowering,
+     * used to emit a LocalVariableTable. Empty for IR not produced from source (e.g. the bytecode-lift path).
+     */
+    public List<SourceLocal> getSourceLocals() {
+        return sourceLocals;
+    }
+
+    public List<IRBlock> getBlocks() {
+        return blocks;
+    }
+
+    public IRBlock getEntryBlock() {
+        return entryBlock;
+    }
+
+    public void setEntryBlock(IRBlock entryBlock) {
+        this.entryBlock = entryBlock;
+    }
+
+    public List<ExceptionHandler> getExceptionHandlers() {
+        return exceptionHandlers;
+    }
+
+    public Map<IRBlock, SSAValue> getHandlerExceptionValues() {
+        return handlerExceptionValues;
+    }
+
+    public IRType getReturnType() {
+        return returnType;
+    }
+
+    public int getMaxLocals() {
+        return maxLocals;
+    }
+
+    public void setMaxLocals(int maxLocals) {
+        this.maxLocals = maxLocals;
+    }
+
+    public int getMaxStack() {
+        return maxStack;
+    }
+
+    public void setMaxStack(int maxStack) {
+        this.maxStack = maxStack;
+    }
+
+    /**
+     * Mapping from phi results to their copy instructions for register coalescing.
+     * Used by RegisterAllocator to coalesce phi copies into the same register.
+     */
+    public Map<SSAValue, List<CopyInfo>> getPhiCopyMapping() {
+        return phiCopyMapping;
+    }
+
+    public void setPhiCopyMapping(Map<SSAValue, List<CopyInfo>> phiCopyMapping) {
+        this.phiCopyMapping = phiCopyMapping;
     }
 
     /**
@@ -84,7 +158,6 @@ public class IRMethod {
      * to. Carries the real source name + declared type so the lowerer can emit a LocalVariableTable; the slot
      * and scope are resolved later from register allocation and the final bytecode layout.
      */
-    @Getter
     public static final class SourceLocal {
         private final String name;
         private final IRType type;
@@ -95,6 +168,22 @@ public class IRMethod {
             this.name = name;
             this.type = type;
             this.parameter = parameter;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public IRType getType() {
+            return type;
+        }
+
+        public List<SSAValue> getValues() {
+            return values;
+        }
+
+        public boolean isParameter() {
+            return parameter;
         }
 
         /** Adds another SSA value bound to this source variable (SSA splits one source var across defs). */

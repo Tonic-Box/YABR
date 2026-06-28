@@ -3,14 +3,12 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
 /**
  * Object allocation instruction (NEW).
  */
-@Getter
 public class NewInstruction extends IRInstruction {
 
     private final String className;
@@ -18,6 +16,10 @@ public class NewInstruction extends IRInstruction {
     public NewInstruction(SSAValue result, String className) {
         super(result);
         this.className = className;
+    }
+
+    public String getClassName() {
+        return className;
     }
 
     @Override

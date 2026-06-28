@@ -4,7 +4,6 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.stack.VerificationTypeInfo;
 import com.tonic.util.Modifiers;
-import lombok.Getter;
 
 import java.util.*;
 import java.util.function.Function;
@@ -13,7 +12,6 @@ import java.util.function.Function;
  * Immutable representation of the type state at a specific point in bytecode execution.
  * Contains the types of all local variables and the operand stack.
  */
-@Getter
 public final class TypeState {
     private static Function<String, String> superclassResolver;
 
@@ -33,6 +31,14 @@ public final class TypeState {
     public TypeState(List<VerificationType> locals, List<VerificationType> stack) {
         this.locals = Collections.unmodifiableList(new ArrayList<>(locals));
         this.stack = Collections.unmodifiableList(new ArrayList<>(stack));
+    }
+
+    public List<VerificationType> getLocals() {
+        return locals;
+    }
+
+    public List<VerificationType> getStack() {
+        return stack;
     }
 
     /**

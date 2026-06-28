@@ -5,20 +5,17 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import lombok.Getter;
-
 import java.util.*;
 
 /**
  * Schedules instructions for stack-based execution.
  * Inserts load/store operations as needed.
  */
-@Getter
 public class StackScheduler {
 
     private final IRMethod method;
     private final RegisterAllocator regAlloc;
-    private List<ScheduledInstruction> schedule;
+    private final List<ScheduledInstruction> schedule;
     private int maxStack;
 
     public StackScheduler(IRMethod method, RegisterAllocator regAlloc) {
@@ -26,6 +23,22 @@ public class StackScheduler {
         this.regAlloc = regAlloc;
         this.schedule = new ArrayList<>();
         this.maxStack = 0;
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public RegisterAllocator getRegAlloc() {
+        return regAlloc;
+    }
+
+    public List<ScheduledInstruction> getSchedule() {
+        return schedule;
+    }
+
+    public int getMaxStack() {
+        return maxStack;
     }
 
     public void schedule() {
@@ -122,7 +135,6 @@ public class StackScheduler {
         EXECUTE
     }
 
-    @Getter
     public static class ScheduledInstruction {
         private final IRInstruction instruction;
         private final ScheduleType type;
@@ -130,6 +142,14 @@ public class StackScheduler {
         public ScheduledInstruction(IRInstruction instruction, ScheduleType type) {
             this.instruction = instruction;
             this.type = type;
+        }
+
+        public IRInstruction getInstruction() {
+            return instruction;
+        }
+
+        public ScheduleType getType() {
+            return type;
         }
     }
 }

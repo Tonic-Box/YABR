@@ -2,14 +2,11 @@ package com.tonic.analysis.ssa.analysis;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import lombok.Getter;
-
 import java.util.*;
 
 /**
  * Computes dominator tree and dominance frontiers for a CFG.
  */
-@Getter
 public class DominatorTree {
 
     private final IRMethod method;
@@ -26,6 +23,30 @@ public class DominatorTree {
         this.dominanceFrontier = new HashMap<>();
         this.preorder = new HashMap<>();
         this.postorder = new HashMap<>();
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public Map<IRBlock, IRBlock> getImmediateDominator() {
+        return immediateDominator;
+    }
+
+    public Map<IRBlock, Set<IRBlock>> getDominatorTreeChildren() {
+        return dominatorTreeChildren;
+    }
+
+    public Map<IRBlock, Set<IRBlock>> getDominanceFrontier() {
+        return dominanceFrontier;
+    }
+
+    public Map<IRBlock, Integer> getPreorder() {
+        return preorder;
+    }
+
+    public Map<IRBlock, Integer> getPostorder() {
+        return postorder;
     }
 
     /**

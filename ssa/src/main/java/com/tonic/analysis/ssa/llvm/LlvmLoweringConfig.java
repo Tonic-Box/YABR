@@ -1,12 +1,9 @@
 package com.tonic.analysis.ssa.llvm;
 
-import lombok.Getter;
-
 /**
  * Configuration for {@link LlvmLowering}, following the project's builder + presets convention
  * (see {@code DecompilerConfig}).
  */
-@Getter
 public final class LlvmLoweringConfig {
 
     /**
@@ -27,17 +24,9 @@ public final class LlvmLoweringConfig {
         RUNTIME_ABI
     }
 
-    /** Target triple emitted as a module header, or null to omit. */
     private final String targetTriple;
-    /** Target datalayout emitted as a module header, or null to omit. */
     private final String dataLayout;
-    /**
-     * When true, emit JVM-faithful guards around integer division (divide-by-zero / INT_MIN/-1),
-     * which are undefined behavior in raw LLVM {@code sdiv}/{@code srem}. Off by default in v1 —
-     * the divergence is documented and this flag is the designed extension point.
-     */
     private final boolean emitDivisionGuards;
-    /** How the object/reference/runtime model is lowered. Defaults to {@link ObjectModel#NONE}. */
     private final ObjectModel objectModel;
 
     private LlvmLoweringConfig(Builder b) {
@@ -45,6 +34,30 @@ public final class LlvmLoweringConfig {
         this.dataLayout = b.dataLayout;
         this.emitDivisionGuards = b.emitDivisionGuards;
         this.objectModel = b.objectModel;
+    }
+
+    /** The target triple emitted as a module header, or null to omit. */
+    public String getTargetTriple() {
+        return targetTriple;
+    }
+
+    /** The target datalayout emitted as a module header, or null to omit. */
+    public String getDataLayout() {
+        return dataLayout;
+    }
+
+    /**
+     * Whether JVM-faithful guards are emitted around integer division (divide-by-zero / INT_MIN/-1),
+     * which are undefined behavior in raw LLVM {@code sdiv}/{@code srem}. Off by default in v1 — the
+     * divergence is documented and this flag is the designed extension point.
+     */
+    public boolean isEmitDivisionGuards() {
+        return emitDivisionGuards;
+    }
+
+    /** How the object/reference/runtime model is lowered. Defaults to {@link ObjectModel#NONE}. */
+    public ObjectModel getObjectModel() {
+        return objectModel;
     }
 
     /** No target header; raw LLVM arithmetic (no division guards); computational subset only. */

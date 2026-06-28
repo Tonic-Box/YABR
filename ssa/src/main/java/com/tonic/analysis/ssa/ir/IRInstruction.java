@@ -5,30 +5,19 @@ import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 
 /**
  * Base class for all IR instructions.
  */
-@Getter
 public abstract class IRInstruction {
 
     private static final ThreadLocal<int[]> NEXT_ID = ThreadLocal.withInitial(() -> new int[1]);
 
     protected final int id;
-    @Setter
     protected IRBlock block;
-    @Setter
     protected SSAValue result;
-
-    /**
-     * Originating bytecode offset, or {@code -1} when unknown. Stamped by the lifter so SSA
-     * instructions can be correlated back to their source bytecode (e.g. data-flow provenance).
-     */
-    @Setter
     protected int bytecodeOffset = -1;
 
     protected IRInstruction() {
@@ -41,6 +30,38 @@ public abstract class IRInstruction {
         if (result != null) {
             result.setDefinition(this);
         }
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public IRBlock getBlock() {
+        return block;
+    }
+
+    public void setBlock(IRBlock block) {
+        this.block = block;
+    }
+
+    public SSAValue getResult() {
+        return result;
+    }
+
+    public void setResult(SSAValue result) {
+        this.result = result;
+    }
+
+    /**
+     * Returns the originating bytecode offset, or {@code -1} when unknown. Stamped by the lifter so SSA
+     * instructions can be correlated back to their source bytecode (e.g. data-flow provenance).
+     */
+    public int getBytecodeOffset() {
+        return bytecodeOffset;
+    }
+
+    public void setBytecodeOffset(int bytecodeOffset) {
+        this.bytecodeOffset = bytecodeOffset;
     }
 
     /**

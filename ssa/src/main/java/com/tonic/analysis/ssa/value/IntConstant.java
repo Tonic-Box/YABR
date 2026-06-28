@@ -2,12 +2,10 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
-import lombok.Getter;
 
 /**
  * Represents an integer constant (covers boolean, byte, char, short, int).
  */
-@Getter
 public final class IntConstant extends Constant {
 
     public static final IntConstant ZERO = new IntConstant(0);

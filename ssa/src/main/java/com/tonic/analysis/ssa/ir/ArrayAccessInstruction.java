@@ -3,11 +3,9 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
-@Getter
 public class ArrayAccessInstruction extends IRInstruction {
 
     private final AccessMode mode;
@@ -30,6 +28,22 @@ public class ArrayAccessInstruction extends IRInstruction {
         this.index = index;
         this.value = value;
         registerUses();
+    }
+
+    public AccessMode getMode() {
+        return mode;
+    }
+
+    public Value getArray() {
+        return array;
+    }
+
+    public Value getIndex() {
+        return index;
+    }
+
+    public Value getValue() {
+        return value;
     }
 
     public boolean isLoad() {

@@ -4,8 +4,6 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,15 +11,12 @@ import java.util.List;
 /**
  * Conditional branch instruction.
  */
-@Getter
 public class BranchInstruction extends IRInstruction {
 
     private final CompareOp condition;
     private Value left;
     private Value right;
-    @Setter
     private IRBlock trueTarget;
-    @Setter
     private IRBlock falseTarget;
 
     public BranchInstruction(CompareOp condition, Value left, Value right, IRBlock trueTarget, IRBlock falseTarget) {
@@ -47,6 +42,34 @@ public class BranchInstruction extends IRInstruction {
             SSAValue ssa = (SSAValue) right;
             ssa.addUse(this);
         }
+    }
+
+    public CompareOp getCondition() {
+        return condition;
+    }
+
+    public Value getLeft() {
+        return left;
+    }
+
+    public Value getRight() {
+        return right;
+    }
+
+    public IRBlock getTrueTarget() {
+        return trueTarget;
+    }
+
+    public void setTrueTarget(IRBlock trueTarget) {
+        this.trueTarget = trueTarget;
+    }
+
+    public IRBlock getFalseTarget() {
+        return falseTarget;
+    }
+
+    public void setFalseTarget(IRBlock falseTarget) {
+        this.falseTarget = falseTarget;
     }
 
     @Override

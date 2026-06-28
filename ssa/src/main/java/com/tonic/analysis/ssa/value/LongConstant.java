@@ -2,12 +2,10 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
-import lombok.Getter;
 
 /**
  * Represents a long constant.
  */
-@Getter
 public final class LongConstant extends Constant {
 
     public static final LongConstant ZERO = new LongConstant(0L);

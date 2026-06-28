@@ -4,7 +4,6 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.*;
 
@@ -12,7 +11,6 @@ import java.util.*;
  * Phi instruction for SSA form.
  * Merges values from different predecessor blocks.
  */
-@Getter
 public class PhiInstruction extends IRInstruction {
 
     private final Map<IRBlock, Value> incomingValues;
@@ -20,6 +18,10 @@ public class PhiInstruction extends IRInstruction {
     public PhiInstruction(SSAValue result) {
         super(result);
         this.incomingValues = new LinkedHashMap<>();
+    }
+
+    public Map<IRBlock, Value> getIncomingValues() {
+        return incomingValues;
     }
 
     /**

@@ -3,8 +3,6 @@ package com.tonic.analysis.ssa.value;
 import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.type.IRType;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,16 +11,13 @@ import java.util.List;
  * Represents a value defined by an SSA instruction.
  * Each SSAValue has exactly one definition point.
  */
-@Getter
 public class SSAValue implements Value {
 
     private static final ThreadLocal<int[]> NEXT_ID = ThreadLocal.withInitial(() -> new int[1]);
 
     private final int id;
     private final IRType type;
-    @Setter
     private String name;
-    @Setter
     private IRInstruction definition;
     private final List<IRInstruction> uses;
 
@@ -49,6 +44,34 @@ public class SSAValue implements Value {
         this.type = type;
         this.name = name;
         this.uses = new ArrayList<>();
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public IRType getType() {
+        return type;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public IRInstruction getDefinition() {
+        return definition;
+    }
+
+    public void setDefinition(IRInstruction definition) {
+        this.definition = definition;
+    }
+
+    public List<IRInstruction> getUses() {
+        return uses;
     }
 
     @Override

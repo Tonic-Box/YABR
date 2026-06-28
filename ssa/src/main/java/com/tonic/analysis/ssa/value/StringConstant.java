@@ -2,12 +2,10 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-import lombok.Getter;
 
 /**
  * Represents a string constant.
  */
-@Getter
 public final class StringConstant extends Constant {
 
     private final String value;

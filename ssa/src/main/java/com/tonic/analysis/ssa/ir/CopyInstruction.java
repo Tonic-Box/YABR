@@ -3,14 +3,12 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.List;
 
 /**
  * Copy instruction (used for phi elimination and value copying).
  */
-@Getter
 public class CopyInstruction extends IRInstruction {
 
     private Value source;
@@ -22,6 +20,10 @@ public class CopyInstruction extends IRInstruction {
             SSAValue ssa = (SSAValue) source;
             ssa.addUse(this);
         }
+    }
+
+    public Value getSource() {
+        return source;
     }
 
     @Override

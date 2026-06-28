@@ -2,12 +2,10 @@ package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-import lombok.Getter;
 
 /**
  * Represents a class constant (Class object reference).
  */
-@Getter
 public final class ClassConstant extends Constant {
 
     private final IRType classType;
@@ -28,6 +26,10 @@ public final class ClassConstant extends Constant {
      */
     public ClassConstant(String className) {
         this.classType = new ReferenceType(className);
+    }
+
+    public IRType getClassType() {
+        return classType;
     }
 
     @Override

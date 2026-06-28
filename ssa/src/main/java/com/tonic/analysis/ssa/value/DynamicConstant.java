@@ -1,7 +1,6 @@
 package com.tonic.analysis.ssa.value;
 
 import com.tonic.analysis.ssa.type.IRType;
-import lombok.Getter;
 
 import java.util.Objects;
 
@@ -12,7 +11,6 @@ import java.util.Objects;
  * Dynamic constants are computed at runtime using a bootstrap method,
  * similar to invokedynamic but for constants rather than method calls.
  */
-@Getter
 public final class DynamicConstant extends Constant {
 
     private final String name;
@@ -33,6 +31,22 @@ public final class DynamicConstant extends Constant {
         this.descriptor = descriptor;
         this.bootstrapMethodIndex = bootstrapMethodIndex;
         this.originalCpIndex = originalCpIndex;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public int getBootstrapMethodIndex() {
+        return bootstrapMethodIndex;
+    }
+
+    public int getOriginalCpIndex() {
+        return originalCpIndex;
     }
 
     @Override

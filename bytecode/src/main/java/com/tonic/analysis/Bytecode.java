@@ -7,8 +7,6 @@ import com.tonic.parser.constpool.*;
 import com.tonic.util.Logger;
 import com.tonic.util.Modifiers;
 import com.tonic.util.ReturnType;
-import lombok.Getter;
-import lombok.Setter;
 
 import static com.tonic.util.Opcode.*;
 
@@ -20,12 +18,10 @@ import java.util.Map;
  * High-level bytecode manipulation API.
  * Provides convenient methods for inserting common bytecode instructions into a method.
  */
-@Getter
 public class Bytecode {
     private final CodeWriter codeWriter;
     private final ConstPool constPool;
     private boolean insertBefore = false;
-    @Setter
     private int insertBeforeOffset = 0;
     private final boolean isStatic;
 
@@ -51,6 +47,34 @@ public class Bytecode {
         this.codeWriter = codeWriter;
         this.constPool = codeWriter.getConstPool();
         this.isStatic = Modifiers.isStatic(codeWriter.getMethodEntry().getAccess());
+    }
+
+    public CodeWriter getCodeWriter() {
+        return codeWriter;
+    }
+
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
+    public boolean isInsertBefore() {
+        return insertBefore;
+    }
+
+    public int getInsertBeforeOffset() {
+        return insertBeforeOffset;
+    }
+
+    public void setInsertBeforeOffset(int insertBeforeOffset) {
+        this.insertBeforeOffset = insertBeforeOffset;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public Map<String, Integer> getLabels() {
+        return labels;
     }
 
     /**

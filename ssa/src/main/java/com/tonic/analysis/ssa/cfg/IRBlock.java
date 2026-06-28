@@ -2,23 +2,18 @@ package com.tonic.analysis.ssa.cfg;
 
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.*;
 
 /**
  * Represents a basic block in SSA form containing phi instructions and regular instructions.
  */
-@Getter
 public class IRBlock {
 
     private static final ThreadLocal<int[]> NEXT_ID = ThreadLocal.withInitial(() -> new int[1]);
 
     private final int id;
-    @Setter
     private String name;
-    @Setter
     private IRMethod method;
 
     private final List<PhiInstruction> phiInstructions;
@@ -30,7 +25,6 @@ public class IRBlock {
 
     private final List<ExceptionHandler> exceptionHandlers;
 
-    @Setter
     private int bytecodeOffset;
 
     /**
@@ -56,6 +50,58 @@ public class IRBlock {
     public IRBlock(String name) {
         this();
         this.name = name;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public void setMethod(IRMethod method) {
+        this.method = method;
+    }
+
+    public List<PhiInstruction> getPhiInstructions() {
+        return phiInstructions;
+    }
+
+    public List<IRInstruction> getInstructions() {
+        return instructions;
+    }
+
+    public Set<IRBlock> getPredecessors() {
+        return predecessors;
+    }
+
+    public Set<IRBlock> getSuccessors() {
+        return successors;
+    }
+
+    public Map<IRBlock, EdgeType> getSuccessorEdgeTypes() {
+        return successorEdgeTypes;
+    }
+
+    public List<ExceptionHandler> getExceptionHandlers() {
+        return exceptionHandlers;
+    }
+
+    public int getBytecodeOffset() {
+        return bytecodeOffset;
+    }
+
+    public void setBytecodeOffset(int bytecodeOffset) {
+        this.bytecodeOffset = bytecodeOffset;
     }
 
     /**

@@ -11,7 +11,6 @@ import com.tonic.analysis.instruction.*;
 import com.tonic.util.Logger;
 import com.tonic.util.Opcode;
 import com.tonic.util.ReturnType;
-import lombok.Getter;
 
 import java.io.ByteArrayOutputStream;
 
@@ -25,7 +24,6 @@ import java.util.*;
  * It allows iterating over bytecode instructions, inserting new instructions,
  * and automatically updating stack and local variable information.
  */
-@Getter
 public class CodeWriter {
     private final MethodEntry methodEntry;
     private final CodeAttribute codeAttribute;
@@ -46,13 +44,6 @@ public class CodeWriter {
     private int maxStack;
     private int maxLocals;
 
-    /**
-     * -- GETTER --
-     *  Returns whether the bytecode has been modified since loading.
-     *
-     * @return true if modified, false otherwise
-     */
-    @Getter
     private boolean modified = false;
 
     /**
@@ -69,6 +60,39 @@ public class CodeWriter {
         this.bytecode = this.codeAttribute.getCode();
         this.constPool = methodEntry.getClassFile().getConstPool();
         parseBytecode();
+    }
+
+    public MethodEntry getMethodEntry() {
+        return methodEntry;
+    }
+
+    public CodeAttribute getCodeAttribute() {
+        return codeAttribute;
+    }
+
+    public byte[] getBytecode() {
+        return bytecode;
+    }
+
+    public ConstPool getConstPool() {
+        return constPool;
+    }
+
+    public Map<Instruction, List<Instruction>> getBranchTargets() {
+        return branchTargets;
+    }
+
+    public int getMaxStack() {
+        return maxStack;
+    }
+
+    public int getMaxLocals() {
+        return maxLocals;
+    }
+
+    /** Returns whether the bytecode has been modified since loading. */
+    public boolean isModified() {
+        return modified;
     }
 
     /**

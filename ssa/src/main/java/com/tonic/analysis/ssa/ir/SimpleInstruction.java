@@ -4,17 +4,13 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 
-@Getter
 public class SimpleInstruction extends IRInstruction {
 
     private final SimpleOp op;
     private Value operand;
-    @Setter
     private IRBlock target;
 
     public static SimpleInstruction createArrayLength(SSAValue result, Value array) {
@@ -50,6 +46,22 @@ public class SimpleInstruction extends IRInstruction {
         if (operand instanceof SSAValue) {
             ((SSAValue) operand).addUse(this);
         }
+    }
+
+    public SimpleOp getOp() {
+        return op;
+    }
+
+    public Value getOperand() {
+        return operand;
+    }
+
+    public IRBlock getTarget() {
+        return target;
+    }
+
+    public void setTarget(IRBlock target) {
+        this.target = target;
     }
 
     @Override

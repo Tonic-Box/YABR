@@ -3,12 +3,10 @@ package com.tonic.analysis.ssa.ir;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 public class FieldAccessInstruction extends IRInstruction {
 
     private final AccessMode mode;
@@ -50,6 +48,34 @@ public class FieldAccessInstruction extends IRInstruction {
         this.objectRef = objectRef;
         this.value = value;
         registerUses();
+    }
+
+    public AccessMode getMode() {
+        return mode;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public Value getObjectRef() {
+        return objectRef;
+    }
+
+    public Value getValue() {
+        return value;
     }
 
     public boolean isLoad() {

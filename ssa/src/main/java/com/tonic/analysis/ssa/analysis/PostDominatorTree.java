@@ -3,8 +3,6 @@ package com.tonic.analysis.ssa.analysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
-import lombok.Getter;
-
 import java.util.*;
 
 /**
@@ -12,15 +10,14 @@ import java.util.*;
  * A block B post-dominates block A if every path from A to exit must go through B.
  * This is computed by running dominator analysis on the reverse CFG.
  */
-@Getter
 public class PostDominatorTree {
 
     private final IRMethod method;
-    private Map<IRBlock, IRBlock> immediatePostDominator;
-    private Map<IRBlock, Set<IRBlock>> postDominatorTreeChildren;
-    private Map<IRBlock, Integer> reversePreorder;
-    private Map<IRBlock, Integer> reversePostorder;
-    private Set<IRBlock> exitBlocks;
+    private final Map<IRBlock, IRBlock> immediatePostDominator;
+    private final Map<IRBlock, Set<IRBlock>> postDominatorTreeChildren;
+    private final Map<IRBlock, Integer> reversePreorder;
+    private final Map<IRBlock, Integer> reversePostorder;
+    private final Set<IRBlock> exitBlocks;
 
     public PostDominatorTree(IRMethod method) {
         this.method = method;
@@ -29,6 +26,30 @@ public class PostDominatorTree {
         this.reversePreorder = new HashMap<>();
         this.reversePostorder = new HashMap<>();
         this.exitBlocks = new HashSet<>();
+    }
+
+    public IRMethod getMethod() {
+        return method;
+    }
+
+    public Map<IRBlock, IRBlock> getImmediatePostDominator() {
+        return immediatePostDominator;
+    }
+
+    public Map<IRBlock, Set<IRBlock>> getPostDominatorTreeChildren() {
+        return postDominatorTreeChildren;
+    }
+
+    public Map<IRBlock, Integer> getReversePreorder() {
+        return reversePreorder;
+    }
+
+    public Map<IRBlock, Integer> getReversePostorder() {
+        return reversePostorder;
+    }
+
+    public Set<IRBlock> getExitBlocks() {
+        return exitBlocks;
     }
 
     /**
