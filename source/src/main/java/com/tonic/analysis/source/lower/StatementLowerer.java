@@ -496,8 +496,10 @@ public class StatementLowerer {
             tryBodyBlocks.add(allBlocks.get(i));
         }
 
+        List<IRBlock> catchBlocks = new java.util.ArrayList<>();
         for (CatchClause catchClause : tryCatch.getCatches()) {
             IRBlock catchBlock = ctx.createBlock();
+            catchBlocks.add(catchBlock);
             tryBlock.addSuccessor(catchBlock, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
 
             ctx.setCurrentBlock(catchBlock);
@@ -536,6 +538,36 @@ public class StatementLowerer {
         }
 
         if (finallyBlock != null) {
+            // Synthetic catch-all so the finally also runs when an exception escapes the try/catches (javac
+            // semantics - otherwise an uncaught throw skips the finally entirely), and so the re-decompile
+            // recognizes the finally via the catch(Throwable){ <finally>; throw } pattern
+            // (StatementRecoverer.isFinallyRethrowPattern). Registered AFTER the real catches so they take
+            // precedence, and covering the catch blocks too so a throw inside a catch still runs the finally.
+            java.util.Map<String, SSAValue> normalFinallyVars = ctx.snapshotVariables();
+            IRBlock finallyHandler = ctx.createBlock();
+            tryBlock.addSuccessor(finallyHandler, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+            ctx.setCurrentBlock(finallyHandler);
+            ReferenceType throwableType = new ReferenceType("java/lang/Throwable");
+            SSAValue caught = ctx.newValue(throwableType);
+            finallyHandler.addInstruction(SimpleInstruction.createCatch(caught));
+            String caughtName = "$finallyEx" + finallyHandler.getId();
+            ctx.declareLocal(caughtName, throwableType, false);
+            ctx.setVariable(caughtName, caught);
+            for (String name : reassignedInTry) {
+                ctx.setVariable(name, preTryVars.get(name));
+            }
+            lower(tryCatch.getFinallyBlock());
+            if (ctx.getCurrentBlock().getTerminator() == null) {
+                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createThrow(caught));
+            }
+            Set<IRBlock> finallyProtected = new LinkedHashSet<>(tryBodyBlocks);
+            finallyProtected.addAll(catchBlocks);
+            ExceptionHandler finallyAll =
+                    new ExceptionHandler(tryBlock, tryEnd, finallyHandler, throwableType);
+            finallyAll.setTryBlocks(finallyProtected);
+            ctx.getIrMethod().addExceptionHandler(finallyAll);
+            ctx.restoreVariables(normalFinallyVars);
+
             ctx.setCurrentBlock(finallyBlock);
             lower(tryCatch.getFinallyBlock());
             if (ctx.getCurrentBlock().getTerminator() == null) {

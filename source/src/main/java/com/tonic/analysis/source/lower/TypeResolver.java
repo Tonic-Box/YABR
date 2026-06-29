@@ -83,6 +83,7 @@ public class TypeResolver {
             throw new LoweringException("Cannot resolve field: " + ownerClass + "." + fieldName + " in current class");
         }
 
+        ownerClass = normalizeNestedName(ownerClass);
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
             return reflectFieldType(ownerClass, fieldName);

@@ -44,12 +44,21 @@ public class ExpressionLowerer {
      * @param falseTarget block to branch to if condition is false
      */
     public void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget) {
-        // Logical NOT: branch directly with the targets swapped, rather than materializing the negation
-        // into a boolean value and branching on that (which spills to a temp local and breaks round-tripping).
+        lowerCondition(condition, trueTarget, falseTarget, false);
+    }
+
+    /**
+     * Lowers {@code condition} (optionally negated) as control flow that branches to {@code trueTarget} when
+     * the (negated) condition holds, else {@code falseTarget}. A logical NOT inverts the leaf branch opcode and
+     * applies De Morgan to {@code &&}/{@code ||} - keeping the THEN block as the branch's jump target - rather
+     * than swapping the true/false targets. Swapping would make the ELSE arm the fall-through, flipping the
+     * recovered branch polarity on the round trip (javac keeps the THEN arm as the jump target).
+     */
+    private void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget, boolean negate) {
         if (condition instanceof UnaryExpr) {
             UnaryExpr unary = (UnaryExpr) condition;
             if (unary.getOperator() == UnaryOperator.NOT) {
-                lowerCondition(unary.getOperand(), falseTarget, trueTarget);
+                lowerCondition(unary.getOperand(), trueTarget, falseTarget, !negate);
                 return;
             }
         }
@@ -58,35 +67,41 @@ public class ExpressionLowerer {
             BinaryExpr bin = (BinaryExpr) condition;
             BinaryOperator op = bin.getOperator();
             if (op.isComparison()) {
-                lowerComparisonForControlFlow(bin, trueTarget, falseTarget);
+                lowerComparisonForControlFlow(bin, trueTarget, falseTarget, negate);
                 return;
             }
-            // Short-circuit && / ||: chain the operands as branches through an intermediate block, instead of
-            // computing the whole expression as a 0/1 value first.
-            if (op == BinaryOperator.AND) {
+            // Short-circuit && / ||: chain the operands as branches through an intermediate block. Under a
+            // negation De Morgan turns && into || and vice versa, with the negation pushed into each operand.
+            if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+                boolean effectiveAnd = (op == BinaryOperator.AND) != negate;
                 IRBlock evalRight = ctx.createBlock();
-                lowerCondition(bin.getLeft(), evalRight, falseTarget);
-                ctx.setCurrentBlock(evalRight);
-                lowerCondition(bin.getRight(), trueTarget, falseTarget);
-                return;
-            }
-            if (op == BinaryOperator.OR) {
-                IRBlock evalRight = ctx.createBlock();
-                lowerCondition(bin.getLeft(), trueTarget, evalRight);
-                ctx.setCurrentBlock(evalRight);
-                lowerCondition(bin.getRight(), trueTarget, falseTarget);
+                if (effectiveAnd) {
+                    lowerCondition(bin.getLeft(), evalRight, falseTarget, negate);
+                    ctx.setCurrentBlock(evalRight);
+                    lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
+                } else {
+                    lowerCondition(bin.getLeft(), trueTarget, evalRight, negate);
+                    ctx.setCurrentBlock(evalRight);
+                    lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
+                }
                 return;
             }
         }
 
         Value cond = lower(condition);
-        BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, cond, trueTarget, falseTarget);
+        CompareOp leaf = negate ? CompareOp.IFEQ : CompareOp.IFNE;
+        BranchInstruction branch = new BranchInstruction(leaf, cond, trueTarget, falseTarget);
         ctx.getCurrentBlock().addInstruction(branch);
         ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
     }
 
-    private void lowerComparisonForControlFlow(BinaryExpr bin, IRBlock trueTarget, IRBlock falseTarget) {
+    /** The inverse of {@code op} when {@code negate} (null-safe), else {@code op} unchanged. */
+    private static CompareOp maybeInvert(CompareOp op, boolean negate) {
+        return negate && op != null ? op.invert() : op;
+    }
+
+    private void lowerComparisonForControlFlow(BinaryExpr bin, IRBlock trueTarget, IRBlock falseTarget, boolean negate) {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
@@ -97,7 +112,7 @@ public class ExpressionLowerer {
             BinaryOperator binOp = bin.getOperator();
             if (binOp == BinaryOperator.EQ || binOp == BinaryOperator.NE) {
                 CompareOp op = binOp == BinaryOperator.EQ ? CompareOp.ACMPEQ : CompareOp.ACMPNE;
-                ctx.getCurrentBlock().addInstruction(new BranchInstruction(op, left, right, trueTarget, falseTarget));
+                ctx.getCurrentBlock().addInstruction(new BranchInstruction(maybeInvert(op, negate), left, right, trueTarget, falseTarget));
                 ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
                 ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
                 return;
@@ -121,7 +136,7 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(lcmp);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
-            BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
+            BranchInstruction branch = new BranchInstruction(maybeInvert(singleCmp, negate), cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
         } else if (commonType == PrimitiveSourceType.FLOAT) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
@@ -130,7 +145,7 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(fcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
-            BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
+            BranchInstruction branch = new BranchInstruction(maybeInvert(singleCmp, negate), cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
         } else if (commonType == PrimitiveSourceType.DOUBLE) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
@@ -139,10 +154,10 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(dcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
-            BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueTarget, falseTarget);
+            BranchInstruction branch = new BranchInstruction(maybeInvert(singleCmp, negate), cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
         } else {
-            BranchInstruction branch = new BranchInstruction(cmpOp, left, right, trueTarget, falseTarget);
+            BranchInstruction branch = new BranchInstruction(maybeInvert(cmpOp, negate), left, right, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
         }
 

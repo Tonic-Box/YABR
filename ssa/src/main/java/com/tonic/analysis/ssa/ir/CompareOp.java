@@ -35,5 +35,28 @@ public enum CompareOp {
     /** If references are equal. */
     ACMPEQ,
     /** If references are not equal. */
-    ACMPNE
+    ACMPNE;
+
+    /** The logically-opposite comparison (the branch that fires exactly when this one would not). */
+    public CompareOp invert() {
+        switch (this) {
+            case EQ: return NE;
+            case NE: return EQ;
+            case LT: return GE;
+            case GE: return LT;
+            case GT: return LE;
+            case LE: return GT;
+            case IFEQ: return IFNE;
+            case IFNE: return IFEQ;
+            case IFLT: return IFGE;
+            case IFGE: return IFLT;
+            case IFGT: return IFLE;
+            case IFLE: return IFGT;
+            case IFNULL: return IFNONNULL;
+            case IFNONNULL: return IFNULL;
+            case ACMPEQ: return ACMPNE;
+            case ACMPNE: return ACMPEQ;
+            default: throw new IllegalStateException("No inverse for " + this);
+        }
+    }
 }
