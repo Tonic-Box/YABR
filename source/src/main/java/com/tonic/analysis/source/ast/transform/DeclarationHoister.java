@@ -122,6 +122,22 @@ public class DeclarationHoister implements ASTTransform {
                 continue;
             }
 
+            // Sink a declaration whose variable is confined to a single nested `if` block into that block
+            // (e.g. `Task task = null; if (c) { task = new Task(); use(task); }` ->
+            // `if (c) { Task task = new Task(); use(task); }`). The recursive pass below then inlines it at the
+            // first store, dropping the synthetic default init - matching javac's block scoping. Only `if`
+            // arms (not loop bodies, which re-run; not switches) are targeted, so a loop-carried variable is
+            // never re-initialized and pattern-switch reconstruction is untouched.
+            if (useIdx < nonDeclStatements.size()
+                    && isConfinedToSingleStatement(nonDeclStatements, varName, useIdx)) {
+                List<Statement> sinkTarget = getSinkTargetBlock(nonDeclStatements.get(useIdx), varName);
+                if (sinkTarget != null) {
+                    sinkTarget.add(0, decl);
+                    changed = true;
+                    continue;
+                }
+            }
+
             Expression inlineValue = firstAssignments.get(varName);
             if (inlineValue != null) {
                 VarDeclStmt newDecl = new VarDeclStmt(decl.getType(), varName, inlineValue);
@@ -219,6 +235,47 @@ public class DeclarationHoister implements ASTTransform {
         VariableUsageChecker checker = new VariableUsageChecker(varName);
         stmt.accept(checker);
         return checker.found;
+    }
+
+    /** Whether {@code varName} is used in no statement of {@code stmts} other than the one at {@code keepIdx}. */
+    private boolean isConfinedToSingleStatement(List<Statement> stmts, String varName, int keepIdx) {
+        for (int j = 0; j < stmts.size(); j++) {
+            if (j == keepIdx) {
+                continue;
+            }
+            if (usesVariable(stmts.get(j), varName)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * If {@code varName} is used inside exactly one block of an {@code if} statement (and not its controlling
+     * condition), returns that block's statement list as a sink target; otherwise null. Only {@code if} arms
+     * are eligible - loop bodies re-run (a loop-carried variable must not be re-initialized) and switches drive
+     * pattern reconstruction - so the variable's lifetime is genuinely confined to a block that executes once.
+     */
+    private List<Statement> getSinkTargetBlock(Statement stmt, String varName) {
+        if (!(stmt instanceof IfStmt)) {
+            return null;
+        }
+        IfStmt ifStmt = (IfStmt) stmt;
+        if (usesVariableInExpr(ifStmt.getCondition(), varName)) {
+            return null;
+        }
+        List<Statement> target = null;
+        if (ifStmt.getThenBranch() instanceof BlockStmt && usesVariable(ifStmt.getThenBranch(), varName)) {
+            target = ((BlockStmt) ifStmt.getThenBranch()).getStatements();
+        }
+        if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt
+                && usesVariable(ifStmt.getElseBranch(), varName)) {
+            if (target != null) {
+                return null;
+            }
+            target = ((BlockStmt) ifStmt.getElseBranch()).getStatements();
+        }
+        return target;
     }
 
     private boolean isUsedInNestedScope(Statement stmt, String varName) {

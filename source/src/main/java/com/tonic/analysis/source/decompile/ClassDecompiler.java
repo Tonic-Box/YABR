@@ -890,6 +890,9 @@ public class ClassDecompiler {
         deadVarEliminator.transform(body);
         varargsReconstructor.transform(body);
         declarationHoister.transform(body);
+        // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
+        // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
+        singleUseInliner.transform(body);
         patternSwitchReconstructor.transform(body);
         switchExprReconstructor.transform(body);
         removeTrailingReturn(body); // Static initializers cannot have return statements
@@ -1103,6 +1106,9 @@ public class ClassDecompiler {
             deadVarEliminator.transform(body);
             varargsReconstructor.transform(body);
             declarationHoister.transform(body);
+        // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
+        // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
+        singleUseInliner.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeRedundantSuper(body);
@@ -1191,6 +1197,9 @@ public class ClassDecompiler {
             astSimplifier.transform(body);
             varargsReconstructor.transform(body);
             declarationHoister.transform(body);
+        // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
+        // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
+        singleUseInliner.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body);

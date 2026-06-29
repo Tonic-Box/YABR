@@ -58,7 +58,10 @@ public final class LocalVariableTableBuilder {
             if (slot == null) {
                 continue;
             }
-            int[] scope = local.isParameter() ? new int[]{0, codeLength} : bodyScope(local);
+            // Parameters span the whole method; a body local uses its instruction-precise live range so that a
+            // slot reused by a later local (or a compiler temp) does not fall inside this variable's scope and
+            // merge into it - which in a straight-line method would widen the slot to Object on round trip.
+            int[] scope = local.isParameter() ? new int[]{0, codeLength} : instructionScope(local);
             int startPc = scope[0];
             int length = scope[1] - scope[0];
             String desc = local.getType() != null ? local.getType().getDescriptor() : null;
@@ -92,8 +95,8 @@ public final class LocalVariableTableBuilder {
         return null;
     }
 
-    /** Block-range {@code [startPc, endPc)} spanning the blocks of the local's defs and uses. */
-    private int[] bodyScope(IRMethod.SourceLocal local) {
+    /** Block-range scope {@code [startPc, endPc)} spanning the blocks of the local's defs and uses (the default). */
+    private int[] blockScope(IRMethod.SourceLocal local) {
         Map<IRBlock, Integer> starts = emitter.getBlockOffsets();
         Map<IRBlock, Integer> ends = emitter.getBlockEndOffsets();
         int startPc = Integer.MAX_VALUE;
@@ -124,5 +127,53 @@ public final class LocalVariableTableBuilder {
             }
         }
         return new int[]{Integer.MAX_VALUE, -1};
+    }
+
+    /**
+     * Instruction-precise scope {@code [startPc, endPc)} spanning the local's defs and uses - used only for a
+     * reused slot, so its live-disjoint occupants get disjoint scopes (their block-range scopes would collide in
+     * a straight-line method, losing one to {@link LvtSupport#dropSameSlotOverlaps} and widening the slot to
+     * {@code Object}). Phi defs carry no bytecode offset and are simply skipped; a local's real (stored/used)
+     * offsets bound its range.
+     */
+    private int[] instructionScope(IRMethod.SourceLocal local) {
+        Map<IRInstruction, Integer> offs = emitter.getInstructionOffsets();
+        int startPc = Integer.MAX_VALUE;
+        int endPc = -1;
+        for (SSAValue v : local.getValues()) {
+            startPc = Math.min(startPc, offsetOf(v.getDefinition(), offs, Integer.MAX_VALUE));
+            endPc = Math.max(endPc, offsetOf(v.getDefinition(), offs, -1));
+            for (IRInstruction use : v.getUses()) {
+                startPc = Math.min(startPc, offsetOf(use, offs, Integer.MAX_VALUE));
+                endPc = Math.max(endPc, offsetOf(use, offs, -1));
+            }
+        }
+        if (endPc < 0 || startPc == Integer.MAX_VALUE) {
+            return blockScope(local);
+        }
+        // End at the instruction boundary AFTER the last def/use, so the range covers that instruction yet
+        // {@code start_pc + length} stays a valid opcode index (the JVM rejects a mid-instruction LVT bound).
+        return new int[]{Math.max(0, startPc), nextBoundaryAfter(endPc, offs)};
+    }
+
+    /** The smallest emitted instruction offset strictly greater than {@code off}, or {@code codeLength}. */
+    private int nextBoundaryAfter(int off, Map<IRInstruction, Integer> offs) {
+        int best = codeLength;
+        for (int o : offs.values()) {
+            if (o > off && o < best) {
+                best = o;
+            }
+        }
+        return best;
+    }
+
+    private int offsetOf(IRInstruction instr, Map<IRInstruction, Integer> offs, int absent) {
+        if (instr != null) {
+            Integer off = offs.get(instr);
+            if (off != null) {
+                return off;
+            }
+        }
+        return absent;
     }
 }

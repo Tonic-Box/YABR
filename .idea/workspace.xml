@@ -6,9 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Faithful lambda + argument recompilation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeclarationHoister.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeclarationHoister.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/LocalVariableTableBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/LocalVariableTableBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/heap_analysis_debug.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tests/heap_analysis_debug.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/recovery_trace.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tests/recovery_trace.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -156,14 +159,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00047" summary="- Fix bug where query wasn't considering DynamicSubject condys">
-      <option name="closed" value="true" />
-      <created>1781684392712</created>
-      <option name="number" value="00047" />
-      <option name="presentableId" value="LOCAL-00047" />
-      <option name="project" value="LOCAL" />
-      <updated>1781684392712</updated>
     </task>
     <task id="LOCAL-00048" summary="- Fixed bytecode printer for nested BSMs">
       <option name="closed" value="true" />
@@ -549,7 +544,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782737518022</updated>
     </task>
-    <option name="localTasksCounter" value="96" />
+    <task id="LOCAL-00096" summary="- Faithful lambda + argument recompilation">
+      <option name="closed" value="true" />
+      <created>1782744144715</created>
+      <option name="number" value="00096" />
+      <option name="presentableId" value="LOCAL-00096" />
+      <option name="project" value="LOCAL" />
+      <updated>1782744144715</updated>
+    </task>
+    <option name="localTasksCounter" value="97" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

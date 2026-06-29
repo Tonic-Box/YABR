@@ -34,6 +34,7 @@ public class BytecodeEmitter {
     private DataOutputStream dos;
     private final Map<IRBlock, Integer> blockOffsets;
     private final Map<IRBlock, Integer> blockEndOffsets;
+    private final Map<IRInstruction, Integer> instructionOffsets = new HashMap<>();
     private final List<PendingJump> pendingJumps;
     private int currentOffset;
 
@@ -59,6 +60,8 @@ public class BytecodeEmitter {
     private final Map<IRInstruction, SSAValue> receiverPreload = new HashMap<>();
     /** Invokes whose receiver (operand 0) was preloaded ahead of the argument window, so skip it at the call. */
     private final Set<InvokeInstruction> skipReceiver = new HashSet<>();
+    /** Operand use count per value (across instructions and phis), so an unused result can be popped not stored. */
+    private final Map<SSAValue, Integer> valueUseCounts = new HashMap<>();
 
     // For fall-through optimization
     private IRBlock nextBlock;
@@ -121,6 +124,11 @@ public class BytecodeEmitter {
         return blockEndOffsets;
     }
 
+    /** Start bytecode offset of each emitted instruction, for instruction-precise local-variable scopes. */
+    public Map<IRInstruction, Integer> getInstructionOffsets() {
+        return instructionOffsets;
+    }
+
     public int getCurrentOffset() {
         return currentOffset;
     }
@@ -167,6 +175,7 @@ public class BytecodeEmitter {
         analyzeStackResidentValues();
         analyzeConstructorPairs();
         analyzeReceiverPreloads();
+        computeValueUseCounts();
         identifyHandlerExceptionCaptures();
 
         try {
@@ -644,6 +653,7 @@ public class BytecodeEmitter {
         }
 
         for (IRInstruction instr : block.getInstructions()) {
+            instructionOffsets.put(instr, currentOffset);
             emitInstruction(instr);
         }
 
@@ -1039,6 +1049,27 @@ public class BytecodeEmitter {
         }
     }
 
+    /** Operand use count per value across phis and instructions; an unused result is popped, not stored. */
+    private void computeValueUseCounts() {
+        valueUseCounts.clear();
+        for (IRBlock block : method.getBlocksInOrder()) {
+            for (PhiInstruction phi : block.getPhiInstructions()) {
+                for (Value op : phi.getOperands()) {
+                    if (op instanceof SSAValue) {
+                        valueUseCounts.merge((SSAValue) op, 1, Integer::sum);
+                    }
+                }
+            }
+            for (IRInstruction instr : block.getInstructions()) {
+                for (Value op : instr.getOperands()) {
+                    if (op instanceof SSAValue) {
+                        valueUseCounts.merge((SSAValue) op, 1, Integer::sum);
+                    }
+                }
+            }
+        }
+    }
+
     private void emitResultStore(IRInstruction instr) throws IOException {
         if (!instr.hasResult()) return;
         SSAValue result = instr.getResult();
@@ -1051,6 +1082,14 @@ public class BytecodeEmitter {
         }
 
         if (stackResidentValues.contains(result)) {
+            return;
+        }
+
+        if (valueUseCounts.getOrDefault(result, 0) == 0) {
+            // An unused result (e.g. a discarded `panel.add(child)`) is popped, not stored into a local whose
+            // slot is then reused for unrelated types and widened to Object on round trip - matching javac's
+            // `invoke; pop`.
+            emit((result.getType().isTwoSlot() ? Opcode.POP2 : Opcode.POP).getCode());
             return;
         }
 
