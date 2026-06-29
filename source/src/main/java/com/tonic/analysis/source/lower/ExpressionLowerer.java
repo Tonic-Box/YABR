@@ -900,6 +900,12 @@ public class ExpressionLowerer {
         if (declaredDescriptor != null) {
             descriptor = declaredDescriptor;
             returnType = ctx.getTypeResolver().returnTypeFromDescriptor(declaredDescriptor);
+        } else if ("<init>".equals(call.getMethodName())) {
+            // A constructor (super(...)/this(...)) is always void; the generic fallback otherwise defaults an
+            // unresolved <init> (e.g. a JDK super not in the pool) to Object, producing an invalid
+            // (...)Ljava/lang/Object; descriptor that the decompiler then mis-renders as a duplicate super().
+            returnType = VoidSourceType.INSTANCE;
+            descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);
         } else {
             returnType = resolveMethodReturnType(call, ownerClass, argTypes);
             descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);

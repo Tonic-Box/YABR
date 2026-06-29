@@ -550,9 +550,9 @@ public class StatementLowerer {
             ReferenceType throwableType = new ReferenceType("java/lang/Throwable");
             SSAValue caught = ctx.newValue(throwableType);
             finallyHandler.addInstruction(SimpleInstruction.createCatch(caught));
-            String caughtName = "$finallyEx" + finallyHandler.getId();
-            ctx.declareLocal(caughtName, throwableType, false);
-            ctx.setVariable(caughtName, caught);
+            // No declareLocal/named variable for the captured exception: it is only re-thrown (createThrow
+            // uses the value directly), and naming it leaks a synthetic local (e.g. $finallyEx) into the LVT
+            // that the decompiler then surfaces on a reused slot. The recovery matches the rethrow by slot.
             for (String name : reassignedInTry) {
                 ctx.setVariable(name, preTryVars.get(name));
             }

@@ -392,7 +392,22 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     private boolean isEarlyExit(Statement stmt) {
         Statement unwrapped = unwrapSingleStatement(stmt);
-        return unwrapped instanceof ReturnStmt || unwrapped instanceof ThrowStmt;
+        if (unwrapped instanceof ReturnStmt || unwrapped instanceof ThrowStmt) {
+            return true;
+        }
+        // A multi-statement block is also an early exit when its last statement unconditionally returns or
+        // throws: the whole block runs and leaves the method, so the early-exit-guard can hoist it (the full
+        // block becomes the guard body). The decompiler recovers a multi-statement guard like
+        // `if (expired) { invalidate(); return ...; }` as an if/else with a negated condition; widening this
+        // rule recovers the original guard form (and makes the first decompile a round-trip fixed point).
+        if (stmt instanceof BlockStmt) {
+            BlockStmt block = (BlockStmt) stmt;
+            if (!block.getStatements().isEmpty()) {
+                Statement last = block.getStatements().get(block.size() - 1);
+                return last instanceof ReturnStmt || last instanceof ThrowStmt;
+            }
+        }
+        return false;
     }
 
     private Statement unwrapSingleStatement(Statement stmt) {
