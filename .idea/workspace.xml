@@ -4,11 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Round-trip idempotence: harness + try/finally, inner-class types, branch polarity&#10;- try/finally: lower a synthetic catch(Throwable){&lt;finally&gt;; throw} so the finally runs on uncaught exceptions and re-decompiles back to a finally&#10;- TypeResolver: resolve inner-class field owners spelled with '/' via normalizeNestedName&#10;- branch polarity: lowerCondition threads a negate flag (De Morgan + CompareOp.invert()) instead of swapping targets, so '!cond' keeps the then arm as the jump target like javac">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/StatementLowerer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -156,14 +154,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00044" summary="Add MethodGrafter.replaceMethodBody for in-place body swaps">
-      <option name="closed" value="true" />
-      <created>1781495120264</created>
-      <option name="number" value="00044" />
-      <option name="presentableId" value="LOCAL-00044" />
-      <option name="project" value="LOCAL" />
-      <updated>1781495120264</updated>
     </task>
     <task id="LOCAL-00045" summary="Resolve reference types in descriptors and qualified static field access&#10;&#10;descriptorOf/resolveInternalName apply imports and fix nested $ so descriptors match the originals; recognize a.b.Outer$Inner.CONST as a static field access instead of resolving its owner to Object.">
       <option name="closed" value="true" />
@@ -549,7 +539,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782704127075</updated>
     </task>
-    <option name="localTasksCounter" value="93" />
+    <task id="LOCAL-00093" summary="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak">
+      <option name="closed" value="true" />
+      <created>1782709241128</created>
+      <option name="number" value="00093" />
+      <option name="presentableId" value="LOCAL-00093" />
+      <option name="project" value="LOCAL" />
+      <updated>1782709241128</updated>
+    </task>
+    <option name="localTasksCounter" value="94" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -564,7 +562,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="The BIG one&#10;- Refactored the gigantic MAMMOTH of a monolithic module into multiple submodules for project health.&#10;&#10;# Breaking Changes&#10;&#10;Package Renames:&#10;- com.tonic.utill -&gt; com.tonic.util&#10;- com.tonic.parser.attribute.anotation -&gt; com.tonic.parser.attribute.annotation&#10;&#10;Class Relocations:&#10;- com.tonic.analysis.visitor.Visitor -&gt; com.tonic.parser.visitor.Visitor&#10;- com.tonic.analysis.visitor.AbstractClassVisitor -&gt; com.tonic.parser.visitor.AbstractClassVisitor&#10;- com.tonic.analysis.visitor.AbstractMethodVisitor -&gt; com.tonic.parser.visitor.AbstractMethodVisitor&#10;- com.tonic.analysis.visitor.AbstractBlockVisitor -&gt; com.tonic.analysis.ssa.visitor.AbstractBlockVisitor&#10;&#10;Method Relocations:&#10;- ClassFile.generateGetter(...) -&gt; com.tonic.analysis.ClassFactory.generateGetter(classFile, ...)&#10;- ClassFile.generateSetter(...) -&gt; com.tonic.analysis.ClassFactory.generateSetter(classFile, ...)&#10;- ClassFile.setFieldInitialValue(...) -&gt; com.tonic.analysis.ClassFactory.setFieldInitialValue(classFile, ...)&#10;- ClassFile.computeFrames(...) -&gt; com.tonic.analysis.ClassFactory.computeFrames(classFile, ...)&#10;- ClassFile.createNewMethod(boolean addDefaultBody, ...) -&gt; com.tonic.analysis.ClassFactory.createMethodWithBody(classFile, ...)&#10;- ClassPool.createNewClass(...) (auto ctor/clinit) -&gt; com.tonic.analysis.ClassFactory.createClass(pool, ...) (now bare without it)&#10;- CodeAttribute.prettyPrintCode([opts]) -&gt; com.tonic.analysis.CodePrinter.prettyPrintCode(codeAttr[, opts])&#10;- CodeWriter.toSSA()/fromSSA(ir)/optimizeSSA() -&gt; com.tonic.analysis.ssa.SSABridge.toSSA(cw)/fromSSA(cw, ir)/optimizeSSA(cw)&#10;- BootstrapMethodInfo.isStringConcat/isLambda/isRecord/isSwitch(...) + the LAMBDA_METAFACTORY/STRING_CONCAT_FACTORY/OBJECT_METHODS/SWITCH_BOOTSTRAPS constants -&gt; com.tonic.analysis.BootstrapFamilies.*" />
     <MESSAGE value="Stale tasks cleanup" />
     <MESSAGE value="Clean up README" />
     <MESSAGE value="Jitpack badge" />
@@ -589,7 +586,8 @@
     <MESSAGE value="- Keep call receivers on the stack + type-aware slot reuse" />
     <MESSAGE value="- Keep call arguments and loop bounds on the operand stack" />
     <MESSAGE value="Round-trip idempotence: harness + try/finally, inner-class types, branch polarity&#10;- try/finally: lower a synthetic catch(Throwable){&lt;finally&gt;; throw} so the finally runs on uncaught exceptions and re-decompiles back to a finally&#10;- TypeResolver: resolve inner-class field owners spelled with '/' via normalizeNestedName&#10;- branch polarity: lowerCondition threads a negate flag (De Morgan + CompareOp.invert()) instead of swapping targets, so '!cond' keeps the then arm as the jump target like javac" />
-    <option name="LAST_COMMIT_MESSAGE" value="Round-trip idempotence: harness + try/finally, inner-class types, branch polarity&#10;- try/finally: lower a synthetic catch(Throwable){&lt;finally&gt;; throw} so the finally runs on uncaught exceptions and re-decompiles back to a finally&#10;- TypeResolver: resolve inner-class field owners spelled with '/' via normalizeNestedName&#10;- branch polarity: lowerCondition threads a negate flag (De Morgan + CompareOp.invert()) instead of swapping targets, so '!cond' keeps the then arm as the jump target like javac" />
+    <MESSAGE value="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak" />
+    <option name="LAST_COMMIT_MESSAGE" value="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

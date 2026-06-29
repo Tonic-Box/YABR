@@ -864,12 +864,23 @@ public class ExpressionLowerer {
         List<Value> loweredArgs = new ArrayList<>();
         List<Expression> callArguments = call.getArguments();
         List<SourceType> calleeParamTypes = resolveCalleeParamTypes(ownerClass, call.getMethodName(), callArguments.size());
+        // Track where each argument's instructions begin in the current block, so a varargs pack can later
+        // move each element's computation to sit right before its array store (keeping it stack-resident
+        // instead of materialized to a local). Only valid while all args lower into this one block.
+        IRBlock argBlock = ctx.getCurrentBlock();
+        int[] argInstrStart = new int[callArguments.size()];
+        boolean argsSingleBlock = true;
         for (int i = 0; i < callArguments.size(); i++) {
             Expression arg = callArguments.get(i);
             if (calleeParamTypes != null && i < calleeParamTypes.size()) {
                 arg = retypeFunctionalArg(arg, calleeParamTypes.get(i));
             }
+            argInstrStart[i] = argsSingleBlock && ctx.getCurrentBlock() == argBlock
+                    ? argBlock.getInstructions().size() : -1;
             loweredArgs.add(lower(arg));
+            if (ctx.getCurrentBlock() != argBlock) {
+                argsSingleBlock = false;
+            }
         }
         List<SourceType> argTypes = new ArrayList<>();
         List<IRType> argIrTypes = new ArrayList<>();
@@ -892,7 +903,8 @@ public class ExpressionLowerer {
 
         // Varargs calls are decompiled as flat trailing arguments; the bytecode invoke needs them packed into the
         // declared component[] array. Pack here (before adding to the arg list) when the resolved method is varargs.
-        loweredArgs = packVarargsIfNeeded(ownerClass, call.getMethodName(), declaredDescriptor, loweredArgs);
+        loweredArgs = packVarargsIfNeeded(ownerClass, call.getMethodName(), declaredDescriptor, loweredArgs,
+                argBlock, argInstrStart, argsSingleBlock);
         args.addAll(loweredArgs);
 
         SourceType returnType;
@@ -938,7 +950,8 @@ public class ExpressionLowerer {
      * list unchanged for non-varargs calls or when an array is already passed explicitly for the varargs parameter.
      */
     private List<Value> packVarargsIfNeeded(String ownerClass, String methodName, String declaredDescriptor,
-                                            List<Value> loweredArgs) {
+                                            List<Value> loweredArgs, IRBlock argBlock, int[] argInstrStart,
+                                            boolean argsSingleBlock) {
         if (declaredDescriptor == null
                 || !ctx.getTypeResolver().isVarargsMethod(ownerClass, methodName, declaredDescriptor)) {
             return loweredArgs;
@@ -957,19 +970,63 @@ public class ExpressionLowerer {
         IRType componentType = ((ArraySourceType) params.get(params.size() - 1)).getElementType().toIRType();
         int count = loweredArgs.size() - fixedCount;
 
+        // Pull each element's already-emitted computation out of the block so it can be re-emitted right before
+        // its array store (keeping it stack-resident). Null when the move is unsafe - then the values stay put
+        // (and get materialized to locals, the prior behavior).
+        List<List<IRInstruction>> elementGroups =
+                extractVarargsElementGroups(argBlock, argInstrStart, fixedCount, count, argsSingleBlock);
+
+        IRBlock block = ctx.getCurrentBlock();
         SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
-        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(sizeVal, IntConstant.of(count)));
+        block.addInstruction(new ConstantInstruction(sizeVal, IntConstant.of(count)));
         SSAValue arrayVal = ctx.newValue(new ArrayType(componentType));
-        ctx.getCurrentBlock().addInstruction(new NewArrayInstruction(arrayVal, componentType, List.of(sizeVal)));
+        block.addInstruction(new NewArrayInstruction(arrayVal, componentType, List.of(sizeVal)));
         for (int i = 0; i < count; i++) {
             SSAValue idx = ctx.newValue(PrimitiveType.INT);
-            ctx.getCurrentBlock().addInstruction(new ConstantInstruction(idx, IntConstant.of(i)));
-            ctx.getCurrentBlock().addInstruction(
+            block.addInstruction(new ConstantInstruction(idx, IntConstant.of(i)));
+            if (elementGroups != null) {
+                for (IRInstruction moved : elementGroups.get(i)) {
+                    block.addInstruction(moved);
+                }
+            }
+            block.addInstruction(
                     ArrayAccessInstruction.createStore(arrayVal, idx, loweredArgs.get(fixedCount + i)));
         }
         List<Value> packed = new ArrayList<>(loweredArgs.subList(0, fixedCount));
         packed.add(arrayVal);
         return packed;
+    }
+
+    /**
+     * If the varargs element arguments all lowered contiguously into {@code argBlock} (which must still be the
+     * current block), removes their instructions from the block and returns them grouped per element, so the
+     * caller can re-emit each group immediately before its array store. Returns null when the move would be
+     * unsafe - multi-block args, a changed current block, or a non-monotonic/invalid range - in which case the
+     * already-emitted values are left in place (and the scheduler materializes them, as before).
+     */
+    private List<List<IRInstruction>> extractVarargsElementGroups(IRBlock argBlock, int[] argInstrStart,
+                                                                  int fixedCount, int count, boolean argsSingleBlock) {
+        if (!argsSingleBlock || ctx.getCurrentBlock() != argBlock || count <= 0
+                || fixedCount + count > argInstrStart.length) {
+            return null;
+        }
+        List<IRInstruction> instrs = argBlock.getInstructions();
+        int end = instrs.size();
+        int[] bounds = new int[count + 1];
+        bounds[count] = end;
+        for (int j = 0; j < count; j++) {
+            int start = argInstrStart[fixedCount + j];
+            if (start < 0 || start > end || (j > 0 && start < bounds[j - 1])) {
+                return null;
+            }
+            bounds[j] = start;
+        }
+        List<List<IRInstruction>> groups = new ArrayList<>();
+        for (int j = 0; j < count; j++) {
+            groups.add(new ArrayList<>(instrs.subList(bounds[j], bounds[j + 1])));
+        }
+        instrs.subList(bounds[0], end).clear();
+        return groups;
     }
 
     private List<SourceType> resolveCalleeParamTypes(String ownerClass, String methodName, int argCount) {
