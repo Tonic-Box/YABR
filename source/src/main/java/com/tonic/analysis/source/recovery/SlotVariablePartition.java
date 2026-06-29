@@ -383,10 +383,33 @@ public class SlotVariablePartition {
         Map<Integer, String> rootName = new HashMap<>();
         for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet()) {
             int slot = se.getKey();
-            for (Map.Entry<Integer, Integer> ce : se.getValue().entrySet()) {
-                int root = ce.getKey();
+            Map<Integer, Integer> order = se.getValue();
+            // Pass 1: LVT-scoped names are authoritative - a component whose offsets fall inside a debug
+            // variable's scope owns that name. Claim these first so reused-slot components cannot steal them.
+            Set<String> used = new HashSet<>();
+            for (int root : order.keySet()) {
                 String scoped = scopeName(slot, rootOffsets.get(root));
-                rootName.put(root, scoped != null ? scoped : nameFor(slot, ce.getValue()));
+                if (scoped != null) {
+                    rootName.put(root, scoped);
+                    used.add(scoped);
+                }
+            }
+            // Pass 2: remaining components get a fallback name that does NOT collide with a scoped name. The
+            // base (slot) name is the LVT variable's name; a component living outside that variable's scope
+            // (e.g. a return-value temp reusing the slot) must not reuse it, else the two merge and the slot's
+            // type widens to Object.
+            for (Map.Entry<Integer, Integer> ce : order.entrySet()) {
+                int root = ce.getKey();
+                if (rootName.containsKey(root)) {
+                    continue;
+                }
+                int idx = ce.getValue();
+                String name = nameFor(slot, idx);
+                while (used.contains(name)) {
+                    name = "local" + slot + "_" + (++idx);
+                }
+                rootName.put(root, name);
+                used.add(name);
             }
         }
 
