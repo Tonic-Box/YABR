@@ -8,6 +8,7 @@ import com.tonic.analysis.source.ast.expr.FieldAccessExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
@@ -1028,11 +1029,33 @@ public class ClassDecompiler {
      * Used for static initializers where return statements are invalid in Java source.
      */
     private void removeTrailingReturn(BlockStmt body) {
-        List<Statement> stmts = body.getStatements();
-        if (!stmts.isEmpty()) {
-            Statement last = stmts.get(stmts.size() - 1);
-            if (last instanceof ReturnStmt && ((ReturnStmt) last).getValue() == null) {
-                stmts.remove(stmts.size() - 1);
+        removeTrailingVoidReturn(body.getStatements());
+    }
+
+    /**
+     * Removes a redundant trailing void {@code return;} - one with nothing executable after it - from a
+     * statement list, recursing into the branches of a trailing {@code if} (which are themselves in tail
+     * position). A void return in tail position is implicit in Java, so emitting one is non-idempotent: the
+     * recompiled bytecode routes a try/catch's normal exit through a shared trailing return that recovery
+     * then surfaces as an explicit `return;` inside the enclosing block.
+     */
+    private void removeTrailingVoidReturn(List<Statement> stmts) {
+        if (stmts.isEmpty()) {
+            return;
+        }
+        Statement last = stmts.get(stmts.size() - 1);
+        if (last instanceof ReturnStmt && ((ReturnStmt) last).getValue() == null) {
+            stmts.remove(stmts.size() - 1);
+            // The statement now in last position (e.g. a trailing if) is itself in tail position; re-process so
+            // its own redundant trailing void return is dropped too.
+            removeTrailingVoidReturn(stmts);
+        } else if (last instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) last;
+            if (ifStmt.getThenBranch() instanceof BlockStmt) {
+                removeTrailingVoidReturn(((BlockStmt) ifStmt.getThenBranch()).getStatements());
+            }
+            if (ifStmt.getElseBranch() instanceof BlockStmt) {
+                removeTrailingVoidReturn(((BlockStmt) ifStmt.getElseBranch()).getStatements());
             }
         }
     }

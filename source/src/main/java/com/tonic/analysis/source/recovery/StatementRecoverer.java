@@ -1883,7 +1883,12 @@ public class StatementRecoverer {
         }
 
         if (current != null && stopBlocks.contains(current) && !visited.contains(current)) {
-            if (isSimpleTerminatorBlock(current)) {
+            // Only absorb a trailing terminator (e.g. a return) that is not the shared continuation of a
+            // try/catch. A return block that a try body falls into AND a catch jumps to is the continuation
+            // after the try/catch, not the try's own terminator; absorbing it emits a spurious `return;` inside
+            // the try. (A switch/if merge-return reached only from normal case blocks is still absorbed.)
+            if (isSimpleTerminatorBlock(current)
+                    && (visited.containsAll(current.getPredecessors()) || !isReachedFromCatchHandler(current))) {
                 List<Statement> termStmts = recoverSimpleBlock(current);
                 result.addAll(termStmts);
                 visited.add(current);
@@ -2441,10 +2446,25 @@ public class StatementRecoverer {
     }
 
     /**
-     * Whether {@code phi} is a dead merge of a catch handler's caught exception with the try-path's
-     * undefined value of the catch variable's reused slot - the catch variable already declared by its
-     * catch clause, so this phi must not be declared as a duplicate top-level local.
+     * Whether {@code block} is reached from a catch handler - i.e. one of its predecessors lies in some
+     * exception handler's region. Used to tell a shared try/catch continuation (the catch jumps to it) from
+     * an ordinary sequence terminator, so the former is recovered after the try/catch rather than inside it.
      */
+    private boolean isReachedFromCatchHandler(IRBlock block) {
+        Set<IRBlock> handlerRegion = new HashSet<>();
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+            if (h.getHandlerBlock() != null && handlerRegion.add(h.getHandlerBlock())) {
+                collectReachableBlocks(h.getHandlerBlock(), handlerRegion);
+            }
+        }
+        for (IRBlock pred : block.getPredecessors()) {
+            if (handlerRegion.contains(pred)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean isDeadCatchVarPhi(PhiInstruction phi, Set<IRBlock> handlerBlocks) {
         SSAValue result = phi.getResult();
         if (result == null || !result.getUses().isEmpty()) {
@@ -3254,7 +3274,12 @@ public class StatementRecoverer {
         }
 
         if (current != null && stopBlocks.contains(current) && !visited.contains(current)) {
-            if (isSimpleTerminatorBlock(current)) {
+            // Only absorb a trailing terminator (e.g. a return) that is not the shared continuation of a
+            // try/catch. A return block that a try body falls into AND a catch jumps to is the continuation
+            // after the try/catch, not the try's own terminator; absorbing it emits a spurious `return;` inside
+            // the try. (A switch/if merge-return reached only from normal case blocks is still absorbed.)
+            if (isSimpleTerminatorBlock(current)
+                    && (visited.containsAll(current.getPredecessors()) || !isReachedFromCatchHandler(current))) {
                 List<Statement> termStmts = recoverSimpleBlock(current);
                 result.addAll(termStmts);
                 visited.add(current);
