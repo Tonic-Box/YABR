@@ -68,3 +68,6 @@ bin/
 /ISSUES.md
 /tests/stress-test/
 /.serena/
+/tests/heap_analysis_debug.txt
+/tests/ir_dump.txt
+/tests/recovery_trace.txt

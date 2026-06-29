@@ -62,6 +62,8 @@ public class BytecodeEmitter {
     private final Set<InvokeInstruction> skipReceiver = new HashSet<>();
     /** Operand use count per value (across instructions and phis), so an unused result can be popped not stored. */
     private final Map<SSAValue, Integer> valueUseCounts = new HashMap<>();
+    /** Values that back a named source local; a store to one is kept (not popped) even when the value is unused. */
+    private final Set<SSAValue> namedValues = new HashSet<>();
 
     // For fall-through optimization
     private IRBlock nextBlock;
@@ -340,10 +342,11 @@ public class BytecodeEmitter {
                 || ((SimpleInstruction) instr).getOp() != SimpleOp.GOTO;
     }
 
-    /**
-     * Records each handler block's leading self-copy marker value — the caught exception the JVM places on
-     * the entry stack. These must be stored off the stack at handler entry (see {@link #emitCopy}).
-     */
+    /** Whether {@code instr} captures a caught exception (the handler-entry CATCH), whose slot must be kept. */
+    private boolean isCatchCapture(IRInstruction instr) {
+        return instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.CATCH;
+    }
+
     private void identifyHandlerExceptionCaptures() {
         handlerExceptionCaptures.clear();
         for (ExceptionHandler handler : method.getExceptionHandlers()) {
@@ -398,6 +401,10 @@ public class BytecodeEmitter {
                 SSAValue result = current.getResult();
                 if (result == null) continue;
                 if (inlinedConstants.contains(result)) continue;
+                // A caught exception always astores into the catch variable's own slot (like javac), even when
+                // used once, so the slot - and its LocalVariableTable name - survive the round trip. Never keep
+                // it resident.
+                if (isCatchCapture(current)) continue;
 
                 int useCount = useCounts.getOrDefault(result, 0);
                 if (useCount != 1) continue;
@@ -1052,6 +1059,10 @@ public class BytecodeEmitter {
     /** Operand use count per value across phis and instructions; an unused result is popped, not stored. */
     private void computeValueUseCounts() {
         valueUseCounts.clear();
+        namedValues.clear();
+        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
+            namedValues.addAll(local.getValues());
+        }
         for (IRBlock block : method.getBlocksInOrder()) {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 for (Value op : phi.getOperands()) {
@@ -1085,10 +1096,13 @@ public class BytecodeEmitter {
             return;
         }
 
-        if (valueUseCounts.getOrDefault(result, 0) == 0) {
+        if (valueUseCounts.getOrDefault(result, 0) == 0 && !isCatchCapture(instr)
+                && !namedValues.contains(result)) {
             // An unused result (e.g. a discarded `panel.add(child)`) is popped, not stored into a local whose
             // slot is then reused for unrelated types and widened to Object on round trip - matching javac's
-            // `invoke; pop`.
+            // `invoke; pop`. Exempt: a catch variable and a named source local (e.g. `num = num + 2` in a
+            // finally whose result is unused on the rethrow path) astore into their own slot below, so the
+            // assignment - and the slot/LVT name - survive, like javac's store-back.
             emit((result.getType().isTwoSlot() ? Opcode.POP2 : Opcode.POP).getCode());
             return;
         }

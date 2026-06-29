@@ -1693,6 +1693,42 @@ public class StatementRecoverer {
             }
         }
 
+        // YABR routes BOTH the try and catch normal exits through ONE shared finally block, which sits between
+        // the try and the catch (below the catch-all's wider span), so it would be absorbed into the try body
+        // AND re-recovered by the outer sequence -> a duplicated finally. javac duplicates the finally and has
+        // no such block. Find it as the non-handler successor of an inner (catch) region that ends before the
+        // catch-all, and stop there so it is recovered once, as the continuation after the try-catch-finally.
+        boolean sharedFinallyStopAdded = false;
+        if (mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null) {
+            Set<IRBlock> allHandlerBlocks = new HashSet<>();
+            for (ExceptionHandler h : handlers) {
+                if (h.getHandlerBlock() != null) {
+                    allHandlerBlocks.add(h.getHandlerBlock());
+                }
+            }
+            // YABR routes the try AND catch normal exits through ONE shared finally block sitting in the gap
+            // between the try region's end and the catch-all handler. It is a MERGE (reached from the try and
+            // the catch); the outer block sequence recovers it once as the continuation, so stop the try body
+            // there and skip the gap re-add - otherwise it is pulled into the try body too (duplicating the
+            // finally / continuation). The first such merge block in the gap is the shared finally.
+            int tryEndOffset = mainHandler.getTryEnd().getBytecodeOffset();
+            int handlerOffset = mainHandler.getHandlerBlock().getBytecodeOffset();
+            IRBlock shared = null;
+            int bestOffset = Integer.MAX_VALUE;
+            for (IRBlock block : irMethod.getBlocks()) {
+                int off = block.getBytecodeOffset();
+                if (off >= tryEndOffset && off < handlerOffset && off < bestOffset
+                        && !allHandlerBlocks.contains(block) && block.getPredecessors().size() > 1) {
+                    shared = block;
+                    bestOffset = off;
+                }
+            }
+            if (shared != null) {
+                tryStopBlocks.add(shared);
+                sharedFinallyStopAdded = true;
+            }
+        }
+
         List<Statement> tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited);
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
@@ -1726,7 +1762,11 @@ public class StatementRecoverer {
             List<Statement> finallyStmts = finallyBlock.getStatements();
             tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyStmts);
 
-            if (mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null) {
+            // Skip the gap re-add when we stopped at a shared finally block: that block IS the normal-exit
+            // finally + continuation and is now recovered once by the outer block sequence; pulling it in here
+            // too would duplicate it back into the try body.
+            if (!sharedFinallyStopAdded
+                    && mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null) {
                 List<Statement> gapStmts = recoverFinallyGap(
                     mainHandler.getTryEnd(), mainHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
 
@@ -2110,7 +2150,7 @@ public class StatementRecoverer {
 
         for (SSAValue value : sortedValues) {
             PhiInstruction phi = valueToPhiMap.get(value);
-            emitPhiDeclaration(phi, statements, declaredNames);
+            emitPhiDeclaration(phi, statements, declaredNames, handlerBlocks);
         }
 
         // Additional pass: Declare handler block phis that are used through store chains
@@ -2150,10 +2190,20 @@ public class StatementRecoverer {
      * Emits a phi variable declaration with default value.
      * Uses unified type from all incoming phi values.
      */
-    private void emitPhiDeclaration(PhiInstruction phi, List<Statement> statements, Set<String> declaredNames) {
+    private void emitPhiDeclaration(PhiInstruction phi, List<Statement> statements, Set<String> declaredNames,
+                                    Set<IRBlock> handlerBlocks) {
         if (phi == null) return;
         SSAValue result = phi.getResult();
         if (result == null) return;
+
+        // A dead phi that merges a caught exception (an operand defined in a catch handler) with the
+        // try-path's undefined slot value is the catch variable's reused slot bridging the shared finally
+        // join. The catch variable is declared by its own catch clause, so declaring this phi too emits a
+        // spurious top-level `Exception e = null`. (Restricted to dead + handler-sourced so the load-bearing
+        // pattern-switch dead phis, which have no handler operand, still declare.)
+        if (isDeadCatchVarPhi(phi, handlerBlocks)) {
+            return;
+        }
 
         // A phi that merges a primitive with a reference is a type-pun across a reused JVM
         // slot; it is only verifier-legal because its result is dead. Declaring it would
@@ -2391,11 +2441,36 @@ public class StatementRecoverer {
     }
 
     /**
-     * Detects a dead phi whose operands mix primitive and reference types. Such a phi is a
-     * type-pun over a JVM slot reused for unrelated values; it is only verifier-legal because
-     * its result is never read. Declaring it would unify the operands to Object and mis-type
-     * the slot, so it must not drive the slot's declaration.
+     * Whether {@code phi} is a dead merge of a catch handler's caught exception with the try-path's
+     * undefined value of the catch variable's reused slot - the catch variable already declared by its
+     * catch clause, so this phi must not be declared as a duplicate top-level local.
      */
+    private boolean isDeadCatchVarPhi(PhiInstruction phi, Set<IRBlock> handlerBlocks) {
+        SSAValue result = phi.getResult();
+        if (result == null || !result.getUses().isEmpty()) {
+            return false;
+        }
+        SourceType type = typeRecoverer.recoverType(result);
+        if (type == null || type.isPrimitive() || type.isVoid()) {
+            return false;
+        }
+        // A reference-typed dead phi that either has no real incoming value (the catch variable's reused slot
+        // is undefined on the try path and its catch def was elided) or merges a value defined in a catch
+        // handler is the catch variable bridging a shared finally join - already declared by its catch clause.
+        boolean hasOperand = false;
+        for (Value op : phi.getOperands()) {
+            if (op instanceof SSAValue) {
+                hasOperand = true;
+                IRInstruction def = ((SSAValue) op).getDefinition();
+                if (def != null && def.getBlock() != null && handlerBlocks != null
+                        && handlerBlocks.contains(def.getBlock())) {
+                    return true;
+                }
+            }
+        }
+        return !hasOperand;
+    }
+
     private boolean isTypePunDeadPhi(PhiInstruction phi) {
         SSAValue result = phi.getResult();
         if (result == null || !result.getUses().isEmpty()) {

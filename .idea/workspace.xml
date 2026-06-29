@@ -4,14 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Faithful lambda + argument recompilation">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Type reused-slot locals correctly on round trip">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeclarationHoister.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/DeclarationHoister.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/LocalVariableTableBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/LocalVariableTableBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/heap_analysis_debug.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tests/heap_analysis_debug.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/recovery_trace.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tests/recovery_trace.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripIdempotenceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripIdempotenceTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -159,14 +157,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00048" summary="- Fixed bytecode printer for nested BSMs">
-      <option name="closed" value="true" />
-      <created>1781729144636</created>
-      <option name="number" value="00048" />
-      <option name="presentableId" value="LOCAL-00048" />
-      <option name="project" value="LOCAL" />
-      <updated>1781729144636</updated>
     </task>
     <task id="LOCAL-00049" summary="- Query DSL: class type-system predicates, class &lt;-&gt; method composition, param(n).type">
       <option name="closed" value="true" />
@@ -552,7 +542,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782744144715</updated>
     </task>
-    <option name="localTasksCounter" value="97" />
+    <task id="LOCAL-00097" summary="- Type reused-slot locals correctly on round trip">
+      <option name="closed" value="true" />
+      <created>1782751217861</created>
+      <option name="number" value="00097" />
+      <option name="presentableId" value="LOCAL-00097" />
+      <option name="project" value="LOCAL" />
+      <updated>1782751217861</updated>
+    </task>
+    <option name="localTasksCounter" value="98" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -567,7 +565,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Cleanup" />
     <MESSAGE value="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup" />
     <MESSAGE value="Removal of Lombok: pt1&#10;- query module&#10;- renamer module" />
     <MESSAGE value="Removal of Lombok: pt2&#10;- execution" />
@@ -592,7 +589,8 @@
     <MESSAGE value="- Keep varargs call arguments stack-resident" />
     <MESSAGE value="- slot-naming fix now" />
     <MESSAGE value="- Faithful lambda + argument recompilation" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Faithful lambda + argument recompilation" />
+    <MESSAGE value="- Type reused-slot locals correctly on round trip" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Type reused-slot locals correctly on round trip" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

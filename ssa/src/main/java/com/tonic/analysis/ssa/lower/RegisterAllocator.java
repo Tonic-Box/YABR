@@ -3,6 +3,7 @@ package com.tonic.analysis.ssa.lower;
 import com.tonic.analysis.ssa.analysis.LivenessAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
 import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
@@ -81,6 +82,7 @@ public class RegisterAllocator {
         preAllocatePhiResults(freeRegs);
         assignPhiCopiesToPhiResultSlots();
         coalesceCopySourcesIntoPhiSlots();
+        coalesceReassignmentsIntoVariableSlots();
 
         for (LiveInterval interval : intervals) {
             SSAValue value = interval.value;
@@ -225,18 +227,94 @@ public class RegisterAllocator {
     }
 
     /**
-     * Move coalescing for phi-edge copies. Each phi has copies of the form
-     * {@code copyValue = copy source} in its predecessors, and the copy value already shares the
-     * phi result's slot. If the copy's <em>source</em> is also pinned to that slot the copy becomes
-     * a no-op (the emitter skips same-slot copies), eliminating the redundant load/store and the
-     * source's separate slot. A source is coalesced only when it does not interfere with the phi
-     * result nor with any source already placed in that slot, so simultaneously-live values keep
-     * distinct slots. Phi slots are reserved for the whole method, so a coalesced source safely
-     * occupies the slot across its (covered) live range.
+     * Coalesces a reassignment back into its variable's slot. A value defined as {@code v = op(p, x)} where one
+     * operand {@code p} belongs to {@code v}'s OWN source variable (e.g. {@code num = num + 2},
+     * {@code sum = sum + i}) is the same variable's next value and javac keeps it in the one slot - but it has
+     * no copy/phi edge, so the linear scan would spill it to a fresh temp. Pin it to {@code p}'s slot. Only an
+     * operand of the SAME source variable qualifies (so {@code local6 = sum + local5} never coalesces across
+     * variables), and it must not interfere with a DIFFERENT variable already in that slot (same-variable
+     * occupants are temporally/path disjoint by construction, like the values javac keeps in one slot).
      */
+    private void coalesceReassignmentsIntoVariableSlots() {
+        Map<SSAValue, Object> group = new HashMap<>();
+        Map<Object, Set<Integer>> groupSlots = new HashMap<>();
+        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
+            for (SSAValue v : local.getValues()) {
+                group.putIfAbsent(v, local);
+                Integer s = allocation.get(v);
+                if (s != null) {
+                    groupSlots.computeIfAbsent(local, k -> new HashSet<>()).add(s);
+                }
+            }
+        }
+        Map<Integer, List<SSAValue>> slotValues = new HashMap<>();
+        for (Map.Entry<SSAValue, Integer> e : allocation.entrySet()) {
+            slotValues.computeIfAbsent(e.getValue(), k -> new ArrayList<>()).add(e.getKey());
+        }
+        for (IRBlock b : method.getBlocks()) {
+            for (IRInstruction instr : b.getInstructions()) {
+                if (!(instr instanceof BinaryOpInstruction)) {
+                    continue;
+                }
+                SSAValue v = instr.getResult();
+                if (v == null || allocation.containsKey(v) || v.getType().isTwoSlot()) {
+                    continue;
+                }
+                Object g = group.get(v);
+                if (g == null) {
+                    continue;
+                }
+                // An operand sitting in a slot v's OWN variable already occupies means this op reassigns the
+                // variable (the operand is the variable's current value, e.g. the loop/entry phi in num's slot).
+                Set<Integer> mySlots = groupSlots.getOrDefault(g, Collections.emptySet());
+                Integer slot = null;
+                for (Value op : instr.getOperands()) {
+                    if (op instanceof SSAValue) {
+                        Integer s = allocation.get(op);
+                        if (s != null && s >= reservedSlotCount && mySlots.contains(s)) {
+                            slot = s;
+                            break;
+                        }
+                    }
+                }
+                if (slot == null) {
+                    continue;
+                }
+                IRType last = slotType.get(slot);
+                if (last != null && storageKind(last) != storageKind(v.getType())) {
+                    continue;
+                }
+                boolean conflicts = false;
+                for (SSAValue occ : slotValues.getOrDefault(slot, Collections.emptyList())) {
+                    if (group.get(occ) != g && interferes(v, occ)) {
+                        conflicts = true;
+                        break;
+                    }
+                }
+                if (conflicts) {
+                    continue;
+                }
+                allocation.put(v, slot);
+                slotValues.computeIfAbsent(slot, k -> new ArrayList<>()).add(v);
+            }
+        }
+    }
+
     private void coalesceCopySourcesIntoPhiSlots() {
         Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
         if (phiCopies == null) return;
+
+        // value -> its source variable. Two incoming copies of ONE phi that belong to the same source
+        // variable are its pre- and post-reassignment SSA values arriving from different predecessors; they
+        // are mutually exclusive at the phi and may share the phi slot even though their conservative
+        // linear-scan intervals overlap (e.g. num0 = pre-try value restored on the catch path vs num1 = the
+        // try's reassignment - the overlap is path-insensitive, the values never coexist).
+        Map<SSAValue, Object> group = new HashMap<>();
+        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
+            for (SSAValue v : local.getValues()) {
+                group.putIfAbsent(v, local);
+            }
+        }
 
         for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
             Integer phiSlot = allocation.get(entry.getKey());
@@ -251,9 +329,11 @@ public class RegisterAllocator {
                 if (interferes(entry.getKey(), source)) {
                     continue;
                 }
+                Object sourceGroup = group.get(source);
                 boolean conflictsWithPlaced = false;
                 for (SSAValue other : placed) {
-                    if (interferes(other, source)) {
+                    boolean sameVariable = sourceGroup != null && sourceGroup == group.get(other);
+                    if (!sameVariable && interferes(other, source)) {
                         conflictsWithPlaced = true;
                         break;
                     }
