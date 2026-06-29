@@ -267,6 +267,54 @@ public class TypeResolver {
     }
 
     /**
+     * The descriptor of a method declared directly in {@code ownerClass} with the given (assumed unique, e.g.
+     * a synthetic {@code lambda$...}) name, or null if the class or method is not found. Used to recover a
+     * lambda's specific parameter types on round trip, which the source's untyped {@code x ->} form drops.
+     */
+    public String descriptorOfMethod(String ownerClass, String methodName) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return null;
+        }
+        for (MethodEntry method : cf.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                return String.valueOf(method.getDesc());
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The {@code [name, descriptor]} of the {@code index}-th synthetic lambda method enclosed by
+     * {@code enclosingMethod} in {@code ownerClass}, ordered by the trailing counter, or null if none. The
+     * compiler numbers lambdas with a per-class counter (e.g. {@code lambda$showError$3}) that a per-method
+     * regenerated name can't reproduce, so on round trip we match by enclosing method + in-method index
+     * instead, recovering the real name and parameter types of the lambda the class already declares.
+     */
+    public String[] findLambdaMethod(String ownerClass, String enclosingMethod, int index) {
+        ClassFile cf = classPool.get(ownerClass);
+        if (cf == null) {
+            return null;
+        }
+        String prefix = "lambda$" + enclosingMethod + "$";
+        List<MethodEntry> matches = new ArrayList<>();
+        for (MethodEntry method : cf.getMethods()) {
+            String suffix = method.getName().startsWith(prefix)
+                    ? method.getName().substring(prefix.length()) : null;
+            if (suffix != null && !suffix.isEmpty() && suffix.chars().allMatch(Character::isDigit)) {
+                matches.add(method);
+            }
+        }
+        matches.sort(java.util.Comparator.comparingInt(
+                m -> Integer.parseInt(m.getName().substring(prefix.length()))));
+        if (index < 0 || index >= matches.size()) {
+            return null;
+        }
+        MethodEntry chosen = matches.get(index);
+        return new String[]{chosen.getName(), String.valueOf(chosen.getDesc())};
+    }
+
+    /**
      * Parses the parameter types of a method descriptor into a list of SourceTypes.
      */
     public List<SourceType> paramTypesFromDescriptor(String methodDescriptor) {

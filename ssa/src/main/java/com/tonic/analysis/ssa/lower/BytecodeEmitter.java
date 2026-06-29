@@ -55,6 +55,11 @@ public class BytecodeEmitter {
     private final Map<NewInstruction, InvokeInstruction> newToInit;
     private final Map<InvokeInstruction, NewInstruction> initToNew;
 
+    /** A receiver value to push just before this instruction (the start of a call argument's build window). */
+    private final Map<IRInstruction, SSAValue> receiverPreload = new HashMap<>();
+    /** Invokes whose receiver (operand 0) was preloaded ahead of the argument window, so skip it at the call. */
+    private final Set<InvokeInstruction> skipReceiver = new HashSet<>();
+
     // For fall-through optimization
     private IRBlock nextBlock;
 
@@ -161,6 +166,7 @@ public class BytecodeEmitter {
         analyzeInlinedConstants();
         analyzeStackResidentValues();
         analyzeConstructorPairs();
+        analyzeReceiverPreloads();
         identifyHandlerExceptionCaptures();
 
         try {
@@ -368,10 +374,8 @@ public class BytecodeEmitter {
 
         for (IRBlock block : method.getBlocksInOrder()) {
             List<IRInstruction> instructions = block.getInstructions();
-            Map<IRInstruction, Integer> indexOf = new HashMap<>();
             Map<SSAValue, Integer> defIdxOf = new HashMap<>();
             for (int k = 0; k < instructions.size(); k++) {
-                indexOf.put(instructions.get(k), k);
                 SSAValue r = instructions.get(k).getResult();
                 if (r != null) {
                     defIdxOf.put(r, k);
@@ -651,6 +655,11 @@ public class BytecodeEmitter {
             return;
         }
 
+        SSAValue preload = receiverPreload.get(instr);
+        if (preload != null) {
+            emitLoadValue(preload); // push the call receiver beneath the argument it's about to build
+        }
+
         if (instr instanceof NewInstruction && newToInit.containsKey(instr)) {
             emitNew((NewInstruction) instr);
             emit(Opcode.DUP.getCode());
@@ -750,6 +759,128 @@ public class BytecodeEmitter {
     }
 
     /**
+     * Detects {@code recv.method(buildArg)} where the receiver is a re-loadable value and the single argument is
+     * built in a closed window immediately before the call (e.g. {@code setLayout(new BoxLayout(...))},
+     * {@code setBorder(BorderFactory.create...())}). The emitter would otherwise spill the argument to a local
+     * (whose slot is then reused for unrelated types, surfacing as {@code Object} on round trip) because it can't
+     * place the receiver beneath an already-built argument. Here the receiver is preloaded before the argument's
+     * build window and the argument is kept stack-resident, matching javac's {@code aload recv; <build arg>;
+     * invoke}. Safe: window and use sit in one block (no branch), so the resident argument never crosses a join,
+     * and the receiver's other uses (e.g. a constructor argument) load fresh from its slot.
+     */
+    private void analyzeReceiverPreloads() {
+        receiverPreload.clear();
+        skipReceiver.clear();
+
+        Map<SSAValue, Integer> useCounts = new HashMap<>();
+        for (IRBlock block : method.getBlocksInOrder()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                for (Value op : instr.getOperands()) {
+                    if (op instanceof SSAValue) {
+                        useCounts.merge((SSAValue) op, 1, Integer::sum);
+                    }
+                }
+            }
+        }
+
+        for (IRBlock block : method.getBlocksInOrder()) {
+            List<IRInstruction> instructions = block.getInstructions();
+            Map<SSAValue, Integer> defIdxOf = new HashMap<>();
+            for (int k = 0; k < instructions.size(); k++) {
+                SSAValue r = instructions.get(k).getResult();
+                if (r != null) {
+                    defIdxOf.put(r, k);
+                }
+            }
+            for (int k = 0; k < instructions.size(); k++) {
+                if (!(instructions.get(k) instanceof InvokeInstruction)) {
+                    continue;
+                }
+                InvokeInstruction inv = (InvokeInstruction) instructions.get(k);
+                boolean pairedInit = initToNew.containsKey(inv);
+                if (!pairedInit && "<init>".equals(inv.getName())) {
+                    continue; // a chained constructor (super/this) - special stack handling, never touch
+                }
+                List<Value> ops = inv.getOperands();
+                if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue)) {
+                    continue; // exactly receiver/new + one argument
+                }
+                SSAValue recv = (SSAValue) ops.get(0);
+                SSAValue arg = (SSAValue) ops.get(1);
+                Integer argDef = defIdxOf.get(arg);
+                if (argDef == null || argDef >= k) {
+                    continue; // the argument is built in this block before the call
+                }
+                IRInstruction argDefInstr = instructions.get(argDef);
+                if (!(argDefInstr instanceof NewInstruction) && !(argDefInstr instanceof InvokeInstruction)) {
+                    continue; // only genuinely constructed args (new / call result), not constants or loads
+                }
+                // The argument must be consumed ONLY by this call - plus its own <init> when it's a paired new
+                // (which adds one use). A value used elsewhere (e.g. a panel that also receives child adds)
+                // can't be made resident, so exclude it.
+                int expectedUses = (argDefInstr instanceof NewInstruction
+                        && newToInit.containsKey(argDefInstr)) ? 2 : 1;
+                if (useCounts.getOrDefault(arg, 0) != expectedUses) {
+                    continue;
+                }
+                if (!argWindowClosedForPreload(instructions, defIdxOf, useCounts, argDef, k, recv)) {
+                    continue;
+                }
+                if (pairedInit) {
+                    // The receiver is the freshly-new'd object, already on the stack (new; dup); just keep the
+                    // argument resident so it builds on top of it (e.g. new JPanel(new FlowLayout(0))).
+                    stackResidentValues.add(arg);
+                } else {
+                    // Method call: the receiver is a re-loadable, multi-use slot value; preload it beneath the
+                    // argument window so the argument need not spill to a local.
+                    if (useCounts.getOrDefault(recv, 0) <= 1
+                            || stackResidentValues.contains(recv) || inlinedConstants.contains(recv)) {
+                        continue;
+                    }
+                    receiverPreload.put(instructions.get(argDef), recv);
+                    skipReceiver.add(inv);
+                    stackResidentValues.add(arg);
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether {@code [windowStart, invIdx)} is a closed build window for an argument preceded by a preloaded
+     * receiver: the receiver is defined before the window, and every value the window produces is consumed
+     * inside the window or by the call - so the receiver stays undisturbed at the bottom (no {@code dup_x}/swap).
+     */
+    private boolean argWindowClosedForPreload(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
+                                              Map<SSAValue, Integer> useCounts, int windowStart, int invIdx,
+                                              SSAValue recv) {
+        Integer recvDef = defIdxOf.get(recv);
+        if (recvDef != null && recvDef >= windowStart) {
+            return false;
+        }
+        for (int j = windowStart; j < invIdx; j++) {
+            SSAValue r = instructions.get(j).getResult();
+            if (r == null) {
+                continue;
+            }
+            if (r.equals(recv)) {
+                return false;
+            }
+            int within = 0;
+            for (int q = windowStart; q <= invIdx; q++) {
+                for (Value op : instructions.get(q).getOperands()) {
+                    if (r.equals(op)) {
+                        within++;
+                    }
+                }
+            }
+            if (within != useCounts.getOrDefault(r, 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Emits a paired constructor {@code <init>}: the receiver is already on the stack (from {@code new; dup}), so only
      * the constructor arguments are loaded; after {@code invokespecial} the initialized reference is stored as the
      * paired {@code new}'s result.
@@ -791,7 +922,13 @@ public class BytecodeEmitter {
             }
         }
 
-        for (Value operand : instr.getOperands()) {
+        boolean skipFirst = instr instanceof InvokeInstruction && skipReceiver.contains(instr);
+        List<Value> operands = instr.getOperands();
+        for (int oi = 0; oi < operands.size(); oi++) {
+            if (oi == 0 && skipFirst) {
+                continue; // receiver preloaded beneath the argument window
+            }
+            Value operand = operands.get(oi);
             if (operand instanceof SSAValue) {
                 SSAValue ssa = (SSAValue) operand;
                 if (preloadedOnStack.remove(ssa)) {

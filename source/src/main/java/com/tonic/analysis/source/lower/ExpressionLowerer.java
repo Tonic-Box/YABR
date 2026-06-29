@@ -15,6 +15,7 @@ import com.tonic.analysis.ssa.value.*;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -1878,10 +1879,19 @@ public class ExpressionLowerer {
 
     private Value lowerLambda(LambdaExpr lambda) {
         List<SyntheticLambdaMethod.CapturedVariable> captures = collectCaptures(lambda);
-        String lambdaMethodName = ctx.generateLambdaMethodName();
         String ownerClass = ctx.getOwnerClass();
         if (ownerClass == null) {
             ownerClass = "UnknownClass";
+        }
+        // Resolve the name to the class's existing lambda method for this enclosing method + in-method index
+        // (the compiler's per-class counter, e.g. $3, differs from our per-method one, e.g. $0). Falls back to
+        // the generated name for genuinely new lambdas.
+        int lambdaIndex = ctx.getLambdaCounter();
+        String lambdaMethodName = ctx.generateLambdaMethodName();
+        String[] existingLambda =
+                ctx.getTypeResolver().findLambdaMethod(ownerClass, ctx.getCurrentMethodName(), lambdaIndex);
+        if (existingLambda != null) {
+            lambdaMethodName = existingLambda[0];
         }
 
         SourceType lambdaType = lambda.getType();
@@ -1908,9 +1918,35 @@ public class ExpressionLowerer {
         String syntheticDescriptor = buildSyntheticMethodDescriptor(captures, lambda.getParameters(), returnType);
         boolean isStatic = !capturesThis(captures);
 
+        // Round-trip fidelity: the decompiled source spells lambda parameters untyped (`x -> ...`), so the
+        // generic element type is lost and would re-lower to Object - breaking the body (`x.foo()` won't
+        // resolve) and the synthetic descriptor. When the class still declares this synthetic method (the
+        // round-trip case), recover the real parameter types from its descriptor (captures precede the SAM
+        // parameters) and reuse the exact descriptor, so the recompiled invokedynamic resolves to it.
+        List<LambdaParameter> lambdaParams = lambda.getParameters();
+        String existingDescriptor = ctx.getTypeResolver().descriptorOfMethod(ownerClass, lambdaMethodName);
+        if (existingDescriptor != null) {
+            // Reuse the existing method's exact descriptor so the recompiled invokedynamic resolves to it
+            // (works for both static and instance `this`-capturing lambdas). The SAM parameters are the
+            // TRAILING descriptor args - captures, including an implicit receiver for instance lambdas,
+            // precede them - so retype the lambda params from the tail, independent of capture order.
+            List<SourceType> existingArgs = ctx.getTypeResolver().paramTypesFromDescriptor(existingDescriptor);
+            int n = lambdaParams.size();
+            if (existingArgs.size() >= n) {
+                List<LambdaParameter> retyped = new ArrayList<>();
+                for (int i = 0; i < n; i++) {
+                    retyped.add(LambdaParameter.implicit(
+                        lambdaParams.get(i).name(), existingArgs.get(existingArgs.size() - n + i)));
+                }
+                lambdaParams = retyped;
+            }
+            syntheticDescriptor = existingDescriptor;
+            returnType = ctx.getTypeResolver().returnTypeFromDescriptor(existingDescriptor);
+        }
+
         SyntheticLambdaMethod synthetic = new SyntheticLambdaMethod(
             lambdaMethodName, syntheticDescriptor, isStatic,
-            captures, lambda.getBody(), lambda.getParameters(), returnType
+            captures, lambda.getBody(), lambdaParams, returnType
         );
         ctx.registerSyntheticMethod(synthetic);
 
@@ -2100,7 +2136,10 @@ public class ExpressionLowerer {
             paramNames.add(param.name());
         }
 
-        Set<String> capturedNames = new HashSet<>();
+        // Insertion-ordered so captures follow the order they appear in the body (matching javac): the
+        // receiver `this` first when present, then captured locals. The order is the call site's argument
+        // order, so it must be stable and match the class's existing lambda method.
+        Set<String> capturedNames = new LinkedHashSet<>();
         List<SyntheticLambdaMethod.CapturedVariable> captures = new ArrayList<>();
 
         CaptureCollector collector = new CaptureCollector(paramNames, capturedNames);
@@ -2394,6 +2433,15 @@ public class ExpressionLowerer {
             if (!paramNames.contains(name)) {
                 capturedNames.add(name);
             }
+            return null;
+        }
+
+        @Override
+        public Void visitThis(ThisExpr expr) {
+            // A lambda that references the enclosing instance captures `this` (javac emits an instance
+            // synthetic and passes the receiver as the first captured arg). Without this the recompiled call
+            // site drops the receiver and the synthetic descriptor no longer matches the class's lambda method.
+            capturedNames.add("this");
             return null;
         }
     }

@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Faithful lambda + argument recompilation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/TypeResolver.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,22 +156,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00045" summary="Resolve reference types in descriptors and qualified static field access&#10;&#10;descriptorOf/resolveInternalName apply imports and fix nested $ so descriptors match the originals; recognize a.b.Outer$Inner.CONST as a static field access instead of resolving its owner to Object.">
-      <option name="closed" value="true" />
-      <created>1781498764552</created>
-      <option name="number" value="00045" />
-      <option name="presentableId" value="LOCAL-00045" />
-      <option name="project" value="LOCAL" />
-      <updated>1781498764552</updated>
-    </task>
-    <task id="LOCAL-00046" summary="- update docs">
-      <option name="closed" value="true" />
-      <created>1781501034007</created>
-      <option name="number" value="00046" />
-      <option name="presentableId" value="LOCAL-00046" />
-      <option name="project" value="LOCAL" />
-      <updated>1781501034007</updated>
     </task>
     <task id="LOCAL-00047" summary="- Fix bug where query wasn't considering DynamicSubject condys">
       <option name="closed" value="true" />
@@ -547,7 +533,23 @@
       <option name="project" value="LOCAL" />
       <updated>1782709241128</updated>
     </task>
-    <option name="localTasksCounter" value="94" />
+    <task id="LOCAL-00094" summary="- Keep varargs call arguments stack-resident">
+      <option name="closed" value="true" />
+      <created>1782734786735</created>
+      <option name="number" value="00094" />
+      <option name="presentableId" value="LOCAL-00094" />
+      <option name="project" value="LOCAL" />
+      <updated>1782734786735</updated>
+    </task>
+    <task id="LOCAL-00095" summary="- slot-naming fix now">
+      <option name="closed" value="true" />
+      <created>1782737518022</created>
+      <option name="number" value="00095" />
+      <option name="presentableId" value="LOCAL-00095" />
+      <option name="project" value="LOCAL" />
+      <updated>1782737518022</updated>
+    </task>
+    <option name="localTasksCounter" value="96" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -562,9 +564,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Stale tasks cleanup" />
-    <MESSAGE value="Clean up README" />
-    <MESSAGE value="Jitpack badge" />
     <MESSAGE value="Cleanup" />
     <MESSAGE value="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup" />
     <MESSAGE value="Removal of Lombok: pt1&#10;- query module&#10;- renamer module" />
@@ -587,7 +586,10 @@
     <MESSAGE value="- Keep call arguments and loop bounds on the operand stack" />
     <MESSAGE value="Round-trip idempotence: harness + try/finally, inner-class types, branch polarity&#10;- try/finally: lower a synthetic catch(Throwable){&lt;finally&gt;; throw} so the finally runs on uncaught exceptions and re-decompiles back to a finally&#10;- TypeResolver: resolve inner-class field owners spelled with '/' via normalizeNestedName&#10;- branch polarity: lowerCondition threads a negate flag (De Morgan + CompareOp.invert()) instead of swapping targets, so '!cond' keeps the then arm as the jump target like javac" />
     <MESSAGE value="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak" />
-    <option name="LAST_COMMIT_MESSAGE" value="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak" />
+    <MESSAGE value="- Keep varargs call arguments stack-resident" />
+    <MESSAGE value="- slot-naming fix now" />
+    <MESSAGE value="- Faithful lambda + argument recompilation" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Faithful lambda + argument recompilation" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
