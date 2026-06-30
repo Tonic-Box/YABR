@@ -31,8 +31,10 @@ import com.tonic.util.Modifiers;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Reconstructs varargs calls by collapsing an explicit trailing array argument back into individual
@@ -137,17 +139,28 @@ public class VarargsReconstructor implements ASTTransform {
      */
     private boolean process(List<Statement> stmts, Map<String, Integer> uses) {
         for (int i = 0; i < stmts.size(); i++) {
-            ArrayBuild build = matchArrayBuild(stmts, i);
+            ArrayBuild build = matchArrayBuild(stmts, i, uses);
             if (build != null
-                    && uses.getOrDefault(build.varName, 0) == build.stmtCount
-                    && i + build.stmtCount < stmts.size()) {
-                MethodCallExpr consumer = findConsumer(stmts.get(i + build.stmtCount), build.varName);
+                    && uses.getOrDefault(build.varName, 0) == build.elements.size() + build.extraRefs + 1) {
+                // The uses check guarantees the array var is referenced ONLY by its stores and the single
+                // consuming call, so any statements between the build and that call (e.g. the recompile
+                // hoists the array build ahead of an intervening `dialog.updateStatus(...)`) cannot touch it.
+                // Scan forward to the consumer rather than requiring it immediately after the build.
+                int ci = build.consumerIndex;
+                MethodCallExpr consumer = null;
+                while (ci < stmts.size()) {
+                    consumer = findConsumer(stmts.get(ci), build.varName);
+                    if (consumer != null) {
+                        break;
+                    }
+                    ci++;
+                }
                 if (consumer != null && isVarargsCallee(consumer)) {
                     NodeList<Expression> args = consumer.getArguments();
                     args.remove(args.size() - 1);
                     args.addAll(build.elements);
-                    for (int k = 0; k < build.stmtCount; k++) {
-                        stmts.remove(i);
+                    for (int k = build.removeIndices.size() - 1; k >= 0; k--) {
+                        stmts.remove((int) build.removeIndices.get(k));
                     }
                     return true;
                 }
@@ -167,16 +180,28 @@ public class VarargsReconstructor implements ASTTransform {
      * statements the group spans (declaration + stores), and the element expressions in index order,
      * or {@code null} if the shape does not match.
      */
-    private ArrayBuild matchArrayBuild(List<Statement> stmts, int index) {
+    private ArrayBuild matchArrayBuild(List<Statement> stmts, int index, Map<String, Integer> uses) {
         Statement first = stmts.get(index);
-        if (!(first instanceof VarDeclStmt)) {
+        // The array creation is either a declaration `T[] v = new T[N]` or - when a slot-split gives the local
+        // a separate null-init declaration - a plain assignment `v = new T[N]`. Accept both as the build start.
+        String varName;
+        NewArrayExpr array;
+        if (first instanceof VarDeclStmt && ((VarDeclStmt) first).getInitializer() instanceof NewArrayExpr) {
+            VarDeclStmt decl = (VarDeclStmt) first;
+            varName = decl.getName();
+            array = (NewArrayExpr) decl.getInitializer();
+        } else if (first instanceof ExprStmt && ((ExprStmt) first).getExpression() instanceof BinaryExpr) {
+            BinaryExpr assign = (BinaryExpr) ((ExprStmt) first).getExpression();
+            if (assign.getOperator() != BinaryOperator.ASSIGN
+                    || !(assign.getLeft() instanceof VarRefExpr)
+                    || !(assign.getRight() instanceof NewArrayExpr)) {
+                return null;
+            }
+            varName = ((VarRefExpr) assign.getLeft()).getName();
+            array = (NewArrayExpr) assign.getRight();
+        } else {
             return null;
         }
-        VarDeclStmt decl = (VarDeclStmt) first;
-        if (!(decl.getInitializer() instanceof NewArrayExpr)) {
-            return null;
-        }
-        NewArrayExpr array = (NewArrayExpr) decl.getInitializer();
         if (array.getInitializer() != null || array.getDimensions().size() != 1) {
             return null;
         }
@@ -184,14 +209,43 @@ public class VarargsReconstructor implements ASTTransform {
         if (size == null || size < 0) {
             return null;
         }
-        String varName = decl.getName();
         Expression[] elements = new Expression[size];
-        for (int k = 0; k < size; k++) {
-            int storeIndex = index + 1 + k;
-            if (storeIndex >= stmts.size() || !(stmts.get(storeIndex) instanceof ExprStmt)) {
+        List<Integer> removeIndices = new ArrayList<>();
+        removeIndices.add(index);
+        Map<String, Expression> elementTemps = new HashMap<>();
+        Set<String> consumedTemps = new HashSet<>();
+        int cursor = index + 1;
+        int matched = 0;
+        int extraRefs = 0;
+        while (matched < size) {
+            if (cursor >= stmts.size()) {
                 return null;
             }
-            Expression expr = ((ExprStmt) stmts.get(storeIndex)).getExpression();
+            Statement s = stmts.get(cursor);
+            // An interleaved inert self-assignment or declaration of the array var (the spurious
+            // `local6 = null` / `Object[] local6 = null` a slot-split round trip emits between the array
+            // creation and its stores) is folded into the build and removed. extraRefs tracks the var
+            // references it contributes so the "used only by this build" check below stays exact.
+            int ir = inertRefs(s, varName);
+            if (ir >= 0) {
+                extraRefs += ir;
+                removeIndices.add(cursor);
+                cursor++;
+                continue;
+            }
+            // A single-use temp holding one element's value (`T = <expr>` then later `arr[k] = T`) - the
+            // recompile's multi-element eval-order spill. Record it; the store that reads T inlines <expr>.
+            String temp = elementTempName(s, varName, uses);
+            if (temp != null && !elementTemps.containsKey(temp)) {
+                elementTemps.put(temp, ((BinaryExpr) ((ExprStmt) s).getExpression()).getRight());
+                removeIndices.add(cursor);
+                cursor++;
+                continue;
+            }
+            if (!(s instanceof ExprStmt)) {
+                return null;
+            }
+            Expression expr = ((ExprStmt) s).getExpression();
             if (!(expr instanceof BinaryExpr)) {
                 return null;
             }
@@ -209,9 +263,69 @@ public class VarargsReconstructor implements ASTTransform {
             if (slot == null || slot < 0 || slot >= size || elements[slot] != null) {
                 return null;
             }
-            elements[slot] = assign.getRight();
+            Expression element = assign.getRight();
+            if (element instanceof VarRefExpr && elementTemps.containsKey(((VarRefExpr) element).getName())) {
+                String t = ((VarRefExpr) element).getName();
+                consumedTemps.add(t);
+                element = elementTemps.get(t);
+            }
+            elements[slot] = element;
+            removeIndices.add(cursor);
+            matched++;
+            cursor++;
         }
-        return new ArrayBuild(varName, 1 + size, new ArrayList<>(List.of(elements)));
+        // Every recorded element temp must be consumed by a store; an unconsumed one means that `T = <expr>`
+        // was not actually part of this build, so the match is invalid (do not remove unrelated statements).
+        if (!consumedTemps.containsAll(elementTemps.keySet())) {
+            return null;
+        }
+        return new ArrayBuild(varName, removeIndices, cursor, extraRefs, new ArrayList<>(List.of(elements)));
+    }
+
+    /**
+     * If {@code s} is `T = <expr>` for a single-use temp {@code T} (not the array var, LHS a plain variable),
+     * returns {@code T} - a candidate element value the recompile spilled out of the array store. {@code T}
+     * must be referenced at most twice (its definition and the one store that reads it) so inlining is safe.
+     */
+    private String elementTempName(Statement s, String varName, Map<String, Integer> uses) {
+        if (!(s instanceof ExprStmt) || !(((ExprStmt) s).getExpression() instanceof BinaryExpr)) {
+            return null;
+        }
+        BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
+        if (b.getOperator() != BinaryOperator.ASSIGN || !(b.getLeft() instanceof VarRefExpr)) {
+            return null;
+        }
+        String t = ((VarRefExpr) b.getLeft()).getName();
+        if (t.equals(varName) || uses.getOrDefault(t, 0) > 2) {
+            return null;
+        }
+        return t;
+    }
+
+    /**
+     * Classifies an interleaved statement that may sit inside an array build. Returns the number of {@code
+     * varName} references it contributes if it is an inert (literal-valued) self-assignment ({@code 1}) or
+     * declaration ({@code 0}) of the array var - both safe to fold into and remove with the build - or
+     * {@code -1} if it is anything else (which ends the build).
+     */
+    private int inertRefs(Statement s, String varName) {
+        if (s instanceof VarDeclStmt) {
+            VarDeclStmt d = (VarDeclStmt) s;
+            Expression init = d.getInitializer();
+            if (d.getName().equals(varName) && (init == null || init instanceof LiteralExpr)) {
+                return 0;
+            }
+            return -1;
+        }
+        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
+            if (b.getOperator() == BinaryOperator.ASSIGN && b.getLeft() instanceof VarRefExpr
+                    && ((VarRefExpr) b.getLeft()).getName().equals(varName)
+                    && b.getRight() instanceof LiteralExpr) {
+                return 1;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -331,12 +445,17 @@ public class VarargsReconstructor implements ASTTransform {
 
     private static final class ArrayBuild {
         final String varName;
-        final int stmtCount;
+        final List<Integer> removeIndices;
+        final int consumerIndex;
+        final int extraRefs;
         final List<Expression> elements;
 
-        ArrayBuild(String varName, int stmtCount, List<Expression> elements) {
+        ArrayBuild(String varName, List<Integer> removeIndices, int consumerIndex, int extraRefs,
+                   List<Expression> elements) {
             this.varName = varName;
-            this.stmtCount = stmtCount;
+            this.removeIndices = removeIndices;
+            this.consumerIndex = consumerIndex;
+            this.extraRefs = extraRefs;
             this.elements = elements;
         }
     }

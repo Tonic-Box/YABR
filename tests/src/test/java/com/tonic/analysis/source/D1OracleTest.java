@@ -91,7 +91,7 @@ class D1OracleTest {
         // change introduced or failed to preserve an allocation/throw — a correctness regression.
         assertTrue(faithful >= 30, "d1 allocation faithfulness regressed: " + faithful + "/" + graded
                 + " — " + faithViolations);
-        assertTrue(stable >= 29, "round-trip allocation stability regressed: " + stable + "/" + graded
+        assertTrue(stable >= 30, "round-trip allocation stability regressed: " + stable + "/" + graded
                 + " — " + driftViolations);
     }
 
