@@ -2410,6 +2410,26 @@ public class StatementRecoverer {
     }
 
     /**
+     * True when {@code value} is stored to the slot the {@code phi} represents - a branch's own StoreLocal
+     * already assigns the phi variable, so materializing the phi value as a separate `phiVar = value` copy
+     * would duplicate that store (e.g. javac's `s = new X(); result = s` where both s and result get one
+     * `new X` value: the result store assigns the phi, the extra phi copy must not be emitted).
+     */
+    private boolean isStoredToPhiSlot(SSAValue value, PhiInstruction phi) {
+        int slot = getLocalIndexFromPhi(phi);
+        if (slot < 0 || value == null) {
+            return false;
+        }
+        for (IRInstruction use : value.getUses()) {
+            if (use instanceof StoreLocalInstruction
+                    && ((StoreLocalInstruction) use).getLocalIndex() == slot) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * The local slot a value belongs to - its parameter slot, the slot it was stored to, or the slot of its
      * defining local load/store/phi - or -1 when it is not a local-slot value. Lets a variable's role be
      * decided from its slot layout rather than from its (now real) recovered name.
@@ -3515,7 +3535,8 @@ public class StatementRecoverer {
                             if (targetPhi == null && usedByStore) {
                                 targetPhi = getPhiThroughStoreChain(newResult);
                             }
-                            if (newResult != null && targetPhi != null && targetPhi.getResult() != null) {
+                            if (newResult != null && targetPhi != null && targetPhi.getResult() != null
+                                    && !isStoredToPhiSlot(newResult, targetPhi)) {
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                                 if (phiVarName != null && !phiVarName.equals("this")
                                         && !isParameterOrThisRef(targetPhi.getResult())) {

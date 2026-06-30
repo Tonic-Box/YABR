@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Extend live intervals for loop-carried values to prevent slot clobber">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix retry-loop corruption">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripDumpTest.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/SymbolicRecompileCorrectnessTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/SymbolicRecompileCorrectnessTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -157,14 +153,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00055" summary="CodeWriter.replaceInstructions">
-      <option name="closed" value="true" />
-      <created>1781847950015</created>
-      <option name="number" value="00055" />
-      <option name="presentableId" value="LOCAL-00055" />
-      <option name="project" value="LOCAL" />
-      <updated>1781847950015</updated>
     </task>
     <task id="LOCAL-00056" summary="Fix unresolved class constants in .class literals, casts, and instanceof&#10;&#10;lowerClass/lowerCast/lowerInstanceOf emitted bare simple names (e.g. Main instead of osrs/dev/Main) for same-package/imported types, causing NoClassDefFoundError at runtime. Resolve the type name through the TypeResolver via a shared helper. Adds ClassLiteralResolutionTest.">
       <option name="closed" value="true" />
@@ -550,7 +538,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782807061178</updated>
     </task>
-    <option name="localTasksCounter" value="104" />
+    <task id="LOCAL-00104" summary="- Fix retry-loop corruption">
+      <option name="closed" value="true" />
+      <created>1782822391701</created>
+      <option name="number" value="00104" />
+      <option name="presentableId" value="LOCAL-00104" />
+      <option name="project" value="LOCAL" />
+      <updated>1782822391701</updated>
+    </task>
+    <option name="localTasksCounter" value="105" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -565,7 +561,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Removal of Lombok: pt5&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt6&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt7&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt8&#10;- analyses" />
@@ -590,7 +585,8 @@
     <MESSAGE value="- Preload binary-op left operand to avoid spilling the right" />
     <MESSAGE value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
     <MESSAGE value="- Extend live intervals for loop-carried values to prevent slot clobber" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Extend live intervals for loop-carried values to prevent slot clobber" />
+    <MESSAGE value="- Fix retry-loop corruption" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fix retry-loop corruption" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
