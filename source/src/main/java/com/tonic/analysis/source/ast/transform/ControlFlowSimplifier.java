@@ -889,7 +889,83 @@ public class ControlFlowSimplifier implements ASTTransform {
             return expressionsEqual(ta.getException(), tb.getException());
         }
 
+        // Multi-statement / nested bodies must be compared DEEPLY. The previous toString() fallback was
+        // unsound: BlockStmt.toString() reports only the statement count ("{ 2 statements }") and
+        // IfStmt.toString() omits its body, so two guards with different bodies but the same shape compared
+        // equal - merging `if(x==0){A} if(y==0){B}` into `if(x==0||y==0){A}` and silently dropping B.
+        if (ua instanceof BlockStmt) {
+            // Normalize a trailing single-use return temp first: an asymmetric `||` lowering can emit
+            // `temp = expr; return temp` on one merge path and `return expr` on the other; both mean the same
+            // exit, so collapse them before comparing (else equal guards fail to merge and the round trip drifts).
+            List<Statement> sa = normalizeReturnTemp(((BlockStmt) ua).getStatements());
+            List<Statement> sb = normalizeReturnTemp(((BlockStmt) ub).getStatements());
+            if (sa.size() != sb.size()) return false;
+            for (int k = 0; k < sa.size(); k++) {
+                if (!earlyExitsEqual(sa.get(k), sb.get(k))) return false;
+            }
+            return true;
+        }
+
+        if (ua instanceof IfStmt) {
+            IfStmt ia = (IfStmt) ua;
+            IfStmt ib = (IfStmt) ub;
+            if (!expressionsEqual(ia.getCondition(), ib.getCondition())) return false;
+            if (!earlyExitsEqual(ia.getThenBranch(), ib.getThenBranch())) return false;
+            if (ia.hasElse() != ib.hasElse()) return false;
+            return !ia.hasElse() || earlyExitsEqual(ia.getElseBranch(), ib.getElseBranch());
+        }
+
+        if (ua instanceof ExprStmt) {
+            return expressionsEqual(((ExprStmt) ua).getExpression(), ((ExprStmt) ub).getExpression());
+        }
+
+        // For other statement kinds, toString() is content-bearing (only BlockStmt and IfStmt, handled above,
+        // are lossy), so it is a sound equality here.
         return ua.toString().equals(ub.toString());
+    }
+
+    /**
+     * If {@code stmts} ends in {@code temp = expr; return temp} where {@code temp} is a pure return temp (not
+     * referenced earlier in the list), returns the list with that pair replaced by {@code return expr}; else
+     * returns {@code stmts} unchanged. Used only to normalize guard bodies for equality comparison.
+     */
+    private List<Statement> normalizeReturnTemp(List<Statement> stmts) {
+        int n = stmts.size();
+        if (n < 2) return stmts;
+        Statement last = stmts.get(n - 1);
+        Statement prev = stmts.get(n - 2);
+        if (!(last instanceof ReturnStmt) || !(prev instanceof ExprStmt)) return stmts;
+        Expression retVal = ((ReturnStmt) last).getValue();
+        if (!(retVal instanceof VarRefExpr)) return stmts;
+        String var = ((VarRefExpr) retVal).getName();
+        Expression pe = ((ExprStmt) prev).getExpression();
+        if (!(pe instanceof BinaryExpr)) return stmts;
+        BinaryExpr assign = (BinaryExpr) pe;
+        if (assign.getOperator() != BinaryOperator.ASSIGN
+                || !(assign.getLeft() instanceof VarRefExpr)
+                || !((VarRefExpr) assign.getLeft()).getName().equals(var)) {
+            return stmts;
+        }
+        for (int i = 0; i < n - 2; i++) {
+            if (referencesVar(stmts.get(i), var)) return stmts;
+        }
+        List<Statement> out = new ArrayList<>(stmts.subList(0, n - 2));
+        out.add(new ReturnStmt(assign.getRight()));
+        return out;
+    }
+
+    private boolean referencesVar(Statement stmt, String var) {
+        AtomicBoolean found = new AtomicBoolean(false);
+        stmt.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitVarRef(VarRefExpr e) {
+                if (e.getName().equals(var)) {
+                    found.set(true);
+                }
+                return null;
+            }
+        });
+        return found.get();
     }
 
     /**

@@ -34,7 +34,10 @@ class SymbolicRecompileCorrectnessTest {
     private static final String DIR = "C:/Users/zacke/IdeaProjects/DemoApplication/build/classes/java/main";
     private static final int[][] INPUTS = {
         {10, 10, 0}, {10, 10, 1}, {10, 10, 2}, {10, 10, 5},
-        {5, 5, 0}, {10, 5, 1}, {3, 7, 2}, {0, 0, 0}, {10, 10, -3}, {8, 12, 4}
+        {5, 5, 0}, {10, 5, 1}, {3, 7, 2}, {0, 0, 0}, {10, 10, -3}, {8, 12, 4},
+        // x != 0, y == 0 (and the mirror) - exercises the x==0||y==0 early-exit vs the recovered branch shape
+        {5, 0, 0}, {7, 0, 1}, {10, 0, 2}, {3, 0, 3}, {0, 5, 0}, {0, 7, 1}, {6, 0, 0}, {9, 0, 2},
+        {1, 1, 0}, {2, 4, 1}, {50, 50, 3}, {99, 1, 2}
     };
 
     @Test

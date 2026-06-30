@@ -4,8 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Recover switch case breaks (don't treat the merge as a fallthrough target)">
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Extend live intervals for loop-carried values to prevent slot clobber">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripDumpTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/SymbolicRecompileCorrectnessTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/SymbolicRecompileCorrectnessTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,22 +157,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00053" summary="- CopyPropagation replaced both chain-followers with one resolve()">
-      <option name="closed" value="true" />
-      <created>1781823936445</created>
-      <option name="number" value="00053" />
-      <option name="presentableId" value="LOCAL-00053" />
-      <option name="project" value="LOCAL" />
-      <updated>1781823936445</updated>
-    </task>
-    <task id="LOCAL-00054" summary="- TypeInference: handle WIDE-prefixed load/store (locals &gt; 255) instead of treating them as frame no-ops&#10;- BytecodeLifter: propagate primitive type around phi cycles (long loop var seeded by a const was mis-typed int)&#10;- BytecodeLifter/BytecodeEmitter: emit the caught-exception astore at handler entry; mark it via the real exception value (SSA IR unchanged)&#10;- BytecodeLifter: populate ExceptionHandler.tryBlocks so the regenerated table no longer spans the handler&#10;- Fix two tests that codified the old bugs (testWide, removeMethodCall)">
-      <option name="closed" value="true" />
-      <created>1781835561457</created>
-      <option name="number" value="00054" />
-      <option name="presentableId" value="LOCAL-00054" />
-      <option name="project" value="LOCAL" />
-      <updated>1781835561457</updated>
     </task>
     <task id="LOCAL-00055" summary="CodeWriter.replaceInstructions">
       <option name="closed" value="true" />
@@ -546,7 +534,23 @@
       <option name="project" value="LOCAL" />
       <updated>1782805026405</updated>
     </task>
-    <option name="localTasksCounter" value="102" />
+    <task id="LOCAL-00102" summary="- Extend live intervals for loop-carried values to prevent slot clobber">
+      <option name="closed" value="true" />
+      <created>1782806844215</created>
+      <option name="number" value="00102" />
+      <option name="presentableId" value="LOCAL-00102" />
+      <option name="project" value="LOCAL" />
+      <updated>1782806844215</updated>
+    </task>
+    <task id="LOCAL-00103" summary="- Extend live intervals for loop-carried values to prevent slot clobber">
+      <option name="closed" value="true" />
+      <created>1782807061178</created>
+      <option name="number" value="00103" />
+      <option name="presentableId" value="LOCAL-00103" />
+      <option name="project" value="LOCAL" />
+      <updated>1782807061178</updated>
+    </task>
+    <option name="localTasksCounter" value="104" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -561,7 +565,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Removal of Lombok: pt4&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt5&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt6&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt7&#10;- analyses" />
@@ -586,7 +589,8 @@
     <MESSAGE value="- Fix spurious return-in-try" />
     <MESSAGE value="- Preload binary-op left operand to avoid spilling the right" />
     <MESSAGE value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
+    <MESSAGE value="- Extend live intervals for loop-carried values to prevent slot clobber" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Extend live intervals for loop-carried values to prevent slot clobber" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

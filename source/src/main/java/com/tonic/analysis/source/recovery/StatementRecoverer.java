@@ -3197,6 +3197,13 @@ public class StatementRecoverer {
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
                         current = merge;
+                    } else if (ifStmt instanceof IfStmt
+                            && isTerminatingStatement(((IfStmt) ifStmt).getThenBranch())) {
+                        // No merge and the then-branch exits (returns/throws): the else's tail leaves the
+                        // straight-line flow too (it loops back to the enclosing loop), so there is no
+                        // continuation. Searching for a "next" block would walk into the then-branch's own
+                        // already-recovered blocks and re-add them, duplicating that branch after the if/else.
+                        current = null;
                     } else {
                         current = findNextUnprocessedBlock(current, visited, stopBlocks);
                     }
@@ -4482,11 +4489,35 @@ public class StatementRecoverer {
         if (block == null) {
             return true;
         }
+        // The increment block may be suppressed (folded into the for-update) only if it contains NOTHING but
+        // the loop-counter update: every non-terminator instruction must be the update itself or transitively
+        // feed it. A previous check only flagged non-increment local stores, so a side-effecting call sharing
+        // the block (e.g. `clearPassword(); i = i + 1;`) was silently dropped - which broke the loop's
+        // `continue` and let the recovery bleed into and duplicate the block after it.
+        Map<SSAValue, IRInstruction> defs = new HashMap<>();
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr.getResult() != null) {
+                defs.put(instr.getResult(), instr);
+            }
+        }
+        Set<IRInstruction> needed = new HashSet<>(incrementInstructions);
+        List<IRInstruction> work = new ArrayList<>(incrementInstructions);
+        while (!work.isEmpty()) {
+            IRInstruction instr = work.remove(work.size() - 1);
+            for (Value operand : instr.getOperands()) {
+                if (operand instanceof SSAValue) {
+                    IRInstruction def = defs.get((SSAValue) operand);
+                    if (def != null && needed.add(def)) {
+                        work.add(def);
+                    }
+                }
+            }
+        }
         for (IRInstruction instr : block.getInstructions()) {
             if (instr.isTerminator()) {
                 continue;
             }
-            if (instr instanceof StoreLocalInstruction && !incrementInstructions.contains(instr)) {
+            if (!needed.contains(instr)) {
                 return false;
             }
         }
