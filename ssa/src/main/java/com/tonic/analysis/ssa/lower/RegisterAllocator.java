@@ -462,12 +462,15 @@ public class RegisterAllocator {
         Map<SSAValue, LiveInterval> intervals = new HashMap<>();
         List<IRBlock> rpo = method.getReversePostOrder();
 
-        // First pass: build basic intervals
+        // First pass: build basic intervals from textual def/use positions, recording each block's range.
+        Map<IRBlock, Integer> blockEnd = new HashMap<>();
+        Set<SSAValue> phiResults = new HashSet<>();
         int pos = 0;
         for (IRBlock block : rpo) {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 if (phi.getResult() != null) {
                     updateInterval(intervals, phi.getResult(), pos);
+                    phiResults.add(phi.getResult());
                 }
                 pos++;
             }
@@ -483,9 +486,35 @@ public class RegisterAllocator {
                 }
                 pos++;
             }
+            blockEnd.put(block, pos - 1);
         }
 
-        // Second pass: extend phi result intervals to cover their phi copies
+        // Second pass: extend intervals to cover loop-carried liveness. A value live-OUT of a block is still
+        // live at that block's exit (its back-edge or fall-through), so its slot must not be reused within the
+        // block. Textual positions miss this for a value used only in a loop header - e.g. a loop bound read in
+        // the condition but kept live across the body by the back-edge: its textual interval ends at the
+        // condition, so a loop-body temp coalesces over its slot and corrupts it each iteration. Extending to
+        // the block end makes the true interference visible (only lengthens intervals, never miscompiles).
+        for (IRBlock block : rpo) {
+            Integer end = blockEnd.get(block);
+            if (end == null) {
+                continue;
+            }
+            for (SSAValue live : liveness.getLiveOut(block)) {
+                // Phi results carry their liveness through extendPhiResultIntervals; extending them here too
+                // only perturbs allocation. Target the non-phi loop-carried values (e.g. a loop bound) that the
+                // textual pass misses - those are the ones a body temp would otherwise falsely coalesce over.
+                if (phiResults.contains(live)) {
+                    continue;
+                }
+                LiveInterval interval = intervals.get(live);
+                if (interval != null && end > interval.end) {
+                    interval.end = end;
+                }
+            }
+        }
+
+        // Third pass: extend phi result intervals to cover their phi copies
         // This ensures phi result slots aren't reused before all copies complete
         extendPhiResultIntervals(intervals);
 
