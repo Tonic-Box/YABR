@@ -5171,6 +5171,14 @@ public class StatementRecoverer {
             allCaseTargets.add(info.getDefaultTarget());
         }
 
+        // A case "falls through" only if it reaches ANOTHER case BODY - never the switch's merge/exit block.
+        // When the default is empty its target IS the merge, so a case that breaks (jumps to the merge) would
+        // otherwise look like a fall-through into the default and lose its `break`. Exclude the merge.
+        Set<IRBlock> fallThroughTargets = new HashSet<>(allCaseTargets);
+        if (mergeBlock != null) {
+            fallThroughTargets.remove(mergeBlock);
+        }
+
         for (Map.Entry<IRBlock, List<Integer>> entry : targetToCases.entrySet()) {
             IRBlock target = entry.getKey();
             List<Integer> labels = entry.getValue();
@@ -5190,7 +5198,7 @@ public class StatementRecoverer {
                 context.popStopBlocks();
             }
 
-            boolean fallsThrough = caseFallsThrough(target, stopBlocks, allCaseTargets);
+            boolean fallsThrough = caseFallsThrough(target, stopBlocks, fallThroughTargets);
 
             if (enumNamesResolved) {
                 List<Expression> enumLabels = new ArrayList<>();

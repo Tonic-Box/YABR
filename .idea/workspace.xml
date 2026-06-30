@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix spurious return-in-try">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Recover switch case breaks (don't treat the merge as a fallthrough target)">
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/SymbolicRecompileCorrectnessTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripIdempotenceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripIdempotenceTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,14 +59,14 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "settings.editor.selected.configurable": "Errors"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Gradle.YABR-fixed [build]">
     <configuration name="YABR-fixed [build]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
@@ -156,14 +155,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00051" summary="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8">
-      <option name="closed" value="true" />
-      <created>1781784068318</created>
-      <option name="number" value="00051" />
-      <option name="presentableId" value="LOCAL-00051" />
-      <option name="project" value="LOCAL" />
-      <updated>1781784068318</updated>
     </task>
     <task id="LOCAL-00052" summary="- LdcInstruction lowering encoding is now derived from cpIndex (narrow ldc =&lt; 255, wide ldc_w &gt; 255) in the constructor, getLength(), and write().">
       <option name="closed" value="true" />
@@ -549,7 +540,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782774077846</updated>
     </task>
-    <option name="localTasksCounter" value="100" />
+    <task id="LOCAL-00100" summary="- Preload binary-op left operand to avoid spilling the right">
+      <option name="closed" value="true" />
+      <created>1782799989534</created>
+      <option name="number" value="00100" />
+      <option name="presentableId" value="LOCAL-00100" />
+      <option name="project" value="LOCAL" />
+      <updated>1782799989534</updated>
+    </task>
+    <option name="localTasksCounter" value="101" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -564,8 +563,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Removal of Lombok: pt2&#10;- execution" />
-    <MESSAGE value="Removal of Lombok: pt3&#10;- execution" />
     <MESSAGE value="Removal of Lombok: pt4&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt5&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt6&#10;- analyses" />
@@ -589,7 +586,9 @@
     <MESSAGE value="- Type reused-slot locals correctly on round trip" />
     <MESSAGE value="- Fix try/catch/finally round-trip: SimpleFinallyClass now idempotent" />
     <MESSAGE value="- Fix spurious return-in-try" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix spurious return-in-try" />
+    <MESSAGE value="- Preload binary-op left operand to avoid spilling the right" />
+    <MESSAGE value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
