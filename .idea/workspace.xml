@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix try/catch/finally round-trip: SimpleFinallyClass now idempotent">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix spurious return-in-try">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripIdempotenceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/RoundTripIdempotenceTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -155,14 +156,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00050" summary="- Fixed issue with ClassRenamer erroneously renaming unrelated Utf8 attributes">
-      <option name="closed" value="true" />
-      <created>1781782904854</created>
-      <option name="number" value="00050" />
-      <option name="presentableId" value="LOCAL-00050" />
-      <option name="project" value="LOCAL" />
-      <updated>1781782904854</updated>
     </task>
     <task id="LOCAL-00051" summary="- updateNameAndTypeName now always repoints to a NameAndType backed by a fresh name Utf8">
       <option name="closed" value="true" />
@@ -548,7 +541,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782769885456</updated>
     </task>
-    <option name="localTasksCounter" value="99" />
+    <task id="LOCAL-00099" summary="- Fix spurious return-in-try">
+      <option name="closed" value="true" />
+      <created>1782774077846</created>
+      <option name="number" value="00099" />
+      <option name="presentableId" value="LOCAL-00099" />
+      <option name="project" value="LOCAL" />
+      <updated>1782774077846</updated>
+    </task>
+    <option name="localTasksCounter" value="100" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -563,7 +564,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Removal of Lombok: pt1&#10;- query module&#10;- renamer module" />
     <MESSAGE value="Removal of Lombok: pt2&#10;- execution" />
     <MESSAGE value="Removal of Lombok: pt3&#10;- execution" />
     <MESSAGE value="Removal of Lombok: pt4&#10;- analyses" />
@@ -588,7 +588,8 @@
     <MESSAGE value="- Faithful lambda + argument recompilation" />
     <MESSAGE value="- Type reused-slot locals correctly on round trip" />
     <MESSAGE value="- Fix try/catch/finally round-trip: SimpleFinallyClass now idempotent" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix try/catch/finally round-trip: SimpleFinallyClass now idempotent" />
+    <MESSAGE value="- Fix spurious return-in-try" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fix spurious return-in-try" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

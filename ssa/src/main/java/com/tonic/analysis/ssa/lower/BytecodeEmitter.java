@@ -58,8 +58,9 @@ public class BytecodeEmitter {
 
     /** A receiver value to push just before this instruction (the start of a call argument's build window). */
     private final Map<IRInstruction, SSAValue> receiverPreload = new HashMap<>();
-    /** Invokes whose receiver (operand 0) was preloaded ahead of the argument window, so skip it at the call. */
-    private final Set<InvokeInstruction> skipReceiver = new HashSet<>();
+    /** Instructions whose operand 0 was preloaded ahead of operand 1's window, so skip loading it at the use
+     *  (a call receiver before its argument, or a binary op's left operand before its computed right operand). */
+    private final Set<IRInstruction> skipReceiver = new HashSet<>();
     /** Operand use count per value (across instructions and phis), so an unused result can be popped not stored. */
     private final Map<SSAValue, Integer> valueUseCounts = new HashMap<>();
     /** Values that back a named source local; a store to one is kept (not popped) even when the value is unused. */
@@ -859,7 +860,84 @@ public class BytecodeEmitter {
                     stackResidentValues.add(arg);
                 }
             }
+
+            // Binary ops: OP(left, right) where left is a re-loadable register and right is a closed computed
+            // window. Preload left beneath right's window so right stays on the stack instead of spilling to a
+            // temp - matching javac's `load left; <compute right>; OP`. Operand order is preserved (no
+            // commutative swap), so it works for non-commutative ops too.
+            for (int k = 0; k < instructions.size(); k++) {
+                if (!(instructions.get(k) instanceof BinaryOpInstruction)) {
+                    continue;
+                }
+                IRInstruction op = instructions.get(k);
+                List<Value> ops = op.getOperands();
+                if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue)) {
+                    continue;
+                }
+                SSAValue left = (SSAValue) ops.get(0);
+                SSAValue right = (SSAValue) ops.get(1);
+                // left must be a re-loadable register value (defined outside this block), not a constant.
+                if (left.equals(right) || defIdxOf.containsKey(left) || inlinedConstants.contains(left)) {
+                    continue;
+                }
+                // right must be computed in this block before the op, consumed only by it, and not already
+                // resident (the adjacent-operand case is handled by analyzeStackResidentValues).
+                Integer rightDef = defIdxOf.get(right);
+                if (rightDef == null || rightDef >= k || useCounts.getOrDefault(right, 0) != 1
+                        || stackResidentValues.contains(right)) {
+                    continue;
+                }
+                // right must be a genuine computation that would otherwise spill - never a constant or a plain
+                // load/copy (those are pushed at their use, never spilled, so preloading left is pointless and,
+                // for an inlined constant, would attach the preload to an instruction that emits nothing).
+                IRInstruction rightInstr = instructions.get(rightDef);
+                if (inlinedConstants.contains(right) || rightInstr instanceof ConstantInstruction
+                        || rightInstr instanceof LoadLocalInstruction || rightInstr instanceof CopyInstruction) {
+                    continue;
+                }
+                int windowStart = windowStartIndex(right, instructions, defIdxOf, k);
+                if (!argWindowClosedForPreload(instructions, defIdxOf, useCounts, windowStart, k, left)) {
+                    continue;
+                }
+                // At most one preload per instruction: nested binary ops (e.g. `c + (a + (b + c))` from a dup)
+                // can share a window-start, and a Map would silently drop one while both still skip their left
+                // operand - a stack underflow. Yield to the preload already placed there (the inner op).
+                IRInstruction windowStartInstr = instructions.get(windowStart);
+                if (receiverPreload.containsKey(windowStartInstr)) {
+                    continue;
+                }
+                receiverPreload.put(windowStartInstr, left);
+                skipReceiver.add(op);
+                stackResidentValues.add(right);
+            }
         }
+    }
+
+    /** The earliest def index reached from {@code value} through its in-block operands (its computation
+     *  window's start), bounded by {@code useIdx}. A register operand (no in-block def) is not part of it. */
+    private int windowStartIndex(SSAValue value, List<IRInstruction> instructions,
+                                 Map<SSAValue, Integer> defIdxOf, int useIdx) {
+        Set<SSAValue> seen = new HashSet<>();
+        List<SSAValue> work = new ArrayList<>();
+        work.add(value);
+        int min = useIdx;
+        while (!work.isEmpty()) {
+            SSAValue v = work.remove(work.size() - 1);
+            if (!seen.add(v)) {
+                continue;
+            }
+            Integer di = defIdxOf.get(v);
+            if (di == null || inlinedConstants.contains(v)) {
+                continue; // a register operand or an inlined constant - emitted at its use, not a window position
+            }
+            min = Math.min(min, di);
+            for (Value o : instructions.get(di).getOperands()) {
+                if (o instanceof SSAValue) {
+                    work.add((SSAValue) o);
+                }
+            }
+        }
+        return min;
     }
 
     /**
@@ -939,7 +1017,7 @@ public class BytecodeEmitter {
             }
         }
 
-        boolean skipFirst = instr instanceof InvokeInstruction && skipReceiver.contains(instr);
+        boolean skipFirst = skipReceiver.contains(instr);
         List<Value> operands = instr.getOperands();
         for (int oi = 0; oi < operands.size(); oi++) {
             if (oi == 0 && skipFirst) {

@@ -62,11 +62,13 @@ class RoundTripIdempotenceTest {
         List<String> notIdempotent = new ArrayList<>();
         List<String> notVerifying = new ArrayList<>();
         List<String> skipped = new ArrayList<>();
+        List<String> convergesNotFixed = new ArrayList<>();
+        List<String> drifts = new ArrayList<>();
         StringBuilder report = new StringBuilder();
 
         for (ClassFile cf : cfs) {
             String name = cf.getClassName();
-            String d1, d2;
+            String d1, d2, d3;
             boolean verified;
             try {
                 d1 = ClassDecompiler.decompile(cf);
@@ -77,6 +79,8 @@ class RoundTripIdempotenceTest {
                 verified = Verifier.builder().classPool(pool).build().verify(cf).getErrors()
                         .stream().noneMatch(VerificationError::isError);
                 d2 = ClassDecompiler.decompile(cf);
+                recompile(cf, pool, d2, name);
+                d3 = ClassDecompiler.decompile(cf);
             } catch (Throwable t) {
                 notIdempotent.add(name + " (threw " + t + ")");
                 continue;
@@ -84,16 +88,27 @@ class RoundTripIdempotenceTest {
             if (!verified) {
                 notVerifying.add(name);
             }
+            if (!d2.equals(d3)) {
+                drifts.add(name); // genuinely drifts - output keeps changing each round trip
+            }
             if (!d1.equals(d2)) {
                 notIdempotent.add(name);
                 report.append("\n=== ").append(name).append(" ===\n").append(firstDiff(d1, d2));
+                if (d2.equals(d3)) {
+                    convergesNotFixed.add(name); // stabilizes after one round trip (d2==d3) - normalization, not drift
+                }
             }
         }
 
         int graded = cfs.size() - skipped.size();
         int pass = graded - notIdempotent.size();
-        System.out.println("idempotent: " + pass + "/" + graded + " (skipped " + skipped.size() + " non-class)"
+        int stable = graded - drifts.size();
+        System.out.println("idempotent (d1==d2): " + pass + "/" + graded
+                + "  |  stable/no-drift (d2==d3): " + stable + "/" + graded
+                + "  (skipped " + skipped.size() + " non-class)"
                 + (notVerifying.isEmpty() ? "" : "  | NOT VERIFYING: " + notVerifying));
+        System.out.println("  converges-not-fixed (d1!=d2, d2==d3): " + convergesNotFixed);
+        System.out.println("  genuinely drifts (d2!=d3): " + drifts);
         for (String n : notIdempotent) {
             System.out.println("  NOT IDEMPOTENT: " + n);
         }

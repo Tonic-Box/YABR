@@ -4017,7 +4017,26 @@ public class StatementRecoverer {
                 }
             }
         }
+        // `cond ? 1 : 0` returned from a boolean method is the JVM's int form of the boolean; in source it is
+        // just `cond`. Folding it makes the round trip stable (recovery materializes the boolean differently on
+        // recompiled vs javac bytecode, so one pass produces the ternary and the other the bare condition).
+        if (returnType == PrimitiveSourceType.BOOLEAN && expr instanceof TernaryExpr) {
+            TernaryExpr tern = (TernaryExpr) expr;
+            Integer thenV = intLiteralValue(tern.getThenExpr());
+            Integer elseV = intLiteralValue(tern.getElseExpr());
+            if (thenV != null && elseV != null && thenV == 1 && elseV == 0) {
+                return tern.getCondition();
+            }
+        }
         return expr;
+    }
+
+    /** The int value of {@code e} when it is an integer literal, else null. */
+    private Integer intLiteralValue(Expression e) {
+        if (e instanceof LiteralExpr && ((LiteralExpr) e).getValue() instanceof Integer) {
+            return (Integer) ((LiteralExpr) e).getValue();
+        }
+        return null;
     }
 
 
