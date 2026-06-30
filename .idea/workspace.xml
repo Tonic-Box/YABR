@@ -4,8 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix retry-loop corruption">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- skip phi copy when the value is stored to the phi slot">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/D1OracleTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/source/D1OracleTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,14 +155,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00056" summary="Fix unresolved class constants in .class literals, casts, and instanceof&#10;&#10;lowerClass/lowerCast/lowerInstanceOf emitted bare simple names (e.g. Main instead of osrs/dev/Main) for same-package/imported types, causing NoClassDefFoundError at runtime. Resolve the type name through the TypeResolver via a shared helper. Adds ClassLiteralResolutionTest.">
-      <option name="closed" value="true" />
-      <created>1781860067807</created>
-      <option name="number" value="00056" />
-      <option name="presentableId" value="LOCAL-00056" />
-      <option name="project" value="LOCAL" />
-      <updated>1781860067807</updated>
     </task>
     <task id="LOCAL-00057" summary="- Fix recompile fidelity: qualified class constants + JDK return types">
       <option name="closed" value="true" />
@@ -546,7 +540,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782822391701</updated>
     </task>
-    <option name="localTasksCounter" value="105" />
+    <task id="LOCAL-00105" summary="- skip phi copy when the value is stored to the phi slot">
+      <option name="closed" value="true" />
+      <created>1782832094954</created>
+      <option name="number" value="00105" />
+      <option name="presentableId" value="LOCAL-00105" />
+      <option name="project" value="LOCAL" />
+      <updated>1782832094954</updated>
+    </task>
+    <option name="localTasksCounter" value="106" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -561,7 +563,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Removal of Lombok: pt6&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt7&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt8&#10;- analyses" />
     <MESSAGE value="Removal of Lombok: pt9&#10;- bytecode" />
@@ -586,7 +587,8 @@
     <MESSAGE value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
     <MESSAGE value="- Extend live intervals for loop-carried values to prevent slot clobber" />
     <MESSAGE value="- Fix retry-loop corruption" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix retry-loop corruption" />
+    <MESSAGE value="- skip phi copy when the value is stored to the phi slot" />
+    <option name="LAST_COMMIT_MESSAGE" value="- skip phi copy when the value is stored to the phi slot" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

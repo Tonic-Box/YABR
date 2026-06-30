@@ -4378,6 +4378,12 @@ public class StatementRecoverer {
         }
 
         PhiInstruction ternaryPhi = findTernaryPhiPattern(info);
+        // Don't collapse to a ternary when the merged value feeds ANOTHER phi (a nested if/else-if merge):
+        // the collapsed value is cached but the outer merge can't consume it as a statement, so its arm would
+        // be orphaned and dropped. Recover this if/else as a statement so the outer recovery keeps it.
+        if (ternaryPhi != null && getPhiUsingValue(ternaryPhi.getResult()) != null) {
+            ternaryPhi = null;
+        }
         if (ternaryPhi != null) {
             collapseToTernaryPhiExpression(condition, ternaryPhi, info.getThenBlock(), info.getElseBlock());
             context.markProcessed(info.getThenBlock());
