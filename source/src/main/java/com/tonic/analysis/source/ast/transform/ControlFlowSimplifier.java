@@ -58,6 +58,8 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= flattenNestedNegatedGuards(stmts);
 
+        changed |= collapseGuardWithSharedEarlyExit(stmts);
+
         for (int i = 0; i < stmts.size(); i++) {
             Statement stmt = stmts.get(i);
 
@@ -1227,9 +1229,58 @@ public class ControlFlowSimplifier implements ASTTransform {
     }
 
     /**
-     * Flattens nested negated guard patterns into OR conditions.
-     * Pattern: if(!a) { if(!b) { if(!c) { body } } } earlyExit; -> if(a || b || c) { earlyExit; } body
+     * Collapses a positive guard whose outer-else and inner guard reach the SAME early exit into one OR guard:
+     * <pre>if (cond) { if (inner) E; rest } E   =&gt;   if (!cond || inner) E; rest</pre>
+     * javac compiles {@code if (!cond || inner) E; rest} (e.g. {@code if (session == null || expired()) return
+     * null;}) as short-circuit branches that the recovery renders as the expanded nested form, while YABR's own
+     * recompiled shape recovers the OR directly - so d1 and d2 diverge. Rebuilding the OR here makes the first
+     * decompile a fixed point. Requires the two early exits to be identical so control flow is preserved exactly.
      */
+    private boolean collapseGuardWithSharedEarlyExit(List<Statement> stmts) {
+        boolean changed = false;
+        for (int i = 0; i + 1 < stmts.size(); i++) {
+            if (!(stmts.get(i) instanceof IfStmt)) {
+                continue;
+            }
+            IfStmt outer = (IfStmt) stmts.get(i);
+            if (outer.hasElse()) {
+                continue;
+            }
+            Statement afterExit = stmts.get(i + 1);
+            if (!isEarlyExit(afterExit)) {
+                continue;
+            }
+            List<Statement> body = getStatements(outer.getThenBranch());
+            if (body.isEmpty() || !(body.get(0) instanceof IfStmt)) {
+                continue;
+            }
+            IfStmt guard = (IfStmt) body.get(0);
+            if (guard.hasElse()) {
+                continue;
+            }
+            Statement guardExit = unwrapSingleStatement(guard.getThenBranch());
+            if (!(guardExit instanceof ReturnStmt || guardExit instanceof ThrowStmt
+                    || guardExit instanceof ContinueStmt || guardExit instanceof BreakStmt)
+                    || !earlyExitsEqual(guardExit, afterExit)) {
+                continue;
+            }
+            Expression collapsed = new BinaryExpr(BinaryOperator.OR,
+                    negate(outer.getCondition()), guard.getCondition(), PrimitiveSourceType.BOOLEAN);
+            List<Statement> guardBody = new ArrayList<>();
+            guardBody.add(afterExit);
+            IfStmt newIf = new IfStmt(collapsed, new BlockStmt(guardBody));
+            Locations.copy(outer, newIf);
+            stmts.set(i, newIf);
+            stmts.remove(i + 1);
+            List<Statement> rest = new ArrayList<>(body.subList(1, body.size()));
+            for (int k = 0; k < rest.size(); k++) {
+                stmts.add(i + 1 + k, rest.get(k));
+            }
+            changed = true;
+        }
+        return changed;
+    }
+
     private boolean flattenNestedNegatedGuards(List<Statement> stmts) {
         boolean changed = false;
 

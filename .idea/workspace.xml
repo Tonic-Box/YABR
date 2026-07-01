@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Drop a redundant continue in a loop's trailing switch" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Drop redundant phi-copy re-assignment" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -151,14 +151,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00079" summary="Removal of Lombok: pt5&#10;- analyses">
-      <option name="closed" value="true" />
-      <created>1782616266482</created>
-      <option name="number" value="00079" />
-      <option name="presentableId" value="LOCAL-00079" />
-      <option name="project" value="LOCAL" />
-      <updated>1782616266482</updated>
     </task>
     <task id="LOCAL-00080" summary="Removal of Lombok: pt6&#10;- analyses">
       <option name="closed" value="true" />
@@ -544,7 +536,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782936290269</updated>
     </task>
-    <option name="localTasksCounter" value="128" />
+    <task id="LOCAL-00128" summary="- Drop redundant phi-copy re-assignment">
+      <option name="closed" value="true" />
+      <created>1782938229678</created>
+      <option name="number" value="00128" />
+      <option name="presentableId" value="LOCAL-00128" />
+      <option name="project" value="LOCAL" />
+      <updated>1782938229678</updated>
+    </task>
+    <option name="localTasksCounter" value="129" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -559,7 +559,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Extend live intervals for loop-carried values to prevent slot clobber" />
     <MESSAGE value="- Fix retry-loop corruption" />
     <MESSAGE value="- skip phi copy when the value is stored to the phi slot" />
     <MESSAGE value="- Fix dropped conditional arm in nested if/else-if (ternary-phi over-collapse)" />
@@ -584,7 +583,8 @@
     <MESSAGE value="- Keep a copy's named source variable off the destination's slot" />
     <MESSAGE value="- re-add residency for a paired-new consumed by a return" />
     <MESSAGE value="- Drop a redundant continue in a loop's trailing switch" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Drop a redundant continue in a loop's trailing switch" />
+    <MESSAGE value="- Drop redundant phi-copy re-assignment" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Drop redundant phi-copy re-assignment" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
