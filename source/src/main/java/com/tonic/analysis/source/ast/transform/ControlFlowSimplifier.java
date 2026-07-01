@@ -373,11 +373,13 @@ public class ControlFlowSimplifier implements ASTTransform {
             WhileStmt ws = (WhileStmt) stmt;
             if (ws.getBody() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) ws.getBody());
+                changed |= stripRedundantSwitchContinue((BlockStmt) ws.getBody());
             }
         } else if (stmt instanceof ForStmt) {
             ForStmt fs = (ForStmt) stmt;
             if (fs.getBody() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) fs.getBody());
+                changed |= stripRedundantSwitchContinue((BlockStmt) fs.getBody());
             }
         } else if (stmt instanceof TryCatchStmt) {
             TryCatchStmt tc = (TryCatchStmt) stmt;
@@ -400,11 +402,41 @@ public class ControlFlowSimplifier implements ASTTransform {
     }
 
     /**
-     * Recurses into each switch case body so the same simplifications (empty-if
-     * inversion, etc.) apply inside reconstructed switch cases. Case bodies are
-     * immutable lists, so each is transformed via a temporary block and the case is
-     * rebuilt in place.
+     * Removes a redundant unlabeled {@code continue} that is the last statement of the LAST case of a switch
+     * which is itself the last statement of a loop body: control reaches the loop's back-edge either way, so
+     * the continue is a no-op. javac omits it; the recovery emits it for its own recompiled shape, so it drifts
+     * on round trip. The last case has no case after it, so dropping the continue cannot introduce fall-through.
      */
+    private boolean stripRedundantSwitchContinue(BlockStmt loopBody) {
+        List<Statement> stmts = loopBody.getStatements();
+        if (stmts.isEmpty() || !(stmts.get(stmts.size() - 1) instanceof SwitchStmt)) {
+            return false;
+        }
+        List<SwitchCase> cases = ((SwitchStmt) stmts.get(stmts.size() - 1)).getCases();
+        if (cases.isEmpty()) {
+            return false;
+        }
+        int last = cases.size() - 1;
+        SwitchCase c = cases.get(last);
+        List<Statement> body = c.statements();
+        if (body == null || body.isEmpty()) {
+            return false;
+        }
+        Statement tail = body.get(body.size() - 1);
+        if (!(tail instanceof ContinueStmt) || ((ContinueStmt) tail).hasLabel()) {
+            return false;
+        }
+        List<Statement> trimmed = new java.util.ArrayList<>(body.subList(0, body.size() - 1));
+        SwitchCase rebuilt = (c.isDefault()
+                ? SwitchCase.defaultCase(trimmed)
+                : c.hasExpressionLabels()
+                    ? SwitchCase.ofExpressions(c.expressionLabels(), trimmed)
+                    : SwitchCase.of(c.labels(), trimmed))
+                .withFallsThrough(c.fallsThrough());
+        cases.set(last, rebuilt);
+        return true;
+    }
+
     private boolean simplifySwitchCases(SwitchStmt sw) {
         boolean changed = false;
         List<SwitchCase> cases = sw.getCases();
