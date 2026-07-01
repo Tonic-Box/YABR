@@ -907,6 +907,32 @@ public class BytecodeEmitter {
                 }
             }
 
+            // A paired-new consumed by a return stays on the stack (`new; dup; init; areturn`) instead of
+            // spilling to a temp - javac keeps it resident. analyzeConstructorPairs stripped its residency; re-add
+            // it only when the <init> immediately precedes the return, so the new is provably on top of the stack.
+            for (int k = 1; k < instructions.size(); k++) {
+                if (!(instructions.get(k) instanceof ReturnInstruction)) {
+                    continue;
+                }
+                ReturnInstruction ret = (ReturnInstruction) instructions.get(k);
+                if (ret.isVoidReturn() || !(ret.getReturnValue() instanceof SSAValue)) {
+                    continue;
+                }
+                SSAValue val = (SSAValue) ret.getReturnValue();
+                Integer valDef = defIdxOf.get(val);
+                if (valDef == null || !(instructions.get(valDef) instanceof NewInstruction)) {
+                    continue;
+                }
+                NewInstruction newInstr = (NewInstruction) instructions.get(valDef);
+                if (!newToInit.containsKey(newInstr) || useCounts.getOrDefault(val, 0) != 2) {
+                    continue; // a paired-new used only by its own <init> and this return
+                }
+                if (instructions.get(k - 1) != newToInit.get(newInstr)) {
+                    continue;
+                }
+                stackResidentValues.add(val);
+            }
+
             // Binary ops: OP(left, right) where left is a re-loadable register and right is a closed computed
             // window. Preload left beneath right's window so right stays on the stack instead of spilling to a
             // temp - matching javac's `load left; <compute right>; OP`. Operand order is preserved (no
