@@ -199,6 +199,16 @@ public class ControlFlowSimplifier implements ASTTransform {
             ReturnStmt ret = (ReturnStmt) stmt;
             if (ret.getValue() != null) {
                 Expression simplified = simplifyExpression(ret.getValue());
+                // `cond ? 1 : 0` returned from a boolean method is the boolean `cond` (the JVM's int form of
+                // the boolean). Fold it here, after inlining has resolved the ternary arms to their 1/0
+                // literals, so a boolean-returning comparison round-trips stably instead of drifting to a
+                // ternary. (The recovery's own coercion runs before the arms resolve, so it cannot see this.)
+                if (ret.getMethodReturnType() == PrimitiveSourceType.BOOLEAN) {
+                    Expression bool = foldBooleanIntTernary(simplified);
+                    if (bool != null) {
+                        simplified = bool;
+                    }
+                }
                 if (simplified != ret.getValue()) {
                     ReturnStmt newRet = new ReturnStmt(simplified);
                     newRet.setMethodReturnType(ret.getMethodReturnType());
@@ -221,6 +231,30 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
         }
         return stmt;
+    }
+
+    /**
+     * Folds {@code cond ? 1 : 0} to {@code cond} - the boolean whose int materialization the ternary is.
+     * Returns null when {@code e} is not that shape.
+     */
+    private Expression foldBooleanIntTernary(Expression e) {
+        if (!(e instanceof TernaryExpr)) {
+            return null;
+        }
+        TernaryExpr t = (TernaryExpr) e;
+        Integer thenV = constInt(t.getThenExpr());
+        Integer elseV = constInt(t.getElseExpr());
+        if (thenV != null && thenV == 1 && elseV != null && elseV == 0) {
+            return t.getCondition();
+        }
+        return null;
+    }
+
+    private Integer constInt(Expression e) {
+        if (e instanceof LiteralExpr && ((LiteralExpr) e).getValue() instanceof Integer) {
+            return (Integer) ((LiteralExpr) e).getValue();
+        }
+        return null;
     }
 
     private Expression simplifyExpression(Expression expr) {
