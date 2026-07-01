@@ -277,6 +277,7 @@ public class MethodRecoverer {
         SlotVariablePartition partition = new SlotVariablePartition(irMethod, this::baseNameForSlot,
                 nameRecoverer::debugNameAt);
         recoveryContext.setSlotPartition(partition);
+        recoveryContext.setDebugDescriptorResolver(nameRecoverer::debugDescriptorAt);
 
         irMethod.getBlocks().forEach(block -> {
             block.getPhiInstructions().forEach(phi -> {

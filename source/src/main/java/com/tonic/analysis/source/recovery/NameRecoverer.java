@@ -103,6 +103,26 @@ public class NameRecoverer {
         return null;
     }
 
+    /**
+     * The LocalVariableTable type descriptor in scope for {@code slot} at bytecode {@code offset} - the
+     * declared type of the variable there (e.g. {@code "C"} for {@code char}), or null when no debug info or
+     * no entry covers it. This is the authoritative declared type javac recorded, distinct from the widened
+     * type inferred from the (int-shaped) stored values.
+     */
+    public String debugDescriptorAt(int slot, int offset) {
+        if (lvt == null) {
+            return null;
+        }
+        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable()) {
+            if (entry.getIndex() == slot
+                    && offset >= entry.getStartPc()
+                    && offset < entry.getStartPc() + entry.getLengthPc()) {
+                return resolveUtf8(entry.getDescriptorIndex());
+            }
+        }
+        return null;
+    }
+
     private String resolveUtf8(int index) {
         try {
             var item = constPool.getItem(index);

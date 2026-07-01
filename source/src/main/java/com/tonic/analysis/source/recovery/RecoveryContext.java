@@ -78,6 +78,17 @@ public class RecoveryContext {
         this.slotPartition = slotPartition;
     }
 
+    private java.util.function.BiFunction<Integer, Integer, String> debugDescriptorResolver;
+
+    public void setDebugDescriptorResolver(java.util.function.BiFunction<Integer, Integer, String> resolver) {
+        this.debugDescriptorResolver = resolver;
+    }
+
+    /** The LocalVariableTable type descriptor for {@code slot} at {@code offset}, or null if unavailable. */
+    public String debugDescriptorAt(int slot, int offset) {
+        return debugDescriptorResolver == null ? null : debugDescriptorResolver.apply(slot, offset);
+    }
+
     /** Recovered expressions keyed by SSA value */
     public Map<SSAValue, Expression> getRecoveredExpressions() {
         return recoveredExpressions;

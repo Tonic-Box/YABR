@@ -2029,6 +2029,10 @@ public class StatementRecoverer {
         Set<IRBlock> handlerBlocks = collectExceptionHandlerBlocks(method);
 
         Map<String, List<SourceType>> localSlotTypes = new HashMap<>();
+        // The authoritative narrow-primitive declared type (char/byte/short/boolean) from the
+        // LocalVariableTable, per name - used to override int-widening below. A CONFLICT marker means two
+        // stores of one name disagree, so we don't override.
+        Map<String, String> localSlotLvtNarrow = new HashMap<>();
 
         slotTypeCategoryToName.clear();
         phiSlots.clear();
@@ -2065,6 +2069,13 @@ public class StatementRecoverer {
 
                     if (storedType != null && !storedType.isVoid() && !isNullValue(storedValue)) {
                         localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
+                        String narrow = narrowLvtDescriptor(localIndex, storeLocal.getBytecodeOffset());
+                        if (narrow != null) {
+                            String prev = localSlotLvtNarrow.putIfAbsent(localName, narrow);
+                            if (prev != null && !prev.equals(narrow)) {
+                                localSlotLvtNarrow.put(localName, "CONFLICT");
+                            }
+                        }
                     }
 
                     if (storedValue instanceof SSAValue) {
@@ -2103,6 +2114,13 @@ public class StatementRecoverer {
             List<SourceType> types = entry.getValue();
             if (!types.isEmpty()) {
                 SourceType unifiedType = typeRecoverer.computeCommonType(types);
+                // Prefer the LocalVariableTable's declared narrow-primitive type over int-widening: a
+                // char/byte/short/boolean local stored through int-shaped bytecode (e.g. a synthetic `= 0`
+                // init) otherwise widens to `int`, losing the declared type and drifting from javac.
+                String narrow = localSlotLvtNarrow.get(slotName);
+                if (narrow != null && !"CONFLICT".equals(narrow) && unifiedType == PrimitiveSourceType.INT) {
+                    unifiedType = typeRecoverer.recoverType(narrow);
+                }
                 localSlotUnifiedTypes.put(slotName, unifiedType);
             }
         }
@@ -2182,6 +2200,23 @@ public class StatementRecoverer {
                 }
             }
         }
+    }
+
+    /**
+     * The LocalVariableTable declared type at a store, when it is a narrow primitive (char/byte/short/boolean)
+     * - the sub-int types that int-shaped bytecode would otherwise lose. A store makes its slot live at the
+     * following pc, so the entry's scope typically begins just after the store; a small forward window catches
+     * it. Returns null when there is no such entry (no debug info, or the slot holds a wider type there).
+     */
+    private String narrowLvtDescriptor(int slot, int offset) {
+        RecoveryContext ctx = context.getExpressionContext();
+        for (int d = 0; d <= 3; d++) {
+            String desc = ctx.debugDescriptorAt(slot, offset + d);
+            if (desc != null && desc.length() == 1 && "ZBCS".indexOf(desc.charAt(0)) >= 0) {
+                return desc;
+            }
+        }
+        return null;
     }
 
     /**
