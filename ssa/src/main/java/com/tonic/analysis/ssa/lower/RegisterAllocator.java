@@ -24,6 +24,12 @@ public class RegisterAllocator {
     private final Map<SSAValue, Integer> allocation;
     private final Map<SSAValue, LiveInterval> intervalByValue = new HashMap<>();
     private final Map<Integer, IRType> slotType = new HashMap<>();
+    // A slot is owned by at most one NAMED source variable. javac gives each named local its own slot for its
+    // lexical scope; YABR's liveness-based reuse/coalescing otherwise lets two distinctly-named locals share a
+    // slot (e.g. `byte[] hash = combined` - combined dies at the copy so hash reuses its slot), collapsing them
+    // to one name on round trip. Ownership blocks that merge while leaving unnamed temps free to share.
+    private final Map<Integer, IRMethod.SourceLocal> slotOwner = new HashMap<>();
+    private Map<SSAValue, IRMethod.SourceLocal> namedLocalOf = new HashMap<>();
     private int maxLocals;
     private int reservedSlotCount; // Slots reserved for parameters, never released
     private Map<IRBlock, List<PhiInstruction>> phisByBlockCache;
@@ -80,6 +86,20 @@ public class RegisterAllocator {
         }
         reservedSlotCount = slotIndex;
         maxLocals = slotIndex;
+
+        namedLocalOf = new HashMap<>();
+        for (IRMethod.SourceLocal sl : method.getSourceLocals()) {
+            if (sl.getName() == null) {
+                continue;
+            }
+            for (SSAValue v : sl.getValues()) {
+                namedLocalOf.putIfAbsent(v, sl);
+            }
+        }
+        slotOwner.clear();
+        for (SSAValue param : method.getParameters()) {
+            claimSlot(allocation.get(param), param);
+        }
 
         preAllocatePhiResults(freeRegs);
         assignPhiCopiesToPhiResultSlots();
@@ -144,6 +164,23 @@ public class RegisterAllocator {
             }
             active.add(interval);
             active.sort(Comparator.comparingInt(a -> a.end));
+        }
+    }
+
+    /** Whether {@code local} (a named source var, or null for an unnamed temp) may occupy {@code slot}. */
+    private boolean canOwnSlot(int slot, IRMethod.SourceLocal local) {
+        if (local == null) {
+            return true;
+        }
+        IRMethod.SourceLocal owner = slotOwner.get(slot);
+        return owner == null || owner == local;
+    }
+
+    /** Records the named owner of {@code slot} from {@code value}, if it is a named source variable. */
+    private void claimSlot(int slot, SSAValue value) {
+        IRMethod.SourceLocal local = namedLocalOf.get(value);
+        if (local != null) {
+            slotOwner.putIfAbsent(slot, local);
         }
     }
 
@@ -370,11 +407,24 @@ public class RegisterAllocator {
             Integer phiSlot = allocation.get(entry.getKey());
             if (phiSlot == null) continue;
 
+            // The phi belongs to the variable that flows around its own loop (`v = f(phi)`, the loop-carried
+            // source). Claim its slot for that named variable so an init copy of a DIFFERENT named variable
+            // (`byte[] hash = combined`) is not coalesced onto it and lost.
+            for (CopyInfo copyInfo : entry.getValue()) {
+                SSAValue s = copySource(copyInfo);
+                if (s != null && definitionUsesValue(s, entry.getKey())) {
+                    claimSlot(phiSlot, s);
+                }
+            }
+
             List<SSAValue> placed = new ArrayList<>();
             for (CopyInfo copyInfo : entry.getValue()) {
                 SSAValue source = copySource(copyInfo);
                 if (source == null || allocation.containsKey(source)) {
                     continue;
+                }
+                if (!canOwnSlot(phiSlot, namedLocalOf.get(source))) {
+                    continue; // slot owned by a different named variable - keep this one separate, like javac
                 }
                 // Normally the conservative interval decides. The one case we override is a source that is the
                 // phi's own loop-carried value (`v = f(phi)`, so it derives from the phi and becomes the phi
@@ -400,6 +450,7 @@ public class RegisterAllocator {
                     continue;
                 }
                 allocation.put(source, phiSlot);
+                claimSlot(phiSlot, source);
                 placed.add(source);
             }
         }

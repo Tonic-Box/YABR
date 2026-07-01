@@ -4,12 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Drop an empty else before the AND-chain merge">
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/MethodRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/NameRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/NameRecoverer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/RecoveryContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/recovery/StatementRecoverer.java" afterDir="false" />
-    </list>
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Preserve a narrow-primitive local's declared type from the LVT" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -156,14 +151,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00074" summary="- TypeInferenceAnalyzer: narrow types across edges from instanceof/null checks&#10;- InterProceduralEngine: follow resolvable calls by lifting the callee&#10;- ValueFlowQuery: populate the def/use/dependency graph&#10;- SimulationEngine.simulate(MethodEntry): lift and simulate instead of throwing&#10;- ClassRenamer: re-derive inner-class names in the InnerClasses attribute&#10;- InstrumentationTransform: honor the array-store type filter and implement exception-handler hooks (exposing the caught-exception value on IRMethod)&#10;- General code quality cleanup">
-      <option name="closed" value="true" />
-      <created>1782612251224</created>
-      <option name="number" value="00074" />
-      <option name="presentableId" value="LOCAL-00074" />
-      <option name="project" value="LOCAL" />
-      <updated>1782612251224</updated>
     </task>
     <task id="LOCAL-00075" summary="Removal of Lombok: pt1&#10;- query module&#10;- renamer module">
       <option name="closed" value="true" />
@@ -549,7 +536,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782925583955</updated>
     </task>
-    <option name="localTasksCounter" value="123" />
+    <task id="LOCAL-00123" summary="- Preserve a narrow-primitive local's declared type from the LVT">
+      <option name="closed" value="true" />
+      <created>1782928437645</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1782928437645</updated>
+    </task>
+    <option name="localTasksCounter" value="124" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -564,7 +559,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Type reused-slot locals correctly on round trip" />
     <MESSAGE value="- Fix try/catch/finally round-trip: SimpleFinallyClass now idempotent" />
     <MESSAGE value="- Fix spurious return-in-try" />
     <MESSAGE value="- Preload binary-op left operand to avoid spilling the right" />
@@ -589,7 +583,8 @@
     <MESSAGE value="- Re-run dead-code elimination after the late reconstructions" />
     <MESSAGE value="- Coalesce a loop-carried phi with its own if/else-merge phi" />
     <MESSAGE value="- Drop an empty else before the AND-chain merge" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Drop an empty else before the AND-chain merge" />
+    <MESSAGE value="- Preserve a narrow-primitive local's declared type from the LVT" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Preserve a narrow-primitive local's declared type from the LVT" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
