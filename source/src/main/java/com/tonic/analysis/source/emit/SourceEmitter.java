@@ -705,7 +705,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
             return false;
         }
         Statement last = statements.get(statements.size() - 1);
-        if (last instanceof ReturnStmt || last instanceof ThrowStmt || last instanceof BreakStmt) {
+        // A case ending in an unconditional continue/return/throw/break already terminates the case's flow, so
+        // an appended `break` would be unreachable (`continue; break;` - invalid Java). continue was missing.
+        if (last instanceof ReturnStmt || last instanceof ThrowStmt || last instanceof BreakStmt
+                || last instanceof ContinueStmt) {
             return false;
         }
         if (last instanceof BlockStmt) {
