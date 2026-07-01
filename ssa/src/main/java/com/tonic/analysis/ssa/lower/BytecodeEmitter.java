@@ -413,9 +413,11 @@ public class BytecodeEmitter {
                 IRInstruction next = nextEmittedInstruction(instructions, i);
                 if (next == null) continue;
 
+                // The adjacent-operand fast path: this value is an operand of the very next instruction. Only
+                // applicable when that instruction has operands - but the receiver-window path below does NOT
+                // depend on it, so we must not bail here when the next instruction (e.g. a paired `new`, which
+                // has no operands) sits between a cast/receiver and its actual use.
                 List<Value> nextOperands = next.getOperands();
-                if (nextOperands.isEmpty()) continue;
-
                 int p = nextOperands.indexOf(result);
                 if (p >= 0 && prefixResidentInOrder(nextOperands, p, defIdxOf, i)
                         && suffixSimple(nextOperands, p)) {
@@ -848,11 +850,16 @@ public class BytecodeEmitter {
                     // The receiver is the freshly-new'd object, already on the stack (new; dup); just keep the
                     // argument resident so it builds on top of it (e.g. new JPanel(new FlowLayout(0))).
                     stackResidentValues.add(arg);
+                } else if (stackResidentValues.contains(recv)) {
+                    // The receiver already stays on the stack (e.g. a cast kept resident by the receiver-window
+                    // analysis). Just keep the paired-new argument resident on top of it - no preload needed, so
+                    // the argument builds directly above the receiver (javac's `<recv>; new; dup; init; invoke`)
+                    // instead of spilling to a local.
+                    stackResidentValues.add(arg);
                 } else {
-                    // Method call: the receiver is a re-loadable, multi-use slot value; preload it beneath the
-                    // argument window so the argument need not spill to a local.
-                    if (useCounts.getOrDefault(recv, 0) <= 1
-                            || stackResidentValues.contains(recv) || inlinedConstants.contains(recv)) {
+                    // Method call with a re-loadable, multi-use slot receiver: preload it beneath the argument
+                    // window so the argument need not spill to a local.
+                    if (useCounts.getOrDefault(recv, 0) <= 1 || inlinedConstants.contains(recv)) {
                         continue;
                     }
                     receiverPreload.put(instructions.get(argDef), recv);

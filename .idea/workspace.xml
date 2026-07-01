@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Coalesce loop-carried phi sources via phi-aware precise interference">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Reuse a slot only for the same reference type, not any reference">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/LocalVariableTableBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/LocalVariableTableBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,22 +154,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00062" summary="- CodeWriter::removeInstruction">
-      <option name="closed" value="true" />
-      <created>1781874492600</created>
-      <option name="number" value="00062" />
-      <option name="presentableId" value="LOCAL-00062" />
-      <option name="project" value="LOCAL" />
-      <updated>1781874492600</updated>
-    </task>
-    <task id="LOCAL-00063" summary="- ASTLowerer ordering fix">
-      <option name="closed" value="true" />
-      <created>1781875079343</created>
-      <option name="number" value="00063" />
-      <option name="presentableId" value="LOCAL-00063" />
-      <option name="project" value="LOCAL" />
-      <updated>1781875079343</updated>
     </task>
     <task id="LOCAL-00064" summary="Fix decompile→recompile type fidelity&#10;&#10;Resolve ctor/method/field/array/generic types via TypeResolver, not raw AST types (fixes Frame NoClassDefFound + more); emit acmp for reference ==/!=; run structured finally bodies. Add recompile-verify sweep test.">
       <option name="closed" value="true" />
@@ -547,7 +531,23 @@
       <option name="project" value="LOCAL" />
       <updated>1782899988384</updated>
     </task>
-    <option name="localTasksCounter" value="111" />
+    <task id="LOCAL-00111" summary="- Emit per-slot LVT ranges and trim overlaps instead of dropping">
+      <option name="closed" value="true" />
+      <created>1782904394796</created>
+      <option name="number" value="00111" />
+      <option name="presentableId" value="LOCAL-00111" />
+      <option name="project" value="LOCAL" />
+      <updated>1782904394796</updated>
+    </task>
+    <task id="LOCAL-00112" summary="- Reuse a slot only for the same reference type, not any reference">
+      <option name="closed" value="true" />
+      <created>1782906198340</created>
+      <option name="number" value="00112" />
+      <option name="presentableId" value="LOCAL-00112" />
+      <option name="project" value="LOCAL" />
+      <updated>1782906198341</updated>
+    </task>
+    <option name="localTasksCounter" value="113" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -562,8 +562,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Removal of Lombok: pt12&#10;- source" />
-    <MESSAGE value="Removal of Lombok: pt13 (Final&#10;- core" />
     <MESSAGE value="Removal of Lombok: pt13 (Final)&#10;- core" />
     <MESSAGE value="- Update some stale docs" />
     <MESSAGE value="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)" />
@@ -587,7 +585,9 @@
     <MESSAGE value="- Coalesce loop accumulators into one slot; frame dead code after returns" />
     <MESSAGE value="- Fold `return cond ? 1 : 0` to `return cond` for boolean methods" />
     <MESSAGE value="- Coalesce loop-carried phi sources via phi-aware precise interference" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Coalesce loop-carried phi sources via phi-aware precise interference" />
+    <MESSAGE value="- Emit per-slot LVT ranges and trim overlaps instead of dropping" />
+    <MESSAGE value="- Reuse a slot only for the same reference type, not any reference" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Reuse a slot only for the same reference type, not any reference" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
