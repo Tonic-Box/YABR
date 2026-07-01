@@ -130,8 +130,19 @@ public class FrameGenerator {
         CodeAttribute codeAttr = method.getCodeAttribute();
 
         CodeWriter codeWriter = new CodeWriter(method);
+        Instruction prev = null;
         for (Instruction instr : codeWriter.getInstructions()) {
             int offset = instr.getOffset();
+
+            // An instruction that follows an unconditional transfer (return/throw/goto/switch) cannot be
+            // reached by fall-through, so it starts a new basic block and needs a frame even when it is not a
+            // branch target - e.g. a stray nop a structural edit leaves after a return. Without a frame the
+            // JVM verifier reports "Expected a stack map frame" there (computeTypeStates gives it a state via
+            // the dead-code fill-in below).
+            if (isUnconditionalTransfer(prev)) {
+                targets.add(offset);
+            }
+            prev = instr;
 
             if (instr instanceof ConditionalBranchInstruction) {
                 ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
@@ -187,6 +198,18 @@ public class FrameGenerator {
         }
 
         return targets;
+    }
+
+    /**
+     * Whether this instruction transfers control unconditionally, so the following instruction cannot be
+     * reached by fall-through and begins a new basic block (requiring a frame).
+     */
+    private boolean isUnconditionalTransfer(Instruction instr) {
+        return instr instanceof ReturnInstruction
+                || instr instanceof ATHROWInstruction
+                || instr instanceof GotoInstruction
+                || instr instanceof TableSwitchInstruction
+                || instr instanceof LookupSwitchInstruction;
     }
 
     /**
@@ -258,6 +281,29 @@ public class FrameGenerator {
 
         processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
                 instructionList, offsetToIndex, constPool);
+
+        // Dead-code frame targets: an unreachable block start (e.g. a nop a structural edit leaves after a
+        // return) still requires a frame, but the worklist never reaches it so it has no simulated state. It
+        // falls through into the next reachable block, and a stray nop cannot net-change the operand stack, so
+        // its frame must match that fall-through destination's state. Assign the next reachable target's state
+        // (or the method-entry state if nothing follows) - a valid, self-consistent frame for dead code.
+        List<Integer> sortedTargets = new ArrayList<>(frameTargets);
+        Collections.sort(sortedTargets);
+        for (int i = 0; i < sortedTargets.size(); i++) {
+            int target = sortedTargets.get(i);
+            if (states.containsKey(target)) {
+                continue;
+            }
+            TypeState fill = null;
+            for (int j = i + 1; j < sortedTargets.size(); j++) {
+                TypeState next = states.get(sortedTargets.get(j));
+                if (next != null) {
+                    fill = next;
+                    break;
+                }
+            }
+            states.put(target, fill != null ? fill : initialState);
+        }
 
         return states;
     }

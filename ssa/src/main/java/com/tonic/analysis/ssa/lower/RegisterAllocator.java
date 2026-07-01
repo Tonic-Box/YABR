@@ -235,6 +235,26 @@ public class RegisterAllocator {
      * variables), and it must not interfere with a DIFFERENT variable already in that slot (same-variable
      * occupants are temporally/path disjoint by construction, like the values javac keeps in one slot).
      */
+    private Object commonCopySourceGroup(List<CopyInfo> copies, Map<SSAValue, Object> group) {
+        Object common = null;
+        for (CopyInfo ci : copies) {
+            SSAValue src = copySource(ci);
+            if (src == null) {
+                continue;
+            }
+            Object g = group.get(src);
+            if (g == null) {
+                continue;
+            }
+            if (common == null) {
+                common = g;
+            } else if (common != g) {
+                return null;
+            }
+        }
+        return common;
+    }
+
     private void coalesceReassignmentsIntoVariableSlots() {
         Map<SSAValue, Object> group = new HashMap<>();
         Map<Object, Set<Integer>> groupSlots = new HashMap<>();
@@ -244,6 +264,29 @@ public class RegisterAllocator {
                 Integer s = allocation.get(v);
                 if (s != null) {
                     groupSlots.computeIfAbsent(local, k -> new HashSet<>()).add(s);
+                }
+            }
+        }
+        // A phi result is the loop/merge-carried version of a variable but is synthesised after lowering, so
+        // it carries no SourceLocal (and by allocation time the phi is already eliminated - its structure lives
+        // in the phi-copy mapping). Associate each phi result whose incoming copies all belong to one variable
+        // with that variable, so a reassignment `v = op(phi, c)` recognises the phi's slot as the variable's -
+        // otherwise a loop accumulator `x = x | ...` cannot coalesce and splits into a two-slot swap.
+        Map<SSAValue, List<CopyInfo>> phiCopiesForGroup = method.getPhiCopyMapping();
+        if (phiCopiesForGroup != null) {
+            for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopiesForGroup.entrySet()) {
+                SSAValue res = entry.getKey();
+                if (res == null || group.containsKey(res)) {
+                    continue;
+                }
+                Object g = commonCopySourceGroup(entry.getValue(), group);
+                if (g == null) {
+                    continue;
+                }
+                group.put(res, g);
+                Integer s = allocation.get(res);
+                if (s != null) {
+                    groupSlots.computeIfAbsent(g, k -> new HashSet<>()).add(s);
                 }
             }
         }
