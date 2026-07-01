@@ -1233,6 +1233,12 @@ public class ClassDecompiler {
             // Scope a loop counter used only within its `for` back into the for-init (`int j = 0; for (j = 1;...)`
             // -> `for (int j = 1;...)`), matching javac and dropping the drifting method-scope declaration.
             forLoopCounterFolder.transform(body);
+            // The reconstructions above run AFTER the first dead-code pass: varargs-arg inlining and array-literal
+            // folding can strip the last use of a hoisted temp, leaving it declared `= null` and unused (e.g. an
+            // inlined String.format varargs array). A second dead-store/var pass removes those - their unstable
+            // slot-based names otherwise drift on round trip.
+            deadStoreEliminator.transform(body);
+            deadVarEliminator.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body);
