@@ -957,27 +957,38 @@ public class BytecodeEmitter {
                         || useCounts.getOrDefault(value, 0) != 2) {
                     continue; // a paired-new value used only by its <init> and this store
                 }
-                // The array and index must be re-loadable values with no definition in this block (loaded purely
-                // on-demand), so preloading them ahead of the value neither duplicates a standalone load nor
-                // reorders an in-block computation. In-block array refs (e.g. matrix[i]) are handled by the
-                // evaluation-order lowering + receiver-window residency instead.
-                List<SSAValue> prefix = new ArrayList<>();
-                boolean ok = true;
-                for (Value op : new Value[]{store.getArray(), store.getIndex()}) {
-                    if (!(op instanceof SSAValue)) {
-                        ok = false;
-                        break;
-                    }
-                    SSAValue sv = (SSAValue) op;
-                    if (defIdxOf.get(sv) != null || regAlloc.getRegister(sv) < 0
-                            || stackResidentValues.contains(sv) || inlinedConstants.contains(sv)) {
-                        ok = false;
-                        break;
-                    }
-                    prefix.add(sv);
-                }
-                if (!ok || !arrayStoreWindowClosed(instructions, valDef, k, useCounts, value)) {
+                SSAValue arraySv = store.getArray() instanceof SSAValue ? (SSAValue) store.getArray() : null;
+                SSAValue indexSv = store.getIndex() instanceof SSAValue ? (SSAValue) store.getIndex() : null;
+                if (arraySv == null || indexSv == null
+                        || stackResidentValues.contains(arraySv) || stackResidentValues.contains(indexSv)
+                        || inlinedConstants.contains(arraySv) || inlinedConstants.contains(indexSv)
+                        || regAlloc.getRegister(arraySv) < 0 || regAlloc.getRegister(indexSv) < 0) {
                     continue;
+                }
+                Integer arrayD = defIdxOf.get(arraySv);
+                Integer indexD = defIdxOf.get(indexSv);
+                // The array+index must end up on the stack, in order, beneath the value. The array (operand 0) is
+                // the lower slot, so it may be either a re-loadable on-demand value (preloaded) or an in-block
+                // sub-array (e.g. matrix[i]) computed immediately before the value (kept resident). The index
+                // (operand 1) sits above it, so it must be a re-loadable on-demand value (preloaded on top).
+                List<SSAValue> prefix = new ArrayList<>();
+                SSAValue residentArray = null;
+                if (indexD != null) {
+                    continue; // an in-block index would have to be reordered above the array - out of scope
+                }
+                if (arrayD == null) {
+                    prefix.add(arraySv); // on-demand array: preload it first
+                } else if (arrayD == valDef - 1 && useCounts.getOrDefault(arraySv, 0) == 1) {
+                    residentArray = arraySv; // 2-D sub-array computed just before the value: keep it resident
+                } else {
+                    continue;
+                }
+                prefix.add(indexSv);
+                if (!arrayStoreWindowClosed(instructions, valDef, k, useCounts, value)) {
+                    continue;
+                }
+                if (residentArray != null) {
+                    stackResidentValues.add(residentArray);
                 }
                 arrayStorePrefixPreload.put(valDefInstr, prefix);
                 skipStorePrefix.add(store);
