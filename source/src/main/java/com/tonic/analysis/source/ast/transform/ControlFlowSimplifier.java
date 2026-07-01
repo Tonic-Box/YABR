@@ -132,6 +132,15 @@ public class ControlFlowSimplifier implements ASTTransform {
             changed = true;
         }
 
+        // Drop an empty else (`if (c) { body } else {}`): semantically identical to no else, and the emitter
+        // omits it anyway - but its presence blocks the AND-merge below (whose `!hasElse()` guard would fail).
+        // The recompiled short-circuit shape gives each `&&` guard such an empty else, so without this a javac
+        // `a && b && c` chain oscillates between nested and merged forms on round trip.
+        if (ifStmt.hasElse() && isEmptyBlock(ifStmt.getElseBranch())) {
+            ifStmt.setElseBranch(null);
+            changed = true;
+        }
+
         if (!ifStmt.hasElse()) {
             Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
             if (inner instanceof IfStmt) {

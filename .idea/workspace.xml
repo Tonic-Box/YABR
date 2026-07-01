@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Coalesce a loop-carried phi with its own if/else-merge phi">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ControlFlowSimplifier.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,14 +154,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00072" summary="Clean up README">
-      <option name="closed" value="true" />
-      <created>1782568505573</created>
-      <option name="number" value="00072" />
-      <option name="presentableId" value="LOCAL-00072" />
-      <option name="project" value="LOCAL" />
-      <updated>1782568505573</updated>
     </task>
     <task id="LOCAL-00073" summary="Jitpack badge">
       <option name="closed" value="true" />
@@ -547,7 +539,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782922899821</updated>
     </task>
-    <option name="localTasksCounter" value="121" />
+    <task id="LOCAL-00121" summary="- Coalesce a loop-carried phi with its own if/else-merge phi">
+      <option name="closed" value="true" />
+      <created>1782924416199</created>
+      <option name="number" value="00121" />
+      <option name="presentableId" value="LOCAL-00121" />
+      <option name="project" value="LOCAL" />
+      <updated>1782924416199</updated>
+    </task>
+    <option name="localTasksCounter" value="122" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
