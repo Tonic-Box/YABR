@@ -13,6 +13,7 @@ import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.transform.ArrayInitializerReconstructor;
+import com.tonic.analysis.source.ast.transform.ForLoopCounterFolder;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
@@ -97,6 +98,7 @@ public class ClassDecompiler {
     private final PatternInstanceOfReconstructor patternInstanceOf;
     private final VarargsReconstructor varargsReconstructor;
     private final ArrayInitializerReconstructor arrayInitReconstructor;
+    private final ForLoopCounterFolder forLoopCounterFolder;
     private final Set<String> usedTypes = new TreeSet<>();
     private Map<String, NavigableMap<Integer, Integer>> lineMapsCollector;
     private Map<String, DecompileResult.MethodSpan> methodSpansCollector;
@@ -130,6 +132,7 @@ public class ClassDecompiler {
         this.patternInstanceOf = new PatternInstanceOfReconstructor();
         this.varargsReconstructor = new VarargsReconstructor(classFile);
         this.arrayInitReconstructor = new ArrayInitializerReconstructor();
+        this.forLoopCounterFolder = new ForLoopCounterFolder();
         this.hasInnerClasses = detectInnerClasses();
     }
 
@@ -1227,6 +1230,9 @@ public class ClassDecompiler {
             // (`new T[]{...}`). Run after hoisting+inlining so the temp declaration is formed and each element
             // value is inline; the synthetic temp otherwise carries an unstable slot-based name that drifts.
             arrayInitReconstructor.transform(body);
+            // Scope a loop counter used only within its `for` back into the for-init (`int j = 0; for (j = 1;...)`
+            // -> `for (int j = 1;...)`), matching javac and dropping the drifting method-scope declaration.
+            forLoopCounterFolder.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body);
