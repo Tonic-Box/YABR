@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Keep a cast receiver and its paired-new argument resident">
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/lower/ExpressionLowerer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/BytecodeEmitter.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Keep a 2-D array store's sub-array and value resident">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,22 +153,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00065" summary="Fix decompile→recompile type fidelity">
-      <option name="closed" value="true" />
-      <created>1781942505771</created>
-      <option name="number" value="00065" />
-      <option name="presentableId" value="LOCAL-00065" />
-      <option name="project" value="LOCAL" />
-      <updated>1781942505771</updated>
-    </task>
-    <task id="LOCAL-00066" summary="- Abstract Execution API">
-      <option name="closed" value="true" />
-      <created>1782172897448</created>
-      <option name="number" value="00066" />
-      <option name="presentableId" value="LOCAL-00066" />
-      <option name="project" value="LOCAL" />
-      <updated>1782172897448</updated>
     </task>
     <task id="LOCAL-00067" summary="Fix decompile -&gt; recompile fidelity for constructors and boolean conditions&#10;- BytecodeEmitter: emit the idiomatic new;dup;args;invokespecial for constructor calls (storing the result to a local), so new X(args) round-trips instead of spilling and decompiling back to new X() with dropped args&#10;- ExpressionLowerer: lower !, &amp;&amp; and || in conditions as direct branches rather than materializing them into a 0/1 value over a temp local (which decompiled to `cond ? local : local`)&#10;- Add round-trip regression tests">
       <option name="closed" value="true" />
@@ -547,7 +530,23 @@
       <option name="project" value="LOCAL" />
       <updated>1782909708561</updated>
     </task>
-    <option name="localTasksCounter" value="114" />
+    <task id="LOCAL-00114" summary="- Keep an array store's paired-new value resident">
+      <option name="closed" value="true" />
+      <created>1782911852318</created>
+      <option name="number" value="00114" />
+      <option name="presentableId" value="LOCAL-00114" />
+      <option name="project" value="LOCAL" />
+      <updated>1782911852318</updated>
+    </task>
+    <task id="LOCAL-00115" summary="- Keep a 2-D array store's sub-array and value resident">
+      <option name="closed" value="true" />
+      <created>1782913329578</created>
+      <option name="number" value="00115" />
+      <option name="presentableId" value="LOCAL-00115" />
+      <option name="project" value="LOCAL" />
+      <updated>1782913329578</updated>
+    </task>
+    <option name="localTasksCounter" value="116" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -562,8 +561,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Update some stale docs" />
-    <MESSAGE value="Fix decompile-&gt;recompile round-trip failures&#10;- Verifier: correct category-2 (long/double) handling — slot-faithful dup/swap family + read the value (not TOP) on long/double returns&#10;- Emitter: compute max_stack from the actual bytecode (FrameGenerator), not the under-counting StackScheduler estimate&#10;- NewArray/ANewArray getStackChange 1→0; lower new T[]{...} initializers (push length + store elements) so array &lt;clinit&gt;s round-trip&#10;- Decompiler: don't sink loop-invariant calls into loop conditions (SingleUseInliner) and recover loop-header materialized calls instead of dropping them into a $pc$ dispatch loop (recoverForLoop)" />
     <MESSAGE value="- Keep call receivers on the stack + type-aware slot reuse" />
     <MESSAGE value="- Keep call arguments and loop bounds on the operand stack" />
     <MESSAGE value="Round-trip idempotence: harness + try/finally, inner-class types, branch polarity&#10;- try/finally: lower a synthetic catch(Throwable){&lt;finally&gt;; throw} so the finally runs on uncaught exceptions and re-decompiles back to a finally&#10;- TypeResolver: resolve inner-class field owners spelled with '/' via normalizeNestedName&#10;- branch polarity: lowerCondition threads a negate flag (De Morgan + CompareOp.invert()) instead of swapping targets, so '!cond' keeps the then arm as the jump target like javac" />
@@ -587,7 +584,9 @@
     <MESSAGE value="- Emit per-slot LVT ranges and trim overlaps instead of dropping" />
     <MESSAGE value="- Reuse a slot only for the same reference type, not any reference" />
     <MESSAGE value="- Keep a cast receiver and its paired-new argument resident" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Keep a cast receiver and its paired-new argument resident" />
+    <MESSAGE value="- Keep an array store's paired-new value resident" />
+    <MESSAGE value="- Keep a 2-D array store's sub-array and value resident" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Keep a 2-D array store's sub-array and value resident" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

@@ -427,7 +427,12 @@ public class BytecodeEmitter {
                 // has no operands) sits between a cast/receiver and its actual use.
                 List<Value> nextOperands = next.getOperands();
                 int p = nextOperands.indexOf(result);
-                if (p >= 0 && prefixResidentInOrder(nextOperands, p, defIdxOf, i)
+                // A paired-new `<init>` consumer holds its receiver on the stack from `new; dup`, so a constructor
+                // argument can stay resident on top of it. (Detected here from the block itself - operand 0 is a
+                // NewInstruction defined earlier in this block - because analyzeConstructorPairs, which fills
+                // initToNew, has not run yet when this residency pass runs.)
+                boolean nextPairedInit = isPairedInitConsumer(next, nextOperands, instructions, defIdxOf, i);
+                if (p >= 0 && prefixResidentInOrder(nextOperands, p, defIdxOf, i, nextPairedInit)
                         && suffixSimple(nextOperands, p)) {
                     stackResidentValues.add(result);
                 } else if (isReceiverStackResident(instructions, defIdxOf, useCounts, i, result)) {
@@ -530,10 +535,27 @@ public class BytecodeEmitter {
      * the exact operand order the instruction needs. This lets a call argument stay on the stack once its
      * receiver (and earlier arguments) are already resident, instead of being spilled to a local and reloaded.
      */
+    private boolean isPairedInitConsumer(IRInstruction invoke, List<Value> ops, List<IRInstruction> instructions,
+                                         Map<SSAValue, Integer> defIdxOf, int consumerIdx) {
+        if (!(invoke instanceof InvokeInstruction)) {
+            return false;
+        }
+        InvokeInstruction inv = (InvokeInstruction) invoke;
+        if (inv.getInvokeType() != InvokeType.SPECIAL || !"<init>".equals(inv.getName())
+                || ops.isEmpty() || !(ops.get(0) instanceof SSAValue)) {
+            return false;
+        }
+        Integer nd = defIdxOf.get((SSAValue) ops.get(0));
+        return nd != null && nd < consumerIdx && instructions.get(nd) instanceof NewInstruction;
+    }
+
     private boolean prefixResidentInOrder(List<Value> ops, int p, Map<SSAValue, Integer> defIdxOf,
-                                          int resultDefIdx) {
+                                          int resultDefIdx, boolean firstOperandOnStack) {
         int prev = -1;
         for (int q = 0; q < p; q++) {
+            if (q == 0 && firstOperandOnStack) {
+                continue; // operand 0 (a paired-init receiver) is already on the stack from `new; dup`
+            }
             Value o = ops.get(q);
             if (!(o instanceof SSAValue) || !stackResidentValues.contains((SSAValue) o)) {
                 return false;
