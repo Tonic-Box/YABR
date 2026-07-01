@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- re-add residency for a paired-new consumed by a return" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Drop a redundant continue in a loop's trailing switch" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -151,14 +151,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00078" summary="Removal of Lombok: pt4&#10;- analyses">
-      <option name="closed" value="true" />
-      <created>1782616010458</created>
-      <option name="number" value="00078" />
-      <option name="presentableId" value="LOCAL-00078" />
-      <option name="project" value="LOCAL" />
-      <updated>1782616010458</updated>
     </task>
     <task id="LOCAL-00079" summary="Removal of Lombok: pt5&#10;- analyses">
       <option name="closed" value="true" />
@@ -544,7 +536,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782935330638</updated>
     </task>
-    <option name="localTasksCounter" value="127" />
+    <task id="LOCAL-00127" summary="- Drop a redundant continue in a loop's trailing switch">
+      <option name="closed" value="true" />
+      <created>1782936290269</created>
+      <option name="number" value="00127" />
+      <option name="presentableId" value="LOCAL-00127" />
+      <option name="project" value="LOCAL" />
+      <updated>1782936290269</updated>
+    </task>
+    <option name="localTasksCounter" value="128" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -559,7 +559,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
     <MESSAGE value="- Extend live intervals for loop-carried values to prevent slot clobber" />
     <MESSAGE value="- Fix retry-loop corruption" />
     <MESSAGE value="- skip phi copy when the value is stored to the phi slot" />
@@ -584,7 +583,8 @@
     <MESSAGE value="- Keep an init copy's named source variable off the phi's slot" />
     <MESSAGE value="- Keep a copy's named source variable off the destination's slot" />
     <MESSAGE value="- re-add residency for a paired-new consumed by a return" />
-    <option name="LAST_COMMIT_MESSAGE" value="- re-add residency for a paired-new consumed by a return" />
+    <MESSAGE value="- Drop a redundant continue in a loop's trailing switch" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Drop a redundant continue in a loop's trailing switch" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

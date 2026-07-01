@@ -91,6 +91,8 @@ public class ClassDecompiler {
     private final ControlFlowSimplifier astSimplifier;
     private final DeadVariableEliminator deadVarEliminator;
     private final DeadStoreEliminator deadStoreEliminator;
+    private final com.tonic.analysis.source.ast.transform.RedundantAssignmentEliminator redundantAssignmentEliminator
+            = new com.tonic.analysis.source.ast.transform.RedundantAssignmentEliminator();
     private final DeclarationHoister declarationHoister;
     private final SwitchExpressionReconstructor switchExprReconstructor;
     private final PatternSwitchReconstructor patternSwitchReconstructor;
@@ -1239,6 +1241,9 @@ public class ClassDecompiler {
             // slot-based names otherwise drift on round trip.
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            // Drop a redundant phi-copy re-assignment (`x = V; ...; x = V`) that YABR's phi elimination emits at
+            // a branch's end but javac never does - keeps the earlier source-position assignment, matching d1.
+            redundantAssignmentEliminator.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body);
