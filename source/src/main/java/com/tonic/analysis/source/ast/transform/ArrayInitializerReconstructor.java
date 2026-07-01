@@ -63,6 +63,10 @@ public class ArrayInitializerReconstructor implements ASTTransform {
             }
             String var = decl.getName();
 
+            if (foldConsumerFirst(stmts, i, na, size, var)) {
+                return true;
+            }
+
             List<Expression> elements = new ArrayList<>();
             int j = i + 1;
             while (j < stmts.size() && elements.size() < size) {
@@ -105,6 +109,76 @@ public class ArrayInitializerReconstructor implements ASTTransform {
             return true;
         }
         return false;
+    }
+
+    /**
+     * The consumer-first variant: {@code T[] tmp = new T[N]; X = tmp; tmp[0]=e0; ...; tmp[N-1]=e_{N-1}} folded to
+     * {@code X = new T[]{e0, ..., e_{N-1}}}. javac assigns the array to its target before the element stores (the
+     * stores modify the aliased array), so the store scan of the consumer-last path never starts. Safe under the
+     * same conditions: the temp is used only by the one assignment plus the N in-order stores, and no store value
+     * references the temp or the target X (so X's intermediate state is never observed).
+     */
+    private boolean foldConsumerFirst(List<Statement> stmts, int i, NewArrayExpr na, int size, String var) {
+        if (i + 1 >= stmts.size()) {
+            return false;
+        }
+        Statement consumer = stmts.get(i + 1);
+        String target = assignTargetFromVar(consumer, var);
+        if (target == null || target.equals(var)) {
+            return false;
+        }
+        List<Expression> elements = new ArrayList<>();
+        int j = i + 2;
+        while (j < stmts.size() && elements.size() < size) {
+            Expression value = storeValue(stmts.get(j), var, elements.size());
+            if (value == null || referencesVar(value, var) || countUsesExpr(value, target) > 0) {
+                break;
+            }
+            elements.add(value);
+            j++;
+        }
+        if (elements.size() != size) {
+            return false;
+        }
+        int total = 0;
+        for (int t = i + 1; t < j; t++) {
+            total += countUses(stmts.get(t), var);
+        }
+        if (total != size + 1) {
+            return false; // the temp is used somewhere other than the one assignment + N stores
+        }
+
+        ArrayInitExpr arrayInit = new ArrayInitExpr(elements, na.getType());
+        NewArrayExpr literal = new NewArrayExpr(na.getElementType(), new ArrayList<>(), arrayInit,
+                na.getType(), na.getLocation());
+        ExpressionReplacer replacer = new ExpressionReplacer(var, literal);
+        Statement replaced = replaceInStatement(consumer, replacer);
+        if (replacer.replacementCount != 1) {
+            return false;
+        }
+        stmts.set(i + 1, replaced);      // X = new T[]{...}
+        stmts.subList(i + 2, j).clear(); // remove the element stores
+        stmts.remove(i);                 // remove the temp declaration
+        return true;
+    }
+
+    /** If {@code stmt} is {@code X = var} with X a simple variable and rhs exactly {@code var}, X's name; else null. */
+    private String assignTargetFromVar(Statement stmt, String var) {
+        if (!(stmt instanceof ExprStmt)) {
+            return null;
+        }
+        Expression e = ((ExprStmt) stmt).getExpression();
+        if (!(e instanceof BinaryExpr)) {
+            return null;
+        }
+        BinaryExpr b = (BinaryExpr) e;
+        if (b.getOperator() != BinaryOperator.ASSIGN
+                || !(b.getLeft() instanceof VarRefExpr)
+                || !(b.getRight() instanceof VarRefExpr)
+                || !((VarRefExpr) b.getRight()).getName().equals(var)) {
+            return null;
+        }
+        return ((VarRefExpr) b.getLeft()).getName();
     }
 
     private Integer constSize(NewArrayExpr na) {

@@ -1223,6 +1223,10 @@ public class ClassDecompiler {
         // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
         // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
         singleUseInliner.transform(body);
+            // Fold the array-build idiom (`T[] tmp = new T[N]; tmp[i]=...`) back into an array literal
+            // (`new T[]{...}`). Run after hoisting+inlining so the temp declaration is formed and each element
+            // value is inline; the synthetic temp otherwise carries an unstable slot-based name that drifts.
+            arrayInitReconstructor.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             removeTrailingReturn(body);

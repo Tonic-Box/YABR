@@ -4,8 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Keep a 2-D array store's sub-array and value resident">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Keep a paired-new constructor argument resident">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ArrayInitializerReconstructor.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/ast/transform/ArrayInitializerReconstructor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,14 +155,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00067" summary="Fix decompile -&gt; recompile fidelity for constructors and boolean conditions&#10;- BytecodeEmitter: emit the idiomatic new;dup;args;invokespecial for constructor calls (storing the result to a local), so new X(args) round-trips instead of spilling and decompiling back to new X() with dropped args&#10;- ExpressionLowerer: lower !, &amp;&amp; and || in conditions as direct branches rather than materializing them into a 0/1 value over a temp local (which decompiled to `cond ? local : local`)&#10;- Add round-trip regression tests">
-      <option name="closed" value="true" />
-      <created>1782188459048</created>
-      <option name="number" value="00067" />
-      <option name="presentableId" value="LOCAL-00067" />
-      <option name="project" value="LOCAL" />
-      <updated>1782188459048</updated>
     </task>
     <task id="LOCAL-00068" summary="The BIG one&#10;- Refactored the gigantic MAMMOTH of a monolithic module into multiple submodules for project health.&#10;&#10;# Breaking Changes&#10;&#10;Package Renames:&#10;- com.tonic.utill -&gt; com.tonic.util&#10;- com.tonic.parser.attribute.anotation -&gt; com.tonic.parser.attribute.annotation&#10;&#10;Class Relocations:&#10;- com.tonic.analysis.visitor.Visitor -&gt; com.tonic.parser.visitor.Visitor&#10;- com.tonic.analysis.visitor.AbstractClassVisitor -&gt; com.tonic.parser.visitor.AbstractClassVisitor&#10;- com.tonic.analysis.visitor.AbstractMethodVisitor -&gt; com.tonic.parser.visitor.AbstractMethodVisitor&#10;- com.tonic.analysis.visitor.AbstractBlockVisitor -&gt; com.tonic.analysis.ssa.visitor.AbstractBlockVisitor&#10;&#10;Method Relocations:&#10;- ClassFile.generateGetter(...) -&gt; com.tonic.analysis.ClassFactory.generateGetter(classFile, ...)&#10;- ClassFile.generateSetter(...) -&gt; com.tonic.analysis.ClassFactory.generateSetter(classFile, ...)&#10;- ClassFile.setFieldInitialValue(...) -&gt; com.tonic.analysis.ClassFactory.setFieldInitialValue(classFile, ...)&#10;- ClassFile.computeFrames(...) -&gt; com.tonic.analysis.ClassFactory.computeFrames(classFile, ...)&#10;- ClassFile.createNewMethod(boolean addDefaultBody, ...) -&gt; com.tonic.analysis.ClassFactory.createMethodWithBody(classFile, ...)&#10;- ClassPool.createNewClass(...) (auto ctor/clinit) -&gt; com.tonic.analysis.ClassFactory.createClass(pool, ...) (now bare without it)&#10;- CodeAttribute.prettyPrintCode([opts]) -&gt; com.tonic.analysis.CodePrinter.prettyPrintCode(codeAttr[, opts])&#10;- CodeWriter.toSSA()/fromSSA(ir)/optimizeSSA() -&gt; com.tonic.analysis.ssa.SSABridge.toSSA(cw)/fromSSA(cw, ir)/optimizeSSA(cw)&#10;- BootstrapMethodInfo.isStringConcat/isLambda/isRecord/isSwitch(...) + the LAMBDA_METAFACTORY/STRING_CONCAT_FACTORY/OBJECT_METHODS/SWITCH_BOOTSTRAPS constants -&gt; com.tonic.analysis.BootstrapFamilies.*">
       <option name="closed" value="true" />
@@ -546,7 +540,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782913329578</updated>
     </task>
-    <option name="localTasksCounter" value="116" />
+    <task id="LOCAL-00116" summary="- Keep a paired-new constructor argument resident">
+      <option name="closed" value="true" />
+      <created>1782915721956</created>
+      <option name="number" value="00116" />
+      <option name="presentableId" value="LOCAL-00116" />
+      <option name="project" value="LOCAL" />
+      <updated>1782915721956</updated>
+    </task>
+    <option name="localTasksCounter" value="117" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -561,7 +563,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Keep call receivers on the stack + type-aware slot reuse" />
     <MESSAGE value="- Keep call arguments and loop bounds on the operand stack" />
     <MESSAGE value="Round-trip idempotence: harness + try/finally, inner-class types, branch polarity&#10;- try/finally: lower a synthetic catch(Throwable){&lt;finally&gt;; throw} so the finally runs on uncaught exceptions and re-decompiles back to a finally&#10;- TypeResolver: resolve inner-class field owners spelled with '/' via normalizeNestedName&#10;- branch polarity: lowerCondition threads a negate flag (De Morgan + CompareOp.invert()) instead of swapping targets, so '!cond' keeps the then arm as the jump target like javac" />
     <MESSAGE value="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak" />
@@ -586,7 +587,8 @@
     <MESSAGE value="- Keep a cast receiver and its paired-new argument resident" />
     <MESSAGE value="- Keep an array store's paired-new value resident" />
     <MESSAGE value="- Keep a 2-D array store's sub-array and value resident" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Keep a 2-D array store's sub-array and value resident" />
+    <MESSAGE value="- Keep a paired-new constructor argument resident" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Keep a paired-new constructor argument resident" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
