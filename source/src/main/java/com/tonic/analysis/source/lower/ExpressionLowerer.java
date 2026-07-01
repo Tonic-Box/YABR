@@ -514,9 +514,22 @@ public class ExpressionLowerer {
     }
 
     private Value lowerAssignment(BinaryExpr bin) {
-        Value rhs = lower(bin.getRight());
-
         Expression left = bin.getLeft();
+        // Java evaluates an array store's array reference and index BEFORE the value (`a[i] = expr` evaluates
+        // `a`, then `i`, then `expr`). Lower them in that order so the value is the last operand built - it can
+        // then stay stack-resident (javac's `<array>; <index>; new; dup; init; aastore`) instead of being
+        // spilled to a local and reloaded on round trip. (The previous rhs-first order was also a subtle
+        // evaluation-order bug when the value expression reads the array or index.)
+        if (left instanceof ArrayAccessExpr) {
+            ArrayAccessExpr arr = (ArrayAccessExpr) left;
+            Value array = lower(arr.getArray());
+            Value index = lower(arr.getIndex());
+            Value rhs = lower(bin.getRight());
+            ctx.getCurrentBlock().addInstruction(ArrayAccessInstruction.createStore(array, index, rhs));
+            return rhs;
+        }
+
+        Value rhs = lower(bin.getRight());
         if (left instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) left;
             if (!ctx.hasVariable(varRef.getName()) && tryLowerImplicitFieldStore(varRef.getName(), rhs)) {
@@ -526,8 +539,6 @@ public class ExpressionLowerer {
             return rhs;
         } else if (left instanceof FieldAccessExpr) {
             return lowerFieldStore((FieldAccessExpr) left, rhs);
-        } else if (left instanceof ArrayAccessExpr) {
-            return lowerArrayStore((ArrayAccessExpr) left, rhs);
         }
 
         throw new LoweringException("Invalid assignment target: " + left.getClass().getSimpleName());

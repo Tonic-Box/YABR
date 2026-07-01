@@ -61,6 +61,14 @@ public class BytecodeEmitter {
     /** Instructions whose operand 0 was preloaded ahead of operand 1's window, so skip loading it at the use
      *  (a call receiver before its argument, or a binary op's left operand before its computed right operand). */
     private final Set<IRInstruction> skipReceiver = new HashSet<>();
+    /** For an array store {@code arr[i] = new X()}: the array and index (re-loadable, loaded on-demand at the
+     *  store) pushed just before the value's construction, so the paired-new value stays resident on top of them
+     *  (javac's {@code <array>; <index>; new; dup; init; aastore}) instead of spilling to a local. Keyed by the
+     *  value's defining instruction; the store itself skips those operand loads (see {@link #skipStorePrefix}). */
+    private final Map<IRInstruction, List<SSAValue>> arrayStorePrefixPreload = new HashMap<>();
+    /** Array-store instructions whose array+index were preloaded ahead of the value - skip loading operands 0/1
+     *  at the store (the value, operand 2, is separately stack-resident). */
+    private final Set<IRInstruction> skipStorePrefix = new HashSet<>();
     /** Operand use count per value (across instructions and phis), so an unused result can be popped not stored. */
     private final Map<SSAValue, Integer> valueUseCounts = new HashMap<>();
     /** Values that back a named source local; a store to one is kept (not popped) even when the value is unused. */
@@ -680,6 +688,13 @@ public class BytecodeEmitter {
             emitLoadValue(preload); // push the call receiver beneath the argument it's about to build
         }
 
+        List<SSAValue> storePrefix = arrayStorePrefixPreload.get(instr);
+        if (storePrefix != null) {
+            for (SSAValue p : storePrefix) {
+                emitLoadValue(p); // push the array store's array+index beneath the value it's about to build
+            }
+        }
+
         if (instr instanceof NewInstruction && newToInit.containsKey(instr)) {
             emitNew((NewInstruction) instr);
             emit(Opcode.DUP.getCode());
@@ -791,6 +806,8 @@ public class BytecodeEmitter {
     private void analyzeReceiverPreloads() {
         receiverPreload.clear();
         skipReceiver.clear();
+        arrayStorePrefixPreload.clear();
+        skipStorePrefix.clear();
 
         Map<SSAValue, Integer> useCounts = new HashMap<>();
         for (IRBlock block : method.getBlocksInOrder()) {
@@ -917,7 +934,83 @@ public class BytecodeEmitter {
                 skipReceiver.add(op);
                 stackResidentValues.add(right);
             }
+
+            // Array store: arr[i] = new X(). The paired-new value is built before the store, but the array and
+            // index are re-loadable values loaded on-demand AT the store (after the value) - forcing the value to
+            // spill. Preload the array+index just before the value's construction so it stays resident on top of
+            // them, matching javac's `<array>; <index>; new; dup; init; aastore`.
+            for (int k = 0; k < instructions.size(); k++) {
+                if (!(instructions.get(k) instanceof ArrayAccessInstruction)) {
+                    continue;
+                }
+                ArrayAccessInstruction store = (ArrayAccessInstruction) instructions.get(k);
+                if (!store.isStore() || !(store.getValue() instanceof SSAValue)) {
+                    continue;
+                }
+                SSAValue value = (SSAValue) store.getValue();
+                Integer valDef = defIdxOf.get(value);
+                if (valDef == null || valDef >= k) {
+                    continue; // value built in this block before the store
+                }
+                IRInstruction valDefInstr = instructions.get(valDef);
+                if (!(valDefInstr instanceof NewInstruction) || !newToInit.containsKey(valDefInstr)
+                        || useCounts.getOrDefault(value, 0) != 2) {
+                    continue; // a paired-new value used only by its <init> and this store
+                }
+                // The array and index must be re-loadable values with no definition in this block (loaded purely
+                // on-demand), so preloading them ahead of the value neither duplicates a standalone load nor
+                // reorders an in-block computation. In-block array refs (e.g. matrix[i]) are handled by the
+                // evaluation-order lowering + receiver-window residency instead.
+                List<SSAValue> prefix = new ArrayList<>();
+                boolean ok = true;
+                for (Value op : new Value[]{store.getArray(), store.getIndex()}) {
+                    if (!(op instanceof SSAValue)) {
+                        ok = false;
+                        break;
+                    }
+                    SSAValue sv = (SSAValue) op;
+                    if (defIdxOf.get(sv) != null || regAlloc.getRegister(sv) < 0
+                            || stackResidentValues.contains(sv) || inlinedConstants.contains(sv)) {
+                        ok = false;
+                        break;
+                    }
+                    prefix.add(sv);
+                }
+                if (!ok || !arrayStoreWindowClosed(instructions, valDef, k, useCounts, value)) {
+                    continue;
+                }
+                arrayStorePrefixPreload.put(valDefInstr, prefix);
+                skipStorePrefix.add(store);
+                stackResidentValues.add(value);
+            }
         }
+    }
+
+    /**
+     * Whether the window {@code (valDef, storeIdx]} building an array store's paired-new value is self-contained:
+     * every value produced strictly inside it is consumed only inside it, so preloading the array/index ahead of
+     * {@code valDef} leaves the value's construction (and nothing else) stacked cleanly above them.
+     */
+    private boolean arrayStoreWindowClosed(List<IRInstruction> instructions, int valDef, int storeIdx,
+                                           Map<SSAValue, Integer> useCounts, SSAValue value) {
+        for (int j = valDef; j < storeIdx; j++) {
+            SSAValue r = instructions.get(j).getResult();
+            if (r == null || r.equals(value)) {
+                continue;
+            }
+            int within = 0;
+            for (int q = valDef; q <= storeIdx; q++) {
+                for (Value op : instructions.get(q).getOperands()) {
+                    if (r.equals(op)) {
+                        within++;
+                    }
+                }
+            }
+            if (within != useCounts.getOrDefault(r, 0)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** The earliest def index reached from {@code value} through its in-block operands (its computation
@@ -1025,10 +1118,14 @@ public class BytecodeEmitter {
         }
 
         boolean skipFirst = skipReceiver.contains(instr);
+        boolean skipTwo = skipStorePrefix.contains(instr);
         List<Value> operands = instr.getOperands();
         for (int oi = 0; oi < operands.size(); oi++) {
             if (oi == 0 && skipFirst) {
                 continue; // receiver preloaded beneath the argument window
+            }
+            if (oi <= 1 && skipTwo) {
+                continue; // array store's array+index preloaded beneath the value window
             }
             Value operand = operands.get(oi);
             if (operand instanceof SSAValue) {
