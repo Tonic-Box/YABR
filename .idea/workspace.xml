@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Don't emit a dead break after a case-ending continue">
-      <change beforePath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" beforeDir="false" afterPath="$PROJECT_DIR$/source/src/main/java/com/tonic/analysis/source/decompile/ClassDecompiler.java" afterDir="false" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Coalesce a loop-carried phi with its own if/else-merge phi">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,22 +154,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00070" summary="The BIG one&#10;- Refactored the gigantic MAMMOTH of a monolithic module into multiple submodules for project health.&#10;&#10;# Breaking Changes&#10;&#10;Package Renames:&#10;- com.tonic.utill -&gt; com.tonic.util&#10;- com.tonic.parser.attribute.anotation -&gt; com.tonic.parser.attribute.annotation&#10;&#10;Class Relocations:&#10;- com.tonic.analysis.visitor.Visitor -&gt; com.tonic.parser.visitor.Visitor&#10;- com.tonic.analysis.visitor.AbstractClassVisitor -&gt; com.tonic.parser.visitor.AbstractClassVisitor&#10;- com.tonic.analysis.visitor.AbstractMethodVisitor -&gt; com.tonic.parser.visitor.AbstractMethodVisitor&#10;- com.tonic.analysis.visitor.AbstractBlockVisitor -&gt; com.tonic.analysis.ssa.visitor.AbstractBlockVisitor&#10;&#10;Method Relocations:&#10;- ClassFile.generateGetter(...) -&gt; com.tonic.analysis.ClassFactory.generateGetter(classFile, ...)&#10;- ClassFile.generateSetter(...) -&gt; com.tonic.analysis.ClassFactory.generateSetter(classFile, ...)&#10;- ClassFile.setFieldInitialValue(...) -&gt; com.tonic.analysis.ClassFactory.setFieldInitialValue(classFile, ...)&#10;- ClassFile.computeFrames(...) -&gt; com.tonic.analysis.ClassFactory.computeFrames(classFile, ...)&#10;- ClassFile.createNewMethod(boolean addDefaultBody, ...) -&gt; com.tonic.analysis.ClassFactory.createMethodWithBody(classFile, ...)&#10;- ClassPool.createNewClass(...) (auto ctor/clinit) -&gt; com.tonic.analysis.ClassFactory.createClass(pool, ...) (now bare without it)&#10;- CodeAttribute.prettyPrintCode([opts]) -&gt; com.tonic.analysis.CodePrinter.prettyPrintCode(codeAttr[, opts])&#10;- CodeWriter.toSSA()/fromSSA(ir)/optimizeSSA() -&gt; com.tonic.analysis.ssa.SSABridge.toSSA(cw)/fromSSA(cw, ir)/optimizeSSA(cw)&#10;- BootstrapMethodInfo.isStringConcat/isLambda/isRecord/isSwitch(...) + the LAMBDA_METAFACTORY/STRING_CONCAT_FACTORY/OBJECT_METHODS/SWITCH_BOOTSTRAPS constants -&gt; com.tonic.analysis.BootstrapFamilies.*">
-      <option name="closed" value="true" />
-      <created>1782568253284</created>
-      <option name="number" value="00070" />
-      <option name="presentableId" value="LOCAL-00070" />
-      <option name="project" value="LOCAL" />
-      <updated>1782568253284</updated>
-    </task>
-    <task id="LOCAL-00071" summary="Stale tasks cleanup">
-      <option name="closed" value="true" />
-      <created>1782568312838</created>
-      <option name="number" value="00071" />
-      <option name="presentableId" value="LOCAL-00071" />
-      <option name="project" value="LOCAL" />
-      <updated>1782568312838</updated>
     </task>
     <task id="LOCAL-00072" summary="Clean up README">
       <option name="closed" value="true" />
@@ -546,7 +531,23 @@
       <option name="project" value="LOCAL" />
       <updated>1782920555785</updated>
     </task>
-    <option name="localTasksCounter" value="119" />
+    <task id="LOCAL-00119" summary="- Fold loop counter's declaration back into the for-init">
+      <option name="closed" value="true" />
+      <created>1782921879462</created>
+      <option name="number" value="00119" />
+      <option name="presentableId" value="LOCAL-00119" />
+      <option name="project" value="LOCAL" />
+      <updated>1782921879462</updated>
+    </task>
+    <task id="LOCAL-00120" summary="- Re-run dead-code elimination after the late reconstructions">
+      <option name="closed" value="true" />
+      <created>1782922899821</created>
+      <option name="number" value="00120" />
+      <option name="presentableId" value="LOCAL-00120" />
+      <option name="project" value="LOCAL" />
+      <updated>1782922899821</updated>
+    </task>
+    <option name="localTasksCounter" value="121" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -561,9 +562,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Round-trip idempotence: &#10;- faithful guard/super-call recovery&#10;- no finally name leak" />
-    <MESSAGE value="- Keep varargs call arguments stack-resident" />
-    <MESSAGE value="- slot-naming fix now" />
     <MESSAGE value="- Faithful lambda + argument recompilation" />
     <MESSAGE value="- Type reused-slot locals correctly on round trip" />
     <MESSAGE value="- Fix try/catch/finally round-trip: SimpleFinallyClass now idempotent" />
@@ -586,7 +584,10 @@
     <MESSAGE value="- Keep a paired-new constructor argument resident" />
     <MESSAGE value="- Fold the array-literal build idiom back to a literal in regular methods" />
     <MESSAGE value="- Don't emit a dead break after a case-ending continue" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Don't emit a dead break after a case-ending continue" />
+    <MESSAGE value="- Fold loop counter's declaration back into the for-init" />
+    <MESSAGE value="- Re-run dead-code elimination after the late reconstructions" />
+    <MESSAGE value="- Coalesce a loop-carried phi with its own if/else-merge phi" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Coalesce a loop-carried phi with its own if/else-merge phi" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

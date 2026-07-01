@@ -587,9 +587,13 @@ public class RegisterAllocator {
                             // Only coalesce two phis that reference each other when their live
                             // ranges do not overlap. Coalescing interfering phis into one slot
                             // corrupts code such as a loop swap (a = b; b = temp), where both phi
-                            // results are simultaneously live and must occupy distinct slots.
+                            // results are simultaneously live and must occupy distinct slots. Use the
+                            // phi-aware interference test - the shared LivenessAnalysis over-lives a phi
+                            // result (phis are eliminated before it runs) and falsely reports a loop-carried
+                            // phi as interfering with its own if/else-merge phi, splitting an accumulator like
+                            // `x = f(x)` into `t = f(x); x = t`.
                             if (source instanceof SSAValue && allPhiResults.contains(source)
-                                    && !interferes(phiResult, (SSAValue) source)) {
+                                    && !preciselyInterferes(phiResult, (SSAValue) source)) {
                                 coalescingMap.put(phiResult, (SSAValue) source);
                             }
                         }
