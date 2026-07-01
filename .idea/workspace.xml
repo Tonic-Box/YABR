@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Preserve a narrow-primitive local's declared type from the LVT" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Keep an init copy's named source variable off the phi's slot">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -151,14 +154,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00075" summary="Removal of Lombok: pt1&#10;- query module&#10;- renamer module">
-      <option name="closed" value="true" />
-      <created>1782613735833</created>
-      <option name="number" value="00075" />
-      <option name="presentableId" value="LOCAL-00075" />
-      <option name="project" value="LOCAL" />
-      <updated>1782613735833</updated>
     </task>
     <task id="LOCAL-00076" summary="Removal of Lombok: pt2&#10;- execution">
       <option name="closed" value="true" />
@@ -544,7 +539,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782928437645</updated>
     </task>
-    <option name="localTasksCounter" value="124" />
+    <task id="LOCAL-00124" summary="- Keep an init copy's named source variable off the phi's slot">
+      <option name="closed" value="true" />
+      <created>1782931977667</created>
+      <option name="number" value="00124" />
+      <option name="presentableId" value="LOCAL-00124" />
+      <option name="project" value="LOCAL" />
+      <updated>1782931977667</updated>
+    </task>
+    <option name="localTasksCounter" value="125" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -559,7 +562,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fix try/catch/finally round-trip: SimpleFinallyClass now idempotent" />
     <MESSAGE value="- Fix spurious return-in-try" />
     <MESSAGE value="- Preload binary-op left operand to avoid spilling the right" />
     <MESSAGE value="- Recover switch case breaks (don't treat the merge as a fallthrough target)" />
@@ -584,7 +586,8 @@
     <MESSAGE value="- Coalesce a loop-carried phi with its own if/else-merge phi" />
     <MESSAGE value="- Drop an empty else before the AND-chain merge" />
     <MESSAGE value="- Preserve a narrow-primitive local's declared type from the LVT" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Preserve a narrow-primitive local's declared type from the LVT" />
+    <MESSAGE value="- Keep an init copy's named source variable off the phi's slot" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Keep an init copy's named source variable off the phi's slot" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

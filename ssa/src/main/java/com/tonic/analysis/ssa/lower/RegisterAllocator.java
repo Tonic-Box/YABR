@@ -6,7 +6,9 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
 import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
+import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
@@ -780,7 +782,76 @@ public class RegisterAllocator {
         // This ensures phi result slots aren't reused before all copies complete
         extendPhiResultIntervals(intervals);
 
+        // Fourth pass: a copy `X = Y` between two DISTINCT named source variables (lowered as
+        // StoreLocal(X, LoadLocal(Y))) keeps BOTH live in the source - javac emits the copy and gives them
+        // separate slots. Value liveness alone lets Y reuse X's freed slot (Y dies at the copy), collapsing two
+        // names onto one slot so the round trip loses one name (e.g. `chained = complex`). Extend Y's interval
+        // to overlap X's so linear-scan reuse keeps them apart, as javac does. Targeted to an actual copy
+        // between named locals - unrelated locals and unnamed temps are untouched, so no over-separation.
+        extendCopiesBetweenNamedLocals(intervals);
+
         return new ArrayList<>(intervals.values());
+    }
+
+    private void extendCopiesBetweenNamedLocals(Map<SSAValue, LiveInterval> intervals) {
+        Map<SSAValue, IRMethod.SourceLocal> localOf = new HashMap<>();
+        for (IRMethod.SourceLocal sl : method.getSourceLocals()) {
+            if (sl.getName() == null) {
+                continue;
+            }
+            for (SSAValue v : sl.getValues()) {
+                localOf.putIfAbsent(v, sl);
+            }
+        }
+        // The named variable whose value is stored at each local index.
+        Map<Integer, IRMethod.SourceLocal> homeIndex = new HashMap<>();
+        for (IRBlock block : method.getBlocks()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (!(instr instanceof StoreLocalInstruction)) {
+                    continue;
+                }
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                if (!(store.getValue() instanceof SSAValue)) {
+                    continue;
+                }
+                IRMethod.SourceLocal sl = localOf.get((SSAValue) store.getValue());
+                if (sl != null) {
+                    homeIndex.putIfAbsent(store.getLocalIndex(), sl);
+                }
+            }
+        }
+        for (IRBlock block : method.getBlocks()) {
+            for (IRInstruction instr : block.getInstructions()) {
+                if (!(instr instanceof StoreLocalInstruction)) {
+                    continue;
+                }
+                Value stored = ((StoreLocalInstruction) instr).getValue();
+                if (!(stored instanceof SSAValue)
+                        || !(((SSAValue) stored).getDefinition() instanceof LoadLocalInstruction)) {
+                    continue;
+                }
+                SSAValue storedSsa = (SSAValue) stored;
+                IRMethod.SourceLocal dst = localOf.get(storedSsa);
+                IRMethod.SourceLocal src = homeIndex.get(
+                        ((LoadLocalInstruction) storedSsa.getDefinition()).getLocalIndex());
+                if (dst == null || src == null || dst == src) {
+                    continue;
+                }
+                int dstEnd = -1;
+                for (SSAValue v : dst.getValues()) {
+                    LiveInterval li = intervals.get(v);
+                    if (li != null) {
+                        dstEnd = Math.max(dstEnd, li.end);
+                    }
+                }
+                for (SSAValue v : src.getValues()) {
+                    LiveInterval li = intervals.get(v);
+                    if (li != null && dstEnd > li.end) {
+                        li.end = dstEnd;
+                    }
+                }
+            }
+        }
     }
 
     /**
