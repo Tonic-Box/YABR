@@ -26,6 +26,8 @@ public class RegisterAllocator {
     private final Map<Integer, IRType> slotType = new HashMap<>();
     private int maxLocals;
     private int reservedSlotCount; // Slots reserved for parameters, never released
+    private Map<IRBlock, List<PhiInstruction>> phisByBlockCache;
+    private Map<IRBlock, Set<SSAValue>> phiAwareLiveOutCache;
 
     public RegisterAllocator(IRMethod method, LivenessAnalysis liveness) {
         this.method = method;
@@ -369,7 +371,15 @@ public class RegisterAllocator {
                 if (source == null || allocation.containsKey(source)) {
                     continue;
                 }
-                if (interferes(entry.getKey(), source)) {
+                // Normally the conservative interval decides. The one case we override is a source that is the
+                // phi's own loop-carried value (`v = f(phi)`, so it derives from the phi and becomes the phi
+                // next iteration): the interval falsely reports a conflict there (it keeps the phi live across
+                // the back-edge past its real last use), so confirm with precise liveness and coalesce when
+                // they genuinely never coexist. Everything else keeps the interval behaviour, so no unrelated
+                // allocation shifts. A nested accumulator whose phi truly coexists still reports interference.
+                boolean loopCarriedFalseConflict = definitionUsesValue(source, entry.getKey())
+                        && !preciselyInterferes(entry.getKey(), source);
+                if (interferes(entry.getKey(), source) && !loopCarriedFalseConflict) {
                     continue;
                 }
                 Object sourceGroup = group.get(source);
@@ -388,6 +398,155 @@ public class RegisterAllocator {
                 placed.add(source);
             }
         }
+    }
+
+    /**
+     * Whether {@code value}'s defining instruction reads {@code used} as an operand - i.e. {@code value} is
+     * computed from {@code used}. For a phi's incoming source this marks the loop-carried value derived from
+     * the phi ({@code v = f(phi)}), which supersedes it on the back-edge and may share its slot.
+     */
+    private boolean definitionUsesValue(SSAValue value, SSAValue used) {
+        IRInstruction def = value.getDefinition();
+        if (def == null) {
+            return false;
+        }
+        for (Value op : def.getOperands()) {
+            if (op == used) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Precise interference test: whether {@code a} and {@code b} are ever simultaneously live at any program
+     * point, computed from the true per-instruction liveness rather than the single conservative interval.
+     * <p>
+     * The interval an allocator carries for a phi result is deliberately over-extended (across the loop
+     * back-edge and to cover its copies), so {@link #interferes} reports a false conflict between a phi and its
+     * own loop-carried source ({@code v = f(phi)}): the interval says the phi is live in {@code [f(phi), back
+     * edge]} where in truth it is dead (the back-edge carries the source, not the phi). Walking real liveness
+     * shows they never coexist there, so the source may share the phi slot - while a nested-loop accumulator
+     * whose phi genuinely coexists with the source is still reported as interfering.
+     */
+    private boolean preciselyInterferes(SSAValue a, SSAValue b) {
+        if (a == b) {
+            return false;
+        }
+        Map<IRBlock, Set<SSAValue>> liveOut = phiAwareLiveOut();
+        for (IRBlock block : method.getBlocks()) {
+            Set<SSAValue> live = new HashSet<>(liveOut.get(block));
+            if (live.contains(a) && live.contains(b)) {
+                return true;
+            }
+            List<IRInstruction> instrs = block.getInstructions();
+            for (int i = instrs.size() - 1; i >= 0; i--) {
+                IRInstruction instr = instrs.get(i);
+                SSAValue def = instr.getResult();
+                if (def != null) {
+                    live.remove(def);
+                }
+                for (Value op : instr.getOperands()) {
+                    if (op instanceof SSAValue) {
+                        live.add((SSAValue) op);
+                    }
+                }
+                if (live.contains(a) && live.contains(b)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Per-block live-out sets recomputed to be phi-aware, because the shared {@link LivenessAnalysis} is not:
+     * phis are eliminated (their instructions cleared from blocks) before liveness runs, so a phi result has no
+     * visible definition and is computed as live everywhere backward from its uses - over-extending it across
+     * the loop back-edge so it falsely coexists with its own back-edge source. Here a phi result is a proper
+     * definition at its block entry (not live-in there, not live on the back-edge), and each predecessor edge
+     * carries the phi OPERAND supplied from that predecessor. Standard backward dataflow to a fixed point.
+     */
+    private Map<IRBlock, Set<SSAValue>> phiAwareLiveOut() {
+        if (phiAwareLiveOutCache != null) {
+            return phiAwareLiveOutCache;
+        }
+        List<IRBlock> blocks = method.getBlocks();
+        Map<IRBlock, Set<SSAValue>> liveIn = new HashMap<>();
+        Map<IRBlock, Set<SSAValue>> liveOut = new HashMap<>();
+        for (IRBlock b : blocks) {
+            liveIn.put(b, new HashSet<>());
+            liveOut.put(b, new HashSet<>());
+        }
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (int i = blocks.size() - 1; i >= 0; i--) {
+                IRBlock b = blocks.get(i);
+                Set<SSAValue> out = new HashSet<>();
+                for (IRBlock succ : b.getSuccessors()) {
+                    Set<SSAValue> edge = new HashSet<>(liveIn.get(succ));
+                    for (PhiInstruction phi : phisByBlock().getOrDefault(succ, Collections.emptyList())) {
+                        if (phi.getResult() != null) {
+                            edge.remove(phi.getResult());
+                        }
+                        Value in = phi.getIncoming(b);
+                        if (in instanceof SSAValue) {
+                            edge.add((SSAValue) in);
+                        }
+                    }
+                    out.addAll(edge);
+                }
+                Set<SSAValue> in = new HashSet<>(out);
+                List<IRInstruction> instrs = b.getInstructions();
+                for (int j = instrs.size() - 1; j >= 0; j--) {
+                    IRInstruction instr = instrs.get(j);
+                    if (instr.getResult() != null) {
+                        in.remove(instr.getResult());
+                    }
+                    for (Value op : instr.getOperands()) {
+                        if (op instanceof SSAValue) {
+                            in.add((SSAValue) op);
+                        }
+                    }
+                }
+                for (PhiInstruction phi : phisByBlock().getOrDefault(b, Collections.emptyList())) {
+                    if (phi.getResult() != null) {
+                        in.remove(phi.getResult());
+                    }
+                }
+                if (!out.equals(liveOut.get(b)) || !in.equals(liveIn.get(b))) {
+                    liveOut.put(b, out);
+                    liveIn.put(b, in);
+                    changed = true;
+                }
+            }
+        }
+        phiAwareLiveOutCache = liveOut;
+        return liveOut;
+    }
+
+    /**
+     * Phi results grouped by the block that defines them, rebuilt from the phi-copy mapping. Phi instructions
+     * are cleared from their blocks during phi elimination (before allocation), but each phi-result value still
+     * points at its {@code PhiInstruction} (with its block and per-edge incoming values intact), so the phi
+     * structure needed for phi-aware liveness survives here.
+     */
+    private Map<IRBlock, List<PhiInstruction>> phisByBlock() {
+        if (phisByBlockCache == null) {
+            phisByBlockCache = new HashMap<>();
+            Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
+            if (phiCopies != null) {
+                for (SSAValue phiResult : phiCopies.keySet()) {
+                    IRInstruction def = phiResult.getDefinition();
+                    if (def instanceof PhiInstruction && def.getBlock() != null) {
+                        phisByBlockCache.computeIfAbsent(def.getBlock(), k -> new ArrayList<>())
+                                .add((PhiInstruction) def);
+                    }
+                }
+            }
+        }
+        return phisByBlockCache;
     }
 
     /**

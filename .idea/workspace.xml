@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Coalesce loop accumulators into one slot; frame dead code after returns">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fold `return cond ? 1 : 0` to `return cond` for boolean methods">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/bytecode/src/main/java/com/tonic/analysis/frame/FrameGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lower/RegisterAllocator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -155,14 +154,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00060" summary="- Fix decompile-&gt;recompile fidelity: qualified names + return types">
-      <option name="closed" value="true" />
-      <created>1781871841882</created>
-      <option name="number" value="00060" />
-      <option name="presentableId" value="LOCAL-00060" />
-      <option name="project" value="LOCAL" />
-      <updated>1781871841882</updated>
     </task>
     <task id="LOCAL-00061" summary="- Fix decompile-&gt;recompile fidelity: qualified names + return types for wildcard imports">
       <option name="closed" value="true" />
@@ -548,7 +539,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782888372959</updated>
     </task>
-    <option name="localTasksCounter" value="109" />
+    <task id="LOCAL-00109" summary="- Fold `return cond ? 1 : 0` to `return cond` for boolean methods">
+      <option name="closed" value="true" />
+      <created>1782889843668</created>
+      <option name="number" value="00109" />
+      <option name="presentableId" value="LOCAL-00109" />
+      <option name="project" value="LOCAL" />
+      <updated>1782889843668</updated>
+    </task>
+    <option name="localTasksCounter" value="110" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -563,7 +562,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Removal of Lombok: pt10&#10;- bytecode" />
     <MESSAGE value="Removal of Lombok: pt11&#10;- ssa" />
     <MESSAGE value="Removal of Lombok: pt12&#10;- source" />
     <MESSAGE value="Removal of Lombok: pt13 (Final&#10;- core" />
@@ -588,7 +586,8 @@
     <MESSAGE value="- Fix dropped conditional arm in nested if/else-if (ternary-phi over-collapse)" />
     <MESSAGE value="- Reconstruct round-trip varargs hoisted/spilled across statements" />
     <MESSAGE value="- Coalesce loop accumulators into one slot; frame dead code after returns" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Coalesce loop accumulators into one slot; frame dead code after returns" />
+    <MESSAGE value="- Fold `return cond ? 1 : 0` to `return cond` for boolean methods" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fold `return cond ? 1 : 0` to `return cond` for boolean methods" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
