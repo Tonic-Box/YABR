@@ -112,15 +112,19 @@ public class RegisterAllocator {
                 freeRegs.remove(reg + 1);
                 maxLocals = Math.max(maxLocals, reg + 2);
             } else {
-                // Reuse a free slot only when its last occupant has the same storage kind. Sharing a slot
-                // between a primitive and a reference (or e.g. int and float) is legal bytecode, but forces the
-                // decompiler to widen the slot's variable to Object - producing ugly, non-idempotent
-                // `Object x = ...` locals on round trip. A fresh slot keeps each variable cleanly typed.
-                int want = storageKind(value.getType());
+                // Reuse a free slot only when its last occupant is compatible. For a primitive, the same storage
+                // kind (int family, long, float, double). For a REFERENCE, the same reference type - not merely
+                // "some reference": two disjoint-lived refs of different types sharing a slot force the decompiler
+                // to widen the slot to Object (an Object grab-bag of unrelated variables it can't cleanly name or
+                // type on round trip). A fresh slot per reference type keeps each variable cleanly typed.
+                IRType wantType = value.getType();
+                int want = storageKind(wantType);
+                boolean isRef = !(wantType instanceof PrimitiveType);
                 int reuse = -1;
                 for (int candidate : freeRegs) {
                     IRType last = slotType.get(candidate);
-                    if (last == null || storageKind(last) == want) {
+                    if (last == null
+                            || (isRef ? sameReferenceType(last, wantType) : storageKind(last) == want)) {
                         reuse = candidate;
                         break;
                     }
@@ -143,11 +147,12 @@ public class RegisterAllocator {
         }
     }
 
-    /**
-     * A slot's "storage kind" for reuse compatibility: all references share one kind, and each primitive
-     * family (the JVM int family, long, float, double) is its own, so a slot is never shared across a
-     * primitive/reference (or e.g. int/float) boundary.
-     */
+    /** Whether {@code a} and {@code b} are the same reference type (both references, equal descriptor). */
+    private static boolean sameReferenceType(IRType a, IRType b) {
+        return !(a instanceof PrimitiveType) && !(b instanceof PrimitiveType)
+                && a.getDescriptor().equals(b.getDescriptor());
+    }
+
     private static int storageKind(IRType type) {
         if (!(type instanceof PrimitiveType)) {
             return 0;
