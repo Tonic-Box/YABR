@@ -11,6 +11,7 @@ import com.tonic.parser.attribute.table.LocalVariableTableEntry;
 import com.tonic.parser.attribute.table.LvtSupport;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,25 +55,41 @@ public final class LocalVariableTableBuilder {
 
         List<LocalVariableTableEntry> entries = new ArrayList<>();
         for (IRMethod.SourceLocal local : locals) {
-            Integer slot = resolveSlot(local, allocation);
-            if (slot == null) {
-                continue;
-            }
-            // Parameters span the whole method; a body local uses its instruction-precise live range so that a
-            // slot reused by a later local (or a compiler temp) does not fall inside this variable's scope and
-            // merge into it - which in a straight-line method would widen the slot to Object on round trip.
-            int[] scope = local.isParameter() ? new int[]{0, codeLength} : instructionScope(local);
-            int startPc = scope[0];
-            int length = scope[1] - scope[0];
             String desc = local.getType() != null ? local.getType().getDescriptor() : null;
-            if (desc == null || local.getName() == null
-                    || !LvtSupport.valid(slot, maxLocals, startPc, length, codeLength)) {
+            if (desc == null || local.getName() == null) {
                 continue;
             }
-            entries.add(LvtSupport.entry(constPool, slot, local.getName(), desc, startPc, length));
+            if (local.isParameter()) {
+                Integer slot = resolveSlot(local, allocation);
+                if (slot != null && LvtSupport.valid(slot, maxLocals, 0, codeLength, codeLength)) {
+                    entries.add(LvtSupport.entry(constPool, slot, local.getName(), desc, 0, codeLength));
+                }
+                continue;
+            }
+            // A source variable's SSA versions can land on DIFFERENT slots (e.g. a dead `= null` default-init
+            // on one slot, the real values on another). Emit one entry per slot, each scoped to only the values
+            // ON that slot - a single scope spanning all versions would cover slots the entry doesn't name and
+            // over-reach into other variables sharing this slot, so the overlap-drop would silently discard
+            // their names and the decompiler would mislabel them (an unstable, drifting round trip).
+            Map<Integer, List<SSAValue>> valuesBySlot = new LinkedHashMap<>();
+            for (SSAValue v : local.getValues()) {
+                Integer s = allocation.get(v);
+                if (s != null) {
+                    valuesBySlot.computeIfAbsent(s, k -> new ArrayList<>()).add(v);
+                }
+            }
+            for (Map.Entry<Integer, List<SSAValue>> e : valuesBySlot.entrySet()) {
+                int slot = e.getKey();
+                int[] scope = instructionScope(e.getValue());
+                int startPc = scope[0];
+                int length = scope[1] - scope[0];
+                if (LvtSupport.valid(slot, maxLocals, startPc, length, codeLength)) {
+                    entries.add(LvtSupport.entry(constPool, slot, local.getName(), desc, startPc, length));
+                }
+            }
         }
 
-        LvtSupport.dropSameSlotOverlaps(entries);
+        entries = trimSameSlotOverlaps(entries);
         if (entries.isEmpty()) {
             return null;
         }
@@ -82,6 +99,43 @@ public final class LocalVariableTableBuilder {
         attr.setLocalVariableTable(entries);
         attr.updateLength();
         return attr;
+    }
+
+    /**
+     * Resolves same-slot range overlaps by TRIMMING rather than dropping: within each slot, sort entries by
+     * start and clamp each one's end to the next one's start, so a reused slot's successive variables get
+     * disjoint ranges and BOTH keep their name. (The old drop discarded the later entry, so the decompiler
+     * fell back to the surviving name for it - the mislabelled, drifting round trip.) The LocalVariableTable is
+     * debug-only, so trimming never affects execution; it only sharpens which variable a slot names at each pc.
+     */
+    private List<LocalVariableTableEntry> trimSameSlotOverlaps(List<LocalVariableTableEntry> entries) {
+        Map<Integer, List<LocalVariableTableEntry>> bySlot = new LinkedHashMap<>();
+        for (LocalVariableTableEntry e : entries) {
+            bySlot.computeIfAbsent(e.getIndex(), k -> new ArrayList<>()).add(e);
+        }
+        List<LocalVariableTableEntry> result = new ArrayList<>();
+        for (List<LocalVariableTableEntry> slotEntries : bySlot.values()) {
+            slotEntries.sort(java.util.Comparator.comparingInt(LocalVariableTableEntry::getStartPc)
+                    .thenComparingInt(LocalVariableTableEntry::getLengthPc));
+            for (int i = 0; i < slotEntries.size(); i++) {
+                LocalVariableTableEntry e = slotEntries.get(i);
+                int end = e.getStartPc() + e.getLengthPc();
+                for (int j = i + 1; j < slotEntries.size(); j++) {
+                    int nextStart = slotEntries.get(j).getStartPc();
+                    if (nextStart > e.getStartPc()) {
+                        end = Math.min(end, nextStart);
+                        break;
+                    }
+                }
+                int len = end - e.getStartPc();
+                if (len > 0) {
+                    result.add(new LocalVariableTableEntry(constPool, e.getStartPc(), len,
+                            e.getNameIndex(), e.getDescriptorIndex(), e.getIndex()));
+                }
+            }
+        }
+        result.sort(java.util.Comparator.comparingInt(LocalVariableTableEntry::getStartPc));
+        return result;
     }
 
     /** The final slot of a source variable: the first of its SSA values that was allocated one, else null. */
@@ -95,13 +149,13 @@ public final class LocalVariableTableBuilder {
         return null;
     }
 
-    /** Block-range scope {@code [startPc, endPc)} spanning the blocks of the local's defs and uses (the default). */
-    private int[] blockScope(IRMethod.SourceLocal local) {
+    /** Block-range scope {@code [startPc, endPc)} spanning the blocks of the given values' defs and uses. */
+    private int[] blockScope(List<SSAValue> values) {
         Map<IRBlock, Integer> starts = emitter.getBlockOffsets();
         Map<IRBlock, Integer> ends = emitter.getBlockEndOffsets();
         int startPc = Integer.MAX_VALUE;
         int endPc = -1;
-        for (SSAValue v : local.getValues()) {
+        for (SSAValue v : values) {
             int[] def = blockRange(v.getDefinition(), starts, ends);
             startPc = Math.min(startPc, def[0]);
             endPc = Math.max(endPc, def[1]);
@@ -136,11 +190,11 @@ public final class LocalVariableTableBuilder {
      * {@code Object}). Phi defs carry no bytecode offset and are simply skipped; a local's real (stored/used)
      * offsets bound its range.
      */
-    private int[] instructionScope(IRMethod.SourceLocal local) {
+    private int[] instructionScope(List<SSAValue> values) {
         Map<IRInstruction, Integer> offs = emitter.getInstructionOffsets();
         int startPc = Integer.MAX_VALUE;
         int endPc = -1;
-        for (SSAValue v : local.getValues()) {
+        for (SSAValue v : values) {
             startPc = Math.min(startPc, offsetOf(v.getDefinition(), offs, Integer.MAX_VALUE));
             endPc = Math.max(endPc, offsetOf(v.getDefinition(), offs, -1));
             for (IRInstruction use : v.getUses()) {
@@ -149,7 +203,7 @@ public final class LocalVariableTableBuilder {
             }
         }
         if (endPc < 0 || startPc == Integer.MAX_VALUE) {
-            return blockScope(local);
+            return blockScope(values);
         }
         // End at the instruction boundary AFTER the last def/use, so the range covers that instruction yet
         // {@code start_pc + length} stays a valid opcode index (the JVM rejects a mid-instruction LVT bound).
