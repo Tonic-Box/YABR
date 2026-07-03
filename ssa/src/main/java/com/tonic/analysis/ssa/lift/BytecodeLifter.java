@@ -580,7 +580,7 @@ public class BytecodeLifter {
                 registerStackPhi(targetBlock, i, phi);
 
                 // Update the existing state to use the PHI value
-                existingState.getStackValues().set(i, phiResult);
+                existingState.setStackValue(i, phiResult);
 
                 // Also update any instructions in the block that use the old value
                 replaceValueInBlock(targetBlock, existingVal, phiResult);
@@ -609,7 +609,7 @@ public class BytecodeLifter {
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 SSAValue phiResult = phi.getResult();
                 for (Value incomingValue : phi.getOperands()) {
-                    replaceValueInBlockAndSuccessors(block, incomingValue, phiResult);
+                    replaceValueInBlockAndSuccessors(block, incomingValue, phiResult, phi);
                 }
             }
         }
@@ -619,9 +619,12 @@ public class BytecodeLifter {
      * Replaces all uses of oldValue with newValue in the given block and all
      * reachable successor blocks. Uses a worklist to avoid infinite loops
      * in cyclic control flow. Also updates phi incoming values in successor blocks
-     * where the edge comes from a visited block.
+     * where the edge comes from a visited block, except for the phi that triggered
+     * the replacement: in cyclic control flow the walk reaches that phi's own
+     * predecessors, and rewriting its incoming edges would make it reference itself.
      */
-    private void replaceValueInBlockAndSuccessors(IRBlock startBlock, Value oldValue, Value newValue) {
+    private void replaceValueInBlockAndSuccessors(IRBlock startBlock, Value oldValue, Value newValue,
+                                                  PhiInstruction currentPhi) {
         Set<IRBlock> visited = new HashSet<>();
         Deque<IRBlock> worklist = new ArrayDeque<>();
         worklist.add(startBlock);
@@ -641,6 +644,9 @@ public class BytecodeLifter {
 
             for (IRBlock succ : block.getSuccessors()) {
                 for (PhiInstruction phi : succ.getPhiInstructions()) {
+                    if (phi == currentPhi) {
+                        continue;
+                    }
                     Value incoming = phi.getIncoming(block);
                     if (incoming != null && incoming.equals(oldValue)) {
                         phi.removeIncoming(block);

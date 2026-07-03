@@ -29,7 +29,7 @@ public final class DoubleConstant extends Constant {
      * @return a DoubleConstant instance
      */
     public static DoubleConstant of(double value) {
-        if (value == 0.0) return ZERO;
+        if (Double.doubleToRawLongBits(value) == 0L) return ZERO;
         if (value == 1.0) return ONE;
         return new DoubleConstant(value);
     }

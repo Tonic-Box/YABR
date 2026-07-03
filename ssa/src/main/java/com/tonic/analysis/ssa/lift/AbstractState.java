@@ -1,7 +1,5 @@
 package com.tonic.analysis.ssa.lift;
 
-import com.tonic.analysis.ssa.type.IRType;
-import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
@@ -106,6 +104,22 @@ public class AbstractState {
 
     public List<Value> getStackValues() {
         return new ArrayList<>(stack);
+    }
+
+    /**
+     * Replaces the value at a stack slot in place. Used by stack merging to make the stored
+     * state reflect a newly created phi.
+     *
+     * @param index stack slot index
+     * @param value replacement value
+     */
+    public void setStackValue(int index, Value value) {
+        List<Value> values = new ArrayList<>(stack);
+        values.set(index, value);
+        stack.clear();
+        for (int i = values.size() - 1; i >= 0; i--) {
+            stack.push(values.get(i));
+        }
     }
 
     @Override

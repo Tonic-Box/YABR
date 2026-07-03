@@ -4,7 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Drop redundant phi-copy re-assignment" />
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix stack-phi self-corruption in loops and -0.0 constant folding">
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/ssa/lift/StackPhiSelfReferenceTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/ssa/value/NegativeZeroConstantTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/fixtures/StackPhiLoop.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/AbstractState.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/AbstractState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/DoubleConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/DoubleConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/FloatConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/FloatConstant.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -63,7 +72,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;
   }
 }</component>
-  <component name="RunManager" selected="Gradle.YABR-fixed [build]">
+  <component name="RunManager" selected="Gradle.YABR-fixed [publishToMavenLocal]">
     <configuration name="YABR-fixed [build]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -130,13 +139,61 @@
       <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
+    <configuration name="YABR-fixed [publishToMavenLocal]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="publishToMavenLocal" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <configuration name="YABR-fixed [publish]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="publish" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
     <list>
+      <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
+      <item itemvalue="Gradle.YABR-fixed [publish]" />
       <item itemvalue="Gradle.YABR-fixed [build]" />
       <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
       <item itemvalue="Gradle.YABR-fixed [compileJava]" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.YABR-fixed [publishToMavenLocal]" />
+        <item itemvalue="Gradle.YABR-fixed [publish]" />
         <item itemvalue="Gradle.YABR-fixed [build]" />
         <item itemvalue="Gradle.YABR-fixed [compileJava]" />
         <item itemvalue="Gradle.YABR-fixed [compileTestJava]" />
@@ -151,14 +208,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00080" summary="Removal of Lombok: pt6&#10;- analyses">
-      <option name="closed" value="true" />
-      <created>1782616669891</created>
-      <option name="number" value="00080" />
-      <option name="presentableId" value="LOCAL-00080" />
-      <option name="project" value="LOCAL" />
-      <updated>1782616669891</updated>
     </task>
     <task id="LOCAL-00081" summary="Removal of Lombok: pt7&#10;- analyses">
       <option name="closed" value="true" />
@@ -544,7 +593,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782938229678</updated>
     </task>
-    <option name="localTasksCounter" value="129" />
+    <task id="LOCAL-00129" summary="- Collapse a shared-early-exit guard into an OR">
+      <option name="closed" value="true" />
+      <created>1782939604545</created>
+      <option name="number" value="00129" />
+      <option name="presentableId" value="LOCAL-00129" />
+      <option name="project" value="LOCAL" />
+      <updated>1782939604545</updated>
+    </task>
+    <option name="localTasksCounter" value="130" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -559,8 +616,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fix retry-loop corruption" />
-    <MESSAGE value="- skip phi copy when the value is stored to the phi slot" />
     <MESSAGE value="- Fix dropped conditional arm in nested if/else-if (ternary-phi over-collapse)" />
     <MESSAGE value="- Reconstruct round-trip varargs hoisted/spilled across statements" />
     <MESSAGE value="- Coalesce loop accumulators into one slot; frame dead code after returns" />
@@ -584,7 +639,9 @@
     <MESSAGE value="- re-add residency for a paired-new consumed by a return" />
     <MESSAGE value="- Drop a redundant continue in a loop's trailing switch" />
     <MESSAGE value="- Drop redundant phi-copy re-assignment" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Drop redundant phi-copy re-assignment" />
+    <MESSAGE value="- Collapse a shared-early-exit guard into an OR" />
+    <MESSAGE value="- Fix stack-phi self-corruption in loops and -0.0 constant folding" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fix stack-phi self-corruption in loops and -0.0 constant folding" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

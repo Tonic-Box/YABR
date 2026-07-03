@@ -30,7 +30,7 @@ public final class FloatConstant extends Constant {
      * @return a FloatConstant instance
      */
     public static FloatConstant of(float value) {
-        if (value == 0.0f) return ZERO;
+        if (Float.floatToRawIntBits(value) == 0) return ZERO;
         if (value == 1.0f) return ONE;
         if (value == 2.0f) return TWO;
         return new FloatConstant(value);
