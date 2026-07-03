@@ -5,14 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix stack-phi self-corruption in loops and -0.0 constant folding">
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/ssa/lift/StackPhiSelfReferenceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/analysis/ssa/value/NegativeZeroConstantTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/src/test/java/com/tonic/fixtures/StackPhiLoop.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/AbstractState.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/AbstractState.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/DoubleConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/DoubleConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/FloatConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/value/FloatConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -208,14 +202,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00081" summary="Removal of Lombok: pt7&#10;- analyses">
-      <option name="closed" value="true" />
-      <created>1782617289786</created>
-      <option name="number" value="00081" />
-      <option name="presentableId" value="LOCAL-00081" />
-      <option name="project" value="LOCAL" />
-      <updated>1782617289786</updated>
     </task>
     <task id="LOCAL-00082" summary="Removal of Lombok: pt8&#10;- analyses">
       <option name="closed" value="true" />
@@ -601,7 +587,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782939604545</updated>
     </task>
-    <option name="localTasksCounter" value="130" />
+    <task id="LOCAL-00130" summary="- Fix stack-phi self-corruption in loops and -0.0 constant folding">
+      <option name="closed" value="true" />
+      <created>1783070438132</created>
+      <option name="number" value="00130" />
+      <option name="presentableId" value="LOCAL-00130" />
+      <option name="project" value="LOCAL" />
+      <updated>1783070438132</updated>
+    </task>
+    <option name="localTasksCounter" value="131" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

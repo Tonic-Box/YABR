@@ -370,7 +370,7 @@ public class InstructionTranslator {
             state.push(local);
             return;
         }
-        IRType type = (local != null && local.getType() instanceof ReferenceType)
+        IRType type = (local != null && local.getType() != null && local.getType().isReference())
                       ? local.getType() : ReferenceType.OBJECT;
         SSAValue result = new SSAValue(type);
         block.addInstruction(new LoadLocalInstruction(result, index));
@@ -381,6 +381,12 @@ public class InstructionTranslator {
         Value index = state.pop();
         Value array = state.pop();
         IRType elemType = getArrayElementType(opcode);
+        if (opcode == AALOAD.getCode() && array.getType() instanceof ArrayType) {
+            ArrayType arrayType = (ArrayType) array.getType();
+            elemType = arrayType.getDimensions() > 1
+                    ? new ArrayType(arrayType.getElementType(), arrayType.getDimensions() - 1)
+                    : arrayType.getElementType();
+        }
         SSAValue result = new SSAValue(elemType);
         block.addInstruction(ArrayAccessInstruction.createLoad(result, array, index));
         state.push(result);
