@@ -107,6 +107,9 @@ public class BytecodeLifter {
                         continue;
                     }
                     IRType unified = uniformPrimitiveIncomingType(phi);
+                    if (unified == null) {
+                        unified = uniformReferenceIncomingType(phi);
+                    }
                     if (unified != null && !unified.equals(result.getType())) {
                         SSAValue retyped = new SSAValue(unified, result.getName());
                         result.replaceAllUsesWith(retyped);
@@ -147,6 +150,35 @@ public class BytecodeLifter {
             if (common == null) {
                 common = (PrimitiveType) t;
             } else if (common != t) {
+                return null;
+            }
+        }
+        return common;
+    }
+
+    /**
+     * Unifies a reference phi's type without hierarchy knowledge: NullConstant incomings are
+     * bottom, self-referential loop operands are skipped, and if every remaining incoming
+     * carries one identical reference or array type, the phi adopts it.
+     */
+    private static IRType uniformReferenceIncomingType(PhiInstruction phi) {
+        IRType resultType = phi.getResult() != null ? phi.getResult().getType() : null;
+        IRType common = null;
+        for (Value v : phi.getOperands()) {
+            if (v == null || v instanceof NullConstant) {
+                continue;
+            }
+            IRType t = v.getType();
+            if (t == resultType && v instanceof SSAValue
+                    && ((SSAValue) v).getDefinition() instanceof PhiInstruction) {
+                continue;
+            }
+            if (t == null || !t.isReference()) {
+                return null;
+            }
+            if (common == null) {
+                common = t;
+            } else if (!common.equals(t)) {
                 return null;
             }
         }

@@ -635,8 +635,7 @@ final class SsaToLlvmLowerer extends AbstractIRVisitor<Void> {
 
     private void lowerInvokeDynamic(InvokeInstruction invoke, LlvmType retTy, String descriptor) {
         // Emitted against a per-call-site ABI symbol (no lambda-class synthesis): the descriptor's
-        // argument types are the captured/dynamic arguments, and getArguments() carries all of them
-        // (getMethodArguments() would wrongly drop index 0, which is not a receiver for indy).
+        // argument types are the captured/dynamic arguments, and getArguments() carries all of them.
         String sym = SymbolMangler.mangleIndy(invoke.getOwner(), invoke.getName(), descriptor,
             invoke.getOriginalCpIndex());
         declares.note(sym, retTy, IrTypeMapper.mapParams(descriptor));

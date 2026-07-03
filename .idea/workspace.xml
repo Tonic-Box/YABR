@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix stack-phi self-corruption in loops and -0.0 constant folding">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Type aload and aaload results from the operand, not Object">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/InstructionTranslator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/ir/InvokeInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/ir/InvokeInstruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -202,14 +203,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00082" summary="Removal of Lombok: pt8&#10;- analyses">
-      <option name="closed" value="true" />
-      <created>1782618462015</created>
-      <option name="number" value="00082" />
-      <option name="presentableId" value="LOCAL-00082" />
-      <option name="project" value="LOCAL" />
-      <updated>1782618462015</updated>
     </task>
     <task id="LOCAL-00083" summary="Removal of Lombok: pt9&#10;- bytecode">
       <option name="closed" value="true" />
@@ -595,7 +588,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783070438132</updated>
     </task>
-    <option name="localTasksCounter" value="131" />
+    <task id="LOCAL-00131" summary="- Type aload and aaload results from the operand, not Object">
+      <option name="closed" value="true" />
+      <created>1783075418486</created>
+      <option name="number" value="00131" />
+      <option name="presentableId" value="LOCAL-00131" />
+      <option name="project" value="LOCAL" />
+      <updated>1783075418486</updated>
+    </task>
+    <option name="localTasksCounter" value="132" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -610,7 +611,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Fix dropped conditional arm in nested if/else-if (ternary-phi over-collapse)" />
     <MESSAGE value="- Reconstruct round-trip varargs hoisted/spilled across statements" />
     <MESSAGE value="- Coalesce loop accumulators into one slot; frame dead code after returns" />
     <MESSAGE value="- Fold `return cond ? 1 : 0` to `return cond` for boolean methods" />
@@ -635,7 +635,8 @@
     <MESSAGE value="- Drop redundant phi-copy re-assignment" />
     <MESSAGE value="- Collapse a shared-early-exit guard into an OR" />
     <MESSAGE value="- Fix stack-phi self-corruption in loops and -0.0 constant folding" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix stack-phi self-corruption in loops and -0.0 constant folding" />
+    <MESSAGE value="- Type aload and aaload results from the operand, not Object" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Type aload and aaload results from the operand, not Object" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

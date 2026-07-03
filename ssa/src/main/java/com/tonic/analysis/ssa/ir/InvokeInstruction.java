@@ -103,7 +103,7 @@ public class InvokeInstruction extends IRInstruction {
      * @return the receiver value, or null for static calls
      */
     public Value getReceiver() {
-        if (invokeType == InvokeType.STATIC) return null;
+        if (invokeType == InvokeType.STATIC || invokeType == InvokeType.DYNAMIC) return null;
         return arguments.isEmpty() ? null : arguments.get(0);
     }
 
@@ -113,7 +113,7 @@ public class InvokeInstruction extends IRInstruction {
      * @return list of method arguments
      */
     public List<Value> getMethodArguments() {
-        if (invokeType == InvokeType.STATIC) return arguments;
+        if (invokeType == InvokeType.STATIC || invokeType == InvokeType.DYNAMIC) return arguments;
         return arguments.size() > 1 ? arguments.subList(1, arguments.size()) : List.of();
     }
 
