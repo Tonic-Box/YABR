@@ -159,11 +159,15 @@ public class BytecodeLifter {
     /**
      * Unifies a reference phi's type without hierarchy knowledge: NullConstant incomings are
      * bottom, self-referential loop operands are skipped, and if every remaining incoming
-     * carries one identical reference or array type, the phi adopts it.
+     * carries one identical reference or array type, the phi adopts it. When the concrete
+     * reference incomings disagree (e.g. a String constant merged with an Object value, as a
+     * ternary produces), the phi widens to java/lang/Object rather than keeping a stale narrow
+     * type that would pun an unrelated reference into a downcast.
      */
     private static IRType uniformReferenceIncomingType(PhiInstruction phi) {
         IRType resultType = phi.getResult() != null ? phi.getResult().getType() : null;
         IRType common = null;
+        boolean disagree = false;
         for (Value v : phi.getOperands()) {
             if (v == null || v instanceof NullConstant) {
                 continue;
@@ -179,10 +183,13 @@ public class BytecodeLifter {
             if (common == null) {
                 common = t;
             } else if (!common.equals(t)) {
-                return null;
+                disagree = true;
             }
         }
-        return common;
+        if (common == null) {
+            return null;
+        }
+        return disagree ? new ReferenceType("java/lang/Object") : common;
     }
 
     private IRMethod createEmptyMethod(MethodEntry method) {

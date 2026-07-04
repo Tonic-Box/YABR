@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Type aload and aaload results from the operand, not Object">
+    <list default="true" id="0985da93-86ad-4a59-bdc4-49a15979c6e4" name="Changes" comment="- Fix indy receiver handling and refine reference phi types">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/ir/InvokeInstruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/ir/InvokeInstruction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/llvm/SsaToLlvmLowerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ssa/src/main/java/com/tonic/analysis/ssa/lift/BytecodeLifter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -203,14 +202,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1769502970794</updated>
-    </task>
-    <task id="LOCAL-00083" summary="Removal of Lombok: pt9&#10;- bytecode">
-      <option name="closed" value="true" />
-      <created>1782619042598</created>
-      <option name="number" value="00083" />
-      <option name="presentableId" value="LOCAL-00083" />
-      <option name="project" value="LOCAL" />
-      <updated>1782619042598</updated>
     </task>
     <task id="LOCAL-00084" summary="Removal of Lombok: pt10&#10;- bytecode">
       <option name="closed" value="true" />
@@ -596,7 +587,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783075418486</updated>
     </task>
-    <option name="localTasksCounter" value="132" />
+    <task id="LOCAL-00132" summary="- Fix indy receiver handling and refine reference phi types">
+      <option name="closed" value="true" />
+      <created>1783077905872</created>
+      <option name="number" value="00132" />
+      <option name="presentableId" value="LOCAL-00132" />
+      <option name="project" value="LOCAL" />
+      <updated>1783077905872</updated>
+    </task>
+    <option name="localTasksCounter" value="133" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -611,7 +610,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="- Reconstruct round-trip varargs hoisted/spilled across statements" />
     <MESSAGE value="- Coalesce loop accumulators into one slot; frame dead code after returns" />
     <MESSAGE value="- Fold `return cond ? 1 : 0` to `return cond` for boolean methods" />
     <MESSAGE value="- Coalesce loop-carried phi sources via phi-aware precise interference" />
@@ -636,7 +634,8 @@
     <MESSAGE value="- Collapse a shared-early-exit guard into an OR" />
     <MESSAGE value="- Fix stack-phi self-corruption in loops and -0.0 constant folding" />
     <MESSAGE value="- Type aload and aaload results from the operand, not Object" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Type aload and aaload results from the operand, not Object" />
+    <MESSAGE value="- Fix indy receiver handling and refine reference phi types" />
+    <option name="LAST_COMMIT_MESSAGE" value="- Fix indy receiver handling and refine reference phi types" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
