@@ -569,7 +569,8 @@ public class ExpressionRecoverer {
                 retType = typeRecoverer.recoverType(instr.getResult());
             }
             boolean isStatic = instr.getInvokeType() == InvokeType.STATIC;
-            MethodCallExpr call = new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType);
+            MethodCallExpr call = new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType)
+                    .withDescriptor(instr.getDescriptor());
 
             Expression collapsed = tryCollapseStringBuilder(call);
             return collapsed != null ? collapsed : call;
@@ -597,9 +598,11 @@ public class ExpressionRecoverer {
                         String ownerClass = instr.getOwner();
                         String methodClass = context.getIrMethod().getOwnerClass();
                         if (ownerClass != null && methodClass != null && !ownerClass.equals(methodClass)) {
-                            return new MethodCallExpr(null, "super", ownerClass, args, false, null);
+                            return new MethodCallExpr(null, "super", ownerClass, args, false, null)
+                                    .withDescriptor(instr.getDescriptor());
                         } else {
-                            return new MethodCallExpr(null, "this", ownerClass, args, false, null);
+                            return new MethodCallExpr(null, "this", ownerClass, args, false, null)
+                                    .withDescriptor(instr.getDescriptor());
                         }
                     }
 
@@ -619,7 +622,7 @@ public class ExpressionRecoverer {
 
                     if (context.isPendingNew(actualReceiver)) {
                         String className = context.consumePendingNew(actualReceiver);
-                        NewExpr newExpr = new NewExpr(className);
+                        NewExpr newExpr = new NewExpr(className).withDescriptor(instr.getDescriptor());
                         for (Expression arg : args) {
                             newExpr.addArgument(arg);
                         }
@@ -632,7 +635,7 @@ public class ExpressionRecoverer {
                 }
             }
 
-            NewExpr newExpr = new NewExpr(instr.getOwner());
+            NewExpr newExpr = new NewExpr(instr.getOwner()).withDescriptor(instr.getDescriptor());
             for (Expression arg : args) {
                 newExpr.addArgument(arg);
             }
@@ -1011,7 +1014,7 @@ public class ExpressionRecoverer {
             String retDesc = desc.substring(desc.indexOf(')') + 1);
             SourceType retType = SourceType.fromIRType(IRType.fromDescriptor(retDesc));
 
-            return MethodCallExpr.staticCall(owner, name, callArgs, retType);
+            return MethodCallExpr.staticCall(owner, name, callArgs, retType).withDescriptor(desc);
         }
 
         /**
@@ -1070,7 +1073,7 @@ public class ExpressionRecoverer {
             int refKind = handle.getReferenceKind();
 
             if ("<init>".equals(name) || refKind == MethodHandleConstant.REF_newInvokeSpecial) {
-                return MethodRefExpr.constructorRef(owner, returnType);
+                return MethodRefExpr.constructorRef(owner, returnType).withDescriptor(handle.getDescriptor());
             }
 
             MethodRefKind kind;
@@ -1091,7 +1094,8 @@ public class ExpressionRecoverer {
                 kind = MethodRefKind.INSTANCE;
             }
 
-            return new MethodRefExpr(receiver, name, owner, kind, returnType);
+            return new MethodRefExpr(receiver, name, owner, kind, returnType)
+                    .withDescriptor(handle.getDescriptor());
         }
 
         /**
@@ -1513,7 +1517,8 @@ public class ExpressionRecoverer {
 
                     SourceType retType = typeRecoverer.recoverType(invoke.getResult());
                     return new MethodCallExpr(receiver, invoke.getName(), invoke.getOwner(), args,
-                        invoke.getInvokeType() == InvokeType.STATIC, retType);
+                            invoke.getInvokeType() == InvokeType.STATIC, retType)
+                            .withDescriptor(invoke.getDescriptor());
                 }
 
                 if (instr instanceof FieldAccessInstruction) {
@@ -1523,7 +1528,8 @@ public class ExpressionRecoverer {
                             recoverLambdaOperand(fieldAccess.getObjectRef(), lambdaIR);
                         if (obj instanceof ThisExpr) obj = null;
                         SourceType type = typeRecoverer.recoverType(fieldAccess.getResult());
-                        return new FieldAccessExpr(obj, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), type);
+                        return new FieldAccessExpr(obj, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), type)
+                                .withDescriptor(fieldAccess.getDescriptor());
                     }
                 }
 
@@ -1615,7 +1621,8 @@ public class ExpressionRecoverer {
             }
             Expression receiver = instr.isStatic() ? null : recoverOperand(instr.getObjectRef());
             SourceType type = typeRecoverer.recoverType(instr.getResult());
-            return new FieldAccessExpr(receiver, instr.getName(), instr.getOwner(), instr.isStatic(), type);
+            return new FieldAccessExpr(receiver, instr.getName(), instr.getOwner(), instr.isStatic(), type)
+                    .withDescriptor(instr.getDescriptor());
         }
 
         public Expression visitArrayAccess(ArrayAccessInstruction instr) {

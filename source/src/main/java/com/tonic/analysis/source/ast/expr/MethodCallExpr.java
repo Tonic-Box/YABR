@@ -29,6 +29,8 @@ public final class MethodCallExpr implements Expression {
     private final SourceType type;
     private final SourceLocation location;
     private ASTNode parent;
+    /** JVM method descriptor; null unless recovered from bytecode. */
+    private String descriptor;
 
     public MethodCallExpr(Expression receiver, String methodName, String ownerClass,
                           List<Expression> arguments, boolean isStatic, SourceType type,
@@ -72,6 +74,15 @@ public final class MethodCallExpr implements Expression {
 
     public String getOwnerClass() {
         return ownerClass;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public MethodCallExpr withDescriptor(String descriptor) {
+        this.descriptor = descriptor;
+        return this;
     }
 
     public NodeList<Expression> getArguments() {

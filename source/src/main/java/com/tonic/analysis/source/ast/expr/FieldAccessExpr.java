@@ -26,6 +26,8 @@ public final class FieldAccessExpr implements Expression {
     private final SourceType type;
     private final SourceLocation location;
     private ASTNode parent;
+    /** JVM field descriptor; null unless recovered from bytecode. */
+    private String descriptor;
 
     public FieldAccessExpr(Expression receiver, String fieldName, String ownerClass,
                            boolean isStatic, SourceType type, SourceLocation location) {
@@ -64,6 +66,15 @@ public final class FieldAccessExpr implements Expression {
 
     public String getOwnerClass() {
         return ownerClass;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public FieldAccessExpr withDescriptor(String descriptor) {
+        this.descriptor = descriptor;
+        return this;
     }
 
     public boolean isStatic() {

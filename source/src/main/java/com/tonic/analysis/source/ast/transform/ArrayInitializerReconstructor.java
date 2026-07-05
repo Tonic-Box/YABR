@@ -364,7 +364,8 @@ public class ArrayInitializerReconstructor implements ASTTransform {
             if (f.getReceiver() != null) {
                 Expression rec = replaceInExpression(f.getReceiver(), replacer);
                 if (rec != f.getReceiver()) {
-                    return new FieldAccessExpr(rec, f.getFieldName(), f.getOwnerClass(), f.isStatic(), f.getType());
+                    return new FieldAccessExpr(rec, f.getFieldName(), f.getOwnerClass(), f.isStatic(), f.getType())
+                            .withDescriptor(f.getDescriptor());
                 }
             }
             return expr;
@@ -379,7 +380,7 @@ public class ArrayInitializerReconstructor implements ASTTransform {
                 changed |= na != arg;
             }
             return changed ? new MethodCallExpr(rec, call.getMethodName(), call.getOwnerClass(),
-                    args, call.isStatic(), call.getType()) : expr;
+                    args, call.isStatic(), call.getType()).withDescriptor(call.getDescriptor()) : expr;
         } else if (expr instanceof NewExpr) {
             NewExpr n = (NewExpr) expr;
             List<Expression> args = new ArrayList<>();
@@ -389,7 +390,7 @@ public class ArrayInitializerReconstructor implements ASTTransform {
                 args.add(na);
                 changed |= na != arg;
             }
-            return changed ? new NewExpr(n.getClassName(), args, n.getType()) : expr;
+            return changed ? new NewExpr(n.getClassName(), args, n.getType()).withDescriptor(n.getDescriptor()) : expr;
         } else if (expr instanceof ArrayInitExpr) {
             ArrayInitExpr a = (ArrayInitExpr) expr;
             List<Expression> elems = new ArrayList<>();

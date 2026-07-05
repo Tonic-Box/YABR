@@ -26,6 +26,8 @@ public final class MethodRefExpr implements Expression {
     private final SourceType type;
     private final SourceLocation location;
     private ASTNode parent;
+    /** JVM descriptor of the referenced method; null unless recovered from bytecode. */
+    private String descriptor;
 
     public MethodRefExpr(Expression receiver, String methodName, String ownerClass,
                          MethodRefKind kind, SourceType type, SourceLocation location) {
@@ -64,6 +66,15 @@ public final class MethodRefExpr implements Expression {
 
     public String getOwnerClass() {
         return ownerClass;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public MethodRefExpr withDescriptor(String descriptor) {
+        this.descriptor = descriptor;
+        return this;
     }
 
     public MethodRefKind getKind() {

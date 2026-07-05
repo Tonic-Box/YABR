@@ -288,7 +288,7 @@ public class SingleUseInliner implements ASTTransform {
             }
             if (newReceiver != call.getReceiver() || argsChanged) {
                 return new MethodCallExpr(newReceiver, call.getMethodName(), call.getOwnerClass(),
-                    newArgs, call.isStatic(), call.getType());
+                    newArgs, call.isStatic(), call.getType()).withDescriptor(call.getDescriptor());
             }
             return expr;
         } else if (expr instanceof FieldAccessExpr) {
@@ -297,7 +297,7 @@ public class SingleUseInliner implements ASTTransform {
                 Expression newReceiver = replaceInExpression(field.getReceiver(), replacer);
                 if (newReceiver != field.getReceiver()) {
                     return new FieldAccessExpr(newReceiver, field.getFieldName(), field.getOwnerClass(),
-                        field.isStatic(), field.getType());
+                        field.isStatic(), field.getType()).withDescriptor(field.getDescriptor());
                 }
             }
             return expr;
@@ -343,7 +343,8 @@ public class SingleUseInliner implements ASTTransform {
                 if (newArg != arg) argsChanged = true;
             }
             if (argsChanged) {
-                return new NewExpr(newExpr.getClassName(), newArgs, newExpr.getType());
+                return new NewExpr(newExpr.getClassName(), newArgs, newExpr.getType())
+                    .withDescriptor(newExpr.getDescriptor());
             }
             return expr;
         } else if (expr instanceof NewArrayExpr) {

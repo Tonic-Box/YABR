@@ -3020,7 +3020,8 @@ public class StatementRecoverer {
 
         SourceType fieldType = typeRecoverer.recoverType(fieldLoad.getDescriptor());
         Expression fieldExpr = new FieldAccessExpr(
-            null, fieldLoad.getName(), fieldLoad.getOwner(), fieldLoad.isStatic(), fieldType);
+            null, fieldLoad.getName(), fieldLoad.getOwner(), fieldLoad.isStatic(), fieldType)
+            .withDescriptor(fieldLoad.getDescriptor());
 
         Set<PhiInstruction> visited = new HashSet<>();
         cacheFieldExprForPhiChain(phi, fieldExpr, visited);
@@ -3488,7 +3489,8 @@ public class StatementRecoverer {
                 SourceType fieldType = typeRecoverer.recoverType(fieldAccess.getDescriptor());
                 Expression value = exprRecoverer.recoverOperand(fieldAccess.getValue(), fieldType);
                 Expression target = new FieldAccessExpr(
-                    receiver, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), fieldType);
+                    receiver, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), fieldType)
+                    .withDescriptor(fieldAccess.getDescriptor());
                 return new ExprStmt(new BinaryExpr(
                     BinaryOperator.ASSIGN, target, value, fieldType));
             }
@@ -3803,7 +3805,8 @@ public class StatementRecoverer {
                             Expression value = exprRecoverer.recover(constInstr);
                             SourceType fieldType = typeRecoverer.recoverType(fieldInfo.getDescriptor());
                             Expression fieldTarget = new FieldAccessExpr(
-                                null, fieldInfo.getName(), fieldInfo.getOwner(), fieldInfo.isStatic(), fieldType);
+                                null, fieldInfo.getName(), fieldInfo.getOwner(), fieldInfo.isStatic(), fieldType)
+                                .withDescriptor(fieldInfo.getDescriptor());
                             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, fieldTarget, value, fieldType));
                         }
                     }

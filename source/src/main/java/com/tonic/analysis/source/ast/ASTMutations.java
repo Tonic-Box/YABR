@@ -71,7 +71,7 @@ public final class ASTMutations {
                 e.isStatic(),
                 e.getType(),
                 e.getLocation()
-            );
+            ).withDescriptor(e.getDescriptor());
         } else if (expr instanceof FieldAccessExpr) {
             FieldAccessExpr e = (FieldAccessExpr) expr;
             return new FieldAccessExpr(
@@ -81,7 +81,7 @@ public final class ASTMutations {
                 e.isStatic(),
                 e.getType(),
                 e.getLocation()
-            );
+            ).withDescriptor(e.getDescriptor());
         } else if (expr instanceof ArrayAccessExpr) {
             ArrayAccessExpr e = (ArrayAccessExpr) expr;
             return new ArrayAccessExpr(
@@ -121,7 +121,7 @@ public final class ASTMutations {
                 cloneExprList(e.getArguments()),
                 e.getType(),
                 e.getLocation()
-            );
+            ).withDescriptor(e.getDescriptor());
         } else if (expr instanceof NewArrayExpr) {
             NewArrayExpr e = (NewArrayExpr) expr;
             return new NewArrayExpr(
@@ -155,7 +155,7 @@ public final class ASTMutations {
                 e.getKind(),
                 e.getType(),
                 e.getLocation()
-            );
+            ).withDescriptor(e.getDescriptor());
         } else if (expr instanceof ClassExpr) {
             ClassExpr e = (ClassExpr) expr;
             return new ClassExpr(e.getClassType(), e.getLocation());

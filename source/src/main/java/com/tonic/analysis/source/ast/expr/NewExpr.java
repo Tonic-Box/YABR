@@ -29,6 +29,8 @@ public final class NewExpr implements Expression {
     private final SourceType type;
     private final SourceLocation location;
     private ASTNode parent;
+    /** JVM constructor descriptor; null unless recovered from bytecode. */
+    private String descriptor;
 
     public NewExpr(Expression enclosingInstance, String className, List<Expression> arguments,
                    SourceType type, SourceLocation location) {
@@ -72,6 +74,15 @@ public final class NewExpr implements Expression {
 
     public String getClassName() {
         return className;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
+    }
+
+    public NewExpr withDescriptor(String descriptor) {
+        this.descriptor = descriptor;
+        return this;
     }
 
     public NodeList<Expression> getArguments() {
