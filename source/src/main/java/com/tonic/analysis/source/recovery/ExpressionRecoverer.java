@@ -886,6 +886,11 @@ public class ExpressionRecoverer {
                 recipe = sc.getValue();
             }
 
+            // The indy descriptor carries each dynamic operand's true type; char/boolean must be
+            // recovered as such (they concatenate differently than their int value), unlike the
+            // int-typed stack slots recoverOperand would otherwise infer.
+            List<String> concatParamTypes = parseParameterTypes(instr.getDescriptor());
+
             List<Expression> parts = new ArrayList<>();
             int stackIdx = 0;
             int constantIdx = 1;
@@ -894,7 +899,14 @@ public class ExpressionRecoverer {
                 char c = recipe.charAt(i);
                 if (c == '\u0001') {
                     if (stackIdx < stackArgs.size()) {
-                        parts.add(recoverOperand(stackArgs.get(stackIdx++)));
+                        String concatParamType = stackIdx < concatParamTypes.size()
+                                ? concatParamTypes.get(stackIdx)
+                                : null;
+                        SourceType concatHint = concatParamType != null
+                                ? typeRecoverer.recoverType(concatParamType)
+                                : null;
+                        Expression operand = recoverOperand(stackArgs.get(stackIdx++), concatHint);
+                        parts.add(coerceConcatOperand(operand, concatParamType));
                     }
                 } else if (c == '\u0002') {
                     if (constantIdx < bsArgs.size()) {
@@ -921,6 +933,23 @@ public class ExpressionRecoverer {
                 result = new BinaryExpr(BinaryOperator.ADD, result, parts.get(i), ReferenceSourceType.STRING);
             }
             return result;
+        }
+
+        /**
+         * Retypes a concat operand to the char/boolean the indy descriptor declares, when the
+         * recovered value came back as its int computational form (materialized locals never see
+         * the type hint). A char casts; a boolean becomes {@code v != 0} — both concatenate as the
+         * source type intended, unlike a bare int.
+         */
+        private Expression coerceConcatOperand(Expression operand, String paramType) {
+            if ("C".equals(paramType) && operand.getType() != PrimitiveSourceType.CHAR) {
+                return new CastExpr(PrimitiveSourceType.CHAR, operand);
+            }
+            if ("Z".equals(paramType) && operand.getType() != PrimitiveSourceType.BOOLEAN) {
+                return new BinaryExpr(BinaryOperator.NE, operand, LiteralExpr.ofInt(0),
+                        PrimitiveSourceType.BOOLEAN);
+            }
+            return operand;
         }
 
         /**

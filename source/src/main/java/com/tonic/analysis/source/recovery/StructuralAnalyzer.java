@@ -131,6 +131,24 @@ public class StructuralAnalyzer {
             exitBlock = trueTarget;
             conditionNegated = true;
         } else if (loop.contains(trueTarget) && loop.contains(falseTarget)) {
+            // Bottom-tested loop: the header's branch is body control flow (both targets stay
+            // inside), and the real loop test lives in the unique latch. Structure as do-while,
+            // recovering the header as the plain conditional it is.
+            IRBlock latch = findConditionalLatch(header, loop);
+            if (latch != null) {
+                BranchInstruction latchBranch = (BranchInstruction) latch.getTerminator();
+                IRBlock latchExit = latchBranch.getTrueTarget() == header
+                        ? latchBranch.getFalseTarget()
+                        : latchBranch.getTrueTarget();
+                RegionInfo info = new RegionInfo(StructuredRegion.DO_WHILE_LOOP, header);
+                info.setLoopBody(header);
+                info.setLoopExit(latchExit);
+                info.setLoop(loop);
+                info.setConditionNegated(latchBranch.getTrueTarget() != header);
+                info.setLatchBlock(latch);
+                info.setHeaderConditional(analyzeConditional(header, trueTarget, falseTarget));
+                return info;
+            }
             bodyBlock = trueTarget;
             exitBlock = null;
             conditionNegated = false;
@@ -138,7 +156,9 @@ public class StructuralAnalyzer {
             return new RegionInfo(StructuredRegion.IRREDUCIBLE, header);
         }
 
-        if (isDoWhilePattern(header, loop)) {
+        // A self-looping header (body, condition and back-edge in one block) is javac's shape for
+        // do-while: the body precedes the bottom-tested condition. bodyBlock == header signals it.
+        if (bodyBlock == header || isDoWhilePattern(header, loop)) {
             RegionInfo info = new RegionInfo(StructuredRegion.DO_WHILE_LOOP, header);
             info.setLoopBody(bodyBlock);
             info.setLoopExit(exitBlock);
@@ -175,6 +195,33 @@ public class StructuralAnalyzer {
             }
         }
         return true;
+    }
+
+    /**
+     * The unique in-loop predecessor of the header whose conditional branch goes back to the
+     * header with its other target outside the loop — the bottom test of a do-while. Null when
+     * the back-edge structure is anything else.
+     */
+    private IRBlock findConditionalLatch(IRBlock header, LoopAnalysis.Loop loop) {
+        IRBlock latch = null;
+        for (IRBlock pred : header.getPredecessors()) {
+            if (!loop.contains(pred)) {
+                continue;
+            }
+            if (latch != null) {
+                return null;
+            }
+            latch = pred;
+        }
+        if (latch == null || latch == header
+                || !(latch.getTerminator() instanceof BranchInstruction)) {
+            return null;
+        }
+        BranchInstruction branch = (BranchInstruction) latch.getTerminator();
+        IRBlock other = branch.getTrueTarget() == header ? branch.getFalseTarget()
+                : branch.getFalseTarget() == header ? branch.getTrueTarget()
+                : null;
+        return other != null && !loop.contains(other) ? latch : null;
     }
 
     private static class ForLoopInfo {
@@ -1417,6 +1464,28 @@ public class StructuralAnalyzer {
     }
 
     private void analyzeGoto(IRBlock block) {
+        // A goto-terminated loop header is a bottom-tested loop whose body simply starts here
+        // (e.g. the header only seeds a local before deeper body structure); the loop test lives
+        // in the latch, exactly as in the branch-headed do-while case.
+        if (loopAnalysis.isLoopHeader(block)) {
+            LoopAnalysis.Loop loop = findLoopWithHeader(block);
+            IRBlock latch = loop != null ? findConditionalLatch(block, loop) : null;
+            if (latch != null) {
+                BranchInstruction latchBranch = (BranchInstruction) latch.getTerminator();
+                IRBlock latchExit = latchBranch.getTrueTarget() == block
+                        ? latchBranch.getFalseTarget()
+                        : latchBranch.getTrueTarget();
+                RegionInfo info = new RegionInfo(StructuredRegion.DO_WHILE_LOOP, block);
+                info.setLoopBody(block);
+                info.setLoopExit(latchExit);
+                info.setLoop(loop);
+                info.setConditionNegated(latchBranch.getTrueTarget() != block);
+                info.setLatchBlock(latch);
+                regionInfos.put(block, info);
+                return;
+            }
+        }
+
         if (loopAnalysis.isInLoop(block)) {
             LoopAnalysis.Loop loop = loopAnalysis.getLoop(block);
             IRBlock header = loop.getHeader();
@@ -1483,6 +1552,8 @@ public class StructuralAnalyzer {
         private IRBlock loopExit;
         private LoopAnalysis.Loop loop;
         private IRBlock continueTarget;
+        private IRBlock latchBlock;
+        private RegionInfo headerConditional;
 
         private Map<Integer, IRBlock> switchCases;
         private IRBlock defaultTarget;
@@ -1536,6 +1607,24 @@ public class StructuralAnalyzer {
 
         public IRBlock getContinueTarget() {
             return continueTarget;
+        }
+
+        /** Bottom-test block of a do-while whose header carries body control flow; null otherwise. */
+        public IRBlock getLatchBlock() {
+            return latchBlock;
+        }
+
+        public void setLatchBlock(IRBlock latchBlock) {
+            this.latchBlock = latchBlock;
+        }
+
+        /** The header's own conditional region when the loop test lives in the latch. */
+        public RegionInfo getHeaderConditional() {
+            return headerConditional;
+        }
+
+        public void setHeaderConditional(RegionInfo headerConditional) {
+            this.headerConditional = headerConditional;
         }
 
         public Map<Integer, IRBlock> getSwitchCases() {

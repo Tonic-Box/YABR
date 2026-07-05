@@ -1404,12 +1404,23 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitTernary(TernaryExpr expr) {
+        // Ternary binds looser than any non-assignment operator: as an operand of one it must be
+        // parenthesized or the condition absorbs the surrounding expression.
+        boolean needsParens = expr.getParent() instanceof UnaryExpr
+                || (expr.getParent() instanceof BinaryExpr
+                        && !isAssignmentOperator(((BinaryExpr) expr.getParent()).getOperator()));
+        if (needsParens) writer.write("(");
         expr.getCondition().accept(this);
         writer.write(" ? ");
         expr.getThenExpr().accept(this);
         writer.write(" : ");
         expr.getElseExpr().accept(this);
+        if (needsParens) writer.write(")");
         return null;
+    }
+
+    private static boolean isAssignmentOperator(BinaryOperator op) {
+        return op.getPrecedence() <= BinaryOperator.ASSIGN.getPrecedence();
     }
 
     @Override

@@ -4504,6 +4504,9 @@ public class StatementRecoverer {
     }
 
     private Statement recoverDoWhileLoop(IRBlock header, RegionInfo info) {
+        if (info.getLatchBlock() != null) {
+            return recoverLatchDoWhile(header, info);
+        }
         context.markProcessed(header);
 
         Set<IRBlock> stopBlocks = new HashSet<>();
@@ -4523,7 +4526,12 @@ public class StatementRecoverer {
 
         context.pushStopBlocks(stopBlocks);
         try {
-            List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
+            // Single-block do-while: body, bottom condition and back-edge share the header, so its
+            // own non-terminator instructions are the body (recoverBlockSequence would stop on the
+            // header immediately, since it is its own stop block).
+            List<Statement> bodyStmts = info.getLoopBody() == header
+                    ? recoverBlockInstructions(header)
+                    : recoverBlockSequence(info.getLoopBody(), stopBlocks);
             BlockStmt body = new BlockStmt(bodyStmts);
             Expression condition = recoverCondition(header, info.isConditionNegated());
             DoWhileStmt doWhileStmt = new DoWhileStmt(body, condition);
@@ -4532,6 +4540,54 @@ public class StatementRecoverer {
         } finally {
             context.popStopBlocks();
         }
+    }
+
+    /**
+     * Recovers a bottom-tested do-while whose header carries body control flow. The body runs
+     * from the header (temporarily reclassified as its own conditional so the sequence walk does
+     * not re-enter the loop) up to the latch, whose leading instructions close the body and whose
+     * branch is the loop condition.
+     */
+    private Statement recoverLatchDoWhile(IRBlock header, RegionInfo info) {
+        IRBlock latch = info.getLatchBlock();
+        Set<IRBlock> stopBlocks = new HashSet<>();
+        stopBlocks.add(latch);
+        if (info.getLoopExit() != null) {
+            stopBlocks.add(info.getLoopExit());
+        }
+        context.pushStopBlocks(stopBlocks);
+        // The latch is a continue target only when it is the bare test: jumping to an impure latch
+        // runs its trailing body statements first, which a source-level continue would skip.
+        context.pushLoop(header, latchIsBareTest(latch) ? latch : null, info.getLoopExit());
+        Map<IRBlock, RegionInfo> infos = analyzer.getRegionInfos();
+        RegionInfo headerView = info.getHeaderConditional() != null
+                ? info.getHeaderConditional()
+                : new RegionInfo(ControlFlowContext.StructuredRegion.SEQUENCE, header);
+        RegionInfo saved = infos.put(header, headerView);
+        try {
+            List<Statement> bodyStmts = new ArrayList<>(recoverBlockSequence(header, stopBlocks));
+            stripTrailingContinue(bodyStmts);
+            bodyStmts.addAll(recoverBlockInstructions(latch));
+            context.markProcessed(latch);
+            Expression condition = recoverCondition(latch, info.isConditionNegated());
+            DoWhileStmt doWhileStmt = new DoWhileStmt(new BlockStmt(bodyStmts), condition);
+            stampFromHeader(doWhileStmt, header);
+            return labelIfTargeted(header, doWhileStmt);
+        } finally {
+            infos.put(header, saved);
+            context.popLoop();
+            context.popStopBlocks();
+        }
+    }
+
+    /** True when the latch holds nothing but its branch — the shape a source continue can target. */
+    private boolean latchIsBareTest(IRBlock latch) {
+        for (IRInstruction instr : latch.getInstructions()) {
+            if (!instr.isTerminator() && instr.getResult() == null) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Wraps a recovered loop in a {@link LabeledStmt} when an inner non-local jump created a label for its header. */
@@ -6874,28 +6930,61 @@ public class StatementRecoverer {
             return null;
         }
 
-        SSAValue thenValue = extractSingleProducedValue(thenBlock);
-        SSAValue elseValue = extractSingleProducedValue(elseBlock);
-
-        if (thenValue == null || elseValue == null) {
-            return null;
-        }
-
         for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
-            // The arms are pure single-value blocks (above) with the merge as their only join, so a phi
-            // that takes an input from each arm is a ternary. We do NOT require the phi input to be SSA-
-            // identical to the block's produced value: a redundant load of an unchanged parameter resolves
-            // to the parameter SSA value, so the arm "produces" v4=load(slot) while the phi takes the param
-            // directly. collapseToTernaryPhiExpression reads the actual phi incomings, so identity is moot.
+            // A phi taking one input from each arm is a ternary when each arm is either the classic
+            // single-value block or a compound but provably pure computation (e.g. `-k` = load +
+            // neg). Arms with calls/allocations stay on the single-value rule: their statements are
+            // consumed by the collapse, so anything beyond the produced value would be lost.
             Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
             if (incomingBlocks.size() == 2
                     && incomingBlocks.contains(thenBlock) && incomingBlocks.contains(elseBlock)
-                    && phi.getIncoming(thenBlock) != null && phi.getIncoming(elseBlock) != null) {
+                    && phi.getIncoming(thenBlock) != null && phi.getIncoming(elseBlock) != null
+                    && isTernaryArm(thenBlock, phi.getIncoming(thenBlock))
+                    && isTernaryArm(elseBlock, phi.getIncoming(elseBlock))) {
                 return phi;
             }
         }
 
         return null;
+    }
+
+    private boolean isTernaryArm(IRBlock block, Value phiIncoming) {
+        return extractSingleProducedValue(block) != null || isPureComputeArm(block, phiIncoming);
+    }
+
+    /**
+     * True when every instruction in a diamond arm is a side-effect-free computation: local/array/
+     * field loads, constants, unary/binary ops and type checks. A local store is permitted only when
+     * it stores the phi's incoming value (the redundant temp materialization the lifter emits).
+     * Calls, allocations and real stores disqualify - the collapse would drop them.
+     */
+    private boolean isPureComputeArm(IRBlock block, Value phiIncoming) {
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr.isTerminator()) {
+                continue;
+            }
+            if (instr instanceof StoreLocalInstruction) {
+                if (((StoreLocalInstruction) instr).getValue() != phiIncoming) {
+                    return false;
+                }
+            } else if (instr instanceof FieldAccessInstruction) {
+                if (((FieldAccessInstruction) instr).isStore()) {
+                    return false;
+                }
+            } else if (instr instanceof ArrayAccessInstruction) {
+                if (((ArrayAccessInstruction) instr).isStore()) {
+                    return false;
+                }
+            } else if (!(instr instanceof LoadLocalInstruction
+                    || instr instanceof ConstantInstruction
+                    || instr instanceof UnaryOpInstruction
+                    || instr instanceof BinaryOpInstruction
+                    || instr instanceof TypeCheckInstruction
+                    || instr instanceof CopyInstruction)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
