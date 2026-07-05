@@ -380,7 +380,8 @@ public class ArrayInitializerReconstructor implements ASTTransform {
                 changed |= na != arg;
             }
             return changed ? new MethodCallExpr(rec, call.getMethodName(), call.getOwnerClass(),
-                    args, call.isStatic(), call.getType()).withDescriptor(call.getDescriptor()) : expr;
+                    args, call.isStatic(), call.getType()).withDescriptor(call.getDescriptor())
+                    .withSuperCall(call.isSuperCall()) : expr;
         } else if (expr instanceof NewExpr) {
             NewExpr n = (NewExpr) expr;
             List<Expression> args = new ArrayList<>();

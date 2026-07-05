@@ -1162,6 +1162,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
         if (expr.isStatic()) {
             writer.write(formatClassName(expr.getOwnerClass()));
             writer.write(".");
+        } else if (expr.isSuperCall() && expr.getReceiver() == null) {
+            writer.write("super.");
         } else if (expr.getReceiver() != null) {
             Expression receiver = expr.getReceiver();
             SourceType receiverType = castReceiverType(receiver);

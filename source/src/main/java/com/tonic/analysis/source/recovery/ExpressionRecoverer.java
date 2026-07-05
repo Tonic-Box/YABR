@@ -569,8 +569,14 @@ public class ExpressionRecoverer {
                 retType = typeRecoverer.recoverType(instr.getResult());
             }
             boolean isStatic = instr.getInvokeType() == InvokeType.STATIC;
+            String methodClass = context.getIrMethod().getOwnerClass();
+            boolean superCall = instr.getInvokeType() == InvokeType.SPECIAL
+                    && receiver == null
+                    && instr.getOwner() != null
+                    && !instr.getOwner().equals(methodClass);
             MethodCallExpr call = new MethodCallExpr(receiver, instr.getName(), instr.getOwner(), args, isStatic, retType)
-                    .withDescriptor(instr.getDescriptor());
+                    .withDescriptor(instr.getDescriptor())
+                    .withSuperCall(superCall);
 
             Expression collapsed = tryCollapseStringBuilder(call);
             return collapsed != null ? collapsed : call;

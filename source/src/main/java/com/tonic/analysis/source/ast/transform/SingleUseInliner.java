@@ -288,7 +288,8 @@ public class SingleUseInliner implements ASTTransform {
             }
             if (newReceiver != call.getReceiver() || argsChanged) {
                 return new MethodCallExpr(newReceiver, call.getMethodName(), call.getOwnerClass(),
-                    newArgs, call.isStatic(), call.getType()).withDescriptor(call.getDescriptor());
+                    newArgs, call.isStatic(), call.getType()).withDescriptor(call.getDescriptor())
+                    .withSuperCall(call.isSuperCall());
             }
             return expr;
         } else if (expr instanceof FieldAccessExpr) {

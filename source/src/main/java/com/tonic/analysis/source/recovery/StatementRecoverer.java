@@ -5755,6 +5755,17 @@ public class StatementRecoverer {
         if (negate) {
             op = negateOperator(op);
         }
+        // fcmpl/dcmpl bias NaN to -1, fcmpg/dcmpg to +1, so the int test reading in the biased
+        // direction is NOT the plain relational: dcmpg >= 0 is !(a < b), true for NaN, while
+        // a >= b is false. Emit the negated complement for those combinations.
+        boolean nanGreater = cmp.getOp() == BinaryOp.FCMPG || cmp.getOp() == BinaryOp.DCMPG;
+        boolean floatCmp = cmp.getOp() != BinaryOp.LCMP;
+        if (floatCmp && (nanGreater
+                ? (op == BinaryOperator.GT || op == BinaryOperator.GE)
+                : (op == BinaryOperator.LT || op == BinaryOperator.LE))) {
+            BinaryExpr complement = new BinaryExpr(negateOperator(op), a, b, PrimitiveSourceType.BOOLEAN);
+            return new UnaryExpr(UnaryOperator.NOT, complement, PrimitiveSourceType.BOOLEAN);
+        }
         return new BinaryExpr(op, a, b, PrimitiveSourceType.BOOLEAN);
     }
 

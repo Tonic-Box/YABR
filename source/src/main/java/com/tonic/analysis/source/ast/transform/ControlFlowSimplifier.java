@@ -1220,7 +1220,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
             if (newReceiver != mc.getReceiver() || argsChanged) {
                 return new MethodCallExpr(newReceiver, mc.getMethodName(), mc.getOwnerClass(),
-                    newArgs, mc.isStatic(), mc.getType()).withDescriptor(mc.getDescriptor());
+                    newArgs, mc.isStatic(), mc.getType()).withDescriptor(mc.getDescriptor())
+                    .withSuperCall(mc.isSuperCall());
             }
             return expr;
         }

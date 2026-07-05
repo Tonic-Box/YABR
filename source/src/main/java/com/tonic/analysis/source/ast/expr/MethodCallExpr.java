@@ -31,6 +31,8 @@ public final class MethodCallExpr implements Expression {
     private ASTNode parent;
     /** JVM method descriptor; null unless recovered from bytecode. */
     private String descriptor;
+    /** True for an invokespecial dispatch to a superclass method (super.m()). */
+    private boolean superCall;
 
     public MethodCallExpr(Expression receiver, String methodName, String ownerClass,
                           List<Expression> arguments, boolean isStatic, SourceType type,
@@ -82,6 +84,15 @@ public final class MethodCallExpr implements Expression {
 
     public MethodCallExpr withDescriptor(String descriptor) {
         this.descriptor = descriptor;
+        return this;
+    }
+
+    public boolean isSuperCall() {
+        return superCall;
+    }
+
+    public MethodCallExpr withSuperCall(boolean superCall) {
+        this.superCall = superCall;
         return this;
     }
 

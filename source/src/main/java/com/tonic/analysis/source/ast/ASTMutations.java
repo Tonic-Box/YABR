@@ -71,7 +71,7 @@ public final class ASTMutations {
                 e.isStatic(),
                 e.getType(),
                 e.getLocation()
-            ).withDescriptor(e.getDescriptor());
+            ).withDescriptor(e.getDescriptor()).withSuperCall(e.isSuperCall());
         } else if (expr instanceof FieldAccessExpr) {
             FieldAccessExpr e = (FieldAccessExpr) expr;
             return new FieldAccessExpr(
