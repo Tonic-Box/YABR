@@ -14,6 +14,7 @@ import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.transform.ArrayInitializerReconstructor;
 import com.tonic.analysis.source.ast.transform.ForLoopCounterFolder;
+import com.tonic.analysis.source.ast.transform.ScopeEscapeHoister;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
@@ -101,6 +102,7 @@ public class ClassDecompiler {
     private final VarargsReconstructor varargsReconstructor;
     private final ArrayInitializerReconstructor arrayInitReconstructor;
     private final ForLoopCounterFolder forLoopCounterFolder;
+    private final ScopeEscapeHoister scopeEscapeHoister;
     private final Set<String> usedTypes = new TreeSet<>();
     private Map<String, NavigableMap<Integer, Integer>> lineMapsCollector;
     private Map<String, DecompileResult.MethodSpan> methodSpansCollector;
@@ -135,6 +137,7 @@ public class ClassDecompiler {
         this.varargsReconstructor = new VarargsReconstructor(classFile);
         this.arrayInitReconstructor = new ArrayInitializerReconstructor();
         this.forLoopCounterFolder = new ForLoopCounterFolder();
+        this.scopeEscapeHoister = new ScopeEscapeHoister();
         this.hasInnerClasses = detectInnerClasses();
     }
 
@@ -901,6 +904,7 @@ public class ClassDecompiler {
         singleUseInliner.transform(body);
         patternSwitchReconstructor.transform(body);
         switchExprReconstructor.transform(body);
+        scopeEscapeHoister.transform(body);
         removeTrailingReturn(body); // Static initializers cannot have return statements
         return body;
     }
@@ -1139,6 +1143,7 @@ public class ClassDecompiler {
         singleUseInliner.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
+            scopeEscapeHoister.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body, ctor.getName() + ctor.getDesc());
@@ -1246,6 +1251,7 @@ public class ClassDecompiler {
             redundantAssignmentEliminator.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
+            scopeEscapeHoister.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body, method.getName() + method.getDesc());
         } catch (Exception e) {

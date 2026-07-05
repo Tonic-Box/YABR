@@ -118,6 +118,26 @@ public class StructuralAnalyzer {
         IRBlock trueTarget = branch.getTrueTarget();
         IRBlock falseTarget = branch.getFalseTarget();
 
+        // A unique conditional latch is the bottom test of a do-while regardless of where the
+        // header's own branch goes — inside the loop it is body control flow, outside it is a
+        // mid-body break. javac's top-tested loops always close with an unconditional back-edge,
+        // so they never match. The header recovers as the plain conditional it is.
+        IRBlock latch = findConditionalLatch(header, loop);
+        if (latch != null && (loop.contains(trueTarget) || loop.contains(falseTarget))) {
+            BranchInstruction latchBranch = (BranchInstruction) latch.getTerminator();
+            IRBlock latchExit = latchBranch.getTrueTarget() == header
+                    ? latchBranch.getFalseTarget()
+                    : latchBranch.getTrueTarget();
+            RegionInfo info = new RegionInfo(StructuredRegion.DO_WHILE_LOOP, header);
+            info.setLoopBody(header);
+            info.setLoopExit(latchExit);
+            info.setLoop(loop);
+            info.setConditionNegated(latchBranch.getTrueTarget() != header);
+            info.setLatchBlock(latch);
+            info.setHeaderConditional(analyzeConditional(header, trueTarget, falseTarget));
+            return info;
+        }
+
         IRBlock bodyBlock;
         IRBlock exitBlock;
         boolean conditionNegated;
@@ -131,24 +151,6 @@ public class StructuralAnalyzer {
             exitBlock = trueTarget;
             conditionNegated = true;
         } else if (loop.contains(trueTarget) && loop.contains(falseTarget)) {
-            // Bottom-tested loop: the header's branch is body control flow (both targets stay
-            // inside), and the real loop test lives in the unique latch. Structure as do-while,
-            // recovering the header as the plain conditional it is.
-            IRBlock latch = findConditionalLatch(header, loop);
-            if (latch != null) {
-                BranchInstruction latchBranch = (BranchInstruction) latch.getTerminator();
-                IRBlock latchExit = latchBranch.getTrueTarget() == header
-                        ? latchBranch.getFalseTarget()
-                        : latchBranch.getTrueTarget();
-                RegionInfo info = new RegionInfo(StructuredRegion.DO_WHILE_LOOP, header);
-                info.setLoopBody(header);
-                info.setLoopExit(latchExit);
-                info.setLoop(loop);
-                info.setConditionNegated(latchBranch.getTrueTarget() != header);
-                info.setLatchBlock(latch);
-                info.setHeaderConditional(analyzeConditional(header, trueTarget, falseTarget));
-                return info;
-            }
             bodyBlock = trueTarget;
             exitBlock = null;
             conditionNegated = false;

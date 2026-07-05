@@ -444,14 +444,30 @@ public class StatementRecoverer {
                 }
 
                 Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(outerHandler) : null;
+                Statement region;
                 if (syncLock != null) {
                     SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
                     stampFromBody(sync, tryBlock);
-                    result.add(sync);
+                    region = sync;
                 } else {
                     TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
                     stampFromBody(tryCatch, tryBlock);
-                    result.add(tryCatch);
+                    region = tryCatch;
+                }
+                result.add(region);
+                // A region whose catch (or sync body) falls through continues at the join after
+                // the protected range; without walking it the method's tail is silently dropped.
+                if (!isTerminatingRecoveredTry(region)) {
+                    Set<IRBlock> consumed = new HashSet<>();
+                    for (ExceptionHandler h : outerRegionHandlers) {
+                        if (h.getHandlerBlock() != null) {
+                            collectCatchConsumedBlocks(h, consumed);
+                        }
+                    }
+                    IRBlock continuation = findBlockAfterTryCatch(outerHandler, consumed);
+                    if (continuation != null && !context.isProcessed(continuation)) {
+                        result.addAll(recoverBlockSequence(continuation, new HashSet<>()));
+                    }
                 }
             } else {
                 result.addAll(tryStmts);
@@ -919,7 +935,7 @@ public class StatementRecoverer {
             exceptionVarName = simpleName.charAt(0) + "_ex";
         }
 
-        registerExceptionVariables(handlerBlock, exceptionVarName);
+        registerExceptionVariables(handler, exceptionVarName);
 
         Set<SSAValue> exceptionValues = collectExceptionValues(handlerBlock);
 
@@ -1371,9 +1387,16 @@ public class StatementRecoverer {
      * Registers all SSA values that represent the exception in an exception handler.
      * This ensures they reference the catch parameter instead of undefined "v#" names.
      */
-    private void registerExceptionVariables(IRBlock handlerBlock, String exceptionVarName) {
+    private void registerExceptionVariables(ExceptionHandler handler, String exceptionVarName) {
+        IRBlock handlerBlock = handler.getHandlerBlock();
+        // Bound the walk to the blocks the catch clause's recovery actually consumes. The
+        // handler block often falls through (physically) into the join after the try/catch;
+        // an unbounded successor walk would claim every later load of the exception's slot
+        // (a slot javac freely reuses) and rename unrelated variables to the catch variable.
+        Set<IRBlock> consumed = new HashSet<>();
+        collectCatchConsumedBlocks(handler, consumed);
         Set<SSAValue> exceptionValuesSet = new HashSet<>();
-        findExceptionSSAValues(handlerBlock, exceptionValuesSet);
+        findExceptionSSAValues(handlerBlock, exceptionValuesSet, consumed);
 
         for (SSAValue excVal : exceptionValuesSet) {
             context.getExpressionContext().setVariableName(excVal, exceptionVarName);
@@ -1384,13 +1407,13 @@ public class StatementRecoverer {
      * Finds all SSA values that represent the caught exception.
      * Starts from values with "exc_" prefix and tracks through copies and local stores/loads.
      */
-    private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result) {
+    private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result, Set<IRBlock> bound) {
         Set<Integer> exceptionLocalSlots = new HashSet<>();
 
-        findExceptionSSAValuesPass1(block, result, exceptionLocalSlots, new HashSet<>());
+        findExceptionSSAValuesPass1(block, result, exceptionLocalSlots, new HashSet<>(), bound);
 
         if (!exceptionLocalSlots.isEmpty()) {
-            findExceptionSSAValuesPass2(block, result, exceptionLocalSlots, new HashSet<>());
+            findExceptionSSAValuesPass2(block, result, exceptionLocalSlots, new HashSet<>(), bound);
         }
     }
 
@@ -1398,8 +1421,9 @@ public class StatementRecoverer {
      * First pass: Find exc_ prefix values and track which local slots they're stored to.
      */
     private void findExceptionSSAValuesPass1(IRBlock block, Set<SSAValue> result,
-                                               Set<Integer> exceptionSlots, Set<IRBlock> visited) {
-        if (visited.contains(block)) return;
+                                               Set<Integer> exceptionSlots, Set<IRBlock> visited,
+                                               Set<IRBlock> bound) {
+        if (visited.contains(block) || !bound.contains(block)) return;
         visited.add(block);
 
         for (IRInstruction instr : block.getInstructions()) {
@@ -1450,7 +1474,7 @@ public class StatementRecoverer {
         }
 
         for (IRBlock succ : block.getSuccessors()) {
-            findExceptionSSAValuesPass1(succ, result, exceptionSlots, visited);
+            findExceptionSSAValuesPass1(succ, result, exceptionSlots, visited, bound);
         }
     }
 
@@ -1458,8 +1482,9 @@ public class StatementRecoverer {
      * Second pass: Find LoadLocal from exception-containing slots.
      */
     private void findExceptionSSAValuesPass2(IRBlock block, Set<SSAValue> result,
-                                               Set<Integer> exceptionSlots, Set<IRBlock> visited) {
-        if (visited.contains(block)) return;
+                                               Set<Integer> exceptionSlots, Set<IRBlock> visited,
+                                               Set<IRBlock> bound) {
+        if (visited.contains(block) || !bound.contains(block)) return;
         visited.add(block);
 
         for (IRInstruction instr : block.getInstructions()) {
@@ -1471,11 +1496,23 @@ public class StatementRecoverer {
                         result.add(loadResult);
                     }
                 }
+            } else if (instr instanceof StoreLocalInstruction) {
+                // A store of a non-exception value redefines the slot: javac reuses the catch
+                // variable's slot for unrelated locals afterwards, so later loads are NOT the
+                // exception and must keep their own variable.
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                if (exceptionSlots.contains(store.getLocalIndex())) {
+                    Value stored = store.getValue();
+                    boolean isExceptionValue = stored instanceof SSAValue && result.contains(stored);
+                    if (!isExceptionValue) {
+                        exceptionSlots.remove(store.getLocalIndex());
+                    }
+                }
             }
         }
 
         for (IRBlock succ : block.getSuccessors()) {
-            findExceptionSSAValuesPass2(succ, result, exceptionSlots, visited);
+            findExceptionSSAValuesPass2(succ, result, exceptionSlots, visited, bound);
         }
     }
 
@@ -1515,7 +1552,10 @@ public class StatementRecoverer {
     }
 
     /**
-     * Finds an exception handler whose try region starts at the given block.
+     * Finds the exception handler whose try region starts at the given block, preferring the
+     * widest region: nested regions share a start pc with their enclosing one (and the table
+     * lists inner entries first), so taking the first match would recover the inner region and
+     * silently drop the outer catch. Ties keep table order.
      */
     private ExceptionHandler findHandlerStartingAt(IRBlock block) {
         IRMethod irMethod = context.getIrMethod();
@@ -1523,14 +1563,21 @@ public class StatementRecoverer {
         if (handlers == null || handlers.isEmpty()) {
             return null;
         }
+        ExceptionHandler best = null;
+        int bestEnd = Integer.MIN_VALUE;
         for (ExceptionHandler handler : handlers) {
             IRBlock tryStart = handler.getTryStart();
             if (tryStart == block ||
                 (tryStart != null && tryStart.getBytecodeOffset() == block.getBytecodeOffset())) {
-                return handler;
+                int end = handler.getTryEnd() != null
+                        ? handler.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
+                if (best == null || end > bestEnd) {
+                    best = handler;
+                    bestEnd = end;
+                }
             }
         }
-        return null;
+        return best;
     }
 
     /**
@@ -1668,11 +1715,40 @@ public class StatementRecoverer {
                                           Set<IRBlock> originalStopBlocks, Set<IRBlock> visited) {
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
+
+        // javac splits one try's protected range into several exception-table entries around
+        // instructions that exit the try (a break/return between protected sections). All entries
+        // targeting this handler block are the SAME source try; widen the effective range to their
+        // union, otherwise the body recovery stops at the first entry's end and the blocks of the
+        // later entries (e.g. code after an `if (...) break;` in the try) are silently skipped.
+        IRBlock mergedStart = mainHandler.getTryStart();
+        IRBlock mergedEnd = mainHandler.getTryEnd();
+        for (ExceptionHandler h : handlers) {
+            if (h.getHandlerBlock() != mainHandler.getHandlerBlock()) {
+                continue;
+            }
+            if (h.getTryStart() != null && (mergedStart == null
+                    || h.getTryStart().getBytecodeOffset() < mergedStart.getBytecodeOffset())) {
+                mergedStart = h.getTryStart();
+            }
+            if (h.getTryEnd() != null && (mergedEnd == null
+                    || h.getTryEnd().getBytecodeOffset() > mergedEnd.getBytecodeOffset())) {
+                mergedEnd = h.getTryEnd();
+            }
+        }
+        if (mergedStart != mainHandler.getTryStart() || mergedEnd != mainHandler.getTryEnd()) {
+            mainHandler = new ExceptionHandler(
+                mergedStart, mergedEnd, mainHandler.getHandlerBlock(), mainHandler.getCatchType());
+        }
+
+        // The region's clause set: entries targeting the same handler block (the split ranges
+        // above plus multi-catch types) and entries whose range equals the merged range (a
+        // finally handler protecting exactly this try).
         List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
         TryRegion mainRegion = createTryRegion(mainHandler);
         for (ExceptionHandler h : handlers) {
-            TryRegion handlerRegion = createTryRegion(h);
-            if (mainRegion != null && mainRegion.equals(handlerRegion)) {
+            if (h.getHandlerBlock() == mainHandler.getHandlerBlock()
+                    || (mainRegion != null && mainRegion.equals(createTryRegion(h)))) {
                 sameRegionHandlers.add(h);
             }
         }
@@ -1729,14 +1805,42 @@ public class StatementRecoverer {
             }
         }
 
-        List<Statement> tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited);
+        // Handlers whose try range sits inside this region are nested try/catch/finally structure
+        // that the body recovery must build (mirroring recoverWithExceptionHandling's outer/inner
+        // split); recovering the body flat would drop or misplace their clauses.
+        List<ExceptionHandler> nestedHandlers = new ArrayList<>();
+        if (mainHandler.getTryStart() != null && mainHandler.getTryEnd() != null) {
+            int mainStart = mainHandler.getTryStart().getBytecodeOffset();
+            int mainEnd = mainHandler.getTryEnd().getBytecodeOffset();
+            for (ExceptionHandler h : handlers) {
+                if (sameRegionHandlers.contains(h) || h.getTryStart() == null || h.getTryEnd() == null) {
+                    continue;
+                }
+                int hStart = h.getTryStart().getBytecodeOffset();
+                int hEnd = h.getTryEnd().getBytecodeOffset();
+                if (hStart >= mainStart && hEnd <= mainEnd) {
+                    nestedHandlers.add(h);
+                }
+            }
+        }
+        List<Statement> tryStmts;
+        if (!nestedHandlers.isEmpty()) {
+            for (ExceptionHandler h : nestedHandlers) {
+                processedTryHandlers.add(h);
+                if (h.getHandlerBlock() != null) {
+                    processedHandlerBlocks.add(h.getHandlerBlock());
+                }
+            }
+            tryStmts = recoverWithNestedHandlers(startBlock, nestedHandlers, tryStopBlocks);
+        } else {
+            tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited);
+        }
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
         Set<String> finallyExceptionVars = new HashSet<>();
         for (ExceptionHandler h : sameRegionHandlers) {
             if (h.getHandlerBlock() != null) {
-                visited.add(h.getHandlerBlock());
-                collectReachableBlocks(h.getHandlerBlock(), visited);
+                collectCatchConsumedBlocks(h, visited);
             }
         }
         List<CatchClause> catchClauses = buildCatchClauses(sameRegionHandlers);
@@ -1829,7 +1933,14 @@ public class StatementRecoverer {
                     Statement ifStmt = recoverIfThenElse(current, info);
                     result.addAll(context.collectPendingStatements());
                     result.add(ifStmt);
-                    current = info.getMergeBlock();
+                    // A merge that is a loop boundary was only reached as a post-dominator:
+                    // both arms already carry their own jumps, so walking to it would append
+                    // a spurious break/continue after the if/else.
+                    IRBlock merge = info.getMergeBlock();
+                    current = merge != null && stopBlocks.contains(merge)
+                            && context.classifyLoopJump(merge) != null
+                            ? null
+                            : merge;
                     break;
                 }
                 case WHILE_LOOP: {
@@ -3252,7 +3363,12 @@ public class StatementRecoverer {
                     }
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
-                        current = merge;
+                        // A merge that is a loop boundary was only reached as a post-dominator:
+                        // both arms already carry their own jumps, so walking to it would append
+                        // a spurious break/continue after the if/else.
+                        current = stopBlocks.contains(merge) && context.classifyLoopJump(merge) != null
+                                ? null
+                                : merge;
                     } else if (ifStmt instanceof IfStmt
                             && isTerminatingStatement(((IfStmt) ifStmt).getThenBranch())) {
                         // No merge and the then-branch exits (returns/throws): the else's tail leaves the
@@ -4030,7 +4146,10 @@ public class StatementRecoverer {
         boolean isDeclared = context.getExpressionContext().isDeclared(name);
 
         if (isDeclared) {
-            if (isDefaultValue(value)) {
+            // A default-value store is covered by the declaration's initializer only outside
+            // loops: inside one it re-runs each iteration while the hoisted declaration ran
+            // once, so eliding it would drop a live re-initialization.
+            if (isDefaultValue(value) && context.getLoopStack().isEmpty()) {
                 return null;
             }
             if (value instanceof VarRefExpr) {
@@ -6178,6 +6297,44 @@ public class StatementRecoverer {
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result) {
         collectReachableBlocks(start, result, Collections.emptySet());
+    }
+
+    /**
+     * Marks exactly the blocks a catch clause's recovery consumes: the walk stops at goto,
+     * return and athrow terminators, mirroring recoverCatchClause/recoverHandlerBlocks. An
+     * unbounded reachability walk would claim the fall-through join and everything after the
+     * try/catch, making the outer sequence drop the method's continuation.
+     */
+    private void collectCatchConsumedBlocks(ExceptionHandler handler, Set<IRBlock> result) {
+        IRBlock handlerBlock = handler.getHandlerBlock();
+        result.add(handlerBlock);
+        if (isGotoTerminated(handlerBlock) && !handler.isCatchAll()) {
+            return;
+        }
+        Deque<IRBlock> worklist = new ArrayDeque<>(handlerBlock.getSuccessors());
+        while (!worklist.isEmpty()) {
+            IRBlock current = worklist.poll();
+            if (!result.add(current)) {
+                continue;
+            }
+            IRInstruction terminator = current.getTerminator();
+            if (terminator instanceof ReturnInstruction) {
+                continue;
+            }
+            if (terminator instanceof SimpleInstruction) {
+                SimpleOp op = ((SimpleInstruction) terminator).getOp();
+                if (op == SimpleOp.GOTO || op == SimpleOp.ATHROW) {
+                    continue;
+                }
+            }
+            worklist.addAll(current.getSuccessors());
+        }
+    }
+
+    private static boolean isGotoTerminated(IRBlock block) {
+        IRInstruction terminator = block.getTerminator();
+        return terminator instanceof SimpleInstruction
+                && ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO;
     }
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result, Set<IRBlock> stopBlocks) {

@@ -119,11 +119,21 @@ public class MethodRecoverer {
     public void analyze() {
         stripSyntheticMatchExceptionHandlers();
 
+        // Dominance and loop detection must see the exception edges: when a protected region
+        // always throws (its only exit is the handler), the code after it is reachable solely
+        // through the handler, and without the edges it has no dominators - back edges are then
+        // missed and loops degrade to plain conditionals. The edges are removed again so the
+        // structural analysis and statement recovery walk only real control flow.
+        List<IRBlock[]> excEdges =
+            com.tonic.analysis.ssa.lift.BytecodeLifter.addExceptionEdges(irMethod);
+
         dominatorTree = new DominatorTree(irMethod);
         dominatorTree.compute();
 
         loopAnalysis = new LoopAnalysis(irMethod, dominatorTree);
         loopAnalysis.compute();
+
+        com.tonic.analysis.ssa.lift.BytecodeLifter.removeExceptionEdges(excEdges);
 
         defUseChains = new DefUseChains(irMethod);
         defUseChains.compute();
