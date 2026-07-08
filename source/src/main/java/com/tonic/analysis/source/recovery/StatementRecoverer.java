@@ -4830,14 +4830,18 @@ public class StatementRecoverer {
 
             IRBlock bodyBlock = info.getLoopBody();
             boolean bodyIsIncrement = bodyBlock == incrementBlock;
+            // The increment block is PURE when it holds only the induction update. An impure one also
+            // carries body work javac merged into it (e.g. `publish(); Thread.sleep(); i++;`): it must
+            // NOT be folded into the for-update, and it must NOT be the continue target — jumping there
+            // would skip its trailing body statements (mirrors recoverWhileLoop's impure-latch guard).
+            boolean incrementPure = !bodyIsIncrement
+                    && isIncrementBlockPure(incrementBlock, incrementInstructions);
 
             context.pushStopBlocks(stopBlocks);
             context.pushSkipInstructions(incrementInstructions);
-            context.pushLoop(header, incrementBlock, info.getLoopExit());
+            context.pushLoop(header, incrementPure ? incrementBlock : null, info.getLoopExit());
             try {
-                // Only suppress the increment block when it is PURE (just the induction update): when a
-                // mid-loop break bypasses it, javac merges body work into it, which must be recovered.
-                if (!bodyIsIncrement && isIncrementBlockPure(incrementBlock, incrementInstructions)) {
+                if (incrementPure) {
                     context.markProcessed(incrementBlock);
                 }
 
