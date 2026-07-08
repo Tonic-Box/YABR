@@ -379,10 +379,19 @@ public class StructuralAnalyzer {
         IRBlock mergePoint = findMergePoint(block);
 
         if (mergePoint == null || mergePoint == block) {
-            RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
-            info.setThenBlock(trueTarget);
-            info.setElseBlock(falseTarget);
-            return info;
+            // The post-dominator tree yields no merge when the branch block has extra (e.g.
+            // exception) successors, even though the two arms genuinely reconverge — as for a
+            // boolean-value diamond whose join carries the method continuation. Fall back to the
+            // arms' actual convergence before giving up, or the continuation would be duplicated
+            // into both branches instead of bounded by the merge.
+            IRBlock converge = findImmediateMergePoint(trueTarget, falseTarget);
+            if (converge == null) {
+                RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
+                info.setThenBlock(trueTarget);
+                info.setElseBlock(falseTarget);
+                return info;
+            }
+            mergePoint = converge;
         }
 
         // Try to find an immediate merge point - a block that both branches reach quickly
