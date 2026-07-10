@@ -4141,12 +4141,14 @@ public class StatementRecoverer {
         if (store.getValue() instanceof SSAValue) {
             SSAValue sourceValue = (SSAValue) store.getValue();
             IRInstruction sourceDef = sourceValue.getDefinition();
-            // A value from a load OR a phi is a read of an existing variable (the slot's current
-            // value or a loop-carried merge), not a value freshly defined by this store. Copying
-            // the store's slot name onto it would conflate distinct variables — e.g. `a = b`
-            // (b is a loop phi) would rename b to "a" and collapse the assignment.
+            // A value from a load, a phi, or a parameter is a read of an existing variable (the
+            // slot's current value, a loop-carried merge, or a method argument), not a value freshly
+            // defined by this store. Copying the store's slot name onto it would conflate distinct
+            // variables — e.g. `a = b` (b is a loop phi or a parameter) would rename b to "a" and
+            // collapse the assignment into an elided self-store.
             boolean isLoadedValue = sourceDef instanceof LoadLocalInstruction
-                || sourceDef instanceof PhiInstruction;
+                || sourceDef instanceof PhiInstruction
+                || isParameterOrThisRef(sourceValue);
             boolean isAlreadyMaterialized = context.getExpressionContext().isMaterialized(sourceValue);
 
             if (!isLoadedValue && !isAlreadyMaterialized) {
