@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
@@ -569,7 +570,10 @@ public class ControlFlowSimplifier implements ASTTransform {
 
                         if (i > 0) {
                             Statement prev = stmts.get(i - 1);
-                            if (isDuplicateAssignment(prev, binary.getLeft())) {
+                            // The prior assignment to this variable is dead only if the current
+                            // assignment does not read it; `x = f(); x = x.g()` keeps the first store.
+                            if (isDuplicateAssignment(prev, binary.getLeft())
+                                    && !references(binary.getRight(), binary.getLeft())) {
                                 stmts.remove(i - 1);
                                 i--;
                                 changed = true;
@@ -586,6 +590,24 @@ public class ControlFlowSimplifier implements ASTTransform {
     private boolean isSameVariable(Expression left, Expression right) {
         if (left instanceof VarRefExpr && right instanceof VarRefExpr) {
             return ((VarRefExpr) left).getName().equals(((VarRefExpr) right).getName());
+        }
+        return false;
+    }
+
+    /** Whether {@code expr} reads the variable named by {@code varRef}. */
+    private static boolean references(Expression expr, Expression varRef) {
+        return varRef instanceof VarRefExpr
+                && referencesName(expr, ((VarRefExpr) varRef).getName());
+    }
+
+    private static boolean referencesName(ASTNode node, String name) {
+        if (node instanceof VarRefExpr && ((VarRefExpr) node).getName().equals(name)) {
+            return true;
+        }
+        for (ASTNode child : node.getChildren()) {
+            if (referencesName(child, name)) {
+                return true;
+            }
         }
         return false;
     }
