@@ -4990,7 +4990,32 @@ public class StatementRecoverer {
             localName = getNameForLocalSlotWithType(localIndex, storedType);
         }
 
+        // The init value is frequently coalesced into this same loop-variable partition (e.g. the
+        // GETFIELD feeding `for (int i = this.position; ...)`), so a plain recovery would render it
+        // as the variable's own name and produce a self-referential `int i = i`. Un-materialize it
+        // across recovery so its defining expression is inlined, mirroring recoverStoreLocal.
+        boolean shouldUnmaterialize = false;
+        if (storedValue instanceof SSAValue) {
+            SSAValue ssaValue = (SSAValue) storedValue;
+            boolean wasMaterialized = context.getExpressionContext().isMaterialized(ssaValue);
+            int previousSlot = context.getExpressionContext().getSSAValueSlot(ssaValue);
+            String valueName = context.getExpressionContext().getVariableName(ssaValue);
+            boolean declaredArrayInit = ssaValue.getDefinition() instanceof NewArrayInstruction
+                    && isUsedByArrayStore(ssaValue)
+                    && valueName != null
+                    && context.getExpressionContext().isDeclared(valueName);
+            shouldUnmaterialize = wasMaterialized && !declaredArrayInit
+                    && (previousSlot == -1 || previousSlot == localIndex);
+            if (shouldUnmaterialize) {
+                context.getExpressionContext().unmarkMaterialized(ssaValue);
+            }
+        }
+
         Expression valueExpr = recoverExpressionDirectly(storedValue, storedType);
+
+        if (shouldUnmaterialize) {
+            context.getExpressionContext().markMaterialized((SSAValue) storedValue);
+        }
 
         if (context.getExpressionContext().isDeclared(localName)) {
             VarRefExpr target = new VarRefExpr(localName, storedType, null);

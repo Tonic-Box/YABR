@@ -249,6 +249,19 @@ public class StructuralAnalyzer {
                 if (succ == header) {
                     List<IncrementInfo> allIncrements = findAllIncrementsInBlock(block);
                     if (!allIncrements.isEmpty()) {
+                        // A latch updating two or more loop-carried counters (javac's `for (i = a,
+                        // j = b; ...; i++, j++)`) cannot be represented by the single-induction
+                        // for-header: selecting one counter drops the others' init and duplicates
+                        // their update. Recover as a while loop, which keeps every counter's init
+                        // before the loop and its update in the body.
+                        long distinctCounters = allIncrements.stream()
+                                .map(incr -> incr.localIndex)
+                                .filter(idx -> idx >= 0)
+                                .distinct()
+                                .count();
+                        if (distinctCounters >= 2) {
+                            return null;
+                        }
                         if (conditionVar != null) {
                             for (IncrementInfo incr : allIncrements) {
                                 if (usesLocal(conditionVar, incr.localIndex)) {
