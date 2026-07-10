@@ -91,6 +91,18 @@ public class DuplicateBlockMerging implements IRTransform {
         if (term != null) {
             sb.append("T:").append(getTerminatorSignature(term));
         }
+        // Two blocks are duplicates only if they transfer control to the same successors. The
+        // terminator signature omits branch targets, so encode each successor's edge type and id:
+        // otherwise a chain of blocks with identical instructions but different targets (e.g. the
+        // `getstatic $assertionsDisabled; ifne <next>` precheck of each assert in a chain, each
+        // branching to a different next assert) would share a signature and be merged, collapsing
+        // the distinct edges into a spurious self-loop that recovers as `do {} while (...)`.
+        List<String> successors = new ArrayList<>();
+        for (IRBlock succ : block.getSuccessors()) {
+            successors.add(block.getEdgeType(succ) + ":" + succ.getId());
+        }
+        Collections.sort(successors);
+        sb.append("|S:").append(successors);
         return sb.toString();
     }
 
