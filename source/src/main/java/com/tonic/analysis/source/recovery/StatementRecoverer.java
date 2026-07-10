@@ -106,11 +106,7 @@ public class StatementRecoverer {
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
         if (handlers != null && !handlers.isEmpty()) {
             List<Statement> twr = recoverTryWithResources(entry, handlers);
-            if (twr != null) {
-                statements.addAll(twr);
-            } else {
-                statements.addAll(recoverWithExceptionHandling(entry, handlers));
-            }
+            statements.addAll(Objects.requireNonNullElseGet(twr, () -> recoverWithExceptionHandling(entry, handlers)));
         } else {
             statements.addAll(recoverBlockSequence(entry, new HashSet<>()));
         }
@@ -2576,6 +2572,28 @@ public class StatementRecoverer {
     }
 
     /**
+     * Whether a freshly-constructed {@code value} genuinely belongs to the variable {@code phiVarName}
+     * that a phi merges it into. A JVM slot reused for two variables can leave a value from one
+     * partition ({@code max}) feeding the phi of the other ({@code child}); materializing it under the
+     * phi's name would emit a wrong-typed assignment (e.g. {@code child = new Vector3f()}). The value's
+     * own store partition is authoritative, so require it to match. Unknown partitions do not veto.
+     */
+    private boolean valueBelongsToPhiVariable(SSAValue value, String phiVarName) {
+        if (value == null || phiVarName == null) {
+            return true;
+        }
+        for (IRInstruction use : value.getUses()) {
+            if (use instanceof StoreLocalInstruction) {
+                String storeName = partitionName(use);
+                if (storeName != null) {
+                    return storeName.equals(phiVarName);
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * The local slot a value belongs to - its parameter slot, the slot it was stored to, or the slot of its
      * defining local load/store/phi - or -1 when it is not a local-slot value. Lets a variable's role be
      * decided from its slot layout rather than from its (now real) recovered name.
@@ -3692,7 +3710,8 @@ public class StatementRecoverer {
                                     && !isStoredToPhiSlot(newResult, targetPhi)) {
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                                 if (phiVarName != null && !phiVarName.equals("this")
-                                        && !isParameterOrThisRef(targetPhi.getResult())) {
+                                        && !isParameterOrThisRef(targetPhi.getResult())
+                                        && valueBelongsToPhiVariable(newResult, phiVarName)) {
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
@@ -3713,7 +3732,8 @@ public class StatementRecoverer {
                             if (targetPhi != null && targetPhi.getResult() != null) {
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                                 if (phiVarName != null && !phiVarName.equals("this")
-                                        && !isParameterOrThisRef(targetPhi.getResult())) {
+                                        && !isParameterOrThisRef(targetPhi.getResult())
+                                        && valueBelongsToPhiVariable(actualNewValue, phiVarName)) {
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
