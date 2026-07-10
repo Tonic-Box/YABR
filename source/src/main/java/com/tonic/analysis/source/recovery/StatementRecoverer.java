@@ -7130,7 +7130,57 @@ public class StatementRecoverer {
     }
 
     private boolean isTernaryArm(IRBlock block, Value phiIncoming) {
-        return extractSingleProducedValue(block) != null || isPureComputeArm(block, phiIncoming);
+        return extractSingleProducedValue(block) != null || isPureComputeArm(block, phiIncoming)
+                || isSingleValueComputeArm(block, phiIncoming);
+    }
+
+    /**
+     * True when the arm computes exactly the phi's incoming value and nothing else observable: every
+     * non-terminator instruction either defines the incoming value, stores that value into the merged
+     * slot, or produces an intermediate consumed only within this arm (e.g. a load feeding the call
+     * whose result is the incoming value). Unlike {@link #extractSingleProducedValue} this tolerates
+     * multi-instruction value computations (load + invoke), and unlike {@link #isPureComputeArm} it
+     * allows the value-producing call/allocation itself - it is not lost, it becomes the ternary arm.
+     * A side-effecting store or a value that escapes the arm for anything but the phi disqualifies it,
+     * so the collapse never drops work.
+     */
+    private boolean isSingleValueComputeArm(IRBlock block, Value phiIncoming) {
+        if (!(phiIncoming instanceof SSAValue)) {
+            return false;
+        }
+        Set<IRInstruction> armInstrs = new HashSet<>(block.getInstructions());
+        boolean producesIncoming = false;
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr.isTerminator()) {
+                continue;
+            }
+            if (instr instanceof StoreLocalInstruction) {
+                if (((StoreLocalInstruction) instr).getValue() != phiIncoming) {
+                    return false;
+                }
+                continue;
+            }
+            if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isStore()) {
+                return false;
+            }
+            if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isStore()) {
+                return false;
+            }
+            SSAValue result = instr.getResult();
+            if (result == null) {
+                return false;
+            }
+            if (result == phiIncoming) {
+                producesIncoming = true;
+                continue;
+            }
+            for (IRInstruction use : result.getUses()) {
+                if (!armInstrs.contains(use)) {
+                    return false;
+                }
+            }
+        }
+        return producesIncoming;
     }
 
     /**
@@ -7210,8 +7260,8 @@ public class StatementRecoverer {
         Value thenValue = phi.getIncoming(thenBlock);
         Value elseValue = phi.getIncoming(elseBlock);
 
-        Expression thenExpr = exprRecoverer.recoverOperand(thenValue);
-        Expression elseExpr = exprRecoverer.recoverOperand(elseValue);
+        Expression thenExpr = recoverTernaryArmValue(thenValue);
+        Expression elseExpr = recoverTernaryArmValue(elseValue);
 
         SSAValue phiResult = phi.getResult();
         SourceType type = typeRecoverer.recoverType(phiResult);
@@ -7222,6 +7272,29 @@ public class StatementRecoverer {
             context.getExpressionContext().cacheExpression(phiResult, ternaryExpr);
             context.getExpressionContext().unmarkMaterialized(phiResult);
         }
+    }
+
+    /**
+     * Recovers a ternary arm's incoming value as an inlined expression. The arm's statements are
+     * discarded by the collapse, so a value the arm materialized into a temp (e.g. a call result
+     * stored into the merged slot) must be re-recovered as its defining expression - referencing the
+     * discarded temp name would leave an undefined variable. Un-materialize across the recovery so the
+     * expression is inlined, then restore the flag so unrelated uses are unaffected.
+     */
+    private Expression recoverTernaryArmValue(Value value) {
+        if (value instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) value;
+            boolean wasMaterialized = context.getExpressionContext().isMaterialized(ssa);
+            if (wasMaterialized) {
+                context.getExpressionContext().unmarkMaterialized(ssa);
+            }
+            Expression expr = exprRecoverer.recoverOperand(value);
+            if (wasMaterialized) {
+                context.getExpressionContext().markMaterialized(ssa);
+            }
+            return expr;
+        }
+        return exprRecoverer.recoverOperand(value);
     }
 
     /**
