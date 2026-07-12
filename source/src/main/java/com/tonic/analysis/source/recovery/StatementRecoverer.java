@@ -2195,8 +2195,13 @@ public class StatementRecoverer {
                             continue;
                         }
                         String existingName = context.getExpressionContext().getVariableName(sourceValue);
+                        // Overwrite only an absent or synthetic name (a value-id like "v3"/"v3_0" or a
+                        // one-letter slot name like "i5") with this store's slot name. A real name -
+                        // including one that merely starts with 'v', e.g. an LVT "viewPorts" - is kept,
+                        // so a copy `slot2 = viewPorts` is not clobbered into a self-reference
+                        // `local2 = local2` (which reads before assignment).
                         boolean shouldOverwrite = existingName == null
-                                || existingName.startsWith("v")
+                                || isSyntheticValueName(existingName)
                                 || existingName.matches("[a-z]\\d+");
                         if (shouldOverwrite) {
                             context.getExpressionContext().setVariableName(sourceValue, localName);
@@ -2307,6 +2312,11 @@ public class StatementRecoverer {
                 }
             }
         }
+    }
+
+    /** A synthetic SSA value name ("v" followed by a digit, e.g. {@code v3} or {@code v3_0}) - not a real local name. */
+    private static boolean isSyntheticValueName(String name) {
+        return name.length() > 1 && name.charAt(0) == 'v' && Character.isDigit(name.charAt(1));
     }
 
     /**

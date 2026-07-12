@@ -721,6 +721,12 @@ public class ControlFlowSimplifier implements ASTTransform {
                 continue;
             }
 
+            // The reassignment's right-hand side may read the variable itself (e.g. an accumulator
+            // `result = f(x, result)` seeded by the default init). Folding the default declaration into
+            // it would make the initializer read the variable before it is assigned, which is not
+            // definitely assigned; keep the separate default init in that case.
+            if (readsVariableExpr(assign.getRight(), varName, false)) continue;
+
             VarDeclStmt merged = new VarDeclStmt(decl.getType(), varName, assign.getRight());
             Locations.copy(stmts.get(firstAssignIdx), merged);
             stmts.remove(i);
