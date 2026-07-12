@@ -42,6 +42,11 @@ public class DeadVariableEliminator implements ASTTransform {
             madeProgress = false;
 
             Set<String> readVariables = collectReadVariables(block);
+            // A variable whose initializer/assigned value is side-effecting but not a legal
+            // statement-expression (e.g. a ternary or arithmetic built from calls) cannot have its
+            // store stripped to a bare `expr;` - that would not compile. Pin such variables so both
+            // their declaration and their store survive intact.
+            readVariables.addAll(collectPinnedVariables(block));
 
             if (removeUnusedCode(block.getStatements(), readVariables)) {
                 madeProgress = true;
@@ -50,6 +55,71 @@ public class DeadVariableEliminator implements ASTTransform {
         } while (madeProgress);
 
         return changed;
+    }
+
+    /**
+     * Collects variables that must not be eliminated because their value is side-effecting yet cannot
+     * legally stand alone as a statement. Stripping such a store to a bare expression (Java/C# only
+     * admit calls, {@code new}, assignments, and inc/dec as expression-statements) would not compile,
+     * so the whole declaration and store are kept and the variable is treated as live.
+     */
+    private Set<String> collectPinnedVariables(BlockStmt block) {
+        Set<String> pinned = new HashSet<>();
+        block.accept(new PinnedVariableCollector(pinned));
+        return pinned;
+    }
+
+    /**
+     * Whether {@code expr} is legal as an expression-statement: a method call, object creation,
+     * assignment, or increment/decrement. Any other side-effecting expression (ternary, binary
+     * arithmetic, cast, field/array access, array creation) must stay bound to its variable.
+     */
+    private static boolean isStatementExpression(Expression expr) {
+        if (expr instanceof MethodCallExpr || expr instanceof NewExpr) {
+            return true;
+        }
+        if (expr instanceof BinaryExpr) {
+            return ((BinaryExpr) expr).getOperator().isAssignment();
+        }
+        if (expr instanceof UnaryExpr) {
+            UnaryOperator op = ((UnaryExpr) expr).getOperator();
+            return op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
+                    || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC;
+        }
+        return false;
+    }
+
+    /**
+     * Visitor collecting the names of variables whose declaration initializer or simple-assignment
+     * right-hand side is side-effecting but not a legal statement-expression.
+     */
+    private static class PinnedVariableCollector extends AbstractSourceVisitor<Void> {
+        private final Set<String> pinned;
+
+        PinnedVariableCollector(Set<String> pinned) {
+            this.pinned = pinned;
+        }
+
+        @Override
+        public Void visitVarDecl(VarDeclStmt stmt) {
+            Expression init = stmt.getInitializer();
+            if (init != null && init.accept(SideEffectDetector.INSTANCE)
+                    && !isStatementExpression(init)) {
+                pinned.add(stmt.getName());
+            }
+            return super.visitVarDecl(stmt);
+        }
+
+        @Override
+        public Void visitBinary(BinaryExpr expr) {
+            if (expr.getOperator() == BinaryOperator.ASSIGN && expr.getLeft() instanceof VarRefExpr) {
+                Expression rhs = expr.getRight();
+                if (rhs.accept(SideEffectDetector.INSTANCE) && !isStatementExpression(rhs)) {
+                    pinned.add(((VarRefExpr) expr.getLeft()).getName());
+                }
+            }
+            return super.visitBinary(expr);
+        }
     }
 
     /**
