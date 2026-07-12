@@ -6,8 +6,10 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -137,6 +139,7 @@ public class DeadVariableEliminator implements ASTTransform {
      */
     private static class ReadVariableCollector extends AbstractSourceVisitor<Void> {
         private final Set<String> read;
+        private final Map<String, Integer> shadowed = new HashMap<>();
 
         ReadVariableCollector(Set<String> read) {
             this.read = read;
@@ -144,8 +147,35 @@ public class DeadVariableEliminator implements ASTTransform {
 
         @Override
         public Void visitVarRef(VarRefExpr expr) {
-            read.add(expr.getName());
+            // A name shadowed by an enclosing catch parameter is that parameter here, not the outer
+            // variable, so it is not a read of the outer one.
+            if (!shadowed.containsKey(expr.getName())) {
+                read.add(expr.getName());
+            }
             return super.visitVarRef(expr);
+        }
+
+        @Override
+        public Void visitTryCatch(TryCatchStmt stmt) {
+            for (Expression resource : stmt.getResources()) {
+                resource.accept(this);
+            }
+            stmt.getTryBlock().accept(this);
+            for (CatchClause clause : stmt.getCatches()) {
+                // The catch parameter shadows any enclosing same-named local for the handler body, so
+                // reads there are not reads of the outer variable. This lets a dead outer variable be
+                // eliminated even when a handler reuses its name - the shape recovery emits for an
+                // `Exception e = null; ... catch (Exception e) { ... e ... }` shadow of a caught-exception
+                // slot, which Java and C# both reject, so it never arises in real code.
+                String name = clause.variableName();
+                shadowed.merge(name, 1, Integer::sum);
+                clause.body().accept(this);
+                shadowed.computeIfPresent(name, (k, n) -> n == 1 ? null : n - 1);
+            }
+            if (stmt.hasFinally()) {
+                stmt.getFinallyBlock().accept(this);
+            }
+            return null;
         }
 
 
