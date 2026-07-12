@@ -1,6 +1,5 @@
 package com.tonic.analysis.source.recovery;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,25 +13,37 @@ public class EnumSwitchMapRegistry {
         return INSTANCE;
     }
 
-    public void registerMapping(String enumClassName, int caseValue, String enumConstant) {
-        switchMaps.computeIfAbsent(enumClassName, k -> new ConcurrentHashMap<>())
+    /**
+     * Registers one {@code caseValue -> enumConstant} entry of a switch map. The map is keyed by the
+     * holder class that declares the {@code $SwitchMap$} field as well as the enum: javac emits a
+     * separate holder per class that switches on the enum, each with its own dense numbering, so
+     * keying by the enum alone lets one class's mapping overwrite another's and mislabels the cases.
+     */
+    public void registerMapping(String holderClass, String enumClassName, int caseValue, String enumConstant) {
+        switchMaps.computeIfAbsent(key(holderClass, enumClassName), k -> new ConcurrentHashMap<>())
                   .put(caseValue, enumConstant);
     }
 
-    public String lookupEnumConstant(String enumClassName, int caseValue) {
-        Map<Integer, String> mapping = switchMaps.get(enumClassName);
+    public String lookupEnumConstant(String holderClass, String enumClassName, int caseValue) {
+        Map<Integer, String> mapping = switchMaps.get(key(holderClass, enumClassName));
         if (mapping == null) {
             return null;
         }
         return mapping.get(caseValue);
     }
 
-    public boolean hasMapping(String enumClassName) {
-        return switchMaps.containsKey(enumClassName);
+    public boolean hasMapping(String holderClass, String enumClassName) {
+        return switchMaps.containsKey(key(holderClass, enumClassName));
     }
 
     public void clear() {
         switchMaps.clear();
+    }
+
+    /** The registry key: the holder class (normalized to internal form) plus the enum class. */
+    private static String key(String holderClass, String enumClassName) {
+        String holder = holderClass == null ? "" : holderClass.replace('.', '/');
+        return holder + "#" + enumClassName;
     }
 
     public static String parseEnumClassFromFieldName(String fieldName) {

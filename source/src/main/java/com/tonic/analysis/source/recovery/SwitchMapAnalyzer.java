@@ -12,7 +12,7 @@ import java.util.*;
 
 public class SwitchMapAnalyzer {
 
-    public static void analyzeClass(List<FieldEntry> fields, List<IRMethod> methods) {
+    public static void analyzeClass(String holderClass, List<FieldEntry> fields, List<IRMethod> methods) {
         Set<String> switchMapFieldNames = new HashSet<>();
         for (FieldEntry field : fields) {
             String name = field.getName();
@@ -27,13 +27,13 @@ public class SwitchMapAnalyzer {
 
         for (IRMethod method : methods) {
             if ("<clinit>".equals(method.getName())) {
-                analyzeStaticInit(method, switchMapFieldNames);
+                analyzeStaticInit(holderClass, method, switchMapFieldNames);
                 break;
             }
         }
     }
 
-    private static void analyzeStaticInit(IRMethod clinit, Set<String> switchMapFieldNames) {
+    private static void analyzeStaticInit(String holderClass, IRMethod clinit, Set<String> switchMapFieldNames) {
         Map<SSAValue, String> valueToEnumConstant = new HashMap<>();
         Map<SSAValue, String> valueToSwitchMapField = new HashMap<>();
 
@@ -133,7 +133,8 @@ public class SwitchMapAnalyzer {
                     String enumClassName = EnumSwitchMapRegistry.parseEnumClassFromFieldName(switchMapField);
                     if (enumClassName != null) {
                         String constantName = extractConstantName(enumConstant);
-                        EnumSwitchMapRegistry.getInstance().registerMapping(enumClassName, caseValue, constantName);
+                        EnumSwitchMapRegistry.getInstance()
+                                .registerMapping(holderClass, enumClassName, caseValue, constantName);
                     }
                 }
             }

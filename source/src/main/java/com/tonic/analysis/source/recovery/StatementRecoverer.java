@@ -5467,7 +5467,7 @@ public class StatementRecoverer {
         EnumSwitchInfo enumInfo = detectEnumSwitchPattern(selector);
         boolean enumNamesResolved = false;
         if (enumInfo != null) {
-            if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo.enumClassName)) {
+            if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo)) {
                 // Enum constants resolved (the $SwitchMap$ holder is available): switch (e) { case CONST: }.
                 selector = enumInfo.enumVariable;
                 enumNamesResolved = true;
@@ -5534,7 +5534,7 @@ public class StatementRecoverer {
                 List<Expression> enumLabels = new ArrayList<>();
                 for (Integer caseValue : labels) {
                     String constantName = EnumSwitchMapRegistry.getInstance()
-                            .lookupEnumConstant(enumInfo.enumClassName, caseValue);
+                            .lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue);
                     SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
                     enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
                 }
@@ -5580,6 +5580,7 @@ public class StatementRecoverer {
         Expression enumVariable;
         Expression ordinalExpression;
         String enumClassName;
+        String holderClass;
     }
 
     private EnumSwitchInfo detectEnumSwitchPattern(Expression selector) {
@@ -5620,17 +5621,18 @@ public class StatementRecoverer {
         info.enumVariable = enumVar;
         info.ordinalExpression = methodCall;
         info.enumClassName = EnumSwitchMapRegistry.parseEnumClassFromFieldName(fieldName);
+        info.holderClass = fieldAccess.getOwnerClass();
         return info;
     }
 
     /** True when every case value of an enum switch resolves to a constant name via the switch-map registry. */
-    private boolean allEnumCasesResolve(RegionInfo info, String enumClassName) {
+    private boolean allEnumCasesResolve(RegionInfo info, EnumSwitchInfo enumInfo) {
         EnumSwitchMapRegistry registry = EnumSwitchMapRegistry.getInstance();
-        if (!registry.hasMapping(enumClassName)) {
+        if (!registry.hasMapping(enumInfo.holderClass, enumInfo.enumClassName)) {
             return false;
         }
         for (Integer caseValue : info.getSwitchCases().keySet()) {
-            if (registry.lookupEnumConstant(enumClassName, caseValue) == null) {
+            if (registry.lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue) == null) {
                 return false;
             }
         }

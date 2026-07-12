@@ -474,7 +474,7 @@ public class ClassDecompiler {
             applyBaselineTransforms(ir);
             List<IRMethod> methods = new ArrayList<>();
             methods.add(ir);
-            SwitchMapAnalyzer.analyzeClass(classFile.getFields(), methods);
+            SwitchMapAnalyzer.analyzeClass(classFile.getClassName(), classFile.getFields(), methods);
         } catch (Exception e) {
             // Switch map analysis failed, continue without it
         }
@@ -511,7 +511,7 @@ public class ClassDecompiler {
                 IRMethod ir = new SSA(holder.getConstPool()).lift(clinits.get(0));
                 List<IRMethod> methods = new ArrayList<>();
                 methods.add(ir);
-                SwitchMapAnalyzer.analyzeClass(holder.getFields(), methods);
+                SwitchMapAnalyzer.analyzeClass(holder.getClassName(), holder.getFields(), methods);
             } catch (Exception ignored) {
                 // Holder unavailable or unliftable; the switch falls back to ordinal().
             }
