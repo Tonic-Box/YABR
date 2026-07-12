@@ -3831,6 +3831,14 @@ public class StatementRecoverer {
                         context.getExpressionContext().cacheExpression(result, value);
                         context.getExpressionContext().setVariableName(result, varName);
                         context.getExpressionContext().markMaterialized(result);
+                        // The slot may already be declared in an enclosing scope (its declaration was
+                        // emitted at method scope or by an earlier store). Re-declaring here shadows it,
+                        // so the array is built into a fresh inner variable and the outer one keeps its
+                        // old value - the store is lost. Assign to the existing variable instead.
+                        if (context.getExpressionContext().isDeclared(varName)) {
+                            return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                                    new VarRefExpr(varName, type, result), value, type));
+                        }
                         context.getExpressionContext().markDeclared(varName);
                         return new VarDeclStmt(type, varName, value);
                     }
