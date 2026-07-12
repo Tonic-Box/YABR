@@ -3195,10 +3195,50 @@ public class StatementRecoverer {
             return false;
         }
 
+        // The recovery renders this field cursor with an implicit (null) receiver, which only
+        // reproduces the original access for a static field or a `this`-receiver field. An instance
+        // field whose receiver is the cursor itself (e.g. `e.next` where `e` is this phi) would lose
+        // its receiver and collapse to `this.next`; such a phi is an ordinary local, not a cursor.
+        if (!selfStoreFieldReceiverIsImplicit(fieldLoad)) {
+            return false;
+        }
+
         String fieldOwner = fieldLoad.getOwner();
         String fieldName = fieldLoad.getName();
 
         return hasFieldStoreInPhiUseChain(phi, fieldOwner, fieldName, new HashSet<>());
+    }
+
+    /**
+     * True when {@code fieldLoad}'s receiver matches the implicit (null) receiver the self-store
+     * recovery emits: a static field, or an instance field accessed on {@code this}.
+     */
+    private boolean selfStoreFieldReceiverIsImplicit(FieldAccessInstruction fieldLoad) {
+        if (fieldLoad.isStatic()) {
+            return true;
+        }
+        Value receiver = fieldLoad.getObjectRef();
+        if (!(receiver instanceof SSAValue)) {
+            return false;
+        }
+        return !context.getIrMethod().isStatic() && slotOfValue((SSAValue) receiver) == 0;
+    }
+
+    /**
+     * True when {@code result} (a field load feeding {@code targetPhi}) is written by a store_local to
+     * a slot other than the phi's own. That is the coalesced advance idiom (`next = e.next; e = next`),
+     * where the value belongs to the sibling slot and the phi's slot is carried through it; a back-edge
+     * copy here for the phi's slot would be a spurious extra advance.
+     */
+    private boolean fieldLoadValueCarriedThroughOtherSlot(SSAValue result, PhiInstruction targetPhi) {
+        int phiSlot = slotOfValue(targetPhi.getResult());
+        for (IRInstruction use : result.getUses()) {
+            if (use instanceof StoreLocalInstruction
+                    && ((StoreLocalInstruction) use).getLocalIndex() != phiSlot) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasFieldStoreInPhiUseChain(PhiInstruction phi, String fieldOwner, String fieldName, Set<PhiInstruction> visited) {
@@ -3648,6 +3688,14 @@ public class StatementRecoverer {
                         return null;
                     }
                     if (context.isForLoopInductionPhi(targetPhi.getResult())) {
+                        return null;
+                    }
+                    // When this field-load value is also written to a slot *other* than the phi's own,
+                    // it belongs to that sibling variable and the phi's slot is advanced through it (the
+                    // coalesced `next = e.next; e = next` idiom). A copy emitted here for the phi's slot
+                    // would then be a spurious extra advance (`e = e.next` on top of `e = next`). Cache
+                    // the expression and let the store chain assign the phi's slot.
+                    if (fieldLoadValueCarriedThroughOtherSlot(result, targetPhi)) {
                         return null;
                     }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
