@@ -5867,6 +5867,16 @@ public class StatementRecoverer {
                 } finally {
                     context.popStopBlocks();
                 }
+                // A `return`/`throw` tail shared by the default and a case body (e.g.
+                // `case: if (a && b) return true; default: return false;`) is consumed when the case
+                // absorbs it, leaving the default empty and the method falling off its end. Re-emit the
+                // terminator directly for the default so its exit is preserved.
+                IRInstruction defTerm = info.getDefaultTarget().getTerminator();
+                boolean defIsTerminal = defTerm instanceof ReturnInstruction
+                        || (defTerm instanceof SimpleInstruction && ((SimpleInstruction) defTerm).getOp() == SimpleOp.ATHROW);
+                if (defaultStmts.isEmpty() && defIsTerminal) {
+                    defaultStmts = recoverSimpleBlock(info.getDefaultTarget());
+                }
                 cases.add(SwitchCase.defaultCase(defaultStmts));
             }
         }
@@ -6627,11 +6637,15 @@ public class StatementRecoverer {
         if (info.getDefaultTarget() != null) {
             allTargets.add(info.getDefaultTarget());
         }
-
         var postDomTree = analyzer.getPostDominatorTree();
         if (postDomTree != null) {
             IRBlock ipdom = postDomTree.getImmediatePostDominator(info.getHeader());
-            if (ipdom != null && !caseTargets.contains(ipdom)) {
+            // The post-dominator tree is unreliable when the switch has several distinct `return`/`throw`
+            // exits and no single sink: it can name a block reached through only one case body (e.g. the
+            // `return true` arm of `case: return a && b; default: return false;`) as the header's ipdom,
+            // even though the default path never reaches it. A genuine merge post-dominates the header, so
+            // it must be reachable from every case target and the default; reject candidates that are not.
+            if (ipdom != null && !caseTargets.contains(ipdom) && reachedFromAllTargets(ipdom, allTargets)) {
                 return ipdom;
             }
         }
@@ -6659,6 +6673,25 @@ public class StatementRecoverer {
             return null;
         }
         return merge;
+    }
+
+    /**
+     * True when {@code merge} is reachable from every switch target (each case target and the default),
+     * i.e. it is a real convergence point that post-dominates the header. Guards against a spurious
+     * post-dominator that only one case body can reach.
+     */
+    private boolean reachedFromAllTargets(IRBlock merge, Set<IRBlock> allTargets) {
+        for (IRBlock target : allTargets) {
+            if (target == merge) {
+                continue;
+            }
+            Set<IRBlock> reachable = new HashSet<>();
+            collectReachableBlocks(target, reachable);
+            if (!reachable.contains(merge)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result) {
