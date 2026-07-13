@@ -1648,7 +1648,7 @@ public class StatementRecoverer {
     private List<Statement> reconstructTryWithResources(List<Statement> normalPath) {
         Set<String> closedVars = new LinkedHashSet<>();
         for (Statement s : normalPath) {
-            String closed = closeReceiverName(s);
+            String closed = findClosedResource(s);
             if (closed != null) {
                 closedVars.add(closed);
             }
@@ -1687,9 +1687,9 @@ public class StatementRecoverer {
             if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName())) {
                 continue; // resource declaration -> lifted into the try header
             }
-            String closed = closeReceiverName(s);
+            String closed = findClosedResource(s);
             if (closed != null && resourceNames.contains(closed)) {
-                continue; // synthetic resource close
+                continue; // synthetic resource close (a bare close() or the `if (r != null) r.close()` finally)
             }
             body.add(s);
         }
@@ -1705,6 +1705,32 @@ public class StatementRecoverer {
         result.addAll(resourceDecls);
         result.add(tryStmt);
         return result;
+    }
+
+    /**
+     * The resource variable closed by {@code s}, whether directly ({@code r.close();}) or through the
+     * try-with-resources finally wrapper javac emits ({@code if (r != null) { ... r.close() ... }}).
+     * Recurses into if-branches and blocks so a close nested inside that wrapper is still recognized as
+     * the resource's, which top-level inspection alone misses.
+     */
+    private String findClosedResource(Statement s) {
+        if (s instanceof ExprStmt) {
+            return closeReceiverName(s);
+        }
+        if (s instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) s;
+            String r = findClosedResource(ifStmt.getThenBranch());
+            return r != null ? r : findClosedResource(ifStmt.getElseBranch());
+        }
+        if (s instanceof BlockStmt) {
+            for (Statement inner : ((BlockStmt) s).getStatements()) {
+                String r = findClosedResource(inner);
+                if (r != null) {
+                    return r;
+                }
+            }
+        }
+        return null;
     }
 
     /** The receiver variable name of a {@code receiver.close()} expression statement, else null. */
@@ -3671,6 +3697,94 @@ public class StatementRecoverer {
         }
     }
 
+    /**
+     * True when a field-load value is read again after the same field is reassigned before that use.
+     * A field read is not an SSA value backed by a register but a re-read of mutable memory, so
+     * inlining it at a later use would observe the written value, not the loaded one. This is javac's
+     * {@code arr[this.f++] = v} shape: the store index is the pre-increment field value, but the
+     * putfield that increments the field is emitted first. Restricted to a single block, where
+     * instruction order is program order, so the check needs no dominance reasoning.
+     */
+    private boolean fieldLoadClobberedBeforeUse(FieldAccessInstruction load, SSAValue result) {
+        if (result == null) {
+            return false;
+        }
+        IRBlock block = load.getBlock();
+        if (block == null || !blockHasFieldStore(block)) {
+            return false;
+        }
+        Set<IRInstruction> uses = null;
+        boolean seenLoad = false;
+        boolean clobbered = false;
+        for (IRInstruction between : block.getInstructions()) {
+            if (!seenLoad) {
+                seenLoad = between == load;
+                continue;
+            }
+            if (between instanceof FieldAccessInstruction) {
+                FieldAccessInstruction store = (FieldAccessInstruction) between;
+                if (store.isStore()
+                        && store.isStatic() == load.isStatic()
+                        && load.getName().equals(store.getName())
+                        && load.getOwner().equals(store.getOwner())
+                        && load.getObjectRef() == store.getObjectRef()) {
+                    clobbered = true;
+                }
+            }
+            if (clobbered) {
+                if (uses == null) {
+                    uses = new HashSet<>(result.getUses());
+                }
+                if (uses.contains(between)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Whether a block writes any field, cached so store-free blocks skip the clobber scan in O(1). */
+    private boolean blockHasFieldStore(IRBlock block) {
+        Boolean cached = blockHasFieldStoreCache.get(block);
+        if (cached != null) {
+            return cached;
+        }
+        boolean has = false;
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isStore()) {
+                has = true;
+                break;
+            }
+        }
+        blockHasFieldStoreCache.put(block, has);
+        return has;
+    }
+
+    private final java.util.Map<IRBlock, Boolean> blockHasFieldStoreCache = new java.util.IdentityHashMap<>();
+
+    /**
+     * Materializes a field load into a named temporary declared at the load site so later uses read
+     * the captured value instead of re-reading the field after it was written. Returns null when the
+     * value has no recoverable type or the name is already taken (leaving the caller's default path).
+     */
+    private Statement materializeFieldLoad(SSAValue result, Expression value) {
+        SourceType type = value.getType();
+        if (type == null) {
+            type = typeRecoverer.recoverType(result);
+        }
+        if (type == null) {
+            return null;
+        }
+        String name = "v" + result.getId();
+        if (context.getExpressionContext().isDeclared(name)) {
+            return null;
+        }
+        context.getExpressionContext().markDeclaredWithType(name, type);
+        context.getExpressionContext().markMaterialized(result);
+        context.getExpressionContext().setVariableName(result, name);
+        return new VarDeclStmt(type, name, value);
+    }
+
     private Statement recoverInstruction0(IRInstruction instr) {
         if (instr.isTerminator()) {
             return recoverTerminator(instr);
@@ -3706,6 +3820,12 @@ public class StatementRecoverer {
                 SSAValue result = fieldAccess.getResult();
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(result, value);
+                if (fieldLoadClobberedBeforeUse(fieldAccess, result)) {
+                    Statement decl = materializeFieldLoad(result, value);
+                    if (decl != null) {
+                        return decl;
+                    }
+                }
                 PhiInstruction targetPhi = getPhiUsingValue(result);
                 if (targetPhi != null && targetPhi.getResult() != null) {
                     if (selfStorePhis.contains(targetPhi)) {
