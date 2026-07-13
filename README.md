@@ -1,9 +1,17 @@
 # YABR - Yet Another Bytecode Reader/Writer
 
-A Java bytecode library with class-file parsing, bytecode editing, mutable IRs, (de)compilation,
-and a set of higher-level analyses.
+YABR is a bidirectional Java (de)compiler, program analysis, and transformation 
+framework built around mutable semantic representations. Spanning bytecode, SSA, 
+structured IR, execution, and source, it provides a unified ecosystem for 
+constructing, analyzing, transforming, executing, compiling, and decompiling Java 
+programs.
 
 [![](https://www.jitpack.io/v/Tonic-Box/YABR.svg)](https://www.jitpack.io/#Tonic-Box/YABR)
+# Projects the use YABR
+- [JStudio](https://github.com/Tonic-Box/JStudio) - A Java reverse engineering and static analysis IDE for analyzing, decompiling, and transforming Java bytecode.
+- [J2CS](https://github.com/Tonic-Box/J2CS) - A Java to C# transpile
+- [Dukes-8-Bit-Challenge](https://github.com/Tonic-Box/Dukes-8-Bit-Challenge) - A game jam submission where I used in buildSrc/ for sompile time transformations.
+
 ## Quick Start
 
 ```java

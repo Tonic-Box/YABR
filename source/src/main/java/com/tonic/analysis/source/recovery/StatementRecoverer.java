@@ -102,6 +102,7 @@ public class StatementRecoverer {
 
         registerPendingNewInstructions(method);
         emitPhiDeclarations(method, statements);
+        splitClobberedIncrementReads(method);
 
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
         if (handlers != null && !handlers.isEmpty()) {
@@ -3763,11 +3764,11 @@ public class StatementRecoverer {
     private final java.util.Map<IRBlock, Boolean> blockHasFieldStoreCache = new java.util.IdentityHashMap<>();
 
     /**
-     * Materializes a field load into a named temporary declared at the load site so later uses read
-     * the captured value instead of re-reading the field after it was written. Returns null when the
-     * value has no recoverable type or the name is already taken (leaving the caller's default path).
+     * Materializes a load into a named temporary declared at the load site so later uses read the
+     * captured value instead of re-reading its storage after a write. Returns null when the value has no
+     * recoverable type or the name is already taken (leaving the caller's default path).
      */
-    private Statement materializeFieldLoad(SSAValue result, Expression value) {
+    private Statement materializeClobberedLoad(SSAValue result, Expression value) {
         SourceType type = value.getType();
         if (type == null) {
             type = typeRecoverer.recoverType(result);
@@ -3783,6 +3784,94 @@ public class StatementRecoverer {
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
         return new VarDeclStmt(type, name, value);
+    }
+
+    private final Set<SSAValue> splitIncrementTemps = new HashSet<>();
+
+    /**
+     * Splits the live range of a self-increment's pre-value when it is read again, later in the same
+     * block, after the increment store. A loop induction and its {@code + 1} coalesce to one source name
+     * ({@code i}); {@code f(i++)} reads the pre-increment value but the store {@code i = i + 1} is
+     * emitted first, so re-rendering that read as {@code i} would observe the incremented value. The
+     * pre-value is captured into a temporary before the store and the post-store reads rewired to it,
+     * yielding {@code int t = i; i = i + 1; f(t);}. The copy carries a temp name; its declaration is
+     * emitted when the inserted {@link CopyInstruction} is recovered.
+     */
+    private void splitClobberedIncrementReads(IRMethod method) {
+        for (IRBlock block : method.getBlocks()) {
+            List<IRInstruction> snapshot = new ArrayList<>(block.getInstructions());
+            for (int i = 0; i < snapshot.size(); i++) {
+                if (!(snapshot.get(i) instanceof StoreLocalInstruction)) {
+                    continue;
+                }
+                StoreLocalInstruction store = (StoreLocalInstruction) snapshot.get(i);
+                SSAValue pre = incrementPreValue(store);
+                if (pre == null) {
+                    continue;
+                }
+                String storeName = partitionName(store);
+                if (storeName == null
+                        || !storeName.equals(context.getExpressionContext().getVariableName(pre))) {
+                    continue;
+                }
+                List<IRInstruction> laterUses = new ArrayList<>();
+                for (IRInstruction use : pre.getUses()) {
+                    if (snapshot.indexOf(use) > i) {
+                        laterUses.add(use);
+                    }
+                }
+                if (laterUses.isEmpty()) {
+                    continue;
+                }
+                SourceType type = typeRecoverer.recoverType(pre);
+                if (type == null) {
+                    continue;
+                }
+                SSAValue copy = new SSAValue(pre.getType());
+                String name = "v" + copy.getId();
+                context.getExpressionContext().markDeclaredWithType(name, type);
+                context.getExpressionContext().markMaterialized(copy);
+                context.getExpressionContext().setVariableName(copy, name);
+                splitIncrementTemps.add(copy);
+                block.insertInstruction(block.getInstructions().indexOf(store), new CopyInstruction(copy, pre));
+                for (IRInstruction use : laterUses) {
+                    use.replaceOperand(pre, copy);
+                }
+            }
+        }
+    }
+
+    /** The incremented pre-value {@code x} of a {@code slot = x +/- constant} store, else null. */
+    private SSAValue incrementPreValue(StoreLocalInstruction store) {
+        Value stored = store.getValue();
+        if (!(stored instanceof SSAValue)) {
+            return null;
+        }
+        IRInstruction def = ((SSAValue) stored).getDefinition();
+        if (!(def instanceof BinaryOpInstruction)) {
+            return null;
+        }
+        BinaryOpInstruction bin = (BinaryOpInstruction) def;
+        if (bin.getOp() != BinaryOp.ADD && bin.getOp() != BinaryOp.SUB) {
+            return null;
+        }
+        Value left = bin.getLeft();
+        Value right = bin.getRight();
+        if (left instanceof SSAValue && isConstantValue(right)) {
+            return (SSAValue) left;
+        }
+        if (right instanceof SSAValue && isConstantValue(left) && bin.getOp() == BinaryOp.ADD) {
+            return (SSAValue) right;
+        }
+        return null;
+    }
+
+    /** A raw constant, or an SSA value produced by a constant load. */
+    private boolean isConstantValue(Value v) {
+        if (v instanceof Constant) {
+            return true;
+        }
+        return v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction;
     }
 
     private Statement recoverInstruction0(IRInstruction instr) {
@@ -3821,7 +3910,7 @@ public class StatementRecoverer {
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(result, value);
                 if (fieldLoadClobberedBeforeUse(fieldAccess, result)) {
-                    Statement decl = materializeFieldLoad(result, value);
+                    Statement decl = materializeClobberedLoad(result, value);
                     if (decl != null) {
                         return decl;
                     }
@@ -4061,6 +4150,12 @@ public class StatementRecoverer {
 
         if (instr instanceof CopyInstruction) {
             CopyInstruction copy = (CopyInstruction) instr;
+            if (copy.getResult() != null && splitIncrementTemps.contains(copy.getResult())) {
+                SourceType type = typeRecoverer.recoverType(copy.getResult());
+                String name = context.getExpressionContext().getVariableName(copy.getResult());
+                Expression src = exprRecoverer.recoverOperand(copy.getSource());
+                return new VarDeclStmt(type, name, src);
+            }
             Value source = copy.getSource();
             Set<SSAValue> visited = new HashSet<>();
             while (source instanceof SSAValue) {
