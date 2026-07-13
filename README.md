@@ -10,7 +10,7 @@ programs.
 # Projects the use YABR
 - [JStudio](https://github.com/Tonic-Box/JStudio) - A Java reverse engineering and analysis IDE.
 - [J2CS](https://github.com/Tonic-Box/J2CS) - A Java to C# transpile
-- [Dukes-8-Bit-Challenge](https://github.com/Tonic-Box/Dukes-8-Bit-Challenge) - A game jam submission where I used in buildSrc/ for sompile time transformations.
+- [Dukes-8-Bit-Challenge](https://github.com/Tonic-Box/Dukes-8-Bit-Challenge) - A game jam submission where I used YABR in buildSrc/ for compile time transformations.
 
 ## Quick Start
 
