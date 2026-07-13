@@ -3460,7 +3460,16 @@ public class StatementRecoverer {
                                 result.addAll(returnStmts);
                                 current = null;
                             } else {
-                                current = merge;
+                                // The if's fall-through reaches this return merge, but the merge was
+                                // already visited while recovering the then-branch (a nested if sharing
+                                // it), so handing it back to the loop would skip it as visited and run the
+                                // fall-through off the method end. Emit its recovered return here instead.
+                                List<Statement> returnStmts = context.getStatements(merge);
+                                if (returnStmts == null || returnStmts.isEmpty()) {
+                                    returnStmts = recoverSimpleBlock(merge);
+                                }
+                                result.addAll(returnStmts);
+                                current = null;
                             }
                         } else {
                             current = merge;
