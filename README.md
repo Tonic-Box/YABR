@@ -8,7 +8,7 @@ programs.
 
 [![](https://www.jitpack.io/v/Tonic-Box/YABR.svg)](https://www.jitpack.io/#Tonic-Box/YABR)
 # Projects the use YABR
-- [JStudio](https://github.com/Tonic-Box/JStudio) - A Java reverse engineering and static analysis IDE for analyzing, decompiling, and transforming Java bytecode.
+- [JStudio](https://github.com/Tonic-Box/JStudio) - A Java reverse engineering and analysis IDE.
 - [J2CS](https://github.com/Tonic-Box/J2CS) - A Java to C# transpile
 - [Dukes-8-Bit-Challenge](https://github.com/Tonic-Box/Dukes-8-Bit-Challenge) - A game jam submission where I used in buildSrc/ for sompile time transformations.
 
