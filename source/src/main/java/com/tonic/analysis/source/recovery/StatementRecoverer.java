@@ -3226,16 +3226,24 @@ public class StatementRecoverer {
 
     /**
      * True when {@code result} (a field load feeding {@code targetPhi}) is written by a store_local to
-     * a slot other than the phi's own. That is the coalesced advance idiom (`next = e.next; e = next`),
-     * where the value belongs to the sibling slot and the phi's slot is carried through it; a back-edge
-     * copy here for the phi's slot would be a spurious extra advance.
+     * a source variable other than the phi's own. The store is then the value's real assignment, and a
+     * phi copy naming the phi's variable would be a spurious cross-variable one — either a redundant
+     * advance (`e = e.next` beside the store `e = next` in the coalesced `next = e.next; e = next`
+     * idiom) or a type-punned slot reuse (`i = model` where the reused JVM slot later holds the
+     * {@code sceneModel} Spatial). Suppress the copy; the store owns the value. Names come from the
+     * reaching-definition partition, which splits a reused slot into its distinct source variables.
      */
-    private boolean fieldLoadValueCarriedThroughOtherSlot(SSAValue result, PhiInstruction targetPhi) {
-        int phiSlot = slotOfValue(targetPhi.getResult());
+    private boolean fieldLoadValueBelongsToOtherVariable(SSAValue result, PhiInstruction targetPhi) {
+        String phiName = context.getExpressionContext().getVariableName(targetPhi.getResult());
+        if (phiName == null) {
+            return false;
+        }
         for (IRInstruction use : result.getUses()) {
-            if (use instanceof StoreLocalInstruction
-                    && ((StoreLocalInstruction) use).getLocalIndex() != phiSlot) {
-                return true;
+            if (use instanceof StoreLocalInstruction) {
+                String storeName = partitionName(use);
+                if (storeName != null && !storeName.equals(phiName)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -3690,12 +3698,11 @@ public class StatementRecoverer {
                     if (context.isForLoopInductionPhi(targetPhi.getResult())) {
                         return null;
                     }
-                    // When this field-load value is also written to a slot *other* than the phi's own,
-                    // it belongs to that sibling variable and the phi's slot is advanced through it (the
-                    // coalesced `next = e.next; e = next` idiom). A copy emitted here for the phi's slot
-                    // would then be a spurious extra advance (`e = e.next` on top of `e = next`). Cache
-                    // the expression and let the store chain assign the phi's slot.
-                    if (fieldLoadValueCarriedThroughOtherSlot(result, targetPhi)) {
+                    // When this field-load value is written by a store_local to a source variable other
+                    // than the phi's own, that store is its real assignment; a copy here naming the phi's
+                    // variable would be a spurious cross-variable one (a redundant advance, or a
+                    // type-punned reuse like `i = model`). Cache the expression and let the store emit it.
+                    if (fieldLoadValueBelongsToOtherVariable(result, targetPhi)) {
                         return null;
                     }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
