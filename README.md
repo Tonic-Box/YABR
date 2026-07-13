@@ -7,7 +7,7 @@ constructing, analyzing, transforming, executing, compiling, and decompiling Jav
 programs.
 
 [![](https://www.jitpack.io/v/Tonic-Box/YABR.svg)](https://www.jitpack.io/#Tonic-Box/YABR)
-# Projects the use YABR
+# Projects that use YABR
 - [JStudio](https://github.com/Tonic-Box/JStudio) - A Java reverse engineering and analysis IDE.
 - [J2CS](https://github.com/Tonic-Box/J2CS) - A Java to C# transpile
 - [Dukes-8-Bit-Challenge](https://github.com/Tonic-Box/Dukes-8-Bit-Challenge) - A game jam submission where I used YABR in buildSrc/ for compile time transformations.
