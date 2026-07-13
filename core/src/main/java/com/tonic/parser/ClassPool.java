@@ -35,6 +35,15 @@ public class ClassPool {
 
     private final List<ClassFile> classes = new ArrayList<>();
 
+    /**
+     * Name -> ClassFile index for {@link #get(String)}, avoiding a linear scan of every class per
+     * lookup (which makes callers that resolve names in a loop, e.g. hierarchy building, quadratic).
+     * A validated cache: entries can go stale when a class is renamed in place, so {@link #get} checks
+     * the cached class still carries the requested name and falls back to a linear scan otherwise.
+     * First-match wins, mirroring the previous {@code findFirst} behaviour for duplicate names.
+     */
+    private final Map<String, ClassFile> byName = new HashMap<>();
+
     public ClassPool() throws IOException {
         loadAllJavaBuiltInClasses();
     }
@@ -99,6 +108,7 @@ public class ClassPool {
     public void put(ClassFile classFile) {
         classFile.setClassPool(this);
         classes.add(classFile);
+        byName.putIfAbsent(classFile.getClassName(), classFile);
     }
 
     /**
@@ -108,6 +118,7 @@ public class ClassPool {
      * @return true if a class was removed, false otherwise
      */
     public boolean remove(String internalName) {
+        byName.remove(internalName);
         return classes.removeIf(cf -> cf.getClassName().equals(internalName));
     }
 
@@ -118,10 +129,17 @@ public class ClassPool {
      * @return ClassFile if found, null otherwise
      */
     public ClassFile get(String internalName) {
-        return classes.stream()
-                .filter(cf -> cf.getClassName().equals(internalName))
-                .findFirst()
-                .orElse(null);
+        ClassFile cached = byName.get(internalName);
+        if (cached != null && internalName.equals(cached.getClassName())) {
+            return cached;
+        }
+        for (ClassFile cf : classes) {
+            if (cf.getClassName().equals(internalName)) {
+                byName.put(internalName, cf);
+                return cf;
+            }
+        }
+        return null;
     }
 
     /**
@@ -134,6 +152,7 @@ public class ClassPool {
         ClassFile cf = new ClassFile(classData);
         cf.setClassPool(this);
         classes.add(cf);
+        byName.putIfAbsent(cf.getClassName(), cf);
         return cf;
     }
 
