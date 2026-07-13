@@ -347,10 +347,21 @@ public class StatementRecoverer {
             List<ExceptionHandler> innerHandlers = new ArrayList<>();
 
             for (ExceptionHandler h : mergedHandlers) {
-                if (h.getHandlerBlock() == outerHandler.getHandlerBlock()) {
+                // A handler over the identical try range is a sibling catch clause on the same try
+                // (try { } catch (A) { } catch (B) { }), not a nested one. Only a handler over a strict
+                // sub-range is genuinely nested; classifying a sibling as inner would rebuild it as a
+                // nested try and drop the shared try body.
+                if (h.getHandlerBlock() == outerHandler.getHandlerBlock()
+                        || sameTryRange(h, outerHandler)) {
                     outerHandlers.add(h);
                 } else {
                     innerHandlers.add(h);
+                }
+            }
+            Set<IRBlock> outerHandlerBlocks = new HashSet<>();
+            for (ExceptionHandler h : outerHandlers) {
+                if (h.getHandlerBlock() != null) {
+                    outerHandlerBlocks.add(h.getHandlerBlock());
                 }
             }
 
@@ -370,9 +381,7 @@ public class StatementRecoverer {
             // Mark the handler block (stable across the merge that may have replaced the handler objects) so
             // the try body's own block-sequence recovery does not rebuild the same region as a nested
             // try/catch, which would duplicate the clause (and drop multi-catch types via the merge).
-            if (outerHandler.getHandlerBlock() != null) {
-                processedHandlerBlocks.add(outerHandler.getHandlerBlock());
-            }
+            processedHandlerBlocks.addAll(outerHandlerBlocks);
 
             IRBlock tryStart = outerHandler.getTryStart();
             List<Statement> preTryStmts = new ArrayList<>();
@@ -396,7 +405,7 @@ public class StatementRecoverer {
             // multi-catch's several exception-table entries coalesce into one `catch (A | B e)` clause.
             List<ExceptionHandler> outerRegionHandlers = new ArrayList<>();
             for (ExceptionHandler h : handlers) {
-                if (h.getHandlerBlock() == outerHandler.getHandlerBlock()) {
+                if (outerHandlerBlocks.contains(h.getHandlerBlock())) {
                     outerRegionHandlers.add(h);
                 }
             }
@@ -519,9 +528,16 @@ public class StatementRecoverer {
         return merged;
     }
 
-    /**
-     * Finds the outermost exception handler (the one covering the most code from entry).
-     */
+    /** Whether two handlers protect the identical try range (making them sibling catch clauses). */
+    private static boolean sameTryRange(ExceptionHandler a, ExceptionHandler b) {
+        return tryOffset(a.getTryStart()) == tryOffset(b.getTryStart())
+                && tryOffset(a.getTryEnd()) == tryOffset(b.getTryEnd());
+    }
+
+    private static int tryOffset(IRBlock block) {
+        return block != null ? block.getBytecodeOffset() : -1;
+    }
+
     private ExceptionHandler findOutermostHandler(IRBlock entry, List<ExceptionHandler> handlers) {
         ExceptionHandler outermost = null;
         int maxCoverage = -1;
