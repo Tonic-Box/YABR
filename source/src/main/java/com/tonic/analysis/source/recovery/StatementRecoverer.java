@@ -5040,8 +5040,6 @@ public class StatementRecoverer {
     private Statement recoverWhileLoop(IRBlock header, RegionInfo info) {
         context.markProcessed(header);
 
-        Expression condition = recoverCondition(header, info.isConditionNegated());
-
         Set<IRBlock> stopBlocks = new HashSet<>();
         stopBlocks.add(header);
         if (info.getLoopExit() != null) {
@@ -5061,10 +5059,40 @@ public class StatementRecoverer {
         context.pushStopBlocks(stopBlocks);
         context.pushLoop(header, header, info.getLoopExit());
         try {
+            // An at-top induction update (javac's `for (i = n; --i >= 0;)` puts `i = i +/- c` in the
+            // header, before the exit test) must be lifted or it is dropped and the loop reads
+            // out of bounds. Lift it only when the header branch is a GENUINE loop exit whose taken
+            // edge leaves the loop for good: when the "exit" block immediately re-enters the loop it
+            // is a continue in disguise (e.g. a `\r`-skip straight back to the header), not the exit,
+            // so turning it into a break would corrupt the loop. Restricted to constant induction
+            // steps - a header that instead fuses reads/assigns into the condition (a tokenizer's
+            // `c = (char) read()`) is left to the faithful $pc$ dispatch rather than mis-structured.
+            boolean genuineExit = info.getLoopExit() != null && info.getLoop() != null
+                    && info.getLoopExit().getSuccessors().stream()
+                        .noneMatch(s -> info.getLoop().getBlocks().contains(s));
+            List<Statement> headerStmts = genuineExit
+                    ? recoverHeaderLeadingStatements(header, -1, true)
+                    : java.util.Collections.emptyList();
+            if (!headerStmts.isEmpty()) {
+                // Emit the induction update at the top of the body and turn the loop condition into
+                // an early break, keeping the update on every iteration.
+                List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
+                stripTrailingContinue(bodyStmts);
+                List<Statement> merged = new ArrayList<>(headerStmts);
+                Expression breakCond = recoverCondition(header, !info.isConditionNegated());
+                List<Statement> breakBody = new ArrayList<>();
+                breakBody.add(new BreakStmt());
+                merged.add(new IfStmt(breakCond, new BlockStmt(breakBody)));
+                merged.addAll(bodyStmts);
+                WhileStmt whileStmt = new WhileStmt(LiteralExpr.ofBoolean(true), new BlockStmt(merged));
+                stampFromHeader(whileStmt, header);
+                return labelIfTargeted(header, whileStmt);
+            }
+
+            Expression condition = recoverCondition(header, info.isConditionNegated());
             List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
             stripTrailingContinue(bodyStmts);
-            BlockStmt body = new BlockStmt(bodyStmts);
-            WhileStmt whileStmt = new WhileStmt(condition, body);
+            WhileStmt whileStmt = new WhileStmt(condition, new BlockStmt(bodyStmts));
             stampFromHeader(whileStmt, header);
             return labelIfTargeted(header, whileStmt);
         } finally {
@@ -5336,6 +5364,15 @@ public class StatementRecoverer {
      * for-loop shape would otherwise drop.
      */
     private List<Statement> recoverHeaderLeadingStatements(IRBlock header, int inductionLocal) {
+        return recoverHeaderLeadingStatements(header, inductionLocal, false);
+    }
+
+    /**
+     * When {@code inductionOnly} is set, restricts recovery to constant induction steps of their own
+     * slot ({@code i = i +/- const}) - the update javac lifts to a loop's header for a pre-inc/dec
+     * idiom. Other header stores are left alone (they belong to the plain-while or $pc$ recovery).
+     */
+    private List<Statement> recoverHeaderLeadingStatements(IRBlock header, int inductionLocal, boolean inductionOnly) {
         List<Statement> stmts = new ArrayList<>();
         for (IRInstruction instr : header.getInstructions()) {
             if (!(instr instanceof StoreLocalInstruction)) {
@@ -5343,6 +5380,9 @@ public class StatementRecoverer {
             }
             StoreLocalInstruction st = (StoreLocalInstruction) instr;
             if (st.getLocalIndex() == inductionLocal || context.shouldSkipInstruction(instr)) {
+                continue;
+            }
+            if (inductionOnly && !isConstantInductionStore(st)) {
                 continue;
             }
 
@@ -5379,6 +5419,53 @@ public class StatementRecoverer {
             }
         }
         return stmts;
+    }
+
+    /**
+     * True when a store writes a constant induction step of its own slot ({@code i = i +/- const}) -
+     * the shape javac lifts to a loop header for a pre-increment/decrement condition like {@code --i}.
+     */
+    private boolean isConstantInductionStore(StoreLocalInstruction store) {
+        if (!(store.getValue() instanceof SSAValue)) {
+            return false;
+        }
+        IRInstruction def = ((SSAValue) store.getValue()).getDefinition();
+        if (!(def instanceof BinaryOpInstruction)) {
+            return false;
+        }
+        BinaryOpInstruction bin = (BinaryOpInstruction) def;
+        if (bin.getOp() != BinaryOp.ADD && bin.getOp() != BinaryOp.SUB) {
+            return false;
+        }
+        boolean leftConst = isConstantIrValue(bin.getLeft());
+        boolean rightConst = isConstantIrValue(bin.getRight());
+        if (leftConst == rightConst) {
+            return false;
+        }
+        com.tonic.analysis.ssa.value.Value nonConst = leftConst ? bin.getRight() : bin.getLeft();
+        if (!(nonConst instanceof SSAValue)) {
+            return false;
+        }
+        IRInstruction nonConstDef = ((SSAValue) nonConst).getDefinition();
+        // A non-loop step reads the slot directly.
+        if (nonConstDef instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) nonConstDef).getLocalIndex() == store.getLocalIndex();
+        }
+        // The usual loop shape: the slot's header value is a phi merging the initial value with this
+        // store's own result on the back-edge (`i_phi = φ(init, i_next); i_next = i_phi +/- const`).
+        if (nonConstDef instanceof PhiInstruction) {
+            for (com.tonic.analysis.ssa.value.Value incoming : ((PhiInstruction) nonConstDef).getIncomingValues().values()) {
+                if (incoming == store.getValue()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isConstantIrValue(com.tonic.analysis.ssa.value.Value v) {
+        return v instanceof Constant
+                || (v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
     }
 
     private Statement recoverWhileLoopFallback(IRBlock header, RegionInfo info) {

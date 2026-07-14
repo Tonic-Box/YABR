@@ -190,7 +190,17 @@ public class StructuralAnalyzer {
         return info;
     }
 
+    /**
+     * True when every path into the loop reaches the header through the loop body, so the body
+     * runs before the condition is first tested — the shape of a do-while. The method entry block
+     * is excluded: control enters it directly rather than through the body, so its conditional
+     * terminator guards the first iteration (a pre-tested while) even though its only predecessor
+     * is the back-edge.
+     */
     private boolean isDoWhilePattern(IRBlock header, LoopAnalysis.Loop loop) {
+        if (header == method.getEntryBlock()) {
+            return false;
+        }
         for (IRBlock pred : header.getPredecessors()) {
             if (!loop.contains(pred)) {
                 return false;
