@@ -6,6 +6,7 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MethodBuilder {
@@ -34,9 +35,7 @@ public class MethodBuilder {
     }
 
     public MethodBuilder exceptions(String... exceptionTypes) {
-        for (String ex : exceptionTypes) {
-            exceptions.add(ex);
-        }
+        Collections.addAll(exceptions, exceptionTypes);
         return this;
     }
 
