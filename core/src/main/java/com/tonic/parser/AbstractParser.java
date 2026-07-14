@@ -46,6 +46,10 @@ public abstract class AbstractParser {
         }
     }
 
+    /**
+     * Gets the classes origonal bytes
+     * @return class bytes
+     */
     public byte[] getBytes() {
         return bytes;
     }
