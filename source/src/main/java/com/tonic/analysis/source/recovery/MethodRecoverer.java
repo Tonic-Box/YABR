@@ -309,6 +309,17 @@ public class MethodRecoverer {
                     name = partition.nameForLoad((LoadLocalInstruction) instr);
                 }
                 if (name == null) {
+                    // A value stored into a local slot shares that slot's variable (the partition unions it
+                    // with the slot's loads and phis). Name it by its store so it does not split into a
+                    // separate synthetic when it is ALSO materialized on its own - e.g. a boolean method
+                    // result stored to a slot AND used directly as an if-condition whose slot is returned via
+                    // a phi. Splitting would strand the phi's variable at its default value.
+                    StoreLocalInstruction store = singleStoreConsumer(instr.getResult());
+                    if (store != null) {
+                        name = partition.nameForStore(store);
+                    }
+                }
+                if (name == null) {
                     name = recoverNameForInstruction(instr);
                 }
                 recoveryContext.setVariableName(instr.getResult(), name);
@@ -400,6 +411,20 @@ public class MethodRecoverer {
             return baseNameForSlot(((LoadLocalInstruction) instr).getLocalIndex());
         }
         return nameRecoverer.generateSyntheticName(instr.getResult());
+    }
+
+    /** The single StoreLocal that stores {@code value} into a slot, or null if there is not exactly one. */
+    private StoreLocalInstruction singleStoreConsumer(SSAValue value) {
+        StoreLocalInstruction found = null;
+        for (IRInstruction use : value.getUses()) {
+            if (use instanceof StoreLocalInstruction && ((StoreLocalInstruction) use).getValue() == value) {
+                if (found != null) {
+                    return null;
+                }
+                found = (StoreLocalInstruction) use;
+            }
+        }
+        return found;
     }
 
     private int getParamIndexForSlot(int slot) {
