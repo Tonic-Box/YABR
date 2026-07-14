@@ -157,8 +157,8 @@ public class BytecodeLifter {
     }
 
     /**
-     * Unifies a reference phi's type without hierarchy knowledge: NullConstant incomings are
-     * bottom, self-referential loop operands are skipped, and if every remaining incoming
+     * Unifies a reference phi's type without hierarchy knowledge: null-bottom incomings are
+     * ignored, self-referential loop operands are skipped, and if every remaining incoming
      * carries one identical reference or array type, the phi adopts it. When the concrete
      * reference incomings disagree (e.g. a String constant merged with an Object value, as a
      * ternary produces), the phi widens to java/lang/Object rather than keeping a stale narrow
@@ -169,7 +169,7 @@ public class BytecodeLifter {
         IRType common = null;
         boolean disagree = false;
         for (Value v : phi.getOperands()) {
-            if (v == null || v instanceof NullConstant) {
+            if (v == null || isNullBottom(v)) {
                 continue;
             }
             IRType t = v.getType();
@@ -190,6 +190,23 @@ public class BytecodeLifter {
             return null;
         }
         return disagree ? new ReferenceType("java/lang/Object") : common;
+    }
+
+    /**
+     * Whether a phi operand is a null bottom, assignable to any reference and so ignorable when
+     * unifying a reference phi's type. This is the bare {@link NullConstant} or an SSAValue defined
+     * by a {@link ConstantInstruction} of it: {@code aconst_null} lifts to such a ConstantInstruction
+     * with an Object-typed result, so a null reaching a phi through a local store arrives as that
+     * Object-typed value rather than a bare NullConstant. Both must count as bottom, else a null
+     * merged with a concrete reference or array type would spuriously widen the phi to Object.
+     */
+    private static boolean isNullBottom(Value v) {
+        if (v instanceof NullConstant) {
+            return true;
+        }
+        return v instanceof SSAValue
+                && ((SSAValue) v).getDefinition() instanceof ConstantInstruction
+                && ((ConstantInstruction) ((SSAValue) v).getDefinition()).getConstant() instanceof NullConstant;
     }
 
     private IRMethod createEmptyMethod(MethodEntry method) {
