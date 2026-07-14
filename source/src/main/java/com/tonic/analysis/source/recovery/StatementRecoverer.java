@@ -1946,7 +1946,28 @@ public class StatementRecoverer {
 
             if (context.isProcessed(current)) {
                 result.addAll(context.getStatements(current));
-                current = getNextSequentialBlock(current);
+                IRBlock revisitNext = getNextSequentialBlock(current);
+                if (revisitNext == null && stopBlocks.isEmpty()) {
+                    // A re-visited region header (if/switch/loop) has two-plus successors, so
+                    // getNextSequentialBlock stops the chain — but the fall-through past it continues
+                    // along the region merges to a shared trailing return that other arms already
+                    // emitted. Walk the merge chain and re-emit that return (a terminator is
+                    // idempotent) without re-adding the intermediate, already-emitted blocks, which
+                    // would duplicate them.
+                    IRBlock chain = current;
+                    Set<IRBlock> chainSeen = new HashSet<>();
+                    while (chain != null && chainSeen.add(chain)) {
+                        if (chain != current && isReturnBlock(chain) && context.isProcessed(chain)) {
+                            result.addAll(context.getStatements(chain));
+                            break;
+                        }
+                        RegionInfo chainInfo = analyzer.getRegionInfo(chain);
+                        chain = chainInfo != null && chainInfo.getMergeBlock() != null
+                                ? chainInfo.getMergeBlock()
+                                : getNextSequentialBlock(chain);
+                    }
+                }
+                current = revisitNext;
                 continue;
             }
 
@@ -3422,7 +3443,28 @@ public class StatementRecoverer {
 
             if (context.isProcessed(current)) {
                 result.addAll(context.getStatements(current));
-                current = getNextSequentialBlock(current);
+                IRBlock revisitNext = getNextSequentialBlock(current);
+                if (revisitNext == null && stopBlocks.isEmpty()) {
+                    // A re-visited region header (if/switch/loop) has two-plus successors, so
+                    // getNextSequentialBlock stops the chain — but the fall-through past it continues
+                    // along the region merges to a shared trailing return that other arms already
+                    // emitted. Walk the merge chain and re-emit that return (a terminator is
+                    // idempotent) without re-adding the intermediate, already-emitted blocks, which
+                    // would duplicate them.
+                    IRBlock chain = current;
+                    Set<IRBlock> chainSeen = new HashSet<>();
+                    while (chain != null && chainSeen.add(chain)) {
+                        if (chain != current && isReturnBlock(chain) && context.isProcessed(chain)) {
+                            result.addAll(context.getStatements(chain));
+                            break;
+                        }
+                        RegionInfo chainInfo = analyzer.getRegionInfo(chain);
+                        chain = chainInfo != null && chainInfo.getMergeBlock() != null
+                                ? chainInfo.getMergeBlock()
+                                : getNextSequentialBlock(chain);
+                    }
+                }
+                current = revisitNext;
                 continue;
             }
 
