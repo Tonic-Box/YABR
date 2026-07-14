@@ -667,7 +667,19 @@ public class TypeInference {
                 state = state.pop();
                 if (objectRef instanceof VerificationType.UninitializedType
                         || objectRef.equals(VerificationType.UNINITIALIZED_THIS)) {
-                    int classIndex = getInitClassIndex(instr);
+                    // JVMS 4.10.1.9: invokespecial <init> on uninitializedThis initializes `this` to the
+                    // class being verified, not the methodref owner — a super() call names the superclass
+                    // as owner, yet `this` is an instance of the current class. Only an uninitialized(Offset)
+                    // from `new` initializes to the created class, which is the methodref owner.
+                    int classIndex;
+                    if (objectRef.equals(VerificationType.UNINITIALIZED_THIS)) {
+                        com.tonic.parser.ClassFile owner = constPool.getClassFile();
+                        classIndex = owner != null && owner.getThisClass() > 0
+                                ? owner.getThisClass()
+                                : getInitClassIndex(instr);
+                    } else {
+                        classIndex = getInitClassIndex(instr);
+                    }
                     VerificationType initializedType = VerificationType.object(classIndex);
                     state = state.replaceType(objectRef, initializedType);
                 }
