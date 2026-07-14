@@ -16,7 +16,7 @@ import java.util.List;
  * Lists the exceptions that a method can throw.
  */
 public class ExceptionsAttribute extends Attribute {
-    private List<Integer> exceptionIndexTable;
+    private List<Integer> exceptionIndexTable = new ArrayList<>();
 
     public ExceptionsAttribute(String name, MemberEntry parent, int nameIndex, int length) {
         super(name, parent, nameIndex, length);

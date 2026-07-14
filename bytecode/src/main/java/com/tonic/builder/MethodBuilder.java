@@ -3,6 +3,8 @@ package com.tonic.builder;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.ExceptionsAttribute;
+import com.tonic.parser.constpool.ClassRefItem;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -74,6 +76,20 @@ public class MethodBuilder {
 
         if (codeBuilder != null) {
             codeBuilder.buildCode(method, constPool);
+        }
+
+        if(!exceptions.isEmpty())
+        {
+            int nameIndex = constPool.getIndexOf(constPool.findOrAddUtf8("Exceptions"));
+            ExceptionsAttribute exAttr = new ExceptionsAttribute("Exceptions", method, nameIndex, 0);
+            ClassRefItem type;
+            for(String ex : exceptions)
+            {
+                type = constPool.findOrAddClass(ex);
+                exAttr.getExceptionIndexTable().add(constPool.getIndexOf(type));
+            }
+            exAttr.updateLength();
+            method.getAttributes().add(exAttr);
         }
 
         if (maxStack != null && method.getCodeAttribute() != null) {
