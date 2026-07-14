@@ -6853,27 +6853,71 @@ public class StatementRecoverer {
             }
         }
 
-        Set<IRBlock> commonSuccessors = null;
+        // Reachable region of each target, stopping at the other targets so one case body's blocks
+        // do not bleed into another's region.
+        Map<IRBlock, Set<IRBlock>> reachableByTarget = new LinkedHashMap<>();
         for (IRBlock target : allTargets) {
             Set<IRBlock> reachable = new HashSet<>();
             Set<IRBlock> otherTargets = new HashSet<>(allTargets);
             otherTargets.remove(target);
             collectReachableBlocks(target, reachable, otherTargets);
+            reachableByTarget.put(target, reachable);
+        }
 
-            if (commonSuccessors == null) {
-                commonSuccessors = reachable;
-            } else {
-                commonSuccessors.retainAll(reachable);
+        // A case that returns or throws without rejoining the others never reaches the merge - its
+        // region is disjoint from every sibling's. The merge is where the CONVERGING cases meet, so
+        // intersect only over targets whose region overlaps another's. Requiring every target
+        // (including a throwing default) to reach the merge collapses the intersection to empty and
+        // leaves the shared post-switch tail to be absorbed into whichever case is recovered first.
+        Set<IRBlock> converging = new HashSet<>();
+        for (IRBlock a : allTargets) {
+            for (IRBlock b : allTargets) {
+                if (a != b && !Collections.disjoint(reachableByTarget.get(a), reachableByTarget.get(b))) {
+                    converging.add(a);
+                    break;
+                }
             }
         }
-
-        if (commonSuccessors == null || commonSuccessors.isEmpty()) {
+        if (converging.size() < 2) {
             return null;
         }
 
-        IRBlock merge = commonSuccessors.iterator().next();
-        if (caseTargets.contains(merge)) {
+        Set<IRBlock> commonSuccessors = null;
+        for (IRBlock target : converging) {
+            if (commonSuccessors == null) {
+                commonSuccessors = new HashSet<>(reachableByTarget.get(target));
+            } else {
+                commonSuccessors.retainAll(reachableByTarget.get(target));
+            }
+        }
+        commonSuccessors.removeAll(caseTargets);
+        if (commonSuccessors.isEmpty()) {
             return null;
+        }
+
+        // The merge is the ENTRY of the shared region - the earliest common block reached straight
+        // from a converging case (a predecessor outside the region), not one buried deeper in the
+        // tail. Pick by lowest bytecode offset so the choice is deterministic.
+        IRBlock merge = null;
+        int mergeOffset = Integer.MAX_VALUE;
+        for (IRBlock candidate : commonSuccessors) {
+            boolean isEntry = false;
+            for (IRBlock pred : candidate.getPredecessors()) {
+                if (!commonSuccessors.contains(pred)) {
+                    isEntry = true;
+                    break;
+                }
+            }
+            if (!isEntry) {
+                continue;
+            }
+            int off = candidate.getInstructions().isEmpty()
+                    ? Integer.MAX_VALUE
+                    : candidate.getInstructions().get(0).getBytecodeOffset();
+            if (off < mergeOffset) {
+                mergeOffset = off;
+                merge = candidate;
+            }
         }
         return merge;
     }
