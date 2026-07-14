@@ -47,7 +47,6 @@ byte[] bytes = newClass.write();
 | [SSA Transforms](docs/ssa-transforms.md) | Optimizations and analysis |
 | [LLVM Lowering](docs/llvm-lowering.md) | Lower SSA IR to textual LLVM IR |
 | [LLVM Lifting](docs/llvm-lifting.md) | Lift LLVM IR back to SSA |
-| [SSA IR Migration](docs/SSA_IR_MIGRATION.md) | API changes from the SSA IR redesign |
 | [Analysis APIs](docs/analysis-apis.md) | Code analysis and semantic queries |
 | [PDG API](docs/pdg-api.md) | Program Dependence Graph with slicing |
 | [SDG API](docs/sdg-api.md) | Interprocedural System Dependence Graph |

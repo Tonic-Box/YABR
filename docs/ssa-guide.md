@@ -1,4 +1,4 @@
-[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [LLVM Lowering](llvm-lowering.md) | [Migration Guide](SSA_IR_MIGRATION.md)
+[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [LLVM Lowering](llvm-lowering.md)
 
 # SSA Guide
 
@@ -184,7 +184,7 @@ SSAType type = result.getType();    // INT, LONG, OBJECT, etc.
 
 ## IR Instructions
 
-YABR defines IR instruction types organized into functional categories. Recent refactoring consolidated symmetric instruction pairs (e.g., GetField/PutField) into unified classes with mode enums. See [SSA IR Migration Guide](SSA_IR_MIGRATION.md) for migration details.
+YABR defines IR instruction types organized into functional categories. Recent refactoring consolidated symmetric instruction pairs (e.g., GetField/PutField) into unified classes with mode enums.
 
 Every instruction shares a common base (`IRInstruction`) carrying its defined value, containing block, and provenance back to the source bytecode:
 
@@ -444,8 +444,7 @@ analyzer.printStats();
 - [SSA Transforms](ssa-transforms.md) - Optimization passes
 - [LLVM Lowering](llvm-lowering.md) - Lower SSA IR to textual LLVM IR
 - [Analysis APIs](analysis-apis.md) - Call graph, dependency analysis, type inference, pattern search
-- [SSA IR Migration Guide](SSA_IR_MIGRATION.md) - API changes from the SSA IR redesign
 
 ---
 
-[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [LLVM Lowering](llvm-lowering.md) | [Migration Guide](SSA_IR_MIGRATION.md)
+[<- Back to README](../README.md) | [Visitors](visitors.md) | [SSA Transforms ->](ssa-transforms.md) | [LLVM Lowering](llvm-lowering.md)
