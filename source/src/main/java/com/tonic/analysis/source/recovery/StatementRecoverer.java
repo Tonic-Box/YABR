@@ -2499,13 +2499,67 @@ public class StatementRecoverer {
         // (e.g. an accumulator seeded from a parameter starts at 0). Only simple entry values (constant,
         // parameter, or a local load) are inlined, to avoid duplicating a side-effecting expression.
         Value entryInput = findLoopEntryInput(phi);
-        if (isSafeEntryInit(entryInput)) {
+        if (isSafeEntryInit(entryInput) && entryDominatesPhi(entryInput, phi)) {
             Expression entryExpr = exprRecoverer.recoverOperand(entryInput, type);
+            if (isSelfReference(entryExpr, name)) {
+                // The entry value is materialized under this phi's own slot name, so recoverOperand
+                // returns a reference to the variable being declared. Recover its underlying constant
+                // directly so the entry value is not lost to a `T v = v` self-initializer (which a later
+                // pass then resolves to the loop-body store, e.g. `boolean captured = true`).
+                entryExpr = recoverEntryConstant(entryInput, type);
+            }
             if (entryExpr != null) {
                 initValue = entryExpr;
             }
         }
         statements.add(new VarDeclStmt(type, name, initValue));
+    }
+
+    /**
+     * Whether the entry input genuinely enters the loop from outside: its definition dominates the
+     * phi's block. A merge phi inside the loop body (e.g. one whose non-recursive incoming is a
+     * mid-loop assignment) has a non-dominating "entry" that must not seed the slot's declaration.
+     */
+    private boolean entryDominatesPhi(Value entryInput, PhiInstruction phi) {
+        IRBlock phiBlock = phi.getBlock();
+        if (phiBlock == null) {
+            return false;
+        }
+        if (entryInput instanceof Constant) {
+            return true;
+        }
+        if (entryInput instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) entryInput).getDefinition();
+            if (def == null) {
+                return true;
+            }
+            IRBlock defBlock = def.getBlock();
+            return defBlock != null && analyzer.getDominatorTree().dominates(defBlock, phiBlock);
+        }
+        return false;
+    }
+
+    /** Whether {@code expr} is a reference to the variable {@code name} - a self-initializer to reject. */
+    private boolean isSelfReference(Expression expr, String name) {
+        return expr instanceof VarRefExpr && name != null
+                && name.equals(((VarRefExpr) expr).getName());
+    }
+
+    /**
+     * Recovers a constant-backed entry value as a literal, bypassing slot materialization. Returns null
+     * when the entry input is not constant-backed, leaving the declaration's default initializer.
+     */
+    private Expression recoverEntryConstant(Value entryInput, SourceType type) {
+        Constant c = null;
+        if (entryInput instanceof Constant) {
+            c = (Constant) entryInput;
+        } else if (entryInput instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) entryInput).getDefinition();
+            if (def instanceof com.tonic.analysis.ssa.ir.ConstantInstruction) {
+                c = ((com.tonic.analysis.ssa.ir.ConstantInstruction) def).getConstant();
+            }
+        }
+        return c != null ? exprRecoverer.recoverConstant(c, type) : null;
     }
 
     /** For a loop-carried phi (exactly one input recurses through the phi result), returns the entry input; else null. */
