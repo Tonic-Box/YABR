@@ -930,7 +930,9 @@ public class StructuralAnalyzer {
             if (instr instanceof SimpleInstruction) {
                 SimpleInstruction simple = (SimpleInstruction) instr;
                 SimpleOp op = simple.getOp();
-                if (op == SimpleOp.GOTO) {
+                // A synchronized return releases the monitor (monitorexit) before returning, so a return
+                // setup block inside a synchronized region carries one; it is still an indirect return.
+                if (op == SimpleOp.GOTO || op == SimpleOp.MONITOREXIT) {
                     continue;
                 }
             }

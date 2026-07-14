@@ -2099,9 +2099,9 @@ public class StatementRecoverer {
             }
         }
 
-        if (handler.getTryEnd() != null) {
+        int endOffset = mergedTryEndOffset(handler);
+        if (endOffset >= 0) {
             IRMethod irMethod = context.getIrMethod();
-            int endOffset = handler.getTryEnd().getBytecodeOffset();
             for (IRBlock block : irMethod.getBlocks()) {
                 if (block.getBytecodeOffset() > endOffset && !visited.contains(block)) {
                     return block;
@@ -2110,6 +2110,26 @@ public class StatementRecoverer {
         }
 
         return null;
+    }
+
+    /**
+     * The end offset of a try/synchronized region, widened across every exception-table entry sharing
+     * this handler block. javac splits one protected range into several entries around instructions that
+     * exit it (a return/break between protected sections, e.g. per {@code monitorexit} in a synchronized
+     * block); the continuation lies past the LAST entry's end, so using the passed entry's own {@code
+     * tryEnd} would land on a block still inside the region. Mirrors the range-merge in recoverTryCatch.
+     */
+    private int mergedTryEndOffset(ExceptionHandler handler) {
+        int end = handler.getTryEnd() != null ? handler.getTryEnd().getBytecodeOffset() : -1;
+        if (handler.getHandlerBlock() == null) {
+            return end;
+        }
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+            if (h.getHandlerBlock() == handler.getHandlerBlock() && h.getTryEnd() != null) {
+                end = Math.max(end, h.getTryEnd().getBytecodeOffset());
+            }
+        }
+        return end;
     }
 
     private boolean isTerminatingTryCatch(TryCatchStmt tryCatch) {
