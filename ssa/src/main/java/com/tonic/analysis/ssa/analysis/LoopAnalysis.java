@@ -65,14 +65,35 @@ public class LoopAnalysis {
     }
 
     private void identifyLoops() {
+        // A header may have several back-edges (e.g. a while loop whose body has multiple `continue`
+        // points, each an edge back to the header). Their natural loops share the header but differ in
+        // which body blocks they reach, so treating each back-edge as its own loop yields several
+        // loops with the same header, the smallest omitting body blocks. Union the natural loops per
+        // header into ONE loop, the standard natural loop of a reducible header, so the whole body is
+        // recognised (otherwise findConditionalLatch mistakes a body branch for a do-while bottom test).
+        Map<IRBlock, Set<IRBlock>> headerToTails = new LinkedHashMap<>();
         for (Map.Entry<IRBlock, Set<IRBlock>> entry : backEdges.entrySet()) {
             IRBlock tail = entry.getKey();
             for (IRBlock header : entry.getValue()) {
-                Set<IRBlock> loopBlocks = findNaturalLoop(header, tail);
-                Loop loop = new Loop(header, loopBlocks);
-                loops.add(loop);
+                headerToTails.computeIfAbsent(header, k -> new LinkedHashSet<>()).add(tail);
+            }
+        }
 
-                for (IRBlock block : loopBlocks) {
+        for (Map.Entry<IRBlock, Set<IRBlock>> entry : headerToTails.entrySet()) {
+            IRBlock header = entry.getKey();
+            Set<IRBlock> loopBlocks = new HashSet<>();
+            for (IRBlock tail : entry.getValue()) {
+                loopBlocks.addAll(findNaturalLoop(header, tail));
+            }
+            loops.add(new Loop(header, loopBlocks));
+        }
+
+        // Map each block to the smallest loop that contains it, so getLoop returns the innermost loop
+        // for nested structures.
+        for (Loop loop : loops) {
+            for (IRBlock block : loop.getBlocks()) {
+                Loop existing = blockToLoop.get(block);
+                if (existing == null || loop.getBlocks().size() < existing.getBlocks().size()) {
                     blockToLoop.put(block, loop);
                 }
             }
