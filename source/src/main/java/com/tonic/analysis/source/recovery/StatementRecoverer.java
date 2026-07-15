@@ -3587,10 +3587,19 @@ public class StatementRecoverer {
                             // through to `current = merge` below so the plain fall-through break is emitted.
                             current = null;
                         } else if (stopBlocks.contains(merge) && isReturnBlock(merge)) {
-                            List<Statement> returnStmts = recoverSimpleBlock(merge);
-                            result.addAll(returnStmts);
-                            context.markProcessed(merge);
-                            current = null;
+                            if (isMergeSharedBeyondIf(merge, current, info)) {
+                                // The merge is a return reached from a sibling region too - e.g. the
+                                // shared tail after a switch that several case bodies converge on.
+                                // Inlining it here consumes it for this branch and drops it from the
+                                // siblings; the enclosing structure (which walks to it once the switch
+                                // is recovered) emits it a single time. Just break out.
+                                current = null;
+                            } else {
+                                List<Statement> returnStmts = recoverSimpleBlock(merge);
+                                result.addAll(returnStmts);
+                                context.markProcessed(merge);
+                                current = null;
+                            }
                         } else if (context.isProcessed(merge) && isReturnBlock(merge) && ifStmt != null) {
                             if (isAllPathsTerminating((IfStmt) ifStmt)) {
                                 List<Statement> returnStmts = recoverSimpleBlock(merge);
@@ -7057,6 +7066,31 @@ public class StatementRecoverer {
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result) {
         collectReachableBlocks(start, result, Collections.emptySet());
+    }
+
+    /**
+     * True when {@code merge} is reached not only through this if (its header {@code current} and the
+     * then/else body) but from at least one predecessor outside it - a shared convergence point such
+     * as the tail after a switch that multiple case bodies fall into. Inlining such a return merge
+     * into one branch strips it from the siblings, so the caller must leave it for the enclosing
+     * structure to emit once.
+     */
+    private boolean isMergeSharedBeyondIf(IRBlock merge, IRBlock current, RegionInfo info) {
+        Set<IRBlock> owned = new HashSet<>();
+        owned.add(current);
+        Set<IRBlock> boundary = Collections.singleton(merge);
+        if (info.getThenBlock() != null) {
+            collectReachableBlocks(info.getThenBlock(), owned, boundary);
+        }
+        if (info.getElseBlock() != null) {
+            collectReachableBlocks(info.getElseBlock(), owned, boundary);
+        }
+        for (IRBlock pred : merge.getPredecessors()) {
+            if (!owned.contains(pred)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
