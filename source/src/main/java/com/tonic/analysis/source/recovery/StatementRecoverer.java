@@ -3106,6 +3106,19 @@ public class StatementRecoverer {
         return getPhiUsingValueWithVisited(value, new HashSet<>());
     }
 
+    /** Whether the value is stored into a local, materializing it as a real assignment statement. */
+    private boolean hasStoreLocalUse(SSAValue value) {
+        if (value == null) {
+            return false;
+        }
+        for (IRInstruction use : value.getUses()) {
+            if (use instanceof StoreLocalInstruction) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private PhiInstruction getPhiUsingValueWithVisited(SSAValue value, Set<SSAValue> visited) {
         if (value == null || !visited.add(value)) return null;
 
@@ -3565,11 +3578,13 @@ public class StatementRecoverer {
                     }
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
-                        if (stopBlocks.contains(merge) && context.classifyLoopJump(merge) != null) {
-                            // The merge is the enclosing loop's boundary (a shared break/continue target),
-                            // reached only as a post-dominator. It is emitted once by the enclosing
-                            // structure, not inlined as this if's private tail (which would duplicate a
-                            // shared return into one branch and drop it from the others).
+                        if (stopBlocks.contains(merge) && isReturnBlock(merge)
+                                && context.classifyLoopJump(merge) != null) {
+                            // The merge is a RETURN block that is also the enclosing loop's boundary: a
+                            // shared exit reached only as a post-dominator. Don't inline its return here (it
+                            // would duplicate the shared return into one branch and drop it from the others);
+                            // the enclosing structure emits it once. A non-return loop-boundary merge falls
+                            // through to `current = merge` below so the plain fall-through break is emitted.
                             current = null;
                         } else if (stopBlocks.contains(merge) && isReturnBlock(merge)) {
                             List<Statement> returnStmts = recoverSimpleBlock(merge);
@@ -5093,8 +5108,11 @@ public class StatementRecoverer {
         PhiInstruction ternaryPhi = findTernaryPhiPattern(info);
         // Don't collapse to a ternary when the merged value feeds ANOTHER phi (a nested if/else-if merge):
         // the collapsed value is cached but the outer merge can't consume it as a statement, so its arm would
-        // be orphaned and dropped. Recover this if/else as a statement so the outer recovery keeps it.
-        if (ternaryPhi != null && getPhiUsingValue(ternaryPhi.getResult()) != null) {
+        // be orphaned and dropped. Recover this if/else as a statement so the outer recovery keeps it. A value
+        // that is also stored into a local is exempt: the store materializes it as a real assignment (`v = t`),
+        // and any phi that reads it (e.g. a loop-carried counter) consumes the local, so nothing is orphaned.
+        if (ternaryPhi != null && getPhiUsingValue(ternaryPhi.getResult()) != null
+                && !hasStoreLocalUse(ternaryPhi.getResult())) {
             ternaryPhi = null;
         }
         if (ternaryPhi != null) {
@@ -7978,8 +7996,8 @@ public class StatementRecoverer {
         Value thenValue = phi.getIncoming(thenBlock);
         Value elseValue = phi.getIncoming(elseBlock);
 
-        Expression thenExpr = recoverTernaryArmValue(thenValue);
-        Expression elseExpr = recoverTernaryArmValue(elseValue);
+        Expression thenExpr = recoverTernaryArmValue(thenValue, thenBlock);
+        Expression elseExpr = recoverTernaryArmValue(elseValue, elseBlock);
 
         SSAValue phiResult = phi.getResult();
         SourceType type = typeRecoverer.recoverType(phiResult);
@@ -7999,15 +8017,20 @@ public class StatementRecoverer {
      * discarded temp name would leave an undefined variable. Un-materialize across the recovery so the
      * expression is inlined, then restore the flag so unrelated uses are unaffected.
      */
-    private Expression recoverTernaryArmValue(Value value) {
+    private Expression recoverTernaryArmValue(Value value, IRBlock armBlock) {
         if (value instanceof SSAValue) {
             SSAValue ssa = (SSAValue) value;
+            // Only inline the defining expression for a value the arm itself produced (a temp the collapse
+            // discards). A value defined before the arm - a pre-existing local like a loop-invariant bound -
+            // must be referenced by its name: re-inlining its defining call would recompute it against the
+            // current (possibly mutated) operands, changing its meaning.
+            boolean definedInArm = ssa.getDefinition() != null && ssa.getDefinition().getBlock() == armBlock;
             boolean wasMaterialized = context.getExpressionContext().isMaterialized(ssa);
-            if (wasMaterialized) {
+            if (definedInArm && wasMaterialized) {
                 context.getExpressionContext().unmarkMaterialized(ssa);
             }
             Expression expr = exprRecoverer.recoverOperand(value);
-            if (wasMaterialized) {
+            if (definedInArm && wasMaterialized) {
                 context.getExpressionContext().markMaterialized(ssa);
             }
             return expr;
