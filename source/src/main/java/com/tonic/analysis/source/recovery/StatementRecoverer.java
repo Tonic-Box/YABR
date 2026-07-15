@@ -4768,7 +4768,20 @@ public class StatementRecoverer {
             }
         }
 
-        Expression condition = recoverCondition(header, info.isConditionNegated());
+        Expression condition;
+        if (info.getOrChainBlocks() != null && !info.getOrChainBlocks().isEmpty()) {
+            // Short-circuit `A || B [|| ...]`: the header and each chain block jump to the then/body
+            // when their condition holds. OR their enter-body conditions (a block whose true edge is
+            // NOT the body is negated), and mark the extra condition blocks processed.
+            condition = recoverCondition(header, !branchTrueGoesTo(header, info.getThenBlock()));
+            for (IRBlock chainBlock : info.getOrChainBlocks()) {
+                Expression next = recoverCondition(chainBlock, !branchTrueGoesTo(chainBlock, info.getThenBlock()));
+                condition = new BinaryExpr(BinaryOperator.OR, condition, next, PrimitiveSourceType.BOOLEAN);
+                context.markProcessed(chainBlock);
+            }
+        } else {
+            condition = recoverCondition(header, info.isConditionNegated());
+        }
         Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
@@ -4851,6 +4864,12 @@ public class StatementRecoverer {
         return guardStmt;
     }
 
+    /** True when {@code block}'s conditional branch takes its true edge to {@code target}. */
+    private boolean branchTrueGoesTo(IRBlock block, IRBlock target) {
+        return block.getTerminator() instanceof BranchInstruction
+                && ((BranchInstruction) block.getTerminator()).getTrueTarget() == target;
+    }
+
     private Statement recoverIfThenElse(IRBlock header, RegionInfo info) {
         context.markProcessed(header);
 
@@ -4887,7 +4906,21 @@ public class StatementRecoverer {
             }
         }
 
-        Expression condition = recoverCondition(header, info.isConditionNegated());
+        Expression condition;
+        if (info.getAndChainBlocks() != null && !info.getAndChainBlocks().isEmpty()) {
+            // Short-circuit `A && B [&& ...]`: the header and each chain block continue toward the then
+            // arm when their condition holds and short-circuit to the shared else otherwise. AND their
+            // continue-conditions (negating a block whose true edge is the else), and mark the extra
+            // condition blocks processed so they are not re-emitted as separate statements.
+            condition = recoverCondition(header, branchTrueGoesTo(header, info.getElseBlock()));
+            for (IRBlock chainBlock : info.getAndChainBlocks()) {
+                Expression next = recoverCondition(chainBlock, branchTrueGoesTo(chainBlock, info.getElseBlock()));
+                condition = new BinaryExpr(BinaryOperator.AND, condition, next, PrimitiveSourceType.BOOLEAN);
+                context.markProcessed(chainBlock);
+            }
+        } else {
+            condition = recoverCondition(header, info.isConditionNegated());
+        }
         Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
