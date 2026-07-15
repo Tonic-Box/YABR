@@ -399,20 +399,13 @@ public class StructuralAnalyzer {
             return chainSwitch;
         }
 
-        // A short-circuit `A && B [&& ...]` guarding an if/else: each condition short-circuits to the
-        // SAME shared else. Detect it so the else runs when the compound condition is false, instead
-        // of the else being mis-read as the merge (which duplicates the post-if tail).
-        RegionInfo andChain = detectAndChainElse(block, trueTarget, falseTarget);
-        if (andChain != null) {
-            return andChain;
-        }
-
-        // The `A || B [|| ...]` mirror: each condition short-circuits to the shared then/body on
-        // success. Without this it recovers as a negated, inverted guard with dropped terms (the
-        // `if (ext || GL30 || GLES20)` framebuffer guard becomes `if (!ext && !GL30) { GLES20; body }`).
-        RegionInfo orChain = detectOrChainThen(block, trueTarget, falseTarget);
-        if (orChain != null) {
-            return orChain;
+        // A short-circuit compound condition (`A && B`, `A || B`, or any mix) guarding an if/else: the
+        // condition is a DAG of two-way branch blocks deciding between two exits. Recover the whole
+        // boolean expression as one, instead of mis-reading a shared exit as the merge (which drops
+        // terms, duplicates the post-if tail, or absorbs the sibling code after the if).
+        RegionInfo compound = detectCompoundCondition(block);
+        if (compound != null) {
+            return compound;
         }
 
         IRBlock mergePoint = findMergePoint(block);
@@ -561,159 +554,208 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * Detects a short-circuit {@code A && B [&& ...]} condition guarding an if/else: the header and
-     * one or more following condition blocks each jump to the SAME shared else block on failure, and
-     * the then/else arms reconverge at a later merge. Returns an IF_THEN_ELSE region whose condition
-     * is the AND of the chain (recorded via {@code andChainBlocks}), or null when the shape is not a
-     * genuine compound-condition-with-else (e.g. the shared target IS the merge, which is the plain
-     * `if (A && B) {..}` the standard recovery already handles by nesting-and-merging).
+     * Detects a short-circuit compound condition (`A && B`, `A || B`, or any mix, e.g.
+     * {@code (A || B) && C}) guarding an if/else. Such a condition is a DAG of two-way branch blocks
+     * that all decide between exactly two exits; grows that region, confirms it is a clean
+     * series-parallel short-circuit chain, and returns an IF_THEN / IF_THEN_ELSE region carrying the
+     * condition blocks so recovery can reconstruct the whole boolean expression (see
+     * {@link CompoundConditionBuilder}). Returns null for a single-condition if (no compound to
+     * reconstruct) or any shape that is not a clean two-exit short-circuit condition.
      */
-    private RegionInfo detectAndChainElse(IRBlock header, IRBlock trueTarget, IRBlock falseTarget) {
-        // The shared else is whichever header target the next condition block also jumps to; the other
-        // is the "continue" edge toward the then arm.
-        IRBlock sharedElse = null;
-        IRBlock cont = null;
-        for (int side = 0; side < 2; side++) {
-            IRBlock candElse = side == 0 ? trueTarget : falseTarget;
-            IRBlock candCont = side == 0 ? falseTarget : trueTarget;
-            if (candCont != null && candElse != null && candCont != candElse
-                    && candCont.getTerminator() instanceof BranchInstruction
-                    && branchTargets(candCont).contains(candElse)) {
-                sharedElse = candElse;
-                cont = candCont;
-                break;
-            }
-        }
-        if (sharedElse == null) {
+    private RegionInfo detectCompoundCondition(IRBlock header) {
+        if (!(header.getTerminator() instanceof BranchInstruction)) {
             return null;
         }
+        // Grow the condition region: absorb a two-way-branch, condition-only successor whose every
+        // predecessor is already inside the region, but only while the region still decides between at
+        // most two exits. A block reached as the shared short-circuit target of several condition blocks
+        // is the guard body (one of the two exits), not a condition continuation - absorbing it would
+        // explode the exit set. Bounding growth by the exit count keeps genuine terms (e.g. the `C` of
+        // `(A || B) && C`, reached from two blocks but still two-exit) while stopping at the body.
+        Set<IRBlock> region = new LinkedHashSet<>();
+        region.add(header);
+        boolean grew = true;
+        while (grew) {
+            grew = false;
+            for (IRBlock b : new ArrayList<>(region)) {
+                for (IRBlock s : b.getSuccessors()) {
+                    if (region.contains(s) || s == header) {
+                        continue;
+                    }
+                    if (!isConditionOnlyBlock(s) || !region.containsAll(s.getPredecessors())) {
+                        continue;
+                    }
+                    Set<IRBlock> trial = new LinkedHashSet<>(region);
+                    trial.add(s);
+                    if (countExits(trial) <= 2) {
+                        region.add(s);
+                        grew = true;
+                    }
+                }
+            }
+        }
+        if (region.size() < 2) {
+            return null; // a single condition - the standard if recovery handles it
+        }
 
-        List<IRBlock> chain = new ArrayList<>();
-        IRBlock then;
-        IRBlock current = cont;
-        java.util.Set<IRBlock> seen = new java.util.HashSet<>();
-        seen.add(header);
-        while (true) {
-            if (current == null || !seen.add(current)) {
+        // The condition must decide between exactly two exits (then-entry and else-entry).
+        Set<IRBlock> exits = new LinkedHashSet<>();
+        for (IRBlock b : region) {
+            for (IRBlock s : b.getSuccessors()) {
+                if (!region.contains(s)) {
+                    exits.add(s);
+                }
+            }
+        }
+        if (exits.size() != 2) {
+            return null;
+        }
+        Iterator<IRBlock> it = exits.iterator();
+        IRBlock x = it.next();
+        IRBlock y = it.next();
+        IRBlock arms = findImmediateMergePoint(x, y);
+        // A shared return/throw block is not a real reconvergence - it is a common exit both the guard
+        // body and the continuation happen to reach (e.g. several guards that all `return 0`). Treating
+        // it as the merge would fold the continuation into the condition and invert the guard clause, so
+        // ignore it and let the guard-clause handling below pick the body by which exit actually exits.
+        if (arms != null && isSingleEarlyExitBlock(arms)) {
+            arms = null;
+        }
+
+        RegionInfo info;
+        if (arms == x || arms == y) {
+            // One exit flows into the other: the sink is the merge, so this is an if-then and the
+            // condition is true exactly when it reaches the body (the other exit).
+            IRBlock body = arms == y ? x : y;
+            if (!CompoundConditionBuilder.isReconstructible(header, body, arms, region)) {
                 return null;
             }
-            if (!(current.getTerminator() instanceof BranchInstruction)) {
-                then = current;
-                break;
+            info = new RegionInfo(StructuredRegion.IF_THEN, header);
+            info.setThenBlock(body);
+            info.setMergeBlock(arms);
+        } else if (arms != null) {
+            // Distinct arms reconverging at a real merge: an if/else. Either exit is a valid true-arm;
+            // recovery picks the polarity that reads with fewer negations. Only require reconstructibility.
+            if (!CompoundConditionBuilder.isReconstructible(header, x, y, region)) {
+                return null;
             }
-            java.util.List<IRBlock> targets = branchTargets(current);
-            if (!targets.contains(sharedElse)) {
-                // A conditional that does not short-circuit to the shared else is the then arm itself
-                // (a nested if inside the then), not part of the && chain.
-                then = current;
-                break;
+            info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, header);
+            info.setThenBlock(x);
+            info.setElseBlock(y);
+            info.setMergeBlock(arms);
+        } else {
+            // The exits never reconverge. If exactly one is an early exit, this is a guard clause
+            // (`if (cond) return; cont`): recover it as an if-then whose body is the exiting arm and
+            // whose merge is the continuation, so the whole condition stays un-negated and round-trips
+            // stably. If both or neither exit, there is no clean guard shape - defer to standard recovery.
+            boolean xExit = isSingleEarlyExitBlock(x);
+            boolean yExit = isSingleEarlyExitBlock(y);
+            if (xExit == yExit) {
+                return null;
             }
-            IRBlock next = targets.get(0) == sharedElse ? targets.get(1) : targets.get(0);
-            chain.add(current);
-            current = next;
+            IRBlock body = xExit ? x : y;
+            IRBlock merge = xExit ? y : x;
+            if (!CompoundConditionBuilder.isReconstructible(header, body, merge, region)) {
+                return null;
+            }
+            info = new RegionInfo(StructuredRegion.IF_THEN, header);
+            info.setThenBlock(body);
+            info.setMergeBlock(merge);
         }
-
-        if (chain.isEmpty() || then == sharedElse) {
-            return null;
-        }
-
-        // Require a genuine separate else: the then arm and the shared else reconverge at a merge that
-        // is neither of them. When the shared else IS the merge there is no else body, and the plain
-        // `if (A && B)` nesting-and-merge recovery handles it correctly.
-        IRBlock merge = findImmediateMergePoint(then, sharedElse);
-        if (merge == null || merge == sharedElse || merge == then) {
-            return null;
-        }
-        // An early-exit else is a guard clause, recovered elsewhere; don't reshape it here.
-        if (isEarlyExitBlock(sharedElse) || isEarlyExitBlock(then)) {
-            return null;
-        }
-
-        RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, header);
-        info.setThenBlock(then);
-        info.setElseBlock(sharedElse);
-        info.setMergeBlock(merge);
-        info.setAndChainBlocks(chain);
+        info.setConditionBlocks(region);
         return info;
+    }
+
+    /** The number of distinct blocks reached from {@code region} that lie outside it. */
+    private int countExits(Set<IRBlock> region) {
+        Set<IRBlock> exits = new LinkedHashSet<>();
+        for (IRBlock b : region) {
+            for (IRBlock s : b.getSuccessors()) {
+                if (!region.contains(s)) {
+                    exits.add(s);
+                }
+            }
+        }
+        return exits.size();
     }
 
     /**
-     * Detects a short-circuit {@code A || B [|| ...]} condition guarding an if-then: the header and
-     * one or more following condition blocks each jump to the SAME shared then/body when true, and
-     * fall through to the next condition (finally to a skip block) when false. Returns an IF_THEN
-     * region whose condition is the OR of the chain (recorded via {@code orChainBlocks}), or null when
-     * the shape is not a genuine short-circuit-or with a body.
+     * A block that contributes only to a condition: it ends in a two-way branch and every other
+     * instruction produces a value used solely within the block (feeding that branch). Blocks with a
+     * side effect (a store, a void call, a monitor) or a value consumed by other code do real work and
+     * are not part of a pure short-circuit condition.
      */
-    private RegionInfo detectOrChainThen(IRBlock header, IRBlock trueTarget, IRBlock falseTarget) {
-        IRBlock sharedThen = null;
-        IRBlock cont = null;
-        for (int side = 0; side < 2; side++) {
-            IRBlock candThen = side == 0 ? trueTarget : falseTarget;
-            IRBlock candCont = side == 0 ? falseTarget : trueTarget;
-            if (candCont != null && candThen != null && candCont != candThen
-                    && candCont.getTerminator() instanceof BranchInstruction
-                    && branchTargets(candCont).contains(candThen)) {
-                sharedThen = candThen;
-                cont = candCont;
-                break;
+    private boolean isConditionOnlyBlock(IRBlock b) {
+        if (!(b.getTerminator() instanceof BranchInstruction)) {
+            return false;
+        }
+        BranchInstruction branch = (BranchInstruction) b.getTerminator();
+        if (branch.getTrueTarget() == null || branch.getFalseTarget() == null) {
+            return false;
+        }
+        for (IRInstruction instr : b.getInstructions()) {
+            if (instr.isTerminator()) {
+                continue;
+            }
+            SSAValue result = instr.getResult();
+            if (result == null) {
+                return false; // a void instruction (store, void call, monitor) is real work
+            }
+            if (result.getUses().isEmpty() && isSideEffecting(instr)) {
+                // A discarded-result side effect (e.g. a `set.add(x)` whose boolean return is dropped)
+                // is a statement, not part of a pure condition. A dead pure load (a `load this` the IR
+                // never consumes) is harmless and must not disqualify the block.
+                return false;
+            }
+            for (IRInstruction use : result.getUses()) {
+                if (use.getBlock() != b) {
+                    return false;
+                }
             }
         }
-        if (sharedThen == null) {
-            return null;
-        }
-
-        List<IRBlock> chain = new ArrayList<>();
-        IRBlock skip;
-        IRBlock current = cont;
-        java.util.Set<IRBlock> seen = new java.util.HashSet<>();
-        seen.add(header);
-        while (true) {
-            if (current == null || !seen.add(current)) {
-                return null;
-            }
-            if (!(current.getTerminator() instanceof BranchInstruction)) {
-                skip = current;
-                break;
-            }
-            java.util.List<IRBlock> targets = branchTargets(current);
-            if (!targets.contains(sharedThen)) {
-                skip = current;
-                break;
-            }
-            IRBlock next = targets.get(0) == sharedThen ? targets.get(1) : targets.get(0);
-            chain.add(current);
-            current = next;
-        }
-
-        if (chain.isEmpty() || skip == sharedThen) {
-            return null;
-        }
-        // This is an if-then only when the body falls through to the skip (the merge). Otherwise the
-        // body diverts elsewhere (a guard/exit), which is not a plain `if (A || B) { body }`.
-        IRBlock merge = findImmediateMergePoint(sharedThen, skip);
-        if (merge != skip) {
-            return null;
-        }
-        if (isEarlyExitBlock(sharedThen)) {
-            return null;
-        }
-
-        RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, header);
-        info.setThenBlock(sharedThen);
-        info.setMergeBlock(skip);
-        info.setOrChainBlocks(chain);
-        return info;
+        return true;
     }
 
-    /** The (up to two) branch targets of a conditional block, in true-then-false order. */
-    private List<IRBlock> branchTargets(IRBlock block) {
-        List<IRBlock> targets = new ArrayList<>(2);
-        if (block.getTerminator() instanceof BranchInstruction) {
-            BranchInstruction branch = (BranchInstruction) block.getTerminator();
-            targets.add(branch.getTrueTarget());
-            targets.add(branch.getFalseTarget());
+    /** Whether an instruction has a side effect (a call or allocation) beyond producing its value. */
+    private boolean isSideEffecting(IRInstruction instr) {
+        return instr instanceof InvokeInstruction
+                || instr instanceof NewInstruction
+                || instr instanceof NewArrayInstruction;
+    }
+
+    /**
+     * A block that recovers to a single early-exit statement: it ends in a return or throw and does no
+     * other work (every instruction feeds that exit's value). Unlike {@link #isEarlyExitBlock} this does
+     * not require a single predecessor, so a shared {@code return} target still qualifies - the property
+     * that distinguishes a guard clause's body from the method continuation, which carries real statements.
+     */
+    private boolean isSingleEarlyExitBlock(IRBlock b) {
+        IRInstruction terminator = b.getTerminator();
+        boolean exits = terminator instanceof ReturnInstruction
+                || (terminator instanceof SimpleInstruction && ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW);
+        if (!exits) {
+            return false;
         }
-        return targets;
+        for (IRInstruction instr : b.getInstructions()) {
+            if (instr.isTerminator()) {
+                continue;
+            }
+            SSAValue result = instr.getResult();
+            if (result == null) {
+                return false; // a void instruction (store, void call, monitor) is real work
+            }
+            if (result.getUses().isEmpty() && isSideEffecting(instr)) {
+                // A discarded-result side effect (e.g. `sb.append(x)` whose return is dropped) is an
+                // independent statement, so the block does more than exit.
+                return false;
+            }
+            for (IRInstruction use : result.getUses()) {
+                if (use.getBlock() != b) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -1756,15 +1798,10 @@ public class StructuralAnalyzer {
         private IRBlock mergeBlock;
         private boolean conditionNegated;
 
-        // For a short-circuit `A && B [&& ...]` condition: the extra condition blocks after the header
-        // (header is A, these are B, ...), each of which short-circuits to the shared else on failure.
-        // Recovery ANDs the header's condition with each of these to form the compound condition.
-        private java.util.List<IRBlock> andChainBlocks;
-
-        // For a short-circuit `A || B [|| ...]` condition: the extra condition blocks after the header,
-        // each of which short-circuits to the shared then/body on success. Recovery ORs the header's
-        // condition with each of these to form the compound condition.
-        private java.util.List<IRBlock> orChainBlocks;
+        // For a short-circuit compound condition (`A && B`, `A || B`, or any mix): every two-way branch
+        // block that participates in the condition, including the header. Recovery reconstructs the whole
+        // boolean expression from this DAG (see CompoundConditionBuilder).
+        private Set<IRBlock> conditionBlocks;
 
         private IRBlock loopBody;
         private IRBlock loopExit;
@@ -1807,20 +1844,12 @@ public class StructuralAnalyzer {
             return mergeBlock;
         }
 
-        public java.util.List<IRBlock> getAndChainBlocks() {
-            return andChainBlocks;
+        public Set<IRBlock> getConditionBlocks() {
+            return conditionBlocks;
         }
 
-        public void setAndChainBlocks(java.util.List<IRBlock> andChainBlocks) {
-            this.andChainBlocks = andChainBlocks;
-        }
-
-        public java.util.List<IRBlock> getOrChainBlocks() {
-            return orChainBlocks;
-        }
-
-        public void setOrChainBlocks(java.util.List<IRBlock> orChainBlocks) {
-            this.orChainBlocks = orChainBlocks;
+        public void setConditionBlocks(Set<IRBlock> conditionBlocks) {
+            this.conditionBlocks = conditionBlocks;
         }
 
         public boolean isConditionNegated() {

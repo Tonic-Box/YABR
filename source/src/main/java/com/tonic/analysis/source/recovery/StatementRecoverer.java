@@ -2575,8 +2575,8 @@ public class StatementRecoverer {
             c = (Constant) entryInput;
         } else if (entryInput instanceof SSAValue) {
             IRInstruction def = ((SSAValue) entryInput).getDefinition();
-            if (def instanceof com.tonic.analysis.ssa.ir.ConstantInstruction) {
-                c = ((com.tonic.analysis.ssa.ir.ConstantInstruction) def).getConstant();
+            if (def instanceof ConstantInstruction) {
+                c = ((ConstantInstruction) def).getConstant();
             }
         }
         return c != null ? exprRecoverer.recoverConstant(c, type) : null;
@@ -2628,7 +2628,7 @@ public class StatementRecoverer {
         if (v instanceof SSAValue) {
             IRInstruction def = ((SSAValue) v).getDefinition();
             return def == null
-                    || def instanceof com.tonic.analysis.ssa.ir.ConstantInstruction
+                    || def instanceof ConstantInstruction
                     || def instanceof LoadLocalInstruction;
         }
         return false;
@@ -3200,10 +3200,10 @@ public class StatementRecoverer {
     }
 
     /** Whether {@code v} is a compile-time constant operand (a bare constant or a constant SSA def). */
-    private static boolean isConstantOperand(com.tonic.analysis.ssa.value.Value v) {
+    private static boolean isConstantOperand(Value v) {
         return v instanceof Constant
                 || (v instanceof SSAValue
-                    && ((SSAValue) v).getDefinition() instanceof com.tonic.analysis.ssa.ir.ConstantInstruction);
+                    && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
     }
 
     private boolean isUsedByArrayStore(SSAValue value) {
@@ -4768,18 +4768,12 @@ public class StatementRecoverer {
             }
         }
 
-        Expression condition;
-        if (info.getOrChainBlocks() != null && !info.getOrChainBlocks().isEmpty()) {
-            // Short-circuit `A || B [|| ...]`: the header and each chain block jump to the then/body
-            // when their condition holds. OR their enter-body conditions (a block whose true edge is
-            // NOT the body is negated), and mark the extra condition blocks processed.
-            condition = recoverCondition(header, !branchTrueGoesTo(header, info.getThenBlock()));
-            for (IRBlock chainBlock : info.getOrChainBlocks()) {
-                Expression next = recoverCondition(chainBlock, !branchTrueGoesTo(chainBlock, info.getThenBlock()));
-                condition = new BinaryExpr(BinaryOperator.OR, condition, next, PrimitiveSourceType.BOOLEAN);
-                context.markProcessed(chainBlock);
-            }
-        } else {
+        // For a short-circuit compound condition the true edge reaches the body (then) and the false
+        // edge the merge; reconstruct the whole boolean expression over its condition blocks.
+        Expression condition = info.getConditionBlocks() != null
+                ? reconstructCompoundCondition(header, info.getThenBlock(), info.getMergeBlock(), info.getConditionBlocks())
+                : null;
+        if (condition == null) {
             condition = recoverCondition(header, info.isConditionNegated());
         }
         Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
@@ -4864,10 +4858,45 @@ public class StatementRecoverer {
         return guardStmt;
     }
 
-    /** True when {@code block}'s conditional branch takes its true edge to {@code target}. */
-    private boolean branchTrueGoesTo(IRBlock block, IRBlock target) {
-        return block.getTerminator() instanceof BranchInstruction
-                && ((BranchInstruction) block.getTerminator()).getTrueTarget() == target;
+    /**
+     * Reconstructs a short-circuit compound condition ({@code A && B}, {@code A || B}, or any mix) as
+     * one boolean expression over its condition blocks, where the true edge reaches {@code trueExit}
+     * and the false edge {@code falseExit}. Marks the non-header condition blocks processed. Returns
+     * null when the DAG is not a clean short-circuit chain (the caller then recovers the header
+     * condition alone).
+     */
+    private Expression reconstructCompoundCondition(IRBlock header, IRBlock trueExit, IRBlock falseExit,
+                                                    Set<IRBlock> conditionBlocks) {
+        Expression expr = CompoundConditionBuilder.build(header, trueExit, falseExit, conditionBlocks,
+                this::recoverCondition);
+        if (expr != null) {
+            for (IRBlock conditionBlock : conditionBlocks) {
+                if (conditionBlock != header) {
+                    context.markProcessed(conditionBlock);
+                }
+            }
+        }
+        return expr;
+    }
+
+    /**
+     * Counts the negation operators in a reconstructed condition, used to pick the polarity
+     * (true-arm orientation) that reads with the fewest {@code !}s.
+     */
+    private int countNots(Expression expr) {
+        if (expr == null) {
+            return 0;
+        }
+        if (expr instanceof UnaryExpr) {
+            UnaryExpr unary = (UnaryExpr) expr;
+            int self = unary.getOperator() == UnaryOperator.NOT ? 1 : 0;
+            return self + countNots(unary.getOperand());
+        }
+        if (expr instanceof BinaryExpr) {
+            BinaryExpr binary = (BinaryExpr) expr;
+            return countNots(binary.getLeft()) + countNots(binary.getRight());
+        }
+        return 0;
     }
 
     private Statement recoverIfThenElse(IRBlock header, RegionInfo info) {
@@ -4878,7 +4907,7 @@ public class StatementRecoverer {
         SSAValue conditionValue = getConditionValue(header);
         CompareOp conditionOp = getConditionOp(header);
 
-        if (isConditionKnownFalse(conditionValue)) {
+        if (info.getConditionBlocks() == null && isConditionKnownFalse(conditionValue)) {
             if (conditionOp == CompareOp.IFNE) {
                 Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
                 if (info.getMergeBlock() != null) {
@@ -4906,19 +4935,33 @@ public class StatementRecoverer {
             }
         }
 
-        Expression condition;
-        if (info.getAndChainBlocks() != null && !info.getAndChainBlocks().isEmpty()) {
-            // Short-circuit `A && B [&& ...]`: the header and each chain block continue toward the then
-            // arm when their condition holds and short-circuit to the shared else otherwise. AND their
-            // continue-conditions (negating a block whose true edge is the else), and mark the extra
-            // condition blocks processed so they are not re-emitted as separate statements.
-            condition = recoverCondition(header, branchTrueGoesTo(header, info.getElseBlock()));
-            for (IRBlock chainBlock : info.getAndChainBlocks()) {
-                Expression next = recoverCondition(chainBlock, branchTrueGoesTo(chainBlock, info.getElseBlock()));
-                condition = new BinaryExpr(BinaryOperator.AND, condition, next, PrimitiveSourceType.BOOLEAN);
-                context.markProcessed(chainBlock);
+        // For a short-circuit compound condition the true edge reaches the then arm and the false edge
+        // the else arm; reconstruct the whole boolean expression over its condition blocks. Either exit
+        // can be the then arm - orient toward the polarity that needs fewer negations so the condition
+        // reads naturally (`a && b`, not `!a || !b` with the arms swapped).
+        Expression condition = null;
+        if (info.getConditionBlocks() != null) {
+            Expression asThen = CompoundConditionBuilder.build(header, info.getThenBlock(),
+                    info.getElseBlock(), info.getConditionBlocks(), this::recoverCondition);
+            Expression asElse = CompoundConditionBuilder.build(header, info.getElseBlock(),
+                    info.getThenBlock(), info.getConditionBlocks(), this::recoverCondition);
+            if (asElse != null && (asThen == null || countNots(asElse) < countNots(asThen))) {
+                IRBlock swap = info.getThenBlock();
+                info.setThenBlock(info.getElseBlock());
+                info.setElseBlock(swap);
+                condition = asElse;
+            } else {
+                condition = asThen;
             }
-        } else {
+            if (condition != null) {
+                for (IRBlock conditionBlock : info.getConditionBlocks()) {
+                    if (conditionBlock != header) {
+                        context.markProcessed(conditionBlock);
+                    }
+                }
+            }
+        }
+        if (condition == null) {
             condition = recoverCondition(header, info.isConditionNegated());
         }
         Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
@@ -4933,7 +4976,7 @@ public class StatementRecoverer {
         Set<SSAValue> knownFalseForElse = new HashSet<>();
         Set<FieldKey> knownFalseFieldsForThen = new HashSet<>();
         Set<FieldKey> knownFalseFieldsForElse = new HashSet<>();
-        if (condValue != null) {
+        if (condValue != null && info.getConditionBlocks() == null) {
             FieldKey fieldKey = extractFieldKey(condValue);
             boolean knownFalseThen = (conditionOp == CompareOp.IFNE && info.isConditionNegated())
                                   || (conditionOp == CompareOp.IFEQ && !info.isConditionNegated());
@@ -5428,7 +5471,7 @@ public class StatementRecoverer {
             // variable: the value is named after its own slot, so the usual store recovery collapses it to a
             // dropped self-assignment (local = local) and loses the call. Recovering the definition yields
             // the actual `min(x, 10)`.
-            com.tonic.analysis.ssa.value.Value value = st.getValue();
+            Value value = st.getValue();
             Expression valueExpr;
             if (value instanceof SSAValue && ((SSAValue) value).getDefinition() != null) {
                 valueExpr = exprRecoverer.recover(((SSAValue) value).getDefinition());
@@ -5480,7 +5523,7 @@ public class StatementRecoverer {
         if (leftConst == rightConst) {
             return false;
         }
-        com.tonic.analysis.ssa.value.Value nonConst = leftConst ? bin.getRight() : bin.getLeft();
+        Value nonConst = leftConst ? bin.getRight() : bin.getLeft();
         if (!(nonConst instanceof SSAValue)) {
             return false;
         }
@@ -5492,7 +5535,7 @@ public class StatementRecoverer {
         // The usual loop shape: the slot's header value is a phi merging the initial value with this
         // store's own result on the back-edge (`i_phi = φ(init, i_next); i_next = i_phi +/- const`).
         if (nonConstDef instanceof PhiInstruction) {
-            for (com.tonic.analysis.ssa.value.Value incoming : ((PhiInstruction) nonConstDef).getIncomingValues().values()) {
+            for (Value incoming : ((PhiInstruction) nonConstDef).getIncomingValues().values()) {
                 if (incoming == store.getValue()) {
                     return true;
                 }
@@ -5501,7 +5544,7 @@ public class StatementRecoverer {
         return false;
     }
 
-    private boolean isConstantIrValue(com.tonic.analysis.ssa.value.Value v) {
+    private boolean isConstantIrValue(Value v) {
         return v instanceof Constant
                 || (v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
     }
