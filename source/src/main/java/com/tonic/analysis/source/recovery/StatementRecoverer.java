@@ -5250,7 +5250,12 @@ public class StatementRecoverer {
         int targetLocal = info.getInductionLocalIndex();
 
         if (incrementBlock == null || targetLocal < 0) {
-            return recoverWhileLoopFallback(header, info);
+            // No usable counter store: the "increment" the classifier found is not a real for-counter
+            // (targetLocal < 0 is a standalone ADD/SUB such as an address computation `base + i*stride`
+            // in the body). Recover as a while loop, which lifts an at-top induction update the header
+            // itself performs (`for (i = n; --i >= 0;)`); a plain while that ignored that update would
+            // drop it and loop forever.
+            return recoverWhileLoop(header, info);
         }
 
         context.getExpressionContext().pushForLoopScope();
@@ -5466,36 +5471,6 @@ public class StatementRecoverer {
     private boolean isConstantIrValue(com.tonic.analysis.ssa.value.Value v) {
         return v instanceof Constant
                 || (v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
-    }
-
-    private Statement recoverWhileLoopFallback(IRBlock header, RegionInfo info) {
-        Expression condition = recoverCondition(header, info.isConditionNegated());
-
-        Set<IRBlock> stopBlocks = new HashSet<>();
-        stopBlocks.add(header);
-        if (info.getLoopExit() != null) {
-            stopBlocks.add(info.getLoopExit());
-        } else if (info.getLoop() != null) {
-            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
-            for (IRBlock loopBlock : loopBlocks) {
-                for (IRBlock succ : loopBlock.getSuccessors()) {
-                    if (!loopBlocks.contains(succ)) {
-                        stopBlocks.add(succ);
-                    }
-                }
-            }
-        }
-
-        context.pushStopBlocks(stopBlocks);
-        try {
-            List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
-            BlockStmt body = new BlockStmt(bodyStmts);
-            WhileStmt whileStmt = new WhileStmt(condition, body);
-            stampFromHeader(whileStmt, header);
-            return whileStmt;
-        } finally {
-            context.popStopBlocks();
-        }
     }
 
     private Statement recoverStoreLocalAsForInit(StoreLocalInstruction store) {
