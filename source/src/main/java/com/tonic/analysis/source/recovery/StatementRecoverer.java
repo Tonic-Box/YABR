@@ -5313,10 +5313,26 @@ public class StatementRecoverer {
                 continue;
             }
             if (!needed.contains(instr)) {
+                // A dead pure value (an unused `load_local`/`const` the iinc lift leaves behind, whose
+                // value the induction actually reads from the header phi) is SSA noise, not body work
+                // merged into the increment. Ignore it; only genuine work makes the block impure.
+                if (isDeadPureInstruction(instr)) {
+                    continue;
+                }
                 return false;
             }
         }
         return true;
+    }
+
+    /** A value-producing instruction with no side effect whose result is unused (dead SSA noise). */
+    private boolean isDeadPureInstruction(IRInstruction instr) {
+        if (!(instr instanceof LoadLocalInstruction || instr instanceof ConstantInstruction
+                || instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction)) {
+            return false;
+        }
+        SSAValue result = instr.getResult();
+        return result != null && result.getUses().isEmpty();
     }
 
     private Statement recoverForLoop(IRBlock header, RegionInfo info) {

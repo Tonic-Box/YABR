@@ -740,6 +740,11 @@ public class StructuralAnalyzer {
             if (instr.isTerminator()) {
                 continue;
             }
+            if (instr instanceof InvokeInstruction && "<init>".equals(((InvokeInstruction) instr).getName())) {
+                // A constructor call is void but is part of building the thrown/returned value
+                // (`throw new X(msg)`), not independent work.
+                continue;
+            }
             SSAValue result = instr.getResult();
             if (result == null) {
                 return false; // a void instruction (store, void call, monitor) is real work
