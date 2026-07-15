@@ -3565,7 +3565,13 @@ public class StatementRecoverer {
                     }
                     IRBlock merge = info.getMergeBlock();
                     if (merge != null) {
-                        if (stopBlocks.contains(merge) && isReturnBlock(merge)) {
+                        if (stopBlocks.contains(merge) && context.classifyLoopJump(merge) != null) {
+                            // The merge is the enclosing loop's boundary (a shared break/continue target),
+                            // reached only as a post-dominator. It is emitted once by the enclosing
+                            // structure, not inlined as this if's private tail (which would duplicate a
+                            // shared return into one branch and drop it from the others).
+                            current = null;
+                        } else if (stopBlocks.contains(merge) && isReturnBlock(merge)) {
                             List<Statement> returnStmts = recoverSimpleBlock(merge);
                             result.addAll(returnStmts);
                             context.markProcessed(merge);
@@ -4776,6 +4782,29 @@ public class StatementRecoverer {
         if (condition == null) {
             condition = recoverCondition(header, info.isConditionNegated());
         }
+
+        // A loop-body conditional whose then-arm is the enclosing loop's continue target and whose merge
+        // is the loop's exit is a conditional break: entering the then loops back, falling through leaves.
+        // Recover it as `if (breakCond) break;` - the then-arm is the implicit continue, and the exit is a
+        // shared block the enclosing structure emits once (never this branch's private return).
+        if (info.getConditionBlocks() == null && info.getThenBlock() != null && info.getMergeBlock() != null) {
+            ControlFlowContext.LoopJump thenJump = context.classifyLoopJump(info.getThenBlock());
+            ControlFlowContext.LoopJump mergeJump = context.classifyLoopJump(info.getMergeBlock());
+            if (thenJump != null && thenJump.kind == ControlFlowContext.JumpKind.CONTINUE
+                    && mergeJump != null && mergeJump.kind == ControlFlowContext.JumpKind.BREAK) {
+                Expression breakCond = recoverCondition(header, !info.isConditionNegated());
+                Statement brk = mergeJump.loopHeader != null
+                        ? new BreakStmt(context.getOrCreateLabel(mergeJump.loopHeader))
+                        : new BreakStmt();
+                IfStmt guard = new IfStmt(breakCond, brk, null);
+                stampFromHeader(guard, header);
+                if (!headerStmts.isEmpty()) {
+                    context.addPendingStatements(headerStmts);
+                }
+                return guard;
+            }
+        }
+
         Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
         if (info.getMergeBlock() != null) {
             stopBlocks.add(info.getMergeBlock());
