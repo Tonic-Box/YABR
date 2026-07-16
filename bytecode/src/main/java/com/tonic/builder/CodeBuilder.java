@@ -1140,7 +1140,7 @@ public class CodeBuilder {
      */
     private MethodEntry scratchMethod(ClassFile target) {
         ConstPool cp = target.getConstPool();
-        int utf8 = cp.getIndexOf(cp.findOrAddUtf8(target.getClassName()));
+        int utf8 = cp.utf8Index(target.getClassName());
         CodeAttribute codeAttr = new CodeAttribute("Code", (MethodEntry) null, utf8, 0);
         codeAttr.setMaxStack(0);
         codeAttr.setMaxLocals(0);

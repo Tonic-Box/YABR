@@ -232,10 +232,10 @@ public class AnnotationBuilder<P> {
 
     /** Materializes this specification into an {@link Annotation}, adding entries to {@code pool}. */
     public Annotation build(ConstPool pool) {
-        int typeIndex = pool.getIndexOf(pool.findOrAddUtf8(typeDescriptor));
+        int typeIndex = pool.utf8Index(typeDescriptor);
         List<ElementValuePair> pairs = new ArrayList<>(elements.size());
         for (Element element : elements) {
-            int nameIndex = pool.getIndexOf(pool.findOrAddUtf8(element.name));
+            int nameIndex = pool.utf8Index(element.name);
             ElementValue value = element.factory.create(pool);
             pairs.add(new ElementValuePair(nameIndex, element.name, value));
         }
@@ -280,19 +280,19 @@ public class AnnotationBuilder<P> {
     }
 
     private static ValueFactory stringFactory(String v) {
-        return pool -> new ElementValue('s', pool.getIndexOf(pool.findOrAddUtf8(v)));
+        return pool -> new ElementValue('s', pool.utf8Index(v));
     }
 
     private static ValueFactory classFactory(String type) {
         String descriptor = toClassDescriptor(type);
-        return pool -> new ElementValue('c', pool.getIndexOf(pool.findOrAddUtf8(descriptor)));
+        return pool -> new ElementValue('c', pool.utf8Index(descriptor));
     }
 
     private static ValueFactory enumFactory(String enumType, String constant) {
         String descriptor = toTypeDescriptor(enumType);
         return pool -> {
-            int typeNameIndex = pool.getIndexOf(pool.findOrAddUtf8(descriptor));
-            int constNameIndex = pool.getIndexOf(pool.findOrAddUtf8(constant));
+            int typeNameIndex = pool.utf8Index(descriptor);
+            int constNameIndex = pool.utf8Index(constant);
             return new ElementValue('e', new EnumConst(pool, typeNameIndex, constNameIndex));
         };
     }

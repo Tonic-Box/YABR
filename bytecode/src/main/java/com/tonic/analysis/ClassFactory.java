@@ -9,7 +9,6 @@ import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.MethodRefItem;
 import com.tonic.parser.constpool.NameAndTypeRefItem;
-import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.util.AccessBuilder;
 import com.tonic.util.Logger;
 import com.tonic.util.Modifiers;
@@ -59,8 +58,8 @@ public final class ClassFactory {
     public static MethodEntry addDefaultConstructor(ClassFile cf) {
         String name = "<init>";
         String desc = "()V";
-        int nameIndex = cf.getConstPool().getIndexOf(cf.getConstPool().findOrAddUtf8(name));
-        int descIndex = cf.getConstPool().getIndexOf(cf.getConstPool().findOrAddUtf8(desc));
+        int nameIndex = cf.getConstPool().utf8Index(name);
+        int descIndex = cf.getConstPool().utf8Index(desc);
         NameAndTypeRefItem nameAndType = cf.getConstPool().findOrAddNameAndType(nameIndex, descIndex);
         int nameAndTypeIndex = cf.getConstPool().getIndexOf(nameAndType);
         MethodRefItem superConstructorRef = cf.getConstPool().findOrAddMethodRef(cf.getSuperClass(), nameAndTypeIndex);
@@ -92,8 +91,8 @@ public final class ClassFactory {
         String name = "<clinit>";
         String desc = "()V";
         int accessFlags = new AccessBuilder().setPublic().setStatic().build();
-        int nameIndex = cf.getConstPool().getIndexOf(cf.getConstPool().findOrAddUtf8(name));
-        int descIndex = cf.getConstPool().getIndexOf(cf.getConstPool().findOrAddUtf8(desc));
+        int nameIndex = cf.getConstPool().utf8Index(name);
+        int descIndex = cf.getConstPool().utf8Index(desc);
 
         MethodEntry initializer = new MethodEntry(cf, accessFlags, nameIndex, descIndex, new ArrayList<>());
         initializer.setName(name);
@@ -329,7 +328,7 @@ public final class ClassFactory {
 
     private static CodeAttribute newCodeAttribute(ClassFile cf, MethodEntry owner, int maxStack, int maxLocals) {
         CodeAttribute codeAttr = new CodeAttribute("Code", owner,
-                cf.getConstPool().getIndexOf(cf.getConstPool().findOrAddUtf8("Code")), 0);
+                cf.getConstPool().utf8Index("Code"), 0);
         codeAttr.setMaxStack(maxStack);
         codeAttr.setMaxLocals(maxLocals);
         return codeAttr;

@@ -258,6 +258,17 @@ public class ConstPool {
     }
 
     /**
+     * Finds or adds a Utf8Item for the value and returns its constant-pool index. Convenience for the
+     * common {@code getIndexOf(findOrAddUtf8(value))} pairing.
+     *
+     * @param value The UTF-8 string to find or add.
+     * @return the 1-based constant-pool index of the Utf8Item.
+     */
+    public int utf8Index(String value) {
+        return getIndexOf(findOrAddUtf8(value));
+    }
+
+    /**
      * Always adds a new Utf8Item with the specified value.
      * Unlike findOrAddUtf8, this never reuses existing entries.
      * Use this when the value must not be affected by later constant pool modifications.

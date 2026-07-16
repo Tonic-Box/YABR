@@ -250,30 +250,6 @@ public class BitTrackingDCE implements IRTransform {
         SSAValue result = instr.getResult();
         long demanded = demandedBits.getOrDefault(result, 0L);
 
-        if (demanded == 0L && !hasSideEffects(instr)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private boolean hasSideEffects(IRInstruction instr) {
-        if (instr instanceof InvokeInstruction) return true;
-
-        if (instr instanceof FieldAccessInstruction) {
-            FieldAccessInstruction access = (FieldAccessInstruction) instr;
-            return access.isStore();
-        }
-        if (instr instanceof ArrayAccessInstruction) {
-            ArrayAccessInstruction access = (ArrayAccessInstruction) instr;
-            return access.isStore();
-        }
-        if (instr instanceof SimpleInstruction) {
-            SimpleInstruction simple = (SimpleInstruction) instr;
-            SimpleOp op = simple.getOp();
-            return op == SimpleOp.MONITORENTER || op == SimpleOp.MONITOREXIT || op == SimpleOp.ATHROW;
-        }
-
-        return false;
+        return demanded == 0L && !InstructionEffects.hasSideEffects(instr);
     }
 }

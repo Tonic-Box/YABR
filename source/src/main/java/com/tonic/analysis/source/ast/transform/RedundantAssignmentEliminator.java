@@ -74,7 +74,7 @@ public class RedundantAssignmentEliminator implements ASTTransform {
     }
 
     private boolean isSideEffectFree(Expression e) {
-        return !Boolean.TRUE.equals(e.accept(DeadStoreEliminator.SideEffectDetector.INSTANCE));
+        return !Boolean.TRUE.equals(e.accept(SideEffectDetector.INSTANCE));
     }
 
     private boolean writesVar(Statement stmt, String var) {

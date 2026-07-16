@@ -51,7 +51,7 @@ final class AnnotationSupport {
         }
 
         String name = visible ? "RuntimeVisibleParameterAnnotations" : "RuntimeInvisibleParameterAnnotations";
-        int nameIndex = pool.getIndexOf(pool.findOrAddUtf8(name));
+        int nameIndex = pool.utf8Index(name);
         RuntimeVisibleParameterAnnotationsAttribute attribute =
                 new RuntimeVisibleParameterAnnotationsAttribute(name, method, visible, nameIndex, 0);
         attribute.setParameterAnnotations(parameters);
@@ -74,7 +74,7 @@ final class AnnotationSupport {
             }
         }
 
-        int nameIndex = pool.getIndexOf(pool.findOrAddUtf8(attributeName(visible)));
+        int nameIndex = pool.utf8Index(attributeName(visible));
         RuntimeVisibleAnnotationsAttribute created = create.apply(nameIndex);
         List<Annotation> annotations = new ArrayList<>();
         annotations.add(annotation);

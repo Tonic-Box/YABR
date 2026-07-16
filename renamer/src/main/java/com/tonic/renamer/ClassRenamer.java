@@ -79,7 +79,7 @@ public class ClassRenamer {
                     // mutating the existing Utf8 in place. Constant pools deduplicate Utf8 entries,
                     // so the class-name Utf8 can be shared with a CONSTANT_String (or other use) of
                     // equal text; mutating it would silently corrupt that constant.
-                    int newNameIndex = cp.getIndexOf(cp.findOrAddUtf8(newName));
+                    int newNameIndex = cp.utf8Index(newName);
                     classRef.setNameIndex(newNameIndex);
                 }
             }
@@ -175,7 +175,7 @@ public class ClassRenamer {
                     continue;
                 }
                 if (!simpleName.equals(utf8Value(cp, entry.getInnerNameIndex()))) {
-                    entry.setInnerNameIndex(cp.getIndexOf(cp.findOrAddUtf8(simpleName)));
+                    entry.setInnerNameIndex(cp.utf8Index(simpleName));
                 }
             }
         }

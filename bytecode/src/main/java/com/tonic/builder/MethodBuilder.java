@@ -111,7 +111,7 @@ public class MethodBuilder {
 
         if(!exceptions.isEmpty())
         {
-            int nameIndex = constPool.getIndexOf(constPool.findOrAddUtf8("Exceptions"));
+            int nameIndex = constPool.utf8Index("Exceptions");
             ExceptionsAttribute exAttr = new ExceptionsAttribute("Exceptions", method, nameIndex, 0);
             ClassRefItem type;
             for(String ex : exceptions)

@@ -136,6 +136,7 @@ int idx = cp.getIndexOf(item);
 ```java
 // UTF8 strings
 Utf8Item utf8 = cp.findOrAddUtf8("myString");
+int utf8Idx = cp.utf8Index("myString");   // shorthand for getIndexOf(findOrAddUtf8(...))
 
 // Class references
 ClassRefItem classRef = cp.findOrAddClassRef(utf8Index);

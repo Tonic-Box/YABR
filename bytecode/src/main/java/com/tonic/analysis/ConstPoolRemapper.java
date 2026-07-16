@@ -73,7 +73,7 @@ public final class ConstPoolRemapper {
         Item<?> item = sp.getItem(srcIndex);
         int out;
         if (item instanceof Utf8Item) {
-            out = tp.getIndexOf(tp.findOrAddUtf8(((Utf8Item) item).getValue()));
+            out = tp.utf8Index(((Utf8Item) item).getValue());
         } else if (item instanceof ClassRefItem) {
             out = tp.getIndexOf(tp.findOrAddClass(((ClassRefItem) item).getClassName()));
         } else if (item instanceof MethodRefItem) {

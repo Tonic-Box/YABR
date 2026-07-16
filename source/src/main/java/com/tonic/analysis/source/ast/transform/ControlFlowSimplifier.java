@@ -114,7 +114,7 @@ public class ControlFlowSimplifier implements ASTTransform {
         if (isEmptyBlock(ifStmt.getThenBranch()) && !ifStmt.hasElse()) {
             Expression cond = ifStmt.getCondition();
             boolean sideEffecting = Boolean.TRUE.equals(
-                    cond.accept(DeadStoreEliminator.SideEffectDetector.INSTANCE));
+                    cond.accept(SideEffectDetector.INSTANCE));
             if (!sideEffecting) {
                 parentList.remove(index);
                 return true;

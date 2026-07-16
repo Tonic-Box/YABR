@@ -80,7 +80,7 @@ public class FieldBuilder {
         FieldEntry field = classFile.createNewField(getAccess(), name, descriptor, attributes);
 
         if (constantValue != null) {
-            int nameIndex = constPool.getIndexOf(constPool.findOrAddUtf8("ConstantValue"));
+            int nameIndex = constPool.utf8Index("ConstantValue");
             int valueIndex = addConstantToPool(constPool, constantValue);
             ConstantValueAttribute cvAttr = new ConstantValueAttribute("ConstantValue", field, nameIndex, 2);
             cvAttr.setConstantValueIndex(valueIndex);
@@ -88,7 +88,7 @@ public class FieldBuilder {
         }
 
         if (deprecated) {
-            int nameIndex = constPool.getIndexOf(constPool.findOrAddUtf8("Deprecated"));
+            int nameIndex = constPool.utf8Index("Deprecated");
             DeprecatedAttribute deprecatedAttr = new DeprecatedAttribute("Deprecated", field, nameIndex, 0);
             field.getAttributes().add(deprecatedAttr);
         }
