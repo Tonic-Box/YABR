@@ -69,6 +69,7 @@ BytecodeContext ctx = new BytecodeContext.Builder()
 | `heapManager(mgr)` | Set heap manager for object allocation |
 | `classResolver(res)` | Set class/method resolver |
 | `mode(mode)` | Set invocation mode (RECURSIVE/DELEGATED) |
+| `invocationHandler(handler)` | Override the handler used for every call; when unset the engine picks a `RecursiveHandler` in RECURSIVE mode |
 | `maxCallDepth(n)` | Maximum call stack depth |
 | `maxInstructions(n)` | Maximum instructions before abort |
 | `trackStatistics(bool)` | Enable execution statistics |
@@ -133,6 +134,8 @@ engine.resetClassInitialization();
 ```
 
 **Auto-initialization**: When GETSTATIC or PUTSTATIC is executed, the engine automatically calls `ensureClassInitialized()` for the field's owner class. This matches JVM semantics where static field access triggers class initialization.
+
+**JDK constants**: A JDK class's `<clinit>` cannot run here (those classes are not in the pool), so a GETSTATIC of a compile-time constant like `Integer.MAX_VALUE` would otherwise read as the zero default. The engine supplies the well-known `java.lang` `public static final` primitive constants (the wrapper `MIN_VALUE`/`MAX_VALUE`/`SIZE`/`BYTES`, the `Float`/`Double` specials, and `Math.PI`/`E`) when the heap has no value for a static field.
 
 ### BytecodeResult
 
@@ -284,6 +287,12 @@ Object size = obj.getField("java/util/ArrayList", "size", "I");
 // Type checking
 boolean isInstance = obj.isInstanceOf("java/util/List");
 ```
+
+`ObjectInstance.isInstanceOf` compares the exact class (plus `java/lang/Object`).
+When executing `checkcast`/`instanceof` the engine additionally resolves the
+relationship through the class hierarchy, and passes conservatively when a type is
+not loaded, so a valid upcast such as `ArrayList` to `List` succeeds rather than
+raising a spurious `ClassCastException`.
 
 #### Field Key System
 
@@ -437,6 +446,16 @@ DelegatingHandler delegating = new DelegatingHandler((method, receiver, args) ->
     // Custom invocation logic
     return ConcreteValue.intValue(42);
 });
+```
+
+Inject a handler into the context so the engine routes every call through it,
+instead of the mode-selected default:
+
+```java
+BytecodeContext ctx = new BytecodeContext.Builder()
+    .classResolver(resolver)
+    .invocationHandler(delegating)   // every call goes to this handler
+    .build();
 ```
 
 ### InvocationResult

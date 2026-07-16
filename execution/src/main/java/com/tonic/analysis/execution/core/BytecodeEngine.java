@@ -83,7 +83,9 @@ public final class BytecodeEngine {
         this.interrupted = false;
         this.instructionCount = 0;
 
-        if (context.getMode() == ExecutionMode.RECURSIVE) {
+        if (context.getInvocationHandler() != null) {
+            this.invocationHandler = context.getInvocationHandler();
+        } else if (context.getMode() == ExecutionMode.RECURSIVE) {
             this.invocationHandler = new RecursiveHandler(
                 context.getClassResolver(),
                 context.getNativeRegistry()
@@ -308,7 +310,9 @@ public final class BytecodeEngine {
                     clinitEngine.initializedClasses.addAll(this.initializedClasses);
                     BytecodeResult result = clinitEngine.execute(clinitMethod);
                     if (result.getStatus() != BytecodeResult.Status.COMPLETED) {
-                        // clinit failed - this is okay, we continue gracefully
+                        // clinit did not complete; the class is marked initialized (JVM semantics) but
+                        // report the failure so callers can distinguish it from a clean init.
+                        return false;
                     }
                 }
             }
@@ -451,14 +455,12 @@ public final class BytecodeEngine {
     }
 
     private void handleMethodHandle(StackFrame frame, EngineDispatchContext ctx) { //TODO
-        MethodHandleInfo info = ctx.getPendingMethodHandle();
         ObjectInstance mh = context.getHeapManager().newObject("java/lang/invoke/MethodHandle");
         frame.getStack().pushReference(mh);
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
     private void handleMethodType(StackFrame frame, EngineDispatchContext ctx) { //TODO
-        MethodTypeInfo info = ctx.getPendingMethodType();
         ObjectInstance mt = context.getHeapManager().newObject("java/lang/invoke/MethodType");
         frame.getStack().pushReference(mt);
         frame.advancePC(frame.getCurrentInstruction().getLength());
@@ -833,13 +835,18 @@ public final class BytecodeEngine {
         if (fieldInfo.isStatic()) {
             ensureClassInitialized(owner);
             Object value = context.getHeapManager().getStaticField(owner, name, descriptor);
+            if (value == null) {
+                // A JDK class's <clinit> cannot run here, so its compile-time constants (e.g.
+                // Integer.MAX_VALUE) would read as the 0 default; supply the known value instead.
+                value = JdkConstants.lookup(owner, name);
+            }
             pushFieldValue(frame, descriptor, value);
         } else {
             ConcreteValue objRef = frame.getStack().pop();
-            if (objRef.isNull()) {
+            ObjectInstance obj = objRef.isNull() ? null : objRef.asReference();
+            if (obj == null) {
                 pushDefaultValue(frame, descriptor);
             } else {
-                ObjectInstance obj = objRef.asReference();
                 Object value = obj.getField(owner, name, descriptor);
                 ConcreteValue wrappedValue = wrapStoredValue(value, descriptor);
                 notifyFieldRead(obj, name, wrappedValue);
@@ -863,8 +870,8 @@ public final class BytecodeEngine {
             context.getHeapManager().putStaticField(owner, name, descriptor, convertToStorable(value, descriptor));
         } else {
             ConcreteValue objRef = frame.getStack().pop();
-            if (!objRef.isNull()) {
-                ObjectInstance obj = objRef.asReference();
+            ObjectInstance obj = objRef.isNull() ? null : objRef.asReference();
+            if (obj != null) {
                 Object oldRaw = obj.getField(owner, name, descriptor);
                 ConcreteValue oldValue = wrapStoredValue(oldRaw, descriptor);
                 obj.setField(owner, name, descriptor, convertToStorable(value, descriptor));
@@ -1038,7 +1045,7 @@ public final class BytecodeEngine {
         }
         ObjectInstance exception = exceptionRef.asReference();
 
-        if (TRACE_INSTRUCTIONS) {
+        if (TRACE_INSTRUCTIONS && exception != null) {
             String exClass = exception.getClassName();
             Object detailMsg = exception.getField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;");
             String msgStr = null;
@@ -1422,7 +1429,24 @@ public final class BytecodeEngine {
 
         @Override
         public boolean isInstanceOf(ObjectInstance obj, String className) {
-            return obj.isInstanceOf(className);
+            if (obj.isInstanceOf(className)) {
+                return true;
+            }
+            ClassResolver resolver = context.getClassResolver();
+            if (resolver == null) {
+                return false;
+            }
+            String actual = obj.getClassName();
+            if (resolver.isAssignableFrom(className, actual)) {
+                return true;
+            }
+            // The hierarchy can only disprove a relationship when both types are loaded. When either
+            // side is an unresolved library type (e.g. java/util/ArrayList vs java/util/List with the
+            // JDK not in the pool), the engine cannot prove the types unrelated; a verified class
+            // file's casts are almost always valid, so it must not manufacture a mismatch the real
+            // JVM would not produce.
+            return resolver.getClassPool().get(actual) == null
+                    || resolver.getClassPool().get(className) == null;
         }
 
         @Override

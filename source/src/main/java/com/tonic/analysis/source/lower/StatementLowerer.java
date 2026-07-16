@@ -12,6 +12,8 @@ import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,6 +26,14 @@ public class StatementLowerer {
 
     private final LoweringContext ctx;
     private final ExpressionLowerer exprLowerer;
+
+    /**
+     * Finally blocks of the try statements the lowering is currently inside, innermost first. An
+     * abrupt {@code return} out of a protected region must run each enclosing finally before exiting,
+     * matching javac's inlined-finally lowering (JLS 14.20.2). Fall-through and exception paths get
+     * their own finally copies in {@link #lowerTryCatch}.
+     */
+    private final Deque<Statement> finallyStack = new ArrayDeque<>();
 
     /**
      * Creates a new statement lowerer.
@@ -135,13 +145,22 @@ public class StatementLowerer {
 
     private void lowerReturn(ReturnStmt ret) {
         Expression value = ret.getValue();
+        // The return value is evaluated before any enclosing finally runs (JLS 14.20.2). Its SSA value
+        // is an immutable snapshot, so a finally that reassigns the same variable cannot clobber it.
+        Value retVal = value != null ? exprLowerer.lower(value) : null;
 
-        if (value != null) {
-            Value retVal = exprLowerer.lower(value);
-            ctx.getCurrentBlock().addInstruction(new ReturnInstruction(retVal));
-        } else {
-            ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
+        for (Statement fin : finallyStack) {
+            if (ctx.getCurrentBlock().getTerminator() != null) {
+                return;
+            }
+            lower(fin);
         }
+        if (ctx.getCurrentBlock().getTerminator() != null) {
+            return;
+        }
+
+        ctx.getCurrentBlock().addInstruction(
+                retVal != null ? new ReturnInstruction(retVal) : new ReturnInstruction());
     }
 
     private void lowerIf(IfStmt ifStmt) {
@@ -463,6 +482,10 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(tryBlock);
+        // Protect the try body and catch bodies: a return out of either must run this finally first.
+        if (finallyBlock != null) {
+            finallyStack.push(tryCatch.getFinallyBlock());
+        }
         java.util.Map<String, SSAValue> preTryVars = ctx.snapshotVariables();
         int blocksBeforeTryBody = ctx.getIrMethod().getBlocks().size();
         lower(tryCatch.getTryBlock());
@@ -538,6 +561,8 @@ public class StatementLowerer {
         }
 
         if (finallyBlock != null) {
+            // The try/catch bodies are lowered; the finally copies below are not themselves protected.
+            finallyStack.pop();
             // Synthetic catch-all so the finally also runs when an exception escapes the try/catches (javac
             // semantics - otherwise an uncaught throw skips the finally entirely), and so the re-decompile
             // recognizes the finally via the catch(Throwable){ <finally>; throw } pattern

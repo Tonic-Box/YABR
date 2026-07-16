@@ -1,6 +1,7 @@
 package com.tonic.analysis.execution.core;
 
 import com.tonic.analysis.execution.heap.HeapManager;
+import com.tonic.analysis.execution.invoke.InvocationHandler;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 
@@ -10,6 +11,7 @@ public final class BytecodeContext {
     private final HeapManager heapManager;
     private final ClassResolver classResolver;
     private final NativeRegistry nativeRegistry;
+    private final InvocationHandler invocationHandler;
     private final int maxCallDepth;
     private final int maxInstructions;
     private final boolean trackStatistics;
@@ -19,6 +21,7 @@ public final class BytecodeContext {
         this.heapManager = builder.heapManager;
         this.classResolver = builder.classResolver;
         this.nativeRegistry = builder.nativeRegistry;
+        this.invocationHandler = builder.invocationHandler;
         this.maxCallDepth = builder.maxCallDepth;
         this.maxInstructions = builder.maxInstructions;
         this.trackStatistics = builder.trackStatistics;
@@ -40,6 +43,15 @@ public final class BytecodeContext {
         return nativeRegistry;
     }
 
+    /**
+     * A custom invocation handler that overrides the default per-mode handler, or {@code null} to use
+     * the default. Only consulted in {@link ExecutionMode#RECURSIVE}; lets a caller intercept every
+     * call (e.g. to stub the environment for differential execution).
+     */
+    public InvocationHandler getInvocationHandler() {
+        return invocationHandler;
+    }
+
     public int getMaxCallDepth() {
         return maxCallDepth;
     }
@@ -57,6 +69,7 @@ public final class BytecodeContext {
         private HeapManager heapManager;
         private ClassResolver classResolver;
         private NativeRegistry nativeRegistry;
+        private InvocationHandler invocationHandler;
         private int maxCallDepth = 1000;
         private int maxInstructions = 10_000_000;
         private boolean trackStatistics = false;
@@ -81,6 +94,15 @@ public final class BytecodeContext {
 
         public Builder nativeRegistry(NativeRegistry nativeRegistry) {
             this.nativeRegistry = nativeRegistry;
+            return this;
+        }
+
+        /**
+         * Overrides the default per-mode invocation handler. Used to intercept every call
+         * ({@link ExecutionMode#RECURSIVE} only).
+         */
+        public Builder invocationHandler(InvocationHandler invocationHandler) {
+            this.invocationHandler = invocationHandler;
             return this;
         }
 
