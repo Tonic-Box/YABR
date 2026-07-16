@@ -32,6 +32,10 @@ public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute {
         return parameterAnnotations;
     }
 
+    public void setParameterAnnotations(List<List<Annotation>> parameterAnnotations) {
+        this.parameterAnnotations = parameterAnnotations;
+    }
+
     public boolean isVisible() {
         return visible;
     }

@@ -62,6 +62,7 @@ ClassFile cf = ClassBuilder.create("com/example/MyClass")
 | `interfaces(String... names)` | Add implemented interfaces |
 | `addField(int access, String name, String desc)` | Add a field, returns FieldBuilder |
 | `addMethod(int access, String name, String desc)` | Add a method, returns MethodBuilder |
+| `annotate(String type)` | Add a class annotation, returns AnnotationBuilder |
 | `build()` | Build and return ClassFile |
 | `toByteArray()` | Build and serialize to byte array |
 
@@ -94,6 +95,7 @@ ClassBuilder.create("com/example/Counter")
 | `constantValue(Object value)` | Set ConstantValue attribute |
 | `synthetic()` | Mark field as synthetic |
 | `deprecated()` | Mark field as deprecated |
+| `annotate(String type)` | Add a field annotation, returns AnnotationBuilder |
 | `end()` | Return to ClassBuilder |
 
 ---
@@ -126,7 +128,110 @@ ClassBuilder.create("com/example/Calculator")
 | `exceptions(String... types)` | Add throws clause |
 | `maxStack(int value)` | Set max stack depth |
 | `maxLocals(int value)` | Set max local variables |
+| `annotate(String type)` | Add a method annotation, returns AnnotationBuilder |
+| `annotateParameter(int index, String type)` | Add a parameter annotation, returns AnnotationBuilder |
 | `end()` | Return to ClassBuilder |
+
+---
+
+## AnnotationBuilder
+
+Add annotations to classes, fields, methods, and method parameters. Reach it from any fluent builder
+via `.annotate(type)` - it returns the annotation, with `.end()` back to the parent, exactly like
+`addField`/`addMethod`/`code`. The type accepts an internal name (`com/example/Foo`), a dotted name
+(`com.example.Foo`), or a field descriptor (`Lcom/example/Foo;`). A marker annotation is just
+`.annotate("...").end()`.
+
+```java
+ClassFile cf = ClassBuilder.create("com/example/UserApi")
+    .annotate("com/example/Route")
+        .stringValue("path", "/users")
+        .value("cacheable", true)
+    .end()
+
+    .addField(AccessFlags.ACC_PRIVATE, "log", "Lorg/slf4j/Logger;")
+        .annotate("javax/inject/Inject").end()
+    .end()
+
+    .addMethod(AccessFlags.ACC_PUBLIC, "find", "(I)Ljava/lang/Object;")
+        .annotate("java/lang/Deprecated").end()
+        .annotateParameter(0, "javax/annotation/Nonnull").end()
+        .code().aconst_null().areturn().end()
+    .end()
+
+    .build();
+```
+
+### Element values
+
+Each setter selects the correct class-file element-value tag and constant-pool entry for you (a
+String points at a Utf8 entry, a Class at a Utf8 type descriptor, an enum at its type descriptor plus
+constant name).
+
+| Setter | Element kind |
+|--------|--------------|
+| `value(name, int\|long\|float\|double\|boolean)` | primitive |
+| `byteValue` / `charValue` / `shortValue(name, v)` | byte/char/short (explicit - the tag must match the annotation's declared type) |
+| `stringValue(name, String)` | String |
+| `classValue(name, type)` | Class literal (class name or raw descriptor) |
+| `enumValue(name, enumType, constant)` | enum constant |
+| `annotationValue(name, AnnotationBuilder)` | nested annotation |
+| `intArray` / `longArray` / `floatArray` / `doubleArray` / `booleanArray` / `byteArray` / `charArray` / `shortArray` / `stringArray` / `classArray(name, values...)` | array of that kind |
+| `enumArray(name, enumType, constants...)` | array of enum constants |
+| `annotationArray(name, AnnotationBuilder...)` | array of annotations |
+
+### Visibility
+
+Annotations are runtime-visible by default; `.visible(false)` emits them into the
+`RuntimeInvisibleAnnotations` attribute instead. Multiple annotations of the same visibility on one
+target are collected into a single attribute.
+
+```java
+.annotate("com/example/Internal").visible(false).end()
+```
+
+### Nested annotations and arrays
+
+Build sub-annotations standalone with `AnnotationBuilder.of(type)` and pass them as element values.
+
+```java
+AnnotationBuilder<?> meta = AnnotationBuilder.of("com/example/Meta")
+    .stringValue("author", "team");
+
+ClassBuilder.create("com/example/Config")
+    .annotate("com/example/Aggregate")
+        .annotationValue("meta", meta)
+        .enumArray("policies", "java/lang/annotation/RetentionPolicy", "SOURCE", "RUNTIME")
+        .classArray("types", "java/lang/String", "java/lang/Integer")
+    .end()
+    .build();
+```
+
+### Annotating an existing class
+
+For a class you loaded or parsed (rather than built here), construct standalone and `attachTo` the
+member or class. It appends to an existing annotations attribute of matching visibility, or creates
+one - it never emits a duplicate attribute.
+
+```java
+ClassFile cf = pool.loadClass(inputStream);
+MethodEntry m = cf.getMethod("doWork", "(I)I");
+
+AnnotationBuilder.of("java/lang/Deprecated")
+    .attachTo(m, cf.getConstPool());
+```
+
+### AnnotationBuilder Methods
+
+| Method | Description |
+|--------|-------------|
+| `of(String type)` | Standalone builder (for nested values or `attachTo`) |
+| `visible(boolean)` | Runtime-visible (default) or invisible |
+| `value(...)`, `byteValue`/`charValue`/`shortValue`, `stringValue`, `classValue`, `enumValue`, `annotationValue` | Add a scalar element value |
+| `intArray`/`stringArray`/`classArray`/`enumArray`/`annotationArray`/... | Add an array element value |
+| `attachTo(MemberEntry, ConstPool)` / `attachTo(ClassFile, ConstPool)` | Attach to an already-loaded member or class |
+| `build(ConstPool)` | Materialize into an `Annotation` |
+| `end()` | Return to the parent builder |
 
 ---
 

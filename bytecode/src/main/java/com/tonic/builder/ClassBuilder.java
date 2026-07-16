@@ -22,6 +22,7 @@ public class ClassBuilder implements AccessFlags {
     private final List<String> interfaces = new ArrayList<>();
     private final List<FieldBuilder> fields = new ArrayList<>();
     private final List<MethodBuilder> methods = new ArrayList<>();
+    private final List<AnnotationBuilder<ClassBuilder>> annotations = new ArrayList<>();
     private final List<BootstrapMethodDef> bootstrapMethods = new ArrayList<>();
 
     private ClassFile classFile;
@@ -71,6 +72,13 @@ public class ClassBuilder implements AccessFlags {
         return mb;
     }
 
+    /** Opens an annotation on this class; call {@link AnnotationBuilder#end()} to return here. */
+    public AnnotationBuilder<ClassBuilder> annotate(String type) {
+        AnnotationBuilder<ClassBuilder> annotation = AnnotationBuilder.forParent(this, type);
+        annotations.add(annotation);
+        return annotation;
+    }
+
     public ClassFile build() {
         try {
             ClassPool classPool = new ClassPool(true);
@@ -94,6 +102,10 @@ public class ClassBuilder implements AccessFlags {
 
             for (MethodBuilder mb : methods) {
                 mb.buildMethod(classFile, constPool);
+            }
+
+            for (AnnotationBuilder<ClassBuilder> annotation : annotations) {
+                annotation.attachTo(classFile, constPool);
             }
 
             if (!bootstrapMethods.isEmpty()) {

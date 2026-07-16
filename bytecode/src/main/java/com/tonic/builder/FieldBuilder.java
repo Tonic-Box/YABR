@@ -20,6 +20,7 @@ public class FieldBuilder {
     private Object constantValue;
     private boolean synthetic;
     private boolean deprecated;
+    private final List<AnnotationBuilder<FieldBuilder>> annotations = new ArrayList<>();
 
     FieldBuilder(ClassBuilder parent, int access, String name, String descriptor) {
         this.parent = parent;
@@ -31,6 +32,13 @@ public class FieldBuilder {
     public FieldBuilder constantValue(Object value) {
         this.constantValue = value;
         return this;
+    }
+
+    /** Opens an annotation on this field; call {@link AnnotationBuilder#end()} to return here. */
+    public AnnotationBuilder<FieldBuilder> annotate(String type) {
+        AnnotationBuilder<FieldBuilder> annotation = AnnotationBuilder.forParent(this, type);
+        annotations.add(annotation);
+        return annotation;
     }
 
     public FieldBuilder synthetic() {
@@ -83,6 +91,10 @@ public class FieldBuilder {
             int nameIndex = constPool.getIndexOf(constPool.findOrAddUtf8("Deprecated"));
             DeprecatedAttribute deprecatedAttr = new DeprecatedAttribute("Deprecated", field, nameIndex, 0);
             field.getAttributes().add(deprecatedAttr);
+        }
+
+        for (AnnotationBuilder<FieldBuilder> annotation : annotations) {
+            annotation.attachTo(field, constPool);
         }
     }
 

@@ -4,12 +4,16 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.ExceptionsAttribute;
+import com.tonic.parser.attribute.annotation.Annotation;
 import com.tonic.parser.constpool.ClassRefItem;
+import com.tonic.util.DescriptorUtil;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MethodBuilder {
 
@@ -21,6 +25,8 @@ public class MethodBuilder {
     private final List<String> exceptions = new ArrayList<>();
     private Integer maxStack;
     private Integer maxLocals;
+    private final List<AnnotationBuilder<MethodBuilder>> annotations = new ArrayList<>();
+    private final List<ParamAnnotation> parameterAnnotations = new ArrayList<>();
 
     MethodBuilder(ClassBuilder parent, int access, String name, String descriptor) {
         this.parent = parent;
@@ -34,6 +40,31 @@ public class MethodBuilder {
             codeBuilder = new CodeBuilder(this);
         }
         return codeBuilder;
+    }
+
+    /** Opens an annotation on this method; call {@link AnnotationBuilder#end()} to return here. */
+    public AnnotationBuilder<MethodBuilder> annotate(String type) {
+        AnnotationBuilder<MethodBuilder> annotation = AnnotationBuilder.forParent(this, type);
+        annotations.add(annotation);
+        return annotation;
+    }
+
+    /**
+     * Opens an annotation on the parameter at {@code index} (0-based); call
+     * {@link AnnotationBuilder#end()} to return here.
+     *
+     * @throws IllegalArgumentException if {@code index} is not a valid parameter position for this
+     *                                  method's descriptor
+     */
+    public AnnotationBuilder<MethodBuilder> annotateParameter(int index, String type) {
+        int paramCount = DescriptorUtil.countParameters(descriptor);
+        if (index < 0 || index >= paramCount) {
+            throw new IllegalArgumentException("Parameter index " + index + " out of range for "
+                    + descriptor + " (" + paramCount + " parameter(s))");
+        }
+        AnnotationBuilder<MethodBuilder> annotation = AnnotationBuilder.forParent(this, type);
+        parameterAnnotations.add(new ParamAnnotation(index, annotation));
+        return annotation;
     }
 
     public MethodBuilder exceptions(String... exceptionTypes) {
@@ -97,6 +128,37 @@ public class MethodBuilder {
         }
         if (maxLocals != null && method.getCodeAttribute() != null) {
             method.getCodeAttribute().setMaxLocals(maxLocals);
+        }
+
+        for (AnnotationBuilder<MethodBuilder> annotation : annotations) {
+            annotation.attachTo(method, constPool);
+        }
+
+        if (!parameterAnnotations.isEmpty()) {
+            int paramCount = DescriptorUtil.countParameters(descriptor);
+            Map<Integer, List<Annotation>> visibleByIndex = new HashMap<>();
+            Map<Integer, List<Annotation>> invisibleByIndex = new HashMap<>();
+            for (ParamAnnotation pa : parameterAnnotations) {
+                Annotation annotation = pa.builder.build(constPool);
+                Map<Integer, List<Annotation>> target = pa.builder.isVisible() ? visibleByIndex : invisibleByIndex;
+                target.computeIfAbsent(pa.index, k -> new ArrayList<>()).add(annotation);
+            }
+            if (!visibleByIndex.isEmpty()) {
+                AnnotationSupport.setParameterAnnotations(method, constPool, visibleByIndex, paramCount, true);
+            }
+            if (!invisibleByIndex.isEmpty()) {
+                AnnotationSupport.setParameterAnnotations(method, constPool, invisibleByIndex, paramCount, false);
+            }
+        }
+    }
+
+    private static final class ParamAnnotation {
+        final int index;
+        final AnnotationBuilder<MethodBuilder> builder;
+
+        ParamAnnotation(int index, AnnotationBuilder<MethodBuilder> builder) {
+            this.index = index;
+            this.builder = builder;
         }
     }
 }
