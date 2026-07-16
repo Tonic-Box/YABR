@@ -433,7 +433,7 @@ public final class BytecodeEngine {
         }
     }
 
-    private void handleConstantDynamic(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleConstantDynamic(StackFrame frame, EngineDispatchContext ctx) { //TODO
         ConstantDynamicInfo info = ctx.getPendingConstantDynamic();
         String returnType = info.getDescriptor();
 
@@ -796,7 +796,7 @@ public final class BytecodeEngine {
         };
     }
 
-    private void handleInvokeDynamic(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleInvokeDynamic(StackFrame frame, EngineDispatchContext ctx) { //TODO
         InvokeDynamicInfo info = ctx.getPendingInvokeDynamic();
         int paramSlots = info.getParameterSlots();
 

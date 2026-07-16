@@ -211,6 +211,41 @@ class RecoveryEquivalenceTest {
         assertEquals(v1.detail, v2.detail);
     }
 
+    /**
+     * Coverage guidance must reach a branch guarded by a specific constant that random inputs would
+     * essentially never hit. withSink and noSink differ only inside {@code if (x == 987654321)}; the
+     * constant is in the bytecode, so the dictionary feeds it and the divergence is caught.
+     */
+    @Test
+    void coverageGuidanceReachesGuardedBranch() throws Exception {
+        String owner = "com/test/OracleGuarded";
+        byte[] bytes = ClassBuilder.create(owner)
+                .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "sink", "(I)V")
+                .code().vreturn().end()
+                .end()
+                .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "withSink", "(I)V")
+                .code().iload(0).ldc(987654321).if_icmpne("end")
+                       .iload(0).invokestatic(owner, "sink", "(I)V")
+                       .label("end").vreturn().end()
+                .end()
+                .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "noSink", "(I)V")
+                .code().iload(0).ldc(987654321).if_icmpne("end")
+                       .label("end").vreturn().end()
+                .end()
+                .toByteArray();
+
+        ClassPool pool = new ClassPool();
+        ClassFile cf = pool.loadClass(new ByteArrayInputStream(bytes));
+        MethodEntry withSink = cf.getMethod("withSink", "(I)V");
+        MethodEntry noSink = cf.getMethod("noSink", "(I)V");
+
+        RecoveryEquivalenceOracle.Verdict verdict =
+                new RecoveryEquivalenceOracle().differential(withSink, noSink, pool);
+        System.out.println("[oracle coverage] withSink vs noSink -> " + verdict);
+
+        assertEquals(RecoveryEquivalenceOracle.Kind.NOT_EQUIVALENT, verdict.kind, verdict.toString());
+    }
+
     /** A method the engine cannot run (native, no code) must be INCONCLUSIVE, never a crash. */
     @Test
     void nativeMethodIsInconclusive() throws Exception {

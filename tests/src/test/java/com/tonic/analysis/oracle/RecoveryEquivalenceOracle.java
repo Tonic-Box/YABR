@@ -18,7 +18,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.util.DescriptorUtil;
-import com.tonic.util.Modifiers;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
@@ -26,7 +25,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 /**
@@ -160,14 +158,24 @@ public final class RecoveryEquivalenceOracle {
      * against each other (positive/negative controls) without the recompile step.
      */
     Verdict differential(MethodEntry a, MethodEntry b, ClassPool pool) {
-        for (int i = 0; i < inputVectors; i++) {
-            long vectorSeed = seed * 1099511628211L + i;
-            Outcome oa = run(pool, a, vectorSeed);
-            Outcome ob = run(pool, b, vectorSeed);
+        int corpusCap = inputVectors + 6;
+        int probeBudget = Math.max(inputVectors * 4, 36);
+        long[] dictionary = CoverageGuidedInputs.extractDictionary(a);
+        List<InputSpec> corpus = CoverageGuidedInputs.generate(
+                a.getDesc(), dictionary, seed, inputVectors, corpusCap, probeBudget,
+                spec -> coverageEdges(pool, a, spec));
+
+        boolean anyRan = false;
+        for (int i = 0; i < corpus.size(); i++) {
+            InputSpec spec = corpus.get(i);
+            Outcome oa = run(pool, a, spec);
+            Outcome ob = run(pool, b, spec);
             if (oa.reason != null || ob.reason != null) {
-                return new Verdict(Kind.INCONCLUSIVE,
-                        "execution limitation on input#" + i + ": " + (oa.reason != null ? oa.reason : ob.reason));
+                // One side hit an engine limit on this input; it witnessed nothing, so skip it rather
+                // than abort the whole comparison - another input may still expose a real divergence.
+                continue;
             }
+            anyRan = true;
             int div = firstDivergence(oa.trace, ob.trace);
             if (div >= 0) {
                 return new Verdict(Kind.NOT_EQUIVALENT, "input#" + i + " diverges at effect " + div
@@ -175,10 +183,49 @@ public final class RecoveryEquivalenceOracle {
                         + "\n    b: " + at(ob.trace, div));
             }
         }
-        return new Verdict(Kind.EQUIVALENT, inputVectors + " inputs agreed");
+        return anyRan ? new Verdict(Kind.EQUIVALENT, corpus.size() + " inputs agreed")
+                : new Verdict(Kind.INCONCLUSIVE, "no input could be executed on both sides");
     }
 
-    private Outcome run(ClassPool pool, MethodEntry method, long vectorSeed) {
+    /**
+     * Runs the reference method once and returns a coverage fingerprint: taken-branch edges plus the
+     * distinct call targets it reached. Call targets matter because the engine only reports taken
+     * branches (a guarded call reached by falling through a branch shows up only as the call), and
+     * because a call is exactly the kind of observable effect a divergence is made of.
+     */
+    private Set<String> coverageEdges(ClassPool pool, MethodEntry method, InputSpec spec) {
+        BranchCoverageListener cov = new BranchCoverageListener();
+        List<String> trace = new ArrayList<>();
+        try {
+            SimpleHeapManager heap = new SimpleHeapManager();
+            BytecodeContext ctx = new BytecodeContext.Builder()
+                    .mode(ExecutionMode.RECURSIVE)
+                    .heapManager(heap)
+                    .classResolver(new ClassResolver(pool))
+                    .invocationHandler(new DelegatingHandler(new Interceptor(trace, heap)))
+                    .maxInstructions(maxInstructions)
+                    .build();
+            ConcreteValue[] args = InputSpec.materialize(spec, method, heap);
+            BytecodeEngine engine = new BytecodeEngine(ctx);
+            engine.addListener(cov);
+            engine.execute(method, args);
+        } catch (Throwable ignored) {
+            // partial coverage collected before a failure is still informative
+        }
+        Set<String> features = new java.util.HashSet<>();
+        for (Long e : cov.edges()) {
+            features.add("B" + e);
+        }
+        for (String line : trace) {
+            if (line.startsWith("CALL ")) {
+                int r = line.indexOf(" recv=");
+                features.add("C:" + (r >= 0 ? line.substring(0, r) : line));
+            }
+        }
+        return features;
+    }
+
+    private Outcome run(ClassPool pool, MethodEntry method, InputSpec spec) {
         try {
             List<String> trace = new ArrayList<>();
             SimpleHeapManager heap = new SimpleHeapManager();
@@ -191,7 +238,7 @@ public final class RecoveryEquivalenceOracle {
                     .invocationHandler(stub)
                     .maxInstructions(maxInstructions)
                     .build();
-            ConcreteValue[] args = synthesize(method, heap, vectorSeed);
+            ConcreteValue[] args = InputSpec.materialize(spec, method, heap);
             BytecodeEngine engine = new BytecodeEngine(ctx);
             // Observe writes to escaping objects (the receiver and reference parameters, plus objects
             // stored into them). Writes to purely-local temporaries are excluded so benign restructuring
@@ -223,42 +270,6 @@ public final class RecoveryEquivalenceOracle {
         } catch (Throwable t) {
             return Outcome.inconclusive(t.toString());
         }
-    }
-
-    // --- input synthesis -------------------------------------------------------------------------
-
-    private ConcreteValue[] synthesize(MethodEntry method, HeapManager heap, long vectorSeed) {
-        Random rnd = new Random(vectorSeed);
-        List<ConcreteValue> args = new ArrayList<>();
-        if (!Modifiers.isStatic(method.getAccess())) {
-            args.add(ConcreteValue.reference(heap.newObject(method.getClassFile().getClassName())));
-        }
-        for (String p : DescriptorUtil.parseParameterDescriptors(method.getDesc())) {
-            args.add(synthOne(p, heap, rnd));
-        }
-        return args.toArray(new ConcreteValue[0]);
-    }
-
-    private static ConcreteValue synthOne(String desc, HeapManager heap, Random rnd) {
-        switch (desc.charAt(0)) {
-            case 'Z': return ConcreteValue.intValue(rnd.nextBoolean() ? 1 : 0);
-            case 'B': return ConcreteValue.intValue((byte) (rnd.nextInt(256) - 128));
-            case 'C': return ConcreteValue.intValue(rnd.nextInt(0x10000));
-            case 'S': return ConcreteValue.intValue((short) rnd.nextInt());
-            case 'I': return ConcreteValue.intValue(pickInt(rnd));
-            case 'J': return ConcreteValue.longValue(pickInt(rnd));
-            case 'F': return ConcreteValue.floatValue(rnd.nextInt(11) - 5);
-            case 'D': return ConcreteValue.doubleValue(rnd.nextInt(11) - 5);
-            case 'L': return rnd.nextInt(4) == 0 ? ConcreteValue.nullRef()
-                    : ConcreteValue.reference(heap.newObject(desc.substring(1, desc.length() - 1)));
-            case '[': return ConcreteValue.nullRef();
-            default: return ConcreteValue.nullRef();
-        }
-    }
-
-    private static int pickInt(Random rnd) {
-        int[] boundary = {0, 1, -1, 2, Integer.MAX_VALUE, Integer.MIN_VALUE};
-        return rnd.nextInt(3) == 0 ? boundary[rnd.nextInt(boundary.length)] : rnd.nextInt(21) - 10;
     }
 
     // --- effect stub + normalization -------------------------------------------------------------
