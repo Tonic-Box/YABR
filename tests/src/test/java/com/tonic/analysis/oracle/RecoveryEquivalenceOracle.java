@@ -97,8 +97,7 @@ public final class RecoveryEquivalenceOracle {
      * Runs {@link #differential} unless a cache is set and holds a verdict for this method whose
      * original and recompiled bytecode hashes both still match - in which case execution is skipped.
      */
-    private Verdict cachedDifferential(String owner, String sig, MethodEntry original,
-                                       MethodEntry recovered, ClassPool pool) {
+    private Verdict cachedDifferential(String owner, String sig, MethodEntry original, MethodEntry recovered, ClassPool pool) {
         if (cache == null) {
             return differential(original, recovered, pool);
         }

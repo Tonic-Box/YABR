@@ -489,7 +489,8 @@ public final class BytecodeEngine {
                 if (tryNativeInvoke(frame, methodInfo, receiver, args)) {
                     return;
                 }
-                stubInvoke(frame, descriptor, methodInfo.isStatic());
+                // args + receiver were already popped above (:478/:481); only produce the result.
+                pushStubResult(frame, descriptor);
                 return;
             }
 
@@ -687,6 +688,16 @@ public final class BytecodeEngine {
             frame.getStack().pop();
         }
 
+        pushStubResult(frame, descriptor);
+    }
+
+    /**
+     * Pushes a default return value (if any) for a stubbed call and advances the PC, without popping
+     * anything. Used when the arguments and receiver have already been consumed by the caller, so the
+     * pop-ful {@link #stubInvoke} would double-pop (underflowing at a bare {@code aload_0; invokespecial
+     * <init>} site, or silently corrupting the stack elsewhere).
+     */
+    private void pushStubResult(StackFrame frame, String descriptor) {
         String returnType = getReturnType(descriptor);
         if (!"V".equals(returnType)) {
             if (returnType.startsWith("L") || returnType.startsWith("[")) {

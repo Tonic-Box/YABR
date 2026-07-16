@@ -4,7 +4,10 @@ import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
+import com.tonic.analysis.source.ast.expr.BinaryExpr;
+import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.FieldAccessExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.expr.SuperExpr;
 import com.tonic.analysis.source.ast.expr.ThisExpr;
@@ -260,25 +263,29 @@ public class ASTLowerer {
      * {@code superClassName}.
      */
     private void ensureConstructorChainCall(BlockStmt body, String superClassName) {
-        if (beginsWithConstructorChainCall(body)) {
+        List<Statement> statements = body.getStatements();
+        // javac emits synthetic outer-instance / captured-variable field initializers (this$0, val$...)
+        // BEFORE the super() call, and the decompiler drops the now-implicit super(). Re-inject it after
+        // any such leading run - not at index 0 - so the synthetic fields keep preceding super().
+        int idx = 0;
+        while (idx < statements.size() && isSyntheticCaptureFieldInit(statements.get(idx))) {
+            idx++;
+        }
+        if (idx < statements.size() && isConstructorChainCall(statements.get(idx))) {
             return;
         }
         MethodCallExpr superCall = new MethodCallExpr(
                 new SuperExpr(ReferenceSourceType.OBJECT), "<init>", superClassName,
                 new ArrayList<>(), false, VoidSourceType.INSTANCE);
-        body.getStatements().add(0, new ExprStmt(superCall));
+        statements.add(idx, new ExprStmt(superCall));
     }
 
-    /** Whether {@code body}'s first statement is a {@code super(...)}/{@code this(...)} constructor call. */
-    private boolean beginsWithConstructorChainCall(BlockStmt body) {
-        if (body.getStatements().isEmpty()) {
+    /** Whether {@code stmt} is a {@code super(...)}/{@code this(...)} constructor-chain call. */
+    private boolean isConstructorChainCall(Statement stmt) {
+        if (!(stmt instanceof ExprStmt)) {
             return false;
         }
-        Statement first = body.getStatements().get(0);
-        if (!(first instanceof ExprStmt)) {
-            return false;
-        }
-        Expression expr = ((ExprStmt) first).getExpression();
+        Expression expr = ((ExprStmt) stmt).getExpression();
         if (!(expr instanceof MethodCallExpr)) {
             return false;
         }
@@ -289,6 +296,49 @@ public class ASTLowerer {
         }
         return receiver == null
                 && ("super".equals(call.getMethodName()) || "this".equals(call.getMethodName()));
+    }
+
+    /**
+     * Whether {@code stmt} is an assignment to a javac synthetic capture field on {@code this} - the
+     * enclosing-instance reference ({@code this$0}, {@code this$1}, ...) or a captured local
+     * ({@code val$...}). These are emitted before super(); ordinary field assignments are not, so the
+     * name pattern is what keeps normal constructors emitting super() first.
+     */
+    private boolean isSyntheticCaptureFieldInit(Statement stmt) {
+        if (!(stmt instanceof ExprStmt)) {
+            return false;
+        }
+        Expression expr = ((ExprStmt) stmt).getExpression();
+        if (!(expr instanceof BinaryExpr)) {
+            return false;
+        }
+        BinaryExpr assign = (BinaryExpr) expr;
+        if (assign.getOperator() != BinaryOperator.ASSIGN || !(assign.getLeft() instanceof FieldAccessExpr)) {
+            return false;
+        }
+        FieldAccessExpr field = (FieldAccessExpr) assign.getLeft();
+        if (!(field.getReceiver() instanceof ThisExpr)) {
+            return false;
+        }
+        return isSyntheticCaptureFieldName(field.getFieldName());
+    }
+
+    private static boolean isSyntheticCaptureFieldName(String name) {
+        if (name == null) {
+            return false;
+        }
+        if (name.startsWith("val$")) {
+            return true;
+        }
+        if (name.length() > 5 && name.startsWith("this$")) {
+            for (int i = 5; i < name.length(); i++) {
+                if (!Character.isDigit(name.charAt(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
