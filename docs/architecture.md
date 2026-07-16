@@ -72,7 +72,7 @@ targeted AST transformations.
 
 Higher-level analyses built on the IR and bytecode: call graphs, cross-references, data flow, code
 property and program dependence graphs, similarity, pattern search, and type inference (`analyses`);
-concrete execution, abstract simulation, instrumentation, and verification (`execution`); and a
+concrete execution, abstract simulation, instrumentation, and [verification](verifier-api.md) (`execution`); and a
 composable bytecode query language (`query`).
 
 ### renamer
@@ -123,8 +123,10 @@ MethodEntry -> SSA IR -> recovery -> AST -> emit -> Java source
 - [LLVM Lowering](llvm-lowering.md)
 - [AST Guide](ast-guide.md)
 - [AST Editor](ast-editor.md)
+- [Decompiler API](decompiler-api.md)
 - [Analysis APIs](analysis-apis.md)
 - [Execution API](execution-api.md)
+- [Verifier API](verifier-api.md)
 - [Renamer API](renamer-api.md)
 - [Frame Computation](frame-computation.md)
 

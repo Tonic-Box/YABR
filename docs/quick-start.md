@@ -123,7 +123,7 @@ java -cp examples/build/classes/java/main com.tonic.demo.TestBlocks
 
 Available demos in `examples/src/main/java/com/tonic/demo/`:
 - `TestBlocks.java` - SSA IR block visitor pattern
-- `TestBytecodeVisitor.java` - Bytecode-level visitor pattern
+- `TestVisitor.java` - Bytecode-level visitor pattern
 - `TestClassCreation.java` - Creating classes programmatically
 - `TestSSADemo.java` - Complete SSA transformation example
 

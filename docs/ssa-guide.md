@@ -179,8 +179,15 @@ SSAValue result = instruction.getResult();
 
 // Value properties
 String name = result.getName();     // "v3"
-SSAType type = result.getType();    // INT, LONG, OBJECT, etc.
+IRType type = result.getType();     // PrimitiveType.INT, ReferenceType, ArrayType, VoidType, ...
 ```
+
+`IRType` is an interface, not a flat enum. Its implementations are `PrimitiveType`
+(with constants `BOOLEAN`, `BYTE`, `CHAR`, `SHORT`, `INT`, `LONG`, `FLOAT`, `DOUBLE`),
+`ReferenceType` (carrying an internal class name), `ArrayType`, and `VoidType.INSTANCE`.
+Query it with `isPrimitive()`, `isReference()`, `isArray()`, `isVoid()`, `isTwoSlot()`,
+`getSize()`, and `getDescriptor()`; build one from a descriptor with
+`IRType.fromDescriptor("I")` or `IRType.fromInternalName("java/lang/String")`.
 
 ## IR Instructions
 
@@ -283,7 +290,7 @@ TypeCheckInstruction.createCast(result, operand, targetType)
 TypeCheckInstruction.createInstanceOf(result, operand, checkType)
 
 // SimpleInstruction for array length and other simple operations
-SimpleInstruction simple;  // For ARRAYLENGTH, MONITORENTER, MONITOREXIT, ATHROW, GOTO
+SimpleInstruction simple;  // For ARRAYLENGTH, MONITORENTER, MONITOREXIT, ATHROW, GOTO, CATCH
 // Check op: simple.getOp() == SimpleOp.ARRAYLENGTH
 // Factory: SimpleInstruction.createArrayLength(result, array)
 ```
@@ -303,6 +310,12 @@ SimpleInstruction monExit = SimpleInstruction.createMonitorExit(objectRef);
 // Use SimpleInstruction for throw
 SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 // Check: throwInstr.getOp() == SimpleOp.ATHROW
+
+// At a handler entry the JVM places the caught exception on the stack; a CATCH op
+// captures it into its result so the value does not leak past the handler. It emits
+// no opcode of its own - the surrounding result-store becomes the astore.
+SimpleInstruction caught = SimpleInstruction.createCatch(result);
+// Check: caught.getOp() == SimpleOp.CATCH
 ```
 
 

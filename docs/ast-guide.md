@@ -71,7 +71,7 @@ for `break label`/`continue label`), and `throws` clauses are emitted from the `
 Decompiled statements carry **bytecode-offset provenance**: the SSA lifter stamps each IR
 instruction's offset, recovery transfers it onto the statements it builds (`SourceLocation`), the
 AST transform pipeline preserves it across rewrites, and `decompileWithLineMap()` exposes the
-result as per-method offset-to-line maps (see [ClassDecompiler](#classdecompiler) below).
+result as per-method offset-to-line maps (see the [Decompiler API](decompiler-api.md)).
 
 **Recompilation** (front-end parse -> lower -> bytecode) handles end-to-end, verified by running the
 emitted class on a real JDK:
@@ -89,52 +89,16 @@ bootstraps survive constant-pool-mutating edits rather than corrupting as opaque
 
 ### Decompiling a Complete Class
 
-The easiest way to decompile an entire class file to Java source is using `ClassDecompiler`:
+To decompile an entire class file to Java source, use `ClassDecompiler`:
 
 ```java
 import com.tonic.analysis.source.decompile.ClassDecompiler;
-import com.tonic.analysis.source.emit.SourceEmitterConfig;
-import com.tonic.parser.ClassFile;
-import com.tonic.parser.ClassPool;
 
-// Load the class
-ClassFile cf = ClassPool.getDefault().loadClass(inputStream);
-
-// Decompile with default settings (simple class names, includes imports)
 String source = ClassDecompiler.decompile(cf);
-System.out.println(source);
-
-// Or with custom configuration
-SourceEmitterConfig config = SourceEmitterConfig.builder()
-    .useFullyQualifiedNames(false)  // Use simple names with imports
-    .alwaysUseBraces(true)
-    .build();
-
-String source = ClassDecompiler.decompile(cf, config);
 ```
 
-This produces complete Java source with:
-- Package declaration
-- Import statements (when using simple class names)
-- Class declaration with modifiers, extends, implements
-- Fields with access modifiers
-- Static initializer blocks
-- Constructors
-- Methods
-
-**Command-line usage:**
-
-```bash
-# Basic usage
-java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class
-
-# With fully qualified names
-java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --fqn
-
-# With transform preset (none, minimal, standard, aggressive)
-java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=standard
-java -cp examples/build/classes/java/main com.tonic.demo.ast.Decompile MyClass.class --preset=aggressive --fqn
-```
+For emitter configuration, transform presets, bytecode-offset line maps, per-member source
+spans, and the `Decompile` / `JarDecompiler` demos, see the [Decompiler API](decompiler-api.md).
 
 ### Recovering AST from Bytecode
 
@@ -799,204 +763,9 @@ System.out.println("Literals found: " + counter.getCount());
 
 ## Class Decompilation
 
-### ClassDecompiler
-
-The `ClassDecompiler` provides full class decompilation to Java source:
-
-```java
-import com.tonic.analysis.source.decompile.ClassDecompiler;
-import com.tonic.analysis.source.decompile.DecompilerConfig;
-import com.tonic.analysis.source.decompile.TransformPreset;
-import com.tonic.analysis.source.emit.SourceEmitterConfig;
-
-// Simple usage
-String source = ClassDecompiler.decompile(classFile);
-
-// With bytecode-offset provenance: per method (keyed name + descriptor), a NavigableMap from
-// bytecode offset to the 1-based output line of the statement recovered from that offset.
-// Resolve an arbitrary PC with ceilingEntry/floorEntry (inlined expressions live in a
-// later-offset consumer statement, so prefer ceiling). Statements whose provenance did not
-// survive recovery/transforms simply have no entry. An inlined lambda body's statements are
-// keyed under the lambda's own synthetic impl method (e.g. "lambda$doWork$0" + desc), not the
-// enclosing method, since they carry that method's offsets - so a PC inside a lambda resolves
-// via getLineMap("lambda$doWork$0", "()V").
-DecompileResult result = new ClassDecompiler(classFile).decompileWithLineMap();
-NavigableMap<Integer, Integer> lineMap = result.getLineMap("doWork", "(I)V");
-int line = lineMap.ceilingEntry(callSitePc).getValue();
-
-// Each emitted member also gets its exact text span (annotations + signature through the
-// closing brace), e.g. for slicing a single method out of the class source.
-DecompileResult.MethodSpan span = result.getMethodSpan("doWork", "(I)V");
-String methodText = String.join("
-", java.util.Arrays.asList(result.getSource().split("
-"))
-        .subList(span.getStartLine() - 1, span.getEndLine()));
-
-// Fields and the class declaration carry the same spans (a generic MemberSpan; MethodSpan is a
-// MemberSpan subtype). Field spans are keyed name + descriptor; the class span covers its
-// annotations through the `... {` signature line. Useful for locating a declaration without
-// parsing source text.
-DecompileResult.MemberSpan fieldSpan = result.getFieldSpan("count", "I");
-DecompileResult.MemberSpan classSpan = result.getClassSpan();
-
-// With emitter configuration
-SourceEmitterConfig emitterConfig = SourceEmitterConfig.builder()
-    .useFullyQualifiedNames(false)  // Simple names + imports (default)
-    .alwaysUseBraces(true)
-    .useVarKeyword(false)
-    .build();
-
-String source = ClassDecompiler.decompile(classFile, emitterConfig);
-
-// Using the builder API with transform presets
-ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
-    .config(emitterConfig)
-    .preset(TransformPreset.STANDARD)
-    .build();
-
-String source = decompiler.decompile();
-
-// Or write directly to a custom writer
-IndentingWriter writer = new IndentingWriter(new FileWriter("Output.java"));
-decompiler.decompile(writer);
-```
-
-### Configurable Transform Pipeline
-
-The decompiler applies IR transforms to improve output quality. You can configure which transforms run using presets or by adding transforms manually.
-
-**Transform Presets:**
-
-| Preset | Description | Transforms |
-|--------|-------------|------------|
-| `NONE` | No additional transforms (baseline only) | - |
-| `MINIMAL` | Safe, minimal cleanup | ConstantFolding, CopyPropagation |
-| `STANDARD` | Balanced optimization | Above + AlgebraicSimplification, RedundantCopyElimination, DeadCodeElimination |
-| `AGGRESSIVE` | Maximum simplification | Above + StrengthReduction, Reassociate, CommonSubexpressionElimination, PhiConstantPropagation |
-
-**Using Presets:**
-
-```java
-// Use a preset
-ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
-    .config(emitterConfig)
-    .preset(TransformPreset.AGGRESSIVE)
-    .build();
-
-String source = decompiler.decompile();
-```
-
-**Manual Transform Configuration:**
-
-```java
-import com.tonic.analysis.ssa.transform.*;
-
-// Add specific transforms manually
-ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
-    .config(emitterConfig)
-    .addTransform(new ConstantFolding())
-    .addTransform(new CopyPropagation())
-    .addTransform(new DeadCodeElimination())
-    .build();
-```
-
-**Combining Presets with Additional Transforms:**
-
-```java
-// Start with a preset, then add more transforms
-ClassDecompiler decompiler = ClassDecompiler.builder(classFile)
-    .config(emitterConfig)
-    .preset(TransformPreset.MINIMAL)
-    .addTransform(new NullCheckElimination())
-    .addTransform(new AlgebraicSimplification())
-    .build();
-```
-
-**Using DecompilerConfig Directly:**
-
-```java
-// Build config separately for reuse
-DecompilerConfig decompilerConfig = DecompilerConfig.builder()
-    .emitterConfig(emitterConfig)
-    .preset(TransformPreset.STANDARD)
-    .addTransform(new LoopInvariantCodeMotion())
-    .build();
-
-// Use with multiple class files
-ClassDecompiler decompiler1 = new ClassDecompiler(classFile1, decompilerConfig);
-ClassDecompiler decompiler2 = new ClassDecompiler(classFile2, decompilerConfig);
-```
-
-**Baseline Transforms:**
-
-The decompiler always applies these baseline transforms regardless of configuration:
-- `ControlFlowReducibility` - Converts irreducible control flow to reducible form
-- `DuplicateBlockMerging` - Merges duplicate blocks created by reducibility
-
-Additional transforms from presets or manual configuration run after these baseline transforms.
-
-### Import Statement Generation
-
-When `useFullyQualifiedNames` is `false` (the default), the decompiler automatically generates import statements by:
-
-1. Scanning the constant pool for all referenced class types
-2. Filtering out `java.lang.*` classes (implicitly imported in Java)
-3. Filtering out classes in the same package as the decompiled class
-4. Sorting imports alphabetically
-
-Subpackages of `java.lang` (like `java.lang.invoke.*` or `java.lang.reflect.*`) are NOT implicitly imported and will be included in the import list.
-
-Example output:
-
-```java
-package com.example;
-
-import java.awt.Canvas;
-import java.awt.Graphics;
-import java.util.List;
-import javax.swing.JFrame;
-
-public class MyClass extends JFrame {
-    private Canvas canvas;
-    private List items;
-
-    // ... methods
-}
-```
-
-### Output Structure
-
-The decompiler produces properly structured Java source:
-
-```
-package declaration
-<blank line>
-import statements (sorted, when using simple names)
-<blank line>
-class declaration {
-
-    fields
-    <blank line>
-    static initializer (if present)
-    <blank line>
-    constructors
-    <blank line>
-    methods
-
-}
-```
-
-### Handling Decompilation Failures
-
-If a method body fails to decompile, the decompiler inserts a comment instead of crashing:
-
-```java
-public void problematicMethod() {
-    // Failed to decompile: <error message>
-}
-```
-
-This allows partial decompilation of classes even when some methods have complex or unsupported bytecode patterns.
+Decompiling a whole class to Java source - emitter configuration, transform presets,
+bytecode-offset line maps, per-member source spans, import generation, and failure handling -
+is documented in the [Decompiler API](decompiler-api.md).
 
 ## AST Transforms
 
