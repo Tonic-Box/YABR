@@ -263,4 +263,35 @@ class RecoveryEquivalenceTest {
 
         assertEquals(RecoveryEquivalenceOracle.Kind.INCONCLUSIVE, verdict.kind, verdict.toString());
     }
+
+    /**
+     * With a cache set, checking the same unchanged method twice reuses the verdict on the second call
+     * without re-executing (one miss, then one hit). A hit requires the recompiled-bytecode hash to
+     * match across runs, so this also confirms recompilation is deterministic.
+     */
+    @Test
+    void cacheReusesVerdictWithoutReExecuting() throws Exception {
+        byte[] bytes = ClassBuilder.create("com/test/OracleCacheCtl")
+                .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "add", "(II)I")
+                .code().iload(0).iload(1).iadd().ireturn().end()
+                .end()
+                .toByteArray();
+
+        ClassPool pool = new ClassPool();
+        ClassFile cf = pool.loadClass(new ByteArrayInputStream(bytes));
+        MethodEntry add = cf.getMethod("add", "(II)I");
+
+        OracleCache cache = new OracleCache();
+        RecoveryEquivalenceOracle oracle = new RecoveryEquivalenceOracle().cache(cache);
+
+        RecoveryEquivalenceOracle.Verdict first = oracle.check(cf, pool, add);
+        RecoveryEquivalenceOracle.Verdict second = oracle.check(cf, pool, add);
+        System.out.println("[oracle cache] first=" + first + " second=" + second
+                + " hits=" + cache.hits() + " misses=" + cache.misses());
+
+        assertEquals(first.kind, second.kind);
+        assertEquals(first.detail, second.detail);
+        assertEquals(1, cache.misses(), "first check should be a cache miss");
+        assertEquals(1, cache.hits(), "second check should hit the cache (deterministic recompile)");
+    }
 }

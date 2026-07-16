@@ -40,7 +40,9 @@ class RecoveryEquivalenceCorpusTest {
             cfs.add(pool.loadClass(new ByteArrayInputStream(Files.readAllBytes(p))));
         }
 
-        RecoveryEquivalenceOracle oracle = new RecoveryEquivalenceOracle(6, 0x9E3779B9L, 150_000);
+        Path cacheFile = Path.of(System.getProperty("java.io.tmpdir"), "yabr-oracle-cache.tsv");
+        OracleCache cache = OracleCache.load(cacheFile);
+        RecoveryEquivalenceOracle oracle = new RecoveryEquivalenceOracle(6, 0x9E3779B9L, 150_000).cache(cache);
         int equivalent = 0, notEquivalent = 0, inconclusive = 0;
         List<String> counterexamples = new ArrayList<>();
 
@@ -59,10 +61,12 @@ class RecoveryEquivalenceCorpusTest {
             }
         }
 
+        cache.save(cacheFile);
         int total = equivalent + notEquivalent + inconclusive;
         System.out.println("[oracle corpus] classes=" + cfs.size() + " methods=" + total
                 + "  EQUIVALENT=" + equivalent + "  NOT_EQUIVALENT=" + notEquivalent
-                + "  INCONCLUSIVE=" + inconclusive);
+                + "  INCONCLUSIVE=" + inconclusive
+                + "  cache(hits=" + cache.hits() + ",misses=" + cache.misses() + ")");
         for (String c : counterexamples) {
             System.out.println("  NOT_EQUIVALENT: " + c);
         }

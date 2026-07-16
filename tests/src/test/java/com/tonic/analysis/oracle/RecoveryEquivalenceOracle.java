@@ -25,7 +25,9 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Recovery-equivalence oracle (concrete differential, v1). For a method, executes the original and the
@@ -60,6 +62,16 @@ public final class RecoveryEquivalenceOracle {
     private final long seed;
     private final int maxInstructions;
 
+    /**
+     * One resolver (and its class hierarchy) per pool, reused across every execution. Building it is
+     * O(pool); doing so per execute was the dominant, super-linear cost. The resolver is a read-through
+     * cache over an immutable pool, so reuse is behavior-preserving and safe to share across threads.
+     */
+    private final Map<ClassPool, ClassResolver> resolvers = new ConcurrentHashMap<>();
+
+    /** Optional self-invalidating verdict cache; when set, unchanged methods skip execution. */
+    private OracleCache cache;
+
     public RecoveryEquivalenceOracle() {
         this(16, 0x9E3779B9L, 500_000);
     }
@@ -68,6 +80,43 @@ public final class RecoveryEquivalenceOracle {
         this.inputVectors = inputVectors;
         this.seed = seed;
         this.maxInstructions = maxInstructions;
+    }
+
+    private ClassResolver resolverFor(ClassPool pool) {
+        return resolvers.computeIfAbsent(pool, ClassResolver::new);
+    }
+
+    /** Enables the given cache; unchanged (original+recompiled) methods reuse their verdict.
+     * Package-private (like {@link OracleCache}) - only same-package tests configure it. */
+    RecoveryEquivalenceOracle cache(OracleCache cache) {
+        this.cache = cache;
+        return this;
+    }
+
+    /**
+     * Runs {@link #differential} unless a cache is set and holds a verdict for this method whose
+     * original and recompiled bytecode hashes both still match - in which case execution is skipped.
+     */
+    private Verdict cachedDifferential(String owner, String sig, MethodEntry original,
+                                       MethodEntry recovered, ClassPool pool) {
+        if (cache == null) {
+            return differential(original, recovered, pool);
+        }
+        String key = owner + "#" + sig;
+        String origHash = OracleCache.hash(codeBytes(original));
+        String recHash = OracleCache.hash(codeBytes(recovered));
+        String[] hit = cache.lookup(key);
+        if (hit != null && hit[0].equals(origHash) && hit[1].equals(recHash)) {
+            cache.recordHit();
+            return new Verdict(Kind.valueOf(hit[2]), hit[3]);
+        }
+        Verdict v = differential(original, recovered, pool);
+        cache.store(key, origHash, recHash, v.kind.name(), v.detail);
+        return v;
+    }
+
+    private static byte[] codeBytes(MethodEntry m) {
+        return m.getCodeAttribute() == null ? null : m.getCodeAttribute().getCode();
     }
 
     public static final class MethodVerdict {
@@ -114,7 +163,7 @@ public final class RecoveryEquivalenceOracle {
             MethodEntry recovered = find(clone, m.getName(), m.getDesc());
             Verdict v = (original == null || recovered == null)
                     ? new Verdict(Kind.INCONCLUSIVE, "method absent from a reloaded copy")
-                    : differential(original, recovered, pool);
+                    : cachedDifferential(cf.getClassName(), sig, original, recovered, pool);
             out.add(new MethodVerdict(sig, v));
         }
         return out;
@@ -145,7 +194,8 @@ public final class RecoveryEquivalenceOracle {
         if (original == null || recovered == null) {
             return new Verdict(Kind.INCONCLUSIVE, "method absent from a reloaded copy");
         }
-        return differential(original, recovered, pool);
+        return cachedDifferential(cf.getClassName(), method.getName() + method.getDesc(),
+                original, recovered, pool);
     }
 
     private static ClassFile reload(ClassFile cf) throws Exception {
@@ -201,7 +251,7 @@ public final class RecoveryEquivalenceOracle {
             BytecodeContext ctx = new BytecodeContext.Builder()
                     .mode(ExecutionMode.RECURSIVE)
                     .heapManager(heap)
-                    .classResolver(new ClassResolver(pool))
+                    .classResolver(resolverFor(pool))
                     .invocationHandler(new DelegatingHandler(new Interceptor(trace, heap)))
                     .maxInstructions(maxInstructions)
                     .build();
@@ -229,7 +279,7 @@ public final class RecoveryEquivalenceOracle {
         try {
             List<String> trace = new ArrayList<>();
             SimpleHeapManager heap = new SimpleHeapManager();
-            ClassResolver resolver = new ClassResolver(pool);
+            ClassResolver resolver = resolverFor(pool);
             DelegatingHandler stub = new DelegatingHandler(new Interceptor(trace, heap));
             BytecodeContext ctx = new BytecodeContext.Builder()
                     .mode(ExecutionMode.RECURSIVE)
