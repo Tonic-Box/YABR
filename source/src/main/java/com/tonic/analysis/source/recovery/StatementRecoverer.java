@@ -94,9 +94,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (ternaryPhi == null) {
             return false;
         }
-        // A phi feeding another phi (a nested merge) cannot be consumed as a value here unless it is also
-        // stored to a local; collapsing it would orphan the outer merge's arm. Mirrors the schema path guard.
-        if (getPhiUsingValue(ternaryPhi.getResult()) != null && !hasStoreLocalUse(ternaryPhi.getResult())) {
+        // Only collapse a stack phi consumed directly by an expression (e.g. a call argument or a bare return
+        // of the phi). If an arm stores its value into a local slot, the value flows through a variable that the
+        // merge reads back: the arms structure into an `if/else` the AST pipeline folds to a ternary
+        // (tryConvertIfElseToAssignment). Collapsing here would cache the ternary for the phi while the merge
+        // reads the local, orphaning the arms' work and forcing the whole method into a dispatch loop. A phi
+        // feeding another phi (a nested merge) likewise cannot be consumed here.
+        if (armStoresToLocal(thenBlock) || armStoresToLocal(elseBlock)
+                || hasStoreLocalUse(ternaryPhi.getResult()) || getPhiUsingValue(ternaryPhi.getResult()) != null) {
             return false;
         }
         Expression condition = recoverCondition(branch, false);
@@ -104,6 +109,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         context.markProcessed(thenBlock);
         context.markProcessed(elseBlock);
         return true;
+    }
+
+    /** True when {@code block} stores a value into a local slot - the diamond value flows through a variable. */
+    private boolean armStoresToLocal(IRBlock block) {
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof StoreLocalInstruction) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isSolePredecessor(IRBlock pred, IRBlock block) {
