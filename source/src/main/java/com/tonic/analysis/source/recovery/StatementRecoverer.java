@@ -31,12 +31,19 @@ import java.util.*;
 /**
  * Recovers Statement AST nodes from IR blocks using structural analysis.
  */
-public class StatementRecoverer {
+public class StatementRecoverer implements com.tonic.analysis.source.recovery.rcs.RegionRecoveryBridge {
 
     private final ControlFlowContext context;
     private final StructuralAnalyzer analyzer;
     private final ExpressionRecoverer exprRecoverer;
     private final TypeRecoverer typeRecoverer;
+
+    /**
+     * The reaching-condition structurer, present only when {@code -Drcs.enabled=true}. When active it is
+     * offered each region first and falls back to the legacy walk by returning null for shapes it does
+     * not yet handle.
+     */
+    private final com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer rcsStructurer;
 
     public StatementRecoverer(ControlFlowContext context, StructuralAnalyzer analyzer,
                               ExpressionRecoverer exprRecoverer) {
@@ -44,9 +51,23 @@ public class StatementRecoverer {
         this.analyzer = analyzer;
         this.exprRecoverer = exprRecoverer;
         this.typeRecoverer = new TypeRecoverer();
+        this.rcsStructurer = Boolean.getBoolean("rcs.enabled")
+                ? new com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer(this, context)
+                : null;
 
         // Pre-declare parameters so stores to them become assignments, not declarations
         preDeclareParameters();
+    }
+
+    @Override
+    public void markRegionBlockProcessed(IRBlock block, List<Statement> statements) {
+        context.setStatements(block, statements);
+        context.markProcessed(block);
+    }
+
+    @Override
+    public boolean isRegionBlockProcessed(IRBlock block) {
+        return context.isProcessed(block);
     }
 
     /**
@@ -3500,6 +3521,12 @@ public class StatementRecoverer {
     private final Set<IRBlock> processedHandlerBlocks = new HashSet<>();
 
     public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks) {
+        if (rcsStructurer != null) {
+            List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+            if (structured != null) {
+                return structured;
+            }
+        }
         List<Statement> result = new ArrayList<>();
         Set<IRBlock> visited = new HashSet<>();
         IRBlock current = startBlock;
@@ -3789,7 +3816,8 @@ public class StatementRecoverer {
         return false;
     }
 
-    private List<Statement> recoverSimpleBlock(IRBlock block) {
+    @Override
+    public List<Statement> recoverSimpleBlock(IRBlock block) {
         List<Statement> statements = new ArrayList<>();
 
         for (IRInstruction instr : block.getInstructions()) {
@@ -6572,7 +6600,8 @@ public class StatementRecoverer {
      * value coming from {@code pred}, placed before the {@code $pc$} update so it runs when the
      * edge is taken. Reuses the phi result's already-bound name and method-scope declaration.
      */
-    private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ) {
+    @Override
+    public List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ) {
         List<Statement> copies = new ArrayList<>();
         for (PhiInstruction phi : succ.getPhiInstructions()) {
             SSAValue result = phi.getResult();
@@ -6646,7 +6675,8 @@ public class StatementRecoverer {
         return new BinaryExpr(op, a, b, PrimitiveSourceType.BOOLEAN);
     }
 
-    private Expression recoverCondition(IRBlock block, boolean negate) {
+    @Override
+    public Expression recoverCondition(IRBlock block, boolean negate) {
         IRInstruction terminator = block.getTerminator();
         if (terminator instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) terminator;

@@ -25,6 +25,7 @@ tasks.named<Test>("test") {
     maxParallelForks = 1
     jvmArgs("-Xss2m", "-Xmx1g")
     systemProperty("junit.jupiter.execution.parallel.enabled", "false")
+    systemProperty("rcs.enabled", System.getProperty("rcs.enabled", "false"))
     finalizedBy(tasks.named("jacocoTestReport"))
 }
 

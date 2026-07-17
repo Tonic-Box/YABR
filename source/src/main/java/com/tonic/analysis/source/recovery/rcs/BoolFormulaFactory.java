@@ -99,6 +99,16 @@ public final class BoolFormulaFactory {
         return bdds.overflowed();
     }
 
+    /** The canonical-true terminal, for callers walking a formula's BDD to emit minimized conditions. */
+    Bdd bddOne() {
+        return bdds.one;
+    }
+
+    /** The canonical-false terminal. */
+    Bdd bddZero() {
+        return bdds.zero;
+    }
+
     /** Evaluates the syntactic (NNF) layer under an assignment indexed by atom. */
     public boolean evalSyntactic(BoolFormula f, boolean[] assignment) {
         return NnfFactory.eval(f.nnf, assignment);
