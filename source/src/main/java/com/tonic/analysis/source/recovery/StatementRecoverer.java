@@ -2414,14 +2414,21 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                             continue;
                         }
                         String existingName = context.getExpressionContext().getVariableName(sourceValue);
+                        int existingSlot = context.getExpressionContext().getSSAValueSlot(sourceValue);
                         // Overwrite only an absent or synthetic name (a value-id like "v3"/"v3_0" or a
                         // one-letter slot name like "i5") with this store's slot name. A real name -
                         // including one that merely starts with 'v', e.g. an LVT "viewPorts" - is kept,
                         // so a copy `slot2 = viewPorts` is not clobbered into a self-reference
-                        // `local2 = local2` (which reads before assignment).
-                        boolean shouldOverwrite = existingName == null
+                        // `local2 = local2` (which reads before assignment). A store to a DIFFERENT slot than
+                        // the value already belongs to is a cross-slot copy (`x1 = min(); ...; newWidth = x1`),
+                        // not a redefinition: keep the value's home-slot name so the copy references it rather
+                        // than renaming the value to the copy target (which turns the copy into a dropped
+                        // self-store and strands its guarding branch).
+                        boolean crossSlotCopy = existingName != null && existingSlot >= 0 && existingSlot != localIndex;
+                        boolean shouldOverwrite = !crossSlotCopy
+                                && (existingName == null
                                 || isSyntheticValueName(existingName)
-                                || existingName.matches("[a-z]\\d+");
+                                || existingName.matches("[a-z]\\d+"));
                         if (shouldOverwrite) {
                             context.getExpressionContext().setVariableName(sourceValue, localName);
                             context.getExpressionContext().markMaterialized(sourceValue);
