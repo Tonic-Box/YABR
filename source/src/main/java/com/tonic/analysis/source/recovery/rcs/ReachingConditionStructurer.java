@@ -306,6 +306,10 @@ public final class ReachingConditionStructurer {
         }
         List<Statement> own = bridge.recoverSimpleBlock(b);
         bridge.markRegionBlockProcessed(b, own);
+        // Collapse a value-producing ternary diamond (x > y ? x : y) into a cached expression before its arms
+        // are structured: the collapse marks them emitted, so structureChildren emits no if and the merge
+        // block inlines the ternary. A non-diamond branch is untouched and structures normally.
+        bridge.tryCollapseTernaryDiamond(b);
         List<Statement> out = new ArrayList<>(own);
         out.addAll(structureChildren(b));
         return out;

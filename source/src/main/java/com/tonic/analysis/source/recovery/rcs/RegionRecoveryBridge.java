@@ -28,4 +28,13 @@ public interface RegionRecoveryBridge {
 
     /** True once {@code block} has been emitted. */
     boolean isRegionBlockProcessed(IRBlock block);
+
+    /**
+     * If {@code branch} heads a value-producing ternary diamond - both arms produce a single value that
+     * merges at a phi feeding an expression, e.g. {@code x > y ? x : y} - collapses it to a cached
+     * {@code TernaryExpr} (inlined where the merge block consumes it) and marks the two arm blocks emitted,
+     * then returns true. Returns false (touching nothing) when {@code branch} is not such a diamond, so the
+     * caller structures it as ordinary control flow.
+     */
+    boolean tryCollapseTernaryDiamond(IRBlock branch);
 }

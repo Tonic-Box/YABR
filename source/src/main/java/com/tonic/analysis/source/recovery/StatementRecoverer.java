@@ -70,6 +70,52 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return context.isProcessed(block);
     }
 
+    @Override
+    public boolean tryCollapseTernaryDiamond(IRBlock branch) {
+        IRInstruction term = branch.getTerminator();
+        if (!(term instanceof BranchInstruction)) {
+            return false;
+        }
+        BranchInstruction br = (BranchInstruction) term;
+        IRBlock thenBlock = br.getTrueTarget();
+        IRBlock elseBlock = br.getFalseTarget();
+        if (thenBlock == null || elseBlock == null || thenBlock == elseBlock) {
+            return false;
+        }
+        // Both arms must be reached only from this branch and flow to one common merge block.
+        if (!isSolePredecessor(branch, thenBlock) || !isSolePredecessor(branch, elseBlock)) {
+            return false;
+        }
+        IRBlock merge = soleSuccessor(thenBlock);
+        if (merge == null || merge != soleSuccessor(elseBlock)) {
+            return false;
+        }
+        PhiInstruction ternaryPhi = findTernaryPhi(thenBlock, elseBlock, merge);
+        if (ternaryPhi == null) {
+            return false;
+        }
+        // A phi feeding another phi (a nested merge) cannot be consumed as a value here unless it is also
+        // stored to a local; collapsing it would orphan the outer merge's arm. Mirrors the schema path guard.
+        if (getPhiUsingValue(ternaryPhi.getResult()) != null && !hasStoreLocalUse(ternaryPhi.getResult())) {
+            return false;
+        }
+        Expression condition = recoverCondition(branch, false);
+        collapseToTernaryPhiExpression(condition, ternaryPhi, thenBlock, elseBlock);
+        context.markProcessed(thenBlock);
+        context.markProcessed(elseBlock);
+        return true;
+    }
+
+    private boolean isSolePredecessor(IRBlock pred, IRBlock block) {
+        Set<IRBlock> preds = block.getPredecessors();
+        return preds.size() == 1 && preds.contains(pred);
+    }
+
+    private IRBlock soleSuccessor(IRBlock block) {
+        Set<IRBlock> succs = block.getSuccessors();
+        return succs.size() == 1 ? succs.iterator().next() : null;
+    }
+
     /**
      * Pre-declares parameter names so that stores to parameter slots
      * generate assignment statements instead of variable declarations.
@@ -7899,10 +7945,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * - mergeBlock: PHI(value1, value2), use PHI in method call/assignment
      */
     private PhiInstruction findTernaryPhiPattern(RegionInfo info) {
-        IRBlock thenBlock = info.getThenBlock();
-        IRBlock elseBlock = info.getElseBlock();
-        IRBlock mergeBlock = info.getMergeBlock();
+        return findTernaryPhi(info.getThenBlock(), info.getElseBlock(), info.getMergeBlock());
+    }
 
+    /**
+     * The phi in {@code mergeBlock} that a diamond over {@code thenBlock}/{@code elseBlock} collapses to a
+     * ternary - one incoming value from each arm, each arm a valid single-value producer - or null.
+     */
+    private PhiInstruction findTernaryPhi(IRBlock thenBlock, IRBlock elseBlock, IRBlock mergeBlock) {
         if (thenBlock == null || elseBlock == null || mergeBlock == null) {
             return null;
         }
