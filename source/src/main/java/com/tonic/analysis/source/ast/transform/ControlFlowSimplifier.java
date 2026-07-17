@@ -369,6 +369,10 @@ public class ControlFlowSimplifier implements ASTTransform {
             BinaryExpr binary = (BinaryExpr) expr;
             Expression left = simplifyExpression(binary.getLeft());
             Expression right = simplifyExpression(binary.getRight());
+            Expression identity = foldBooleanIdentity(binary.getOperator(), left, right);
+            if (identity != null) {
+                return identity;
+            }
             if (left != binary.getLeft() || right != binary.getRight()) {
                 return new BinaryExpr(binary.getOperator(), left, right, binary.getType());
             }
@@ -1428,6 +1432,32 @@ public class ControlFlowSimplifier implements ASTTransform {
         if (body instanceof BlockStmt) {
             lists.add(((BlockStmt) body).getStatements());
         }
+    }
+
+    /**
+     * Folds a logical identity where one operand is a boolean constant: {@code x && true} and {@code true && x}
+     * to {@code x}, {@code x || false} and {@code false || x} to {@code x}. These keep the other operand as-is,
+     * so they are always safe (no side effect is dropped). The absorbing cases ({@code x && false},
+     * {@code x || true}) are left alone since they would discard the other operand. Returns null when neither
+     * operand is the matching constant, or the operator is not a short-circuit {@code &&}/{@code ||}.
+     */
+    private Expression foldBooleanIdentity(BinaryOperator op, Expression left, Expression right) {
+        if (op == BinaryOperator.AND) {
+            if (isBoolLiteral(right, true)) {
+                return left;
+            }
+            if (isBoolLiteral(left, true)) {
+                return right;
+            }
+        } else if (op == BinaryOperator.OR) {
+            if (isBoolLiteral(right, false)) {
+                return left;
+            }
+            if (isBoolLiteral(left, false)) {
+                return right;
+            }
+        }
+        return null;
     }
 
     /** {@code c} for {@code true/false}, {@code !c} for {@code false/true}; null when the arms are not that pair. */

@@ -125,6 +125,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (info == null || info.getType() != ControlFlowContext.StructuredRegion.SWITCH) {
             return false;
         }
+        // A pattern switch dispatches on `typeSwitch(selector, index)`; the pattern/switch-expression
+        // reconstructors fold that (and its null-check and index scaffolding) into `switch (selector)`. The
+        // native path would recover the raw dispatch and strand the scaffolding, so leave it to the legacy walk.
+        Value key = ((SwitchInstruction) switchBlock.getTerminator()).getKey();
+        if (key instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) key).getDefinition();
+            if (def instanceof InvokeInstruction && ((InvokeInstruction) def).isDynamic()
+                    && "typeSwitch".equals(((InvokeInstruction) def).getName())) {
+                return false;
+            }
+        }
         // A switch inside a loop shares the loop's continue target as its merge and its induction phis flow
         // through the case bodies; structuring it as an opaque unit misplaces those. Leave it to the legacy
         // walk, which recovers the loop and switch together.
