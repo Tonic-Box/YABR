@@ -41,7 +41,7 @@ public class RedundantAssignmentEliminator implements ASTTransform {
                 continue;
             }
             for (int i = j - 1; i >= 0; i--) {
-                Assign ai = asSimpleAssign(stmts.get(i));
+                Assign ai = priorWrite(stmts.get(i));
                 if (ai != null && ai.var.equals(aj.var)) {
                     if (exprEquals(ai.value, aj.value)) {
                         stmts.remove(j);
@@ -71,6 +71,25 @@ public class RedundantAssignmentEliminator implements ASTTransform {
             return null;
         }
         return new Assign(((VarRefExpr) b.getLeft()).getName(), b.getRight());
+    }
+
+    /**
+     * A prior write of {@code x = value}: either an assignment statement or a declaration with an
+     * initializer ({@code T x = value}). Recognizing the declaration lets a later redundant {@code x =
+     * value} be dropped even after a declaration hoist has folded the first write into the declaration.
+     */
+    private Assign priorWrite(Statement stmt) {
+        Assign a = asSimpleAssign(stmt);
+        if (a != null) {
+            return a;
+        }
+        if (stmt instanceof VarDeclStmt) {
+            VarDeclStmt d = (VarDeclStmt) stmt;
+            if (d.getInitializer() != null) {
+                return new Assign(d.getName(), d.getInitializer());
+            }
+        }
+        return null;
     }
 
     private boolean isSideEffectFree(Expression e) {

@@ -1252,6 +1252,9 @@ public class ClassDecompiler {
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             scopeEscapeHoister.transform(body);
+            // A hoist above can re-fold a declaration into `T x = c;` leaving a later redundant `x = c;`
+            // (e.g. a loop counter's init copy); collapse those once more so recovery is a fixed point.
+            redundantAssignmentEliminator.transform(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body, method.getName() + method.getDesc());
         } catch (Exception e) {

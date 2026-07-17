@@ -30,6 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ControlFlowSimplifier implements ASTTransform {
 
+    /** The method body of the in-progress top-level {@code transform} call; whole-method passes read it. */
+    private BlockStmt methodRoot;
+
     @Override
     public String getName() {
         return "ControlFlowSimplifier";
@@ -37,6 +40,20 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     @Override
     public boolean transform(BlockStmt block) {
+        boolean top = methodRoot == null;
+        if (top) {
+            methodRoot = block;
+        }
+        try {
+            return transformBlock(block);
+        } finally {
+            if (top) {
+                methodRoot = null;
+            }
+        }
+    }
+
+    private boolean transformBlock(BlockStmt block) {
         boolean changed = false;
         List<Statement> stmts = block.getStatements();
 
@@ -54,6 +71,9 @@ public class ControlFlowSimplifier implements ASTTransform {
         changed |= simplifyExpressions(stmts);
 
         changed |= inlineSingleUseBooleans(stmts);
+
+        changed |= collapseConditionalMaterialization(stmts);
+        changed |= collapseReturnedBooleanPhi(stmts);
 
         changed |= mergeSequentialGuards(stmts);
 
@@ -269,6 +289,54 @@ public class ControlFlowSimplifier implements ASTTransform {
         return null;
     }
 
+    /**
+     * Folds a boolean short-circuit that javac materializes as an int-carrying ternary back into {@code &&}/{@code
+     * ||}: {@code c ? 1 : y} is {@code c || y}, {@code c ? y : 0} is {@code c && y} (and the negated {@code 0}/
+     * {@code 1} forms), where the non-literal arm {@code y} is itself boolean. Recompiling a {@code ||}/{@code &&}
+     * and decompiling it yields this int-ternary shape; folding it makes the round trip a fixed point. Returns
+     * null when the ternary is a genuine value select (neither arm is a boolean-materialized {@code 0}/{@code 1}).
+     */
+    private Expression foldBooleanShortCircuit(Expression cond, Expression thenExpr, Expression elseExpr) {
+        Integer t = constInt(thenExpr);
+        Integer e = constInt(elseExpr);
+        if (t != null && t == 1 && e != null && e == 0) {
+            return cond;
+        }
+        if (t != null && t == 0 && e != null && e == 1) {
+            return negate(cond);
+        }
+        if (t != null && t == 1 && isBooleanExpr(elseExpr)) {
+            return new BinaryExpr(BinaryOperator.OR, cond, elseExpr, PrimitiveSourceType.BOOLEAN);
+        }
+        if (t != null && t == 0 && isBooleanExpr(elseExpr)) {
+            return new BinaryExpr(BinaryOperator.AND, negate(cond), elseExpr, PrimitiveSourceType.BOOLEAN);
+        }
+        if (e != null && e == 0 && isBooleanExpr(thenExpr)) {
+            return new BinaryExpr(BinaryOperator.AND, cond, thenExpr, PrimitiveSourceType.BOOLEAN);
+        }
+        if (e != null && e == 1 && isBooleanExpr(thenExpr)) {
+            return new BinaryExpr(BinaryOperator.OR, negate(cond), thenExpr, PrimitiveSourceType.BOOLEAN);
+        }
+        return null;
+    }
+
+    /** A boolean-valued expression: a comparison/logical operator, a negation, or a boolean-typed leaf. */
+    private boolean isBooleanExpr(Expression e) {
+        if (e instanceof BinaryExpr) {
+            BinaryOperator op = ((BinaryExpr) e).getOperator();
+            switch (op) {
+                case EQ: case NE: case LT: case LE: case GT: case GE: case AND: case OR:
+                    return true;
+                default:
+                    break;
+            }
+        }
+        if (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator() == UnaryOperator.NOT) {
+            return true;
+        }
+        return isBooleanType(e.getType());
+    }
+
     private Expression simplifyExpression(Expression expr) {
         if (expr instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) expr;
@@ -280,6 +348,7 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         if (expr instanceof TernaryExpr) {
             TernaryExpr ternary = (TernaryExpr) expr;
+            Expression cond = simplifyExpression(ternary.getCondition());
             Expression thenExpr = simplifyExpression(ternary.getThenExpr());
             Expression elseExpr = simplifyExpression(ternary.getElseExpr());
 
@@ -287,13 +356,14 @@ public class ControlFlowSimplifier implements ASTTransform {
                 return thenExpr;
             }
 
-            if (thenExpr != ternary.getThenExpr() || elseExpr != ternary.getElseExpr()) {
-                return new TernaryExpr(
-                    simplifyExpression(ternary.getCondition()),
-                    thenExpr,
-                    elseExpr,
-                    ternary.getType()
-                );
+            Expression shortCircuit = foldBooleanShortCircuit(cond, thenExpr, elseExpr);
+            if (shortCircuit != null) {
+                return shortCircuit;
+            }
+
+            if (cond != ternary.getCondition() || thenExpr != ternary.getThenExpr()
+                    || elseExpr != ternary.getElseExpr()) {
+                return new TernaryExpr(cond, thenExpr, elseExpr, ternary.getType());
             }
         } else if (expr instanceof BinaryExpr) {
             BinaryExpr binary = (BinaryExpr) expr;
@@ -1171,6 +1241,271 @@ public class ControlFlowSimplifier implements ASTTransform {
         }
 
         return changed;
+    }
+
+    /**
+     * Collapses a value materialized through a default init and a one-armed {@code if} back into the condition:
+     * <pre>
+     *   boolean t = false; if (c) { t = true; }   =&gt;   boolean t = c;
+     *   boolean t = true;  if (c) { t = false; }   =&gt;   boolean t = !c;
+     * </pre>
+     * The reaching-condition engine lowers a boolean phi as these two statements where javac wrote the condition
+     * directly; a later single-use inline then folds {@code boolean t = c; return t;} to {@code return c}. Applies
+     * to a declaration ({@code T t = V0}) or a plain assignment, and only when the init, the conditional value,
+     * and the condition are side-effect free and {@code c} does not read {@code t} - so evaluating {@code c}
+     * first changes nothing.
+     */
+    private boolean collapseConditionalMaterialization(List<Statement> stmts) {
+        boolean changed = false;
+        for (int i = 0; i + 1 < stmts.size(); i++) {
+            String var = assignedVar(stmts.get(i));
+            Expression v0 = assignedValue(stmts.get(i));
+            if (var == null || v0 == null || isSideEffecting(v0) || countVariableUses(v0, var) > 0) {
+                continue;
+            }
+            if (!(stmts.get(i + 1) instanceof IfStmt)) {
+                continue;
+            }
+            IfStmt ifStmt = (IfStmt) stmts.get(i + 1);
+            if (ifStmt.hasElse()) {
+                continue;
+            }
+            Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
+            if (inner == null || !var.equals(simpleAssignVar(inner))) {
+                continue;
+            }
+            Expression v1 = simpleAssignValue(inner);
+            Expression cond = ifStmt.getCondition();
+            if (v1 == null || isSideEffecting(v1) || isSideEffecting(cond)
+                    || countVariableUses(cond, var) > 0 || countVariableUses(v1, var) > 0) {
+                continue;
+            }
+            Expression folded = materializeBoolean(cond, v1, v0);
+            if (folded == null) {
+                continue;
+            }
+            Statement rebuilt = rebuildAssignment(stmts.get(i), folded);
+            if (rebuilt == null) {
+                continue;
+            }
+            Locations.copy(stmts.get(i), rebuilt);
+            stmts.set(i, rebuilt);
+            stmts.remove(i + 1);
+            changed = true;
+        }
+        return changed;
+    }
+
+    /**
+     * Collapses a boolean flag whose default init, single conditional write, and single read live at different
+     * nesting levels:
+     * <pre>
+     *   boolean t = false; if (a) { ...; if (c) { t = true; } return t; } return false;
+     *   ==&gt;  boolean-free: ...; if (a) { ...; return c; } return false;
+     * </pre>
+     * The reaching-condition engine hoists the phi default ({@code t = false}) to the flag's method-scope
+     * declaration while its conditional {@code t = true} and its {@code return t} sit inside a branch. This folds
+     * when {@code t} has exactly one declaration with a boolean-literal init, exactly one other write (the
+     * conditional one, immediately followed by {@code return t}), and no other use - so the flag is exactly the
+     * boolean value of its condition.
+     */
+    private boolean collapseReturnedBooleanPhi(List<Statement> stmts) {
+        if (methodRoot == null) {
+            return false;
+        }
+        boolean changed = false;
+        for (int i = 0; i + 1 < stmts.size(); i++) {
+            if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof ReturnStmt)) {
+                continue;
+            }
+            IfStmt ifStmt = (IfStmt) stmts.get(i);
+            ReturnStmt ret = (ReturnStmt) stmts.get(i + 1);
+            if (ifStmt.hasElse() || !(ret.getValue() instanceof VarRefExpr)) {
+                continue;
+            }
+            String var = ((VarRefExpr) ret.getValue()).getName();
+            Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
+            if (inner == null || !var.equals(simpleAssignVar(inner))) {
+                continue;
+            }
+            Expression v1 = simpleAssignValue(inner);
+            Expression cond = ifStmt.getCondition();
+            // The condition may have side effects (e.g. a call): the `if` evaluates it exactly once, and the
+            // folded `return cond` (or `!cond`) at the same position evaluates it exactly once too.
+            if (v1 == null || isSideEffecting(v1) || countVariableUses(cond, var) > 0) {
+                continue;
+            }
+            VarDeclStmt decl = findDeclaration(methodRoot, var);
+            if (decl == null || decl.getInitializer() == null || !isBooleanType(decl.getType())
+                    || countUsesInTree(methodRoot, var) != 2) {
+                continue; // exactly the `var = v1` write and the `return var` read
+            }
+            Expression folded = materializeBoolean(cond, v1, decl.getInitializer());
+            if (folded == null) {
+                continue;
+            }
+            ReturnStmt newRet = new ReturnStmt(folded);
+            newRet.setMethodReturnType(ret.getMethodReturnType());
+            Locations.copy(ret, newRet);
+            stmts.set(i + 1, newRet);
+            stmts.remove(i);
+            // The flag is now unused; a later dead-variable pass drops its declaration. Removing it here would
+            // mutate an ancestor statement list while the recursive walk still iterates it.
+            changed = true;
+            i--;
+        }
+        return changed;
+    }
+
+    /** The first {@code VarDeclStmt} declaring {@code var} anywhere in the tree, else null. */
+    private VarDeclStmt findDeclaration(Statement s, String var) {
+        for (List<Statement> lst : childStatementLists(s)) {
+            for (Statement st : lst) {
+                if (st instanceof VarDeclStmt && var.equals(((VarDeclStmt) st).getName())) {
+                    return (VarDeclStmt) st;
+                }
+                VarDeclStmt inner = findDeclaration(st, var);
+                if (inner != null) {
+                    return inner;
+                }
+            }
+        }
+        return null;
+    }
+
+    private int countUsesInTree(Statement s, String var) {
+        AtomicInteger count = new AtomicInteger(0);
+        s.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitVarRef(VarRefExpr e) {
+                if (e.getName().equals(var)) {
+                    count.incrementAndGet();
+                }
+                return super.visitVarRef(e);
+            }
+        });
+        return count.get();
+    }
+
+    private List<List<Statement>> childStatementLists(Statement s) {
+        List<List<Statement>> lists = new ArrayList<>();
+        if (s instanceof BlockStmt) {
+            lists.add(((BlockStmt) s).getStatements());
+        } else if (s instanceof IfStmt) {
+            IfStmt i = (IfStmt) s;
+            addStatementBody(lists, i.getThenBranch());
+            if (i.hasElse()) {
+                addStatementBody(lists, i.getElseBranch());
+            }
+        } else if (s instanceof ForStmt) {
+            addStatementBody(lists, ((ForStmt) s).getBody());
+        } else if (s instanceof WhileStmt) {
+            addStatementBody(lists, ((WhileStmt) s).getBody());
+        } else if (s instanceof DoWhileStmt) {
+            addStatementBody(lists, ((DoWhileStmt) s).getBody());
+        } else if (s instanceof ForEachStmt) {
+            addStatementBody(lists, ((ForEachStmt) s).getBody());
+        } else if (s instanceof SynchronizedStmt) {
+            addStatementBody(lists, ((SynchronizedStmt) s).getBody());
+        } else if (s instanceof TryCatchStmt) {
+            TryCatchStmt t = (TryCatchStmt) s;
+            addStatementBody(lists, t.getTryBlock());
+            for (CatchClause c : t.getCatches()) {
+                addStatementBody(lists, c.body());
+            }
+            addStatementBody(lists, t.getFinallyBlock());
+        } else if (s instanceof SwitchStmt) {
+            for (SwitchCase c : ((SwitchStmt) s).getCases()) {
+                if (c.statements() != null) {
+                    lists.add(c.statements());
+                }
+            }
+        }
+        return lists;
+    }
+
+    private void addStatementBody(List<List<Statement>> lists, Statement body) {
+        if (body instanceof BlockStmt) {
+            lists.add(((BlockStmt) body).getStatements());
+        }
+    }
+
+    /** {@code c} for {@code true/false}, {@code !c} for {@code false/true}; null when the arms are not that pair. */
+    private Expression materializeBoolean(Expression cond, Expression whenTrue, Expression whenFalse) {
+        if (isBoolLiteral(whenTrue, true) && isBoolLiteral(whenFalse, false)) {
+            return cond;
+        }
+        if (isBoolLiteral(whenTrue, false) && isBoolLiteral(whenFalse, true)) {
+            return negate(cond);
+        }
+        return null;
+    }
+
+    private boolean isBoolLiteral(Expression e, boolean value) {
+        if (!(e instanceof LiteralExpr)) {
+            return false;
+        }
+        Object v = ((LiteralExpr) e).getValue();
+        if (v instanceof Boolean) {
+            return ((Boolean) v) == value;
+        }
+        if (v instanceof Integer) {
+            return ((Integer) v) == (value ? 1 : 0); // JVM materializes boolean as int 1/0
+        }
+        return false;
+    }
+
+    private boolean isSideEffecting(Expression e) {
+        return Boolean.TRUE.equals(e.accept(SideEffectDetector.INSTANCE));
+    }
+
+    /** The variable written by a declaration-with-init or a plain {@code v = ...} assignment, else null. */
+    private String assignedVar(Statement s) {
+        if (s instanceof VarDeclStmt && ((VarDeclStmt) s).getInitializer() != null) {
+            return ((VarDeclStmt) s).getName();
+        }
+        return simpleAssignVar(s);
+    }
+
+    private Expression assignedValue(Statement s) {
+        if (s instanceof VarDeclStmt) {
+            return ((VarDeclStmt) s).getInitializer();
+        }
+        return simpleAssignValue(s);
+    }
+
+    /** The variable written by a plain {@code v = ...} expression statement, else null. */
+    private String simpleAssignVar(Statement s) {
+        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
+            if (b.getOperator() == BinaryOperator.ASSIGN && b.getLeft() instanceof VarRefExpr) {
+                return ((VarRefExpr) b.getLeft()).getName();
+            }
+        }
+        return null;
+    }
+
+    private Expression simpleAssignValue(Statement s) {
+        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
+            if (b.getOperator() == BinaryOperator.ASSIGN) {
+                return b.getRight();
+            }
+        }
+        return null;
+    }
+
+    /** Rebuilds statement {@code s} (declaration or assignment) with a new right-hand side. */
+    private Statement rebuildAssignment(Statement s, Expression value) {
+        if (s instanceof VarDeclStmt) {
+            VarDeclStmt d = (VarDeclStmt) s;
+            return new VarDeclStmt(d.getType(), d.getName(), value);
+        }
+        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
+            return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, b.getLeft(), value, b.getType()));
+        }
+        return null;
     }
 
     private boolean isBooleanType(SourceType type) {

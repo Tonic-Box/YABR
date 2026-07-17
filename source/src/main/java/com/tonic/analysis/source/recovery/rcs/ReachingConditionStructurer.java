@@ -5,16 +5,25 @@ import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
+import com.tonic.analysis.source.ast.expr.UnaryExpr;
+import com.tonic.analysis.source.ast.expr.UnaryOperator;
+import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.BreakStmt;
+import com.tonic.analysis.source.ast.stmt.ContinueStmt;
+import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.ForStmt;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.ThrowStmt;
+import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
+import com.tonic.analysis.source.ast.stmt.WhileStmt;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.recovery.ControlFlowContext;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
-import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.BranchInstruction;
@@ -22,10 +31,14 @@ import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.NewArrayInstruction;
 import com.tonic.analysis.ssa.ir.NewInstruction;
+import com.tonic.analysis.ssa.ir.ReturnInstruction;
+import com.tonic.analysis.ssa.ir.SimpleInstruction;
+import com.tonic.analysis.ssa.ir.SimpleOp;
 import com.tonic.analysis.ssa.ir.SwitchInstruction;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,12 +54,12 @@ import java.util.Set;
  * disjunction of the conditions that reach it - instead of being dropped (the schema structurer's
  * failure mode).
  *
- * <p>Introduced incrementally: this stage handles single-entry acyclic regions of exception-handler-free
- * methods with no switches. Branch nesting is recovered from the dominator tree and edge reachability;
- * a shared merge is guarded by its reaching condition, computed with the {@link BoolFormulaFactory}
- * boolean engine. Anything outside this scope (a loop, a switch, an exception handler, or a shared-tail
- * guard that would have to duplicate a side-effecting condition) is declined by returning {@code null}
- * so the caller keeps its existing recovery. Loops, switches, and irreducible remnants arrive later.
+ * <p>Introduced incrementally: this stage structures whole exception-handler-free, switch-free methods,
+ * including reducible loops (as {@code while (true)} with break/continue). Branch nesting is recovered
+ * from the dominator tree and edge reachability; a shared merge is guarded by its reaching condition,
+ * computed with the {@link BoolFormulaFactory} boolean engine. Anything outside this scope (a switch, an
+ * exception handler, irreducible flow, or a shared-tail guard that would duplicate a side-effecting
+ * condition) is declined by returning {@code null} so the caller keeps its existing recovery.
  */
 public final class ReachingConditionStructurer {
 
@@ -96,12 +109,11 @@ public final class ReachingConditionStructurer {
             return null;
         }
         this.dom = context.getDominatorTree();
-        LoopAnalysis loops = context.getLoopAnalysis();
         if (dom == null) {
             return null;
         }
 
-        if (!collectRegion(entry, stopBlocks, loops)) {
+        if (!collectRegion(entry, stopBlocks)) {
             return null;
         }
         assignAtoms();
@@ -117,12 +129,27 @@ public final class ReachingConditionStructurer {
         return emit(entry);
     }
 
-    /** Side-effect-free dry run mirroring {@link #emit}: throws {@link BailToLegacy} for an unsafe guard. */
+    /**
+     * Side-effect-free dry run mirroring {@link #emit}: throws {@link BailToLegacy} for an unsafe guard
+     * or an unstructurable loop, without touching recovery state or creating labels.
+     */
     private void validate(IRBlock b) {
-        List<IRBlock> children = childrenInRpo(b);
-        if (children.isEmpty()) {
+        LoopAnalysis loops = context.getLoopAnalysis();
+        if (loops != null && loops.isLoopHeader(b)) {
+            IRBlock breakTarget = findBreakTarget(b);
+            context.pushLoop(b, b, breakTarget);
+            validateChildren(b);
+            context.popLoop();
+            if (breakTarget != null && region.contains(breakTarget)) {
+                validate(breakTarget);
+            }
             return;
         }
+        validateChildren(b);
+    }
+
+    private void validateChildren(IRBlock b) {
+        List<IRBlock> children = childrenInRpo(b);
         IRInstruction term = b.getTerminator();
         if (!(term instanceof BranchInstruction)) {
             for (IRBlock c : children) {
@@ -131,8 +158,10 @@ public final class ReachingConditionStructurer {
             return;
         }
         BranchInstruction branch = (BranchInstruction) term;
-        Set<IRBlock> fromTrue = reachWithin(branch.getTrueTarget(), b);
-        Set<IRBlock> fromFalse = reachWithin(branch.getFalseTarget(), b);
+        boolean trueJump = context.classifyLoopJump(branch.getTrueTarget()) != null;
+        boolean falseJump = context.classifyLoopJump(branch.getFalseTarget()) != null;
+        Set<IRBlock> fromTrue = trueJump ? Collections.emptySet() : reachWithin(branch.getTrueTarget(), b);
+        Set<IRBlock> fromFalse = falseJump ? Collections.emptySet() : reachWithin(branch.getFalseTarget(), b);
         for (IRBlock c : children) {
             boolean t = fromTrue.contains(c);
             boolean f = fromFalse.contains(c);
@@ -149,11 +178,12 @@ public final class ReachingConditionStructurer {
     }
 
     /**
-     * Gathers the acyclic single-entry region: blocks reachable from {@code entry} without crossing a
-     * stop block or a back edge. Fails (returns false) if the region contains a loop header, a switch, or
-     * a back edge - shapes this stage does not structure.
+     * Gathers the single-entry region: blocks reachable from {@code entry} without crossing a stop block,
+     * following reducible loop back edges only forward (the header is already in the region). Fails (returns
+     * false) if the region contains a switch, an irreducible (non-back-edge) cycle, or a block the entry does
+     * not dominate - shapes this stage does not structure.
      */
-    private boolean collectRegion(IRBlock entry, Set<IRBlock> stopBlocks, LoopAnalysis loops) {
+    private boolean collectRegion(IRBlock entry, Set<IRBlock> stopBlocks) {
         region = new LinkedHashSet<>();
         Deque<IRBlock> work = new ArrayDeque<>();
         work.add(entry);
@@ -162,21 +192,22 @@ public final class ReachingConditionStructurer {
             if (!region.add(b)) {
                 continue;
             }
-            if (loops != null && loops.isLoopHeader(b)) {
-                return false;
-            }
             if (b.getTerminator() instanceof SwitchInstruction) {
                 return false;
             }
             for (IRBlock s : b.getSuccessors()) {
-                if (b.getEdgeType(s) == EdgeType.BACK) {
-                    return false;
+                if (isBackEdge(b, s)) {
+                    continue; // a reducible loop's back edge - its header is already in the region
                 }
                 if (stopBlocks.contains(s) || region.contains(s)) {
                     continue;
                 }
                 work.add(s);
             }
+        }
+        // Irreducible flow (a cycle that is not a dominance back edge) cannot be structured here.
+        if (hasNonBackCycle(entry, new HashSet<>(), new HashSet<>())) {
+            return false;
         }
         rpoIndex = new HashMap<>();
         int i = 0;
@@ -192,6 +223,34 @@ public final class ReachingConditionStructurer {
             }
         }
         return true;
+    }
+
+    /**
+     * True when the edge {@code from -> to} is a loop back edge, i.e. its target dominates its source.
+     * Computed from dominance rather than the {@code EdgeType.BACK} stamp, which is unreliable after the
+     * exception edges are added and removed around loop analysis.
+     */
+    private boolean isBackEdge(IRBlock from, IRBlock to) {
+        return dom.dominates(to, from);
+    }
+
+    /** DFS over non-back edges: a back edge into an on-stack block would be a genuine (irreducible) cycle. */
+    private boolean hasNonBackCycle(IRBlock b, Set<IRBlock> onStack, Set<IRBlock> done) {
+        onStack.add(b);
+        for (IRBlock s : b.getSuccessors()) {
+            if (isBackEdge(b, s) || !region.contains(s)) {
+                continue;
+            }
+            if (onStack.contains(s)) {
+                return true;
+            }
+            if (!done.contains(s) && hasNonBackCycle(s, onStack, done)) {
+                return true;
+            }
+        }
+        onStack.remove(b);
+        done.add(b);
+        return false;
     }
 
     /** Assigns a boolean atom to every branch block, in RPO order (locality for the BDD variable order). */
@@ -236,11 +295,231 @@ public final class ReachingConditionStructurer {
         if (bridge.isRegionBlockProcessed(b)) {
             return new ArrayList<>();
         }
+        LoopAnalysis loops = context.getLoopAnalysis();
+        if (loops != null && loops.isLoopHeader(b)) {
+            return emitLoop(b);
+        }
         List<Statement> own = bridge.recoverSimpleBlock(b);
         bridge.markRegionBlockProcessed(b, own);
         List<Statement> out = new ArrayList<>(own);
         out.addAll(structureChildren(b));
         return out;
+    }
+
+    /**
+     * Emits a natural loop as {@code while (true) { ... }} with the exit edge lowered to {@code break}
+     * and the back edge to {@code continue}. The header's own condition therefore surfaces inside the
+     * body as {@code if (exit) break;}; the single non-terminal exit becomes the continuation after the
+     * loop. Terminal (return/throw) exits stay inlined in the body.
+     */
+    private List<Statement> emitLoop(IRBlock header) {
+        IRBlock breakTarget = findBreakTarget(header);
+        LoopAnalysis.Loop loop = context.getLoopAnalysis().getLoop(header);
+        List<Statement> out = new ArrayList<>();
+        // Realize the header's phis from the forward (pre-loop) edges before the loop - e.g. a loop
+        // counter's initial value when the for-loop-init pass marked the store for skipping. Identity
+        // copies self-skip, so a value already stored in the pre-header is not repeated.
+        for (IRBlock pred : header.getPredecessors()) {
+            if (region.contains(pred) && !isBackEdge(pred, header)) {
+                out.addAll(bridge.lowerPhisOnEdge(pred, header));
+            }
+        }
+        List<Statement> headerStmts = new ArrayList<>(bridge.recoverSimpleBlock(header));
+        bridge.markRegionBlockProcessed(header, headerStmts);
+        context.pushLoop(header, header, breakTarget);
+
+        // Prefer while(cond): a pure conditional header with exactly one edge staying in the loop lifts
+        // that test into the loop condition (rather than wrapping the body in `if (exit) break;`), which
+        // keeps a value-returning method's exit as an explicit trailing return and is a round-trip fixed
+        // point. Otherwise fall back to the always-correct while(true) with break/continue.
+        Expression whileCond = LiteralExpr.ofBoolean(true);
+        IRBlock terminalExit = null;
+        IRInstruction term = header.getTerminator();
+        boolean lifted = false;
+        if (headerStmts.isEmpty() && term instanceof BranchInstruction) {
+            BranchInstruction br = (BranchInstruction) term;
+            boolean tStays = loop.getBlocks().contains(br.getTrueTarget());
+            boolean fStays = loop.getBlocks().contains(br.getFalseTarget());
+            if (tStays != fStays) {
+                IRBlock exit = tStays ? br.getFalseTarget() : br.getTrueTarget();
+                if (exit == breakTarget || isTerminalBlock(exit)) {
+                    whileCond = bridge.recoverCondition(header, !tStays);
+                    lifted = true;
+                    if (exit != breakTarget && isTerminalBlock(exit)) {
+                        terminalExit = exit;
+                    }
+                }
+            }
+        }
+
+        List<Statement> body = new ArrayList<>(headerStmts);
+        if (lifted) {
+            for (IRBlock c : childrenInRpo(header)) {
+                if (loop.getBlocks().contains(c)) {
+                    body.addAll(emit(c));
+                }
+            }
+        } else {
+            body.addAll(structureChildren(header));
+        }
+        context.popLoop();
+        stripTrailingContinue(body);
+        Statement loopStmt = buildLoop(whileCond, body, lifted);
+        stamp(loopStmt, header);
+        out.add(loopStmt);
+        if (terminalExit != null && region.contains(terminalExit)) {
+            out.addAll(emit(terminalExit));
+        }
+        if (breakTarget != null && region.contains(breakTarget)) {
+            out.addAll(emit(breakTarget));
+        }
+        return out;
+    }
+
+    /**
+     * Builds a {@code for} when the lifted-condition loop body ends in an induction step ({@code i++} /
+     * {@code i = i +/- c}) and contains no {@code continue} - moving the step to the update slot pins its
+     * position ({@code for (; c; i++) { body }} equals {@code while (c) { body; i++ }}), which is a
+     * round-trip fixed point where a body-tail increment is not. A {@code continue} would run the update
+     * in a {@code for} but skip it in a {@code while}, so those keep the {@code while}. Otherwise a
+     * {@code while}.
+     */
+    private Statement buildLoop(Expression cond, List<Statement> body, boolean lifted) {
+        if (lifted && !body.isEmpty() && !containsContinue(body)) {
+            Expression update = asInductionStep(body.get(body.size() - 1));
+            if (update != null) {
+                List<Statement> forBody = new ArrayList<>(body.subList(0, body.size() - 1));
+                return new ForStmt(new ArrayList<>(), cond, List.of(update), new BlockStmt(forBody));
+            }
+        }
+        return new WhileStmt(cond, new BlockStmt(body));
+    }
+
+    /**
+     * The {@code for}-update for a trailing {@code +/- 1} induction step, always normalized to {@code x++}
+     * / {@code x--}, or null. The step is recovered in several equivalent shapes - {@code x++},
+     * {@code x = x + 1}, and the mis-recovered declaration {@code int x = x + 1} - and the update slot must
+     * read the same in every round trip regardless of which shape appeared, so all are normalized here.
+     */
+    private Expression asInductionStep(Statement s) {
+        if (s instanceof ExprStmt) {
+            Expression e = ((ExprStmt) s).getExpression();
+            if (e instanceof UnaryExpr) {
+                UnaryOperator op = ((UnaryExpr) e).getOperator();
+                if ((op == UnaryOperator.PRE_INC || op == UnaryOperator.POST_INC
+                        || op == UnaryOperator.PRE_DEC || op == UnaryOperator.POST_DEC)
+                        && ((UnaryExpr) e).getOperand() instanceof VarRefExpr) {
+                    return e; // already a unary step; used as-is so its node is unchanged
+                }
+                return null;
+            }
+            if (e instanceof BinaryExpr && ((BinaryExpr) e).getOperator() == BinaryOperator.ASSIGN
+                    && ((BinaryExpr) e).getLeft() instanceof VarRefExpr) {
+                VarRefExpr lv = (VarRefExpr) ((BinaryExpr) e).getLeft();
+                return toUnaryStep(lv.getName(), lv.getType(), ((BinaryExpr) e).getRight());
+            }
+            return null;
+        }
+        // A mis-recovered `int x = x +/- 1`; the pipeline folds a plain step to `x++`, so build that here.
+        if (s instanceof VarDeclStmt) {
+            VarDeclStmt d = (VarDeclStmt) s;
+            return toUnaryStep(d.getName(), d.getType(), d.getInitializer());
+        }
+        return null;
+    }
+
+    /** Builds {@code x++} / {@code x--} for a step expression {@code x +/- 1}, else null. */
+    private Expression toUnaryStep(String var, SourceType type, Expression step) {
+        if (step instanceof BinaryExpr) {
+            BinaryExpr r = (BinaryExpr) step;
+            if ((r.getOperator() == BinaryOperator.ADD || r.getOperator() == BinaryOperator.SUB)
+                    && r.getLeft() instanceof VarRefExpr
+                    && ((VarRefExpr) r.getLeft()).getName().equals(var)
+                    && r.getRight() instanceof LiteralExpr
+                    && isLiteralOne(((LiteralExpr) r.getRight()).getValue())) {
+                UnaryOperator op = r.getOperator() == BinaryOperator.ADD
+                        ? UnaryOperator.POST_INC : UnaryOperator.POST_DEC;
+                return new UnaryExpr(op, new VarRefExpr(var, type), type);
+            }
+        }
+        return null;
+    }
+
+    private boolean isLiteralOne(Object v) {
+        return (v instanceof Integer && (Integer) v == 1)
+                || (v instanceof Long && (Long) v == 1L)
+                || (v instanceof Short && (Short) v == 1)
+                || (v instanceof Byte && (Byte) v == 1);
+    }
+
+    /** True if any {@code continue} appears in {@code stmts} (conservatively including nested loops). */
+    private boolean containsContinue(List<Statement> stmts) {
+        for (Statement s : stmts) {
+            if (s instanceof ContinueStmt) {
+                return true;
+            }
+            if (s instanceof BlockStmt && containsContinue(((BlockStmt) s).getStatements())) {
+                return true;
+            }
+            if (s instanceof IfStmt) {
+                IfStmt f = (IfStmt) s;
+                if (blockHasContinue(f.getThenBranch())
+                        || (f.getElseBranch() != null && blockHasContinue(f.getElseBranch()))) {
+                    return true;
+                }
+            }
+            if (s instanceof WhileStmt && blockHasContinue(((WhileStmt) s).getBody())) {
+                return true;
+            }
+            if (s instanceof ForStmt && blockHasContinue(((ForStmt) s).getBody())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean blockHasContinue(Statement s) {
+        if (s instanceof ContinueStmt) {
+            return true;
+        }
+        return s instanceof BlockStmt && containsContinue(((BlockStmt) s).getStatements());
+    }
+
+    /** Drops a trailing unlabeled {@code continue} - the fall-through to the loop end already continues. */
+    private void stripTrailingContinue(List<Statement> body) {
+        if (body.isEmpty()) {
+            return;
+        }
+        Statement last = body.get(body.size() - 1);
+        if (last instanceof ContinueStmt && !((ContinueStmt) last).hasLabel()) {
+            body.remove(body.size() - 1);
+        }
+    }
+
+    /** The loop's single non-terminal exit block (its {@code break} continuation), or null for an infinite loop. */
+    private IRBlock findBreakTarget(IRBlock header) {
+        Set<IRBlock> loopBlocks = context.getLoopAnalysis().getLoop(header).getBlocks();
+        IRBlock breakTarget = null;
+        for (IRBlock u : loopBlocks) {
+            for (IRBlock v : u.getSuccessors()) {
+                if (loopBlocks.contains(v) || isBackEdge(u, v) || isTerminalBlock(v)) {
+                    continue;
+                }
+                if (breakTarget == null) {
+                    breakTarget = v;
+                } else if (breakTarget != v) {
+                    throw new BailToLegacy(); // multiple non-terminal exits need labeled restructuring
+                }
+            }
+        }
+        return breakTarget;
+    }
+
+    /** True when {@code block}'s terminator ends the method (a return or an athrow). */
+    private boolean isTerminalBlock(IRBlock block) {
+        IRInstruction term = block.getTerminator();
+        return term instanceof ReturnInstruction
+                || (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW);
     }
 
     private List<Statement> emitAll(List<IRBlock> blocks) {
@@ -259,17 +538,23 @@ public final class ReachingConditionStructurer {
      */
     private List<Statement> structureChildren(IRBlock b) {
         List<IRBlock> children = childrenInRpo(b);
-        if (children.isEmpty()) {
-            return new ArrayList<>();
-        }
         IRInstruction term = b.getTerminator();
         if (!(term instanceof BranchInstruction)) {
-            // Single-successor (or goto): the subtree continues sequentially through the children.
-            return emitAll(children);
+            // Single-successor / goto: continue through the children, then any loop jump off the edge.
+            List<Statement> seq = emitAll(children);
+            for (IRBlock s : b.getSuccessors()) {
+                List<Statement> jump = loopJump(b, s);
+                if (jump != null) {
+                    seq.addAll(jump);
+                }
+            }
+            return seq;
         }
         BranchInstruction branch = (BranchInstruction) term;
-        Set<IRBlock> fromTrue = reachWithin(branch.getTrueTarget(), b);
-        Set<IRBlock> fromFalse = reachWithin(branch.getFalseTarget(), b);
+        List<Statement> trueJump = loopJump(b, branch.getTrueTarget());
+        List<Statement> falseJump = loopJump(b, branch.getFalseTarget());
+        Set<IRBlock> fromTrue = trueJump != null ? Collections.emptySet() : reachWithin(branch.getTrueTarget(), b);
+        Set<IRBlock> fromFalse = falseJump != null ? Collections.emptySet() : reachWithin(branch.getFalseTarget(), b);
 
         List<IRBlock> trueChildren = new ArrayList<>();
         List<IRBlock> falseChildren = new ArrayList<>();
@@ -289,15 +574,17 @@ public final class ReachingConditionStructurer {
         // Emit with the false (fall-through) edge as the then-branch and the taken condition negated.
         // That matches how the AST lowers back to bytecode (a source `if` compiles to a branch on the
         // negated condition that jumps past the then-block), so recovery is a round-trip fixed point.
-        List<Statement> trueStmts = emitAll(trueChildren);
-        List<Statement> falseStmts = emitAll(falseChildren);
-        Expression cond = bridge.recoverCondition(b, true);
-        IfStmt ifStmt = new IfStmt(cond, new BlockStmt(falseStmts),
-                trueStmts.isEmpty() ? null : new BlockStmt(trueStmts));
-        stamp(ifStmt, b);
-
+        // A loop-boundary edge becomes its break/continue jump rather than a nested subtree.
+        List<Statement> trueStmts = trueJump != null ? new ArrayList<>(trueJump) : emitAll(trueChildren);
+        List<Statement> falseStmts = falseJump != null ? new ArrayList<>(falseJump) : emitAll(falseChildren);
         List<Statement> out = new ArrayList<>();
-        out.add(ifStmt);
+        if (!trueStmts.isEmpty() || !falseStmts.isEmpty()) {
+            Expression cond = bridge.recoverCondition(b, true);
+            IfStmt ifStmt = new IfStmt(cond, new BlockStmt(falseStmts),
+                    trueStmts.isEmpty() ? null : new BlockStmt(trueStmts));
+            stamp(ifStmt, b);
+            out.add(ifStmt);
+        }
         for (int i = 0; i < sharedChildren.size(); i++) {
             out.addAll(emitSharedTail(sharedChildren.get(i), b, i == sharedChildren.size() - 1));
         }
@@ -455,7 +742,7 @@ public final class ReachingConditionStructurer {
             }
             for (IRBlock s : b.getSuccessors()) {
                 if (s != avoid && region.contains(s) && !seen.contains(s)
-                        && b.getEdgeType(s) != EdgeType.BACK) {
+                        && !isBackEdge(b, s)) {
                     work.add(s);
                 }
             }
@@ -486,12 +773,38 @@ public final class ReachingConditionStructurer {
     private List<IRBlock> childrenInRpo(IRBlock b) {
         List<IRBlock> children = new ArrayList<>();
         for (IRBlock c : dom.getDominatorTreeChildren(b)) {
-            if (region.contains(c)) {
+            // A loop-boundary child (the break continuation) is emitted after the loop, not as a body
+            // child; edges into it become break/continue jumps instead.
+            if (region.contains(c) && context.classifyLoopJump(c) == null) {
                 children.add(c);
             }
         }
         children.sort((x, y) -> Integer.compare(rpoIndex.get(x), rpoIndex.get(y)));
         return children;
+    }
+
+    /**
+     * The break/continue for the loop-boundary edge into {@code target}, or null when it is not a loop
+     * boundary. Loop-carried values are realized by their store instructions (recovered in the body) and
+     * unified across the back edge by the slot partition's transparent-phi handling, as in the acyclic
+     * case, so no explicit edge copy is emitted here.
+     */
+    private List<Statement> loopJump(IRBlock from, IRBlock target) {
+        ControlFlowContext.LoopJump jump = context.classifyLoopJump(target);
+        if (jump == null) {
+            return null;
+        }
+        List<Statement> out = new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
+        if (jump.kind == ControlFlowContext.JumpKind.CONTINUE) {
+            out.add(jump.loopHeader != null
+                    ? new ContinueStmt(context.getOrCreateLabel(jump.loopHeader))
+                    : new ContinueStmt());
+        } else {
+            out.add(jump.loopHeader != null
+                    ? new BreakStmt(context.getOrCreateLabel(jump.loopHeader))
+                    : new BreakStmt());
+        }
+        return out;
     }
 
     private void stamp(Statement stmt, IRBlock header) {
