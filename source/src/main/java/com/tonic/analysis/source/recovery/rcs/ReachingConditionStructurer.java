@@ -113,6 +113,11 @@ public final class ReachingConditionStructurer {
             return null;
         }
 
+        // A repeat recover() on the same host reuses this context; clear the prior pass's emitted-block
+        // marks so every block is emitted again (the engine emits each block once per pass, keyed on these
+        // marks). Done only once this is the top-level whole-method call, which the guards above ensure.
+        context.resetProcessedBlocks();
+
         if (!collectRegion(entry, stopBlocks)) {
             return null;
         }

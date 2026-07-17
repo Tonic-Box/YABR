@@ -13,6 +13,7 @@ import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.transform.ArrayInitializerReconstructor;
+import com.tonic.analysis.source.ast.transform.ComparisonChainToSwitch;
 import com.tonic.analysis.source.ast.transform.ForLoopCounterFolder;
 import com.tonic.analysis.source.ast.transform.ScopeEscapeHoister;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
@@ -102,6 +103,7 @@ public class ClassDecompiler {
     private final VarargsReconstructor varargsReconstructor;
     private final ArrayInitializerReconstructor arrayInitReconstructor;
     private final ForLoopCounterFolder forLoopCounterFolder;
+    private final ComparisonChainToSwitch comparisonChainToSwitch;
     private final ScopeEscapeHoister scopeEscapeHoister;
     private final Set<String> usedTypes = new TreeSet<>();
     private Map<String, NavigableMap<Integer, Integer>> lineMapsCollector;
@@ -137,6 +139,7 @@ public class ClassDecompiler {
         this.varargsReconstructor = new VarargsReconstructor(classFile);
         this.arrayInitReconstructor = new ArrayInitializerReconstructor();
         this.forLoopCounterFolder = new ForLoopCounterFolder();
+        this.comparisonChainToSwitch = new ComparisonChainToSwitch();
         this.scopeEscapeHoister = new ScopeEscapeHoister();
         this.hasInnerClasses = detectInnerClasses();
     }
@@ -902,6 +905,7 @@ public class ClassDecompiler {
         // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
         // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
         singleUseInliner.transform(body);
+        comparisonChainToSwitch.transform(body);
         patternSwitchReconstructor.transform(body);
         switchExprReconstructor.transform(body);
         scopeEscapeHoister.transform(body);
@@ -1141,6 +1145,7 @@ public class ClassDecompiler {
         // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
         // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
         singleUseInliner.transform(body);
+            comparisonChainToSwitch.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             scopeEscapeHoister.transform(body);
@@ -1249,6 +1254,10 @@ public class ClassDecompiler {
             // Drop a redundant phi-copy re-assignment (`x = V; ...; x = V`) that YABR's phi elimination emits at
             // a branch's end but javac never does - keeps the earlier source-position assignment, matching d1.
             redundantAssignmentEliminator.transform(body);
+            // Fold a constant equality-guard chain (if (x != a) {...} if (x != b) {...}) into a switch before the
+            // switch reconstructors run, so a dispatch the schema structurer recovers at recovery time is
+            // recovered identically here.
+            comparisonChainToSwitch.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             scopeEscapeHoister.transform(body);

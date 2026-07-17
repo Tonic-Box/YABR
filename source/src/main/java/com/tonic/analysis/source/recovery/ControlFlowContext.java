@@ -156,6 +156,17 @@ public class ControlFlowContext {
         return processedBlocks.contains(block);
     }
 
+    /**
+     * Clears the emitted-block marks and their cached statements so a fresh recovery pass over the same
+     * method starts clean. The legacy walk is self-idempotent (it tracks visited blocks locally), but the
+     * reaching-condition engine reads these marks to emit each block once - without a reset, a second
+     * {@code recover()} on the same instance would see every block already emitted and produce nothing.
+     */
+    public void resetProcessedBlocks() {
+        processedBlocks.clear();
+        blockStatements.clear();
+    }
+
     public void setStatements(IRBlock block, List<Statement> stmts) {
         blockStatements.put(block, stmts);
     }
