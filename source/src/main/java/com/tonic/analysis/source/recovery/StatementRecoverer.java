@@ -40,9 +40,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private final TypeRecoverer typeRecoverer;
 
     /**
-     * The reaching-condition structurer, present only when {@code -Drcs.enabled=true}. When active it is
-     * offered each region first and falls back to the legacy walk by returning null for shapes it does
-     * not yet handle.
+     * The reaching-condition structurer, on by default and disabled only with {@code -Drcs.enabled=false}.
+     * When active it is offered each region first and falls back to the legacy walk by returning null for
+     * shapes it does not yet handle.
      */
     private final com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer rcsStructurer;
 
@@ -52,7 +52,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         this.analyzer = analyzer;
         this.exprRecoverer = exprRecoverer;
         this.typeRecoverer = new TypeRecoverer();
-        this.rcsStructurer = Boolean.getBoolean("rcs.enabled")
+        this.rcsStructurer = Boolean.parseBoolean(System.getProperty("rcs.enabled", "true"))
                 ? new com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer(this, context)
                 : null;
 
