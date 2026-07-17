@@ -10,6 +10,7 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
+import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
@@ -4768,10 +4769,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         boolean isDeclared = context.getExpressionContext().isDeclared(name);
 
         if (isDeclared) {
-            // A default-value store is covered by the declaration's initializer only outside
-            // loops: inside one it re-runs each iteration while the hoisted declaration ran
-            // once, so eliding it would drop a live re-initialization.
-            if (isDefaultValue(value) && context.getLoopStack().isEmpty()) {
+            // A default-value store is covered by the declaration's default initializer only while the variable
+            // provably still holds that default: outside a loop (a loop re-runs the store each iteration where
+            // the hoisted declaration ran once) AND with no non-default store to the slot dominating this one. An
+            // intervening reassignment (`result = fValue; ... result = 0.0f`) makes the later default store a
+            // genuine re-initialization; eliding it there drops a live write and silently changes the value.
+            if (isDefaultValue(value) && context.getLoopStack().isEmpty()
+                    && !hasDominatingNonDefaultStore(store)) {
                 return null;
             }
             if (value instanceof VarRefExpr) {
@@ -4786,6 +4790,80 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         context.getExpressionContext().markDeclared(name);
         return new VarDeclStmt(type, name, value);
+    }
+
+    /**
+     * True when a non-default value is written to {@code store}'s slot on the path reaching it - either earlier
+     * in its own block or in a dominating block (the nearest such store is the value the slot holds entering
+     * {@code store}). When so, a default-valued store to the slot is a real re-initialization, not a redundant
+     * repeat of the declaration's default, and must be kept.
+     */
+    private boolean hasDominatingNonDefaultStore(StoreLocalInstruction store) {
+        int slot = store.getLocalIndex();
+        IRBlock block = store.getBlock();
+        if (block == null) {
+            return false;
+        }
+        Value inBlock = lastSlotStoreValueBefore(block, store, slot);
+        if (inBlock != null) {
+            return !isDefaultIrValue(inBlock);
+        }
+        DominatorTree dom = context.getDominatorTree();
+        if (dom == null) {
+            return false;
+        }
+        IRBlock b = dom.getImmediateDominator(block);
+        while (b != null && b != block) {
+            Value v = lastSlotStoreValueBefore(b, null, slot);
+            if (v != null) {
+                return !isDefaultIrValue(v);
+            }
+            IRBlock next = dom.getImmediateDominator(b);
+            if (next == b) {
+                break; // the entry block immediately dominates itself; stop at the root
+            }
+            b = next;
+        }
+        return false;
+    }
+
+    /**
+     * The value of the last {@code store_local slot} in {@code block} occurring before {@code limit} (or the
+     * last one in the block when {@code limit} is null), or null when the block stores nothing to {@code slot}.
+     */
+    private Value lastSlotStoreValueBefore(IRBlock block, IRInstruction limit, int slot) {
+        Value found = null;
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr == limit) {
+                break;
+            }
+            if (instr instanceof StoreLocalInstruction && ((StoreLocalInstruction) instr).getLocalIndex() == slot) {
+                found = ((StoreLocalInstruction) instr).getValue();
+            }
+        }
+        return found;
+    }
+
+    /** True when an IR value is a default constant (0, 0.0, false, or null). */
+    private boolean isDefaultIrValue(Value value) {
+        if (value instanceof NullConstant) {
+            return true;
+        }
+        IRInstruction def = value instanceof SSAValue ? ((SSAValue) value).getDefinition() : null;
+        if (def instanceof ConstantInstruction) {
+            Constant c = ((ConstantInstruction) def).getConstant();
+            if (c instanceof NullConstant) {
+                return true;
+            }
+            Object v = c.getValue();
+            if (v instanceof Number) {
+                return ((Number) v).doubleValue() == 0.0;
+            }
+            if (v instanceof Boolean) {
+                return !((Boolean) v);
+            }
+        }
+        return false;
     }
 
 
