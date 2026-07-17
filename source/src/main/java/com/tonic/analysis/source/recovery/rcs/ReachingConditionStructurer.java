@@ -198,7 +198,17 @@ public final class ReachingConditionStructurer {
                 continue;
             }
             if (b.getTerminator() instanceof SwitchInstruction) {
-                return false;
+                // A native int/enum switch is recovered as an opaque unit by the legacy switch path; its case
+                // bodies stay out of the region, and the region resumes at the switch's merge. A string switch
+                // or an unrecognized switch declines the whole region to the legacy walk.
+                if (!bridge.canStructureSwitchRegion(b)) {
+                    return false;
+                }
+                IRBlock merge = bridge.switchMergeBlock(b);
+                if (merge != null && !stopBlocks.contains(merge) && !region.contains(merge)) {
+                    work.add(merge);
+                }
+                continue;
             }
             for (IRBlock s : b.getSuccessors()) {
                 if (isBackEdge(b, s)) {
@@ -304,6 +314,9 @@ public final class ReachingConditionStructurer {
         if (loops != null && loops.isLoopHeader(b)) {
             return emitLoop(b);
         }
+        if (b.getTerminator() instanceof SwitchInstruction) {
+            return emitSwitch(b);
+        }
         List<Statement> own = bridge.recoverSimpleBlock(b);
         bridge.markRegionBlockProcessed(b, own);
         // Collapse a value-producing ternary diamond (x > y ? x : y) into a cached expression before its arms
@@ -312,6 +325,19 @@ public final class ReachingConditionStructurer {
         bridge.tryCollapseTernaryDiamond(b);
         List<Statement> out = new ArrayList<>(own);
         out.addAll(structureChildren(b));
+        return out;
+    }
+
+    /**
+     * Emits a native {@code switch}. The host recovers the dispatch and its case bodies (marking their blocks
+     * emitted); the merge - the switch's only in-region dominator child, since the case bodies were kept out
+     * of the region - then follows in sequence, emitted once here.
+     */
+    private List<Statement> emitSwitch(IRBlock b) {
+        List<Statement> out = new ArrayList<>(bridge.recoverSwitchRegion(b));
+        for (IRBlock c : childrenInRpo(b)) {
+            out.addAll(emit(c));
+        }
         return out;
     }
 

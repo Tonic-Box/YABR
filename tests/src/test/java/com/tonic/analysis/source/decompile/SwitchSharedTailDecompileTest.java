@@ -22,11 +22,15 @@ public class SwitchSharedTailDecompileTest {
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");
 
-        assertTrue(flat.matches(".*default:[^{}]*\\}.*if \\(!check\\(.*"),
+        // The tail's guard recovers with either polarity - `if (!check) { cleanup; return }` followed by the
+        // loop, or `if (check) { loop; return } cleanup` - both of which correctly place the tail after the
+        // switch. What matters for this regression is that the tail appears once past the switch and is not
+        // pulled into a case, so the guard match is polarity-agnostic.
+        assertTrue(flat.matches(".*default:[^{}]*\\}.*if \\(!?check\\(.*"),
                 "the shared tail must be emitted after the switch (past the default), not inside a case:\n" + src);
-        assertFalse(flat.matches(".*case 1:.*if \\(!check\\(.*case 2:.*"),
+        assertFalse(flat.matches(".*case 1:.*if \\(!?check\\(.*case 2:.*"),
                 "the first case must not absorb the shared tail:\n" + src);
-        assertFalse(flat.matches(".*case 3:\\s*setC\\(\\w+\\);\\s*if \\(!check\\(.*"),
+        assertFalse(flat.matches(".*case 3:\\s*setC\\(\\w+\\);\\s*if \\(!?check\\(.*"),
                 "the last case must not absorb the shared tail:\n" + src);
     }
 }

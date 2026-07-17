@@ -116,6 +116,47 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return succs.size() == 1 ? succs.iterator().next() : null;
     }
 
+    @Override
+    public boolean canStructureSwitchRegion(IRBlock switchBlock) {
+        if (!(switchBlock.getTerminator() instanceof SwitchInstruction)) {
+            return false;
+        }
+        RegionInfo info = analyzer.getRegionInfo(switchBlock);
+        if (info == null || info.getType() != ControlFlowContext.StructuredRegion.SWITCH) {
+            return false;
+        }
+        // A switch inside a loop shares the loop's continue target as its merge and its induction phis flow
+        // through the case bodies; structuring it as an opaque unit misplaces those. Leave it to the legacy
+        // walk, which recovers the loop and switch together.
+        if (context.getLoopAnalysis() != null && context.getLoopAnalysis().isInLoop(switchBlock)) {
+            return false;
+        }
+        // A string switch is a hash switch feeding an index switch, recovered with its own scaffolding
+        // bookkeeping; leave that shape to the legacy walk.
+        return detectStringSwitch(switchBlock) == null;
+    }
+
+    @Override
+    public IRBlock switchMergeBlock(IRBlock switchBlock) {
+        RegionInfo info = analyzer.getRegionInfo(switchBlock);
+        return info == null ? null : findSwitchMerge(info);
+    }
+
+    @Override
+    public List<Statement> recoverSwitchRegion(IRBlock switchBlock) {
+        RegionInfo info = analyzer.getRegionInfo(switchBlock);
+        Statement sw = recoverSwitch(switchBlock, info);
+        List<Statement> out = new ArrayList<>();
+        // recoverSwitch wraps header statements and the switch in a block; flatten so they stay in the
+        // enclosing sequence rather than nesting in a bare `{ }`.
+        if (sw instanceof BlockStmt) {
+            out.addAll(((BlockStmt) sw).getStatements());
+        } else {
+            out.add(sw);
+        }
+        return out;
+    }
+
     /**
      * Pre-declares parameter names so that stores to parameter slots
      * generate assignment statements instead of variable declarations.
