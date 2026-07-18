@@ -79,6 +79,8 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= mergeSequentialGuards(stmts);
 
+        changed |= mergeComplementaryGuards(stmts);
+
         changed |= flattenNestedNegatedGuards(stmts);
 
         changed |= collapseGuardWithSharedEarlyExit(stmts);
@@ -229,10 +231,11 @@ public class ControlFlowSimplifier implements ASTTransform {
     }
 
     /**
-     * Applies the same safe expression folds to {@code if}/loop conditions that {@code simplifyExpressions}
-     * applies to statement expressions - notably {@code x && true}/{@code x || false} identities left behind by
-     * compound-condition reconstruction. Conditions are mutated in place (preserving the statement's label and
-     * location); the branch/body statements are simplified by the block recursion, not here.
+     * Folds boolean identities ({@code x && true}/{@code x || false}) left behind by compound-condition
+     * reconstruction out of {@code if}/loop conditions. Only these identity folds are applied - NOT the constant
+     * variable-reference inlining that {@code simplifyExpression} also does, which would rewrite {@code if (x >=
+     * y)} to {@code if (5 >= 10)} for constant-valued locals, leaving {@code x}/{@code y} dead and drifting on
+     * round trip. Conditions are mutated in place (preserving the statement's label and location).
      */
     private boolean simplifyConditions(List<Statement> stmts) {
         boolean changed = false;
@@ -241,13 +244,36 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (cond == null) {
                 continue;
             }
-            Expression simplified = simplifyExpression(cond);
+            Expression simplified = foldConditionIdentities(cond);
             if (simplified != cond) {
                 setConditionOf(s, simplified);
                 changed = true;
             }
         }
         return changed;
+    }
+
+    /** Recursively folds {@code x && true}/{@code x || false} identities, leaving all other operands untouched. */
+    private Expression foldConditionIdentities(Expression e) {
+        if (e instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) e;
+            Expression left = foldConditionIdentities(b.getLeft());
+            Expression right = foldConditionIdentities(b.getRight());
+            Expression identity = foldBooleanIdentity(b.getOperator(), left, right);
+            if (identity != null) {
+                return identity;
+            }
+            if (left != b.getLeft() || right != b.getRight()) {
+                return new BinaryExpr(b.getOperator(), left, right, b.getType());
+            }
+        } else if (e instanceof UnaryExpr) {
+            UnaryExpr u = (UnaryExpr) e;
+            Expression operand = foldConditionIdentities(u.getOperand());
+            if (operand != u.getOperand()) {
+                return new UnaryExpr(u.getOperator(), operand, u.getType());
+            }
+        }
+        return e;
     }
 
     private Expression conditionOf(Statement s) {
@@ -654,6 +680,107 @@ public class ControlFlowSimplifier implements ASTTransform {
         }
 
         return new UnaryExpr(UnaryOperator.NOT, expr, PrimitiveSourceType.BOOLEAN);
+    }
+
+    /**
+     * Merges two adjacent guards with complementary conditions into an if/else: {@code if (C) { A } if (!C) { B }}
+     * becomes {@code if (C) { A } else { B }}. The reaching-condition structurer emits the then and else arms of a
+     * compound-condition branch as separate guards under {@code C} and {@code !C} rather than one if/else, so this
+     * recovers the source shape. Sound only when C is side-effect-free (the merge evaluates it once where the two
+     * guards evaluated C then !C) and A does not write a variable C reads (so C's truth is unchanged once A has run
+     * and the else is correctly not entered).
+     */
+    private boolean mergeComplementaryGuards(List<Statement> stmts) {
+        boolean changed = false;
+        for (int i = 0; i + 1 < stmts.size(); i++) {
+            if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof IfStmt)) {
+                continue;
+            }
+            IfStmt first = (IfStmt) stmts.get(i);
+            IfStmt second = (IfStmt) stmts.get(i + 1);
+            if (first.hasElse() || second.hasElse()) {
+                continue;
+            }
+            Expression c1 = first.getCondition();
+            Expression c2 = second.getCondition();
+            if (isSideEffecting(c1) || isSideEffecting(c2) || !areComplementary(c1, c2)) {
+                continue;
+            }
+            if (writesAnyReadVar(first.getThenBranch(), c1)) {
+                continue;
+            }
+            IfStmt merged = new IfStmt(c1, first.getThenBranch(), second.getThenBranch());
+            Locations.copy(first, merged);
+            stmts.set(i, merged);
+            stmts.remove(i + 1);
+            changed = true;
+        }
+        return changed;
+    }
+
+    /** Whether {@code b} is the logical negation of {@code a} - directly ({@code !a}), by comparison flip, or De Morgan. */
+    private boolean areComplementary(Expression a, Expression b) {
+        if (isNotOf(a, b) || isNotOf(b, a)) {
+            return true;
+        }
+        if (a instanceof BinaryExpr && b instanceof BinaryExpr) {
+            BinaryExpr ba = (BinaryExpr) a;
+            BinaryExpr bb = (BinaryExpr) b;
+            BinaryOperator flipped = flipComparison(ba.getOperator());
+            if (flipped != null && flipped == bb.getOperator()
+                    && expressionsEqual(ba.getLeft(), bb.getLeft())
+                    && expressionsEqual(ba.getRight(), bb.getRight())) {
+                return true;
+            }
+            if ((ba.getOperator() == BinaryOperator.AND && bb.getOperator() == BinaryOperator.OR)
+                    || (ba.getOperator() == BinaryOperator.OR && bb.getOperator() == BinaryOperator.AND)) {
+                return areComplementary(ba.getLeft(), bb.getLeft())
+                        && areComplementary(ba.getRight(), bb.getRight());
+            }
+        }
+        return false;
+    }
+
+    /** Whether {@code notExpr} is {@code !base}. */
+    private boolean isNotOf(Expression base, Expression notExpr) {
+        return notExpr instanceof UnaryExpr
+                && ((UnaryExpr) notExpr).getOperator() == UnaryOperator.NOT
+                && expressionsEqual(((UnaryExpr) notExpr).getOperand(), base);
+    }
+
+    /** Whether {@code body} writes (assigns or increments) any variable that {@code cond} reads. */
+    private boolean writesAnyReadVar(Statement body, Expression cond) {
+        WrittenVarCollector collector = new WrittenVarCollector();
+        body.accept(collector);
+        for (String written : collector.written) {
+            if (countVariableUses(cond, written) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final class WrittenVarCollector extends AbstractSourceVisitor<Void> {
+        final java.util.Set<String> written = new java.util.HashSet<>();
+
+        @Override
+        public Void visitBinary(BinaryExpr expr) {
+            if (expr.getOperator().isAssignment() && expr.getLeft() instanceof VarRefExpr) {
+                written.add(((VarRefExpr) expr.getLeft()).getName());
+            }
+            return super.visitBinary(expr);
+        }
+
+        @Override
+        public Void visitUnary(UnaryExpr expr) {
+            UnaryOperator op = expr.getOperator();
+            if ((op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
+                    || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC)
+                    && expr.getOperand() instanceof VarRefExpr) {
+                written.add(((VarRefExpr) expr.getOperand()).getName());
+            }
+            return super.visitUnary(expr);
+        }
     }
 
     private BinaryOperator flipComparison(BinaryOperator op) {
@@ -1274,7 +1401,13 @@ public class ControlFlowSimplifier implements ASTTransform {
                 Expression cond = ifStmt.getCondition();
 
                 int useCount = countVariableUses(cond, varName);
-                if (useCount == 1 && !isVariableUsedAfter(stmts, i + 1, varName, ifStmt)) {
+                // The variable must be used ONLY in the condition: not read or reassigned inside the branches
+                // (a reassigned phi variable like `result = false` in the body must keep its declaration), and
+                // not used after. usesVariable counts an assignment's target too, so a body reassignment blocks
+                // the inline.
+                if (useCount == 1 && !usesVariable(ifStmt.getThenBranch(), varName)
+                        && !(ifStmt.hasElse() && usesVariable(ifStmt.getElseBranch(), varName))
+                        && !isVariableUsedAfter(stmts, i + 1, varName, ifStmt)) {
                     Expression newCond = substituteVariable(cond, varName, initExpr);
                     ifStmt.setCondition(newCond);
                     stmts.remove(i);
@@ -1286,7 +1419,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                 Expression cond = whileStmt.getCondition();
 
                 int useCount = countVariableUses(cond, varName);
-                if (useCount == 1 && !isVariableUsedAfter(stmts, i + 1, varName, whileStmt)) {
+                if (useCount == 1 && !usesVariable(whileStmt.getBody(), varName)
+                        && !isVariableUsedAfter(stmts, i + 1, varName, whileStmt)) {
                     Expression newCond = substituteVariable(cond, varName, initExpr);
                     whileStmt.setCondition(newCond);
                     stmts.remove(i);

@@ -2665,6 +2665,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
 
         Expression initValue = getDefaultValue(type);
+        boolean entryApplied = false;
         // A loop-carried phi's declaration should be initialized with its pre-loop (entry) value, not a
         // default: `int s = first` for `s = phi(first, s + r)`. Without this the entry value is lost
         // (e.g. an accumulator seeded from a parameter starts at 0). Only simple entry values (constant,
@@ -2681,9 +2682,51 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             if (entryExpr != null) {
                 initValue = entryExpr;
+                entryApplied = true;
+            }
+        }
+        // A merge phi whose dominating (pre-branch) operand is a side-effecting value that is ALSO consumed
+        // elsewhere - `boolean result = base(s); if (result) {...} return result;`, where base(s) is both the
+        // phi's entry operand and the branch condition - cannot inline that value as the initializer (it would
+        // evaluate base() twice). Instead bind the value to this phi's variable, materialize it, and pin it, so
+        // its single definition emits `result = base(s)` in place and the condition and phi both read `result`.
+        // Without this the value is inlined into the condition, its store is lost, and the variable is undeclared.
+        if (!entryApplied) {
+            Value dominating = findDominatingOperand(phi);
+            if (dominating instanceof SSAValue && !isSafeEntryInit(dominating)
+                    && entryDominatesPhi(dominating, phi)
+                    && !context.getExpressionContext().isMaterialized((SSAValue) dominating)) {
+                SSAValue dominatingValue = (SSAValue) dominating;
+                context.getExpressionContext().setVariableName(dominatingValue, name);
+                context.getExpressionContext().markMaterialized(dominatingValue);
+                context.getExpressionContext().pinToVariable(dominatingValue);
             }
         }
         statements.add(new VarDeclStmt(type, name, initValue));
+    }
+
+    /**
+     * The single distinct phi operand whose definition dominates the phi's block - the value the variable
+     * holds on entry to the merge, before any branch reassigns it. Null when no operand, or more than one
+     * distinct value, dominates. The same value arriving from several predecessors still counts as one.
+     */
+    private Value findDominatingOperand(PhiInstruction phi) {
+        IRBlock phiBlock = phi.getBlock();
+        if (phiBlock == null) {
+            return null;
+        }
+        Set<Value> dominating = new HashSet<>();
+        for (Value in : phi.getIncomingValues().values()) {
+            if (!(in instanceof SSAValue)) {
+                continue;
+            }
+            IRInstruction def = ((SSAValue) in).getDefinition();
+            IRBlock defBlock = def != null ? def.getBlock() : null;
+            if (defBlock != null && analyzer.getDominatorTree().dominates(defBlock, phiBlock)) {
+                dominating.add(in);
+            }
+        }
+        return dominating.size() == 1 ? dominating.iterator().next() : null;
     }
 
     /**

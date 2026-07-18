@@ -248,6 +248,11 @@ public class ExpressionRecoverer {
         if (def == null) {
             return false;
         }
+        // A value pinned to its variable (a phi operand also consumed elsewhere) must keep its name, or
+        // inlining it here would drop the phi variable's initializing assignment and re-evaluate a side effect.
+        if (context.isPinnedToVariable(ssa)) {
+            return false;
+        }
         if (def instanceof InvokeInstruction) {
             int useCount = ssa.getUses().size();
             return useCount <= 1;

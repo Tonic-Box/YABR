@@ -410,13 +410,37 @@ public final class ReachingConditionStructurer {
         Statement loopStmt = buildLoop(whileCond, body, lifted, context.getLabel(header));
         stamp(loopStmt, header);
         out.add(loopStmt);
-        if (terminalExit != null && region.contains(terminalExit)) {
+        // Emit a loop exit block (the terminal return/throw the header falls to, or the break target) as the
+        // loop's continuation only when it is reached SOLELY by exiting this loop - every predecessor is a loop
+        // block or a break-path block dominated by the header. When it is also reachable from outside - e.g. a
+        // shared method-exit return that the enclosing `if (c) { loop }` reaches on its false edge too - it is a
+        // shared tail the outer structuring must place after the `if`, not nested inside this loop's branch
+        // (which would strand the false edge with no return and put the exit's phi copies after it).
+        Set<IRBlock> loopBlocks = context.getLoopAnalysis().getLoop(header).getBlocks();
+        if (terminalExit != null && region.contains(terminalExit)
+                && exitExclusiveToLoop(terminalExit, header, loopBlocks)) {
             out.addAll(emit(terminalExit));
         }
-        if (breakTarget != null && region.contains(breakTarget)) {
+        if (breakTarget != null && region.contains(breakTarget)
+                && exitExclusiveToLoop(breakTarget, header, loopBlocks)) {
             out.addAll(emit(breakTarget));
         }
         return out;
+    }
+
+    /**
+     * True when {@code exit} is reached only by leaving this loop: every predecessor is a loop block or a
+     * break-path block the header dominates (so control can arrive at {@code exit} only after entering the
+     * loop). A predecessor outside the loop that the header does not dominate - the false edge of an enclosing
+     * {@code if} - means {@code exit} is a shared tail beyond the loop, placed by the outer structuring.
+     */
+    private boolean exitExclusiveToLoop(IRBlock exit, IRBlock header, Set<IRBlock> loopBlocks) {
+        for (IRBlock p : exit.getPredecessors()) {
+            if (!loopBlocks.contains(p) && !dom.dominates(header, p)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -572,17 +596,37 @@ public final class ReachingConditionStructurer {
         IRBlock breakTarget = null;
         for (IRBlock u : loopBlocks) {
             for (IRBlock v : u.getSuccessors()) {
-                if (loopBlocks.contains(v) || isBackEdge(u, v) || isTerminalBlock(v)) {
+                if (loopBlocks.contains(v) || isBackEdge(u, v)) {
                     continue;
                 }
+                IRBlock target = v;
+                // A successor dominated by a non-header loop block is a break-PATH intermediate reached by only
+                // one internal exit (`if (c) { x = val; break; }` compiles the `x = val` into its own block that
+                // then leaves the loop). It is emitted inline on that branch; the loop's real continuation is
+                // where it leads. Follow its single successor so the break targets that shared exit and the
+                // intermediate is not pulled out after the loop to run unconditionally.
+                if (dominatedByNonHeaderLoopBlock(v, header, loopBlocks) && v.getSuccessors().size() == 1) {
+                    target = v.getSuccessors().iterator().next();
+                } else if (isTerminalBlock(v)) {
+                    continue; // a natural terminal (return/throw) exit is inlined in the body, not a break target
+                }
                 if (breakTarget == null) {
-                    breakTarget = v;
-                } else if (breakTarget != v) {
+                    breakTarget = target;
+                } else if (breakTarget != target) {
                     throw new BailToLegacy(); // multiple non-terminal exits need labeled restructuring
                 }
             }
         }
         return breakTarget;
+    }
+
+    private boolean dominatedByNonHeaderLoopBlock(IRBlock v, IRBlock header, Set<IRBlock> loopBlocks) {
+        for (IRBlock b : loopBlocks) {
+            if (b != header && dom.dominates(b, v)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -695,8 +739,15 @@ public final class ReachingConditionStructurer {
         // tail`): the tail follows the subtree and is reached exactly when control did not already exit, so
         // the guard is redundant and re-emitting it would repeat the effect. A pure guard keeps its explicit
         // form even when redundant - dropping it destabilizes the round trip for no correctness gain.
+        // Unguard only a genuine fall-through tail: one reached when a chain of exit guard-clauses were all NOT
+        // taken, so its guard is a CONJUNCTION of negated exit conditions (`if (c1) continue; if (c2) continue;
+        // tail` gives `!c1 && !c2`). When an impure atom sits inside a DISJUNCTION - the guard is `a || cmp() > 0`,
+        // the `then` of a compound `if` whose arms both reach this block - the guard is the natural `if` that
+        // evaluates the condition once; dropping it emits the body unconditionally and loses the side-effecting
+        // term. So keep any guard where an impure atom appears under an OR.
         if (formulas.isTautology(guard)
-                || (guardHasImpureAtom(guard) && reachedByFallThrough(shared, dominator))) {
+                || (guardHasImpureAtom(guard) && !impureAtomUnderDisjunction(guard.nnf, false)
+                        && reachedByFallThrough(shared, dominator))) {
             return emit(shared);
         }
         List<Statement> body = emit(shared);
@@ -776,6 +827,29 @@ public final class ReachingConditionStructurer {
         for (int atom : atomsOf(guard.nnf, new HashSet<>())) {
             if (!pureConditionBlock.contains(blockOfAtom.get(atom))) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * True when an impure (side-effecting) atom appears under a disjunction ({@code OR}) in the guard - the
+     * block is the {@code then} of a compound {@code a || cmp()} condition, reached when EITHER disjunct holds,
+     * so the guard is the natural {@code if} that evaluates the condition once. Such a guard must be kept;
+     * unguarding it (as if the block were a fall-through past an exit test) drops the condition and its side
+     * effect. A fall-through tail's guard is instead a conjunction of negated exit conditions, with no impure
+     * atom under an OR.
+     */
+    private boolean impureAtomUnderDisjunction(Nnf n, boolean underOr) {
+        if (n.kind == Nnf.Kind.LEAF) {
+            return underOr && !pureConditionBlock.contains(blockOfAtom.get(n.atom));
+        }
+        boolean nowUnderOr = underOr || n.kind == Nnf.Kind.OR;
+        if (n.ops != null) {
+            for (Nnf op : n.ops) {
+                if (impureAtomUnderDisjunction(op, nowUnderOr)) {
+                    return true;
+                }
             }
         }
         return false;

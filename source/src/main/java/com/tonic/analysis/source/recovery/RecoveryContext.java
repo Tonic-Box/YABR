@@ -39,6 +39,7 @@ public class RecoveryContext {
     private final Map<Integer, String> localSlotNames = new HashMap<>();
 
     private final Set<SSAValue> materializedValues = new HashSet<>();
+    private final Set<SSAValue> pinnedToVariable = new HashSet<>();
 
     private final Deque<Set<String>> forLoopScopedVariables = new ArrayDeque<>();
 
@@ -289,6 +290,19 @@ public class RecoveryContext {
      */
     public void unmarkMaterialized(SSAValue value) {
         materializedValues.remove(value);
+    }
+
+    /**
+     * Pins a value to its variable: it must always be referenced by name, never force-inlined at a use, even
+     * when it would otherwise qualify (e.g. a single-use invoke). Used for a value that feeds a phi and is also
+     * consumed elsewhere - inlining it would drop the phi variable's assignment and duplicate a side effect.
+     */
+    public void pinToVariable(SSAValue value) {
+        pinnedToVariable.add(value);
+    }
+
+    public boolean isPinnedToVariable(SSAValue value) {
+        return pinnedToVariable.contains(value);
     }
 
     /**
