@@ -106,7 +106,38 @@ final class CompoundConditionBuilder {
         if (b.bailed || root == null) {
             return null;
         }
+        // The normalized Node graph is a DAG (shared operands), but toExpression renders it as a tree - a
+        // shared subtree is duplicated once per parent. A clean short-circuit chain is tiny; only a
+        // reconvergent shape would blow up. Decline (return null, so the caller falls back) rather than emit a
+        // super-linear expression.
+        if (b.expandedSize(root, new HashMap<>()) >= EXPRESSION_SIZE_CAP) {
+            return null;
+        }
         return b.toExpression(root);
+    }
+
+    /** Ceiling on the rendered expression's node count; above it {@link #build} declines to the fallback. */
+    private static final long EXPRESSION_SIZE_CAP = 20_000L;
+
+    /** The number of expression nodes {@link #toExpression} would produce for {@code n}, capped. */
+    private long expandedSize(Node n, Map<Node, Long> memo) {
+        if (n.kind != Node.Kind.AND && n.kind != Node.Kind.OR) {
+            return 1;
+        }
+        Long cached = memo.get(n);
+        if (cached != null) {
+            return cached;
+        }
+        long size = 0;
+        for (Node op : n.ops) {
+            size += expandedSize(op, memo);
+            if (size >= EXPRESSION_SIZE_CAP) {
+                size = EXPRESSION_SIZE_CAP;
+                break;
+            }
+        }
+        memo.put(n, size);
+        return size;
     }
 
     /**

@@ -28,6 +28,15 @@ public interface RegionRecoveryBridge {
      */
     boolean conditionInlinesSideEffect(IRBlock block);
 
+    /**
+     * True when recovering {@code block}'s branch condition inlines no operation that can throw (division,
+     * field/array access or arraylength, checkcast, call/allocation). A condition over locals, parameters,
+     * constants, and non-throwing arithmetic is exception-free. Lets the engine decide whether the condition
+     * may be hoisted out of its short-circuit position into an unconditionally-evaluated temporary without
+     * changing which inputs throw.
+     */
+    boolean guardAtomExceptionFree(IRBlock block);
+
     /** SSA-destruction copies realized when the edge {@code pred -> succ} is taken. */
     List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ);
 

@@ -81,7 +81,18 @@ public final class ReachingConditionStructurer {
     private Map<IRBlock, Integer> atomOf;
     private List<IRBlock> blockOfAtom;
     private Set<IRBlock> pureConditionBlock;
+    private Set<IRBlock> exceptionFreeConditionBlock;
+    private Map<Bdd, Boolean> subtreeExceptionFreeMemo;
+    private int guardTempCounter;
     private BoolFormulaFactory formulas;
+
+    /**
+     * Cap on the number of expression nodes a single shared-tail guard may render to. A guard built from a
+     * clean short-circuit condition is tiny; only a reconvergent BDD whose shared subgraph is NOT
+     * exception-free (so it cannot be hoisted into a temporary) can approach this, and that region declines
+     * to the fallback rather than emit a super-linear condition.
+     */
+    private static final long GUARD_COST_CAP = 20_000L;
 
     public ReachingConditionStructurer(RegionRecoveryBridge bridge, ControlFlowContext context) {
         this.bridge = bridge;
@@ -113,6 +124,7 @@ public final class ReachingConditionStructurer {
         // must preserve the marks the surrounding recovery has already set for blocks outside this region.
         if (topLevel) {
             context.resetProcessedBlocks();
+            guardTempCounter = 0;
         }
 
         if (!collectRegion(entry, stopBlocks)) {
@@ -188,8 +200,22 @@ public final class ReachingConditionStructurer {
                 validate(c);
             } else {
                 BoolFormula guard = reachingConditionWithin(c, b);
-                if (!formulas.isTautology(guard) && !reachedByFallThrough(c, b)) {
-                    requireGuardPure(guard);
+                // The BDD factory hit its node ceiling: results past that point are under-reduced (wrong),
+                // so the guard cannot be emitted safely. Decline the region.
+                if (formulas.overflowed()) {
+                    throw new BailToLegacy();
+                }
+                if (!formulas.isTautology(guard)) {
+                    if (!reachedByFallThrough(c, b)) {
+                        requireGuardPure(guard);
+                    }
+                    // A rendered guard must stay bounded. The CSE emitter is linear in BDD size whenever
+                    // the shared subgraph is hoistable; only a shared but non-hoistable (throwing) subgraph
+                    // can still blow up. Cost the guard side-effect-free (no expression recovery) and decline
+                    // rather than emit a super-linear condition.
+                    if (new BddEmitter(guard.bdd).cost() >= GUARD_COST_CAP) {
+                        throw new BailToLegacy();
+                    }
                 }
                 validate(c);
             }
@@ -287,6 +313,8 @@ public final class ReachingConditionStructurer {
         atomOf = new HashMap<>();
         blockOfAtom = new ArrayList<>();
         pureConditionBlock = new HashSet<>();
+        exceptionFreeConditionBlock = new HashSet<>();
+        subtreeExceptionFreeMemo = new HashMap<>();
         formulas = new BoolFormulaFactory();
         List<IRBlock> ordered = new ArrayList<>(region);
         ordered.sort((a, b) -> Integer.compare(rpoIndex.get(a), rpoIndex.get(b)));
@@ -296,6 +324,9 @@ public final class ReachingConditionStructurer {
                 blockOfAtom.add(b);
                 if (isPureCondition(b)) {
                     pureConditionBlock.add(b);
+                }
+                if (bridge.guardAtomExceptionFree(b)) {
+                    exceptionFreeConditionBlock.add(b);
                 }
             }
         }
@@ -756,10 +787,12 @@ public final class ReachingConditionStructurer {
             // it would leave a syntactic fall-through off the end of a value-returning method.
             return body;
         }
-        Expression guardExpr = emitBdd(guard.bdd);
+        BddEmitter em = new BddEmitter(guard.bdd);
+        Expression guardExpr = em.emitRoot();
         IfStmt g = new IfStmt(guardExpr, new BlockStmt(body), null);
         stamp(g, dominator);
-        List<Statement> out = new ArrayList<>();
+        // Any hoisted boolean temporaries are declared, in dependency order, immediately before the guard.
+        List<Statement> out = new ArrayList<>(em.declarations());
         out.add(g);
         return out;
     }
@@ -900,35 +933,159 @@ public final class ReachingConditionStructurer {
     }
 
     /**
-     * Renders a reaching condition as a minimized boolean {@code Expression} directly from its canonical
-     * BDD, so absorbed terms disappear ({@code a || (!a && b)} becomes {@code a || b}). A node with a
-     * constant branch is a plain {@code &&}/{@code ||}; a genuine if-then-else (rare for a short-circuit
-     * reaching condition) expands to {@code (c && high) || (!c && low)}.
+     * Renders a reaching-condition BDD into an AST condition with common-subexpression elimination. A BDD is
+     * a hash-consed DAG, so a subformula reached along several paths is one shared node; rendering it as a
+     * plain expression tree would re-expand that node once per path - exponential for a reconvergent
+     * (control-flow-flattened) region. This emitter renders each genuinely-shared internal node once, as a
+     * boolean temporary {@code boolean cseN = ...;} that later references reuse, keeping the output linear in
+     * BDD size. A node with a constant branch is a plain {@code &&}/{@code ||}; a genuine if-then-else expands
+     * to {@code (c && high) || (!c && low)} - identical to the pre-CSE emitter.
+     *
+     * <p>Absorbed terms disappear ({@code a || (!a && b)} becomes {@code a || b}). When nothing is shared -
+     * every non-reconvergent method - no temporary is produced and the output is byte-for-byte the pre-CSE
+     * expression.
+     *
+     * <p>A shared node is hoisted into a temporary only when its whole subtree is exception-free
+     * ({@link #subtreeExceptionFree}); hoisting a condition out of its short-circuit position evaluates it
+     * unconditionally, so a subexpression that could throw (a division, a field/array access that could NPE)
+     * must stay inline to preserve which inputs throw. A shared but non-hoistable subgraph large enough to
+     * blow up is declined in {@link #validate} via the {@link #GUARD_COST_CAP} cost gate.
      */
-    private Expression emitBdd(Bdd n) {
-        Bdd one = formulas.bddOne();
-        Bdd zero = formulas.bddZero();
-        if (n == one) {
-            return LiteralExpr.ofBoolean(true);
+    private final class BddEmitter {
+        private final Bdd root;
+        private final Map<Bdd, Integer> refCount = new HashMap<>();
+        private final Set<Bdd> hoisted = new HashSet<>();
+        private final Map<Bdd, Long> inlineCostMemo = new HashMap<>();
+        private final Map<Bdd, String> tempName = new HashMap<>();
+        private final List<Statement> decls = new ArrayList<>();
+
+        BddEmitter(Bdd root) {
+            this.root = root;
+            countRefs(root);
+            for (Map.Entry<Bdd, Integer> e : refCount.entrySet()) {
+                if (e.getValue() >= 2 && subtreeExceptionFree(e.getKey())) {
+                    hoisted.add(e.getKey());
+                }
+            }
         }
-        if (n == zero) {
-            return LiteralExpr.ofBoolean(false);
+
+        /** The number of expression nodes this guard would render to, capped at {@link #GUARD_COST_CAP}. Pure. */
+        long cost() {
+            long total = refCost(root);
+            for (Bdd h : hoisted) {
+                total += 1 + refCost(h.low) + refCost(h.high);
+                if (total >= GUARD_COST_CAP) {
+                    return GUARD_COST_CAP;
+                }
+            }
+            return Math.min(total, GUARD_COST_CAP);
         }
-        IRBlock block = blockOfAtom.get(n.var);
-        if (n.low == zero) {
-            return conj(bridge.recoverCondition(block, false), emitBdd(n.high));
+
+        /** The hoisted-temporary declarations, in dependency order; populated by {@link #emitRoot}. */
+        List<Statement> declarations() {
+            return decls;
         }
-        if (n.high == zero) {
-            return conj(bridge.recoverCondition(block, true), emitBdd(n.low));
+
+        Expression emitRoot() {
+            return emitNode(root);
         }
-        if (n.high == one) {
-            return disj(bridge.recoverCondition(block, false), emitBdd(n.low));
+
+        private Expression emitNode(Bdd n) {
+            if (n == formulas.bddOne()) {
+                return LiteralExpr.ofBoolean(true);
+            }
+            if (n == formulas.bddZero()) {
+                return LiteralExpr.ofBoolean(false);
+            }
+            String existing = tempName.get(n);
+            if (existing != null) {
+                return new VarRefExpr(existing, PrimitiveSourceType.BOOLEAN);
+            }
+            Expression expr = buildNode(n);
+            if (hoisted.contains(n)) {
+                String name = "cse" + (guardTempCounter++);
+                decls.add(new VarDeclStmt(PrimitiveSourceType.BOOLEAN, name, expr));
+                tempName.put(n, name);
+                return new VarRefExpr(name, PrimitiveSourceType.BOOLEAN);
+            }
+            return expr;
         }
-        if (n.low == one) {
-            return disj(bridge.recoverCondition(block, true), emitBdd(n.high));
+
+        /** {@code n}'s local expression, recursing to {@link #emitNode} so shared children become temp refs. */
+        private Expression buildNode(Bdd n) {
+            Bdd one = formulas.bddOne();
+            Bdd zero = formulas.bddZero();
+            IRBlock block = blockOfAtom.get(n.var);
+            if (n.low == zero) {
+                return conj(bridge.recoverCondition(block, false), emitNode(n.high));
+            }
+            if (n.high == zero) {
+                return conj(bridge.recoverCondition(block, true), emitNode(n.low));
+            }
+            if (n.high == one) {
+                return disj(bridge.recoverCondition(block, false), emitNode(n.low));
+            }
+            if (n.low == one) {
+                return disj(bridge.recoverCondition(block, true), emitNode(n.high));
+            }
+            return disj(conj(bridge.recoverCondition(block, false), emitNode(n.high)),
+                    conj(bridge.recoverCondition(block, true), emitNode(n.low)));
         }
-        return disj(conj(bridge.recoverCondition(block, false), emitBdd(n.high)),
-                conj(bridge.recoverCondition(block, true), emitBdd(n.low)));
+
+        private void countRefs(Bdd n) {
+            if (n.isTerminal() || isAtomNode(n)) {
+                return;
+            }
+            Integer c = refCount.get(n);
+            refCount.put(n, (c == null ? 0 : c) + 1);
+            if (c == null) {
+                countRefs(n.low);
+                countRefs(n.high);
+            }
+        }
+
+        private long refCost(Bdd x) {
+            if (x.isTerminal()) {
+                return 0;
+            }
+            if (hoisted.contains(x)) {
+                return 1;
+            }
+            return inlineCost(x);
+        }
+
+        private long inlineCost(Bdd x) {
+            Long c = inlineCostMemo.get(x);
+            if (c != null) {
+                return c;
+            }
+            long v = Math.min(GUARD_COST_CAP, 1 + refCost(x.low) + refCost(x.high));
+            inlineCostMemo.put(x, v);
+            return v;
+        }
+    }
+
+    /** A bare atom node ({@code cond} or {@code !cond}) - both branches terminal; always cheap to inline. */
+    private static boolean isAtomNode(Bdd n) {
+        return !n.isTerminal() && n.low.isTerminal() && n.high.isTerminal();
+    }
+
+    /** True when every atom (condition block) in {@code n}'s subtree is exception-free, so hoisting it out of
+     * its short-circuit position cannot make the method throw on an input the condition would have skipped. */
+    private boolean subtreeExceptionFree(Bdd n) {
+        if (n.isTerminal()) {
+            return true;
+        }
+        Boolean memo = subtreeExceptionFreeMemo.get(n);
+        if (memo != null) {
+            return memo;
+        }
+        // Guard against a cycle: BDDs are acyclic, so this is defensive only.
+        subtreeExceptionFreeMemo.put(n, false);
+        boolean result = exceptionFreeConditionBlock.contains(blockOfAtom.get(n.var))
+                && subtreeExceptionFree(n.low) && subtreeExceptionFree(n.high);
+        subtreeExceptionFreeMemo.put(n, result);
+        return result;
     }
 
     private Expression conj(Expression a, Expression b) {

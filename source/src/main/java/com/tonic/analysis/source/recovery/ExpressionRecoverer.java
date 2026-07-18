@@ -304,6 +304,71 @@ public class ExpressionRecoverer {
         return false;
     }
 
+    /**
+     * True when recovering {@code value} as an operand would inline an operation that can throw at runtime
+     * (a division/remainder, a field/array access or arraylength that can NPE/AIOOBE, a checkcast, or a
+     * call/allocation). Mirrors {@link #operandInlinesSideEffect}'s inline decisions exactly: a value that
+     * renders as a plain variable reference (materialized, or not inlined) is exception-free regardless of
+     * how it was computed. Used to decide whether a shared sub-condition may be hoisted OUT of its
+     * short-circuit position into an unconditionally-evaluated temporary without changing observable throws.
+     */
+    public boolean operandMayThrowInline(Value value) {
+        return operandMayThrowInline(value, new java.util.HashSet<>());
+    }
+
+    private boolean operandMayThrowInline(Value value, java.util.Set<Value> seen) {
+        if (!(value instanceof SSAValue) || !seen.add(value)) {
+            return false;
+        }
+        SSAValue ssa = (SSAValue) value;
+        IRInstruction def = ssa.getDefinition();
+        if (def == null) {
+            return false;
+        }
+        if (context.isMaterialized(ssa) && !shouldForceInline(def, ssa)) {
+            return false;
+        }
+        if (!shouldInlineExpression(def)) {
+            return false;
+        }
+        if (defMayThrowInlined(def)) {
+            return true;
+        }
+        for (Value operand : def.getOperands()) {
+            if (operandMayThrowInline(operand, seen)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether the operation {@code def} itself (once inlined) can throw. Operand hazards are checked separately. */
+    private boolean defMayThrowInlined(IRInstruction def) {
+        if (def instanceof InvokeInstruction
+                || def instanceof NewInstruction
+                || def instanceof NewArrayInstruction) {
+            return true;
+        }
+        if (def instanceof FieldAccessInstruction) {
+            FieldAccessInstruction f = (FieldAccessInstruction) def;
+            return f.isLoad() && !f.isStatic();
+        }
+        if (def instanceof ArrayAccessInstruction) {
+            return ((ArrayAccessInstruction) def).isLoad();
+        }
+        if (def instanceof BinaryOpInstruction) {
+            BinaryOp op = ((BinaryOpInstruction) def).getOp();
+            return op == BinaryOp.DIV || op == BinaryOp.REM;
+        }
+        if (def instanceof SimpleInstruction) {
+            return ((SimpleInstruction) def).getOp() == SimpleOp.ARRAYLENGTH;
+        }
+        if (def instanceof TypeCheckInstruction) {
+            return ((TypeCheckInstruction) def).getOp() == TypeCheckOp.CAST;
+        }
+        return false;
+    }
+
     private Expression recoverConstant(Constant c) {
         return recoverConstant(c, null);
     }

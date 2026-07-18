@@ -7029,6 +7029,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     @Override
+    public boolean guardAtomExceptionFree(IRBlock block) {
+        IRInstruction terminator = block.getTerminator();
+        if (!(terminator instanceof BranchInstruction)) {
+            return false;
+        }
+        BranchInstruction branch = (BranchInstruction) terminator;
+        if (branch.getLeft() != null && exprRecoverer.operandMayThrowInline(branch.getLeft())) {
+            return false;
+        }
+        return branch.getRight() == null || !exprRecoverer.operandMayThrowInline(branch.getRight());
+    }
+
+    @Override
     public boolean regionContainsUnprocessedHandler(Set<IRBlock> region) {
         List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
         if (handlers == null || handlers.isEmpty()) {
