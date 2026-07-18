@@ -2,11 +2,18 @@ package com.tonic.testutil;
 
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
+import com.tonic.analysis.source.ast.decl.ConstructorDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
+import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.lower.ASTLowerer;
+import com.tonic.analysis.source.lower.TypeResolver;
 import com.tonic.analysis.source.parser.JavaParser;
 import com.tonic.analysis.ssa.SSA;
+import com.tonic.analysis.verifier.VerificationError;
+import com.tonic.analysis.verifier.VerificationErrorType;
+import com.tonic.analysis.verifier.Verifier;
+import java.util.List;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -295,6 +302,94 @@ public final class TestUtils {
             new SSA(cf.getConstPool()).lower(ir, method);
         }
         return cf;
+    }
+
+    /**
+     * Re-lowers a decompiled {@code source} back into {@code cf} - every method and constructor with a body
+     * (the original {@code <clinit>} is left as-is), resolving type references against {@code pool} with
+     * {@code owner} as the current class. Mirrors how live recompilation works. Returns false without
+     * recompiling when the primary type is not a plain class (annotation/enum/interface out of scope).
+     */
+    public static boolean recompileSource(ClassFile cf, ClassPool pool, String source, String owner) throws Exception {
+        if (source.contains("@interface ")) {
+            return false;
+        }
+        CompilationUnit cu = JavaParser.create().parse(source);
+        if (!(cu.getPrimaryType() instanceof ClassDecl)) {
+            return false;
+        }
+        ClassDecl decl = (ClassDecl) cu.getPrimaryType();
+        TypeResolver resolver = new TypeResolver(pool, owner);
+        resolver.setImports(cu.getImports());
+        resolver.setCurrentClassDecl(decl);
+        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
+        lowerer.setCurrentClassDecl(decl);
+        lowerer.setImports(cu.getImports());
+        SSA ssa = new SSA(cf.getConstPool());
+
+        for (MethodDecl md : decl.getMethods()) {
+            if (md.getBody() == null) {
+                continue;
+            }
+            MethodEntry target = findMethodEntry(cf, md.getName(),
+                    methodDescriptor(md.getParameters(), resolver.descriptorOf(md.getReturnType()), resolver));
+            if (target != null) {
+                ssa.lower(lowerer.lower(md, owner), target);
+            }
+        }
+        for (ConstructorDecl ctor : decl.getConstructors()) {
+            if (ctor.getBody() == null) {
+                continue;
+            }
+            MethodEntry target = findMethodEntry(cf, "<init>", methodDescriptor(ctor.getParameters(), "V", resolver));
+            if (target == null) {
+                continue;
+            }
+            MethodDecl init = new MethodDecl("<init>", VoidSourceType.INSTANCE).withModifiers(ctor.getModifiers());
+            for (ParameterDecl pp : ctor.getParameters()) {
+                init.addParameter(pp);
+            }
+            init.withBody(ctor.getBody());
+            ssa.lower(lowerer.lower(init, owner), target);
+        }
+        cf.rebuild();
+        return true;
+    }
+
+    /** True when {@code cf} passes the bytecode verifier with no error-level findings. */
+    public static boolean verifies(ClassFile cf, ClassPool pool) {
+        return Verifier.builder().classPool(pool).build().verify(cf).getErrors()
+                .stream().noneMatch(VerificationError::isError);
+    }
+
+    /**
+     * True when verifying {@code cf} finds a control-flow drop - a method that falls off its end or a path
+     * that does not return, the signature of a dropped {@code return}/{@code throw}. Other verify errors
+     * (stack, type, frame) are re-lowering-pipeline artifacts, not recovery drops, and are ignored - so
+     * this isolates structural drops from the pipeline noise a large jar produces.
+     */
+    public static boolean hasControlFlowDrop(ClassFile cf, ClassPool pool) {
+        return Verifier.builder().classPool(pool).build().verify(cf).getErrors().stream()
+                .anyMatch(e -> e.isError()
+                        && (e.getType() == VerificationErrorType.INSTRUCTION_FALLS_OFF_END
+                            || e.getType() == VerificationErrorType.PATH_DOES_NOT_RETURN));
+    }
+
+    private static String methodDescriptor(List<ParameterDecl> params, String ret, TypeResolver resolver) {
+        StringBuilder d = new StringBuilder("(");
+        for (ParameterDecl pp : params) {
+            d.append(resolver.descriptorOf(pp.getType()));
+        }
+        return d.append(")").append(ret).toString();
+    }
+
+    private static MethodEntry findMethodEntry(ClassFile cf, String name, String desc) {
+        for (MethodEntry m : cf.getMethods()) {
+            if (m.getName().equals(name) && m.getDesc().contentEquals(desc)) {
+                return m;
+            }
+        }
+        return null;
     }
 
     /**

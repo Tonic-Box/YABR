@@ -11,6 +11,7 @@ import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.BreakStmt;
 import com.tonic.analysis.source.ast.stmt.ContinueStmt;
+import com.tonic.analysis.source.ast.stmt.DoWhileStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ForStmt;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
@@ -406,7 +407,7 @@ public final class ReachingConditionStructurer {
         }
         context.popLoop();
         stripTrailingContinue(body);
-        Statement loopStmt = buildLoop(whileCond, body, lifted);
+        Statement loopStmt = buildLoop(whileCond, body, lifted, context.getLabel(header));
         stamp(loopStmt, header);
         out.add(loopStmt);
         if (terminalExit != null && region.contains(terminalExit)) {
@@ -426,8 +427,8 @@ public final class ReachingConditionStructurer {
      * in a {@code for} but skip it in a {@code while}, so those keep the {@code while}. Otherwise a
      * {@code while}.
      */
-    private Statement buildLoop(Expression cond, List<Statement> body, boolean lifted) {
-        if (lifted && !body.isEmpty() && !containsContinue(body)) {
+    private Statement buildLoop(Expression cond, List<Statement> body, boolean lifted, String selfLabel) {
+        if (lifted && !body.isEmpty() && !continuesThisLoop(body, selfLabel, false)) {
             Expression update = asInductionStep(body.get(body.size() - 1));
             if (update != null) {
                 List<Statement> forBody = new ArrayList<>(body.subList(0, body.size() - 1));
@@ -494,37 +495,64 @@ public final class ReachingConditionStructurer {
                 || (v instanceof Byte && (Byte) v == 1);
     }
 
-    /** True if any {@code continue} appears in {@code stmts} (conservatively including nested loops). */
-    private boolean containsContinue(List<Statement> stmts) {
+    /**
+     * Whether {@code stmts} holds a {@code continue} that targets THIS loop, whose label is {@code selfLabel}
+     * (null when the loop has none). An unlabeled continue targets this loop only at its own nesting level - one
+     * inside a nested loop belongs to that inner loop ({@code insideNestedLoop} tracks the crossing); a labeled
+     * continue targets this loop only when its label matches, from any depth. Such a continue runs a
+     * {@code for}-update it would skip as a {@code while} tail step, so its presence keeps the loop a
+     * {@code while}.
+     */
+    private boolean continuesThisLoop(List<Statement> stmts, String selfLabel, boolean insideNestedLoop) {
         for (Statement s : stmts) {
             if (s instanceof ContinueStmt) {
-                return true;
-            }
-            if (s instanceof BlockStmt && containsContinue(((BlockStmt) s).getStatements())) {
-                return true;
-            }
-            if (s instanceof IfStmt) {
-                IfStmt f = (IfStmt) s;
-                if (blockHasContinue(f.getThenBranch())
-                        || (f.getElseBranch() != null && blockHasContinue(f.getElseBranch()))) {
+                String target = ((ContinueStmt) s).getTargetLabel();
+                if (target != null ? target.equals(selfLabel) : !insideNestedLoop) {
                     return true;
                 }
+                continue;
             }
-            if (s instanceof WhileStmt && blockHasContinue(((WhileStmt) s).getBody())) {
-                return true;
-            }
-            if (s instanceof ForStmt && blockHasContinue(((ForStmt) s).getBody())) {
-                return true;
+            boolean nested = insideNestedLoop || isLoopStmt(s);
+            for (List<Statement> child : childStatementLists(s)) {
+                if (continuesThisLoop(child, selfLabel, nested)) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
-    private boolean blockHasContinue(Statement s) {
-        if (s instanceof ContinueStmt) {
-            return true;
+    private boolean isLoopStmt(Statement s) {
+        return s instanceof WhileStmt || s instanceof DoWhileStmt || s instanceof ForStmt;
+    }
+
+    /** The nested statement lists of a container statement (block, if arms, loop body); empty for a leaf. */
+    private List<List<Statement>> childStatementLists(Statement s) {
+        List<List<Statement>> lists = new ArrayList<>();
+        if (s instanceof BlockStmt) {
+            lists.add(((BlockStmt) s).getStatements());
+        } else if (s instanceof IfStmt) {
+            IfStmt f = (IfStmt) s;
+            addBranch(lists, f.getThenBranch());
+            if (f.hasElse()) {
+                addBranch(lists, f.getElseBranch());
+            }
+        } else if (s instanceof WhileStmt) {
+            addBranch(lists, ((WhileStmt) s).getBody());
+        } else if (s instanceof DoWhileStmt) {
+            addBranch(lists, ((DoWhileStmt) s).getBody());
+        } else if (s instanceof ForStmt) {
+            addBranch(lists, ((ForStmt) s).getBody());
         }
-        return s instanceof BlockStmt && containsContinue(((BlockStmt) s).getStatements());
+        return lists;
+    }
+
+    private void addBranch(List<List<Statement>> lists, Statement branch) {
+        if (branch instanceof BlockStmt) {
+            lists.add(((BlockStmt) branch).getStatements());
+        } else if (branch != null) {
+            lists.add(Collections.singletonList(branch));
+        }
     }
 
     /** Drops a trailing unlabeled {@code continue} - the fall-through to the loop end already continues. */

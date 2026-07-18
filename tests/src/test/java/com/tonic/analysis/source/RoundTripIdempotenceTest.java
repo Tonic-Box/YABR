@@ -1,21 +1,9 @@
 package com.tonic.analysis.source;
 
-import com.tonic.analysis.source.ast.decl.ClassDecl;
-import com.tonic.analysis.source.ast.decl.CompilationUnit;
-import com.tonic.analysis.source.ast.decl.ConstructorDecl;
-import com.tonic.analysis.source.ast.decl.MethodDecl;
-import com.tonic.analysis.source.ast.decl.ParameterDecl;
-import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.decompile.ClassDecompiler;
-import com.tonic.analysis.source.lower.ASTLowerer;
-import com.tonic.analysis.source.lower.TypeResolver;
-import com.tonic.analysis.source.parser.JavaParser;
-import com.tonic.analysis.ssa.SSA;
-import com.tonic.analysis.verifier.VerificationError;
-import com.tonic.analysis.verifier.Verifier;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
-import com.tonic.parser.MethodEntry;
+import com.tonic.testutil.TestUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -72,14 +60,13 @@ class RoundTripIdempotenceTest {
             boolean verified;
             try {
                 d1 = ClassDecompiler.decompile(cf);
-                if (!recompile(cf, pool, d1, name)) {
+                if (!TestUtils.recompileSource(cf, pool, d1, name)) {
                     skipped.add(name); // non-class type (enum/interface/annotation) - out of scope for now
                     continue;
                 }
-                verified = Verifier.builder().classPool(pool).build().verify(cf).getErrors()
-                        .stream().noneMatch(VerificationError::isError);
+                verified = TestUtils.verifies(cf, pool);
                 d2 = ClassDecompiler.decompile(cf);
-                recompile(cf, pool, d2, name);
+                TestUtils.recompileSource(cf, pool, d2, name);
                 d3 = ClassDecompiler.decompile(cf);
             } catch (Throwable t) {
                 notIdempotent.add(name + " (threw " + t + ")");
@@ -117,74 +104,6 @@ class RoundTripIdempotenceTest {
         assertTrue(notIdempotent.isEmpty() && notVerifying.isEmpty(),
                 "round-trip not a fixed point: " + pass + "/" + graded + " idempotent; "
                         + "not-idempotent=" + notIdempotent + " not-verifying=" + notVerifying);
-    }
-
-    /**
-     * Lowers every method and constructor of the parsed source back into {@code cf} (keeping the original
-     * clinit). Returns false (without recompiling) when the primary type is not a plain class.
-     */
-    private static boolean recompile(ClassFile cf, ClassPool pool, String source, String owner) throws Exception {
-        if (source.contains("@interface ")) {
-            return false; // annotation type - out of scope, and the parser rejects @interface
-        }
-        CompilationUnit cu = JavaParser.create().parse(source);
-        if (!(cu.getPrimaryType() instanceof ClassDecl)) {
-            return false;
-        }
-        ClassDecl decl = (ClassDecl) cu.getPrimaryType();
-        TypeResolver resolver = new TypeResolver(pool, owner);
-        resolver.setImports(cu.getImports());
-        resolver.setCurrentClassDecl(decl);
-        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
-        lowerer.setCurrentClassDecl(decl);
-        lowerer.setImports(cu.getImports());
-        SSA ssa = new SSA(cf.getConstPool());
-
-        for (MethodDecl md : decl.getMethods()) {
-            if (md.getBody() == null) {
-                continue;
-            }
-            String d = desc(md.getParameters(), resolver.descriptorOf(md.getReturnType()), resolver);
-            MethodEntry target = find(cf, md.getName(), d);
-            if (target != null) {
-                ssa.lower(lowerer.lower(md, owner), target);
-            }
-        }
-        for (ConstructorDecl ctor : decl.getConstructors()) {
-            if (ctor.getBody() == null) {
-                continue;
-            }
-            String d = desc(ctor.getParameters(), "V", resolver);
-            MethodEntry target = find(cf, "<init>", d);
-            if (target == null) {
-                continue;
-            }
-            MethodDecl init = new MethodDecl("<init>", VoidSourceType.INSTANCE).withModifiers(ctor.getModifiers());
-            for (ParameterDecl pp : ctor.getParameters()) {
-                init.addParameter(pp);
-            }
-            init.withBody(ctor.getBody());
-            ssa.lower(lowerer.lower(init, owner), target);
-        }
-        cf.rebuild();
-        return true;
-    }
-
-    private static String desc(List<ParameterDecl> params, String ret, TypeResolver resolver) {
-        StringBuilder d = new StringBuilder("(");
-        for (ParameterDecl pp : params) {
-            d.append(resolver.descriptorOf(pp.getType()));
-        }
-        return d.append(")").append(ret).toString();
-    }
-
-    private static MethodEntry find(ClassFile cf, String name, String desc) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name) && m.getDesc().contentEquals(desc)) {
-                return m;
-            }
-        }
-        return null;
     }
 
     /** A small window around the first differing line, for quick eyeballing. */

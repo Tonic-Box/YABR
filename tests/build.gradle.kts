@@ -25,7 +25,8 @@ tasks.named<Test>("test") {
     maxParallelForks = 1
     jvmArgs("-Xss2m", "-Xmx1g")
     systemProperty("junit.jupiter.execution.parallel.enabled", "false")
-    systemProperty("rcs.enabled", System.getProperty("rcs.enabled", "false"))
+    // Forward the opt-in jar path for VerifySweepTest to the forked test JVM (unset -> the test skips).
+    System.getProperty("verify.sweep.jar")?.let { systemProperty("verify.sweep.jar", it) }
     finalizedBy(tasks.named("jacocoTestReport"))
 }
 

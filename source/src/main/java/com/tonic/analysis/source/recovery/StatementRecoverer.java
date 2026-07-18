@@ -40,9 +40,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private final TypeRecoverer typeRecoverer;
 
     /**
-     * The reaching-condition structurer, on by default and disabled only with {@code -Drcs.enabled=false}.
-     * When active it is offered each region first and falls back to the legacy walk by returning null for
-     * shapes it does not yet handle.
+     * The reaching-condition structurer. It is offered each region first and falls back to the legacy walk
+     * by returning null for shapes it does not yet handle (exception scaffolding, irreducible flow, and the
+     * few regions it declines), which the legacy walk still recovers until it is retired.
      */
     private final com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer rcsStructurer;
 
@@ -52,9 +52,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         this.analyzer = analyzer;
         this.exprRecoverer = exprRecoverer;
         this.typeRecoverer = new TypeRecoverer();
-        this.rcsStructurer = Boolean.parseBoolean(System.getProperty("rcs.enabled", "true"))
-                ? new com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer(this, context)
-                : null;
+        this.rcsStructurer = new com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer(this, context);
 
         // Pre-declare parameters so stores to them become assignments, not declarations
         preDeclareParameters();
@@ -2080,11 +2078,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // marked processed, so the RC engine structures the handler-free body or declines to this walk. It
         // marks the body blocks processed via the shared context; the caller's continuation logic keys off
         // the try-end offset and those marks, not this local visited set, so RC need not populate it.
-        if (rcsStructurer != null) {
-            List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
-            if (structured != null) {
-                return structured;
-            }
+        List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+        if (structured != null) {
+            return structured;
         }
         List<Statement> result = new ArrayList<>();
         IRBlock current = startBlock;
@@ -3659,8 +3655,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // loop bodies) must not be intercepted, or the two engines interleave on one region and corrupt
         // shared phi/mark state - so only the top-level whole-method call is offered here. Exception-
         // scaffolding pieces, which are handed off in full, go through recoverRegionHandoff instead.
-        if (rcsStructurer != null
-                && startBlock == context.getIrMethod().getEntryBlock() && stopBlocks.isEmpty()) {
+        if (startBlock == context.getIrMethod().getEntryBlock() && stopBlocks.isEmpty()) {
             List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
             if (structured != null) {
                 return structured;
@@ -3676,11 +3671,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * so the RC engine may structure it without interleaving with the legacy walk.
      */
     private List<Statement> recoverRegionHandoff(IRBlock startBlock, Set<IRBlock> stopBlocks) {
-        if (rcsStructurer != null) {
-            List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
-            if (structured != null) {
-                return structured;
-            }
+        List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+        if (structured != null) {
+            return structured;
         }
         return legacyBlockWalk(startBlock, stopBlocks);
     }

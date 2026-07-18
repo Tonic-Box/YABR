@@ -196,6 +196,20 @@ public class RedundantAssignmentEliminator implements ASTTransform {
             return super.visitBinary(expr);
         }
 
+        /**
+         * A declaration of {@code var} (e.g. the mis-recovered loop-increment {@code int i = i + 1}, or any
+         * re-declaration javac reuses the slot for) writes the variable just as an assignment does. {@code
+         * priorWrite} already treats such a declaration as a write; the between-writes guard must too, or an
+         * intervening loop that steps the counter via a declaration is missed and a later re-init wrongly dropped.
+         */
+        @Override
+        public Void visitVarDecl(VarDeclStmt stmt) {
+            if (var.equals(stmt.getName())) {
+                found = true;
+            }
+            return super.visitVarDecl(stmt);
+        }
+
         @Override
         public Void visitUnary(UnaryExpr expr) {
             UnaryOperator op = expr.getOperator();

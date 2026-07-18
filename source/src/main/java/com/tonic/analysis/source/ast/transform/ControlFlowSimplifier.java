@@ -70,6 +70,8 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= simplifyExpressions(stmts);
 
+        changed |= simplifyConditions(stmts);
+
         changed |= inlineSingleUseBooleans(stmts);
 
         changed |= collapseConditionalMaterialization(stmts);
@@ -224,6 +226,56 @@ public class ControlFlowSimplifier implements ASTTransform {
             Locations.copy(stmt, simplified);
         }
         return simplified;
+    }
+
+    /**
+     * Applies the same safe expression folds to {@code if}/loop conditions that {@code simplifyExpressions}
+     * applies to statement expressions - notably {@code x && true}/{@code x || false} identities left behind by
+     * compound-condition reconstruction. Conditions are mutated in place (preserving the statement's label and
+     * location); the branch/body statements are simplified by the block recursion, not here.
+     */
+    private boolean simplifyConditions(List<Statement> stmts) {
+        boolean changed = false;
+        for (Statement s : stmts) {
+            Expression cond = conditionOf(s);
+            if (cond == null) {
+                continue;
+            }
+            Expression simplified = simplifyExpression(cond);
+            if (simplified != cond) {
+                setConditionOf(s, simplified);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private Expression conditionOf(Statement s) {
+        if (s instanceof IfStmt) {
+            return ((IfStmt) s).getCondition();
+        }
+        if (s instanceof WhileStmt) {
+            return ((WhileStmt) s).getCondition();
+        }
+        if (s instanceof ForStmt) {
+            return ((ForStmt) s).getCondition();
+        }
+        if (s instanceof DoWhileStmt) {
+            return ((DoWhileStmt) s).getCondition();
+        }
+        return null;
+    }
+
+    private void setConditionOf(Statement s, Expression cond) {
+        if (s instanceof IfStmt) {
+            ((IfStmt) s).setCondition(cond);
+        } else if (s instanceof WhileStmt) {
+            ((WhileStmt) s).setCondition(cond);
+        } else if (s instanceof ForStmt) {
+            ((ForStmt) s).setCondition(cond);
+        } else if (s instanceof DoWhileStmt) {
+            ((DoWhileStmt) s).setCondition(cond);
+        }
     }
 
     private Statement simplifyExpressionsInStatement0(Statement stmt) {
