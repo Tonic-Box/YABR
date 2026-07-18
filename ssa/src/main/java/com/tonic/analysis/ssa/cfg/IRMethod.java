@@ -33,6 +33,11 @@ public class IRMethod {
 
     private Map<SSAValue, List<CopyInfo>> phiCopyMapping;
 
+    /** Phi results kept stack-resident (not materialized to a local); their value lives on the operand stack. */
+    private final Set<SSAValue> stackResidentPhiResults = new HashSet<>();
+    /** Incoming values of stack-resident phis; each is left on the operand stack by its predecessor block. */
+    private final Set<SSAValue> stackResidentPhiIncomings = new HashSet<>();
+
     /**
      * Creates a new IR method.
      *
@@ -137,6 +142,16 @@ public class IRMethod {
 
     public void setPhiCopyMapping(Map<SSAValue, List<CopyInfo>> phiCopyMapping) {
         this.phiCopyMapping = phiCopyMapping;
+    }
+
+    /** Phi results whose value is kept on the operand stack across the merge instead of spilled to a local. */
+    public Set<SSAValue> getStackResidentPhiResults() {
+        return stackResidentPhiResults;
+    }
+
+    /** Incoming values of stack-resident phis - each is left on the operand stack by its predecessor block. */
+    public Set<SSAValue> getStackResidentPhiIncomings() {
+        return stackResidentPhiIncomings;
     }
 
     /**

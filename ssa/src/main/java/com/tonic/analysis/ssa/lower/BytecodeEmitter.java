@@ -381,6 +381,13 @@ public class BytecodeEmitter {
         blockHeadPreload.clear();
         preloadedOnStack.clear();
 
+        // A stack-resident phi carries its value on the operand stack across the merge: each predecessor leaves
+        // the incoming value on top (so it must not be stored), and the merge consumes the phi result off the
+        // stack (so it must not be loaded). The phi itself emits nothing - the value is already where the merge's
+        // first instruction expects it.
+        stackResidentValues.addAll(method.getStackResidentPhiIncomings());
+        stackResidentValues.addAll(method.getStackResidentPhiResults());
+
         Map<SSAValue, Integer> useCounts = new HashMap<>();
         for (IRBlock block : method.getBlocksInOrder()) {
             for (IRInstruction instr : block.getInstructions()) {
