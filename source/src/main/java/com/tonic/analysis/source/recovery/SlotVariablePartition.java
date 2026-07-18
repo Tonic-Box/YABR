@@ -331,6 +331,57 @@ public class SlotVariablePartition {
         return false;
     }
 
+    /**
+     * Whether the value stored by {@code store} transitively depends on the slot's own variable - either a load
+     * of the slot, or (following pure ops and phi merges) any SSA value that some OTHER store writes into the
+     * same slot. The latter catches a read-modify-write whose input arrives as a merged value rather than a fresh
+     * load, e.g. {@code num += 2} in a finally where {@code num} is a phi of the try/catch results. Such a
+     * component is a genuine update of the variable, not an independent spill temp reusing its slot.
+     */
+    private boolean storedValueDependsOnSlot(StoreLocalInstruction store, int slot) {
+        Set<SSAValue> storedToSlot = new HashSet<>();
+        for (IRInstruction instr : defNode.keySet()) {
+            if (instr == store || !(instr instanceof StoreLocalInstruction)) {
+                continue;
+            }
+            StoreLocalInstruction s = (StoreLocalInstruction) instr;
+            if (s.getLocalIndex() == slot && s.getValue() instanceof SSAValue) {
+                storedToSlot.add((SSAValue) s.getValue());
+            }
+        }
+        return dependsOnSlot(store.getValue(), slot, storedToSlot, new HashSet<>());
+    }
+
+    private boolean dependsOnSlot(com.tonic.analysis.ssa.value.Value v, int slot,
+                                  Set<SSAValue> storedToSlot, Set<SSAValue> seen) {
+        if (!(v instanceof SSAValue)) {
+            return false;
+        }
+        SSAValue ssa = (SSAValue) v;
+        if (!seen.add(ssa)) {
+            return false;
+        }
+        if (storedToSlot.contains(ssa)) {
+            return true;
+        }
+        IRInstruction def = ssa.getDefinition();
+        if (def == null) {
+            return false;
+        }
+        if (def instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) def).getLocalIndex() == slot;
+        }
+        if (def instanceof BinaryOpInstruction || def instanceof UnaryOpInstruction
+                || def instanceof CopyInstruction || def instanceof PhiInstruction) {
+            for (com.tonic.analysis.ssa.value.Value operand : def.getOperands()) {
+                if (dependsOnSlot(operand, slot, storedToSlot, seen)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static int minId(Set<Node> defs) {
         if (defs == null || defs.isEmpty()) {
             return -1;
@@ -386,12 +437,31 @@ public class SlotVariablePartition {
             Map<Integer, Integer> order = se.getValue();
             // Pass 1: LVT-scoped names are authoritative - a component whose offsets fall inside a debug
             // variable's scope owns that name. Claim these first so reused-slot components cannot steal them.
+            //
+            // A single debug variable can legitimately fan out into several same-named components (a variable
+            // fragmented by exception edges into try/finally copies, or reassigned in place). Those must all keep
+            // the name so they stay one variable. But the recompiler also spills an inlined sub-expression into a
+            // free named local's slot inside that name's scope; that spill is a DIFFERENT value and must NOT
+            // inherit the name, or it materializes as a spurious assignment to the named variable instead of
+            // inlining back into its single use. Distinguish the two: a spill temp is single-def, single-use, and
+            // its stored value does not read its own slot back (a real reassignment like `n = n + 2` does; an
+            // independent `t = f(...)` does not). Such a component is left for Pass 2 to give a fresh fallback name.
             Set<String> used = new HashSet<>();
+            Map<String, List<Integer>> componentsByName = new HashMap<>();
             for (int root : order.keySet()) {
                 String scoped = scopeName(slot, rootOffsets.get(root));
                 if (scoped != null) {
-                    rootName.put(root, scoped);
-                    used.add(scoped);
+                    componentsByName.computeIfAbsent(scoped, k -> new ArrayList<>()).add(root);
+                }
+            }
+            for (Map.Entry<String, List<Integer>> ce : componentsByName.entrySet()) {
+                List<Integer> roots = ce.getValue();
+                for (int root : roots) {
+                    if (roots.size() > 1 && isReusedSlotSpillTemp(root, slot, roots, rootOffsets)) {
+                        continue;
+                    }
+                    rootName.put(root, ce.getKey());
+                    used.add(ce.getKey());
                 }
             }
             // Pass 2: remaining components get a fallback name that does NOT collide with a scoped name. The
@@ -422,6 +492,83 @@ public class SlotVariablePartition {
         for (Map.Entry<PhiInstruction, Integer> e : phiRepresentative.entrySet()) {
             instructionNames.put(e.getKey(), rootName.get(find(e.getValue())));
         }
+    }
+
+    /**
+     * Whether {@code root} is a recompiler spill of an inlined sub-expression that merely reuses another named
+     * local's slot within that local's live range. The recompiler stores such a temp into a free named slot; on
+     * the next round trip it must NOT inherit the slot's debug name (it is an independent value that inlines back
+     * into its single use), or it materializes as a spurious assignment to the named variable.
+     *
+     * <p>The signature is precise so genuine variables are never demoted: the component must be single-def,
+     * single-use, its stored value must not read the slot back (so a reassignment {@code n = n + 2} - even one
+     * whose {@code n} arrives through a phi - is excluded), and its bytecode range must be strictly NESTED inside
+     * another same-named component's range (so two same-named locals in disjoint scopes, which merely reuse the
+     * slot sequentially, are both kept - neither nests in the other).
+     */
+    private boolean isReusedSlotSpillTemp(int root, int slot, List<Integer> sameNameRoots,
+                                          Map<Integer, List<Integer>> rootOffsets) {
+        int defs = 0;
+        StoreLocalInstruction theStore = null;
+        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
+            if (find(e.getValue().id) != root) {
+                continue;
+            }
+            defs++;
+            if (e.getKey() instanceof StoreLocalInstruction) {
+                theStore = (StoreLocalInstruction) e.getKey();
+            }
+        }
+        if (defs != 1 || theStore == null) {
+            return false;
+        }
+        int loads = 0;
+        for (Integer v : loadReaching.values()) {
+            if (find(v) == root) {
+                loads++;
+            }
+        }
+        if (loads != 1) {
+            return false;
+        }
+        if (storedValueDependsOnSlot(theStore, slot)) {
+            return false;
+        }
+        return isRangeNestedInSibling(root, sameNameRoots, rootOffsets);
+    }
+
+    /** Whether {@code root}'s offset range is strictly contained within some other same-named component's range. */
+    private boolean isRangeNestedInSibling(int root, List<Integer> sameNameRoots,
+                                           Map<Integer, List<Integer>> rootOffsets) {
+        List<Integer> mine = rootOffsets.get(root);
+        if (mine == null || mine.isEmpty()) {
+            return false;
+        }
+        int myMin = Integer.MAX_VALUE;
+        int myMax = Integer.MIN_VALUE;
+        for (int o : mine) {
+            myMin = Math.min(myMin, o);
+            myMax = Math.max(myMax, o);
+        }
+        for (int other : sameNameRoots) {
+            if (other == root) {
+                continue;
+            }
+            List<Integer> os = rootOffsets.get(other);
+            if (os == null || os.isEmpty()) {
+                continue;
+            }
+            int oMin = Integer.MAX_VALUE;
+            int oMax = Integer.MIN_VALUE;
+            for (int o : os) {
+                oMin = Math.min(oMin, o);
+                oMax = Math.max(oMax, o);
+            }
+            if (oMin <= myMin && myMax <= oMax && (oMin < myMin || myMax < oMax)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void addOffset(Map<Integer, List<Integer>> map, int root, int offset) {
