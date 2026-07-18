@@ -168,6 +168,37 @@ public class ControlFlowSimplifier implements ASTTransform {
             changed = true;
         }
 
+        // If the then-branch does not fall through (it ends in an unconditional return/throw/break/continue),
+        // the else is redundant: its body runs exactly when the condition is false, which is exactly the code
+        // after the if. Splice the else body out and drop the else. The recompiled bytecode omits the else too,
+        // so this makes the first decompile a round-trip fixed point. Skipped when the else is itself an early
+        // exit - the rule further down normalizes that shape to a leading guard instead.
+        if (ifStmt.hasElse() && !isEarlyExit(ifStmt.getElseBranch()) && isTerminal(ifStmt.getThenBranch())) {
+            List<Statement> elseStmts = getStatements(ifStmt.getElseBranch());
+            ifStmt.setElseBranch(null);
+            for (int j = 0; j < elseStmts.size(); j++) {
+                parentList.add(index + 1 + j, elseStmts.get(j));
+            }
+            changed = true;
+        }
+
+        // Canonicalize branch polarity: when both arms are present and neither is terminal, prefer the positive
+        // condition (== over !=, dropping a leading !) with the arms in that order. Recompiling an if/else can flip
+        // which arm becomes the branch fall-through, so the raw decompile oscillates between the two equivalent
+        // polarities across a round trip; normalizing to the positive form on every pass makes it a fixed point.
+        // Restricted to non-terminal arms so it never competes with the early-exit / terminal-else rules, which own
+        // the single-exit shapes.
+        if (ifStmt.hasElse()
+                && isNegativeCondition(ifStmt.getCondition())
+                && !isEmptyBlock(ifStmt.getThenBranch()) && !isEmptyBlock(ifStmt.getElseBranch())
+                && !isTerminal(ifStmt.getThenBranch()) && !isTerminal(ifStmt.getElseBranch())) {
+            Statement thenBody = ifStmt.getThenBranch();
+            invertCondition(ifStmt);
+            ifStmt.setThenBranch(ifStmt.getElseBranch());
+            ifStmt.setElseBranch(thenBody);
+            changed = true;
+        }
+
         if (!ifStmt.hasElse()) {
             Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
             if (inner instanceof IfStmt) {
@@ -636,6 +667,35 @@ public class ControlFlowSimplifier implements ASTTransform {
                 Statement last = block.getStatements().get(block.size() - 1);
                 return last instanceof ReturnStmt || last instanceof ThrowStmt;
             }
+        }
+        return false;
+    }
+
+    private boolean isTerminal(Statement stmt) {
+        Statement unwrapped = unwrapSingleStatement(stmt);
+        if (isTerminalLeaf(unwrapped)) {
+            return true;
+        }
+        if (stmt instanceof BlockStmt) {
+            BlockStmt block = (BlockStmt) stmt;
+            if (!block.getStatements().isEmpty()) {
+                return isTerminalLeaf(block.getStatements().get(block.size() - 1));
+            }
+        }
+        return false;
+    }
+
+    private boolean isTerminalLeaf(Statement stmt) {
+        return stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
+                || stmt instanceof BreakStmt || stmt instanceof ContinueStmt;
+    }
+
+    private boolean isNegativeCondition(Expression e) {
+        if (e instanceof UnaryExpr) {
+            return ((UnaryExpr) e).getOperator() == UnaryOperator.NOT;
+        }
+        if (e instanceof BinaryExpr) {
+            return ((BinaryExpr) e).getOperator() == BinaryOperator.NE;
         }
         return false;
     }

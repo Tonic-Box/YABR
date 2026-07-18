@@ -142,11 +142,17 @@ public class RegisterAllocator {
                 IRType wantType = value.getType();
                 int want = storageKind(wantType);
                 boolean isRef = !(wantType instanceof PrimitiveType);
+                IRMethod.SourceLocal wantLocal = namedLocalOf.get(value);
                 int reuse = -1;
                 for (int candidate : freeRegs) {
                     IRType last = slotType.get(candidate);
-                    if (last == null
-                            || (isRef ? sameReferenceType(last, wantType) : storageKind(last) == want)) {
+                    boolean typeOk = last == null
+                            || (isRef ? sameReferenceType(last, wantType) : storageKind(last) == want);
+                    // Also honour slot ownership: a slot a DIFFERENT named source variable owns must not be
+                    // reused for this one (javac gives each named local its own slot for its scope). Otherwise
+                    // two distinctly-named locals collapse onto one slot and the round trip loses a name and its
+                    // scope. An unnamed temp (wantLocal == null) may still share any type-compatible slot.
+                    if (typeOk && canOwnSlot(candidate, wantLocal)) {
                         reuse = candidate;
                         break;
                     }
@@ -160,6 +166,7 @@ public class RegisterAllocator {
             }
 
             allocation.put(value, reg);
+            claimSlot(reg, value);
             slotType.put(reg, value.getType());
             if (value.getType().isTwoSlot()) {
                 slotType.put(reg + 1, value.getType());

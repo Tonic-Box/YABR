@@ -57,7 +57,7 @@ class ControlFlowSimplifierBranchCoverageTest {
         void doesNotConvertNonEarlyExitElse() {
             IfStmt ifStmt = new IfStmt(
                 new VarRefExpr("valid", PrimitiveSourceType.BOOLEAN),
-                new ReturnStmt(LiteralExpr.ofInt(1)),
+                new ExprStmt(new VarRefExpr("y", PrimitiveSourceType.INT)),
                 new ExprStmt(new VarRefExpr("x", PrimitiveSourceType.INT))
             );
 
@@ -67,6 +67,26 @@ class ControlFlowSimplifierBranchCoverageTest {
 
             boolean changed = simplifier.transform(block);
             assertFalse(changed);
+        }
+
+        @Test
+        void flattensRedundantElseAfterTerminalThen() {
+            IfStmt ifStmt = new IfStmt(
+                new VarRefExpr("valid", PrimitiveSourceType.BOOLEAN),
+                new ReturnStmt(LiteralExpr.ofInt(1)),
+                new ExprStmt(new VarRefExpr("x", PrimitiveSourceType.INT))
+            );
+
+            List<Statement> stmts = new ArrayList<>();
+            stmts.add(ifStmt);
+            BlockStmt block = new BlockStmt(stmts);
+
+            boolean changed = simplifier.transform(block);
+            assertTrue(changed);
+            assertEquals(2, block.getStatements().size());
+            IfStmt guard = (IfStmt) block.getStatements().get(0);
+            assertFalse(guard.hasElse());
+            assertTrue(block.getStatements().get(1) instanceof ExprStmt);
         }
     }
 

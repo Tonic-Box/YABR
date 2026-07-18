@@ -106,7 +106,12 @@ public class DeclarationHoister implements ASTTransform {
         declsToInsert.sort((a, b) -> {
             int idxA = firstUseIndex.getOrDefault(a.getName(), Integer.MAX_VALUE);
             int idxB = firstUseIndex.getOrDefault(b.getName(), Integer.MAX_VALUE);
-            return Integer.compare(idxA, idxB);
+            int cmp = Integer.compare(idxA, idxB);
+            // Break first-use ties by name so declarations that first appear at the same top-level statement
+            // (e.g. several locals first assigned inside one loop) get a stable order. Their discovery order is
+            // not preserved across a recompile, so without this tie-break the front-declaration block reshuffles
+            // on the round trip.
+            return cmp != 0 ? cmp : a.getName().compareTo(b.getName());
         });
 
         int offset = 0;
