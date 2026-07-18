@@ -28,13 +28,12 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.BranchInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
-import com.tonic.analysis.ssa.ir.InvokeInstruction;
-import com.tonic.analysis.ssa.ir.NewArrayInstruction;
-import com.tonic.analysis.ssa.ir.NewInstruction;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.ir.SimpleInstruction;
 import com.tonic.analysis.ssa.ir.SimpleOp;
 import com.tonic.analysis.ssa.ir.SwitchInstruction;
+import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -98,16 +97,10 @@ public final class ReachingConditionStructurer {
             return null;
         }
         this.method = context.getIrMethod();
-        // This stage structures a whole method at once, never a nested sub-region. recoverBlockSequence
-        // is also called recursively by the legacy walk (for loop bodies etc.); intercepting those
-        // sub-calls would interleave the two engines and corrupt shared state. Only the top-level call -
-        // the method entry with no stop blocks - is eligible.
-        if (entry != method.getEntryBlock() || !stopBlocks.isEmpty()) {
-            return null;
-        }
-        if (method.getExceptionHandlers() != null && !method.getExceptionHandlers().isEmpty()) {
-            return null;
-        }
+        // The caller only offers this stage a wholesale region hand-off: the top-level whole-method call
+        // or an exception-scaffolding piece (recoverRegionHandoff). The legacy walk's own sub-recursion
+        // (if arms, loop bodies) is never routed here, so the two engines never interleave on one region.
+        boolean topLevel = entry == method.getEntryBlock() && stopBlocks.isEmpty();
         this.dom = context.getDominatorTree();
         if (dom == null) {
             return null;
@@ -115,10 +108,19 @@ public final class ReachingConditionStructurer {
 
         // A repeat recover() on the same host reuses this context; clear the prior pass's emitted-block
         // marks so every block is emitted again (the engine emits each block once per pass, keyed on these
-        // marks). Done only once this is the top-level whole-method call, which the guards above ensure.
-        context.resetProcessedBlocks();
+        // marks). Only the top-level whole-method call owns the whole mark namespace; a sub-region hand-off
+        // must preserve the marks the surrounding recovery has already set for blocks outside this region.
+        if (topLevel) {
+            context.resetProcessedBlocks();
+        }
 
         if (!collectRegion(entry, stopBlocks)) {
+            return null;
+        }
+        // A region containing an exception handler the surrounding recovery has not yet consumed is a
+        // (nested) try this stage cannot structure - reaching conditions do not model exception edges.
+        // Decline it so the try/catch scaffolding recovers it and hands this stage its handler-free pieces.
+        if (bridge.regionContainsUnprocessedHandler(region)) {
             return null;
         }
         assignAtoms();
@@ -154,6 +156,17 @@ public final class ReachingConditionStructurer {
     }
 
     private void validateChildren(IRBlock b) {
+        // A return/throw reached from b but lying outside the region, whose value is defined inside the
+        // region, is the region's own terminal lost to the boundary - javac compiles `try { return foo(); }`
+        // with the return past the protected range. Reaching conditions cannot place that terminal, and
+        // structuring the region without it drops the return (and mis-inlines the value it carries), so
+        // decline to the legacy walk, which recovers the boundary.
+        for (IRBlock s : b.getSuccessors()) {
+            if (!isBackEdge(b, s) && !region.contains(s) && context.classifyLoopJump(s) == null
+                    && isTerminalBlock(s) && terminalDependsOnRegion(s)) {
+                throw new BailToLegacy();
+            }
+        }
         List<IRBlock> children = childrenInRpo(b);
         IRInstruction term = b.getTerminator();
         if (!(term instanceof BranchInstruction)) {
@@ -174,7 +187,7 @@ public final class ReachingConditionStructurer {
                 validate(c);
             } else {
                 BoolFormula guard = reachingConditionWithin(c, b);
-                if (!formulas.isTautology(guard)) {
+                if (!formulas.isTautology(guard) && !reachedByFallThrough(c, b)) {
                     requireGuardPure(guard);
                 }
                 validate(c);
@@ -289,18 +302,12 @@ public final class ReachingConditionStructurer {
 
     /**
      * True when {@code block}'s branch condition has no side effect, so it is safe to re-emit inside a
-     * shared-tail guard. Conservative: any allocation or call in the block could be inlined into the
-     * condition, and duplicating it would duplicate the effect.
+     * shared-tail guard. Precise: impure only when recovering the condition would inline an allocation or
+     * call into it (a side effect duplicating it would repeat). A call whose result is a named local, or
+     * one that does not feed the branch operands, leaves the condition a pure re-emittable expression.
      */
     private boolean isPureCondition(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof InvokeInstruction
-                    || instr instanceof NewInstruction
-                    || instr instanceof NewArrayInstruction) {
-                return false;
-            }
-        }
-        return true;
+        return !bridge.conditionInlinesSideEffect(block);
     }
 
     // ---- emission ------------------------------------------------------------------------------
@@ -550,6 +557,27 @@ public final class ReachingConditionStructurer {
         return breakTarget;
     }
 
+    /**
+     * True when the terminal block {@code term} (a return or throw outside the region) carries a value
+     * defined inside the region. Such a terminal is the region's own exit - the value it returns was
+     * computed here - so it cannot be dropped to the boundary.
+     */
+    private boolean terminalDependsOnRegion(IRBlock term) {
+        IRInstruction terminator = term.getTerminator();
+        Value value = null;
+        if (terminator instanceof ReturnInstruction) {
+            value = ((ReturnInstruction) terminator).getReturnValue();
+        } else if (terminator instanceof SimpleInstruction
+                && ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW) {
+            value = ((SimpleInstruction) terminator).getOperand();
+        }
+        if (value instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) value).getDefinition();
+            return def != null && region.contains(def.getBlock());
+        }
+        return false;
+    }
+
     /** True when {@code block}'s terminator ends the method (a return or an athrow). */
     private boolean isTerminalBlock(IRBlock block) {
         IRInstruction term = block.getTerminator();
@@ -627,13 +655,20 @@ public final class ReachingConditionStructurer {
     }
 
     /**
-     * Emits a shared merge child once. If it is reached unconditionally from {@code dominator} it simply
-     * follows in sequence; otherwise it is wrapped in {@code if (reachingCondition)}. Bails to legacy if
-     * the guard would have to duplicate a side-effecting condition.
+     * Emits a shared merge child once. If it is reached unconditionally from {@code dominator} - or by
+     * fall-through past an exiting guard-clause whose condition has a side effect - it follows in sequence;
+     * otherwise it is wrapped in {@code if (reachingCondition)}. A guard that would repeat a side-effecting
+     * condition without the fall-through escape was already declined in {@link #validate}.
      */
     private List<Statement> emitSharedTail(IRBlock shared, IRBlock dominator, boolean last) {
         BoolFormula guard = reachingConditionWithin(shared, dominator);
-        if (formulas.isTautology(guard)) {
+        // A tautological guard is emitted unguarded. So is a tail whose guard would repeat a side-effecting
+        // condition but which is reached purely by fall-through (the guard-clause shape `if (cond) continue;
+        // tail`): the tail follows the subtree and is reached exactly when control did not already exit, so
+        // the guard is redundant and re-emitting it would repeat the effect. A pure guard keeps its explicit
+        // form even when redundant - dropping it destabilizes the round trip for no correctness gain.
+        if (formulas.isTautology(guard)
+                || (guardHasImpureAtom(guard) && reachedByFallThrough(shared, dominator))) {
             return emit(shared);
         }
         List<Statement> body = emit(shared);
@@ -703,11 +738,52 @@ public final class ReachingConditionStructurer {
 
     /** Fails to legacy if any atom in the guard names a block with a side-effecting condition. */
     private void requireGuardPure(BoolFormula guard) {
+        if (guardHasImpureAtom(guard)) {
+            throw new BailToLegacy();
+        }
+    }
+
+    /** True when some atom of the guard names a block whose condition would inline a side effect. */
+    private boolean guardHasImpureAtom(BoolFormula guard) {
         for (int atom : atomsOf(guard.nnf, new HashSet<>())) {
             if (!pureConditionBlock.contains(blockOfAtom.get(atom))) {
-                throw new BailToLegacy();
+                return true;
             }
         }
+        return false;
+    }
+
+    /**
+     * True when the shared tail {@code c} is reached from {@code dominator} purely by fall-through - every
+     * in-region path from {@code dominator} that does not reach {@code c} first exits (a {@code
+     * continue}/{@code break}/{@code return}/{@code throw}). Such a tail needs no guard: it is emitted after
+     * the dominator's subtree, and control arrives there exactly when it did not already exit. This is the
+     * guard-clause shape {@code if (cond) continue; tail} - guarding {@code tail} with the complement of
+     * {@code cond} would be redundant, and would wrongly re-emit a side-effecting {@code cond}.
+     */
+    private boolean reachedByFallThrough(IRBlock c, IRBlock dominator) {
+        return allPathsReachOrExit(dominator, c, new HashSet<>());
+    }
+
+    private boolean allPathsReachOrExit(IRBlock n, IRBlock c, Set<IRBlock> seen) {
+        if (n == c || !seen.add(n)) {
+            return true;
+        }
+        if (isTerminalBlock(n)) {
+            return true;
+        }
+        for (IRBlock s : n.getSuccessors()) {
+            if (isBackEdge(n, s) || s == c || context.classifyLoopJump(s) != null) {
+                continue; // reaches c, or the edge exits the loop/region
+            }
+            if (!region.contains(s)) {
+                return false; // leaves the region toward the continuation without passing through c
+            }
+            if (!allPathsReachOrExit(s, c, seen)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Set<Integer> atomsOf(Nnf n, Set<Integer> into) {

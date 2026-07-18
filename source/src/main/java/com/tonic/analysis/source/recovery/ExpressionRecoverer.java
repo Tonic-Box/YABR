@@ -260,6 +260,45 @@ public class ExpressionRecoverer {
         return false;
     }
 
+    /**
+     * True when recovering {@code value} as an operand would inline an allocation or call - a side effect
+     * that must not be duplicated by re-emitting the expression. Mirrors {@link #recoverOperand}'s inline
+     * decisions exactly (a materialized, non-force-inlined value renders as a named reference; otherwise
+     * {@link #shouldInlineExpression} governs), so the answer matches what emission actually produces. A
+     * pure query: it inspects definitions, use counts, and materialization without recovering anything.
+     */
+    public boolean operandInlinesSideEffect(Value value) {
+        return operandInlinesSideEffect(value, new java.util.HashSet<>());
+    }
+
+    private boolean operandInlinesSideEffect(Value value, java.util.Set<Value> seen) {
+        if (!(value instanceof SSAValue) || !seen.add(value)) {
+            return false;
+        }
+        SSAValue ssa = (SSAValue) value;
+        IRInstruction def = ssa.getDefinition();
+        if (def == null) {
+            return false;
+        }
+        if (context.isMaterialized(ssa) && !shouldForceInline(def, ssa)) {
+            return false;
+        }
+        if (!shouldInlineExpression(def)) {
+            return false;
+        }
+        if (def instanceof InvokeInstruction
+                || def instanceof NewInstruction
+                || def instanceof NewArrayInstruction) {
+            return true;
+        }
+        for (Value operand : def.getOperands()) {
+            if (operandInlinesSideEffect(operand, seen)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Expression recoverConstant(Constant c) {
         return recoverConstant(c, null);
     }

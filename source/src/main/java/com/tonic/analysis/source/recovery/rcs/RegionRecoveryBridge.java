@@ -5,6 +5,7 @@ import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * The narrow set of statement/expression recovery leaves the reaching-condition engine needs from the
@@ -20,8 +21,21 @@ public interface RegionRecoveryBridge {
     /** The branch condition of {@code block}, negated when {@code negate} is set. */
     Expression recoverCondition(IRBlock block, boolean negate);
 
+    /**
+     * True when recovering {@code block}'s branch condition would inline an allocation or call - a side
+     * effect a shared-tail guard must not duplicate by re-emitting the condition. False for a condition
+     * over named locals only, which re-emits freely.
+     */
+    boolean conditionInlinesSideEffect(IRBlock block);
+
     /** SSA-destruction copies realized when the edge {@code pred -> succ} is taken. */
     List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ);
+
+    /**
+     * True when some block in {@code region} starts an exception handler the surrounding recovery has not
+     * yet consumed - a nested try the engine must decline so the try/catch scaffolding recovers it.
+     */
+    boolean regionContainsUnprocessedHandler(Set<IRBlock> region);
 
     /** Records {@code block}'s recovered statements and marks it emitted so nothing re-emits it. */
     void markRegionBlockProcessed(IRBlock block, List<Statement> statements);

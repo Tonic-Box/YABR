@@ -72,3 +72,4 @@ bin/
 /tests/heap_analysis_debug.txt
 /tests/ir_dump.txt
 /tests/recovery_trace.txt
+/el.class

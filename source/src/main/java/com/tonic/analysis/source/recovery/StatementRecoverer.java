@@ -524,7 +524,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (tryStart != null && tryStart != entry) {
                 Set<IRBlock> preTryStop = new HashSet<>(stopBlocks);
                 preTryStop.add(tryStart);
-                preTryStmts = recoverBlockSequence(entry, preTryStop);
+                preTryStmts = recoverRegionHandoff(entry, preTryStop);
             }
 
             IRBlock startBlock = (tryStart != null) ? tryStart : entry;
@@ -532,7 +532,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (!innerHandlers.isEmpty()) {
                 tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
             } else {
-                tryStmts = recoverBlockSequence(startBlock, stopBlocks);
+                tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
             }
             BlockStmt tryBlock = new BlockStmt(tryStmts);
             result.addAll(preTryStmts);
@@ -607,13 +607,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                     IRBlock continuation = findBlockAfterTryCatch(outerHandler, consumed);
                     if (continuation != null && !context.isProcessed(continuation)) {
-                        result.addAll(recoverBlockSequence(continuation, new HashSet<>()));
+                        result.addAll(recoverRegionHandoff(continuation, new HashSet<>()));
                     }
                 }
             } else {
                 result.addAll(tryStmts);
             }
         } else {
+            // No handler covers the entry: the try begins after a prelude, so the whole region still
+            // holds the unprocessed try. The RC engine would only decline it here; let the legacy walk
+            // reach the try (recoverTryCatch) and hand the engine the handler-free body from there.
             result.addAll(recoverBlockSequence(entry, handlerBlocks));
         }
 
@@ -2073,6 +2076,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * Recovers blocks for a try region, stopping at the specified stop blocks.
      */
     private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited) {
+        // The try body is a wholesale region hand-off: the enclosing try (and any nested try) is already
+        // marked processed, so the RC engine structures the handler-free body or declines to this walk. It
+        // marks the body blocks processed via the shared context; the caller's continuation logic keys off
+        // the try-end offset and those marks, not this local visited set, so RC need not populate it.
+        if (rcsStructurer != null) {
+            List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+            if (structured != null) {
+                return structured;
+            }
+        }
         List<Statement> result = new ArrayList<>();
         IRBlock current = startBlock;
 
@@ -3642,12 +3655,38 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private final Set<IRBlock> processedHandlerBlocks = new HashSet<>();
 
     public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks) {
+        // The RC engine structures a whole method at once. The legacy walk's own sub-recursion (if arms,
+        // loop bodies) must not be intercepted, or the two engines interleave on one region and corrupt
+        // shared phi/mark state - so only the top-level whole-method call is offered here. Exception-
+        // scaffolding pieces, which are handed off in full, go through recoverRegionHandoff instead.
+        if (rcsStructurer != null
+                && startBlock == context.getIrMethod().getEntryBlock() && stopBlocks.isEmpty()) {
+            List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+            if (structured != null) {
+                return structured;
+            }
+        }
+        return legacyBlockWalk(startBlock, stopBlocks);
+    }
+
+    /**
+     * Recovers a wholesale region hand-off - an exception-scaffolding piece (the code before a try, a try
+     * body, or the continuation after a try/catch) - preferring the RC engine, then the legacy walk. Such
+     * a piece is handed off in full rather than being a sub-region of an in-progress schema structuring,
+     * so the RC engine may structure it without interleaving with the legacy walk.
+     */
+    private List<Statement> recoverRegionHandoff(IRBlock startBlock, Set<IRBlock> stopBlocks) {
         if (rcsStructurer != null) {
             List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
             if (structured != null) {
                 return structured;
             }
         }
+        return legacyBlockWalk(startBlock, stopBlocks);
+    }
+
+    /** The schema-based structural walk: the legacy recovery the RC engine falls back to for a declined region. */
+    private List<Statement> legacyBlockWalk(IRBlock startBlock, Set<IRBlock> stopBlocks) {
         List<Statement> result = new ArrayList<>();
         Set<IRBlock> visited = new HashSet<>();
         IRBlock current = startBlock;
@@ -6938,6 +6977,35 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 op, left, zero, PrimitiveSourceType.BOOLEAN);
         }
         return LiteralExpr.ofBoolean(!negate);
+    }
+
+    @Override
+    public boolean conditionInlinesSideEffect(IRBlock block) {
+        IRInstruction terminator = block.getTerminator();
+        if (!(terminator instanceof BranchInstruction)) {
+            return false;
+        }
+        BranchInstruction branch = (BranchInstruction) terminator;
+        if (branch.getLeft() != null && exprRecoverer.operandInlinesSideEffect(branch.getLeft())) {
+            return true;
+        }
+        return branch.getRight() != null && exprRecoverer.operandInlinesSideEffect(branch.getRight());
+    }
+
+    @Override
+    public boolean regionContainsUnprocessedHandler(Set<IRBlock> region) {
+        List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
+        if (handlers == null || handlers.isEmpty()) {
+            return false;
+        }
+        for (IRBlock block : region) {
+            ExceptionHandler handler = findHandlerStartingAt(block);
+            if (handler != null && !processedTryHandlers.contains(handler)
+                    && !processedHandlerBlocks.contains(handler.getHandlerBlock())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
