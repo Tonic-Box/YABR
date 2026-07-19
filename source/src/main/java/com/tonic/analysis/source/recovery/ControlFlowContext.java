@@ -281,6 +281,12 @@ public class ControlFlowContext {
         }
     }
 
+    /** The exit (break target) of the innermost enclosing loop, or null when no loop encloses. */
+    public IRBlock innermostLoopExit() {
+        LoopFrame f = loopStack.peek();
+        return f == null ? null : f.exit;
+    }
+
     /**
      * Classifies a control-flow edge into {@code target}: a {@code break} when {@code target} is a loop's exit, a
      * {@code continue} when it is a loop's continue-target. A jump is unlabeled only when its loop is the innermost

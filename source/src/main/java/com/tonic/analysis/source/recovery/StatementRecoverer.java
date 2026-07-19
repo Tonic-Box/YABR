@@ -269,23 +269,33 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Whether the switch yields a value: its merge block has a phi fed by two or more of the switch's own case
-     * targets, i.e. the cases converge to a merged value (the switch-expression shape). A loop-induction phi is
-     * fed by the loop header/back-edge, not the case targets, so it does not match.
+     * Whether the switch is a return switch expression: its merge block directly returns a phi fed by two or more
+     * of the switch's own case targets, i.e. every case computes the returned value (a {@code return switch (sel) {
+     * case L -> e; ... }} javac lowered to a result temp). Native structuring would leave a spurious result temp
+     * that the return fold cannot remove, so these decline to the switch-expression reconstruction path. A statement
+     * switch that merely assigns a variable used later has a merge phi too, but its merge does not return it, so it
+     * stays native; a loop-induction phi is fed by the loop header, not the case targets.
      */
     private boolean switchYieldsValue(IRBlock mergeBlock, Set<IRBlock> caseHeaders, IRBlock defaultTarget) {
-        for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
-            int fromCases = 0;
-            for (IRBlock in : phi.getIncomingBlocks()) {
-                if (caseHeaders.contains(in) || in == defaultTarget) {
-                    fromCases++;
-                }
-            }
-            if (fromCases >= 2) {
-                return true;
+        IRInstruction term = mergeBlock.getTerminator();
+        if (!(term instanceof com.tonic.analysis.ssa.ir.ReturnInstruction)) {
+            return false;
+        }
+        Value ret = ((com.tonic.analysis.ssa.ir.ReturnInstruction) term).getReturnValue();
+        if (!(ret instanceof SSAValue)) {
+            return false;
+        }
+        IRInstruction def = ((SSAValue) ret).getDefinition();
+        if (!(def instanceof PhiInstruction) || !mergeBlock.getPhiInstructions().contains(def)) {
+            return false;
+        }
+        int fromCases = 0;
+        for (IRBlock in : ((PhiInstruction) def).getIncomingBlocks()) {
+            if (caseHeaders.contains(in) || in == defaultTarget) {
+                fromCases++;
             }
         }
-        return false;
+        return fromCases >= 2;
     }
 
     /**

@@ -198,7 +198,17 @@ public final class ReachingConditionStructurer {
      */
     private void validateSwitch(IRBlock b) {
         SwitchDescriptor desc = switchDescriptor(b);
-        context.pushSwitch(b, switchMerge(b, desc), desc.caseHeaders());
+        IRBlock merge = switchMerge(b, desc);
+        // Decline when the switch merge coincides with the enclosing loop's exit: a bare `break` inside a case
+        // breaks the switch (control falls to the merge), but if the merge IS the loop exit, that same target is
+        // reached by breaking the loop too. The two are indistinguishable in the emitted `switch`, so a case that
+        // leaves at the merge cannot be given the correct (switch vs labeled-loop) break. The legacy walk, which
+        // does not model the switch as a lexical break scope, recovers it. A merge that is the loop's
+        // continue-target (the switch is the whole loop body) is unambiguous and stays native.
+        if (merge != null && merge == context.innermostLoopExit()) {
+            throw new BailToLegacy();
+        }
+        context.pushSwitch(b, merge, desc.caseHeaders());
         for (SwitchDescriptor.CaseSpec spec : desc.cases()) {
             if (spec.header() != null) {
                 requireCaseExitsPlaceable(spec);
@@ -1169,6 +1179,14 @@ public final class ReachingConditionStructurer {
             if (succ == branch.getFalseTarget()) {
                 return formulas.not(atom);
             }
+        }
+        // A guard reaching the edge out of a DECLINED switch has no boolean atom to name the taken case: emitting
+        // `truth` would guard the successor unconditionally and drop the case discrimination. A natively structured
+        // switch places its case bodies via emitSwitch (not reaching conditions), and a post-switch successor is
+        // reached regardless of which case ran, so `truth` is the correct guard there; only a switch the engine
+        // declined (no descriptor) leaks its case edges into reaching-condition guards and must fail to legacy.
+        if (term instanceof SwitchInstruction && switchDescriptor(pred) == null) {
+            throw new BailToLegacy();
         }
         return formulas.truth;
     }
