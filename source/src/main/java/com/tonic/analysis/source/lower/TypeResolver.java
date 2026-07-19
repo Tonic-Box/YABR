@@ -960,12 +960,36 @@ public class TypeResolver {
         return count;
     }
 
+    /**
+     * Resolves a source-qualified name whose separators are all slashes (a naive {@code '.'->'/'} of
+     * {@code a.b.C.D}) to its true internal name, recovering the {@code $} nested-class separators. A source
+     * dot means either a package boundary or a nested-class boundary, and the two are indistinguishable
+     * syntactically; try the all-slash form, then convert trailing separators to {@code $} innermost-first until
+     * a known class is found ({@code Outer/Inner} -> {@code Outer$Inner}). Falls back to the all-slash form for a
+     * name no loaded class matches, preserving the prior behavior for unresolvable external types.
+     */
+    private String resolveDottedName(String slashName) {
+        if (classExists(slashName)) {
+            return slashName;
+        }
+        StringBuilder sb = new StringBuilder(slashName);
+        for (int i = sb.length() - 1; i >= 0; i--) {
+            if (sb.charAt(i) == '/') {
+                sb.setCharAt(i, '$');
+                if (classExists(sb.toString())) {
+                    return sb.toString();
+                }
+            }
+        }
+        return slashName;
+    }
+
     public String resolveClassName(String simpleName) {
         if (simpleName.contains("/")) {
             return simpleName;
         }
         if (simpleName.contains(".")) {
-            return simpleName.replace('.', '/');
+            return resolveDottedName(simpleName.replace('.', '/'));
         }
 
         for (ImportDecl imp : imports) {

@@ -840,24 +840,101 @@ public final class ReachingConditionStructurer {
             }
         }
 
-        // Emit with the false (fall-through) edge as the then-branch and the taken condition negated.
-        // That matches how the AST lowers back to bytecode (a source `if` compiles to a branch on the
-        // negated condition that jumps past the then-block), so recovery is a round-trip fixed point.
-        // A loop-boundary edge becomes its break/continue jump, a duplicated-tail edge its inlined copy.
         List<Statement> trueStmts = trueExit != null ? new ArrayList<>(trueExit) : emitAll(trueChildren);
         List<Statement> falseStmts = falseExit != null ? new ArrayList<>(falseExit) : emitAll(falseChildren);
         List<Statement> out = new ArrayList<>();
         if (!trueStmts.isEmpty() || !falseStmts.isEmpty()) {
-            Expression cond = bridge.recoverCondition(b, true);
-            IfStmt ifStmt = new IfStmt(cond, new BlockStmt(falseStmts),
-                    trueStmts.isEmpty() ? null : new BlockStmt(trueStmts));
-            stamp(ifStmt, b);
-            out.add(ifStmt);
+            // Prefer a leading guard clause reading like the source: when an arm exits (return/throw/break/
+            // continue), emit it as `if (condToThatArm) { exitingArm }` and let the other arm flow flat after,
+            // instead of nesting the long continuation. The guarded arm is a deterministic function of the arms
+            // (the exiting one; the smaller when both exit), so both branch orientations of the same shape map to
+            // the same guard clause and the source is a round-trip fixed point. Emitting the guard directly (no
+            // else) also keeps ControlFlowSimplifier's terminal-else flip from re-nesting it. When neither arm
+            // exits (a genuine two-armed diamond), keep the bytecode-lowering form: false edge as the then-branch
+            // with the taken condition negated, which the AST lowers back to the same branch.
+            int guarded = guardedArm(trueStmts, falseStmts);
+            if (guarded >= 0) {
+                boolean guardTrue = guarded == 0;
+                Expression cond = bridge.recoverCondition(b, !guardTrue);
+                IfStmt guard = new IfStmt(cond,
+                        new BlockStmt(guardTrue ? trueStmts : falseStmts), null);
+                stamp(guard, b);
+                out.add(guard);
+                out.addAll(guardTrue ? falseStmts : trueStmts);
+            } else {
+                Expression cond = bridge.recoverCondition(b, true);
+                IfStmt ifStmt = new IfStmt(cond, new BlockStmt(falseStmts),
+                        trueStmts.isEmpty() ? null : new BlockStmt(trueStmts));
+                stamp(ifStmt, b);
+                out.add(ifStmt);
+            }
         }
         for (int i = 0; i < sharedChildren.size(); i++) {
             out.addAll(emitSharedTail(sharedChildren.get(i), b, i == sharedChildren.size() - 1));
         }
         return out;
+    }
+
+    /**
+     * Which arm of a two-way branch to emit as a leading guard clause, or -1 to keep the two-armed form.
+     * Returns 0 (guard the true arm) or 1 (guard the false arm) when both arms are non-empty and at least one
+     * exits: the exiting arm becomes the guard so the other flows flat. When both exit, a single-statement exit
+     * is guarded against a multi-statement body - a choice independent of branch orientation, so the two
+     * equivalent orientations of a shape recover to the same guard clause (a round-trip fixed point). Returns -1
+     * when an arm is empty, neither exits, or both exits have no stable single-vs-multi distinction, leaving the
+     * caller's bytecode-lowering two-armed form.
+     */
+    private int guardedArm(List<Statement> trueStmts, List<Statement> falseStmts) {
+        if (trueStmts.isEmpty() || falseStmts.isEmpty()) {
+            return -1;
+        }
+        boolean trueExits = armExits(trueStmts);
+        boolean falseExits = armExits(falseStmts);
+        if (trueExits && !falseExits) {
+            return 0;
+        }
+        if (falseExits && !trueExits) {
+            return 1;
+        }
+        if (trueExits) {
+            // Both arms exit here - the single-exit cases returned above, so falseExits is implied. Guard a
+            // single-statement early exit (`return`/`throw`/`break`/`continue`) against a multi-statement body, so
+            // the long continuation flows flat rather than nesting. "Single vs multi" is a stable,
+            // orientation-invariant property (unlike a raw size comparison, which shifts by a statement between
+            // javac's and the recompiler's block layout and would make the first decompile drift). Two single
+            // exits (`return a` / `return b`) or two multi-statement arms have no stable choice - keep the
+            // two-armed form.
+            boolean trueSingle = trueStmts.size() == 1;
+            boolean falseSingle = falseStmts.size() == 1;
+            if (falseSingle && !trueSingle) {
+                return 1;
+            }
+            if (trueSingle && !falseSingle) {
+                return 0;
+            }
+        }
+        return -1;
+    }
+
+    /** Whether a recovered arm always leaves the enclosing block - its last statement returns, throws, breaks,
+     * continues, or is a block/if all of whose paths do. */
+    private boolean armExits(List<Statement> stmts) {
+        return !stmts.isEmpty() && stmtExits(stmts.get(stmts.size() - 1));
+    }
+
+    private boolean stmtExits(Statement s) {
+        if (s instanceof ReturnStmt || s instanceof ThrowStmt
+                || s instanceof BreakStmt || s instanceof ContinueStmt) {
+            return true;
+        }
+        if (s instanceof BlockStmt) {
+            return armExits(((BlockStmt) s).getStatements());
+        }
+        if (s instanceof IfStmt) {
+            IfStmt f = (IfStmt) s;
+            return f.getElseBranch() != null && stmtExits(f.getThenBranch()) && stmtExits(f.getElseBranch());
+        }
+        return false;
     }
 
     /**

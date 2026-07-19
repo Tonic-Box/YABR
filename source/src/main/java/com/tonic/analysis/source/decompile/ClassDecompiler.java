@@ -1553,7 +1553,11 @@ public class ClassDecompiler {
     }
 
     /**
-     * Emits import statements based on types actually used in the emitted code.
+     * Emits import statements for the reference types actually used in the emitted code. Excludes types that
+     * need no import: {@code java.lang} and JDK-internal types, same-package types, this class, and its nested
+     * types - the last matched in both the {@code Outer$Inner} form and the malformed {@code Outer/Inner} form a
+     * recompiled generic signature can yield (its package parses to {@code thisClassName}). Unqualified names
+     * (no package) are never valid imports and are dropped.
      */
     private void emitImports(IndentingWriter writer, String thisClassName) {
         String thisPackage = getPackageName(thisClassName);
@@ -1561,7 +1565,9 @@ public class ClassDecompiler {
         List<String> imports = usedTypes.stream()
                 .filter(name -> !isJavaLangClass(name))
                 .filter(name -> !isInternalJdkClass(name))
+                .filter(name -> !getPackageName(name).isEmpty())
                 .filter(name -> !getPackageName(name).equals(thisPackage))
+                .filter(name -> !getPackageName(name).equals(thisClassName))
                 .filter(name -> !name.equals(thisClassName))
                 .filter(name -> !isInnerClassOf(name, thisClassName))
                 .filter(name -> !name.contains("$"))
