@@ -526,9 +526,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
 
             IRBlock startBlock = (tryStart != null) ? tryStart : entry;
+            boolean hasFinally = false;
+            for (ExceptionHandler h : outerHandlers) {
+                if (handlerRethrows(h)) {
+                    hasFinally = true;
+                    break;
+                }
+            }
             List<Statement> tryStmts;
             if (!innerHandlers.isEmpty()) {
                 tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
+            } else if (hasFinally) {
+                tryStmts = legacyBlockWalk(startBlock, stopBlocks);
             } else {
                 tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
             }
@@ -1998,6 +2007,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
+        boolean hasFinally = handlerRethrows(mainHandler);
+        for (ExceptionHandler h : sameRegionHandlers) {
+            if (handlerRethrows(h)) {
+                hasFinally = true;
+            }
+        }
         List<Statement> tryStmts;
         if (!nestedHandlers.isEmpty()) {
             for (ExceptionHandler h : nestedHandlers) {
@@ -2008,7 +2023,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             tryStmts = recoverWithNestedHandlers(startBlock, nestedHandlers, tryStopBlocks);
         } else {
-            tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited);
+            tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited, hasFinally);
         }
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
@@ -2071,16 +2086,62 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
+     * Whether {@code h} is a finally-style rethrow handler - its region ends in an {@code athrow} that re-raises
+     * the caught exception. javac emits a finally's synthetic handler as a catch-any (catch_type 0) while the
+     * recompiler emits it as a {@code Throwable} catch, so identifying the finally by its rethrow shape rather
+     * than its declared type is stable across the round trip.
+     */
+    private boolean handlerRethrows(ExceptionHandler h) {
+        if (h == null || h.getHandlerBlock() == null) {
+            return false;
+        }
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(h.getHandlerBlock());
+        int budget = 40;
+        while (!work.isEmpty() && budget-- > 0) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            List<IRInstruction> instrs = b.getInstructions();
+            if (!instrs.isEmpty()) {
+                IRInstruction last = instrs.get(instrs.size() - 1);
+                if (last instanceof SimpleInstruction && ((SimpleInstruction) last).getOp() == SimpleOp.ATHROW) {
+                    return true;
+                }
+            }
+            work.addAll(b.getSuccessors());
+        }
+        return false;
+    }
+
+    /**
      * Recovers blocks for a try region, stopping at the specified stop blocks.
      */
     private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited) {
-        // The try body is a wholesale region hand-off: the enclosing try (and any nested try) is already
-        // marked processed, so the RC engine structures the handler-free body or declines to this walk. It
-        // marks the body blocks processed via the shared context; the caller's continuation logic keys off
-        // the try-end offset and those marks, not this local visited set, so RC need not populate it.
-        List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
-        if (structured != null) {
-            return structured;
+        return recoverBlocksForTry(startBlock, stopBlocks, visited, false);
+    }
+
+    /**
+     * Recovers a try body as a wholesale region hand-off: the enclosing try (and any nested try) is already
+     * marked processed, so the reaching-condition engine structures the handler-free body or declines to the
+     * legacy walk. It marks the body blocks processed via the shared context; the caller's continuation logic
+     * keys off the try-end offset and those marks, not this local visited set, so the engine need not populate
+     * it.
+     *
+     * <p>When {@code skipReachingConditions} is set the body bypasses the engine entirely. A finally's inlined
+     * copies are still present when the engine would structure the body (they are folded out afterward), which
+     * inflates a guard's exit arm and flips the guard's orientation across a round trip; the legacy walk orients
+     * guards on the un-inflated body and is a round-trip fixed point there.
+     */
+    private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited,
+                                                boolean skipReachingConditions) {
+        if (!skipReachingConditions) {
+            List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+            if (structured != null) {
+                return structured;
+            }
         }
         List<Statement> result = new ArrayList<>();
         IRBlock current = startBlock;
