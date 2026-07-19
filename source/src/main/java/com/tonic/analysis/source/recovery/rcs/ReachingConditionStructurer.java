@@ -86,6 +86,22 @@ public final class ReachingConditionStructurer {
     private int guardTempCounter;
     private BoolFormulaFactory formulas;
 
+    /** Shared tails whose over-cost guard is instead resolved by duplicating the (small, closed) tail at each
+     * reaching branch - populated in the validate pass, consumed by emit. */
+    private Set<IRBlock> duplicatedTails;
+    /** True while re-emitting a duplicated tail's subtree, so its blocks are recovered afresh and never marked
+     * processed (each reaching predecessor re-emits its own copy). */
+    private boolean duplicating;
+    /** Remaining per-region duplication budget (statements * sites), so several eligible tails cannot multiply. */
+    private long regionDupBudget;
+
+    /** A duplicable tail's dominator subtree may span at most this many blocks. */
+    private static final int MAX_TAIL_BLOCKS = 12;
+    /** A single tail's total duplicated size (subtree blocks * reaching sites) may not exceed this. */
+    private static final long MAX_TAIL_DUP = 2_000L;
+    /** All duplicated tails in one region together may not exceed this (subtree blocks * sites, summed). */
+    private static final long MAX_REGION_DUP = 20_000L;
+
     /**
      * Cap on the number of expression nodes a single shared-tail guard may render to. A guard built from a
      * clean short-circuit condition is tiny; only a reconvergent BDD whose shared subgraph is NOT
@@ -211,10 +227,13 @@ public final class ReachingConditionStructurer {
                     }
                     // A rendered guard must stay bounded. The CSE emitter is linear in BDD size whenever
                     // the shared subgraph is hoistable; only a shared but non-hoistable (throwing) subgraph
-                    // can still blow up. Cost the guard side-effect-free (no expression recovery) and decline
-                    // rather than emit a super-linear condition.
+                    // can still blow up. Cost the guard side-effect-free (no expression recovery); when it
+                    // would blow up, duplicate a small closed tail at each reaching branch (like the legacy
+                    // engine) instead of emitting one super-linear guard - or decline if it is not duplicable.
                     if (new BddEmitter(guard.bdd).cost() >= GUARD_COST_CAP) {
-                        throw new BailToLegacy();
+                        if (!tryRegisterDuplicableTail(c)) {
+                            throw new BailToLegacy();
+                        }
                     }
                 }
                 validate(c);
@@ -289,6 +308,83 @@ public final class ReachingConditionStructurer {
         return dom.dominates(to, from);
     }
 
+    /**
+     * When a shared tail's reaching-condition guard would blow up (non-hoistable, over the cost cap), try to
+     * resolve it by DUPLICATING the tail at each reaching branch instead of emitting one guarded copy - exactly
+     * what the legacy engine does for the obfuscator's small shared blocks. Registers {@code c} as a duplicated
+     * tail (consumed by {@link #emit}) when it is safe and bounded; returns false to keep the caller's decline.
+     *
+     * <p>Eligible only when the tail subtree is: small ({@link #MAX_TAIL_BLOCKS}); CLOSED - every outward edge is
+     * a method terminal, a back edge, or a loop break/continue, so duplicating it can never reach another shared
+     * continuation (the anti-cascade invariant); re-recovery-safe ({@link RegionRecoveryBridge#isDuplicationSafe})
+     * so re-emitting each block is byte-identical and duplicates no field/array store or call; every branch pure;
+     * and within the per-tail and per-region duplication budgets.
+     */
+    private boolean tryRegisterDuplicableTail(IRBlock c) {
+        Set<IRBlock> subtree = subtreeOf(c);
+        if (subtree.size() > MAX_TAIL_BLOCKS || !isClosedTail(subtree)) {
+            return false;
+        }
+        for (IRBlock x : subtree) {
+            if (!bridge.isDuplicationSafe(x)) {
+                return false;
+            }
+            if (x.getTerminator() instanceof BranchInstruction && !pureConditionBlock.contains(x)) {
+                return false;
+            }
+        }
+        int sites = 0;
+        for (IRBlock p : c.getPredecessors()) {
+            if (region.contains(p)) {
+                sites++;
+            }
+        }
+        long cost = (long) sites * subtree.size();
+        if (cost > MAX_TAIL_DUP || cost > regionDupBudget) {
+            return false;
+        }
+        regionDupBudget -= cost;
+        duplicatedTails.add(c);
+        return true;
+    }
+
+    /** The blocks {@code emit(c)} walks: {@code c} and its dominator-tree descendants within the region. */
+    private Set<IRBlock> subtreeOf(IRBlock c) {
+        Set<IRBlock> out = new HashSet<>();
+        for (IRBlock x : region) {
+            if (dom.dominates(c, x)) {
+                out.add(x);
+            }
+        }
+        return out;
+    }
+
+    /** True when every edge leaving {@code subtree} lands inside it, is a back edge, or is a loop break/continue. */
+    private boolean isClosedTail(Set<IRBlock> subtree) {
+        for (IRBlock x : subtree) {
+            for (IRBlock s : x.getSuccessors()) {
+                if (!subtree.contains(s) && !isBackEdge(x, s) && context.classifyLoopJump(s) == null) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /** Emits a duplicated tail's whole subtree fresh (unmarked, so each reaching predecessor re-emits it). */
+    private List<Statement> emitDuplicated(IRBlock tail) {
+        boolean savedDuplicating = duplicating;
+        duplicating = true;
+        List<Statement> out = emit(tail);
+        duplicating = savedDuplicating;
+        return out;
+    }
+
+    /** If {@code target} is a duplicated tail, its freshly-recovered statements to inline at this edge, else null. */
+    private List<Statement> tailInline(IRBlock target) {
+        return duplicatedTails.contains(target) ? emitDuplicated(target) : null;
+    }
+
     /** DFS over non-back edges: a back edge into an on-stack block would be a genuine (irreducible) cycle. */
     private boolean hasNonBackCycle(IRBlock b, Set<IRBlock> onStack, Set<IRBlock> done) {
         onStack.add(b);
@@ -315,6 +411,9 @@ public final class ReachingConditionStructurer {
         pureConditionBlock = new HashSet<>();
         exceptionFreeConditionBlock = new HashSet<>();
         subtreeExceptionFreeMemo = new HashMap<>();
+        duplicatedTails = new HashSet<>();
+        duplicating = false;
+        regionDupBudget = MAX_REGION_DUP;
         formulas = new BoolFormulaFactory();
         List<IRBlock> ordered = new ArrayList<>(region);
         ordered.sort((a, b) -> Integer.compare(rpoIndex.get(a), rpoIndex.get(b)));
@@ -346,7 +445,7 @@ public final class ReachingConditionStructurer {
 
     /** Emits {@code b}'s own statements followed by its dominator-tree children (its whole subtree). */
     private List<Statement> emit(IRBlock b) {
-        if (bridge.isRegionBlockProcessed(b)) {
+        if (!duplicating && bridge.isRegionBlockProcessed(b)) {
             return new ArrayList<>();
         }
         LoopAnalysis loops = context.getLoopAnalysis();
@@ -357,7 +456,9 @@ public final class ReachingConditionStructurer {
             return emitSwitch(b);
         }
         List<Statement> own = bridge.recoverSimpleBlock(b);
-        bridge.markRegionBlockProcessed(b, own);
+        if (!duplicating) {
+            bridge.markRegionBlockProcessed(b, own);
+        }
         // Collapse a value-producing ternary diamond (x > y ? x : y) into a cached expression before its arms
         // are structured: the collapse marks them emitted, so structureChildren emits no if and the merge
         // block inlines the ternary. A non-diamond branch is untouched and structures normally.
@@ -706,10 +807,11 @@ public final class ReachingConditionStructurer {
         List<IRBlock> children = childrenInRpo(b);
         IRInstruction term = b.getTerminator();
         if (!(term instanceof BranchInstruction)) {
-            // Single-successor / goto: continue through the children, then any loop jump off the edge.
+            // Single-successor / goto: continue through the children, then any loop jump or duplicated tail
+            // landed off the edge.
             List<Statement> seq = emitAll(children);
             for (IRBlock s : b.getSuccessors()) {
-                List<Statement> jump = loopJump(b, s);
+                List<Statement> jump = edgeExit(b, s);
                 if (jump != null) {
                     seq.addAll(jump);
                 }
@@ -717,10 +819,10 @@ public final class ReachingConditionStructurer {
             return seq;
         }
         BranchInstruction branch = (BranchInstruction) term;
-        List<Statement> trueJump = loopJump(b, branch.getTrueTarget());
-        List<Statement> falseJump = loopJump(b, branch.getFalseTarget());
-        Set<IRBlock> fromTrue = trueJump != null ? Collections.emptySet() : reachWithin(branch.getTrueTarget(), b);
-        Set<IRBlock> fromFalse = falseJump != null ? Collections.emptySet() : reachWithin(branch.getFalseTarget(), b);
+        List<Statement> trueExit = edgeExit(b, branch.getTrueTarget());
+        List<Statement> falseExit = edgeExit(b, branch.getFalseTarget());
+        Set<IRBlock> fromTrue = trueExit != null ? Collections.emptySet() : reachWithin(branch.getTrueTarget(), b);
+        Set<IRBlock> fromFalse = falseExit != null ? Collections.emptySet() : reachWithin(branch.getFalseTarget(), b);
 
         List<IRBlock> trueChildren = new ArrayList<>();
         List<IRBlock> falseChildren = new ArrayList<>();
@@ -732,7 +834,8 @@ public final class ReachingConditionStructurer {
                 trueChildren.add(c);
             } else if (f && !t) {
                 falseChildren.add(c);
-            } else {
+            } else if (!duplicatedTails.contains(c)) {
+                // A duplicated tail is not emitted once here; each reaching branch re-emits it via tailInline.
                 sharedChildren.add(c);
             }
         }
@@ -740,9 +843,9 @@ public final class ReachingConditionStructurer {
         // Emit with the false (fall-through) edge as the then-branch and the taken condition negated.
         // That matches how the AST lowers back to bytecode (a source `if` compiles to a branch on the
         // negated condition that jumps past the then-block), so recovery is a round-trip fixed point.
-        // A loop-boundary edge becomes its break/continue jump rather than a nested subtree.
-        List<Statement> trueStmts = trueJump != null ? new ArrayList<>(trueJump) : emitAll(trueChildren);
-        List<Statement> falseStmts = falseJump != null ? new ArrayList<>(falseJump) : emitAll(falseChildren);
+        // A loop-boundary edge becomes its break/continue jump, a duplicated-tail edge its inlined copy.
+        List<Statement> trueStmts = trueExit != null ? new ArrayList<>(trueExit) : emitAll(trueChildren);
+        List<Statement> falseStmts = falseExit != null ? new ArrayList<>(falseExit) : emitAll(falseChildren);
         List<Statement> out = new ArrayList<>();
         if (!trueStmts.isEmpty() || !falseStmts.isEmpty()) {
             Expression cond = bridge.recoverCondition(b, true);
@@ -1154,11 +1257,15 @@ public final class ReachingConditionStructurer {
     }
 
     /**
-     * The break/continue for the loop-boundary edge into {@code target}, or null when it is not a loop
-     * boundary. Loop-carried values are realized by their store instructions (recovered in the body) and
-     * unified across the back edge by the slot partition's transparent-phi handling, as in the acyclic
-     * case, so no explicit edge copy is emitted here.
+     * The statements realized on the edge {@code from -> target} when the edge does not recurse into a nested
+     * subtree: a loop break/continue, or a duplicated tail landed here. Null for an ordinary forward edge whose
+     * target is a dominator-child structured in sequence.
      */
+    private List<Statement> edgeExit(IRBlock from, IRBlock target) {
+        List<Statement> jump = loopJump(from, target);
+        return jump != null ? jump : tailInline(target);
+    }
+
     private List<Statement> loopJump(IRBlock from, IRBlock target) {
         ControlFlowContext.LoopJump jump = context.classifyLoopJump(target);
         if (jump == null) {

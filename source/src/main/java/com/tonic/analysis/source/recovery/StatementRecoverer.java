@@ -7042,6 +7042,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     @Override
+    public boolean isDuplicationSafe(IRBlock block) {
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof FieldAccessInstruction) {
+                FieldAccessInstruction field = (FieldAccessInstruction) instr;
+                if (field.isStore()) {
+                    return false;
+                }
+                if (field.isLoad() && field.getResult() != null
+                        && fieldLoadClobberedBeforeUse(field, field.getResult())) {
+                    return false;
+                }
+            } else if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isStore()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
     public boolean regionContainsUnprocessedHandler(Set<IRBlock> region) {
         List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
         if (handlers == null || handlers.isEmpty()) {

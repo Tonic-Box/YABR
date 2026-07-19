@@ -37,6 +37,16 @@ public interface RegionRecoveryBridge {
      */
     boolean guardAtomExceptionFree(IRBlock block);
 
+    /**
+     * True when {@code block} may be duplicated - re-recovered once per reaching edge - without changing
+     * semantics or perturbing the round trip. Requires that re-recovering it is byte-identical and repeats no
+     * side effect: no field or array store (which duplication would perform twice), and no field load that is
+     * clobbered before use (its recovery emits a declaration on the first pass and nothing after, so a second
+     * pass would drop it). Local stores are permitted - a duplicated tail's locals are loop-carried and
+     * declared once by the phi-declaration pass, so the assignments re-emit idempotently.
+     */
+    boolean isDuplicationSafe(IRBlock block);
+
     /** SSA-destruction copies realized when the edge {@code pred -> succ} is taken. */
     List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ);
 
