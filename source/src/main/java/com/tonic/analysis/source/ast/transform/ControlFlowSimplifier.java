@@ -695,7 +695,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             return ((UnaryExpr) e).getOperator() == UnaryOperator.NOT;
         }
         if (e instanceof BinaryExpr) {
-            return ((BinaryExpr) e).getOperator() == BinaryOperator.NE;
+            BinaryOperator op = ((BinaryExpr) e).getOperator();
+            return op == BinaryOperator.NE || op == BinaryOperator.GT || op == BinaryOperator.GE;
         }
         return false;
     }

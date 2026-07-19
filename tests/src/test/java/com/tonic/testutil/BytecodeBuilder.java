@@ -1794,8 +1794,7 @@ public class BytecodeBuilder {
             }
             int defaultOffset = defaultTargetOffset - currentOffset;
 
-            // Build match offsets map with resolved label offsets
-            Map<Integer, Integer> matchOffsets = new java.util.LinkedHashMap<>();
+            Map<Integer, Integer> matchOffsets = new java.util.TreeMap<>();
             for (Map.Entry<Integer, Label> entry : cases.entrySet()) {
                 Integer caseTargetOffset = labelOffsets.get(entry.getValue());
                 if (caseTargetOffset == null) {

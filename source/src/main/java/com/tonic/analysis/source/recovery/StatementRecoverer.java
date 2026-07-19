@@ -10,6 +10,7 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
+import com.tonic.analysis.source.recovery.rcs.SwitchDescriptor;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
@@ -180,6 +181,111 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             out.add(sw);
         }
         return out;
+    }
+
+    @Override
+    public SwitchDescriptor decodeSwitch(IRBlock switchBlock) {
+        if (!(switchBlock.getTerminator() instanceof SwitchInstruction)) {
+            return null;
+        }
+        RegionInfo info = analyzer.getRegionInfo(switchBlock);
+        if (info == null || info.getType() != ControlFlowContext.StructuredRegion.SWITCH) {
+            return null;
+        }
+        SwitchInstruction sw = (SwitchInstruction) switchBlock.getTerminator();
+        Value key = sw.getKey();
+        if (key instanceof SSAValue) {
+            IRInstruction def = ((SSAValue) key).getDefinition();
+            if (def instanceof InvokeInstruction && ((InvokeInstruction) def).isDynamic()
+                    && "typeSwitch".equals(((InvokeInstruction) def).getName())) {
+                return null;
+            }
+        }
+        if (detectStringSwitch(switchBlock) != null) {
+            return null;
+        }
+
+        Expression selector = exprRecoverer.recoverOperand(key);
+        EnumSwitchInfo enumInfo = detectEnumSwitchPattern(selector);
+        boolean enumNamesResolved = false;
+        if (enumInfo != null) {
+            if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo)) {
+                selector = enumInfo.enumVariable;
+                enumNamesResolved = true;
+            } else {
+                selector = enumInfo.ordinalExpression;
+            }
+        }
+
+        IRBlock mergeBlock = findSwitchMerge(info);
+
+        Map<IRBlock, List<Integer>> targetToCases = new LinkedHashMap<>();
+        for (Map.Entry<Integer, IRBlock> entry : info.getSwitchCases().entrySet()) {
+            targetToCases.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
+        }
+
+        Set<IRBlock> caseHeaders = new HashSet<>(targetToCases.keySet());
+        IRBlock defaultTarget = info.getDefaultTarget();
+        boolean emptyDefault = defaultTarget != null && defaultTarget == mergeBlock;
+        if (defaultTarget != null && !emptyDefault) {
+            caseHeaders.add(defaultTarget);
+        }
+        if (mergeBlock != null) {
+            caseHeaders.remove(mergeBlock);
+        }
+
+        // Decline a value-yielding switch (a switch expression javac lowered to a statement): its cases each
+        // compute a value that converges to a phi at the merge. The mature SwitchExpressionReconstructor path
+        // (reached via legacy recovery) folds those into `switch (sel) { case L -> e; ... }`; structuring the
+        // cases natively here would instead leave a spurious result temp. Statement switches (array/field stores,
+        // break-out-of-loop) have no such case-sourced merge phi and stay native.
+        if (mergeBlock != null && switchYieldsValue(mergeBlock, caseHeaders, defaultTarget)) {
+            return null;
+        }
+
+        List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
+        for (Map.Entry<IRBlock, List<Integer>> entry : targetToCases.entrySet()) {
+            IRBlock target = entry.getKey();
+            List<Integer> labels = entry.getValue();
+            if (enumNamesResolved) {
+                List<Expression> enumLabels = new ArrayList<>();
+                for (Integer caseValue : labels) {
+                    String constantName = EnumSwitchMapRegistry.getInstance()
+                            .lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue);
+                    SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
+                    enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
+                }
+                cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), enumLabels, false, target));
+            } else {
+                cases.add(new SwitchDescriptor.CaseSpec(new ArrayList<>(labels), Collections.emptyList(), false, target));
+            }
+        }
+        if (defaultTarget != null) {
+            cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), Collections.emptyList(), true,
+                    emptyDefault ? null : defaultTarget));
+        }
+
+        return new SwitchDescriptor(switchBlock, selector, mergeBlock, cases, caseHeaders);
+    }
+
+    /**
+     * Whether the switch yields a value: its merge block has a phi fed by two or more of the switch's own case
+     * targets, i.e. the cases converge to a merged value (the switch-expression shape). A loop-induction phi is
+     * fed by the loop header/back-edge, not the case targets, so it does not match.
+     */
+    private boolean switchYieldsValue(IRBlock mergeBlock, Set<IRBlock> caseHeaders, IRBlock defaultTarget) {
+        for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
+            int fromCases = 0;
+            for (IRBlock in : phi.getIncomingBlocks()) {
+                if (caseHeaders.contains(in) || in == defaultTarget) {
+                    fromCases++;
+                }
+            }
+            if (fromCases >= 2) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -2521,7 +2627,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             String slotName = entry.getKey();
             List<SourceType> types = entry.getValue();
             if (!types.isEmpty()) {
-                SourceType unifiedType = typeRecoverer.computeCommonType(types);
+                // A name whose stores mix primitive and reference types cannot be one Java variable: it groups
+                // distinct variables that legally share a name across disjoint scopes (e.g. a boxed-value transient
+                // and an int loop counter both named `i`). Unifying the whole set would widen to Object and mistype
+                // the primitive uses; unify from the primitive subset so the coherent primitive variable keeps its
+                // type. The reference-typed stores are a separate scope resolved by their own value expressions.
+                List<SourceType> primitiveTypes = new ArrayList<>();
+                boolean hasReference = false;
+                for (SourceType t : types) {
+                    if (t.isPrimitive()) {
+                        primitiveTypes.add(t);
+                    } else {
+                        hasReference = true;
+                    }
+                }
+                List<SourceType> unifyFrom = (hasReference && !primitiveTypes.isEmpty()) ? primitiveTypes : types;
+                SourceType unifiedType = typeRecoverer.computeCommonType(unifyFrom);
                 // Prefer the LocalVariableTable's declared narrow-primitive type over int-widening: a
                 // char/byte/short/boolean local stored through int-shaped bytecode (e.g. a synthetic `= 0`
                 // init) otherwise widens to `int`, losing the declared type and drifting from javac.

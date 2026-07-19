@@ -87,4 +87,12 @@ public interface RegionRecoveryBridge {
      * the switch (preceded by any header statements). The merge block is left for the caller to emit next.
      */
     List<Statement> recoverSwitchRegion(IRBlock switchBlock);
+
+    /**
+     * Decodes {@code switchBlock} into a structuring-ready {@link SwitchDescriptor} - selector, merge, ordered
+     * cases and labels - without recovering case bodies or marking any block, so the reaching-condition engine
+     * can structure the cases itself. Returns null for a switch shape the engine does not own natively (string,
+     * pattern {@code typeSwitch}, or a synthesized comparison-chain switch), which then declines to the legacy walk.
+     */
+    SwitchDescriptor decodeSwitch(IRBlock switchBlock);
 }

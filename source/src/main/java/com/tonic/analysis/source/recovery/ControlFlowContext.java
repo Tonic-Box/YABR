@@ -30,6 +30,8 @@ public class ControlFlowContext {
 
     private final Deque<LoopFrame> loopStack = new ArrayDeque<>();
 
+    private final Deque<SwitchFrame> switchStack = new ArrayDeque<>();
+
     private final List<Statement> pendingStatements = new ArrayList<>();
 
     private final Deque<Set<IRBlock>> stopBlocksStack = new ArrayDeque<>();
@@ -195,15 +197,39 @@ public class ControlFlowContext {
         return blockLabels.get(block);
     }
 
-    /** An enclosing loop: its header (label anchor), continue-target (latch/increment) and exit block. */
+    /**
+     * An enclosing loop: its header (label anchor), continue-target (latch/increment) and exit block. {@code depth}
+     * is the number of enclosing break/continue scopes (loops and switches) at push time, so a jump can tell whether
+     * this loop is the innermost break scope across both stacks.
+     */
     public static final class LoopFrame {
         final IRBlock header;
         final IRBlock continueTarget;
         final IRBlock exit;
-        LoopFrame(IRBlock header, IRBlock continueTarget, IRBlock exit) {
+        final int depth;
+        LoopFrame(IRBlock header, IRBlock continueTarget, IRBlock exit, int depth) {
             this.header = header;
             this.continueTarget = continueTarget;
             this.exit = exit;
+            this.depth = depth;
+        }
+    }
+
+    /**
+     * An enclosing {@code switch}: its {@code merge} (where a case ends and control leaves the switch) and its
+     * {@code caseHeaders} (the sibling case entries, i.e. fall-through targets). A switch captures an unlabeled
+     * {@code break} but not an unlabeled {@code continue}.
+     */
+    public static final class SwitchFrame {
+        final IRBlock header;
+        final IRBlock merge;
+        final Set<IRBlock> caseHeaders;
+        final int depth;
+        SwitchFrame(IRBlock header, IRBlock merge, Set<IRBlock> caseHeaders, int depth) {
+            this.header = header;
+            this.merge = merge;
+            this.caseHeaders = caseHeaders;
+            this.depth = depth;
         }
     }
 
@@ -219,8 +245,24 @@ public class ControlFlowContext {
         }
     }
 
+    public enum SwitchJumpKind { BREAK_SWITCH, FALL_THROUGH }
+
+    /** A jump within a switch: leaving it at its merge, or falling through to a sibling {@code caseHeader}. */
+    public static final class SwitchJump {
+        public final SwitchJumpKind kind;
+        public final IRBlock caseHeader;
+        SwitchJump(SwitchJumpKind kind, IRBlock caseHeader) {
+            this.kind = kind;
+            this.caseHeader = caseHeader;
+        }
+    }
+
+    private int scopeDepth() {
+        return loopStack.size() + switchStack.size();
+    }
+
     public void pushLoop(IRBlock header, IRBlock continueTarget, IRBlock exit) {
-        loopStack.push(new LoopFrame(header, continueTarget, exit));
+        loopStack.push(new LoopFrame(header, continueTarget, exit, scopeDepth()));
     }
 
     public void popLoop() {
@@ -229,21 +271,54 @@ public class ControlFlowContext {
         }
     }
 
+    public void pushSwitch(IRBlock header, IRBlock merge, Set<IRBlock> caseHeaders) {
+        switchStack.push(new SwitchFrame(header, merge, caseHeaders, scopeDepth()));
+    }
+
+    public void popSwitch() {
+        if (!switchStack.isEmpty()) {
+            switchStack.pop();
+        }
+    }
+
     /**
      * Classifies a control-flow edge into {@code target}: a {@code break} when {@code target} is a loop's exit, a
-     * {@code continue} when it is a loop's continue-target. The innermost loop yields an unlabeled jump; an enclosing
-     * loop yields a labeled one (anchored on its header). Returns null when {@code target} is not a loop boundary.
+     * {@code continue} when it is a loop's continue-target. A jump is unlabeled only when its loop is the innermost
+     * scope of the relevant kind: for {@code break}, the innermost of all loops and switches (an enclosing loop broken
+     * across a switch or inner loop is labeled, since a bare {@code break} would leave the switch or inner loop); for
+     * {@code continue}, the innermost loop (switches do not capture {@code continue}). Returns null when {@code target}
+     * is not a loop boundary.
      */
     public LoopJump classifyLoopJump(IRBlock target) {
-        boolean innermost = true;
+        int innermostBreak = scopeDepth() - 1;
+        int innermostLoop = loopStack.isEmpty() ? -1 : loopStack.peek().depth;
         for (LoopFrame f : loopStack) {
             if (target == f.exit) {
-                return new LoopJump(JumpKind.BREAK, innermost ? null : f.header);
+                return new LoopJump(JumpKind.BREAK, f.depth == innermostBreak ? null : f.header);
             }
             if (target == f.continueTarget) {
-                return new LoopJump(JumpKind.CONTINUE, innermost ? null : f.header);
+                return new LoopJump(JumpKind.CONTINUE, f.depth == innermostLoop ? null : f.header);
             }
-            innermost = false;
+        }
+        return null;
+    }
+
+    /**
+     * Classifies an edge into {@code target} relative to the innermost {@code switch}: {@code BREAK_SWITCH} when it is
+     * that switch's merge (the case ends and control leaves the switch), {@code FALL_THROUGH} when it is a sibling case
+     * header. Returns null when {@code target} is not an innermost-switch boundary. A loop boundary takes precedence and
+     * must be classified with {@link #classifyLoopJump} first.
+     */
+    public SwitchJump classifySwitchJump(IRBlock target) {
+        SwitchFrame f = switchStack.peek();
+        if (f == null) {
+            return null;
+        }
+        if (target == f.merge) {
+            return new SwitchJump(SwitchJumpKind.BREAK_SWITCH, null);
+        }
+        if (f.caseHeaders.contains(target)) {
+            return new SwitchJump(SwitchJumpKind.FALL_THROUGH, target);
         }
         return null;
     }

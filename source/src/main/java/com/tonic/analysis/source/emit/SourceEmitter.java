@@ -585,6 +585,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
     @Override
     public Void visitWhile(WhileStmt stmt) {
         recordLine(stmt);
+        if (stmt.getLabel() != null) {
+            writer.write(stmt.getLabel() + ": ");
+        }
         writer.write("while (");
         stmt.getCondition().accept(this);
         writer.write(") ");
@@ -606,6 +609,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
     @Override
     public Void visitFor(ForStmt stmt) {
         recordLine(stmt);
+        if (stmt.getLabel() != null) {
+            writer.write(stmt.getLabel() + ": ");
+        }
         writer.write("for (");
 
         List<Statement> init = stmt.getInit();

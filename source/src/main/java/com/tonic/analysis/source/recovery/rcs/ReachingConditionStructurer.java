@@ -17,6 +17,8 @@ import com.tonic.analysis.source.ast.stmt.ForStmt;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
+import com.tonic.analysis.source.ast.stmt.SwitchCase;
+import com.tonic.analysis.source.ast.stmt.SwitchStmt;
 import com.tonic.analysis.source.ast.stmt.ThrowStmt;
 import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
 import com.tonic.analysis.source.ast.stmt.WhileStmt;
@@ -78,6 +80,7 @@ public final class ReachingConditionStructurer {
     private DominatorTree dom;
     private Set<IRBlock> region;
     private Map<IRBlock, Integer> rpoIndex;
+    private final Map<IRBlock, SwitchDescriptor> switchDescriptors = new HashMap<>();
     private Map<IRBlock, Integer> atomOf;
     private List<IRBlock> blockOfAtom;
     private Set<IRBlock> pureConditionBlock;
@@ -125,6 +128,7 @@ public final class ReachingConditionStructurer {
             return null;
         }
         this.method = context.getIrMethod();
+        switchDescriptors.clear();
         // The caller only offers this stage a wholesale region hand-off: the top-level whole-method call
         // or an exception-scaffolding piece (recoverRegionHandoff). The legacy walk's own sub-recursion
         // (if arms, loop bodies) is never routed here, so the two engines never interleave on one region.
@@ -181,7 +185,57 @@ public final class ReachingConditionStructurer {
             }
             return;
         }
+        if (b.getTerminator() instanceof SwitchInstruction) {
+            validateSwitch(b);
+            return;
+        }
         validateChildren(b);
+    }
+
+    /**
+     * Side-effect-free dry run mirroring {@link #emitSwitch}: pushes the switch scope, validates each case body,
+     * then the merge. Throws {@link BailToLegacy} for a case shape the engine cannot place.
+     */
+    private void validateSwitch(IRBlock b) {
+        SwitchDescriptor desc = switchDescriptor(b);
+        context.pushSwitch(b, switchMerge(b, desc), desc.caseHeaders());
+        for (SwitchDescriptor.CaseSpec spec : desc.cases()) {
+            if (spec.header() != null) {
+                requireCaseExitsPlaceable(spec);
+                validate(spec.header());
+            }
+        }
+        context.popSwitch();
+        for (IRBlock c : childrenInRpo(b)) {
+            if (!desc.caseHeaders().contains(c)) {
+                validate(c);
+            }
+        }
+    }
+
+    /**
+     * Declines to the legacy walk when a case body leaves via an edge the engine cannot place: anything other than
+     * staying in the case, a back edge, a loop break/continue, a switch merge / sibling-case fall-through, or a method
+     * terminal. The unhandled shape is a case that jumps to the loop's latch/update block (a {@code continue} whose
+     * target is distinct from the header), which the while(true) continue model does not yet cover; the legacy walk
+     * recovers it correctly.
+     */
+    private void requireCaseExitsPlaceable(SwitchDescriptor.CaseSpec spec) {
+        Set<IRBlock> body = subtreeOf(spec.header());
+        for (IRBlock x : body) {
+            for (IRBlock s : x.getSuccessors()) {
+                if (body.contains(s) || isBackEdge(x, s)) {
+                    continue;
+                }
+                if (context.classifyLoopJump(s) != null || context.classifySwitchJump(s) != null) {
+                    continue;
+                }
+                if (isTerminalBlock(s)) {
+                    continue;
+                }
+                throw new BailToLegacy();
+            }
+        }
     }
 
     private void validateChildren(IRBlock b) {
@@ -257,17 +311,17 @@ public final class ReachingConditionStructurer {
                 continue;
             }
             if (b.getTerminator() instanceof SwitchInstruction) {
-                // A native int/enum switch is recovered as an opaque unit by the legacy switch path; its case
-                // bodies stay out of the region, and the region resumes at the switch's merge. A string switch
-                // or an unrecognized switch declines the whole region to the legacy walk.
-                if (!bridge.canStructureSwitchRegion(b)) {
+                // A native int/enum switch is structured in-region: its case bodies are ordinary dominator-tree
+                // children (enqueued below as successors) and the region resumes at the switch's merge. A shape
+                // the decoder does not own (string, pattern, comparison-chain) declines the whole region.
+                SwitchDescriptor desc = switchDescriptor(b);
+                if (desc == null) {
                     return false;
                 }
-                IRBlock merge = bridge.switchMergeBlock(b);
+                IRBlock merge = desc.merge();
                 if (merge != null && !stopBlocks.contains(merge) && !region.contains(merge)) {
                     work.add(merge);
                 }
-                continue;
             }
             for (IRBlock s : b.getSuccessors()) {
                 if (isBackEdge(b, s)) {
@@ -297,6 +351,19 @@ public final class ReachingConditionStructurer {
             }
         }
         return true;
+    }
+
+    /**
+     * The decoded descriptor for a switch block, or null when the decoder does not own the shape. Cached per
+     * structuring pass so the collect, validate and emit passes share one decode (and see the same case set).
+     */
+    private SwitchDescriptor switchDescriptor(IRBlock b) {
+        if (switchDescriptors.containsKey(b)) {
+            return switchDescriptors.get(b);
+        }
+        SwitchDescriptor desc = bridge.decodeSwitch(b);
+        switchDescriptors.put(b, desc);
+        return desc;
     }
 
     /**
@@ -469,16 +536,94 @@ public final class ReachingConditionStructurer {
     }
 
     /**
-     * Emits a native {@code switch}. The host recovers the dispatch and its case bodies (marking their blocks
-     * emitted); the merge - the switch's only in-region dominator child, since the case bodies were kept out
-     * of the region - then follows in sequence, emitted once here.
+     * Emits a native {@code switch}, structuring each case body in-region so its exits become the enclosing loop's
+     * break/continue, a fall-through to the next case, or a bare break out of the switch. The selector, labels and
+     * merge come from the decoder; the merge - the switch's remaining dominator child - then follows in sequence.
      */
     private List<Statement> emitSwitch(IRBlock b) {
-        List<Statement> out = new ArrayList<>(bridge.recoverSwitchRegion(b));
+        SwitchDescriptor desc = switchDescriptor(b);
+        List<Statement> own = bridge.recoverSimpleBlock(b);
+        if (!duplicating) {
+            bridge.markRegionBlockProcessed(b, own);
+        }
+        context.pushSwitch(b, switchMerge(b, desc), desc.caseHeaders());
+        List<SwitchCase> cases = new ArrayList<>();
+        for (SwitchDescriptor.CaseSpec spec : desc.cases()) {
+            List<Statement> body = spec.header() == null ? new ArrayList<>() : emit(spec.header());
+            cases.add(buildSwitchCase(spec, body, caseFallsThrough(spec, desc)));
+        }
+        context.popSwitch();
+        List<Statement> out = new ArrayList<>(own);
+        SwitchStmt switchStmt = new SwitchStmt(desc.selector(), cases);
+        stamp(switchStmt, b);
+        out.add(switchStmt);
         for (IRBlock c : childrenInRpo(b)) {
             out.addAll(emit(c));
         }
         return out;
+    }
+
+    /** Builds one {@code case}/{@code default} from its decoded labels and structured body. */
+    private SwitchCase buildSwitchCase(SwitchDescriptor.CaseSpec spec, List<Statement> body, boolean fallsThrough) {
+        if (spec.isDefault()) {
+            return SwitchCase.defaultCase(body);
+        }
+        if (!spec.exprLabels().isEmpty()) {
+            return SwitchCase.ofExpressions(spec.exprLabels(), body).withFallsThrough(fallsThrough);
+        }
+        return SwitchCase.of(spec.intLabels(), body).withFallsThrough(fallsThrough);
+    }
+
+    /**
+     * The immediate post-switch join that bounds the case bodies: the switch header's dominator-tree child, nearest
+     * in reverse-postorder, that a case body reaches by an ordinary edge. The decoder's own merge is where control
+     * resumes after the whole opaque switch, which inside a loop is the loop's continuation or exit - too far to
+     * bound one case; this is the nearer point where the breaking cases meet. Null when no such join exists.
+     */
+    private IRBlock switchMerge(IRBlock header, SwitchDescriptor desc) {
+        IRBlock best = null;
+        for (IRBlock c : dom.getDominatorTreeChildren(header)) {
+            if (!region.contains(c) || desc.caseHeaders().contains(c)) {
+                continue;
+            }
+            boolean fromCase = false;
+            for (IRBlock p : c.getPredecessors()) {
+                if (inSomeCase(p, desc)) {
+                    fromCase = true;
+                    break;
+                }
+            }
+            if (fromCase && (best == null || rpoIndex.get(c) < rpoIndex.get(best))) {
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    /** True when {@code block} lies in some case body (is dominated by a case header). */
+    private boolean inSomeCase(IRBlock block, SwitchDescriptor desc) {
+        for (IRBlock h : desc.caseHeaders()) {
+            if (dom.dominates(h, block)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True when the case body leaves via an edge to a sibling case header (falls through) rather than the merge. */
+    private boolean caseFallsThrough(SwitchDescriptor.CaseSpec spec, SwitchDescriptor desc) {
+        if (spec.header() == null) {
+            return false;
+        }
+        Set<IRBlock> body = subtreeOf(spec.header());
+        for (IRBlock x : body) {
+            for (IRBlock s : x.getSuccessors()) {
+                if (!body.contains(s) && desc.caseHeaders().contains(s)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -588,10 +733,10 @@ public final class ReachingConditionStructurer {
             Expression update = asInductionStep(body.get(body.size() - 1));
             if (update != null) {
                 List<Statement> forBody = new ArrayList<>(body.subList(0, body.size() - 1));
-                return new ForStmt(new ArrayList<>(), cond, List.of(update), new BlockStmt(forBody));
+                return new ForStmt(new ArrayList<>(), cond, List.of(update), new BlockStmt(forBody), selfLabel, null);
             }
         }
-        return new WhileStmt(cond, new BlockStmt(body));
+        return new WhileStmt(cond, new BlockStmt(body), selfLabel);
     }
 
     /**
@@ -1323,9 +1468,9 @@ public final class ReachingConditionStructurer {
     private List<IRBlock> childrenInRpo(IRBlock b) {
         List<IRBlock> children = new ArrayList<>();
         for (IRBlock c : dom.getDominatorTreeChildren(b)) {
-            // A loop-boundary child (the break continuation) is emitted after the loop, not as a body
-            // child; edges into it become break/continue jumps instead.
-            if (region.contains(c) && context.classifyLoopJump(c) == null) {
+            // A loop-boundary child (the break continuation) or a switch boundary (merge / sibling case) is not a
+            // body child; edges into it become break/continue/fall-through instead and it is emitted elsewhere.
+            if (region.contains(c) && context.classifyLoopJump(c) == null && context.classifySwitchJump(c) == null) {
                 children.add(c);
             }
         }
@@ -1340,7 +1485,16 @@ public final class ReachingConditionStructurer {
      */
     private List<Statement> edgeExit(IRBlock from, IRBlock target) {
         List<Statement> jump = loopJump(from, target);
-        return jump != null ? jump : tailInline(target);
+        if (jump != null) {
+            return jump;
+        }
+        if (context.classifySwitchJump(target) != null) {
+            // End of case: control leaves the switch at its merge, or falls through to the next case. The break
+            // (or fall-through) is realized structurally by the case's fallsThrough flag and the emitter, so the
+            // edge carries only its phi assignments, if any.
+            return new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
+        }
+        return tailInline(target);
     }
 
     private List<Statement> loopJump(IRBlock from, IRBlock target) {

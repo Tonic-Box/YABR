@@ -618,8 +618,24 @@ public class StatementLowerer {
         }
     }
 
+    /**
+     * Lowers a labeled statement. A label on a loop names that loop's break/continue targets, so it is moved onto
+     * the loop before lowering - the loop's own lowering registers the label (via {@code pushLoop}), which is what
+     * a labeled {@code break}/{@code continue} inside it resolves against.
+     */
     private void lowerLabeled(LabeledStmt labeled) {
-        lower(labeled.getStatement());
+        Statement inner = labeled.getStatement();
+        String label = labeled.getLabel();
+        if (inner instanceof ForStmt && inner.getLabel() == null) {
+            ((ForStmt) inner).setLabel(label);
+        } else if (inner instanceof WhileStmt && inner.getLabel() == null) {
+            ((WhileStmt) inner).setLabel(label);
+        } else if (inner instanceof DoWhileStmt && inner.getLabel() == null) {
+            ((DoWhileStmt) inner).setLabel(label);
+        } else if (inner instanceof ForEachStmt && inner.getLabel() == null) {
+            ((ForEachStmt) inner).setLabel(label);
+        }
+        lower(inner);
     }
 
     private void lowerIRRegion(IRRegionStmt irRegion) {

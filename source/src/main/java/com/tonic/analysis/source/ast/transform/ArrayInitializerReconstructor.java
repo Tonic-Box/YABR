@@ -141,7 +141,7 @@ public class ArrayInitializerReconstructor implements ASTTransform {
             return false;
         }
         int total = 0;
-        for (int t = i + 1; t < j; t++) {
+        for (int t = i + 1; t < stmts.size(); t++) {
             total += countUses(stmts.get(t), var);
         }
         if (total != size + 1) {
