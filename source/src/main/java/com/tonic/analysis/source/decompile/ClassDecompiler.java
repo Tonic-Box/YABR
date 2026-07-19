@@ -15,6 +15,7 @@ import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.transform.ArrayInitializerReconstructor;
 import com.tonic.analysis.source.ast.transform.ComparisonChainToSwitch;
 import com.tonic.analysis.source.ast.transform.ForLoopCounterFolder;
+import com.tonic.analysis.source.ast.transform.WhileToForCanonicalizer;
 import com.tonic.analysis.source.ast.transform.ScopeEscapeHoister;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
@@ -102,6 +103,7 @@ public class ClassDecompiler {
     private final PatternInstanceOfReconstructor patternInstanceOf;
     private final VarargsReconstructor varargsReconstructor;
     private final ArrayInitializerReconstructor arrayInitReconstructor;
+    private final WhileToForCanonicalizer whileToForCanonicalizer;
     private final ForLoopCounterFolder forLoopCounterFolder;
     private final ComparisonChainToSwitch comparisonChainToSwitch;
     private final ScopeEscapeHoister scopeEscapeHoister;
@@ -138,6 +140,7 @@ public class ClassDecompiler {
         this.patternInstanceOf = new PatternInstanceOfReconstructor();
         this.varargsReconstructor = new VarargsReconstructor(classFile);
         this.arrayInitReconstructor = new ArrayInitializerReconstructor();
+        this.whileToForCanonicalizer = new WhileToForCanonicalizer();
         this.forLoopCounterFolder = new ForLoopCounterFolder();
         this.comparisonChainToSwitch = new ComparisonChainToSwitch();
         this.scopeEscapeHoister = new ScopeEscapeHoister();
@@ -1264,6 +1267,13 @@ public class ClassDecompiler {
             // A hoist above can re-fold a declaration into `T x = c;` leaving a later redundant `x = c;`
             // (e.g. a loop counter's init copy); collapse those once more so recovery is a fixed point.
             redundantAssignmentEliminator.transform(body);
+            // Canonicalize a counted `while` whose tail increments a condition variable back into a `for`. The
+            // structurer commits to while/for while emitting - before simplification settles the body and the
+            // increment reaches its canonical trailing `i++` - so a loop foldable only afterward is caught here.
+            // Runs on the settled body, then the counter-folder scopes the freshly-exposed init into the for.
+            if (whileToForCanonicalizer.transform(body)) {
+                forLoopCounterFolder.transform(body);
+            }
             removeTrailingReturn(body);
             emitBlockContents(writer, body, method.getName() + method.getDesc());
         } catch (Exception e) {
