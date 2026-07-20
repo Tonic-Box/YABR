@@ -76,6 +76,8 @@ class TryWithResourcesFidelityTest {
 
     private static String normalD1;
     private static String normalD2;
+    private static String throwingD1;
+    private static String throwingD2;
     private static Class<?> normalClass;
     private static Class<?> throwingClass;
 
@@ -88,13 +90,23 @@ class TryWithResourcesFidelityTest {
         normalD1 = normal.d1;
         normalD2 = normal.d2;
         normalClass = normal.recompiled;
-        throwingClass = recompile(compiler, "TwrThrowing", THROWING_SOURCE).recompiled;
+        Recovered throwing = recompile(compiler, "TwrThrowing", THROWING_SOURCE);
+        throwingD1 = throwing.d1;
+        throwingD2 = throwing.d2;
+        throwingClass = throwing.recompiled;
     }
 
     @Test
     void isRoundTripFixedPoint() {
         assertTrue(normalD1.contains("try ("), "decompiler should fold to try-with-resources:\n" + normalD1);
         assertEquals(normalD1, normalD2, "try-with-resources must be a round-trip fixed point");
+    }
+
+    @Test
+    void conditionallyThrowingBodyIsRoundTripFixedPoint() {
+        assertTrue(throwingD1.contains("try ("), "decompiler should fold to try-with-resources:\n" + throwingD1);
+        assertEquals(throwingD1, throwingD2,
+                "a conditionally-throwing try-with-resources body must be a round-trip fixed point");
     }
 
     @Test

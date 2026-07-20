@@ -199,6 +199,28 @@ public class ControlFlowSimplifier implements ASTTransform {
             changed = true;
         }
 
+        // A no-else guard that returns, immediately followed by an unconditional throw:
+        // `if (!C) { return x; } throw e;` <=> `if (C) { throw e; } return x;`. Both exits are terminal, so
+        // recompiling flips which one becomes the branch's fall-through; the raw decompile of the recompiled
+        // form then recovers the negated polarity while the plain-method recovery produces the positive one, so
+        // the round trip oscillates. Normalizing to the positive condition (throw as the guard) makes it a fixed
+        // point. Deliberately narrow - a lone returning then under a negative condition followed by a lone throw,
+        // the try-with-resources body shape - so it never competes with the else-bearing rules above.
+        if (!ifStmt.hasElse()
+                && isNegativeCondition(ifStmt.getCondition())
+                && unwrapSingleStatement(ifStmt.getThenBranch()) instanceof ReturnStmt
+                && index + 1 < parentList.size()
+                && unwrapSingleStatement(parentList.get(index + 1)) instanceof ThrowStmt) {
+            Statement returned = unwrapSingleStatement(ifStmt.getThenBranch());
+            Statement thrown = unwrapSingleStatement(parentList.get(index + 1));
+            invertCondition(ifStmt);
+            List<Statement> guardBody = new ArrayList<>();
+            guardBody.add(thrown);
+            ifStmt.setThenBranch(new BlockStmt(guardBody));
+            parentList.set(index + 1, returned);
+            changed = true;
+        }
+
         if (!ifStmt.hasElse()) {
             Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
             if (inner instanceof IfStmt) {

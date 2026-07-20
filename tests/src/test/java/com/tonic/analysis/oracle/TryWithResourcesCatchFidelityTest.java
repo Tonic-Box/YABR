@@ -75,12 +75,9 @@ class TryWithResourcesCatchFidelityTest {
     }
 
     @Test
-    void roundTripPreservesTheCatchAndBody() {
-        assertTrue(d2.contains("try ("), "the recompiled class must still fold to try-with-resources:\n" + d2);
-        assertTrue(d2.contains("catch (RuntimeException"),
-                "the user catch must survive the round-trip, not be dropped on re-decompile:\n" + d2);
-        assertTrue(d2.contains("throw new RuntimeException(\"neg\")"),
-                "the body must survive the round-trip, not collapse to an empty try (r) {}:\n" + d2);
+    void isRoundTripFixedPoint() {
+        assertTrue(d1.contains("catch (RuntimeException"), "the user catch must be preserved:\n" + d1);
+        assertEquals(d1, d2, "try-with-resources with a catch must be a round-trip fixed point:\n" + d1 + "\n---\n" + d2);
     }
 
     @Test
