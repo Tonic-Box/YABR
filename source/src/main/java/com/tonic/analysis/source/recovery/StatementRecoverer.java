@@ -649,10 +649,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
             }
+            boolean finallyDeduped = hasFinally && innerHandlers.isEmpty()
+                    && dedupStraightLineFinally(outerHandlers);
             List<Statement> tryStmts;
             if (!innerHandlers.isEmpty()) {
                 tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
-            } else if (hasFinally) {
+            } else if (hasFinally && !finallyDeduped) {
                 tryStmts = legacyBlockWalk(startBlock, stopBlocks);
             } else {
                 tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
@@ -2129,6 +2131,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 hasFinally = true;
             }
         }
+        boolean finallyDeduped = hasFinally && nestedHandlers.isEmpty() && dedupStraightLineFinally(sameRegionHandlers);
         List<Statement> tryStmts;
         if (!nestedHandlers.isEmpty()) {
             for (ExceptionHandler h : nestedHandlers) {
@@ -2139,7 +2142,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             tryStmts = recoverWithNestedHandlers(startBlock, nestedHandlers, tryStopBlocks);
         } else {
-            tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited, hasFinally);
+            tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited, hasFinally && !finallyDeduped);
         }
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
@@ -2230,6 +2233,202 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             work.addAll(b.getSuccessors());
         }
         return false;
+    }
+
+    /**
+     * Extracts a rethrow handler's finally body as a straight-line instruction template - the instructions between
+     * the handler's leading store of the caught exception and its trailing {@code athrow} - or null when the finally
+     * is not a single straight-line block, or holds an instruction kind the copy matcher does not handle. This is the
+     * sequence javac inlined verbatim on every normal exit of the protected range.
+     */
+    private List<IRInstruction> straightLineFinallyTemplate(ExceptionHandler h) {
+        if (h == null || h.getHandlerBlock() == null) {
+            return null;
+        }
+        IRBlock hb = h.getHandlerBlock();
+        if (!hb.getSuccessors().isEmpty()) {
+            return null;
+        }
+        List<IRInstruction> in = hb.getInstructions();
+        if (in.isEmpty()) {
+            return null;
+        }
+        IRInstruction last = in.get(in.size() - 1);
+        if (!(last instanceof SimpleInstruction) || ((SimpleInstruction) last).getOp() != SimpleOp.ATHROW) {
+            return null;
+        }
+        int start = 0;
+        while (start < in.size()
+                && (in.get(start) instanceof CopyInstruction || in.get(start) instanceof StoreLocalInstruction)) {
+            start++;
+        }
+        List<IRInstruction> template = new ArrayList<>();
+        for (int i = start; i < in.size() - 1; i++) {
+            if (!isMatchableFinallyInstr(in.get(i))) {
+                return null;
+            }
+            template.add(in.get(i));
+        }
+        return template.isEmpty() ? null : template;
+    }
+
+    /** Instruction kinds a straight-line finally copy is matched by: no control flow, structurally comparable. */
+    private boolean isMatchableFinallyInstr(IRInstruction ins) {
+        return ins instanceof FieldAccessInstruction || ins instanceof InvokeInstruction
+                || ins instanceof ConstantInstruction || ins instanceof LoadLocalInstruction
+                || ins instanceof StoreLocalInstruction;
+    }
+
+    /** Structural equality of two finally instructions, ignoring SSA operand identity (verbatim javac copies). */
+    private boolean sameFinallyInstr(IRInstruction a, IRInstruction b) {
+        if (a.getClass() != b.getClass()) {
+            return false;
+        }
+        if (a instanceof FieldAccessInstruction) {
+            FieldAccessInstruction x = (FieldAccessInstruction) a, y = (FieldAccessInstruction) b;
+            return x.isStatic() == y.isStatic() && x.getOwner().equals(y.getOwner())
+                    && x.getName().equals(y.getName()) && x.getDescriptor().equals(y.getDescriptor());
+        }
+        if (a instanceof InvokeInstruction) {
+            InvokeInstruction x = (InvokeInstruction) a, y = (InvokeInstruction) b;
+            return x.getInvokeType() == y.getInvokeType() && x.getOwner().equals(y.getOwner())
+                    && x.getName().equals(y.getName()) && x.getDescriptor().equals(y.getDescriptor());
+        }
+        if (a instanceof ConstantInstruction) {
+            return String.valueOf(((ConstantInstruction) a).getConstant())
+                    .equals(String.valueOf(((ConstantInstruction) b).getConstant()));
+        }
+        if (a instanceof LoadLocalInstruction) {
+            return ((LoadLocalInstruction) a).getLocalIndex() == ((LoadLocalInstruction) b).getLocalIndex();
+        }
+        if (a instanceof StoreLocalInstruction) {
+            return ((StoreLocalInstruction) a).getLocalIndex() == ((StoreLocalInstruction) b).getLocalIndex();
+        }
+        return false;
+    }
+
+    /**
+     * The start index of a contiguous run in {@code block} matching {@code template} instruction-for-instruction, or
+     * -1 when none. The run must be strictly inside the block (a terminator or return-value setup follows), so a bare
+     * rethrow tail is never mistaken for an inlined copy.
+     */
+    private int contiguousTemplateStart(IRBlock block, List<IRInstruction> template) {
+        List<IRInstruction> in = block.getInstructions();
+        int n = template.size();
+        for (int start = 0; start + n < in.size(); start++) {
+            boolean ok = true;
+            for (int i = 0; i < n; i++) {
+                if (!sameFinallyInstr(template.get(i), in.get(start + i))) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) {
+                return start;
+            }
+        }
+        return -1;
+    }
+
+    private final Set<ExceptionHandler> finallyDeduped = new HashSet<>();
+
+    /**
+     * Removes javac's inlined straight-line finally copies from the exits of a protected range so the try body can be
+     * structured natively instead of by the legacy walk (the copies otherwise inflate reaching-condition guards and
+     * flip their orientation across a round trip). All-or-nothing: it verifies a contiguous template run inside every
+     * block that leaves the region before excising any; a shape it cannot fully account for leaves the IR untouched so
+     * the caller keeps the legacy body walk and statement-level fold. Returns true when the body was de-duplicated.
+     */
+    private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers) {
+        IRMethod method = context.getIrMethod();
+        if (method == null) {
+            return false;
+        }
+        List<ExceptionHandler> rethrowers = new ArrayList<>();
+        for (ExceptionHandler h : regionHandlers) {
+            if (handlerRethrows(h) && h.getTryStart() != null && h.getTryEnd() != null) {
+                rethrowers.add(h);
+            }
+        }
+        if (rethrowers.isEmpty()) {
+            return false;
+        }
+        if (finallyDeduped.containsAll(rethrowers)) {
+            return true;
+        }
+        List<IRInstruction> template = null;
+        Set<IRBlock> protectedBlocks = new HashSet<>();
+        Set<IRBlock> handlerBlocks = new HashSet<>();
+        for (ExceptionHandler h : rethrowers) {
+            List<IRInstruction> t = straightLineFinallyTemplate(h);
+            if (t == null) {
+                return false;
+            }
+            if (template == null) {
+                template = t;
+            }
+            int lo = h.getTryStart().getBytecodeOffset();
+            int hi = h.getTryEnd().getBytecodeOffset();
+            for (IRBlock b : method.getBlocks()) {
+                int off = b.getBytecodeOffset();
+                if (off >= lo && off < hi) {
+                    protectedBlocks.add(b);
+                }
+            }
+            if (h.getHandlerBlock() != null) {
+                handlerBlocks.add(h.getHandlerBlock());
+            }
+        }
+        if (protectedBlocks.isEmpty()) {
+            return false;
+        }
+        Set<IRBlock> scan = new LinkedHashSet<>(protectedBlocks);
+        for (IRBlock p : protectedBlocks) {
+            for (IRBlock s : p.getSuccessors()) {
+                if (!handlerBlocks.contains(s)) {
+                    scan.add(s);
+                }
+            }
+        }
+        List<List<IRInstruction>> excisions = new ArrayList<>();
+        for (IRBlock b : scan) {
+            int at = contiguousTemplateStart(b, template);
+            if (at >= 0) {
+                excisions.add(new ArrayList<>(b.getInstructions().subList(at, at + template.size())));
+            } else if (leavesRegion(b, protectedBlocks) && !isBareRethrowTail(b)) {
+                return false;
+            }
+        }
+        if (excisions.isEmpty()) {
+            return false;
+        }
+        for (List<IRInstruction> run : excisions) {
+            for (IRInstruction ins : run) {
+                ins.getBlock().removeInstruction(ins);
+            }
+        }
+        finallyDeduped.addAll(rethrowers);
+        return true;
+    }
+
+    /** A block that leaves the protected region: it returns/throws, or has a successor outside the region. */
+    private boolean leavesRegion(IRBlock b, Set<IRBlock> region) {
+        IRInstruction term = b.getTerminator();
+        if (term instanceof ReturnInstruction) {
+            return true;
+        }
+        for (IRBlock s : b.getSuccessors()) {
+            if (!region.contains(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A block whose only real content is a rethrow of a caught exception (the finally handler tail itself). */
+    private boolean isBareRethrowTail(IRBlock b) {
+        IRInstruction term = b.getTerminator();
+        return term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW;
     }
 
     /**

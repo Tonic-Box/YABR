@@ -218,19 +218,37 @@ public class ControlFlowSimplifier implements ASTTransform {
         }
 
         if (ifStmt.hasElse() && isEarlyExit(ifStmt.getElseBranch())) {
-            Statement earlyExit = unwrapSingleStatement(ifStmt.getElseBranch());
-            Statement thenBody = ifStmt.getThenBranch();
+            boolean thenExits = isTerminal(ifStmt.getThenBranch());
+            int thenLen = getStatements(ifStmt.getThenBranch()).size();
+            int elseLen = getStatements(ifStmt.getElseBranch()).size();
+            if (thenExits && thenLen < elseLen && !isConstantEqualityGuard(ifStmt.getCondition())) {
+                // Both arms exit and the then is strictly shorter: it is already the guard the reaching-condition
+                // structurer would choose (the single-statement early exit), so keep it and flatten the else after it
+                // rather than flipping to guard the longer else with a negated condition - which would oscillate on
+                // round trip. Excluded for a `selector == constant` guard: negating it to `selector != constant` and
+                // nesting is exactly the chain form the switch reconstructor folds, so those keep the guard-the-else
+                // path below.
+                List<Statement> elseStmts = getStatements(ifStmt.getElseBranch());
+                ifStmt.setElseBranch(null);
+                for (int j = 0; j < elseStmts.size(); j++) {
+                    parentList.add(index + 1 + j, elseStmts.get(j));
+                }
+                changed = true;
+            } else {
+                Statement earlyExit = unwrapSingleStatement(ifStmt.getElseBranch());
+                Statement thenBody = ifStmt.getThenBranch();
 
-            IfStmt guard = new IfStmt(negate(ifStmt.getCondition()), earlyExit);
-            Locations.copy(ifStmt, guard);
+                IfStmt guard = new IfStmt(negate(ifStmt.getCondition()), earlyExit);
+                Locations.copy(ifStmt, guard);
 
-            parentList.set(index, guard);
+                parentList.set(index, guard);
 
-            List<Statement> thenStmts = getStatements(thenBody);
-            for (int j = 0; j < thenStmts.size(); j++) {
-                parentList.add(index + 1 + j, thenStmts.get(j));
+                List<Statement> thenStmts = getStatements(thenBody);
+                for (int j = 0; j < thenStmts.size(); j++) {
+                    parentList.add(index + 1 + j, thenStmts.get(j));
+                }
+                changed = true;
             }
-            changed = true;
         }
 
         return changed;
@@ -722,6 +740,24 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     private void invertCondition(IfStmt ifStmt) {
         ifStmt.setCondition(negate(ifStmt.getCondition()));
+    }
+
+    /**
+     * Whether {@code cond} compares a value against a constant for (in)equality - {@code x == k}, {@code x != k}, or
+     * {@code !(x == k)}. These are the guards a switch-dispatch chain is built from, so they must keep the negated-
+     * nested guard form the switch reconstructor recognizes rather than being flattened to a positive leading guard.
+     */
+    private boolean isConstantEqualityGuard(Expression cond) {
+        if (cond instanceof UnaryExpr && ((UnaryExpr) cond).getOperator() == UnaryOperator.NOT) {
+            return isConstantEqualityGuard(((UnaryExpr) cond).getOperand());
+        }
+        if (cond instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) cond;
+            if (b.getOperator() == BinaryOperator.EQ || b.getOperator() == BinaryOperator.NE) {
+                return b.getLeft() instanceof LiteralExpr || b.getRight() instanceof LiteralExpr;
+            }
+        }
+        return false;
     }
 
     private Expression negate(Expression expr) {
