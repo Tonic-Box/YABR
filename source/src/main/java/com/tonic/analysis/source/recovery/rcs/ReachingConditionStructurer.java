@@ -999,7 +999,7 @@ public final class ReachingConditionStructurer {
     /** The loop's single non-terminal exit block (its {@code break} continuation), or null for an infinite loop. */
     private IRBlock findBreakTarget(IRBlock header) {
         Set<IRBlock> loopBlocks = context.getLoopAnalysis().getLoop(header).getBlocks();
-        IRBlock breakTarget = null;
+        Set<IRBlock> targets = new LinkedHashSet<>();
         for (IRBlock u : loopBlocks) {
             for (IRBlock v : u.getSuccessors()) {
                 if (loopBlocks.contains(v) || isBackEdge(u, v)) {
@@ -1016,14 +1016,22 @@ public final class ReachingConditionStructurer {
                 } else if (isTerminalBlock(v)) {
                     continue; // a natural terminal (return/throw) exit is inlined in the body, not a break target
                 }
-                if (breakTarget == null) {
-                    breakTarget = target;
-                } else if (breakTarget != target) {
-                    throw new BailToLegacy(); // multiple non-terminal exits need labeled restructuring
-                }
+                targets.add(target);
             }
         }
-        return breakTarget;
+        if (targets.size() <= 1) {
+            return targets.isEmpty() ? null : targets.iterator().next();
+        }
+        // Several distinct non-terminal exits. When each flows on - through a linear exit intermediate (a phi copy
+        // the loop lowers on its normal-exit edge, or a short break-path block) - to one shared continuation, that
+        // continuation is the single break target; every exit reaches it and each intermediate is emitted inline on
+        // its own branch, ending in the break. Genuinely divergent exits (no common continuation) still need the
+        // labeled restructuring the legacy walk performs.
+        IRBlock converged = convergeExits(targets, loopBlocks);
+        if (converged == null) {
+            throw new BailToLegacy();
+        }
+        return converged;
     }
 
     private boolean dominatedByNonHeaderLoopBlock(IRBlock v, IRBlock header, Set<IRBlock> loopBlocks) {
@@ -1033,6 +1041,50 @@ public final class ReachingConditionStructurer {
             }
         }
         return false;
+    }
+
+    /**
+     * The single block all of {@code targets} reach by following linear exit intermediates, or null when they do not
+     * converge. Each target is walked forward through non-loop blocks that have exactly one predecessor and one
+     * successor (an exit-edge phi copy or a break-path assignment) until it reaches a branch or a join (a block with
+     * more than one predecessor, which is where distinct exits meet); all walks must end at the same block. A walk
+     * that ends on a method terminal does not converge: a return/throw is inlined at each exit, not broken to, and
+     * making it the single break target mis-places the exits' own statements and the terminal itself.
+     */
+    private IRBlock convergeExits(Set<IRBlock> targets, Set<IRBlock> loopBlocks) {
+        IRBlock converged = null;
+        for (IRBlock t : targets) {
+            IRBlock end = followExitIntermediates(t, loopBlocks);
+            if (isTerminalBlock(end)) {
+                return null;
+            }
+            if (converged == null) {
+                converged = end;
+            } else if (converged != end) {
+                return null;
+            }
+        }
+        return converged;
+    }
+
+    /**
+     * Follows a chain of linear exit intermediates from {@code v}: non-loop blocks with exactly one predecessor and
+     * one successor whose successor continues out of the loop. Stops at the first block that branches, merges (more
+     * than one predecessor - the join where exits meet), or re-enters the loop. Returns {@code v} when it is not
+     * such an intermediate.
+     */
+    private IRBlock followExitIntermediates(IRBlock v, Set<IRBlock> loopBlocks) {
+        IRBlock target = v;
+        Set<IRBlock> seen = new HashSet<>();
+        while (!loopBlocks.contains(target) && target.getPredecessors().size() == 1
+                && target.getSuccessors().size() == 1 && seen.add(target)) {
+            IRBlock next = target.getSuccessors().iterator().next();
+            if (isBackEdge(target, next) || loopBlocks.contains(next)) {
+                break;
+            }
+            target = next;
+        }
+        return target;
     }
 
     /**
