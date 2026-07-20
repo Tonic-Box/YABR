@@ -674,7 +674,7 @@ public class TypeResolver {
         Class<?>[] args = new Class<?>[argTypes.size()];
         for (int i = 0; i < argTypes.size(); i++) {
             Class<?> c = descriptorToClass(argTypes.get(i).getDescriptor());
-            if (c == null || c.isPrimitive()) {
+            if (c == null) {
                 return null;
             }
             args[i] = c;
@@ -683,7 +683,7 @@ public class TypeResolver {
             Class<?>[] best = null;
             for (java.lang.reflect.Constructor<?> ctor : owner.getDeclaredConstructors()) {
                 Class<?>[] p = ctor.getParameterTypes();
-                if (referenceParamsAccept(p, args) && (best == null || isAtLeastAsSpecific(p, best))) {
+                if (paramsAccept(p, args) && (best == null || isAtLeastAsSpecific(p, best))) {
                     best = p;
                 }
             }
@@ -696,12 +696,24 @@ public class TypeResolver {
                 continue;
             }
             Class<?>[] p = m.getParameterTypes();
-            if (referenceParamsAccept(p, args) && (bestParams == null || isAtLeastAsSpecific(p, bestParams))) {
+            if (paramsAccept(p, args) && (bestParams == null || isAtLeastAsSpecific(p, bestParams))) {
                 bestParams = p;
                 bestReturn = m.getReturnType();
             }
         }
         return bestParams == null ? null : buildRuntimeDescriptor(bestParams, bestReturn);
+    }
+
+    private static Class<?> boxed(Class<?> c) {
+        if (c == int.class) return Integer.class;
+        if (c == long.class) return Long.class;
+        if (c == short.class) return Short.class;
+        if (c == byte.class) return Byte.class;
+        if (c == char.class) return Character.class;
+        if (c == boolean.class) return Boolean.class;
+        if (c == float.class) return Float.class;
+        if (c == double.class) return Double.class;
+        return c;
     }
 
     private Class<?> loadRuntimeClass(String internalName) {
@@ -738,27 +750,50 @@ public class TypeResolver {
         }
     }
 
-    /** True when every declared parameter is a reference type that accepts the reference argument by assignability. */
-    private boolean referenceParamsAccept(Class<?>[] params, Class<?>[] args) {
+    /** True when every declared parameter accepts the argument: same primitive, or a reference the (boxed) arg fits. */
+    private boolean paramsAccept(Class<?>[] params, Class<?>[] args) {
         if (params.length != args.length) {
             return false;
         }
         for (int i = 0; i < params.length; i++) {
-            if (params[i].isPrimitive() || !params[i].isAssignableFrom(args[i])) {
+            if (!accepts(params[i], args[i])) {
                 return false;
             }
         }
         return true;
     }
 
-    /** True when parameter list {@code a} is at least as specific as {@code b} (each a[i] assignable to b[i]). */
+    private boolean accepts(Class<?> param, Class<?> arg) {
+        if (param.isPrimitive()) {
+            // A boolean value from a comparison is typed int in the IR (the JVM represents both the same on the
+            // operand stack), so a boolean parameter accepts an int argument - needed to box `Boolean.valueOf(z)`.
+            // char/byte/short are NOT conflated: their append(char)/append(int) overloads have distinct semantics.
+            return param == arg || (param == boolean.class && arg == int.class);
+        }
+        return param.isAssignableFrom(arg.isPrimitive() ? boxed(arg) : arg);
+    }
+
+    /** True when parameter list {@code a} is at least as specific as {@code b}, position by position. */
     private boolean isAtLeastAsSpecific(Class<?>[] a, Class<?>[] b) {
         for (int i = 0; i < a.length; i++) {
-            if (!b[i].isAssignableFrom(a[i])) {
+            if (!moreSpecificOrEqual(a[i], b[i])) {
                 return false;
             }
         }
         return true;
+    }
+
+    private boolean moreSpecificOrEqual(Class<?> a, Class<?> b) {
+        if (a == b) {
+            return true;
+        }
+        if (a.isPrimitive()) {
+            return !b.isPrimitive();
+        }
+        if (b.isPrimitive()) {
+            return false;
+        }
+        return b.isAssignableFrom(a);
     }
 
     private String buildRuntimeDescriptor(Class<?>[] params, Class<?> ret) {
