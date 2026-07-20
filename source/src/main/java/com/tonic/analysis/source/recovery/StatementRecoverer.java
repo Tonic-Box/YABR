@@ -2456,29 +2456,70 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (h == null || h.getHandlerBlock() == null) {
             return null;
         }
-        IRBlock hb = h.getHandlerBlock();
-        if (!hb.getSuccessors().isEmpty()) {
+        // Follow the linear chain of blocks from the handler start to the block that rethrows. javac's
+        // finally-self-protection splits a straight-line handler into [store; goto] + [body; aload; athrow];
+        // the intervening goto terminators and the exception self-edge must be stepped over. Any branch
+        // (more than one normal successor) means the finally itself has control flow - not handled here.
+        List<IRBlock> chain = new ArrayList<>();
+        Set<IRBlock> seen = new HashSet<>();
+        IRBlock b = h.getHandlerBlock();
+        while (b != null && seen.add(b)) {
+            chain.add(b);
+            IRInstruction term = b.getTerminator();
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                break;
+            }
+            IRBlock next = null;
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    if (next != null) {
+                        return null;
+                    }
+                    next = e.getKey();
+                }
+            }
+            b = next;
+        }
+        IRBlock lastBlock = chain.isEmpty() ? null : chain.get(chain.size() - 1);
+        if (lastBlock == null) {
             return null;
         }
-        List<IRInstruction> in = hb.getInstructions();
-        if (in.isEmpty()) {
+        IRInstruction lastTerm = lastBlock.getTerminator();
+        if (!(lastTerm instanceof SimpleInstruction) || ((SimpleInstruction) lastTerm).getOp() != SimpleOp.ATHROW) {
             return null;
         }
-        IRInstruction last = in.get(in.size() - 1);
-        if (!(last instanceof SimpleInstruction) || ((SimpleInstruction) last).getOp() != SimpleOp.ATHROW) {
-            return null;
+
+        List<IRInstruction> flat = new ArrayList<>();
+        for (int c = 0; c < chain.size(); c++) {
+            List<IRInstruction> in = chain.get(c).getInstructions();
+            int end = in.size();
+            if (c == chain.size() - 1) {
+                end--; // drop the trailing athrow
+            } else if (end > 0 && in.get(end - 1) instanceof SimpleInstruction
+                    && ((SimpleInstruction) in.get(end - 1)).getOp() == SimpleOp.GOTO) {
+                end--; // drop an inter-block goto
+            }
+            for (int i = 0; i < end; i++) {
+                flat.add(in.get(i));
+            }
         }
+        // Drop the leading materialization+store of the caught exception and the trailing reload of it that
+        // feeds the rethrow, leaving only the finally body - the sequence javac inlined on every normal exit.
         int start = 0;
-        while (start < in.size()
-                && (in.get(start) instanceof CopyInstruction || in.get(start) instanceof StoreLocalInstruction)) {
+        while (start < flat.size()
+                && (flat.get(start) instanceof CopyInstruction || flat.get(start) instanceof StoreLocalInstruction)) {
             start++;
         }
+        int stop = flat.size();
+        if (stop > start && flat.get(stop - 1) instanceof LoadLocalInstruction) {
+            stop--;
+        }
         List<IRInstruction> template = new ArrayList<>();
-        for (int i = start; i < in.size() - 1; i++) {
-            if (!isMatchableFinallyInstr(in.get(i))) {
+        for (int i = start; i < stop; i++) {
+            if (!isMatchableFinallyInstr(flat.get(i))) {
                 return null;
             }
-            template.add(in.get(i));
+            template.add(flat.get(i));
         }
         return template.isEmpty() ? null : template;
     }
