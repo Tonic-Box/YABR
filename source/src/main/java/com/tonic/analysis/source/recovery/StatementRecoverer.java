@@ -1472,12 +1472,78 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (startIdx + finallyStmts.size() > statements.size()) {
             return false;
         }
+        Map<String, String> tempBind = new HashMap<>();
         for (int i = 0; i < finallyStmts.size(); i++) {
-            if (!statementsMatch(statements.get(startIdx + i), finallyStmts.get(i))) {
+            if (!statementMatchesFinally(statements.get(startIdx + i), finallyStmts.get(i), tempBind)) {
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * Structural match of a candidate statement against a finally-body statement, tolerating a bijection between
+     * the two copies' locally-declared temp names. The finally materializes its stored value into a single-use SSA
+     * temp whose name differs between the handler copy and each inlined copy ({@code int i8 = e; x = i8} versus
+     * {@code int i5 = e; x = i5}), so a use of the finally's temp is matched against the candidate's via
+     * {@code bind}, which is populated when their declarations line up.
+     */
+    private boolean statementMatchesFinally(Statement cand, Statement fin, Map<String, String> bind) {
+        if (cand == null || fin == null || cand.getClass() != fin.getClass()) {
+            return false;
+        }
+        if (fin instanceof VarDeclStmt) {
+            VarDeclStmt fd = (VarDeclStmt) fin;
+            VarDeclStmt cd = (VarDeclStmt) cand;
+            Expression fi = fd.getInitializer();
+            Expression ci = cd.getInitializer();
+            if ((fi == null) != (ci == null)) {
+                return false;
+            }
+            if (fi != null && !expressionMatchesFinally(ci, fi, bind)) {
+                return false;
+            }
+            bind.put(fd.getName(), cd.getName());
+            return true;
+        }
+        if (fin instanceof ExprStmt) {
+            return expressionMatchesFinally(((ExprStmt) cand).getExpression(), ((ExprStmt) fin).getExpression(), bind);
+        }
+        if (fin instanceof ReturnStmt) {
+            Expression ce = ((ReturnStmt) cand).getValue();
+            Expression fe = ((ReturnStmt) fin).getValue();
+            if (ce == null && fe == null) {
+                return true;
+            }
+            return ce != null && fe != null && expressionMatchesFinally(ce, fe, bind);
+        }
+        return statementsMatch(cand, fin);
+    }
+
+    private boolean expressionMatchesFinally(Expression cand, Expression fin, Map<String, String> bind) {
+        if (cand == null || fin == null) {
+            return cand == fin;
+        }
+        if (cand.getClass() != fin.getClass()) {
+            return false;
+        }
+        if (fin instanceof VarRefExpr) {
+            String finName = ((VarRefExpr) fin).getName();
+            String candName = ((VarRefExpr) cand).getName();
+            String bound = bind.get(finName);
+            return bound != null ? bound.equals(candName) : finName.equals(candName);
+        }
+        if (fin instanceof BinaryExpr) {
+            BinaryExpr fb = (BinaryExpr) fin;
+            BinaryExpr cb = (BinaryExpr) cand;
+            return fb.getOperator() == cb.getOperator()
+                && expressionMatchesFinally(cb.getLeft(), fb.getLeft(), bind)
+                && expressionMatchesFinally(cb.getRight(), fb.getRight(), bind);
+        }
+        if (fin instanceof LiteralExpr) {
+            return Objects.equals(((LiteralExpr) cand).getValue(), ((LiteralExpr) fin).getValue());
+        }
+        return cand.toString().equals(fin.toString());
     }
 
     /**
@@ -1882,13 +1948,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 userHandlers.add(h);
             }
         }
+
+        List<CatchClause> userClauses = buildCatchClauses(userHandlers);
+        BlockStmt finallyBlock = null;
+        Set<String> finallyVars = new HashSet<>();
+        List<CatchClause> catchClauses = new ArrayList<>();
+        for (CatchClause clause : userClauses) {
+            if (isFinallyRethrowPattern(clause)) {
+                finallyBlock = extractFinallyBody(clause);
+                finallyVars.add(clause.variableName());
+            } else {
+                catchClauses.add(clause);
+            }
+        }
+        // A rethrowing user handler that is not the finally pattern (e.g. a catch that rethrows) is not modeled
+        // here; leave the whole region to the generic recovery rather than mis-fold it.
         for (ExceptionHandler h : userHandlers) {
-            if (handlerRethrows(h)) {
+            if (finallyBlock == null && handlerRethrows(h)) {
                 return null;
             }
         }
-
-        List<CatchClause> userCatches = buildCatchClauses(userHandlers);
 
         List<ExceptionHandler> allHandlers = new ArrayList<>(cleanup);
         allHandlers.addAll(userHandlers);
@@ -1901,7 +1980,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
 
         List<Statement> normalPath = recoverBlockSequence(entry, new HashSet<>());
-        List<Statement> folded = reconstructTryWithResources(normalPath, userCatches);
+        List<Statement> folded = reconstructTryWithResources(normalPath, catchClauses, finallyBlock, finallyVars);
         if (folded == null) {
             processedTryHandlers.removeAll(allHandlers);
             processedHandlerBlocks.removeAll(restoreBlocks);
@@ -1994,6 +2073,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * and referenced from the try header, and the synthetic close calls are dropped.
      */
     private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches) {
+        return reconstructTryWithResources(normalPath, catches, null, Collections.emptySet());
+    }
+
+    private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches,
+                                                        BlockStmt finallyBlock, Set<String> finallyVars) {
         Set<String> closedVars = new LinkedHashSet<>();
         for (Statement s : normalPath) {
             String closed = findClosedResource(s);
@@ -2041,11 +2125,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
 
+        if (finallyBlock != null) {
+            body = filterOrphanFinallyThrows(body, finallyVars);
+            body = filterInlinedFinallyFromTryStatements(body, finallyBlock.getStatements());
+        }
+
         List<Expression> resources = new ArrayList<>();
         for (VarDeclStmt d : resourceDecls) {
             resources.add(new VarRefExpr(d.getName(), d.getType()));
         }
-        TryCatchStmt tryStmt = new TryCatchStmt(new BlockStmt(body), catches, null, resources,
+        TryCatchStmt tryStmt = new TryCatchStmt(new BlockStmt(body), catches, finallyBlock, resources,
                 SourceLocation.UNKNOWN);
 
         List<Statement> result = new ArrayList<>(pre);
