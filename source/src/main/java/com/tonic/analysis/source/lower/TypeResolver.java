@@ -657,6 +657,134 @@ public class TypeResolver {
     }
 
     /**
+     * Resolves a call's DECLARED descriptor by runtime reflection when the callee class is not in the pool (e.g. a
+     * JDK method - the pool never loads JDK classes). {@link #resolveMethodDescriptor} returns null then, and
+     * building a descriptor from the argument static types is wrong for a subtype argument: a String passed to
+     * {@code List.add(Object)} would emit {@code add(String)}, which does not exist, so the recompiled call throws
+     * {@code NoSuchMethodError}. This finds the real method (or constructor, for {@code <init>}) by matching
+     * reference parameters against reference arguments by assignability, and returns its actual descriptor.
+     * Restricted to reference parameters and arguments - the case the erased-argument bug hits; any primitive,
+     * varargs, or unloadable type makes it return null so the caller keeps its existing behavior.
+     */
+    public String resolveMethodDescriptorViaReflection(String ownerClass, String methodName, List<IRType> argTypes) {
+        Class<?> owner = loadRuntimeClass(ownerClass);
+        if (owner == null) {
+            return null;
+        }
+        Class<?>[] args = new Class<?>[argTypes.size()];
+        for (int i = 0; i < argTypes.size(); i++) {
+            Class<?> c = descriptorToClass(argTypes.get(i).getDescriptor());
+            if (c == null || c.isPrimitive()) {
+                return null;
+            }
+            args[i] = c;
+        }
+        if ("<init>".equals(methodName)) {
+            Class<?>[] best = null;
+            for (java.lang.reflect.Constructor<?> ctor : owner.getDeclaredConstructors()) {
+                Class<?>[] p = ctor.getParameterTypes();
+                if (referenceParamsAccept(p, args) && (best == null || isAtLeastAsSpecific(p, best))) {
+                    best = p;
+                }
+            }
+            return best == null ? null : buildRuntimeDescriptor(best, void.class);
+        }
+        Class<?>[] bestParams = null;
+        Class<?> bestReturn = null;
+        for (Method m : owner.getMethods()) {
+            if (!m.getName().equals(methodName)) {
+                continue;
+            }
+            Class<?>[] p = m.getParameterTypes();
+            if (referenceParamsAccept(p, args) && (bestParams == null || isAtLeastAsSpecific(p, bestParams))) {
+                bestParams = p;
+                bestReturn = m.getReturnType();
+            }
+        }
+        return bestParams == null ? null : buildRuntimeDescriptor(bestParams, bestReturn);
+    }
+
+    private Class<?> loadRuntimeClass(String internalName) {
+        try {
+            return Class.forName(internalName.replace('/', '.'), false, TypeResolver.class.getClassLoader());
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** Maps a JVM type descriptor to a runtime Class, or null when it cannot be loaded. */
+    private Class<?> descriptorToClass(String desc) {
+        if (desc == null || desc.isEmpty()) {
+            return null;
+        }
+        switch (desc.charAt(0)) {
+            case 'V': return void.class;
+            case 'Z': return boolean.class;
+            case 'B': return byte.class;
+            case 'C': return char.class;
+            case 'S': return short.class;
+            case 'I': return int.class;
+            case 'J': return long.class;
+            case 'F': return float.class;
+            case 'D': return double.class;
+            case 'L': return loadRuntimeClass(desc.substring(1, desc.length() - 1));
+            case '[':
+                try {
+                    return Class.forName(desc.replace('/', '.'), false, TypeResolver.class.getClassLoader());
+                } catch (Throwable t) {
+                    return null;
+                }
+            default: return null;
+        }
+    }
+
+    /** True when every declared parameter is a reference type that accepts the reference argument by assignability. */
+    private boolean referenceParamsAccept(Class<?>[] params, Class<?>[] args) {
+        if (params.length != args.length) {
+            return false;
+        }
+        for (int i = 0; i < params.length; i++) {
+            if (params[i].isPrimitive() || !params[i].isAssignableFrom(args[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** True when parameter list {@code a} is at least as specific as {@code b} (each a[i] assignable to b[i]). */
+    private boolean isAtLeastAsSpecific(Class<?>[] a, Class<?>[] b) {
+        for (int i = 0; i < a.length; i++) {
+            if (!b[i].isAssignableFrom(a[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String buildRuntimeDescriptor(Class<?>[] params, Class<?> ret) {
+        StringBuilder sb = new StringBuilder("(");
+        for (Class<?> p : params) {
+            sb.append(classDescriptor(p));
+        }
+        sb.append(')').append(classDescriptor(ret));
+        return sb.toString();
+    }
+
+    private String classDescriptor(Class<?> c) {
+        if (c == void.class) return "V";
+        if (c == boolean.class) return "Z";
+        if (c == byte.class) return "B";
+        if (c == char.class) return "C";
+        if (c == short.class) return "S";
+        if (c == int.class) return "I";
+        if (c == long.class) return "J";
+        if (c == float.class) return "F";
+        if (c == double.class) return "D";
+        if (c.isArray()) return c.getName().replace('.', '/');
+        return "L" + c.getName().replace('.', '/') + ";";
+    }
+
+    /**
      * Scores how well {@code method} matches the call argument types: exact descriptor (+2) beats same-kind (+1); any
      * incompatible parameter disqualifies (-1). A varargs method is also considered in its EXPANDED form (fixed
      * parameters + the array component repeated for the trailing args), with a small penalty so a non-varargs exact

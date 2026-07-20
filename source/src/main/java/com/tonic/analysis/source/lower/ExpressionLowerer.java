@@ -912,6 +912,10 @@ public class ExpressionLowerer {
         // descriptor instead of the real (Object,Object) and fails verification.
         String declaredDescriptor =
             ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, call.getMethodName(), argIrTypes);
+        if (declaredDescriptor == null) {
+            declaredDescriptor = ctx.getTypeResolver()
+                .resolveMethodDescriptorViaReflection(ownerClass, call.getMethodName(), argIrTypes);
+        }
 
         // Varargs calls are decompiled as flat trailing arguments; the bytecode invoke needs them packed into the
         // declared component[] array. Pack here (before adding to the arg list) when the resolved method is varargs.
@@ -1579,6 +1583,9 @@ public class ExpressionLowerer {
         // Match the constructor by argument types (disambiguates same-arity overloads, e.g. ArrayList(int) vs
         // ArrayList(Collection)); only when the class isn't in the pool do we build a descriptor from the value types.
         String descriptor = ctx.getTypeResolver().resolveConstructorDescriptor(className, argIrTypes);
+        if (descriptor == null) {
+            descriptor = ctx.getTypeResolver().resolveMethodDescriptorViaReflection(className, "<init>", argIrTypes);
+        }
         if (descriptor == null) {
             StringBuilder descBuilder = new StringBuilder("(");
             for (IRType argIrType : argIrTypes) {
