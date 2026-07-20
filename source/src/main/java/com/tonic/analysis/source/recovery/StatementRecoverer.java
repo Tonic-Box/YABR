@@ -1865,19 +1865,103 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * the clean normal path (the handler blocks are not normal successors), lifts the resource declarations
      * into a {@code try (r1; r2) { ... }} header and strips the synthetic close calls. Returns null when the
      * method is not a try-with-resources, so the caller falls back to the generic recovery.
+     *
+     * <p>A user {@code catch} clause on the resource ({@code try (r) { } catch (E e) { }}) compiles to its own
+     * handler alongside the resource cleanup handlers; those user handlers are folded into the recovered
+     * {@code try (r)} as catch clauses rather than being dropped. A user {@code finally} (a rethrowing handler)
+     * is left to the generic recovery.
      */
     private List<Statement> recoverTryWithResources(IRBlock entry, List<ExceptionHandler> handlers) {
         if (!isTryWithResourcesMethod(handlers)) {
             return null;
         }
+        Set<ExceptionHandler> cleanup = twrCleanupHandlers(handlers);
+        List<ExceptionHandler> userHandlers = new ArrayList<>();
         for (ExceptionHandler h : handlers) {
-            processedTryHandlers.add(h);
-            if (h.getHandlerBlock() != null) {
-                processedHandlerBlocks.add(h.getHandlerBlock());
+            if (!cleanup.contains(h)) {
+                userHandlers.add(h);
             }
         }
+        for (ExceptionHandler h : userHandlers) {
+            if (handlerRethrows(h)) {
+                return null;
+            }
+        }
+
+        List<CatchClause> userCatches = buildCatchClauses(userHandlers);
+
+        List<ExceptionHandler> allHandlers = new ArrayList<>(cleanup);
+        allHandlers.addAll(userHandlers);
+        Set<IRBlock> restoreBlocks = new HashSet<>();
+        for (ExceptionHandler h : allHandlers) {
+            processedTryHandlers.add(h);
+            if (h.getHandlerBlock() != null && processedHandlerBlocks.add(h.getHandlerBlock())) {
+                restoreBlocks.add(h.getHandlerBlock());
+            }
+        }
+
         List<Statement> normalPath = recoverBlockSequence(entry, new HashSet<>());
-        return reconstructTryWithResources(normalPath);
+        List<Statement> folded = reconstructTryWithResources(normalPath, userCatches);
+        if (folded == null) {
+            processedTryHandlers.removeAll(allHandlers);
+            processedHandlerBlocks.removeAll(restoreBlocks);
+            return null;
+        }
+        return folded;
+    }
+
+    /**
+     * The resource cleanup handlers of a try-with-resources method: each suppress handler (its own block calls
+     * {@code Throwable.addSuppressed}) plus the primary handler it pairs with (the nearest enclosing handler,
+     * whose block holds the close the suppress handler protects). Every other handler is a user catch/finally.
+     */
+    private Set<ExceptionHandler> twrCleanupHandlers(List<ExceptionHandler> handlers) {
+        Set<IRBlock> cleanupBlocks = new HashSet<>();
+        List<ExceptionHandler> suppress = new ArrayList<>();
+        for (ExceptionHandler h : handlers) {
+            if (h.getHandlerBlock() != null && blockCallsAddSuppressed(h.getHandlerBlock())) {
+                suppress.add(h);
+                cleanupBlocks.add(h.getHandlerBlock());
+            }
+        }
+        for (ExceptionHandler s : suppress) {
+            if (s.getTryStart() == null) {
+                continue;
+            }
+            int closeOffset = s.getTryStart().getBytecodeOffset();
+            IRBlock primaryBlock = null;
+            int best = -1;
+            for (ExceptionHandler h : handlers) {
+                if (h.getHandlerBlock() == null || cleanupBlocks.contains(h.getHandlerBlock())) {
+                    continue;
+                }
+                int handlerOffset = h.getHandlerBlock().getBytecodeOffset();
+                if (handlerOffset <= closeOffset && handlerOffset > best) {
+                    best = handlerOffset;
+                    primaryBlock = h.getHandlerBlock();
+                }
+            }
+            if (primaryBlock != null) {
+                cleanupBlocks.add(primaryBlock);
+            }
+        }
+        Set<ExceptionHandler> cleanup = new HashSet<>();
+        for (ExceptionHandler h : handlers) {
+            if (h.getHandlerBlock() != null && cleanupBlocks.contains(h.getHandlerBlock())) {
+                cleanup.add(h);
+            }
+        }
+        return cleanup;
+    }
+
+    /** True when the block itself invokes {@code Throwable.addSuppressed} — the suppress handler's signature. */
+    private boolean blockCallsAddSuppressed(IRBlock block) {
+        for (IRInstruction instr : block.getInstructions()) {
+            if (instr instanceof InvokeInstruction && "addSuppressed".equals(((InvokeInstruction) instr).getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** True when an exception handler (transitively) calls {@code Throwable.addSuppressed} — the TWR signature. */
@@ -1909,7 +1993,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * Resources are the locals that are {@code close()}d on the normal path; their declarations are lifted out
      * and referenced from the try header, and the synthetic close calls are dropped.
      */
-    private List<Statement> reconstructTryWithResources(List<Statement> normalPath) {
+    private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches) {
         Set<String> closedVars = new LinkedHashSet<>();
         for (Statement s : normalPath) {
             String closed = findClosedResource(s);
@@ -1962,7 +2046,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         for (VarDeclStmt d : resourceDecls) {
             resources.add(new VarRefExpr(d.getName(), d.getType()));
         }
-        TryCatchStmt tryStmt = new TryCatchStmt(new BlockStmt(body), new ArrayList<>(), null, resources,
+        TryCatchStmt tryStmt = new TryCatchStmt(new BlockStmt(body), catches, null, resources,
                 SourceLocation.UNKNOWN);
 
         List<Statement> result = new ArrayList<>(pre);
