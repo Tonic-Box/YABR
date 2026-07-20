@@ -2035,11 +2035,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName())) {
                 continue; // resource declaration -> lifted into the try header
             }
-            String closed = findClosedResource(s);
-            if (closed != null && resourceNames.contains(closed)) {
-                continue; // synthetic resource close (a bare close() or the `if (r != null) r.close()` finally)
+            Statement stripped = stripSyntheticCloses(s, resourceNames);
+            if (stripped != null) {
+                body.add(stripped);
             }
-            body.add(s);
         }
 
         List<Expression> resources = new ArrayList<>();
@@ -2053,6 +2052,45 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         result.addAll(resourceDecls);
         result.add(tryStmt);
         return result;
+    }
+
+    /**
+     * Removes the synthetic resource {@code close()} calls from {@code s}, returning the statement with only
+     * the closes stripped (or null when the whole statement was nothing but a close - a bare {@code r.close();}
+     * or javac's {@code if (r != null) { r.close(); }} wrapper). Unlike dropping a whole statement that merely
+     * <em>contains</em> a close, this preserves the surrounding code: a close nested in one arm of a user
+     * {@code if} leaves the rest of that arm intact, so a conditionally-throwing body recompiled with the close
+     * inside a branch still recovers its body instead of collapsing to {@code try (r) {}}.
+     */
+    private Statement stripSyntheticCloses(Statement s, Set<String> resourceNames) {
+        if (s instanceof ExprStmt) {
+            String r = closeReceiverName(s);
+            return (r != null && resourceNames.contains(r)) ? null : s;
+        }
+        if (s instanceof BlockStmt) {
+            List<Statement> kept = new ArrayList<>();
+            for (Statement inner : ((BlockStmt) s).getStatements()) {
+                Statement stripped = stripSyntheticCloses(inner, resourceNames);
+                if (stripped != null) {
+                    kept.add(stripped);
+                }
+            }
+            return kept.isEmpty() ? null : new BlockStmt(kept);
+        }
+        if (s instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) s;
+            Statement then = ifStmt.getThenBranch() == null
+                    ? null : stripSyntheticCloses(ifStmt.getThenBranch(), resourceNames);
+            Statement els = ifStmt.getElseBranch() == null
+                    ? null : stripSyntheticCloses(ifStmt.getElseBranch(), resourceNames);
+            if (then == null && els == null) {
+                return null;
+            }
+            ifStmt.setThenBranch(then != null ? then : new BlockStmt());
+            ifStmt.setElseBranch(els);
+            return ifStmt;
+        }
+        return s;
     }
 
     /**
