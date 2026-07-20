@@ -665,7 +665,39 @@ public final class ReachingConditionStructurer {
                 && !desc.caseHeaders().contains(desc.merge())) {
             return desc.merge();
         }
+        if (best == null) {
+            best = caseConvergence(header, desc);
+        }
         return best;
+    }
+
+    /**
+     * The single block that every non-terminal case body leaves to - where the breaking cases converge - or null when
+     * they leave to different blocks or none does. Used only when neither dominance nor the decoder names a merge: a
+     * switch with a single non-terminal case, or one whose merge is a tail shared with sibling switches, still has a
+     * definite break target (the block each surviving case reaches on leaving the switch); this finds it.
+     */
+    private IRBlock caseConvergence(IRBlock header, SwitchDescriptor desc) {
+        IRBlock merge = null;
+        for (IRBlock h : desc.caseHeaders()) {
+            Set<IRBlock> body = subtreeOf(h);
+            for (IRBlock x : body) {
+                for (IRBlock s : x.getSuccessors()) {
+                    if (body.contains(s) || isBackEdge(x, s) || desc.caseHeaders().contains(s)) {
+                        continue;
+                    }
+                    if (!region.contains(s) || isTerminalBlock(s)) {
+                        continue;
+                    }
+                    if (merge == null) {
+                        merge = s;
+                    } else if (merge != s) {
+                        return null;
+                    }
+                }
+            }
+        }
+        return merge;
     }
 
     /** True when {@code block} lies in some case body (is dominated by a case header). */

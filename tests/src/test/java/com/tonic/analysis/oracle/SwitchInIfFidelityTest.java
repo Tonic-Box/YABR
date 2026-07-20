@@ -51,6 +51,32 @@ class SwitchInIfFidelityTest {
         assertBehaviourPreserved(mb.build(), "h");
     }
 
+    /**
+     * {@code int k(int a, int x)} where the switch has a SINGLE non-terminal case whose break target is a tail also
+     * reached from the enclosing {@code if}'s other arm: {@code int r = 0; if (a != 0) { switch (x) { case 5: r = 30;
+     * break; default: return 99; } } else { r = 7; } return r + 1;}. The decoder cannot name the merge (only one case
+     * survives), and it is a shared tail - the break target is found by where the surviving case converges.
+     */
+    @Test
+    void switchWithSingleSurvivingCaseSharesMerge() throws Exception {
+        BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchSharedTail")
+                .publicStaticMethod("k", "(II)I");
+        Label elseArm = mb.newLabel();
+        Label case5 = mb.newLabel();
+        Label dflt = mb.newLabel();
+        Label tail = mb.newLabel();
+
+        mb.iconst(0).istore(2)
+                .iload(0).ifeq(elseArm)
+                .iload(1).lookupswitch(Map.of(5, case5), dflt)
+                .label(case5).iconst(30).istore(2).goto_(tail)
+                .label(dflt).iconst(99).ireturn()
+                .label(elseArm).iconst(7).istore(2).goto_(tail)
+                .label(tail).iload(2).iconst(1).iadd().ireturn();
+
+        assertBehaviourPreserved(mb.build(), "k");
+    }
+
     private static void assertBehaviourPreserved(ClassFile built, String name) throws Exception {
         byte[] bytes = built.write();
         ClassPool pool = TestUtils.emptyPool();
