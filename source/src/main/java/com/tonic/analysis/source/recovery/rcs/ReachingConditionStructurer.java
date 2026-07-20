@@ -1022,16 +1022,20 @@ public final class ReachingConditionStructurer {
         if (targets.size() <= 1) {
             return targets.isEmpty() ? null : targets.iterator().next();
         }
-        // Several distinct non-terminal exits. When each flows on - through a linear exit intermediate (a phi copy
-        // the loop lowers on its normal-exit edge, or a short break-path block) - to one shared continuation, that
-        // continuation is the single break target; every exit reaches it and each intermediate is emitted inline on
-        // its own branch, ending in the break. Genuinely divergent exits (no common continuation) still need the
-        // labeled restructuring the legacy walk performs.
-        IRBlock converged = convergeExits(targets, loopBlocks);
-        if (converged == null) {
+        // Several distinct exits: settle each to its non-terminal continuation (a terminating or inline body region
+        // contributes none). All must reach ONE continuation - the single break target - else the divergence needs
+        // the labeled restructuring the legacy walk performs. No continuation means an endless loop, exits inlined.
+        Set<IRBlock> continuations = new LinkedHashSet<>();
+        for (IRBlock t : targets) {
+            IRBlock end = settleExit(followExitIntermediates(t, loopBlocks), header, loopBlocks);
+            if (end != null && !isTerminalBlock(end)) {
+                continuations.add(end);
+            }
+        }
+        if (continuations.size() > 1) {
             throw new BailToLegacy();
         }
-        return converged;
+        return continuations.isEmpty() ? null : continuations.iterator().next();
     }
 
     private boolean dominatedByNonHeaderLoopBlock(IRBlock v, IRBlock header, Set<IRBlock> loopBlocks) {
@@ -1044,27 +1048,58 @@ public final class ReachingConditionStructurer {
     }
 
     /**
-     * The single block all of {@code targets} reach by following linear exit intermediates, or null when they do not
-     * converge. Each target is walked forward through non-loop blocks that have exactly one predecessor and one
-     * successor (an exit-edge phi copy or a break-path assignment) until it reaches a branch or a join (a block with
-     * more than one predecessor, which is where distinct exits meet); all walks must end at the same block. A walk
-     * that ends on a method terminal does not converge: a return/throw is inlined at each exit, not broken to, and
-     * making it the single break target mis-places the exits' own statements and the terminal itself.
+     * Resolves where an exit settles. A block dominated only by the header (or lying outside the loop) is a real
+     * break continuation and is returned as-is. A block dominated by an INNER loop block is a body region - a guard
+     * or branch deep in the body, {@code if (cond) { ...; ... }} - which is emitted inline on that branch, not broken
+     * to; it settles at the single block on the frontier of its dominance region (where all its paths leave that
+     * region and rejoin the loop's real continuation), returns {@code null} when that region is self-contained (every
+     * path returns/throws within it), or throws when the region itself leaves to several distinct continuations.
      */
-    private IRBlock convergeExits(Set<IRBlock> targets, Set<IRBlock> loopBlocks) {
-        IRBlock converged = null;
-        for (IRBlock t : targets) {
-            IRBlock end = followExitIntermediates(t, loopBlocks);
-            if (isTerminalBlock(end)) {
+    private IRBlock settleExit(IRBlock end, IRBlock header, Set<IRBlock> loopBlocks) {
+        while (dominatedByNonHeaderLoopBlock(end, header, loopBlocks)) {
+            Set<IRBlock> frontier = regionFrontier(end, loopBlocks);
+            if (frontier.isEmpty()) {
                 return null;
             }
-            if (converged == null) {
-                converged = end;
-            } else if (converged != end) {
-                return null;
+            if (frontier.size() > 1) {
+                throw new BailToLegacy();
+            }
+            IRBlock next = frontier.iterator().next();
+            if (loopBlocks.contains(next) || next == end) {
+                throw new BailToLegacy();
+            }
+            end = next;
+        }
+        return end;
+    }
+
+    /**
+     * The frontier of {@code entry}'s dominance region: the blocks reached from that region (following non-back
+     * edges) that {@code entry} does not dominate - where the region rejoins code shared with the rest of the method.
+     * A loop block on the frontier is kept so the caller can decline an exit region that re-enters the loop.
+     */
+    private Set<IRBlock> regionFrontier(IRBlock entry, Set<IRBlock> loopBlocks) {
+        Set<IRBlock> region = new HashSet<>();
+        Set<IRBlock> frontier = new LinkedHashSet<>();
+        Deque<IRBlock> work = new ArrayDeque<>();
+        work.add(entry);
+        region.add(entry);
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            for (IRBlock s : b.getSuccessors()) {
+                if (isBackEdge(b, s)) {
+                    continue;
+                }
+                if (!loopBlocks.contains(s) && dom.dominates(entry, s)) {
+                    if (region.add(s)) {
+                        work.add(s);
+                    }
+                } else {
+                    frontier.add(s);
+                }
             }
         }
-        return converged;
+        return frontier;
     }
 
     /**
