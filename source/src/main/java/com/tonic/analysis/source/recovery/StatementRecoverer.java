@@ -644,7 +644,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             IRBlock startBlock = (tryStart != null) ? tryStart : entry;
             boolean hasFinally = false;
             for (ExceptionHandler h : outerHandlers) {
-                if (handlerRethrows(h)) {
+                if (handlerRethrows(h) && !handlerThrowsFreshException(h)) {
                     hasFinally = true;
                     break;
                 }
@@ -2336,9 +2336,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
-        boolean hasFinally = handlerRethrows(mainHandler);
+        boolean hasFinally = handlerRethrows(mainHandler) && !handlerThrowsFreshException(mainHandler);
         for (ExceptionHandler h : sameRegionHandlers) {
-            if (handlerRethrows(h)) {
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h)) {
                 hasFinally = true;
             }
         }
@@ -2444,6 +2444,42 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             work.addAll(b.getSuccessors());
         }
         return false;
+    }
+
+    /**
+     * True when the handler rethrows a freshly constructed exception rather than the caught one - a
+     * {@code catch (E e) { throw new X(...); }} that wraps and rethrows. Its terminal {@code athrow} throws a value
+     * produced by a {@code new} in the handler, not the caught exception, so it is a catch clause, not a finally,
+     * even though {@link #handlerRethrows} (which only checks for a trailing {@code athrow}) reports true. Used to
+     * keep such a body on the reaching-condition engine instead of routing it to the legacy finally walk.
+     */
+    private boolean handlerThrowsFreshException(ExceptionHandler h) {
+        if (h == null || h.getHandlerBlock() == null) {
+            return false;
+        }
+        Set<Value> freshValues = new HashSet<>();
+        Value thrown = null;
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(h.getHandlerBlock());
+        int budget = 60;
+        while (!work.isEmpty() && budget-- > 0) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            for (IRInstruction ins : b.getInstructions()) {
+                if (ins instanceof NewInstruction && ins.getResult() != null) {
+                    freshValues.add(ins.getResult());
+                }
+            }
+            IRInstruction term = b.getTerminator();
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                thrown = ((SimpleInstruction) term).getOperand();
+            }
+            work.addAll(b.getSuccessors());
+        }
+        return thrown != null && freshValues.contains(thrown);
     }
 
     /**
