@@ -639,9 +639,10 @@ public final class ReachingConditionStructurer {
 
     /**
      * The immediate post-switch join that bounds the case bodies: the switch header's dominator-tree child, nearest
-     * in reverse-postorder, that a case body reaches by an ordinary edge. The decoder's own merge is where control
-     * resumes after the whole opaque switch, which inside a loop is the loop's continuation or exit - too far to
-     * bound one case; this is the nearer point where the breaking cases meet. Null when no such join exists.
+     * in reverse-postorder, that a case body reaches by an ordinary edge. When the switch is enclosed in an {@code if}
+     * whose merge the cases share, that join is dominated by the {@code if}, not the switch, so no dominator-child
+     * qualifies; the decoder's own merge (computed by reachability, not dominance) then names it. Null when no such
+     * join exists (every case returns/throws or falls through).
      */
     private IRBlock switchMerge(IRBlock header, SwitchDescriptor desc) {
         IRBlock best = null;
@@ -659,6 +660,10 @@ public final class ReachingConditionStructurer {
             if (fromCase && (best == null || rpoIndex.get(c) < rpoIndex.get(best))) {
                 best = c;
             }
+        }
+        if (best == null && desc.merge() != null && region.contains(desc.merge())
+                && !desc.caseHeaders().contains(desc.merge())) {
+            return desc.merge();
         }
         return best;
     }
