@@ -343,6 +343,24 @@ public final class ReachingConditionStructurer {
                 work.add(s);
             }
         }
+        // Absorb a boundary terminal: a return/throw just past a stop block whose returned value is defined inside
+        // the region and which the entry dominates. javac compiles `try { return foo(); }` with the return one
+        // block past the protected range, so the region's own terminal lands on the far side of the stop; pulling
+        // it in lets the region structure `return foo()` natively instead of declining (the terminal has no
+        // successors, so this only adds that one block). Repeated to chain through a short return-value tail.
+        boolean absorbed = true;
+        while (absorbed) {
+            absorbed = false;
+            for (IRBlock b : new ArrayList<>(region)) {
+                for (IRBlock s : b.getSuccessors()) {
+                    if (!region.contains(s) && !isBackEdge(b, s) && isTerminalBlock(s)
+                            && terminalDependsOnRegion(s) && dom.dominates(entry, s)) {
+                        region.add(s);
+                        absorbed = true;
+                    }
+                }
+            }
+        }
         // Irreducible flow (a cycle that is not a dominance back edge) cannot be structured here.
         if (hasNonBackCycle(entry, new HashSet<>(), new HashSet<>())) {
             return false;
