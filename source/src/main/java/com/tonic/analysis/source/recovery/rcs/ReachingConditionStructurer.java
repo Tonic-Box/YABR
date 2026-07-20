@@ -29,12 +29,18 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.BinaryOp;
+import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
 import com.tonic.analysis.ssa.ir.BranchInstruction;
+import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.ir.SimpleInstruction;
 import com.tonic.analysis.ssa.ir.SimpleOp;
+import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.ssa.ir.SwitchInstruction;
+import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
@@ -177,7 +183,7 @@ public final class ReachingConditionStructurer {
         LoopAnalysis loops = context.getLoopAnalysis();
         if (loops != null && loops.isLoopHeader(b)) {
             IRBlock breakTarget = findBreakTarget(b);
-            context.pushLoop(b, b, breakTarget);
+            context.pushLoop(b, b, breakTarget, inductionLatch(b));
             validateChildren(b);
             context.popLoop();
             if (breakTarget != null && region.contains(breakTarget)) {
@@ -238,6 +244,9 @@ public final class ReachingConditionStructurer {
                     continue;
                 }
                 if (context.classifyLoopJump(s) != null || context.classifySwitchJump(s) != null) {
+                    continue;
+                }
+                if (isCaseContinueToLatch(x, s)) {
                     continue;
                 }
                 if (isTerminalBlock(s)) {
@@ -570,14 +579,25 @@ public final class ReachingConditionStructurer {
      */
     private List<Statement> emitSwitch(IRBlock b) {
         SwitchDescriptor desc = switchDescriptor(b);
+        IRBlock merge = switchMerge(b, desc);
         List<Statement> own = bridge.recoverSimpleBlock(b);
         if (!duplicating) {
             bridge.markRegionBlockProcessed(b, own);
         }
-        context.pushSwitch(b, switchMerge(b, desc), desc.caseHeaders());
+        IRBlock latch = context.innermostLoopLatch();
+        context.pushSwitch(b, merge, desc.caseHeaders());
         List<SwitchCase> cases = new ArrayList<>();
         for (SwitchDescriptor.CaseSpec spec : desc.cases()) {
-            List<Statement> body = spec.header() == null ? new ArrayList<>() : emit(spec.header());
+            List<Statement> body;
+            if (spec.header() != null && spec.header() == latch && latch != merge) {
+                // The case header IS the enclosing loop's for-update latch: an empty step-running continue case the
+                // recompiler collapsed onto the update block. Emit a bare continue; the increment is emitted once by
+                // the loop as the for-update (below, the latch is skipped so it is not also emitted as a case body).
+                body = new ArrayList<>();
+                body.add(new ContinueStmt());
+            } else {
+                body = spec.header() == null ? new ArrayList<>() : emit(spec.header());
+            }
             cases.add(buildSwitchCase(spec, body, caseFallsThrough(spec, desc)));
         }
         context.popSwitch();
@@ -586,6 +606,9 @@ public final class ReachingConditionStructurer {
         stamp(switchStmt, b);
         out.add(switchStmt);
         for (IRBlock c : childrenInRpo(b)) {
+            if (c == latch && latch != merge) {
+                continue;
+            }
             out.addAll(emit(c));
         }
         return out;
@@ -674,7 +697,8 @@ public final class ReachingConditionStructurer {
         }
         List<Statement> headerStmts = new ArrayList<>(bridge.recoverSimpleBlock(header));
         bridge.markRegionBlockProcessed(header, headerStmts);
-        context.pushLoop(header, header, breakTarget);
+        IRBlock latch = inductionLatch(header);
+        context.pushLoop(header, header, breakTarget, latch);
 
         // Prefer while(cond): a pure conditional header with exactly one edge staying in the loop lifts
         // that test into the loop condition (rather than wrapping the body in `if (exit) break;`), which
@@ -712,7 +736,15 @@ public final class ReachingConditionStructurer {
         }
         context.popLoop();
         stripTrailingContinue(body);
-        Statement loopStmt = buildLoop(whileCond, body, lifted, context.getLabel(header));
+        if (latch != null && !context.isProcessed(latch)) {
+            // A counted loop whose for-update latch was not emitted in the body sequence - a switch turned its
+            // step-running continue case into a bare `continue` and skipped the latch. Emit its increment once, as
+            // the loop's trailing induction step, so buildLoop lifts it to the for-update.
+            List<Statement> latchStmts = new ArrayList<>(bridge.recoverSimpleBlock(latch));
+            bridge.markRegionBlockProcessed(latch, latchStmts);
+            body.addAll(latchStmts);
+        }
+        Statement loopStmt = buildLoop(whileCond, body, lifted, context.getLabel(header), latch != null);
         stamp(loopStmt, header);
         out.add(loopStmt);
         // Emit a loop exit block (the terminal return/throw the header falls to, or the break target) as the
@@ -749,15 +781,84 @@ public final class ReachingConditionStructurer {
     }
 
     /**
+     * The loop's {@code for}-update latch: the header's SOLE back-edge predecessor when it holds a unit induction
+     * step ({@code i = i +/- 1}), else null. Requiring the update to be the only back-edge source distinguishes a
+     * genuine counted loop - where every path (including any {@code continue}) routes through the update before the
+     * header - from a {@code while} whose {@code continue} jumps straight to the header and skips a tail increment;
+     * the latter is not a {@code for} and keeps its {@code while}. A switch case whose {@code continue} lands on the
+     * latch (rather than on the switch's own merge/tail) is a step-running {@code continue} and is recovered as one.
+     */
+    private IRBlock inductionLatch(IRBlock header) {
+        IRBlock latch = null;
+        for (IRBlock p : header.getPredecessors()) {
+            if (isBackEdge(p, header)) {
+                if (latch != null) {
+                    return null;
+                }
+                latch = p;
+            }
+        }
+        if (latch != null && latch != header && isUnitInductionUpdate(latch)) {
+            return latch;
+        }
+        return null;
+    }
+
+    /** True when {@code b} stores {@code S = X +/- 1} for a slot {@code S} it also loads (the induction read). */
+    private boolean isUnitInductionUpdate(IRBlock b) {
+        for (IRInstruction ins : b.getInstructions()) {
+            if (!(ins instanceof StoreLocalInstruction)) {
+                continue;
+            }
+            StoreLocalInstruction st = (StoreLocalInstruction) ins;
+            Value v = st.getValue();
+            if (!(v instanceof SSAValue) || !(((SSAValue) v).getDefinition() instanceof BinaryOpInstruction)) {
+                continue;
+            }
+            BinaryOpInstruction bo = (BinaryOpInstruction) ((SSAValue) v).getDefinition();
+            if (bo.getOp() != BinaryOp.ADD && bo.getOp() != BinaryOp.SUB) {
+                continue;
+            }
+            if (!isConstOne(bo.getLeft()) && !isConstOne(bo.getRight())) {
+                continue;
+            }
+            // SSA routes the increment's input operand through the loop phi, so corroborate that the stored slot is
+            // the one being incremented by a load of the same slot in this block (the pre-increment induction read).
+            int slot = st.getLocalIndex();
+            for (IRInstruction other : b.getInstructions()) {
+                if (other instanceof LoadLocalInstruction && ((LoadLocalInstruction) other).getLocalIndex() == slot) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isConstOne(Value v) {
+        if (!(v instanceof SSAValue)) {
+            return false;
+        }
+        IRInstruction def = ((SSAValue) v).getDefinition();
+        if (!(def instanceof ConstantInstruction)) {
+            return false;
+        }
+        Object c = ((ConstantInstruction) def).getConstant();
+        return c instanceof IntConstant && Integer.valueOf(1).equals(((IntConstant) c).getValue());
+    }
+
+    /**
      * Builds a {@code for} when the lifted-condition loop body ends in an induction step ({@code i++} /
-     * {@code i = i +/- c}) and contains no {@code continue} - moving the step to the update slot pins its
-     * position ({@code for (; c; i++) { body }} equals {@code while (c) { body; i++ }}), which is a
-     * round-trip fixed point where a body-tail increment is not. A {@code continue} would run the update
-     * in a {@code for} but skip it in a {@code while}, so those keep the {@code while}. Otherwise a
+     * {@code i = i +/- c}) - moving the step to the update slot pins its position ({@code for (; c; i++) { body }}
+     * equals {@code while (c) { body; i++ }}), which is a round-trip fixed point where a body-tail increment is not.
+     * A {@code continue} would run the update in a {@code for} but skip it in a {@code while}, so a plain loop with a
+     * {@code continue} keeps its {@code while}. When {@code forLatch} holds, the loop is counted (its sole back edge
+     * is the induction update, so every {@code continue} runs it) and lifts to {@code for} even with {@code continue}s
+     * present - which is the only shape a switch case's step-running {@code continue} can take. Otherwise a
      * {@code while}.
      */
-    private Statement buildLoop(Expression cond, List<Statement> body, boolean lifted, String selfLabel) {
-        if (lifted && !body.isEmpty() && !continuesThisLoop(body, selfLabel, false)) {
+    private Statement buildLoop(Expression cond, List<Statement> body, boolean lifted, String selfLabel,
+                               boolean forLatch) {
+        if (lifted && !body.isEmpty() && (forLatch || !continuesThisLoop(body, selfLabel, false))) {
             Expression update = asInductionStep(body.get(body.size() - 1));
             if (update != null) {
                 List<Statement> forBody = new ArrayList<>(body.subList(0, body.size() - 1));
@@ -1530,7 +1631,29 @@ public final class ReachingConditionStructurer {
             // edge carries only its phi assignments, if any.
             return new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
         }
+        if (isCaseContinueToLatch(from, target)) {
+            // A switch case body jumps to the enclosing counted loop's for-update latch, past the switch's own
+            // post-body tail (the merge). That is a step-running `continue`: in the emitted `for` it runs the
+            // update, matching the source. Scoped to a case body (dominated by a case header) so the merge/tail's
+            // own ordinary fall-through to the latch stays an inlined step, not a spurious continue.
+            List<Statement> out = new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
+            out.add(new ContinueStmt());
+            return out;
+        }
         return tailInline(target);
+    }
+
+    /**
+     * True when the edge {@code from -> target} is a switch case body jumping to the enclosing counted loop's
+     * for-update latch, past the switch's own merge/tail: a step-running {@code continue}. Scoped to a case body
+     * (dominated by a case header of the innermost switch) and to a latch distinct from that switch's merge, so an
+     * ordinary fall-through from the merge/tail to the update is not mistaken for a continue.
+     */
+    private boolean isCaseContinueToLatch(IRBlock from, IRBlock target) {
+        IRBlock latch = context.innermostLoopLatch();
+        IRBlock merge = context.innermostSwitchMerge();
+        return latch != null && target == latch && merge != null && merge != latch
+                && context.inInnermostSwitchCase(from);
     }
 
     private List<Statement> loopJump(IRBlock from, IRBlock target) {

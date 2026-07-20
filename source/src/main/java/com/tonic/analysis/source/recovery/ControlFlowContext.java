@@ -206,11 +206,13 @@ public class ControlFlowContext {
         final IRBlock header;
         final IRBlock continueTarget;
         final IRBlock exit;
+        final IRBlock latch;
         final int depth;
-        LoopFrame(IRBlock header, IRBlock continueTarget, IRBlock exit, int depth) {
+        LoopFrame(IRBlock header, IRBlock continueTarget, IRBlock exit, IRBlock latch, int depth) {
             this.header = header;
             this.continueTarget = continueTarget;
             this.exit = exit;
+            this.latch = latch;
             this.depth = depth;
         }
     }
@@ -262,7 +264,18 @@ public class ControlFlowContext {
     }
 
     public void pushLoop(IRBlock header, IRBlock continueTarget, IRBlock exit) {
-        loopStack.push(new LoopFrame(header, continueTarget, exit, scopeDepth()));
+        loopStack.push(new LoopFrame(header, continueTarget, exit, null, scopeDepth()));
+    }
+
+    /**
+     * As {@link #pushLoop(IRBlock, IRBlock, IRBlock)} but records the loop's {@code for}-update latch (the unit
+     * induction step that back-edges to the header). The latch is exposed via {@link #innermostLoopLatch()} so a
+     * switch case whose {@code continue} jumps past the switch's own tail to the update can be recognized; it is
+     * deliberately NOT a {@link #classifyLoopJump} continue-target, since a plain loop body reaches its update by
+     * ordinary fall-through and must not be rewritten into explicit {@code continue}s.
+     */
+    public void pushLoop(IRBlock header, IRBlock continueTarget, IRBlock exit, IRBlock latch) {
+        loopStack.push(new LoopFrame(header, continueTarget, exit, latch, scopeDepth()));
     }
 
     public void popLoop() {
@@ -285,6 +298,36 @@ public class ControlFlowContext {
     public IRBlock innermostLoopExit() {
         LoopFrame f = loopStack.peek();
         return f == null ? null : f.exit;
+    }
+
+    /** The {@code for}-update latch of the innermost enclosing loop, or null when none / not a counted loop. */
+    public IRBlock innermostLoopLatch() {
+        LoopFrame f = loopStack.peek();
+        return f == null ? null : f.latch;
+    }
+
+    /** The merge of the innermost enclosing switch, or null when no switch encloses. */
+    public IRBlock innermostSwitchMerge() {
+        SwitchFrame f = switchStack.peek();
+        return f == null ? null : f.merge;
+    }
+
+    /**
+     * True when {@code block} lies in a case body of the innermost enclosing switch (is dominated by one of its case
+     * headers). Distinguishes a case-body edge to the loop latch (a {@code continue} that skips the switch's tail)
+     * from the switch merge's own fall-through to the latch (the merge is dominated by no single case header).
+     */
+    public boolean inInnermostSwitchCase(IRBlock block) {
+        SwitchFrame f = switchStack.peek();
+        if (f == null) {
+            return false;
+        }
+        for (IRBlock h : f.caseHeaders) {
+            if (dominatorTree.dominates(h, block)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

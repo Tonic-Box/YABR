@@ -398,7 +398,9 @@ public class StatementLowerer {
             ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
-        ctx.pushLoop(null, exitBlock, exitBlock);
+        // A switch is a break-only scope: an unlabeled break leaves it at exitBlock, but an unlabeled continue must
+        // pass through to the enclosing loop's update (null continue-target keeps the resolver searching outward).
+        ctx.pushLoop(null, null, exitBlock);
 
         for (int i = 0; i < cases.size(); i++) {
             ctx.setCurrentBlock(caseBlocks[i]);

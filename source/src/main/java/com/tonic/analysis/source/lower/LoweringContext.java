@@ -320,7 +320,10 @@ public class LoweringContext {
     }
 
     /**
-     * Gets the continue target for the current or labeled loop.
+     * Gets the continue target for the current or labeled loop. An unlabeled {@code continue} skips break-only
+     * scopes (a {@code switch}, whose frame carries a null continue-target) and resolves to the nearest enclosing
+     * loop's continue-target, matching Java: a {@code continue} inside a {@code switch} continues the loop, it does
+     * not leave the switch at its break target.
      */
     public IRBlock getContinueTarget(String label) {
         if (label != null) {
@@ -330,10 +333,12 @@ public class LoweringContext {
             }
             return targets.continueTarget();
         }
-        if (loopStack.isEmpty()) {
-            throw new LoweringException("Continue outside of loop");
+        for (LoopTargets targets : loopStack) {
+            if (targets.continueTarget() != null) {
+                return targets.continueTarget();
+            }
         }
-        return loopStack.peek().continueTarget();
+        throw new LoweringException("Continue outside of loop");
     }
 
     /**
