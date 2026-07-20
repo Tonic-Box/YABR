@@ -1166,9 +1166,15 @@ public class Parser {
         if (match(TokenType.LPAREN)) {
             do {
                 if (check(TokenType.RPAREN)) break;
-                VarDeclStmt decl = parseResource();
-                if (decl.getInitializer() != null) {
-                    resources.add(decl.getInitializer());
+                if (check(TokenType.FINAL) || (check(TokenType.IDENTIFIER) && looksLikeTypeDeclaration())) {
+                    VarDeclStmt decl = parseResource();
+                    if (decl.getInitializer() != null) {
+                        resources.add(decl.getInitializer());
+                    }
+                } else {
+                    // A concise (Java 9+) resource: an existing effectively-final variable or field access used
+                    // directly as the resource, e.g. `try (in)`, rather than a declaration `try (Type in = init)`.
+                    resources.add(parseExpression());
                 }
             } while (match(TokenType.SEMICOLON));
             consume(TokenType.RPAREN, "Expected ')' after resources");

@@ -471,6 +471,10 @@ public class StatementLowerer {
     }
 
     private void lowerTryCatch(TryCatchStmt tryCatch) {
+        if (!tryCatch.getResources().isEmpty()) {
+            lowerTryWithResources(tryCatch);
+            return;
+        }
         IRBlock tryBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
         // Normal exits (try-success, end-of-catch) flow THROUGH the finally so its body runs on every normal path -
@@ -604,6 +608,159 @@ public class StatementLowerer {
         }
 
         ctx.setCurrentBlock(exitBlock);
+    }
+
+    /**
+     * Desugars a try-with-resources into javac's modern pattern so it recompiles to bytecode the decompiler folds
+     * back into {@code try (r) { ... }}: the body runs in a protected region, the resource is closed on the normal
+     * path (and before every return, via the finally stack), and a cleanup handler closes the resource - chaining a
+     * close failure into the in-flight exception with {@code Throwable.addSuppressed} - then rethrows. Several
+     * resources nest right to left; a try-with-resources that also has its own catch/finally wraps the resource
+     * management in an ordinary try so the existing lowering handles the catch/finally around it.
+     */
+    private void lowerTryWithResources(TryCatchStmt tryCatch) {
+        List<Expression> resources = tryCatch.getResources();
+        if (!tryCatch.getCatches().isEmpty() || tryCatch.getFinallyBlock() != null) {
+            TryCatchStmt inner = new TryCatchStmt(tryCatch.getTryBlock(), new java.util.ArrayList<>(), null,
+                    new java.util.ArrayList<>(resources), tryCatch.getLocation());
+            java.util.List<Statement> wrapped = new java.util.ArrayList<>();
+            wrapped.add(inner);
+            TryCatchStmt outer = new TryCatchStmt(new BlockStmt(wrapped), tryCatch.getCatches(),
+                    tryCatch.getFinallyBlock(), new java.util.ArrayList<>(), tryCatch.getLocation());
+            lowerTryCatch(outer);
+            return;
+        }
+        lowerResource(resources, 0, tryCatch.getTryBlock());
+    }
+
+    private void lowerResource(List<Expression> resources, int idx, Statement innerBody) {
+        if (idx >= resources.size()) {
+            lower(innerBody);
+            return;
+        }
+        Expression resource = resources.get(idx);
+        IRBlock tryBlock = ctx.createBlock();
+        IRBlock closeBlock = ctx.createBlock();
+        IRBlock handlerBlock = ctx.createBlock();
+        IRBlock exitBlock = ctx.createBlock();
+
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(tryBlock));
+        ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+
+        ctx.setCurrentBlock(tryBlock);
+        int blocksBefore = ctx.getIrMethod().getBlocks().size();
+        finallyStack.push(closeCall(resource));
+        lowerResource(resources, idx + 1, innerBody);
+        finallyStack.pop();
+        IRBlock tryEnd = ctx.getCurrentBlock();
+        if (ctx.getCurrentBlock().getTerminator() == null) {
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(closeBlock));
+            ctx.getCurrentBlock().addSuccessor(closeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        }
+
+        Set<IRBlock> tryBodyBlocks = new LinkedHashSet<>();
+        tryBodyBlocks.add(tryBlock);
+        List<IRBlock> allBlocks = ctx.getIrMethod().getBlocks();
+        for (int i = blocksBefore; i < allBlocks.size(); i++) {
+            tryBodyBlocks.add(allBlocks.get(i));
+        }
+
+        ctx.setCurrentBlock(closeBlock);
+        lower(closeCall(resource));
+        if (ctx.getCurrentBlock().getTerminator() == null) {
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
+            ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        }
+
+        tryBlock.addSuccessor(handlerBlock, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+        ReferenceType throwableType = new ReferenceType("java/lang/Throwable");
+        String primaryName = "$twrPrimary$" + idx;
+        String suppressedName = "$twrSuppressed$" + idx;
+        com.tonic.analysis.source.ast.type.SourceType throwableSrc =
+                new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Throwable");
+
+        IRBlock suppressTryBlock = ctx.createBlock();
+        IRBlock suppressCatchBlock = ctx.createBlock();
+        IRBlock throwBlock = ctx.createBlock();
+
+        ctx.setCurrentBlock(handlerBlock);
+        SSAValue primary = ctx.newValue(throwableType);
+        handlerBlock.addInstruction(SimpleInstruction.createCatch(primary));
+        ctx.declareLocal(primaryName, throwableType, false);
+        ctx.setVariable(primaryName, primary);
+        handlerBlock.addInstruction(SimpleInstruction.createGoto(suppressTryBlock));
+        handlerBlock.addSuccessor(suppressTryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+
+        // Close the resource, chaining a close failure into the in-flight exception, then rethrow. The close is the
+        // only statement protected by the suppress handler; the rethrow (throwBlock) sits outside it and is reached
+        // both when the close succeeds and after a close failure is suppressed - the javac layout the decompiler
+        // folds back to try-with-resources. Built directly as blocks so the primary stays a plain slot live to the
+        // shared rethrow.
+        ctx.setCurrentBlock(suppressTryBlock);
+        lower(closeCall(resource));
+        IRBlock suppressTryEnd = ctx.getCurrentBlock();
+        if (ctx.getCurrentBlock().getTerminator() == null) {
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(throwBlock));
+            ctx.getCurrentBlock().addSuccessor(throwBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        }
+        Set<IRBlock> suppressBlocks = new LinkedHashSet<>();
+        suppressBlocks.add(suppressTryBlock);
+
+        suppressTryBlock.addSuccessor(suppressCatchBlock, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+        ctx.setCurrentBlock(suppressCatchBlock);
+        SSAValue suppressed = ctx.newValue(throwableType);
+        suppressCatchBlock.addInstruction(SimpleInstruction.createCatch(suppressed));
+        ctx.declareLocal(suppressedName, throwableType, false);
+        ctx.setVariable(suppressedName, suppressed);
+        Expression addSuppressed = new com.tonic.analysis.source.ast.expr.MethodCallExpr(
+                new com.tonic.analysis.source.ast.expr.VarRefExpr(primaryName, throwableSrc), "addSuppressed",
+                "java/lang/Throwable",
+                java.util.List.of(new com.tonic.analysis.source.ast.expr.VarRefExpr(suppressedName, throwableSrc)),
+                false, null);
+        lower(new ExprStmt(addSuppressed));
+        if (ctx.getCurrentBlock().getTerminator() == null) {
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(throwBlock));
+            ctx.getCurrentBlock().addSuccessor(throwBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        }
+        ExceptionHandler suppressHandler =
+                new ExceptionHandler(suppressTryBlock, suppressTryEnd, suppressCatchBlock, throwableType);
+        suppressHandler.setTryBlocks(suppressBlocks);
+        ctx.getIrMethod().addExceptionHandler(suppressHandler);
+
+        ctx.setCurrentBlock(throwBlock);
+        throwBlock.addInstruction(SimpleInstruction.createThrow(ctx.getVariable(primaryName)));
+
+        ExceptionHandler handler = new ExceptionHandler(tryBlock, tryEnd, handlerBlock, throwableType);
+        handler.setTryBlocks(tryBodyBlocks);
+        ctx.getIrMethod().addExceptionHandler(handler);
+
+        ctx.setCurrentBlock(exitBlock);
+    }
+
+    /** A {@code resource.close()} statement, with a fresh receiver copy so it can be emitted on several paths. */
+    private Statement closeCall(Expression resource) {
+        return new ExprStmt(new com.tonic.analysis.source.ast.expr.MethodCallExpr(copyResource(resource), "close",
+                resourceOwner(resource), new java.util.ArrayList<>(), false, null));
+    }
+
+    private String resourceOwner(Expression resource) {
+        com.tonic.analysis.source.ast.type.SourceType type = resource.getType();
+        if (type != null) {
+            IRType ir = type.toIRType();
+            if (ir instanceof ReferenceType) {
+                return ((ReferenceType) ir).getInternalName();
+            }
+        }
+        return "java/lang/AutoCloseable";
+    }
+
+    private Expression copyResource(Expression resource) {
+        if (resource instanceof com.tonic.analysis.source.ast.expr.VarRefExpr) {
+            com.tonic.analysis.source.ast.expr.VarRefExpr ref =
+                    (com.tonic.analysis.source.ast.expr.VarRefExpr) resource;
+            return new com.tonic.analysis.source.ast.expr.VarRefExpr(ref.getName(), ref.getType());
+        }
+        return resource;
     }
 
     private void lowerSynchronized(SynchronizedStmt syncStmt) {

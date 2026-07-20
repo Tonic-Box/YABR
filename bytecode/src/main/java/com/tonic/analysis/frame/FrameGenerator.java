@@ -255,7 +255,15 @@ public class FrameGenerator {
         processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
                 instructionList, offsetToIndex, constPool);
 
-        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
+        // Set up and scan each handler in turn, ordered by the start of the code it protects. A handler nested in
+        // another handler's code (try-with-resources closes its resource in an exception path that is itself
+        // protected) only learns its entry locals once the enclosing handler's code has been scanned, so the
+        // enclosing handler - which protects earlier code and therefore has the lower protected-region start - must
+        // be processed first. A one-shot merge lattice cannot recover a slot once a handler was defaulted to empty
+        // and that empty propagated, so the order, not a re-merge, is what keeps the nested handler's locals live.
+        List<ExceptionTableEntry> orderedHandlers = new ArrayList<>(codeAttr.getExceptionTable());
+        orderedHandlers.sort(java.util.Comparator.comparingInt(ExceptionTableEntry::getStartPc));
+        for (ExceptionTableEntry entry : orderedHandlers) {
             int handlerPc = entry.getHandlerPc();
 
             // Handler entry locals = the local state merged across the protected region (accumulated during the scan),
@@ -277,10 +285,9 @@ public class FrameGenerator {
                 states.put(handlerPc, handlerState);
             }
             worklist.add(new WorkItem(handlerPc, handlerState));
+            processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
+                    instructionList, offsetToIndex, constPool);
         }
-
-        processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
-                instructionList, offsetToIndex, constPool);
 
         // Dead-code frame targets: an unreachable block start (e.g. a nop a structural edit leaves after a
         // return) still requires a frame, but the worklist never reaches it so it has no simulated state. It
