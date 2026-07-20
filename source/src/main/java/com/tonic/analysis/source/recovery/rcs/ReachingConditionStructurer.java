@@ -214,9 +214,10 @@ public final class ReachingConditionStructurer {
         if (merge != null && merge == context.innermostLoopExit()) {
             throw new BailToLegacy();
         }
+        Set<IRBlock> enclosing = context.switchBoundaries();
         context.pushSwitch(b, merge, desc.caseHeaders());
         for (SwitchDescriptor.CaseSpec spec : desc.cases()) {
-            if (spec.header() != null) {
+            if (spec.header() != null && !resolvesToEnclosingBoundary(spec.header(), enclosing)) {
                 requireCaseExitsPlaceable(spec);
                 validate(spec.header());
             }
@@ -585,6 +586,7 @@ public final class ReachingConditionStructurer {
             bridge.markRegionBlockProcessed(b, own);
         }
         IRBlock latch = context.innermostLoopLatch();
+        Set<IRBlock> enclosing = context.switchBoundaries();
         context.pushSwitch(b, merge, desc.caseHeaders());
         List<SwitchCase> cases = new ArrayList<>();
         for (SwitchDescriptor.CaseSpec spec : desc.cases()) {
@@ -595,6 +597,16 @@ public final class ReachingConditionStructurer {
                 // the loop as the for-update (below, the latch is skipped so it is not also emitted as a case body).
                 body = new ArrayList<>();
                 body.add(new ContinueStmt());
+            } else if (spec.header() != null && resolvesToEnclosingBoundary(spec.header(), enclosing)) {
+                // The target is an enclosing switch's boundary (its next case or merge): this switch is nested in an
+                // outer case that falls through to it. The outer switch owns that block; structuring it here would
+                // nest the outer cases inside this switch. A default is omitted entirely - control falls out of the
+                // switch to the enclosing case, which is what javac emits and a round-trip fixed point (an empty
+                // default instead recompiles to a distinct goto block that recovers differently).
+                if (spec.isDefault()) {
+                    continue;
+                }
+                body = new ArrayList<>();
             } else {
                 body = spec.header() == null ? new ArrayList<>() : emit(spec.header());
             }
@@ -1036,6 +1048,37 @@ public final class ReachingConditionStructurer {
             throw new BailToLegacy();
         }
         return continuations.isEmpty() ? null : continuations.iterator().next();
+    }
+
+    /**
+     * True when {@code header}, followed through a chain of pure {@code goto} connector blocks, lands on a boundary of
+     * an enclosing {@code switch}. javac routes a nested switch's non-matching path straight to the enclosing case,
+     * while the recompiler inserts an empty {@code goto} block on that edge; resolving the chain makes both recover
+     * to the same fall-through, a round-trip fixed point.
+     */
+    private boolean resolvesToEnclosingBoundary(IRBlock header, Set<IRBlock> enclosing) {
+        IRBlock b = header;
+        Set<IRBlock> seen = new HashSet<>();
+        while (seen.add(b)) {
+            if (enclosing.contains(b)) {
+                return true;
+            }
+            if (b.getSuccessors().size() != 1 || !isGotoOnly(b)) {
+                return false;
+            }
+            b = b.getSuccessors().iterator().next();
+        }
+        return false;
+    }
+
+    /** True when {@code b} carries no statements - every instruction is an unconditional {@code goto}. */
+    private boolean isGotoOnly(IRBlock b) {
+        for (IRInstruction ins : b.getInstructions()) {
+            if (!(ins instanceof SimpleInstruction) || ((SimpleInstruction) ins).getOp() != SimpleOp.GOTO) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean dominatedByNonHeaderLoopBlock(IRBlock v, IRBlock header, Set<IRBlock> loopBlocks) {

@@ -313,6 +313,23 @@ public class ControlFlowContext {
     }
 
     /**
+     * The boundaries - case headers and merge - of every currently enclosing {@code switch}. Captured before a
+     * nested switch is pushed, this identifies the targets that belong to an OUTER switch (its next case reached by
+     * fall-through, or its merge): a nested switch must emit such a target as an empty fall-through and not claim it
+     * as one of its own case bodies, else the outer cases nest wrongly inside the inner switch.
+     */
+    public Set<IRBlock> switchBoundaries() {
+        Set<IRBlock> boundaries = new HashSet<>();
+        for (SwitchFrame f : switchStack) {
+            if (f.merge != null) {
+                boundaries.add(f.merge);
+            }
+            boundaries.addAll(f.caseHeaders);
+        }
+        return boundaries;
+    }
+
+    /**
      * True when {@code block} lies in a case body of the innermost enclosing switch (is dominated by one of its case
      * headers). Distinguishes a case-body edge to the loop latch (a {@code continue} that skips the switch's tail)
      * from the switch merge's own fall-through to the latch (the merge is dominated by no single case header).
