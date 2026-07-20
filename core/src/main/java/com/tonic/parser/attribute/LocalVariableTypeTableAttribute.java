@@ -27,6 +27,10 @@ public class LocalVariableTypeTableAttribute extends Attribute {
         return localVariableTypeTable;
     }
 
+    public void setLocalVariableTypeTable(List<LocalVariableTypeTableEntry> localVariableTypeTable) {
+        this.localVariableTypeTable = localVariableTypeTable;
+    }
+
     @Override
     public void read(ClassFile classFile, int length) {
         if (length < 2) {

@@ -15,9 +15,13 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
+import com.tonic.parser.attribute.LocalVariableTypeTableAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
+import com.tonic.parser.attribute.table.LocalVariableTableEntry;
+import com.tonic.parser.attribute.table.LocalVariableTypeTableEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -83,8 +87,22 @@ public class BytecodeLowerer {
             codeAttr.getExceptionTable().clear();
             codeAttr.getExceptionTable().addAll(newExceptionTable);
 
+            // Capture the original generic-local signatures (keyed by slot + name-index) before dropping the stale
+            // tables, so the LocalVariableTypeTable can be rebuilt against the regenerated LocalVariableTable ranges
+            // rather than left with the source class's offsets - a mismatch the class loader rejects.
+            Map<Long, Integer> genericSignatures = new HashMap<>();
+            for (com.tonic.parser.attribute.Attribute attr : codeAttr.getAttributes()) {
+                if (attr instanceof LocalVariableTypeTableAttribute) {
+                    for (LocalVariableTypeTableEntry e
+                            : ((LocalVariableTypeTableAttribute) attr).getLocalVariableTypeTable()) {
+                        genericSignatures.put(lvKey(e.getIndex(), e.getNameIndex()), e.getSignatureIndex());
+                    }
+                }
+            }
+
             codeAttr.getAttributes().removeIf(attr ->
                 attr instanceof LocalVariableTableAttribute ||
+                attr instanceof LocalVariableTypeTableAttribute ||
                 attr instanceof LineNumberTableAttribute);
 
             if (emitLocalVariableTable) {
@@ -92,6 +110,10 @@ public class BytecodeLowerer {
                         irMethod, regAlloc, emitter, bytecode.length, constPool, targetMethod).build();
                 if (lvt != null) {
                     codeAttr.getAttributes().add(lvt);
+                    LocalVariableTypeTableAttribute lvtt = rebuildTypeTable(lvt, genericSignatures, targetMethod);
+                    if (lvtt != null) {
+                        codeAttr.getAttributes().add(lvtt);
+                    }
                 }
             }
 
@@ -107,6 +129,42 @@ public class BytecodeLowerer {
             // populated for methods that emit frames, so it is unreliable for straight-line methods.)
             codeAttr.setMaxStack(Math.max(codeAttr.getMaxStack(), frameGen.computeMaxStack(targetMethod)));
         }
+    }
+
+    private static long lvKey(int slot, int nameIndex) {
+        return (((long) slot) << 32) | (nameIndex & 0xffffffffL);
+    }
+
+    /**
+     * Rebuilds the LocalVariableTypeTable against the regenerated LocalVariableTable: each LVT entry that names a
+     * variable which had a generic signature (matched by slot + name index, captured before the stale tables were
+     * dropped) gets a type-table entry with the LVT entry's fresh offsets and that signature. The class loader
+     * requires every type-table entry to have a matching variable-table entry, so aligning the offsets is what
+     * lets a recompiled generic local ({@code List<Object> l}) load. Returns null when nothing carries a signature.
+     */
+    private LocalVariableTypeTableAttribute rebuildTypeTable(LocalVariableTableAttribute lvt,
+                                                             Map<Long, Integer> genericSignatures,
+                                                             MethodEntry targetMethod) {
+        if (genericSignatures.isEmpty()) {
+            return null;
+        }
+        List<LocalVariableTypeTableEntry> entries = new ArrayList<>();
+        for (LocalVariableTableEntry e : lvt.getLocalVariableTable()) {
+            Integer signatureIndex = genericSignatures.get(lvKey(e.getIndex(), e.getNameIndex()));
+            if (signatureIndex != null) {
+                entries.add(new LocalVariableTypeTableEntry(constPool, e.getStartPc(), e.getLengthPc(),
+                        e.getNameIndex(), signatureIndex, e.getIndex()));
+            }
+        }
+        if (entries.isEmpty()) {
+            return null;
+        }
+        int attrNameIndex = constPool.findOrAddUtf8("LocalVariableTypeTable").getIndex(constPool);
+        LocalVariableTypeTableAttribute attr =
+                new LocalVariableTypeTableAttribute("LocalVariableTypeTable", targetMethod, attrNameIndex, 0);
+        attr.setLocalVariableTypeTable(entries);
+        attr.updateLength();
+        return attr;
     }
 
     private List<ExceptionTableEntry> regenerateExceptionTable(IRMethod irMethod, BytecodeEmitter emitter) {

@@ -1240,7 +1240,23 @@ public class TypeResolver {
             return false;
         }
         ClassFile cf = classPool.get(internalName);
-        return cf != null && (cf.getAccess() & 0x0200) != 0;
+        if (cf == null) {
+            try {
+                cf = classPool.loadSystemClass(internalName);
+            } catch (Exception ignored) {
+            }
+        }
+        if (cf != null) {
+            return (cf.getAccess() & 0x0200) != 0;
+        }
+        // A JDK callee (e.g. java.util.List) isn't in the pool; without knowing it is an interface the call would
+        // wrongly emit invokevirtual instead of invokeinterface (IncompatibleClassChangeError at run time).
+        // Modular JDK classes aren't readable as resources, so resolve via reflection, which sees them regardless.
+        try {
+            return Class.forName(internalName.replace('/', '.'), false, getClass().getClassLoader()).isInterface();
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     /** Whether {@code internalName} names a class resolvable via the pool — already loaded, or loadable
