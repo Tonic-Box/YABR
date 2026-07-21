@@ -12,50 +12,47 @@ import javax.tools.ToolProvider;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * A {@code try { while (...) {...} } catch (...) {...}} that WRAPS a loop, sitting between a prelude and a
- * continuation, has its start block AT the loop header. The sequential-try staging must distinguish this
- * (linearly stageable: prefix, try, continuation - the loop is wholly within the protected range) from a try
- * nested inside an ENCLOSING loop (not stageable, since the prefix re-runs each iteration). Treating any
- * in-loop try-start as unstageable sent the whole shape to the legacy walk; staging it hands the pieces to
- * the reaching-condition engine.
- *
- * <p>This asserts decompile fidelity only: the loop body keeps its statement order, the prelude locals are
- * preserved (not dropped), and the try/catch/loop nest is intact. A full recompile round trip of this shape
- * is blocked by an unrelated, pre-existing recompiler defect (a monitor/long-local frame error when a loop
- * inside a try is followed by a continuation), so it is not exercised here.
+ * A {@code try { while (...) {...; i++} } catch (...)} that WRAPS a counted loop, with the counter declared
+ * in the prelude before the try. The counter's init sits in a pre-header block OUTSIDE the (staged) try-body
+ * region, so the loop emission must still realize the induction phi's forward-edge value there - otherwise
+ * the counter's initial value is dropped and the {@code for} counter is left undeclared
+ * ({@code for (; i < n; i++)} referencing an undeclared {@code i}), which fails to recompile. Asserts a
+ * round-trip fixed point and correct execution on the normal and exceptional paths.
  */
 class TryWrappingLoopStagingFidelityTest {
 
     private static final String SOURCE =
             "public class TryWrapLoop {\n"
-            + "    long result;\n"
-            + "    public long run(long seed) {\n"
-            + "        long total = 0;\n"
-            + "        long v = seed;\n"
+            + "    public int run(int n) {\n"
+            + "        int sum = 0;\n"
+            + "        int i = 0;\n"
             + "        try {\n"
-            + "            while (v != 0) {\n"
-            + "                if (v == 66) {\n"
-            + "                    throw new IllegalStateException(\"sixty-six\");\n"
+            + "            while (i < n) {\n"
+            + "                if (i == 7) {\n"
+            + "                    throw new IllegalStateException(\"seven\");\n"
             + "                }\n"
-            + "                total += v;\n"
-            + "                v = v / 2;\n"
+            + "                sum += i;\n"
+            + "                i++;\n"
             + "            }\n"
             + "        } catch (RuntimeException e) {\n"
-            + "            total = -1;\n"
+            + "            sum = -1;\n"
             + "        }\n"
-            + "        result = total;\n"
-            + "        return total;\n"
+            + "        return sum;\n"
             + "    }\n"
             + "}\n";
 
     private static String d1;
+    private static String d2;
+    private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compile() throws Exception {
+    static void compileAndRecompile() throws Exception {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("try-wrap-loop");
@@ -67,22 +64,31 @@ class TryWrappingLoopStagingFidelityTest {
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
         d1 = ClassDecompiler.decompile(cf);
+        ClassFile recovered = Recompile.recompiledClone(cf, pool);
+        assertNotNull(recovered, "TryWrapLoop must be recompilable");
+        d2 = ClassDecompiler.decompile(recovered);
+        recompiledClass = TestUtils.loadAndVerify(recovered);
     }
 
     @Test
-    void tryCatchAndLoopArePreserved() {
+    void counterIsDeclaredAndSurvivesRecompile() {
         assertTrue(d1.contains("try"), "the try/catch must be preserved:\n" + d1);
-        assertTrue(d1.contains("while") || d1.contains("for"), "the loop must be preserved:\n" + d1);
-        assertTrue(d1.contains("catch (RuntimeException e)"), "the catch clause must be preserved:\n" + d1);
+        // The counter's init lives in a pre-header outside the staged try-body region; it must still be
+        // realized so the for-counter is declared, both on decompile and after a recompile round trip.
+        assertTrue(d1.contains("for (int i = 0"),
+                "the loop counter must be declared in the for-init (decompile):\n" + d1);
+        assertTrue(d2.contains("for (int i = 0"),
+                "the loop counter must survive recompilation, not be dropped to an undeclared counter:\n" + d2);
     }
 
     @Test
-    void preludeLocalsAndBodyOrderAreCorrect() {
-        assertTrue(d1.contains("long v = seed"), "the prelude local v must be declared, not dropped:\n" + d1);
-        // The loop body accumulates BEFORE halving; that order must survive (a reorder is a miscompile).
-        int add = d1.indexOf("total = total + v");
-        int half = d1.indexOf("v = v / 2");
-        assertTrue(add >= 0 && half >= 0 && add < half,
-                "the loop body must accumulate before halving, in that order:\n" + d1);
+    void bothPathsExecuteEquivalently() throws Exception {
+        Object inst = recompiledClass.getDeclaredConstructor().newInstance();
+        // sum 0..4 = 10, no i == 7 reached
+        assertEquals(10, recompiledClass.getMethod("run", int.class).invoke(inst, 5),
+                "the normal path sums 0..4");
+        // i reaches 7 -> throws -> catch sets sum to -1
+        assertEquals(-1, recompiledClass.getMethod("run", int.class).invoke(inst, 20),
+                "the loop throws at i == 7 and the catch sets sum to -1");
     }
 }

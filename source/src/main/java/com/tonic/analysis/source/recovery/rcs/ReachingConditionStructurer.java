@@ -1049,9 +1049,13 @@ public final class ReachingConditionStructurer {
         List<Statement> out = new ArrayList<>();
         // Realize the header's phis from the forward (pre-loop) edges before the loop - e.g. a loop
         // counter's initial value when the for-loop-init pass marked the store for skipping. Identity
-        // copies self-skip, so a value already stored in the pre-header is not repeated.
+        // copies self-skip, so a value already stored in the pre-header is not repeated. A forward pred
+        // OUTSIDE the region occurs when the loop is the region entry (a staged try body that wraps the
+        // loop): the surrounding recovery stopped AT this header and never emitted the header's phi copies,
+        // so the counter's init would otherwise be dropped and the for-counter left undeclared. Emit those
+        // too - the leading `i = <init>` is folded into the for-init downstream.
         for (IRBlock pred : header.getPredecessors()) {
-            if (region.contains(pred) && !isBackEdge(pred, header)) {
+            if (!isBackEdge(pred, header)) {
                 out.addAll(bridge.lowerPhisOnEdge(pred, header));
             }
         }
