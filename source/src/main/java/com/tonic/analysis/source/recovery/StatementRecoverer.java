@@ -4657,10 +4657,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (tryStart != null && tryStart != b) {
                     return null;
                 }
-                // A try inside a loop has no linear staging: control re-enters the blocks before it on the
-                // next iteration, so prefix-try-continuation sequencing would hoist the try out of the loop.
-                if (context.getLoopAnalysis() != null && context.getLoopAnalysis().isInLoop(b)) {
-                    return null;
+                // A try nested INSIDE a loop has no linear staging: control re-enters the blocks before it on
+                // the next iteration, so prefix-try-continuation sequencing would hoist the try out of the
+                // loop. A try that WRAPS a loop (its start block is that loop's header) is fine - the loop is
+                // wholly within the protected range. Decline only when an ENCLOSING loop (one whose header is
+                // a different block) contains the try start.
+                if (context.getLoopAnalysis() != null) {
+                    LoopAnalysis.Loop enclosing = context.getLoopAnalysis().getLoop(b);
+                    while (enclosing != null) {
+                        if (enclosing.getHeader() != b) {
+                            return null;
+                        }
+                        enclosing = enclosing.getParent();
+                    }
                 }
                 tryStart = b;
                 continue;
