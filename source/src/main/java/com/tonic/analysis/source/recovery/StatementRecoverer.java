@@ -632,6 +632,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         List<ExceptionHandler> outerHandlers = new ArrayList<>();
         List<ExceptionHandler> innerHandlers = new ArrayList<>();
 
+        int outerTryEndOffset = outerHandler.getTryEnd() != null
+                ? outerHandler.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
         for (ExceptionHandler h : mergedHandlers) {
             // A handler over the identical try range is a sibling catch clause on the same try
             // (try { } catch (A) { } catch (B) { }), not a nested one. Only a handler over a strict
@@ -640,6 +642,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (h.getHandlerBlock() == outerHandler.getHandlerBlock()
                     || sameTryRange(h, outerHandler)) {
                 outerHandlers.add(h);
+            } else if (h.getTryStart() != null
+                    && h.getTryStart().getBytecodeOffset() >= outerTryEndOffset) {
+                // A handler whose protected range begins at or past the outer try's end is not nested in the
+                // try BODY - it is a try inside the catch clause, or in the continuation after the whole
+                // try/catch. Leaving it out of innerHandlers keeps it unprocessed so the catch-clause recovery
+                // (which recovers a nested try in a catch body) or the continuation recovery owns it, instead
+                // of recoverWithNestedHandlers rebuilding it as a try-body handler and hoisting it out of the
+                // catch (dropping the caught exception variable's scope).
+                continue;
             } else {
                 innerHandlers.add(h);
             }
@@ -1292,14 +1303,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             SimpleInstruction simple = (SimpleInstruction) handlerTerminator;
             isGoto = (simple.getOp() == SimpleOp.GOTO);
         }
-        if (!isGoto) {
+        // Recover the catch body's continuation blocks. A goto out of the handler block usually jumps to the
+        // shared merge after the whole try/catch (post-try code, or an enclosing finally's inlined copy, that
+        // must NOT be pulled into the catch), so a non-catch-all handler ending in a goto normally stops here.
+        // The one exception is a catch whose body contains its own nested TRY: the handler stores the exception
+        // and gotos into that try, so the try-start (dominated by the handler block) must be recovered, or the
+        // rest of the catch - including the caught exception variable's uses - is dropped.
+        if (!isGoto || handler.isCatchAll() || catchBodyHasNestedTry(handlerBlock)) {
             Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
             visitedHandlerBlocks.add(handlerBlock);
-            recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts);
-        } else if (handler.isCatchAll()) {
-            Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
-            visitedHandlerBlocks.add(handlerBlock);
-            recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts);
+            recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts, handlerBlock);
         }
 
         List<Statement> filteredStmts = new ArrayList<>();
@@ -1338,6 +1351,31 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         BlockStmt handlerBody = new BlockStmt(filteredStmts.isEmpty() ? handlerStmts : filteredStmts);
 
         return CatchClause.of(exceptionType, exceptionVarName, handlerBody);
+    }
+
+    /**
+     * True when the catch handler block gotos directly into its own nested try: a successor that starts an
+     * unprocessed exception handler and is dominated by the handler block (reachable only through this catch).
+     * That is the one case where a non-catch-all handler ending in a goto must still recover its successors -
+     * the nested try is the catch body. A successor that is merely the shared post-try merge or an enclosing
+     * finally's inlined copy (no handler starts there) stays skipped, so the inlined copy is not duplicated.
+     */
+    private boolean catchBodyHasNestedTry(IRBlock handlerBlock) {
+        DominatorTree dt = context.getDominatorTree();
+        if (dt == null) {
+            return false;
+        }
+        for (IRBlock succ : handlerBlock.getSuccessors()) {
+            if (!dt.dominates(handlerBlock, succ)) {
+                continue;
+            }
+            ExceptionHandler h = findHandlerStartingAt(succ);
+            if (h != null && !processedTryHandlers.contains(h)
+                    && !processedHandlerBlocks.contains(h.getHandlerBlock())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1655,14 +1693,61 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
-    /**
-     * Recursively recovers all blocks reachable from the handler until we hit a throw, return, or goto.
-     * IMPORTANT: A GotoInstruction in a catch handler typically means "exit the catch and continue",
-     * so we should NOT follow goto targets - they are the merge point, not part of the catch body.
-     */
     private void recoverHandlerBlocks(Collection<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts) {
+        recoverHandlerBlocks(successors, visited, stmts, null);
+    }
+
+    /**
+     * Recursively recovers the blocks of a catch body, starting from {@code successors} of the catch handler
+     * block and bounded to the catch body itself: {@code catchEntry} (the handler block) and everything it
+     * dominates. A block NOT dominated by {@code catchEntry} is the shared merge after the whole try/catch
+     * (reached from the try's normal exit too) and must not be pulled into the catch. A goto out of the
+     * handler usually leads there, which is why a goto normally stops the walk; the exception is a catch whose
+     * body contains its own nested try (recovered below as a nested try/catch/finally so the caught exception
+     * variable stays in scope, instead of the try's blocks being walked flat and its finally hoisted out).
+     */
+    private void recoverHandlerBlocks(Collection<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts,
+                                      IRBlock catchEntry) {
+        DominatorTree dt = context.getDominatorTree();
         for (IRBlock block : successors) {
             if (visited.contains(block)) continue;
+            if (catchEntry != null && dt != null && block != catchEntry && !dt.dominates(catchEntry, block)) {
+                continue; // outside the catch body - the shared post-try-catch merge
+            }
+
+            ExceptionHandler nested = findHandlerStartingAt(block);
+            if (nested != null && !processedTryHandlers.contains(nested)
+                    && !processedHandlerBlocks.contains(nested.getHandlerBlock())) {
+                Set<ExceptionHandler> savedTry = new HashSet<>(processedTryHandlers);
+                Set<IRBlock> savedBlocks = new HashSet<>(processedHandlerBlocks);
+                processedTryHandlers.add(nested);
+                if (nested.getHandlerBlock() != null) {
+                    processedHandlerBlocks.add(nested.getHandlerBlock());
+                }
+                Set<IRBlock> nestedVisited = new HashSet<>(visited);
+                Statement recovered;
+                try {
+                    recovered = recoverTryCatch(block, nested, new HashSet<>(), nestedVisited);
+                } catch (RuntimeException ex) {
+                    recovered = null;
+                }
+                if (recovered != null) {
+                    stmts.add(recovered);
+                    visited.addAll(nestedVisited);
+                    if (!isTerminatingRecoveredTry(recovered)) {
+                        IRBlock after = findBlockAfterTryCatch(nested, visited);
+                        if (after != null && !visited.contains(after)) {
+                            recoverHandlerBlocks(Collections.singletonList(after), visited, stmts, catchEntry);
+                        }
+                    }
+                    continue;
+                }
+                processedTryHandlers.clear();
+                processedTryHandlers.addAll(savedTry);
+                processedHandlerBlocks.clear();
+                processedHandlerBlocks.addAll(savedBlocks);
+            }
+
             visited.add(block);
 
             for (IRInstruction instr : block.getInstructions()) {
@@ -1708,7 +1793,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
 
-            recoverHandlerBlocks(block.getSuccessors(), visited, stmts);
+            recoverHandlerBlocks(block.getSuccessors(), visited, stmts, catchEntry);
         }
     }
 
