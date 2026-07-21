@@ -50,7 +50,10 @@ public class StatementLowerer {
      * Lowers a statement to IR.
      */
     public void lower(Statement stmt) {
-        if (stmt instanceof BlockStmt) {
+        if (stmt instanceof MonitorExitStmt) {
+            ctx.getCurrentBlock().addInstruction(
+                    SimpleInstruction.createMonitorExit(((MonitorExitStmt) stmt).monitor));
+        } else if (stmt instanceof BlockStmt) {
             BlockStmt block = (BlockStmt) stmt;
             lowerBlock(block);
         } else if (stmt instanceof VarDeclStmt) {
@@ -768,17 +771,85 @@ public class StatementLowerer {
         return resource;
     }
 
+    /**
+     * Lowers {@code synchronized (lock) { body }} to javac's monitor scaffolding: a {@code monitorenter}, the
+     * body in a protected region that releases the monitor on every exit, and a catch-all handler that
+     * releases it and rethrows when an exception escapes. The monitor must be released before each early
+     * {@code return}/{@code break} out of the body too (not only on fall-through), so a
+     * {@link MonitorExitStmt} is pushed onto the shared finally stack that {@link #lowerReturn} and the
+     * abrupt-exit lowering already drain - mirroring how a try/finally's cleanup runs on every path. Emitting
+     * the release only on fall-through (the prior behaviour) leaked the monitor whenever the body returned,
+     * throwing {@code IllegalMonitorStateException} and dropping the synchronized shape on re-decompilation.
+     */
     private void lowerSynchronized(SynchronizedStmt syncStmt) {
         Value monitor = exprLowerer.lower(syncStmt.getLock());
 
-        SimpleInstruction monitorEnterInstr = SimpleInstruction.createMonitorEnter(monitor);
-        ctx.getCurrentBlock().addInstruction(monitorEnterInstr);
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createMonitorEnter(monitor));
 
+        IRBlock tryBlock = ctx.createBlock();
+        IRBlock exitBlock = ctx.createBlock();
+        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(tryBlock));
+        ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+
+        ctx.setCurrentBlock(tryBlock);
+        int blocksBeforeBody = ctx.getIrMethod().getBlocks().size();
+        finallyStack.push(new MonitorExitStmt(monitor));
         lower(syncStmt.getBody());
-
+        finallyStack.pop();
+        IRBlock tryEnd = ctx.getCurrentBlock();
         if (ctx.getCurrentBlock().getTerminator() == null) {
-            SimpleInstruction monitorExitInstr = SimpleInstruction.createMonitorExit(monitor);
-            ctx.getCurrentBlock().addInstruction(monitorExitInstr);
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createMonitorExit(monitor));
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
+            ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        }
+
+        Set<IRBlock> bodyBlocks = new LinkedHashSet<>();
+        bodyBlocks.add(tryBlock);
+        List<IRBlock> allBlocks = ctx.getIrMethod().getBlocks();
+        for (int i = blocksBeforeBody; i < allBlocks.size(); i++) {
+            bodyBlocks.add(allBlocks.get(i));
+        }
+
+        // Catch-all release/rethrow so an exception escaping the body still frees the monitor, and so the
+        // re-decompile recognizes the synchronized block via the catch-all monitorexit/rethrow handler.
+        IRBlock handler = ctx.createBlock();
+        tryBlock.addSuccessor(handler, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+        ctx.setCurrentBlock(handler);
+        SSAValue caught = ctx.newValue(new ReferenceType("java/lang/Throwable"));
+        handler.addInstruction(SimpleInstruction.createCatch(caught));
+        handler.addInstruction(SimpleInstruction.createMonitorExit(monitor));
+        handler.addInstruction(SimpleInstruction.createThrow(caught));
+        ExceptionHandler release = new ExceptionHandler(tryBlock, tryEnd, handler, null);
+        release.setTryBlocks(bodyBlocks);
+        ctx.getIrMethod().addExceptionHandler(release);
+
+        ctx.setCurrentBlock(exitBlock);
+    }
+
+    /**
+     * A synthetic cleanup pushed onto {@link #finallyStack} for an enclosing {@code synchronized}: lowering
+     * it emits a {@code monitorexit} of the block's monitor. It exists only during lowering (it is drained by
+     * the abrupt-exit paths, never emitted or visited), so its visitor entry point is unsupported.
+     */
+    private static final class MonitorExitStmt implements Statement {
+        private final Value monitor;
+        MonitorExitStmt(Value monitor) {
+            this.monitor = monitor;
+        }
+        @Override
+        public com.tonic.analysis.source.ast.ASTNode getParent() {
+            return null;
+        }
+        @Override
+        public void setParent(com.tonic.analysis.source.ast.ASTNode parent) {
+        }
+        @Override
+        public com.tonic.analysis.source.ast.SourceLocation getLocation() {
+            return com.tonic.analysis.source.ast.SourceLocation.UNKNOWN;
+        }
+        @Override
+        public <T> T accept(com.tonic.analysis.source.visitor.SourceVisitor<T> visitor) {
+            throw new UnsupportedOperationException("synthetic monitor-exit cleanup is lowered directly");
         }
     }
 

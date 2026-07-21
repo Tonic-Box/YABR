@@ -84,7 +84,7 @@ class StatementLowererTest {
         assertNotNull(var);
 
         List<IRInstruction> instructions = entryBlock.getInstructions();
-        assertTrue(instructions.size() >= 1);
+        assertFalse(instructions.isEmpty());
         assertTrue(instructions.get(0) instanceof ConstantInstruction);
     }
 
@@ -589,11 +589,15 @@ class StatementLowererTest {
 
         lowerer.lower(syncStmt);
 
-        List<IRInstruction> instructions = entryBlock.getInstructions();
-        assertTrue(instructions.stream().anyMatch(i -> i instanceof SimpleInstruction &&
+        assertTrue(entryBlock.getInstructions().stream().anyMatch(i -> i instanceof SimpleInstruction &&
             ((SimpleInstruction) i).getOp() == SimpleOp.MONITORENTER));
-        assertTrue(instructions.stream().anyMatch(i -> i instanceof SimpleInstruction &&
-            ((SimpleInstruction) i).getOp() == SimpleOp.MONITOREXIT));
+        // The monitor is released on the body's exit path (the protected region), not in the entry block;
+        // scan every block. javac releases it on normal exit and in the catch-all handler.
+        long monitorExits = irMethod.getBlocks().stream()
+            .flatMap(b -> b.getInstructions().stream())
+            .filter(i -> i instanceof SimpleInstruction && ((SimpleInstruction) i).getOp() == SimpleOp.MONITOREXIT)
+            .count();
+        assertTrue(monitorExits >= 1, "the synchronized block must release the monitor");
     }
 
     // ========== Break and Continue Tests ==========

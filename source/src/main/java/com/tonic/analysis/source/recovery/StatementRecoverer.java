@@ -701,6 +701,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         List<Statement> tryStmts;
         if (!innerHandlers.isEmpty()) {
             tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
+        } else if (hasFinally && detectSynchronizedLock(outerHandler) != null) {
+            // A synchronized block's monitor instructions (the enter dominating the region and every inlined
+            // monitorexit on the body's exits, plus the catch-all release/rethrow) are dropped during
+            // statement recovery, so the body has no finally to emit and needs no copy de-duplication; hand
+            // it to the engine directly instead of the legacy walk. It is wrapped in SynchronizedStmt below.
+            tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
         } else if (hasFinally && !finallyDeduped) {
             tryStmts = legacyBlockWalk(startBlock, stopBlocks);
         } else if (hasFinally) {

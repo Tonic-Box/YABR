@@ -674,6 +674,11 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (tc.getFinallyBlock() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) tc.getFinallyBlock());
             }
+        } else if (stmt instanceof SynchronizedStmt) {
+            SynchronizedStmt sync = (SynchronizedStmt) stmt;
+            if (sync.getBody() instanceof BlockStmt) {
+                changed |= transform((BlockStmt) sync.getBody());
+            }
         } else if (stmt instanceof SwitchStmt) {
             changed |= simplifySwitchCases((SwitchStmt) stmt);
         }
