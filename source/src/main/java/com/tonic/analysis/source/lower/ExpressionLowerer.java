@@ -366,6 +366,14 @@ public class ExpressionLowerer {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
+        // The parser types `+` as a string concatenation only when it can see an operand's type at parse time; a
+        // call operand (e.g. `strMethod() + strMethod()`) has no resolved return type then, so the `+` looks
+        // numeric and would emit an iadd on two Strings (a VerifyError). The lowered operand types ARE resolved
+        // (against the pool), so fall back to them: if either operand lowered to a String, it is a concatenation.
+        if (op == BinaryOperator.ADD && (isStringValue(left) || isStringValue(right))) {
+            return concatValues(left, right);
+        }
+
         BinaryOp irOp = ReverseOperatorMapper.toIRBinaryOp(op);
         if (irOp == null) {
             throw new LoweringException("No IR binary op for: " + op);
@@ -475,6 +483,41 @@ public class ExpressionLowerer {
         );
         ctx.getCurrentBlock().addInstruction(indy);
 
+        return result;
+    }
+
+    private boolean isStringValue(Value v) {
+        return v != null && v.getType() != null && "Ljava/lang/String;".equals(v.getType().getDescriptor());
+    }
+
+    /**
+     * Builds a two-operand {@code makeConcatWithConstants} from already-lowered values - the fallback for a `+`
+     * the parser could not type as a concatenation. A chain nests (each `+` produces its own indy) rather than
+     * flattening into one, but re-decompiles to the same source, so it is a fixed point.
+     */
+    private Value concatValues(Value left, Value right) {
+        StringBuilder descriptor = new StringBuilder("(");
+        descriptor.append(getDescriptorForValue(left)).append(getDescriptorForValue(right)).append(")Ljava/lang/String;");
+
+        MethodHandleConstant bsm = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            "java/lang/invoke/StringConcatFactory",
+            "makeConcatWithConstants",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;"
+        );
+        List<Constant> bsArgs = new ArrayList<>();
+        bsArgs.add(new StringConstant(""));
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
+
+        SSAValue result = ctx.newValue(new ReferenceType("java/lang/String"));
+        List<Value> dynamicArgs = new ArrayList<>();
+        dynamicArgs.add(left);
+        dynamicArgs.add(right);
+        InvokeInstruction indy = new InvokeInstruction(
+            result, InvokeType.DYNAMIC, null, "makeConcatWithConstants",
+            descriptor.toString(), dynamicArgs, 0, bsInfo
+        );
+        ctx.getCurrentBlock().addInstruction(indy);
         return result;
     }
 

@@ -96,11 +96,7 @@ class RecompileExecutionGateTest {
                 + "            default: return \"big\";\n"
                 + "        }\n"
                 + "    }\n"
-                + "    public static String check() {\n"
-                + "        StringBuilder b = new StringBuilder();\n"
-                + "        b.append(label(0)).append(label(1)).append(label(2)).append(label(9));\n"
-                + "        return b.toString();\n"
-                + "    }\n"
+                + "    public static String check() { return label(0) + label(1) + label(2) + label(9); }\n"
                 + "}\n");
         FIXTURES.put("GateStrings",
                 "public class GateStrings {\n"
