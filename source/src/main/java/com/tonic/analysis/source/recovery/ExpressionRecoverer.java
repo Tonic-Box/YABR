@@ -643,6 +643,16 @@ public class ExpressionRecoverer {
             if (source instanceof Constant) {
                 return recoverConstant((Constant) source);
             }
+            if (source instanceof SSAValue) {
+                // The copy chain terminated at a value with no definition - a parameter or a method-entry
+                // value the copy aliases. Refer to it by its variable name rather than returning null (which
+                // a store of this copy would dereference for its type).
+                SSAValue ssa = (SSAValue) source;
+                String name = context.getVariableName(ssa);
+                if (name != null) {
+                    return new VarRefExpr(name, typeRecoverer.recoverType(ssa), ssa);
+                }
+            }
             return null;
         }
 

@@ -1693,10 +1693,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
-    private void recoverHandlerBlocks(Collection<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts) {
-        recoverHandlerBlocks(successors, visited, stmts, null);
-    }
-
     /**
      * Recursively recovers the blocks of a catch body, starting from {@code successors} of the catch handler
      * block and bounded to the catch body itself: {@code catchEntry} (the handler block) and everything it
@@ -5989,6 +5985,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
 
         value = stripDoubleNot(value);
+
+        if (value == null) {
+            // The stored expression could not be recovered as an operand (e.g. a copy that aliases an
+            // unnamed entry value). Fall back to referencing the stored value by its own name, or the
+            // slot's, so the store still emits a well-formed statement rather than a null right-hand side.
+            SourceType fallbackType = typeRecoverer.recoverType(storeValue);
+            String fallbackName = storeValue instanceof SSAValue
+                    ? context.getExpressionContext().getVariableName((SSAValue) storeValue) : null;
+            if (fallbackName == null) {
+                fallbackName = getNameForLocalSlotWithType(localIndex, fallbackType);
+            }
+            value = new VarRefExpr(fallbackName, fallbackType,
+                    storeValue instanceof SSAValue ? (SSAValue) storeValue : null);
+        }
 
         SourceType valueType = value.getType();
         if (valueType == null) {
