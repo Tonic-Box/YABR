@@ -110,12 +110,13 @@ class RecompileExecutionGateTest {
         FIXTURES.put("GateStringConcat",
                 "public class GateStringConcat {\n"
                 + "    public static String check() {\n"
-                + "        int i = 42; char ch = 'z'; Object o = \"obj\"; long lo = 9L;\n"
+                + "        int i = 42; char ch = 'z'; Object o = \"obj\"; long lo = 9L; boolean bo = (i > 0);\n"
                 + "        String a = \"\" + i;\n"
                 + "        String b = \"x\" + ch;\n"
+                + "        String c = \"y\" + bo;\n"
                 + "        String d = \"\" + o;\n"
-                + "        String e = String.valueOf(lo);\n"
-                + "        return a + \"|\" + b + \"|\" + d + \"|\" + e;\n"
+                + "        String e = lo + \"!\";\n"
+                + "        return a + \"|\" + b + \"|\" + c + \"|\" + d + \"|\" + e;\n"
                 + "    }\n"
                 + "}\n");
         FIXTURES.put("GateArrays",
@@ -133,10 +134,7 @@ class RecompileExecutionGateTest {
                 + "        Integer a = 40; int b = a + 2;\n"
                 + "        Long c = 100L; long d = c - 1;\n"
                 + "        Boolean flag = (b > 40);\n"
-                + "        StringBuilder sb = new StringBuilder();\n"
-                + "        sb.append(b).append(':').append(d).append(':').append(flag)\n"
-                + "          .append(':').append(Integer.valueOf(b).compareTo(41));\n"
-                + "        return sb.toString();\n"
+                + "        return b + \":\" + d + \":\" + flag + \":\" + Integer.valueOf(b).compareTo(41);\n"
                 + "    }\n"
                 + "}\n");
         FIXTURES.put("GateTryFinally",

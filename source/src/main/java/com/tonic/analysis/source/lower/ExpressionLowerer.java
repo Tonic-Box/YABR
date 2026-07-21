@@ -447,6 +447,11 @@ public class ExpressionLowerer {
         for (Object part : parts) {
             if (part instanceof String) {
                 recipe.append((String) part);
+            } else if (part instanceof TypedConcatOperand) {
+                recipe.append('\u0001');
+                TypedConcatOperand to = (TypedConcatOperand) part;
+                dynamicArgs.add(to.value);
+                descriptor.append(to.descriptor);
             } else if (part instanceof Value) {
                 recipe.append('\u0001');
                 Value v = (Value) part;
@@ -496,8 +501,7 @@ public class ExpressionLowerer {
      * flattening into one, but re-decompiles to the same source, so it is a fixed point.
      */
     private Value concatValues(Value left, Value right) {
-        StringBuilder descriptor = new StringBuilder("(");
-        descriptor.append(getDescriptorForValue(left)).append(getDescriptorForValue(right)).append(")Ljava/lang/String;");
+        String descriptor = "(" + getDescriptorForValue(left) + getDescriptorForValue(right) + ")Ljava/lang/String;";
 
         MethodHandleConstant bsm = new MethodHandleConstant(
             MethodHandleConstant.REF_invokeStatic,
@@ -515,10 +519,21 @@ public class ExpressionLowerer {
         dynamicArgs.add(right);
         InvokeInstruction indy = new InvokeInstruction(
             result, InvokeType.DYNAMIC, null, "makeConcatWithConstants",
-            descriptor.toString(), dynamicArgs, 0, bsInfo
+                descriptor, dynamicArgs, 0, bsInfo
         );
         ctx.getCurrentBlock().addInstruction(indy);
         return result;
+    }
+
+    /** A concat operand whose declared descriptor differs from its lowered value's IR type (a boolean, which the
+     *  IR carries as int - so makeConcat must be told it is a {@code Z} to render "true"/"false", not "1"/"0"). */
+    private static final class TypedConcatOperand {
+        final Value value;
+        final String descriptor;
+        TypedConcatOperand(Value value, String descriptor) {
+            this.value = value;
+            this.descriptor = descriptor;
+        }
     }
 
     private void collectConcatParts(Expression expr, List<Object> parts) {
@@ -536,6 +551,10 @@ public class ExpressionLowerer {
                 parts.add(lit.getValue());
                 return;
             }
+        }
+        if (expr.getType() == PrimitiveSourceType.BOOLEAN) {
+            parts.add(new TypedConcatOperand(lower(expr), "Z"));
+            return;
         }
         parts.add(lower(expr));
     }

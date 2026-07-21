@@ -1695,12 +1695,36 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return normalizer.normalizeClassName(formatted);
     }
 
+    /**
+     * Whether a binary expression must be parenthesized inside its parent binary expression to keep
+     * its grouping. Lower precedence always needs parentheses. At equal precedence the operand on the
+     * parent's non-binding side (the right operand of a left-associative operator) re-parses into the
+     * parent's chain, so it keeps parentheses unless re-association is provably value- and
+     * evaluation-order-preserving (a same-operator logical or non-shift bitwise chain).
+     */
     private boolean needsParentheses(BinaryExpr expr) {
-        if (expr.getParent() instanceof BinaryExpr) {
-            BinaryExpr parent = (BinaryExpr) expr.getParent();
-            return expr.getOperator().getPrecedence() < parent.getOperator().getPrecedence();
+        if (!(expr.getParent() instanceof BinaryExpr)) {
+            return false;
         }
-        return false;
+        BinaryExpr parent = (BinaryExpr) expr.getParent();
+        int childPrec = expr.getOperator().getPrecedence();
+        int parentPrec = parent.getOperator().getPrecedence();
+        if (childPrec != parentPrec) {
+            return childPrec < parentPrec;
+        }
+        boolean onBindingSide = parent.getOperator().isLeftAssociative()
+                ? parent.getLeft() == expr
+                : parent.getRight() == expr;
+        if (onBindingSide) {
+            return false;
+        }
+        return expr.getOperator() != parent.getOperator()
+                || !reassociationIsHarmless(expr.getOperator());
+    }
+
+    private static boolean reassociationIsHarmless(BinaryOperator op) {
+        return op == BinaryOperator.AND || op == BinaryOperator.OR
+                || op == BinaryOperator.BAND || op == BinaryOperator.BOR || op == BinaryOperator.BXOR;
     }
 
     private String getUnaryOperatorSymbol(UnaryOperator op) {
