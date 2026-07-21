@@ -2501,6 +2501,30 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 hasFinally = true;
             }
         }
+        // A catch that falls through rejoins the code after the whole try/catch - the shared continuation.
+        // The recompiler can lay that continuation out BETWEEN the try's split protected ranges (below the
+        // merged end offset), where the offset-based stop set does not catch it, so the try body would absorb
+        // it (e.g. a trailing `return` pulled inside the try, breaking the round trip). Stop the body at the
+        // catch's fall-through target so it is recovered once, after the try/catch. A successor that lies
+        // WITHIN a protected range is a catch flowing back into its own loop, not a continuation - left alone.
+        // For a javac layout the continuation sits past the merged end and is already a stop, so this is a
+        // no-op there.
+        if (!hasFinally) {
+            for (ExceptionHandler h : sameRegionHandlers) {
+                if (h.getHandlerBlock() == null) {
+                    continue;
+                }
+                Set<IRBlock> catchBlocks = new HashSet<>();
+                collectCatchConsumedBlocks(h, catchBlocks);
+                for (IRBlock cb : catchBlocks) {
+                    for (IRBlock succ : cb.getSuccessors()) {
+                        if (!catchBlocks.contains(succ) && !isWithinProtectedRange(succ, sameRegionHandlers)) {
+                            tryStopBlocks.add(succ);
+                        }
+                    }
+                }
+            }
+        }
         boolean finallyDeduped = hasFinally && nestedHandlers.isEmpty() && dedupStraightLineFinally(sameRegionHandlers);
         List<Statement> tryStmts;
         if (!nestedHandlers.isEmpty()) {
@@ -3165,6 +3189,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         return end;
+    }
+
+    /** Whether {@code b}'s bytecode offset lies within some handler's protected {@code [tryStart, tryEnd)} range. */
+    private boolean isWithinProtectedRange(IRBlock b, List<ExceptionHandler> handlers) {
+        int off = b.getBytecodeOffset();
+        for (ExceptionHandler h : handlers) {
+            if (h.getTryStart() != null && h.getTryEnd() != null
+                    && off >= h.getTryStart().getBytecodeOffset()
+                    && off < h.getTryEnd().getBytecodeOffset()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isTerminatingTryCatch(TryCatchStmt tryCatch) {

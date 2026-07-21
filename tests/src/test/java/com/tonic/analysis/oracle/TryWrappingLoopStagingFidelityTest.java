@@ -71,14 +71,15 @@ class TryWrappingLoopStagingFidelityTest {
     }
 
     @Test
-    void counterIsDeclaredAndSurvivesRecompile() {
+    void counterIsDeclaredAndRoundTripsFixed() {
         assertTrue(d1.contains("try"), "the try/catch must be preserved:\n" + d1);
         // The counter's init lives in a pre-header outside the staged try-body region; it must still be
-        // realized so the for-counter is declared, both on decompile and after a recompile round trip.
+        // realized so the for-counter is declared. The trailing `return` after the try/catch must stay a
+        // continuation, not be pulled into the try body when the recompiler lays it out between the split
+        // protected ranges. Together these make the shape a round-trip fixed point.
         assertTrue(d1.contains("for (int i = 0"),
-                "the loop counter must be declared in the for-init (decompile):\n" + d1);
-        assertTrue(d2.contains("for (int i = 0"),
-                "the loop counter must survive recompilation, not be dropped to an undeclared counter:\n" + d2);
+                "the loop counter must be declared in the for-init:\n" + d1);
+        assertEquals(d1, d2, "a try wrapping a counted loop, with a trailing continuation, must be a round-trip fixed point");
     }
 
     @Test
