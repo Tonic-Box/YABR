@@ -46,6 +46,7 @@ import com.tonic.analysis.ssa.value.Value;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -78,6 +79,74 @@ public final class ReachingConditionStructurer {
         }
     }
 
+    /**
+     * A snapshot of one structuring pass's per-region state, taken around a try node's delegate recovery -
+     * which re-enters {@link #tryStructureRegion} for the try body's own pass - and restored afterwards so
+     * the outer pass's emit continues on its own region. The monotonic guard-temp counter is intentionally
+     * NOT part of the snapshot: nested passes advance it so hoisted temp names stay unique method-wide.
+     */
+    private static final class PassState {
+        private final IRMethod method;
+        private final DominatorTree dom;
+        private final Set<IRBlock> region;
+        private final Map<IRBlock, Integer> rpoIndex;
+        private final Map<IRBlock, SwitchDescriptor> switchDescriptors;
+        private final Map<IRBlock, TryNodeDescriptor> tryNodes;
+        private final boolean tryNodesEnabled;
+        private final Set<IRBlock> regionStopBlocks;
+        private final Map<IRBlock, Integer> atomOf;
+        private final List<IRBlock> blockOfAtom;
+        private final Set<IRBlock> pureConditionBlock;
+        private final Set<IRBlock> exceptionFreeConditionBlock;
+        private final Map<Bdd, Boolean> subtreeExceptionFreeMemo;
+        private final BoolFormulaFactory formulas;
+        private final Set<IRBlock> duplicatedTails;
+        private final boolean duplicating;
+        private final long regionDupBudget;
+
+        PassState(ReachingConditionStructurer s) {
+            method = s.method;
+            dom = s.dom;
+            region = s.region;
+            rpoIndex = s.rpoIndex;
+            switchDescriptors = new HashMap<>(s.switchDescriptors);
+            tryNodes = new HashMap<>(s.tryNodes);
+            tryNodesEnabled = s.tryNodesEnabled;
+            regionStopBlocks = s.regionStopBlocks;
+            atomOf = s.atomOf;
+            blockOfAtom = s.blockOfAtom;
+            pureConditionBlock = s.pureConditionBlock;
+            exceptionFreeConditionBlock = s.exceptionFreeConditionBlock;
+            subtreeExceptionFreeMemo = s.subtreeExceptionFreeMemo;
+            formulas = s.formulas;
+            duplicatedTails = s.duplicatedTails;
+            duplicating = s.duplicating;
+            regionDupBudget = s.regionDupBudget;
+        }
+
+        void restore(ReachingConditionStructurer s) {
+            s.method = method;
+            s.dom = dom;
+            s.region = region;
+            s.rpoIndex = rpoIndex;
+            s.switchDescriptors.clear();
+            s.switchDescriptors.putAll(switchDescriptors);
+            s.tryNodes.clear();
+            s.tryNodes.putAll(tryNodes);
+            s.tryNodesEnabled = tryNodesEnabled;
+            s.regionStopBlocks = regionStopBlocks;
+            s.atomOf = atomOf;
+            s.blockOfAtom = blockOfAtom;
+            s.pureConditionBlock = pureConditionBlock;
+            s.exceptionFreeConditionBlock = exceptionFreeConditionBlock;
+            s.subtreeExceptionFreeMemo = subtreeExceptionFreeMemo;
+            s.formulas = formulas;
+            s.duplicatedTails = duplicatedTails;
+            s.duplicating = duplicating;
+            s.regionDupBudget = regionDupBudget;
+        }
+    }
+
     private final RegionRecoveryBridge bridge;
     private final ControlFlowContext context;
 
@@ -87,6 +156,10 @@ public final class ReachingConditionStructurer {
     private Set<IRBlock> region;
     private Map<IRBlock, Integer> rpoIndex;
     private final Map<IRBlock, SwitchDescriptor> switchDescriptors = new HashMap<>();
+    /** Opaque try nodes in the region, keyed by the try's entry block; populated only when enabled. */
+    private final Map<IRBlock, TryNodeDescriptor> tryNodes = new HashMap<>();
+    private boolean tryNodesEnabled;
+    private Set<IRBlock> regionStopBlocks;
     private Map<IRBlock, Integer> atomOf;
     private List<IRBlock> blockOfAtom;
     private Set<IRBlock> pureConditionBlock;
@@ -130,11 +203,24 @@ public final class ReachingConditionStructurer {
      * legacy recovery.
      */
     public List<Statement> tryStructureRegion(IRBlock entry, Set<IRBlock> stopBlocks) {
+        return tryStructureRegion(entry, stopBlocks, false);
+    }
+
+    /**
+     * As {@link #tryStructureRegion(IRBlock, Set)}, and with {@code allowTryNodes} set additionally treats
+     * each try in the region as an opaque composite node (delegated to the host's try/catch recovery at its
+     * structural position) instead of declining the region. Offered separately so the linear staging path,
+     * which is preferred for sequentially-shaped regions, is consulted first.
+     */
+    public List<Statement> tryStructureRegion(IRBlock entry, Set<IRBlock> stopBlocks, boolean allowTryNodes) {
         if (entry == null) {
             return null;
         }
         this.method = context.getIrMethod();
         switchDescriptors.clear();
+        tryNodes.clear();
+        this.tryNodesEnabled = allowTryNodes;
+        this.regionStopBlocks = stopBlocks;
         // The caller only offers this stage a wholesale region hand-off: the top-level whole-method call
         // or an exception-scaffolding piece (recoverRegionHandoff). The legacy walk's own sub-recursion
         // (if arms, loop bodies) is never routed here, so the two engines never interleave on one region.
@@ -159,7 +245,8 @@ public final class ReachingConditionStructurer {
         // A region containing an exception handler the surrounding recovery has not yet consumed is a
         // (nested) try this stage cannot structure - reaching conditions do not model exception edges.
         // Decline it so the try/catch scaffolding recovers it and hands this stage its handler-free pieces.
-        if (bridge.regionContainsUnprocessedHandler(region)) {
+        // With try nodes enabled, collectRegion already turned every such try into a node or failed.
+        if (!tryNodesEnabled && bridge.regionContainsUnprocessedHandler(region)) {
             return null;
         }
         assignAtoms();
@@ -181,6 +268,10 @@ public final class ReachingConditionStructurer {
      */
     private void validate(IRBlock b) {
         LoopAnalysis loops = context.getLoopAnalysis();
+        if (tryNodes.containsKey(b)) {
+            validateTryNode(b, loops);
+            return;
+        }
         if (loops != null && loops.isLoopHeader(b)) {
             IRBlock breakTarget = findBreakTarget(b);
             context.pushLoop(b, b, breakTarget, inductionLatch(b));
@@ -196,6 +287,50 @@ public final class ReachingConditionStructurer {
             return;
         }
         validateChildren(b);
+    }
+
+    /**
+     * Side-effect-free dry run mirroring {@link #emitTry}: the node must not double as a loop header, no
+     * region block outside the node may jump into its consumed blocks, and the join it owns must validate.
+     */
+    private void validateTryNode(IRBlock b, LoopAnalysis loops) {
+        if (loops != null && loops.isLoopHeader(b)) {
+            throw new BailToLegacy();
+        }
+        TryNodeDescriptor node = tryNodes.get(b);
+        for (IRBlock r : region) {
+            if (r == b || tryNodes.containsKey(r)) {
+                continue;
+            }
+            for (IRBlock s : r.getSuccessors()) {
+                if (s != b && node.consumed().contains(s)) {
+                    throw new BailToLegacy();
+                }
+            }
+        }
+        IRBlock after = node.after();
+        if (after == null || !region.contains(after) || isBackEdge(b, after)) {
+            return;
+        }
+        if (context.classifyLoopJump(after) != null || context.classifySwitchJump(after) != null) {
+            return;
+        }
+        if (nodeOwnsAfter(b, node)) {
+            validate(after);
+        }
+    }
+
+    /**
+     * True when the node itself must emit its join: the join's immediate dominator is the node or lies in
+     * its consumed blocks, so no other region block's dominator walk places it.
+     */
+    private boolean nodeOwnsAfter(IRBlock b, TryNodeDescriptor node) {
+        IRBlock after = node.after();
+        if (after == null || !region.contains(after)) {
+            return false;
+        }
+        IRBlock idom = dom.getImmediateDominator(after);
+        return idom == b || node.consumed().contains(idom);
     }
 
     /**
@@ -240,7 +375,7 @@ public final class ReachingConditionStructurer {
     private void requireCaseExitsPlaceable(SwitchDescriptor.CaseSpec spec) {
         Set<IRBlock> body = subtreeOf(spec.header());
         for (IRBlock x : body) {
-            for (IRBlock s : x.getSuccessors()) {
+            for (IRBlock s : modelSuccessors(x)) {
                 if (body.contains(s) || isBackEdge(x, s)) {
                     continue;
                 }
@@ -330,6 +465,21 @@ public final class ReachingConditionStructurer {
             if (!region.add(b)) {
                 continue;
             }
+            if (tryNodesEnabled && bridge.startsUnprocessedHandler(b)) {
+                // The try becomes an opaque node: its consumed blocks stay outside the region and the walk
+                // resumes at the join. An undecodable try shape fails the whole region.
+                TryNodeDescriptor node = bridge.decodeTryNode(b);
+                if (node == null) {
+                    return false;
+                }
+                tryNodes.put(b, node);
+                IRBlock after = node.after();
+                if (after != null && !stopBlocks.contains(after) && !region.contains(after)
+                        && !isBackEdge(b, after)) {
+                    work.add(after);
+                }
+                continue;
+            }
             if (b.getTerminator() instanceof SwitchInstruction) {
                 // A native int/enum switch is structured in-region: its case bodies are ordinary dominator-tree
                 // children (enqueued below as successors) and the region resumes at the switch's merge. A shape
@@ -362,6 +512,9 @@ public final class ReachingConditionStructurer {
         while (absorbed) {
             absorbed = false;
             for (IRBlock b : new ArrayList<>(region)) {
+                if (tryNodes.containsKey(b)) {
+                    continue; // a try node's real successors are its own consumed blocks
+                }
                 for (IRBlock s : b.getSuccessors()) {
                     if (!region.contains(s) && !isBackEdge(b, s) && isTerminalBlock(s)
                             && terminalDependsOnRegion(s) && dom.dominates(entry, s)) {
@@ -388,7 +541,66 @@ public final class ReachingConditionStructurer {
                 return false;
             }
         }
+        // With try nodes, a region block whose immediate dominator lies inside a node's consumed set is
+        // reachable only through the try; the dominator walk would never place it. The node emits its own
+        // join directly, so only the join may have a consumed dominator.
+        if (!tryNodes.isEmpty()) {
+            for (IRBlock b : region) {
+                if (b == entry) {
+                    continue;
+                }
+                IRBlock idom = dom.getImmediateDominator(b);
+                if (idom == null || region.contains(idom) || !consumedByAnyNode(idom)) {
+                    continue;
+                }
+                boolean isNodeJoin = false;
+                for (Map.Entry<IRBlock, TryNodeDescriptor> e : tryNodes.entrySet()) {
+                    if (e.getValue().after() == b && e.getValue().consumed().contains(idom)) {
+                        isNodeJoin = true;
+                        break;
+                    }
+                }
+                if (!isNodeJoin) {
+                    return false;
+                }
+            }
+        }
         return true;
+    }
+
+    private boolean consumedByAnyNode(IRBlock b) {
+        for (TryNodeDescriptor node : tryNodes.values()) {
+            if (node.consumed().contains(b)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The successors of {@code b} in the structuring model: a try node's only edge is to its join; every
+     * other block keeps its CFG successors.
+     */
+    private Collection<IRBlock> modelSuccessors(IRBlock b) {
+        TryNodeDescriptor node = tryNodes.get(b);
+        if (node == null) {
+            return b.getSuccessors();
+        }
+        return node.after() != null ? Collections.singletonList(node.after()) : Collections.emptyList();
+    }
+
+    /**
+     * The predecessors of {@code n} in the structuring model: its CFG predecessors (consumed blocks are
+     * never in the region, so a join's real predecessors drop out) plus each try node whose join it is.
+     */
+    private List<IRBlock> modelPredecessors(IRBlock n) {
+        List<IRBlock> out = new ArrayList<>(n.getPredecessors());
+        for (Map.Entry<IRBlock, TryNodeDescriptor> e : tryNodes.entrySet()) {
+            if (e.getValue().after() == n) {
+                out.add(e.getKey());
+            }
+        }
+        return out;
     }
 
     /**
@@ -431,6 +643,11 @@ public final class ReachingConditionStructurer {
             return false;
         }
         for (IRBlock x : subtree) {
+            if (tryNodes.containsKey(x)) {
+                return false;
+            }
+        }
+        for (IRBlock x : subtree) {
             if (!bridge.isDuplicationSafe(x)) {
                 return false;
             }
@@ -467,7 +684,7 @@ public final class ReachingConditionStructurer {
     /** True when every edge leaving {@code subtree} lands inside it, is a back edge, or is a loop break/continue. */
     private boolean isClosedTail(Set<IRBlock> subtree) {
         for (IRBlock x : subtree) {
-            for (IRBlock s : x.getSuccessors()) {
+            for (IRBlock s : modelSuccessors(x)) {
                 if (!subtree.contains(s) && !isBackEdge(x, s) && context.classifyLoopJump(s) == null) {
                     return false;
                 }
@@ -493,7 +710,7 @@ public final class ReachingConditionStructurer {
     /** DFS over non-back edges: a back edge into an on-stack block would be a genuine (irreducible) cycle. */
     private boolean hasNonBackCycle(IRBlock b, Set<IRBlock> onStack, Set<IRBlock> done) {
         onStack.add(b);
-        for (IRBlock s : b.getSuccessors()) {
+        for (IRBlock s : modelSuccessors(b)) {
             if (isBackEdge(b, s) || !region.contains(s)) {
                 continue;
             }
@@ -523,6 +740,9 @@ public final class ReachingConditionStructurer {
         List<IRBlock> ordered = new ArrayList<>(region);
         ordered.sort((a, b) -> Integer.compare(rpoIndex.get(a), rpoIndex.get(b)));
         for (IRBlock b : ordered) {
+            if (tryNodes.containsKey(b)) {
+                continue;
+            }
             if (b.getTerminator() instanceof BranchInstruction) {
                 atomOf.put(b, blockOfAtom.size());
                 blockOfAtom.add(b);
@@ -553,6 +773,9 @@ public final class ReachingConditionStructurer {
         if (!duplicating && bridge.isRegionBlockProcessed(b)) {
             return new ArrayList<>();
         }
+        if (tryNodes.containsKey(b)) {
+            return emitTry(b);
+        }
         LoopAnalysis loops = context.getLoopAnalysis();
         if (loops != null && loops.isLoopHeader(b)) {
             return emitLoop(b);
@@ -570,6 +793,71 @@ public final class ReachingConditionStructurer {
         bridge.tryCollapseTernaryDiamond(b);
         List<Statement> out = new ArrayList<>(own);
         out.addAll(structureChildren(b));
+        return out;
+    }
+
+    /**
+     * Emits an opaque try node: the whole try/catch is recovered by the host machinery at this structural
+     * position (which marks the consumed blocks emitted), then the node continues at its join - emitted here
+     * when the node owns it, realized as the enclosing loop's break/continue when the join is a loop
+     * boundary, or left to the join's own dominator placement otherwise. A delegate that cannot recover the
+     * shape falls back to the legacy walk over just the node's span.
+     */
+    private List<Statement> emitTry(IRBlock b) {
+        TryNodeDescriptor node = tryNodes.get(b);
+        Set<IRBlock> alreadyEmitted = new HashSet<>();
+        for (IRBlock r : region) {
+            if (r != b && bridge.isRegionBlockProcessed(r)) {
+                alreadyEmitted.add(r);
+            }
+        }
+        List<Statement> out = new ArrayList<>();
+        // The delegate recovery hands the try body back through the region hand-off, which re-enters this
+        // structurer for the body's own pass; snapshot this pass's state so the nested pass cannot clobber
+        // the emit in flight. The guard-temp counter deliberately survives, keeping temp names unique.
+        PassState saved = new PassState(this);
+        Statement stmt;
+        try {
+            stmt = bridge.recoverTryNode(b, node, regionStopBlocks, alreadyEmitted);
+            if (stmt == null) {
+                Set<IRBlock> walkStops = new HashSet<>(regionStopBlocks);
+                if (node.after() != null) {
+                    walkStops.add(node.after());
+                }
+                out.addAll(bridge.legacyWalk(b, walkStops));
+            }
+        } finally {
+            saved.restore(this);
+        }
+        if (stmt != null) {
+            out.add(stmt);
+            if (bridge.recoveredTryTerminates(stmt)) {
+                return out;
+            }
+        }
+        IRBlock after = node.after();
+        if (after == null || isBackEdge(b, after)) {
+            return out;
+        }
+        ControlFlowContext.LoopJump jump = context.classifyLoopJump(after);
+        if (jump != null) {
+            if (jump.kind == ControlFlowContext.JumpKind.CONTINUE) {
+                out.add(jump.loopHeader != null
+                        ? new ContinueStmt(context.getOrCreateLabel(jump.loopHeader))
+                        : new ContinueStmt());
+            } else {
+                out.add(jump.loopHeader != null
+                        ? new BreakStmt(context.getOrCreateLabel(jump.loopHeader))
+                        : new BreakStmt());
+            }
+            return out;
+        }
+        if (context.classifySwitchJump(after) != null) {
+            return out;
+        }
+        if (nodeOwnsAfter(b, node)) {
+            out.addAll(emit(after));
+        }
         return out;
     }
 
@@ -661,12 +949,14 @@ public final class ReachingConditionStructurer {
                 best = c;
             }
         }
-        if (best == null && desc.merge() != null && region.contains(desc.merge())
-                && !desc.caseHeaders().contains(desc.merge())) {
+        if (best == null && desc.merge() != null && !desc.caseHeaders().contains(desc.merge())
+                && (region.contains(desc.merge()) || regionStopBlocks.contains(desc.merge()))) {
+            // A merge on the region's stop boundary is the piece's own continuation: the cases break out of
+            // the switch and control falls off the region there, recovered by whatever owns the boundary.
             return desc.merge();
         }
         if (best == null) {
-            best = caseConvergence(header, desc);
+            best = caseConvergence(desc);
         }
         return best;
     }
@@ -677,7 +967,7 @@ public final class ReachingConditionStructurer {
      * switch with a single non-terminal case, or one whose merge is a tail shared with sibling switches, still has a
      * definite break target (the block each surviving case reaches on leaving the switch); this finds it.
      */
-    private IRBlock caseConvergence(IRBlock header, SwitchDescriptor desc) {
+    private IRBlock caseConvergence(SwitchDescriptor desc) {
         IRBlock merge = null;
         for (IRBlock h : desc.caseHeaders()) {
             Set<IRBlock> body = subtreeOf(h);
@@ -1437,7 +1727,7 @@ public final class ReachingConditionStructurer {
                 continue;
             }
             BoolFormula acc = formulas.falsity;
-            for (IRBlock p : n.getPredecessors()) {
+            for (IRBlock p : modelPredecessors(n)) {
                 if (!subSet.contains(p)) {
                     continue;
                 }
@@ -1455,6 +1745,11 @@ public final class ReachingConditionStructurer {
 
     /** The boolean predicate labelling the edge {@code pred -> succ}. */
     private BoolFormula edgePredicate(IRBlock pred, IRBlock succ) {
+        if (tryNodes.containsKey(pred)) {
+            // A try node's only modeled edge is the unconditional continuation to its join; its real
+            // terminator belongs to the protected code the delegate recovers.
+            return formulas.truth;
+        }
         IRInstruction term = pred.getTerminator();
         if (term instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) term;
@@ -1536,7 +1831,7 @@ public final class ReachingConditionStructurer {
         if (isTerminalBlock(n)) {
             return true;
         }
-        for (IRBlock s : n.getSuccessors()) {
+        for (IRBlock s : modelSuccessors(n)) {
             if (isBackEdge(n, s) || s == c || context.classifyLoopJump(s) != null) {
                 continue; // reaches c, or the edge exits the loop/region
             }
@@ -1739,7 +2034,7 @@ public final class ReachingConditionStructurer {
             if (!seen.add(b)) {
                 continue;
             }
-            for (IRBlock s : b.getSuccessors()) {
+            for (IRBlock s : modelSuccessors(b)) {
                 if (s != avoid && region.contains(s) && !seen.contains(s)
                         && !isBackEdge(b, s)) {
                     work.add(s);

@@ -505,6 +505,9 @@ public class StatementLowerer {
         // the PRE-try value. Re-establishing them at catch entry (below) emits a StoreLocal there - a real def that
         // forces a correct phi at the try/catch -> finally join, instead of a trivial phi that binds to the try's
         // post-store value (undefined on the exception path -> "Bad local variable type" at verification).
+        // Inside a loop this snapshot is NOT re-established: it holds the pre-LOOP value, and binding the catch to
+        // it would reset a loop-carried variable on every caught iteration; there the catch keeps the variable's
+        // slot-carried value, which is the value at the fault point.
         java.util.Map<String, SSAValue> postTryVars = ctx.snapshotVariables();
         java.util.List<String> reassignedInTry = new java.util.ArrayList<>();
         for (java.util.Map.Entry<String, SSAValue> e : preTryVars.entrySet()) {
@@ -543,8 +546,10 @@ public class StatementLowerer {
             catchBlock.addInstruction(SimpleInstruction.createCatch(exVar));
             ctx.declareLocal(exVarName, exVarIrType, false);
             ctx.setVariable(exVarName, exVar);
-            for (String name : reassignedInTry) {
-                ctx.setVariable(name, preTryVars.get(name));
+            if (ctx.getLoopStack().isEmpty()) {
+                for (String name : reassignedInTry) {
+                    ctx.setVariable(name, preTryVars.get(name));
+                }
             }
 
             lower(catchClause.body());

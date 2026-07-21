@@ -95,4 +95,29 @@ public interface RegionRecoveryBridge {
      * pattern {@code typeSwitch}, or a synthesized comparison-chain switch), which then declines to the legacy walk.
      */
     SwitchDescriptor decodeSwitch(IRBlock switchBlock);
+
+    /** True when {@code block} starts the protected range of an exception handler no recovery has consumed. */
+    boolean startsUnprocessedHandler(IRBlock block);
+
+    /**
+     * Statically decodes the try starting at {@code block} into an opaque {@link TryNodeDescriptor} - the
+     * blocks the try/catch recovery will consume and the single join it continues at - without recovering or
+     * marking anything. Returns null for a shape the node model does not own (a nested unprocessed try in the
+     * range, a catch with internal control flow, or an ambiguous join), which then declines.
+     */
+    TryNodeDescriptor decodeTryNode(IRBlock block);
+
+    /**
+     * Recovers the try node starting at {@code block} as one statement via the host's try/catch machinery,
+     * marking its handler and blocks consumed. {@code alreadyEmitted} are the region blocks recovered before
+     * the node, excluded from the try's own walk. Returns null when the machinery cannot recover the shape.
+     */
+    Statement recoverTryNode(IRBlock block, TryNodeDescriptor node, Set<IRBlock> stopBlocks,
+                             Set<IRBlock> alreadyEmitted);
+
+    /** Whether a statement recovered by {@link #recoverTryNode} leaves no normal fall-through. */
+    boolean recoveredTryTerminates(Statement recovered);
+
+    /** The legacy schema walk over {@code [start, stopBlocks)}, for a node whose delegate recovery declined. */
+    List<Statement> legacyWalk(IRBlock start, Set<IRBlock> stopBlocks);
 }

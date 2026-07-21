@@ -263,30 +263,42 @@ public class FrameGenerator {
         // and that empty propagated, so the order, not a re-merge, is what keeps the nested handler's locals live.
         List<ExceptionTableEntry> orderedHandlers = new ArrayList<>(codeAttr.getExceptionTable());
         orderedHandlers.sort(java.util.Comparator.comparingInt(ExceptionTableEntry::getStartPc));
-        for (ExceptionTableEntry entry : orderedHandlers) {
-            int handlerPc = entry.getHandlerPc();
+        // A handler's own continuation can flow back into the code it protects (a catch inside a loop), widening
+        // the in-range local states after the handler's entry frame was formed; iterate the handler scans to a
+        // fixpoint so the entry frame reflects every state the protected range is reached with. The merges only
+        // widen, so this preserves the start-order guarantee for a handler nested in another handler's code.
+        for (int round = 0; round < 16; round++) {
+            boolean widened = false;
+            for (ExceptionTableEntry entry : orderedHandlers) {
+                int handlerPc = entry.getHandlerPc();
 
-            // Handler entry locals = the local state merged across the protected region (accumulated during the scan),
-            // merged with any normal-flow reach of the handler PC. Falls back to initialState only if the region was
-            // never reached.
-            TypeState baseLocals = handlerBaseLocals.get(handlerPc);
-            if (states.containsKey(handlerPc)) {
-                baseLocals = (baseLocals == null) ? states.get(handlerPc)
-                        : baseLocals.merge(states.get(handlerPc), constPool);
-            }
-            if (baseLocals == null) {
-                baseLocals = initialState;
-            }
+                // Handler entry locals = the local state merged across the protected region (accumulated during the
+                // scan), merged with any normal-flow reach of the handler PC. Falls back to initialState only if the
+                // region was never reached.
+                TypeState baseLocals = handlerBaseLocals.get(handlerPc);
+                if (states.containsKey(handlerPc)) {
+                    baseLocals = (baseLocals == null) ? states.get(handlerPc)
+                            : baseLocals.merge(states.get(handlerPc), constPool);
+                }
+                if (baseLocals == null) {
+                    baseLocals = initialState;
+                }
 
-            TypeState handlerState = createExceptionHandlerState(baseLocals, entry.getCatchType());
-            if (states.containsKey(handlerPc)) {
-                states.put(handlerPc, states.get(handlerPc).merge(handlerState, constPool));
-            } else {
-                states.put(handlerPc, handlerState);
+                TypeState handlerState = createExceptionHandlerState(baseLocals, entry.getCatchType());
+                TypeState previous = states.get(handlerPc);
+                TypeState merged = previous == null ? handlerState : previous.merge(handlerState, constPool);
+                boolean grew = !merged.equals(previous);
+                if (round == 0 || grew) {
+                    states.put(handlerPc, merged);
+                    worklist.add(new WorkItem(handlerPc, handlerState));
+                    processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
+                            instructionList, offsetToIndex, constPool);
+                    widened |= grew;
+                }
             }
-            worklist.add(new WorkItem(handlerPc, handlerState));
-            processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
-                    instructionList, offsetToIndex, constPool);
+            if (round > 0 && !widened) {
+                break;
+            }
         }
 
         // Dead-code frame targets: an unreachable block start (e.g. a nop a structural edit leaves after a

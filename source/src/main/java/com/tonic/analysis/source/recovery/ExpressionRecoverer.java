@@ -602,8 +602,17 @@ public class ExpressionRecoverer {
         @Override
         public Expression visitCopy(CopyInstruction instr) {
             Value source = instr.getSource();
+            java.util.Set<SSAValue> chain = new java.util.HashSet<>();
             while (source instanceof SSAValue) {
                 SSAValue ssaSource = (SSAValue) source;
+                if (!chain.add(ssaSource)) {
+                    // A cyclic copy chain: phi-eliminated copies of a loop-carried variable feed each other
+                    // across the loop's edges. The value IS that variable; refer to it by name.
+                    String cyclicName = context.getVariableName(ssaSource);
+                    return cyclicName != null
+                            ? new VarRefExpr(cyclicName, typeRecoverer.recoverType(ssaSource), ssaSource)
+                            : null;
+                }
                 if (context.isRecovered(ssaSource)) {
                     return context.getCachedExpression(ssaSource);
                 }

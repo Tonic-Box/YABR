@@ -11,6 +11,7 @@ import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
 import com.tonic.analysis.source.recovery.rcs.SwitchDescriptor;
+import com.tonic.analysis.source.recovery.rcs.TryNodeDescriptor;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
@@ -739,10 +740,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 result.addAll(tryStmts);
             }
         } else {
-            // No handler covers the entry: the try begins after a prelude. The hand-off stages the region
-            // linearly - prefix, try (recoverTryCatch), continuation - structuring the handler-free spans
-            // natively, and falls back to the legacy walk when no linear staging exists.
-            result.addAll(recoverRegionHandoff(entry, handlerBlocks));
+            // No handler covers the entry: the try begins after a prelude, so a reachable unprocessed try
+            // exists by construction and the reaching-condition engine alone can never own the region - it
+            // is not offered here. (Offering it bounded by the handler-REACHABLE set is a miscompile: a
+            // catch that flows back into its loop puts the loop header in that set, the engine then
+            // "succeeds" on the truncated prelude, and the rest of the method is dropped.) The staging and
+            // node attempts get only the catch-EXCLUSIVE blocks as stops - blocks a catch dominates, which
+            // normal flow can never reach - while the legacy walk keeps the historical reachable set, whose
+            // loose stop semantics it is built around.
+            List<Statement> structured = recoverSequentialTryStages(entry, catchExclusiveBlocks(handlers));
+            if (structured == null) {
+                structured = rcsStructurer.tryStructureRegion(entry, new HashSet<>(), true);
+            }
+            if (structured == null) {
+                structured = legacyBlockWalk(entry, handlerBlocks);
+            }
+            result.addAll(structured);
         }
 
         return result;
@@ -4407,6 +4420,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (staged != null) {
             return staged;
         }
+        // No linear staging (a try inside a loop body or on one arm of a branch): let the engine place
+        // each try as an opaque composite node at its structural position.
+        structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks, true);
+        if (structured != null) {
+            return structured;
+        }
         return legacyBlockWalk(startBlock, stopBlocks);
     }
 
@@ -4430,6 +4449,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (tryStart != null && tryStart != b) {
                     return null;
                 }
+                // A try inside a loop has no linear staging: control re-enters the blocks before it on the
+                // next iteration, so prefix-try-continuation sequencing would hoist the try out of the loop.
+                if (context.getLoopAnalysis() != null && context.getLoopAnalysis().isInLoop(b)) {
+                    return null;
+                }
                 tryStart = b;
                 continue;
             }
@@ -4450,6 +4474,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         ExceptionHandler handler = findUnprocessedHandlerStartingAt(tryStart);
         if (handler == null || prefix.contains(handler.getHandlerBlock())) {
+            return null;
+        }
+        if (tryHasFinallyHandler(tryStart)) {
+            // A finally (a rethrowing catch-all) inlines its body on every exit path; recovering it and its
+            // continuation is the exception scaffolding's and the legacy walk's specialty, not a linear stage.
             return null;
         }
 
@@ -4477,6 +4506,156 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         return out;
+    }
+
+    /**
+     * The blocks that belong exclusively to catch code: each handler's entry block plus every block it
+     * dominates. Unlike the handler-REACHABLE set - which a fall-through or looping catch extends into the
+     * normal flow it rejoins - this set can never contain a block normal control reaches, so it is safe as
+     * a stop set for boundary-strict recoveries.
+     */
+    private Set<IRBlock> catchExclusiveBlocks(List<ExceptionHandler> handlers) {
+        Set<IRBlock> out = new HashSet<>();
+        DominatorTree dt = context.getDominatorTree();
+        for (ExceptionHandler h : handlers) {
+            IRBlock hb = h.getHandlerBlock();
+            if (hb == null) {
+                continue;
+            }
+            out.add(hb);
+            if (dt != null) {
+                for (IRBlock b : context.getIrMethod().getBlocks()) {
+                    if (dt.dominates(hb, b)) {
+                        out.add(b);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+
+    @Override
+    public boolean startsUnprocessedHandler(IRBlock block) {
+        return findUnprocessedHandlerStartingAt(block) != null;
+    }
+
+    @Override
+    public TryNodeDescriptor decodeTryNode(IRBlock block) {
+        ExceptionHandler h = findUnprocessedHandlerStartingAt(block);
+        if (h == null || h.getHandlerBlock() == null) {
+            return null;
+        }
+        IRMethod irMethod = context.getIrMethod();
+        int startOff = h.getTryStart() != null ? h.getTryStart().getBytecodeOffset() : -1;
+        int endOff = -1;
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+            if (eh.getHandlerBlock() != h.getHandlerBlock()) {
+                continue;
+            }
+            if (eh.getTryStart() != null && (startOff < 0 || eh.getTryStart().getBytecodeOffset() < startOff)) {
+                startOff = eh.getTryStart().getBytecodeOffset();
+            }
+            if (eh.getTryEnd() != null && eh.getTryEnd().getBytecodeOffset() > endOff) {
+                endOff = eh.getTryEnd().getBytecodeOffset();
+            }
+        }
+        if (startOff < 0 || endOff <= startOff || block.getBytecodeOffset() != startOff) {
+            return null;
+        }
+        if (tryHasFinallyHandler(block)) {
+            return null;
+        }
+        Set<IRBlock> consumed = new HashSet<>();
+        for (IRBlock b : irMethod.getBlocks()) {
+            int off = b.getBytecodeOffset();
+            if (off >= startOff && off < endOff) {
+                consumed.add(b);
+            }
+        }
+        // A different, unprocessed handler protecting a sub-range is a nested try the node model does not
+        // own statically; the try/catch recovery would consume blocks the model cannot predict.
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+            if (eh.getHandlerBlock() == null || eh.getHandlerBlock() == h.getHandlerBlock()
+                    || eh.getTryStart() == null) {
+                continue;
+            }
+            int s = eh.getTryStart().getBytecodeOffset();
+            if (s >= startOff && s < endOff
+                    && !processedTryHandlers.contains(eh)
+                    && !processedHandlerBlocks.contains(eh.getHandlerBlock())) {
+                return null;
+            }
+        }
+        consumed.add(h.getHandlerBlock());
+
+        DominatorTree dt = context.getDominatorTree();
+        IRBlock after = null;
+        for (IRBlock succ : h.getHandlerBlock().getSuccessors()) {
+            if (consumed.contains(succ)) {
+                continue;
+            }
+            if (dt.dominates(h.getHandlerBlock(), succ)) {
+                return null;
+            }
+            if (after != null && after != succ) {
+                return null;
+            }
+            after = succ;
+        }
+        if (after == null) {
+            int best = Integer.MAX_VALUE;
+            for (IRBlock b : irMethod.getBlocks()) {
+                int off = b.getBytecodeOffset();
+                if (off >= endOff && off < best && !consumed.contains(b)) {
+                    after = b;
+                    best = off;
+                }
+            }
+            if (after != null && dt.dominates(h.getHandlerBlock(), after)) {
+                return null;
+            }
+        }
+        if (after == block) {
+            return null;
+        }
+        return new TryNodeDescriptor(h, consumed, after);
+    }
+
+    @Override
+    public Statement recoverTryNode(IRBlock block, TryNodeDescriptor node, Set<IRBlock> stopBlocks,
+                                    Set<IRBlock> alreadyEmitted) {
+        ExceptionHandler h = node.handler();
+        processedTryHandlers.add(h);
+        if (h.getHandlerBlock() != null) {
+            processedHandlerBlocks.add(h.getHandlerBlock());
+        }
+        return recoverTryCatch(block, h, stopBlocks, new HashSet<>(alreadyEmitted));
+    }
+
+    @Override
+    public boolean recoveredTryTerminates(Statement recovered) {
+        return isTerminatingRecoveredTry(recovered);
+    }
+
+    @Override
+    public List<Statement> legacyWalk(IRBlock start, Set<IRBlock> stopBlocks) {
+        return legacyBlockWalk(start, stopBlocks);
+    }
+
+    /**
+     * True when some handler protecting the try starting at {@code tryStart} is a finally - a rethrowing
+     * catch-all whose body javac also inlines on every normal exit path.
+     */
+    private boolean tryHasFinallyHandler(IRBlock tryStart) {
+        int startOff = tryStart.getBytecodeOffset();
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+            if (h.getTryStart() != null && h.getTryStart().getBytecodeOffset() == startOff
+                    && handlerRethrows(h) && !handlerThrowsFreshException(h)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** The handler whose protected range starts at {@code block} and which no recovery has consumed yet. */
@@ -5638,6 +5817,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
         }
 
+        if (value instanceof VarRefExpr && name.equals(((VarRefExpr) value).getName())) {
+            // An identity store - the value already lives under this name (e.g. a caught exception whose
+            // catch clause introduced it) - declares nothing.
+            return null;
+        }
         context.getExpressionContext().markDeclared(name);
         return new VarDeclStmt(type, name, value);
     }
@@ -5789,6 +5973,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
+
+        if (value instanceof VarRefExpr && name.equals(((VarRefExpr) value).getName())) {
+            // An identity copy (a cyclic loop-carried copy chain resolves to the variable itself):
+            // the variable already holds the value, so neither `T x = x;` nor `x = x;` is emitted.
+            return null;
+        }
 
         if (context.getExpressionContext().isDeclared(name)) {
             VarRefExpr target = new VarRefExpr(name, type, result);
