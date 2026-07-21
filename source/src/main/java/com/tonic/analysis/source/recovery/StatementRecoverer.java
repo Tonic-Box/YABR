@@ -8146,10 +8146,28 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      */
     @Override
     public List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ) {
+        return lowerPhisOnEdge(pred, succ, false);
+    }
+
+    /**
+     * As {@link #lowerPhisOnEdge}, but only for the loop's for-induction counter phis - the ones
+     * {@link #emitPhiDeclaration} deliberately does not declare (their init is realized here or folded into
+     * the for-init). Used for a region-entry loop's out-of-region pre-header edge, where emitting every phi
+     * copy would re-emit a non-counter init the surrounding recovery already kept, duplicating it.
+     */
+    @Override
+    public List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ) {
+        return lowerPhisOnEdge(pred, succ, true);
+    }
+
+    private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ, boolean inductionOnly) {
         List<Statement> copies = new ArrayList<>();
         for (PhiInstruction phi : succ.getPhiInstructions()) {
             SSAValue result = phi.getResult();
             if (result == null) {
+                continue;
+            }
+            if (inductionOnly && !isForLoopInductionPhi(phi)) {
                 continue;
             }
             String target = context.getExpressionContext().getVariableName(result);

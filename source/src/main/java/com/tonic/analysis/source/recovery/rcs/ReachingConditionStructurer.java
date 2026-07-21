@@ -1051,12 +1051,19 @@ public final class ReachingConditionStructurer {
         // counter's initial value when the for-loop-init pass marked the store for skipping. Identity
         // copies self-skip, so a value already stored in the pre-header is not repeated. A forward pred
         // OUTSIDE the region occurs when the loop is the region entry (a staged try body that wraps the
-        // loop): the surrounding recovery stopped AT this header and never emitted the header's phi copies,
-        // so the counter's init would otherwise be dropped and the for-counter left undeclared. Emit those
-        // too - the leading `i = <init>` is folded into the for-init downstream.
+        // loop): the surrounding recovery stopped AT this header and emitted no phi copies for it. Only the
+        // for-induction counter's init is at risk there (the declaration pass skips it and its default init
+        // is folded into the phi, so it would otherwise be dropped and the counter left undeclared); the
+        // other loop-carried inits were kept by the surrounding recovery, so re-emitting them would
+        // duplicate them. Emit only the induction inits for the out-of-region edge.
         for (IRBlock pred : header.getPredecessors()) {
-            if (!isBackEdge(pred, header)) {
+            if (isBackEdge(pred, header)) {
+                continue;
+            }
+            if (region.contains(pred)) {
                 out.addAll(bridge.lowerPhisOnEdge(pred, header));
+            } else {
+                out.addAll(bridge.lowerInductionPhiInitsOnEdge(pred, header));
             }
         }
         List<Statement> headerStmts = new ArrayList<>(bridge.recoverSimpleBlock(header));

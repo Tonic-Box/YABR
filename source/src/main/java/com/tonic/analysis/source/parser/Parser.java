@@ -1414,6 +1414,13 @@ public class Parser {
                 Object val = lit.getValue();
                 if (val instanceof Long) {
                     long lval = (Long) val;
+                    // An explicit `long` literal (an `L` suffix, so type LONG) stays long, whatever its
+                    // magnitude: `-1L` is long -1, not int -1. Only a decimal INT literal whose positive
+                    // form overflowed int (e.g. 2147483648, lexed as a Long with INT type) narrows back to
+                    // int on negation - its value is then in int range (down to Integer.MIN_VALUE).
+                    if (lit.getType() == PrimitiveSourceType.LONG) {
+                        return new LiteralExpr(-lval, PrimitiveSourceType.LONG, loc);
+                    }
                     if (lval == 2147483648L) {
                         return new LiteralExpr(Integer.MIN_VALUE, PrimitiveSourceType.INT, loc);
                     }

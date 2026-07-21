@@ -51,6 +51,13 @@ public interface RegionRecoveryBridge {
     List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ);
 
     /**
+     * As {@link #lowerPhisOnEdge}, but restricted to the loop's for-induction counter phis (whose init the
+     * declaration pass does not emit). For a region-entry loop's out-of-region pre-header edge, where the
+     * other phi inits were already emitted by the surrounding recovery.
+     */
+    List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ);
+
+    /**
      * True when some block in {@code region} starts an exception handler the surrounding recovery has not
      * yet consumed - a nested try the engine must decline so the try/catch scaffolding recovers it.
      */
