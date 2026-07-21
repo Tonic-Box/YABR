@@ -739,10 +739,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 result.addAll(tryStmts);
             }
         } else {
-            // No handler covers the entry: the try begins after a prelude, so the whole region still
-            // holds the unprocessed try. The RC engine would only decline it here; let the legacy walk
-            // reach the try (recoverTryCatch) and hand the engine the handler-free body from there.
-            result.addAll(recoverBlockSequence(entry, handlerBlocks));
+            // No handler covers the entry: the try begins after a prelude. The hand-off stages the region
+            // linearly - prefix, try (recoverTryCatch), continuation - structuring the handler-free spans
+            // natively, and falls back to the legacy walk when no linear staging exists.
+            result.addAll(recoverRegionHandoff(entry, handlerBlocks));
         }
 
         return result;
@@ -2070,12 +2070,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     /**
      * Folds a recovered clean normal path of a try-with-resources method into {@code try (resources) { body }}.
      * Resources are the locals that are {@code close()}d on the normal path; their declarations are lifted out
-     * and referenced from the try header, and the synthetic close calls are dropped.
+     * and referenced from the try header, and the synthetic close calls are dropped. A user {@code finally}
+     * (with its inlined copies filtered from the body) is attached when present; pass null and an empty set
+     * when there is none.
      */
-    private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches) {
-        return reconstructTryWithResources(normalPath, catches, null, Collections.emptySet());
-    }
-
     private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches,
                                                         BlockStmt finallyBlock, Set<String> finallyVars) {
         Set<String> closedVars = new LinkedHashSet<>();
@@ -2907,14 +2905,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
 
+        // The protected range's end offset is EXCLUSIVE, so the continuation may begin exactly at it: javac
+        // separates them with a goto over the catch, but the recompiler lays the continuation out to fall
+        // through directly at the end offset, and a strictly-greater scan would skip it (dropping the code
+        // between this try and the next). Pick the unvisited non-handler block nearest at-or-past the end.
         int endOffset = mergedTryEndOffset(handler);
         if (endOffset >= 0) {
             IRMethod irMethod = context.getIrMethod();
+            IRBlock best = null;
             for (IRBlock block : irMethod.getBlocks()) {
-                if (block.getBytecodeOffset() > endOffset && !visited.contains(block)) {
-                    return block;
+                if (block.getBytecodeOffset() >= endOffset && !visited.contains(block)
+                        && block != handler.getHandlerBlock()
+                        && (best == null || block.getBytecodeOffset() < best.getBytecodeOffset())) {
+                    best = block;
                 }
             }
+            return best;
         }
 
         return null;
@@ -4397,7 +4403,90 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (structured != null) {
             return structured;
         }
+        List<Statement> staged = recoverSequentialTryStages(startBlock, stopBlocks);
+        if (staged != null) {
+            return staged;
+        }
         return legacyBlockWalk(startBlock, stopBlocks);
+    }
+
+    /**
+     * Recovers a region that the RC engine declined because it contains a try, by staging it linearly:
+     * the handler-free prefix (recovered recursively, so the RC engine structures it), the try itself
+     * (delegated to {@link #recoverTryCatch} with the same visited/continuation semantics as the legacy
+     * walk), then the continuation after the try (recovered recursively, so a further try stages again).
+     * Applies only when every path from {@code startBlock} reaches one unique try or terminates - a try
+     * on just one arm of a branch, or a prefix path that bypasses the try to a stop block, has no linear
+     * staging and returns null so the caller keeps the legacy walk.
+     */
+    private List<Statement> recoverSequentialTryStages(IRBlock startBlock, Set<IRBlock> stopBlocks) {
+        Set<IRBlock> prefix = new HashSet<>();
+        Deque<IRBlock> work = new ArrayDeque<>();
+        work.add(startBlock);
+        IRBlock tryStart = null;
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            if (findUnprocessedHandlerStartingAt(b) != null) {
+                if (tryStart != null && tryStart != b) {
+                    return null;
+                }
+                tryStart = b;
+                continue;
+            }
+            if (!prefix.add(b)) {
+                continue;
+            }
+            for (IRBlock s : b.getSuccessors()) {
+                if (stopBlocks.contains(s)) {
+                    return null;
+                }
+                if (!prefix.contains(s)) {
+                    work.add(s);
+                }
+            }
+        }
+        if (tryStart == null) {
+            return null;
+        }
+        ExceptionHandler handler = findUnprocessedHandlerStartingAt(tryStart);
+        if (handler == null || prefix.contains(handler.getHandlerBlock())) {
+            return null;
+        }
+
+        List<Statement> out = new ArrayList<>();
+        if (tryStart != startBlock) {
+            Set<IRBlock> prefixStops = new HashSet<>(stopBlocks);
+            prefixStops.add(tryStart);
+            out.addAll(recoverRegionHandoff(startBlock, prefixStops));
+        }
+        processedTryHandlers.add(handler);
+        if (handler.getHandlerBlock() != null) {
+            processedHandlerBlocks.add(handler.getHandlerBlock());
+        }
+        Set<IRBlock> tryVisited = new HashSet<>(prefix);
+        Statement recovered = recoverTryCatch(tryStart, handler, stopBlocks, tryVisited);
+        if (recovered == null) {
+            out.addAll(legacyBlockWalk(tryStart, stopBlocks));
+            return out;
+        }
+        out.add(recovered);
+        if (!isTerminatingRecoveredTry(recovered)) {
+            IRBlock after = findBlockAfterTryCatch(handler, tryVisited);
+            if (after != null && !stopBlocks.contains(after)) {
+                out.addAll(recoverRegionHandoff(after, stopBlocks));
+            }
+        }
+        return out;
+    }
+
+    /** The handler whose protected range starts at {@code block} and which no recovery has consumed yet. */
+    private ExceptionHandler findUnprocessedHandlerStartingAt(IRBlock block) {
+        ExceptionHandler h = findHandlerStartingAt(block);
+        if (h == null || processedTryHandlers.contains(h)
+                || processedHandlerBlocks.contains(h.getHandlerBlock())) {
+            return null;
+        }
+        return h;
     }
 
     /** The schema-based structural walk: the legacy recovery the RC engine falls back to for a declined region. */
