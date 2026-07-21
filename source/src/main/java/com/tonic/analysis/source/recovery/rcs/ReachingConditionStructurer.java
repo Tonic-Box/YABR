@@ -1378,7 +1378,12 @@ public final class ReachingConditionStructurer {
         Set<IRBlock> continuations = new LinkedHashSet<>();
         for (IRBlock t : targets) {
             IRBlock end = settleExit(followExitIntermediates(t, loopBlocks), header, loopBlocks);
-            if (end != null && !isTerminalBlock(end)) {
+            // An exit whose settled continuation is an ENCLOSING loop's continue/break target is a labeled
+            // continue/break out of this inner loop (a `continue label` bridge block leaving to the outer
+            // header). The outer loop owns that target and the edge is realized as the labeled jump, so it is
+            // not one of THIS loop's divergent break continuations. This loop's frame is not pushed yet, so
+            // classifyLoopJump reports only the enclosing loops.
+            if (end != null && !isTerminalBlock(end) && context.classifyLoopJump(end) == null) {
                 continuations.add(end);
             }
         }
