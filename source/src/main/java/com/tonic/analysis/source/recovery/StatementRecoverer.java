@@ -594,151 +594,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         ExceptionHandler outerHandler = findOutermostHandler(entry, mergedHandlers);
 
         if (outerHandler != null) {
-            List<ExceptionHandler> outerHandlers = new ArrayList<>();
-            List<ExceptionHandler> innerHandlers = new ArrayList<>();
-
-            for (ExceptionHandler h : mergedHandlers) {
-                // A handler over the identical try range is a sibling catch clause on the same try
-                // (try { } catch (A) { } catch (B) { }), not a nested one. Only a handler over a strict
-                // sub-range is genuinely nested; classifying a sibling as inner would rebuild it as a
-                // nested try and drop the shared try body.
-                if (h.getHandlerBlock() == outerHandler.getHandlerBlock()
-                        || sameTryRange(h, outerHandler)) {
-                    outerHandlers.add(h);
-                } else {
-                    innerHandlers.add(h);
-                }
-            }
-            Set<IRBlock> outerHandlerBlocks = new HashSet<>();
-            for (ExceptionHandler h : outerHandlers) {
-                if (h.getHandlerBlock() != null) {
-                    outerHandlerBlocks.add(h.getHandlerBlock());
-                }
-            }
-
-            Set<IRBlock> stopBlocks = new HashSet<>(handlerBlocks);
-
-            IRMethod irMethod = context.getIrMethod();
-            if (outerHandler.getTryEnd() != null) {
-                int tryEndOffset = outerHandler.getTryEnd().getBytecodeOffset();
-                for (IRBlock block : irMethod.getBlocks()) {
-                    if (block.getBytecodeOffset() >= tryEndOffset) {
-                        stopBlocks.add(block);
-                    }
-                }
-            }
-
-            processedTryHandlers.addAll(outerHandlers);
-            // Mark the handler block (stable across the merge that may have replaced the handler objects) so
-            // the try body's own block-sequence recovery does not rebuild the same region as a nested
-            // try/catch, which would duplicate the clause (and drop multi-catch types via the merge).
-            processedHandlerBlocks.addAll(outerHandlerBlocks);
-
-            IRBlock tryStart = outerHandler.getTryStart();
-            List<Statement> preTryStmts = new ArrayList<>();
-            if (tryStart != null && tryStart != entry) {
-                Set<IRBlock> preTryStop = new HashSet<>(stopBlocks);
-                preTryStop.add(tryStart);
-                preTryStmts = recoverRegionHandoff(entry, preTryStop);
-            }
-
-            IRBlock startBlock = (tryStart != null) ? tryStart : entry;
-            boolean hasFinally = false;
-            for (ExceptionHandler h : outerHandlers) {
-                if (handlerRethrows(h) && !handlerThrowsFreshException(h)) {
-                    hasFinally = true;
-                    break;
-                }
-            }
-            boolean finallyDeduped = hasFinally && innerHandlers.isEmpty()
-                    && dedupStraightLineFinally(outerHandlers);
-            List<Statement> tryStmts;
-            if (!innerHandlers.isEmpty()) {
-                tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
-            } else if (hasFinally && !finallyDeduped) {
-                tryStmts = legacyBlockWalk(startBlock, stopBlocks);
-            } else {
-                tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
-            }
-            BlockStmt tryBlock = new BlockStmt(tryStmts);
-            result.addAll(preTryStmts);
-
-            // Build clauses from the original (pre-merge) handlers sharing the outer handler block, so a
-            // multi-catch's several exception-table entries coalesce into one `catch (A | B e)` clause.
-            List<ExceptionHandler> outerRegionHandlers = new ArrayList<>();
-            for (ExceptionHandler h : handlers) {
-                if (outerHandlerBlocks.contains(h.getHandlerBlock())) {
-                    outerRegionHandlers.add(h);
-                }
-            }
-            List<CatchClause> catchClauses = buildCatchClauses(outerRegionHandlers);
-
-            if (!catchClauses.isEmpty()) {
-                BlockStmt finallyBlock = null;
-                List<CatchClause> filteredCatches = new ArrayList<>();
-                Set<String> finallyExceptionVars = new HashSet<>();
-
-                for (CatchClause clause : catchClauses) {
-                    if (isFinallyRethrowPattern(clause)) {
-                        finallyBlock = extractFinallyBody(clause);
-                        finallyExceptionVars.add(clause.variableName());
-                    } else {
-                        filteredCatches.add(clause);
-                    }
-                }
-
-                if (!finallyExceptionVars.isEmpty()) {
-                    tryStmts = filterOrphanFinallyThrows(tryStmts, finallyExceptionVars);
-
-                    List<Statement> finallyStmts = finallyBlock.getStatements();
-                    tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyStmts);
-
-                    // The blocks between the protected region's end and the handler hold the finally inlined on
-                    // the normal exit path plus the region's real continuation (e.g. its return). Recover them
-                    // with the inlined-finally copies filtered out so the genuine continuation joins the try body
-                    // instead of being dropped (which would leave an empty try when the finally has control flow).
-                    if (outerHandler.getTryEnd() != null && outerHandler.getHandlerBlock() != null) {
-                        List<Statement> gapStmts = recoverFinallyGap(
-                            outerHandler.getTryEnd(), outerHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
-
-                        if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts))) {
-                            tryStmts = new ArrayList<>(tryStmts);
-                            tryStmts.addAll(gapStmts);
-                        }
-                    }
-
-                    tryBlock = new BlockStmt(tryStmts);
-                }
-
-                Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(outerHandler) : null;
-                Statement region;
-                if (syncLock != null) {
-                    SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
-                    stampFromBody(sync, tryBlock);
-                    region = sync;
-                } else {
-                    TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
-                    stampFromBody(tryCatch, tryBlock);
-                    region = tryCatch;
-                }
-                result.add(region);
-                // A region whose catch (or sync body) falls through continues at the join after
-                // the protected range; without walking it the method's tail is silently dropped.
-                if (!isTerminatingRecoveredTry(region)) {
-                    Set<IRBlock> consumed = new HashSet<>();
-                    for (ExceptionHandler h : outerRegionHandlers) {
-                        if (h.getHandlerBlock() != null) {
-                            collectCatchConsumedBlocks(h, consumed);
-                        }
-                    }
-                    IRBlock continuation = findBlockAfterTryCatch(outerHandler, consumed);
-                    if (continuation != null && !context.isProcessed(continuation)) {
-                        result.addAll(recoverRegionHandoff(continuation, new HashSet<>()));
-                    }
-                }
-            } else {
-                result.addAll(tryStmts);
-            }
+            result.addAll(recoverOuterHandlerRegion(entry, outerHandler, handlers, mergedHandlers, handlerBlocks));
         } else {
             // No handler covers the entry: the try begins after a prelude, so a reachable unprocessed try
             // exists by construction and the reaching-condition engine alone can never own the region - it
@@ -756,6 +612,167 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 structured = legacyBlockWalk(entry, handlerBlocks);
             }
             result.addAll(structured);
+        }
+
+        return result;
+    }
+
+    /**
+     * Recovers the region of the outermost try at {@code entry}: any prelude before the protected range,
+     * the try/catch (or synchronized) statement itself - with a finally de-duplicated or filtered from its
+     * inlined copies - and the continuation after the region. {@code outerHandler} is the widest merged
+     * handler protecting {@code entry}; {@code handlers} and {@code mergedHandlers} are the method's raw and
+     * merged handler lists, and {@code handlerBlocks} the handler-reachable stop set for the walking
+     * recoveries.
+     */
+    private List<Statement> recoverOuterHandlerRegion(IRBlock entry, ExceptionHandler outerHandler,
+                                                      List<ExceptionHandler> handlers,
+                                                      List<ExceptionHandler> mergedHandlers,
+                                                      Set<IRBlock> handlerBlocks) {
+        List<ExceptionHandler> outerHandlers = new ArrayList<>();
+        List<ExceptionHandler> innerHandlers = new ArrayList<>();
+
+        for (ExceptionHandler h : mergedHandlers) {
+            // A handler over the identical try range is a sibling catch clause on the same try
+            // (try { } catch (A) { } catch (B) { }), not a nested one. Only a handler over a strict
+            // sub-range is genuinely nested; classifying a sibling as inner would rebuild it as a
+            // nested try and drop the shared try body.
+            if (h.getHandlerBlock() == outerHandler.getHandlerBlock()
+                    || sameTryRange(h, outerHandler)) {
+                outerHandlers.add(h);
+            } else {
+                innerHandlers.add(h);
+            }
+        }
+        Set<IRBlock> outerHandlerBlocks = new HashSet<>();
+        for (ExceptionHandler h : outerHandlers) {
+            if (h.getHandlerBlock() != null) {
+                outerHandlerBlocks.add(h.getHandlerBlock());
+            }
+        }
+
+        Set<IRBlock> stopBlocks = new HashSet<>(handlerBlocks);
+
+        IRMethod irMethod = context.getIrMethod();
+        if (outerHandler.getTryEnd() != null) {
+            int tryEndOffset = outerHandler.getTryEnd().getBytecodeOffset();
+            for (IRBlock block : irMethod.getBlocks()) {
+                if (block.getBytecodeOffset() >= tryEndOffset) {
+                    stopBlocks.add(block);
+                }
+            }
+        }
+
+        processedTryHandlers.addAll(outerHandlers);
+        // Mark the handler block (stable across the merge that may have replaced the handler objects) so
+        // the try body's own block-sequence recovery does not rebuild the same region as a nested
+        // try/catch, which would duplicate the clause (and drop multi-catch types via the merge).
+        processedHandlerBlocks.addAll(outerHandlerBlocks);
+
+        IRBlock tryStart = outerHandler.getTryStart();
+        List<Statement> preTryStmts = new ArrayList<>();
+        if (tryStart != null && tryStart != entry) {
+            Set<IRBlock> preTryStop = new HashSet<>(stopBlocks);
+            preTryStop.add(tryStart);
+            preTryStmts = recoverRegionHandoff(entry, preTryStop);
+        }
+
+        IRBlock startBlock = (tryStart != null) ? tryStart : entry;
+        boolean hasFinally = false;
+        for (ExceptionHandler h : outerHandlers) {
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h)) {
+                hasFinally = true;
+                break;
+            }
+        }
+        boolean finallyDeduped = hasFinally && innerHandlers.isEmpty()
+                && dedupStraightLineFinally(outerHandlers);
+        List<Statement> tryStmts;
+        if (!innerHandlers.isEmpty()) {
+            tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
+        } else if (hasFinally && !finallyDeduped) {
+            tryStmts = legacyBlockWalk(startBlock, stopBlocks);
+        } else {
+            tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
+        }
+        BlockStmt tryBlock = new BlockStmt(tryStmts);
+        List<Statement> result = new ArrayList<>(preTryStmts);
+
+        // Build clauses from the original (pre-merge) handlers sharing the outer handler block, so a
+        // multi-catch's several exception-table entries coalesce into one `catch (A | B e)` clause.
+        List<ExceptionHandler> outerRegionHandlers = new ArrayList<>();
+        for (ExceptionHandler h : handlers) {
+            if (outerHandlerBlocks.contains(h.getHandlerBlock())) {
+                outerRegionHandlers.add(h);
+            }
+        }
+        List<CatchClause> catchClauses = buildCatchClauses(outerRegionHandlers);
+
+        if (!catchClauses.isEmpty()) {
+            BlockStmt finallyBlock = null;
+            List<CatchClause> filteredCatches = new ArrayList<>();
+            Set<String> finallyExceptionVars = new HashSet<>();
+
+            for (CatchClause clause : catchClauses) {
+                if (isFinallyRethrowPattern(clause)) {
+                    finallyBlock = extractFinallyBody(clause);
+                    finallyExceptionVars.add(clause.variableName());
+                } else {
+                    filteredCatches.add(clause);
+                }
+            }
+
+            if (!finallyExceptionVars.isEmpty()) {
+                tryStmts = filterOrphanFinallyThrows(tryStmts, finallyExceptionVars);
+
+                List<Statement> finallyStmts = finallyBlock.getStatements();
+                tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyStmts);
+
+                // The blocks between the protected region's end and the handler hold the finally inlined on
+                // the normal exit path plus the region's real continuation (e.g. its return). Recover them
+                // with the inlined-finally copies filtered out so the genuine continuation joins the try body
+                // instead of being dropped (which would leave an empty try when the finally has control flow).
+                if (outerHandler.getTryEnd() != null && outerHandler.getHandlerBlock() != null) {
+                    List<Statement> gapStmts = recoverFinallyGap(
+                        outerHandler.getTryEnd(), outerHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
+
+                    if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts))) {
+                        tryStmts = new ArrayList<>(tryStmts);
+                        tryStmts.addAll(gapStmts);
+                    }
+                }
+
+                tryBlock = new BlockStmt(tryStmts);
+            }
+
+            Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(outerHandler) : null;
+            Statement region;
+            if (syncLock != null) {
+                SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
+                stampFromBody(sync, tryBlock);
+                region = sync;
+            } else {
+                TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
+                stampFromBody(tryCatch, tryBlock);
+                region = tryCatch;
+            }
+            result.add(region);
+            // A region whose catch (or sync body) falls through continues at the join after
+            // the protected range; without walking it the method's tail is silently dropped.
+            if (!isTerminatingRecoveredTry(region)) {
+                Set<IRBlock> consumed = new HashSet<>();
+                for (ExceptionHandler h : outerRegionHandlers) {
+                    if (h.getHandlerBlock() != null) {
+                        collectCatchConsumedBlocks(h, consumed);
+                    }
+                }
+                IRBlock continuation = findBlockAfterTryCatch(outerHandler, consumed);
+                if (continuation != null && !context.isProcessed(continuation)) {
+                    result.addAll(recoverRegionHandoff(continuation, new HashSet<>()));
+                }
+            }
+        } else {
+            result.addAll(tryStmts);
         }
 
         return result;
@@ -1995,7 +2012,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         List<Statement> normalPath = recoverBlockSequence(entry, new HashSet<>());
         List<Statement> folded = reconstructTryWithResources(normalPath, catchClauses, finallyBlock, finallyVars);
         if (folded == null) {
-            processedTryHandlers.removeAll(allHandlers);
+            allHandlers.forEach(processedTryHandlers::remove);
             processedHandlerBlocks.removeAll(restoreBlocks);
             return null;
         }
@@ -2494,19 +2511,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Extracts a rethrow handler's finally body as a straight-line instruction template - the instructions between
-     * the handler's leading store of the caught exception and its trailing {@code athrow} - or null when the finally
-     * is not a single straight-line block, or holds an instruction kind the copy matcher does not handle. This is the
-     * sequence javac inlined verbatim on every normal exit of the protected range.
+     * The linear chain of blocks from {@code h}'s handler entry to the block that rethrows, or null when
+     * the handler branches (a finally with control flow). javac's finally-self-protection splits a
+     * straight-line handler into [store; goto] + [body; aload; athrow]; the intervening goto terminators
+     * and the exception self-edge are stepped over.
      */
-    private List<IRInstruction> straightLineFinallyTemplate(ExceptionHandler h) {
+    private List<IRBlock> finallyHandlerChain(ExceptionHandler h) {
         if (h == null || h.getHandlerBlock() == null) {
             return null;
         }
-        // Follow the linear chain of blocks from the handler start to the block that rethrows. javac's
-        // finally-self-protection splits a straight-line handler into [store; goto] + [body; aload; athrow];
-        // the intervening goto terminators and the exception self-edge must be stepped over. Any branch
-        // (more than one normal successor) means the finally itself has control flow - not handled here.
         List<IRBlock> chain = new ArrayList<>();
         Set<IRBlock> seen = new HashSet<>();
         IRBlock b = h.getHandlerBlock();
@@ -2526,6 +2539,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
             b = next;
+        }
+        return chain;
+    }
+
+    private List<IRInstruction> straightLineFinallyTemplate(ExceptionHandler h) {
+        List<IRBlock> chain = finallyHandlerChain(h);
+        if (chain == null) {
+            return null;
         }
         IRBlock lastBlock = chain.isEmpty() ? null : chain.get(chain.size() - 1);
         if (lastBlock == null) {
@@ -4477,8 +4498,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return null;
         }
         if (tryHasFinallyHandler(tryStart)) {
-            // A finally (a rethrowing catch-all) inlines its body on every exit path; recovering it and its
-            // continuation is the exception scaffolding's and the legacy walk's specialty, not a linear stage.
+            // A finally (a rethrowing catch-all) inlines its body on every exit path; the walking recovery
+            // owns that de-duplication and the region's continuation, so a finally-bearing try never stages.
             return null;
         }
 
@@ -4642,6 +4663,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     public List<Statement> legacyWalk(IRBlock start, Set<IRBlock> stopBlocks) {
         return legacyBlockWalk(start, stopBlocks);
     }
+
+
+
 
     /**
      * True when some handler protecting the try starting at {@code tryStart} is a finally - a rethrowing
