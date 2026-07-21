@@ -103,8 +103,10 @@ public final class ReachingConditionStructurer {
         private final Set<IRBlock> duplicatedTails;
         private final boolean duplicating;
         private final long regionDupBudget;
+        private final boolean suppressBoundaryTerminalAbsorption;
 
         PassState(ReachingConditionStructurer s) {
+            suppressBoundaryTerminalAbsorption = s.suppressBoundaryTerminalAbsorption;
             method = s.method;
             dom = s.dom;
             region = s.region;
@@ -125,6 +127,7 @@ public final class ReachingConditionStructurer {
         }
 
         void restore(ReachingConditionStructurer s) {
+            s.suppressBoundaryTerminalAbsorption = suppressBoundaryTerminalAbsorption;
             s.method = method;
             s.dom = dom;
             s.region = region;
@@ -160,6 +163,14 @@ public final class ReachingConditionStructurer {
     private final Map<IRBlock, TryNodeDescriptor> tryNodes = new HashMap<>();
     private boolean tryNodesEnabled;
     private Set<IRBlock> regionStopBlocks;
+    /** Set by the host while structuring a finally-protected body: a boundary terminal past the stops has
+     * the (de-duplicated) finally between it and the region, so absorbing it into the region would move its
+     * evaluation before the finally. The host's continuation recovery places it instead. */
+    private boolean suppressBoundaryTerminalAbsorption;
+
+    public void setSuppressBoundaryTerminalAbsorption(boolean suppress) {
+        this.suppressBoundaryTerminalAbsorption = suppress;
+    }
     private Map<IRBlock, Integer> atomOf;
     private List<IRBlock> blockOfAtom;
     private Set<IRBlock> pureConditionBlock;
@@ -508,7 +519,7 @@ public final class ReachingConditionStructurer {
         // block past the protected range, so the region's own terminal lands on the far side of the stop; pulling
         // it in lets the region structure `return foo()` natively instead of declining (the terminal has no
         // successors, so this only adds that one block). Repeated to chain through a short return-value tail.
-        boolean absorbed = true;
+        boolean absorbed = !suppressBoundaryTerminalAbsorption;
         while (absorbed) {
             absorbed = false;
             for (IRBlock b : new ArrayList<>(region)) {

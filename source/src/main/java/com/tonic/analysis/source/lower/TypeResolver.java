@@ -1144,6 +1144,35 @@ public class TypeResolver {
                 }
             }
         }
+        return conventionNestedName(slashName);
+    }
+
+    /**
+     * The Java-naming-convention reading of a slash-separated name whose class the pool cannot verify:
+     * lowercase segments are the package, the first capitalized segment is the outermost class, and every
+     * later segment is a nested class - so a nested reference (a/b/Outer/Inner) still resolves to its
+     * $-form binary name instead of an all-slash name that links to nothing. Returns the input unchanged
+     * when no capitalized segment is followed by further segments.
+     */
+    private String conventionNestedName(String slashName) {
+        String[] parts = slashName.split("/");
+        int firstClass = -1;
+        for (int i = 0; i < parts.length; i++) {
+            if (!parts[i].isEmpty() && Character.isUpperCase(parts[i].charAt(0))) {
+                firstClass = i;
+                break;
+            }
+        }
+        if (firstClass >= 0 && firstClass < parts.length - 1) {
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < parts.length; i++) {
+                if (i > 0) {
+                    out.append(i <= firstClass ? '/' : '$');
+                }
+                out.append(parts[i]);
+            }
+            return out.toString();
+        }
         return slashName;
     }
 
@@ -1263,7 +1292,7 @@ public class TypeResolver {
                 }
             }
         }
-        return internalName;
+        return conventionNestedName(internalName);
     }
 
     /**

@@ -108,7 +108,21 @@ public class ScopeEscapeHoister implements ASTTransform {
         } else {
             scopeStmts.remove(index);
         }
-        methodBlock.getStatements().add(0,
+        // Insert the repaired declaration immediately before the method-level statement that contains the
+        // escaped scope, not at the method top: the recompiled layout recovers the declaration already sunk
+        // to that position, so a top-of-method placement would oscillate across the round trip.
+        int insertAt = 0;
+        ASTNode carrier = declScope;
+        while (carrier != null && carrier.getParent() != methodBlock) {
+            carrier = carrier.getParent();
+        }
+        if (carrier instanceof Statement) {
+            int idx = methodBlock.getStatements().indexOf(carrier);
+            if (idx >= 0) {
+                insertAt = idx;
+            }
+        }
+        methodBlock.getStatements().add(insertAt,
             new VarDeclStmt(decl.getType(), decl.getName(), defaultValueOf(decl.getType())));
         return true;
     }

@@ -692,6 +692,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
         } else if (hasFinally && !finallyDeduped) {
             tryStmts = legacyBlockWalk(startBlock, stopBlocks);
+        } else if (hasFinally) {
+            // A de-duplicated finally body must not absorb a boundary terminal past its stops: the finally
+            // runs between the body and that terminal, so pulling it inside the try would move its
+            // evaluation before the finally. The continuation recovery below places it instead.
+            rcsStructurer.setSuppressBoundaryTerminalAbsorption(true);
+            try {
+                tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
+            } finally {
+                rcsStructurer.setSuppressBoundaryTerminalAbsorption(false);
+            }
         } else {
             tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
         }
@@ -732,7 +742,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 // the normal exit path plus the region's real continuation (e.g. its return). Recover them
                 // with the inlined-finally copies filtered out so the genuine continuation joins the try body
                 // instead of being dropped (which would leave an empty try when the finally has control flow).
-                if (outerHandler.getTryEnd() != null && outerHandler.getHandlerBlock() != null) {
+                // NOT after a CFG-level de-duplication: the copies are already excised and the continuation
+                // is recovered after the region below - pulling it into the try would move its evaluation
+                // before the finally (wrong when the finally writes an operand the continuation reads).
+                if (!finallyDeduped && outerHandler.getTryEnd() != null && outerHandler.getHandlerBlock() != null) {
                     List<Statement> gapStmts = recoverFinallyGap(
                         outerHandler.getTryEnd(), outerHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
 
@@ -4663,6 +4676,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     public List<Statement> legacyWalk(IRBlock start, Set<IRBlock> stopBlocks) {
         return legacyBlockWalk(start, stopBlocks);
     }
+
 
 
 

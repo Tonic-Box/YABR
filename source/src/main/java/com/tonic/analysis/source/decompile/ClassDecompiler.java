@@ -8,7 +8,9 @@ import com.tonic.analysis.source.ast.expr.FieldAccessExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.CatchClause;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
+import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
@@ -1072,6 +1074,18 @@ public class ClassDecompiler {
             }
             if (ifStmt.getElseBranch() instanceof BlockStmt) {
                 removeTrailingVoidReturn(((BlockStmt) ifStmt.getElseBranch()).getStatements());
+            }
+        } else if (last instanceof TryCatchStmt) {
+            // A trailing try/catch's arms are themselves in tail position: a void return there falls out of
+            // the method the same as falling off the arm (for a finally, the finally runs either way).
+            TryCatchStmt tryCatch = (TryCatchStmt) last;
+            if (tryCatch.getTryBlock() instanceof BlockStmt) {
+                removeTrailingVoidReturn(((BlockStmt) tryCatch.getTryBlock()).getStatements());
+            }
+            for (CatchClause clause : tryCatch.getCatches()) {
+                if (clause.body() instanceof BlockStmt) {
+                    removeTrailingVoidReturn(((BlockStmt) clause.body()).getStatements());
+                }
             }
         }
     }
