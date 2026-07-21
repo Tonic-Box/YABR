@@ -948,8 +948,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 Set<IRBlock> innerStopBlocks = new HashSet<>(stopBlocks);
                 innerStopBlocks.addAll(innerHandlerBlocks);
 
+                boolean innerHasFinally = false;
+                for (ExceptionHandler h : sameRegionHandlers) {
+                    if (handlerRethrows(h)) {
+                        innerHasFinally = true;
+                        break;
+                    }
+                }
+                if (innerHasFinally) {
+                    dedupStraightLineFinally(sameRegionHandlers);
+                }
+
                 IRBlock innerTryEnd = innerHandler.getTryEnd();
                 if (innerTryEnd != null) {
+                    // The block at the try's exclusive end offset holds javac's inlined finally copy on the
+                    // normal-exit path. It belongs after the try/finally, not inside the try body; without this
+                    // stop the body walk absorbs that copy and the finally body executes twice (e.g. a doubled
+                    // lock.unlock()). The dedup above excises the copy from that block, and the continuation
+                    // logic below skips it via the try-end.
+                    if (innerHasFinally) {
+                        innerStopBlocks.add(innerTryEnd);
+                    }
                     for (IRBlock succ : innerTryEnd.getSuccessors()) {
                         if (!innerHandlerBlocks.contains(succ)) {
                             innerStopBlocks.add(succ);
@@ -986,6 +1005,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         } else {
                             filteredCatches.add(clause);
                         }
+                    }
+                    // javac also inlines the finally before each early return/throw inside the try; strip those
+                    // copies so the finally body appears only in the finally block, never a second time on an
+                    // early-exit path.
+                    if (finallyBlock != null) {
+                        tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyBlock.getStatements());
+                        tryBlock = new BlockStmt(tryStmts);
                     }
                     TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
                     stampFromBody(tryCatch, tryBlock);
