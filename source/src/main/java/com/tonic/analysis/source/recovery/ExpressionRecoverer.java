@@ -1037,11 +1037,24 @@ public class ExpressionRecoverer {
             if (parts.isEmpty()) {
                 return LiteralExpr.ofString("");
             }
+            // A single non-String operand (javac's `"" + x` shortcut, recipe "" with no constant) is a
+            // string CONVERSION, not the raw value: without an empty-string left operand the concat collapses to
+            // the bare operand and the method returns its int/etc. type under a String signature. Prepend "" so it
+            // recovers as `"" + x` and re-lowers as a concat. (A single String operand never reaches makeConcat.)
+            if (parts.size() == 1 && !isStringTyped(parts.get(0))) {
+                parts.add(0, LiteralExpr.ofString(""));
+            }
             Expression result = parts.get(0);
             for (int i = 1; i < parts.size(); i++) {
                 result = new BinaryExpr(BinaryOperator.ADD, result, parts.get(i), ReferenceSourceType.STRING);
             }
             return result;
+        }
+
+        private boolean isStringTyped(Expression e) {
+            SourceType t = e.getType();
+            return t instanceof ReferenceSourceType
+                    && "java/lang/String".equals(((ReferenceSourceType) t).getInternalName());
         }
 
         /**

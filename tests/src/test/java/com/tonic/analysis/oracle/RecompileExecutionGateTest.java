@@ -84,7 +84,7 @@ class RecompileExecutionGateTest {
                 + "        int sum = 0;\n"
                 + "        for (int i = 0; i < 10; i++) { if (i % 2 == 0) { sum += i; } else { sum -= 1; } }\n"
                 + "        int j = 0; while (j < 5) { sum *= 2; j++; }\n"
-                + "        return String.valueOf(sum);\n"
+                + "        return \"\" + sum;\n"
                 + "    }\n"
                 + "}\n");
         FIXTURES.put("GateSwitch",
@@ -109,6 +109,17 @@ class RecompileExecutionGateTest {
                 + "        for (int i = 0; i < 4; i++) { sb.append(i).append(','); }\n"
                 + "        String s = \"x\" + 1 + \"y\" + (2 + 3);\n"
                 + "        return sb.toString() + \"|\" + s + \"|\" + s.substring(1, 3);\n"
+                + "    }\n"
+                + "}\n");
+        FIXTURES.put("GateStringConcat",
+                "public class GateStringConcat {\n"
+                + "    public static String check() {\n"
+                + "        int i = 42; char ch = 'z'; Object o = \"obj\"; long lo = 9L;\n"
+                + "        String a = \"\" + i;\n"
+                + "        String b = \"x\" + ch;\n"
+                + "        String d = \"\" + o;\n"
+                + "        String e = String.valueOf(lo);\n"
+                + "        return a + \"|\" + b + \"|\" + d + \"|\" + e;\n"
                 + "    }\n"
                 + "}\n");
         FIXTURES.put("GateArrays",
