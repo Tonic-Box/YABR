@@ -546,6 +546,16 @@ public final class ReachingConditionStructurer {
                 rpoIndex.put(b, i++);
             }
         }
+        // Every region block must appear in the method's reverse-post-order. A block reachable only through
+        // an exception edge (e.g. this region is rooted inside a catch reached by an exception edge, whose
+        // body is only in the normal-flow traversal via that edge) is absent from the RPO, so it has no
+        // index and the atom/ordering passes would dereference null. Decline the whole region to the legacy
+        // walk rather than structure it with an incomplete order.
+        for (IRBlock b : region) {
+            if (!rpoIndex.containsKey(b)) {
+                return false;
+            }
+        }
         // Every non-entry region block must be dominated by the entry (single-entry region).
         for (IRBlock b : region) {
             if (b != entry && !dom.dominates(entry, b)) {

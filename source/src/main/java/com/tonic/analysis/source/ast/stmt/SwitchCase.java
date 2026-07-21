@@ -23,14 +23,18 @@ public final class SwitchCase {
         this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
         this.expressionLabels = Collections.emptyList();
         this.isDefault = isDefault;
-        this.statements = statements != null ? Collections.unmodifiableList(new ArrayList<>(statements)) : Collections.emptyList();
+        // The statement list is mutable: the AST transforms (dead-store/redundant-assignment elimination,
+        // counter folding, ...) rewrite statement lists in place, the same way a block's statements are
+        // mutated. An immutable view here threw UnsupportedOperationException whenever a transform reached a
+        // statement inside a case.
+        this.statements = statements != null ? new ArrayList<>(statements) : new ArrayList<>();
     }
 
     public SwitchCase(List<Integer> labels, List<Expression> expressionLabels, boolean isDefault, List<Statement> statements) {
         this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
         this.expressionLabels = expressionLabels != null ? Collections.unmodifiableList(new ArrayList<>(expressionLabels)) : Collections.emptyList();
         this.isDefault = isDefault;
-        this.statements = statements != null ? Collections.unmodifiableList(new ArrayList<>(statements)) : Collections.emptyList();
+        this.statements = statements != null ? new ArrayList<>(statements) : new ArrayList<>();
     }
 
     /**

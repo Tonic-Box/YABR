@@ -45,6 +45,21 @@ class CatchBodyNestedTryFidelityTest {
             + "            }\n"
             + "        }\n"
             + "    }\n"
+            // A catch body containing its own try/CATCH (not finally): both caught exception variables must
+            // stay in scope, and neither the inner try nor its blocks (reachable only through the exception
+            // edge, so absent from the method's reverse-post-order) may crash the reaching-condition engine.
+            + "    public int nested(String a) {\n"
+            + "        try {\n"
+            + "            return Integer.parseInt(a);\n"
+            + "        } catch (NumberFormatException e) {\n"
+            + "            try {\n"
+            + "                return Integer.parseInt(a.trim());\n"
+            + "            } catch (Exception e2) {\n"
+            + "                log = e.toString() + \"/\" + e2.getClass().getSimpleName();\n"
+            + "                return -2;\n"
+            + "            }\n"
+            + "        }\n"
+            + "    }\n"
             + "}\n";
 
     private static String d1;
@@ -83,6 +98,16 @@ class CatchBodyNestedTryFidelityTest {
     }
 
     @Test
+    void nestedTryCatchInCatchIsRecovered() {
+        assertTrue(d1.contains("int nested"), "the nested-try method must decompile (not crash):\n" + d1);
+        int start = d1.indexOf("int nested");
+        String body = d1.substring(start, Math.min(d1.length(), start + 600));
+        assertTrue(body.contains("catch (Exception e2)") || body.contains("catch (Exception"),
+                "the inner catch must be recovered inside the outer catch:\n" + body);
+        assertTrue(body.contains("e2"), "the inner caught exception variable must be in scope:\n" + body);
+    }
+
+    @Test
     void bothPathsExecute() throws Exception {
         Object o = recompiledClass.getDeclaredConstructor().newInstance();
         assertEquals(42, recompiledClass.getDeclaredMethod("run", String.class).invoke(o, "42"),
@@ -91,6 +116,10 @@ class CatchBodyNestedTryFidelityTest {
                 "the caught path runs the nested try/finally and keeps the exception variable in scope");
         assertEquals("NumberFormatException", getLog(o),
                 "the caught exception variable's use ran (log set inside the nested try)");
+        assertEquals(7, recompiledClass.getDeclaredMethod("nested", String.class).invoke(o, " 7 "),
+                "the inner try's retry path runs");
+        assertEquals(-2, recompiledClass.getDeclaredMethod("nested", String.class).invoke(o, "xx"),
+                "the inner catch path runs with both exception variables in scope");
     }
 
     private static String getLog(Object o) throws Exception {

@@ -624,9 +624,9 @@ class StatementASTTest {
 
     @Test
     void forStmt_basicConstructor() {
-        List<Statement> init = Arrays.asList(new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0)));
+        List<Statement> init = List.of(new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0)));
         Expression condition = createTestExpression();
-        List<Expression> update = Arrays.asList(LiteralExpr.ofInt(1));
+        List<Expression> update = List.of(LiteralExpr.ofInt(1));
         Statement body = createTestStatement();
 
         ForStmt forStmt = new ForStmt(init, condition, update, body);
@@ -776,9 +776,9 @@ class StatementASTTest {
         Statement body = createTestStatement();
 
         ForStmt forStmt = new ForStmt(
-                Arrays.asList(initStmt),
+                List.of(initStmt),
                 condition,
-                Arrays.asList(updateExpr),
+                List.of(updateExpr),
                 body
         );
 
@@ -837,9 +837,9 @@ class StatementASTTest {
     @Test
     void forStmt_toString() {
         ForStmt forStmt = new ForStmt(
-                Arrays.asList(new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0))),
+                List.of(new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0))),
                 LiteralExpr.ofBoolean(true),
-                Arrays.asList(LiteralExpr.ofInt(1)),
+                List.of(LiteralExpr.ofInt(1)),
                 createTestStatement()
         );
 
@@ -1029,8 +1029,8 @@ class StatementASTTest {
     @Test
     void switchStmt_withCases() {
         Expression selector = createTestExpression();
-        SwitchCase case1 = SwitchCase.of(1, Arrays.asList(createTestStatement()));
-        SwitchCase case2 = SwitchCase.of(2, Arrays.asList(createTestStatement()));
+        SwitchCase case1 = SwitchCase.of(1, List.of(createTestStatement()));
+        SwitchCase case2 = SwitchCase.of(2, List.of(createTestStatement()));
 
         SwitchStmt switchStmt = new SwitchStmt(selector, Arrays.asList(case1, case2));
 
@@ -1041,7 +1041,7 @@ class StatementASTTest {
     @Test
     void switchStmt_addCase() {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
-        SwitchCase newCase = SwitchCase.of(1, Arrays.asList(createTestStatement()));
+        SwitchCase newCase = SwitchCase.of(1, Collections.singletonList(createTestStatement()));
 
         switchStmt.addCase(newCase);
 
@@ -1051,7 +1051,7 @@ class StatementASTTest {
     @Test
     void switchStmt_defaultCase() {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
-        SwitchCase defaultCase = SwitchCase.defaultCase(Arrays.asList(createTestStatement()));
+        SwitchCase defaultCase = SwitchCase.defaultCase(Collections.singletonList(createTestStatement()));
 
         switchStmt.addCase(defaultCase);
 
@@ -1062,7 +1062,7 @@ class StatementASTTest {
     @Test
     void switchStmt_noDefaultCase() {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
-        SwitchCase normalCase = SwitchCase.of(1, Arrays.asList(createTestStatement()));
+        SwitchCase normalCase = SwitchCase.of(1, Collections.singletonList(createTestStatement()));
 
         switchStmt.addCase(normalCase);
 
@@ -1129,8 +1129,8 @@ class StatementASTTest {
         SwitchStmt switchStmt = new SwitchStmt(
                 LiteralExpr.ofInt(42),
                 Arrays.asList(
-                        SwitchCase.of(1, Arrays.asList(createTestStatement())),
-                        SwitchCase.of(2, Arrays.asList(createTestStatement()))
+                        SwitchCase.of(1, Collections.singletonList(createTestStatement())),
+                        SwitchCase.of(2, Collections.singletonList(createTestStatement()))
                 )
         );
 
@@ -1146,7 +1146,7 @@ class StatementASTTest {
     @Test
     void switchCase_basicConstructor() {
         List<Integer> labels = Arrays.asList(1, 2, 3);
-        List<Statement> statements = Arrays.asList(createTestStatement());
+        List<Statement> statements = Collections.singletonList(createTestStatement());
 
         SwitchCase switchCase = new SwitchCase(labels, false, statements);
 
@@ -1158,7 +1158,7 @@ class StatementASTTest {
 
     @Test
     void switchCase_singleLabel() {
-        SwitchCase switchCase = SwitchCase.of(42, Arrays.asList(createTestStatement()));
+        SwitchCase switchCase = SwitchCase.of(42, Collections.singletonList(createTestStatement()));
 
         assertEquals(1, switchCase.labels().size());
         assertEquals(42, switchCase.labels().get(0));
@@ -1168,14 +1168,14 @@ class StatementASTTest {
     @Test
     void switchCase_multipleLabels() {
         List<Integer> labels = Arrays.asList(1, 2, 3);
-        SwitchCase switchCase = SwitchCase.of(labels, Arrays.asList(createTestStatement()));
+        SwitchCase switchCase = SwitchCase.of(labels, Collections.singletonList(createTestStatement()));
 
         assertEquals(3, switchCase.labels().size());
     }
 
     @Test
     void switchCase_defaultCase() {
-        SwitchCase switchCase = SwitchCase.defaultCase(Arrays.asList(createTestStatement()));
+        SwitchCase switchCase = SwitchCase.defaultCase(Collections.singletonList(createTestStatement()));
 
         assertTrue(switchCase.isDefault());
         assertTrue(switchCase.labels().isEmpty());
@@ -1183,7 +1183,7 @@ class StatementASTTest {
 
     @Test
     void switchCase_nullLabels() {
-        SwitchCase switchCase = new SwitchCase(null, false, Arrays.asList(createTestStatement()));
+        SwitchCase switchCase = new SwitchCase(null, false, Collections.singletonList(createTestStatement()));
 
         assertNotNull(switchCase.labels());
         assertTrue(switchCase.labels().isEmpty());
@@ -1191,31 +1191,34 @@ class StatementASTTest {
 
     @Test
     void switchCase_nullStatements() {
-        SwitchCase switchCase = new SwitchCase(Arrays.asList(1), false, null);
+        SwitchCase switchCase = new SwitchCase(Collections.singletonList(1), false, null);
 
         assertNotNull(switchCase.statements());
         assertTrue(switchCase.statements().isEmpty());
     }
 
     @Test
-    void switchCase_immutableLists() {
+    void switchCase_labelsImmutable_statementsMutable() {
         List<Integer> labels = Arrays.asList(1, 2);
-        List<Statement> statements = Arrays.asList(createTestStatement());
+        List<Statement> statements = Collections.singletonList(createTestStatement());
 
         SwitchCase switchCase = new SwitchCase(labels, false, statements);
 
+        // Labels are fixed once the case is built and stay immutable.
         assertThrows(UnsupportedOperationException.class, () ->
                 switchCase.labels().add(3)
         );
-        assertThrows(UnsupportedOperationException.class, () ->
-                switchCase.statements().add(createTestStatement())
-        );
+        // The statement list is mutable: the AST transforms rewrite case bodies in place, the same as a
+        // block's statements. It is also defensively copied from the constructor argument.
+        int before = switchCase.statements().size();
+        switchCase.statements().add(createTestStatement());
+        assertEquals(before + 1, switchCase.statements().size());
     }
 
     @Test
     void switchCase_equalsAndHashCode() {
-        List<Integer> labels = Arrays.asList(1);
-        List<Statement> statements = Arrays.asList(createTestStatement());
+        List<Integer> labels = Collections.singletonList(1);
+        List<Statement> statements = Collections.singletonList(createTestStatement());
 
         SwitchCase case1 = new SwitchCase(labels, false, statements);
         SwitchCase case2 = new SwitchCase(labels, false, statements);
@@ -1226,7 +1229,7 @@ class StatementASTTest {
 
     @Test
     void switchCase_toString() {
-        SwitchCase switchCase = SwitchCase.of(42, Arrays.asList(createTestStatement()));
+        SwitchCase switchCase = SwitchCase.of(42, Collections.singletonList(createTestStatement()));
 
         String str = switchCase.toString();
 
@@ -1245,7 +1248,7 @@ class StatementASTTest {
                 createTestStatement()
         );
 
-        TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, Arrays.asList(catchClause));
+        TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, Collections.singletonList(catchClause));
 
         assertNotNull(tryCatch);
         assertEquals(tryBlock, tryCatch.getTryBlock());
@@ -1280,7 +1283,7 @@ class StatementASTTest {
                 tryBlock,
                 Collections.emptyList(),
                 null,
-                Arrays.asList(resource),
+                Collections.singletonList(resource),
                 SourceLocation.UNKNOWN
         );
 
@@ -1360,9 +1363,9 @@ class StatementASTTest {
 
         TryCatchStmt tryCatch = new TryCatchStmt(
                 tryBlock,
-                Arrays.asList(catchClause),
+                Collections.singletonList(catchClause),
                 finallyBlock,
-                Arrays.asList(resource),
+                Collections.singletonList(resource),
                 SourceLocation.UNKNOWN
         );
 
@@ -1401,7 +1404,7 @@ class StatementASTTest {
         CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "e", createTestStatement());
         TryCatchStmt tryCatch = new TryCatchStmt(
                 createTestStatement(),
-                Arrays.asList(catchClause)
+                Collections.singletonList(catchClause)
         );
 
         String str = tryCatch.toString();
@@ -1511,7 +1514,6 @@ class StatementASTTest {
 
     @Test
     void catchClause_immutableExceptionTypes() {
-        List<SourceType> types = Arrays.asList(ReferenceSourceType.OBJECT);
         CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "ex", createTestStatement());
 
         assertThrows(UnsupportedOperationException.class, () ->
@@ -1913,7 +1915,7 @@ class StatementASTTest {
     @Test
     void blockStmt_removeStatement() {
         Statement stmt = createTestStatement();
-        BlockStmt blockStmt = new BlockStmt(Arrays.asList(stmt));
+        BlockStmt blockStmt = new BlockStmt(Collections.singletonList(stmt));
 
         boolean removed = blockStmt.removeStatement(stmt);
 
@@ -1923,7 +1925,7 @@ class StatementASTTest {
 
     @Test
     void blockStmt_removeNonExistentStatement() {
-        BlockStmt blockStmt = new BlockStmt(Arrays.asList(createTestStatement()));
+        BlockStmt blockStmt = new BlockStmt(Collections.singletonList(createTestStatement()));
         Statement otherStmt = createTestStatement();
 
         boolean removed = blockStmt.removeStatement(otherStmt);
