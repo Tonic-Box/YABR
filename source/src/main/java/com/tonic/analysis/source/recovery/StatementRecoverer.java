@@ -693,10 +693,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         } else if (hasFinally && !finallyDeduped) {
             tryStmts = legacyBlockWalk(startBlock, stopBlocks);
         } else if (hasFinally) {
-            // A de-duplicated finally body must not absorb a boundary terminal past its stops: the finally
-            // runs between the body and that terminal, so pulling it inside the try would move its
-            // evaluation before the finally. The continuation recovery below places it instead.
-            rcsStructurer.setSuppressBoundaryTerminalAbsorption(true);
+            // A de-duplicated finally that WRITES A LOCAL must not let the try body absorb a boundary
+            // terminal past its stops: the finally runs between the body and that terminal, so pulling it
+            // inside the try would move its evaluation before the finally's write (wrong when the terminal
+            // reads that local). The continuation recovery below places it instead. A finally that writes no
+            // local (e.g. a plain `unlock()`) cannot change the terminal, so absorption stays on and the
+            // terminal keeps its natural place inside the try - matching the legacy walk and avoiding a
+            // needless escaped-local spill.
+            boolean suppress = finallyWritesLocal(outerHandlers);
+            rcsStructurer.setSuppressBoundaryTerminalAbsorption(suppress);
             try {
                 tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
             } finally {
@@ -2607,6 +2612,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
     /** Instruction kinds a straight-line finally copy is matched by: no control flow, structurally comparable. */
     private boolean isMatchableFinallyInstr(IRInstruction ins) {
+        if (extendedFinallyDedup && (ins instanceof BinaryOpInstruction || ins instanceof UnaryOpInstruction)) {
+            return true;
+        }
         return ins instanceof FieldAccessInstruction || ins instanceof InvokeInstruction
                 || ins instanceof ConstantInstruction || ins instanceof LoadLocalInstruction
                 || ins instanceof StoreLocalInstruction;
@@ -2637,6 +2645,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (a instanceof StoreLocalInstruction) {
             return ((StoreLocalInstruction) a).getLocalIndex() == ((StoreLocalInstruction) b).getLocalIndex();
         }
+        if (a instanceof BinaryOpInstruction) {
+            // Operands are positional within the matched contiguous sequence (the loads and constants
+            // around the op are compared themselves), so the operator is the instruction's identity.
+            return ((BinaryOpInstruction) a).getOp() == ((BinaryOpInstruction) b).getOp();
+        }
+        if (a instanceof UnaryOpInstruction) {
+            return ((UnaryOpInstruction) a).getOp() == ((UnaryOpInstruction) b).getOp();
+        }
         return false;
     }
 
@@ -2664,6 +2680,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private final Set<ExceptionHandler> finallyDeduped = new HashSet<>();
+    /** Widens the finally de-duplication (arithmetic templates, split-handler chains, shared-exit
+     * coverage) for the staged finally-after-prelude path only; the long-standing call sites keep the
+     * narrower acceptance their gated output is calibrated to. */
+    private boolean extendedFinallyDedup;
 
     /**
      * Removes javac's inlined straight-line finally copies from the exits of a protected range so the try body can be
@@ -2708,7 +2728,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     protectedBlocks.add(b);
                 }
             }
-            if (h.getHandlerBlock() != null) {
+            if (extendedFinallyDedup) {
+                List<IRBlock> chain = finallyHandlerChain(h);
+                if (chain != null) {
+                    handlerBlocks.addAll(chain);
+                }
+            } else if (h.getHandlerBlock() != null) {
                 handlerBlocks.add(h.getHandlerBlock());
             }
         }
@@ -2724,12 +2749,48 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         List<List<IRInstruction>> excisions = new ArrayList<>();
-        for (IRBlock b : scan) {
-            int at = contiguousTemplateStart(b, template);
-            if (at >= 0) {
-                excisions.add(new ArrayList<>(b.getInstructions().subList(at, at + template.size())));
-            } else if (leavesRegion(b, protectedBlocks) && !isBareRethrowTail(b)) {
-                return false;
+        if (extendedFinallyDedup) {
+            // The all-or-nothing invariant, per EXIT: every normal edge out of the protected region, and
+            // every return from inside it, must be covered by a copy in the edge's source or target block -
+            // the finally must have run on that path. A block reached only THROUGH a copy (e.g. a return
+            // shared by several already-covered exits) needs no copy of its own.
+            Map<IRBlock, Integer> matchAt = new HashMap<>();
+            for (IRBlock b : scan) {
+                if (!handlerBlocks.contains(b)) {
+                    matchAt.put(b, contiguousTemplateStart(b, template));
+                }
+            }
+            for (IRBlock p : protectedBlocks) {
+                if (handlerBlocks.contains(p)) {
+                    continue;
+                }
+                boolean pCovered = matchAt.getOrDefault(p, -1) >= 0;
+                if (!pCovered && p.getTerminator() instanceof ReturnInstruction) {
+                    return false;
+                }
+                for (IRBlock s2 : p.getSuccessors()) {
+                    if (protectedBlocks.contains(s2) || handlerBlocks.contains(s2)) {
+                        continue;
+                    }
+                    if (!pCovered && matchAt.getOrDefault(s2, -1) < 0 && !isBareRethrowTail(s2)) {
+                        return false;
+                    }
+                }
+            }
+            for (Map.Entry<IRBlock, Integer> e : matchAt.entrySet()) {
+                if (e.getValue() >= 0) {
+                    excisions.add(new ArrayList<>(
+                            e.getKey().getInstructions().subList(e.getValue(), e.getValue() + template.size())));
+                }
+            }
+        } else {
+            for (IRBlock b : scan) {
+                int at = contiguousTemplateStart(b, template);
+                if (at >= 0) {
+                    excisions.add(new ArrayList<>(b.getInstructions().subList(at, at + template.size())));
+                } else if (leavesRegion(b, protectedBlocks) && !isBareRethrowTail(b)) {
+                    return false;
+                }
             }
         }
         if (excisions.isEmpty()) {
@@ -4511,9 +4572,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return null;
         }
         if (tryHasFinallyHandler(tryStart)) {
-            // A finally (a rethrowing catch-all) inlines its body on every exit path; the walking recovery
-            // owns that de-duplication and the region's continuation, so a finally-bearing try never stages.
-            return null;
+            // A finally (a rethrowing catch-all) needs its inlined copies de-duplicated and its clause
+            // built; that is the outer-handler scaffolding's job. Delegate the stage to it: the
+            // handler-free prefix first, then the scaffolding from the try, which recovers the region's
+            // continuation itself.
+            return recoverFinallyStage(startBlock, tryStart, stopBlocks);
         }
 
         List<Statement> out = new ArrayList<>();
@@ -4680,6 +4743,82 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
 
 
+
+    /**
+     * Recovers a staged region whose try at {@code tryStart} carries a finally, by delegating the try and
+     * its continuation to the outer-handler scaffolding (which de-duplicates the inlined finally copies at
+     * the CFG level and builds the clause). The prefix before the try is recovered first, natively. Returns
+     * null - keeping the caller's decline - when the scaffolding's outermost handler for the try does not
+     * begin exactly at the staged boundary, was already consumed, or protects a try with its own catch.
+     */
+    private List<Statement> recoverFinallyStage(IRBlock startBlock, IRBlock tryStart, Set<IRBlock> stopBlocks) {
+        List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
+        List<ExceptionHandler> mergedHandlers = mergeHandlersWithSameTarget(handlers);
+        ExceptionHandler outer = findOutermostHandler(tryStart, mergedHandlers);
+        if (outer == null || outer.getTryStart() == null
+                || outer.getTryStart().getBytecodeOffset() != tryStart.getBytecodeOffset()
+                || processedTryHandlers.contains(outer)
+                || processedHandlerBlocks.contains(outer.getHandlerBlock())) {
+            return null;
+        }
+        // Delegate only a pure try/finally: with a catch clause of its own (a different unprocessed handler
+        // inside the range), the scaffolding cannot de-duplicate the inlined copies at the CFG level, and the
+        // legacy walk's own try recovery produces the cleaner form.
+        int outerStart = outer.getTryStart().getBytecodeOffset();
+        int outerEnd = outer.getTryEnd() != null ? outer.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
+        for (ExceptionHandler h : mergedHandlers) {
+            if (h == outer || h.getHandlerBlock() == outer.getHandlerBlock() || sameTryRange(h, outer)
+                    || h.getTryStart() == null
+                    || processedTryHandlers.contains(h)
+                    || processedHandlerBlocks.contains(h.getHandlerBlock())) {
+                continue;
+            }
+            int hs = h.getTryStart().getBytecodeOffset();
+            if (hs >= outerStart && hs < outerEnd) {
+                return null;
+            }
+        }
+        List<Statement> out = new ArrayList<>();
+        if (tryStart != startBlock) {
+            Set<IRBlock> prefixStops = new HashSet<>(stopBlocks);
+            prefixStops.add(tryStart);
+            out.addAll(recoverRegionHandoff(startBlock, prefixStops));
+        }
+        Set<IRBlock> handlerBlocks = new HashSet<>();
+        for (ExceptionHandler h : handlers) {
+            if (h.getHandlerBlock() != null) {
+                handlerBlocks.add(h.getHandlerBlock());
+                collectReachableBlocks(h.getHandlerBlock(), handlerBlocks);
+            }
+        }
+        boolean savedExtended = extendedFinallyDedup;
+        extendedFinallyDedup = true;
+        try {
+            out.addAll(recoverOuterHandlerRegion(tryStart, outer, handlers, mergedHandlers, handlerBlocks));
+        } finally {
+            extendedFinallyDedup = savedExtended;
+        }
+        return out;
+    }
+
+    /** True when any of the {@code handlers}' finally templates writes a local variable (a StoreLocal). */
+    private boolean finallyWritesLocal(List<ExceptionHandler> handlers) {
+        for (ExceptionHandler h : handlers) {
+            if (!handlerRethrows(h) || handlerThrowsFreshException(h)) {
+                continue;
+            }
+            List<IRInstruction> template = straightLineFinallyTemplate(h);
+            if (template == null) {
+                return true;
+            }
+            for (IRInstruction ins : template) {
+                if (ins instanceof StoreLocalInstruction) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     /**
      * True when some handler protecting the try starting at {@code tryStart} is a finally - a rethrowing

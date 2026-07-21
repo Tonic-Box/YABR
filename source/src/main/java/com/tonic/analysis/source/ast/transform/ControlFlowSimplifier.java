@@ -221,6 +221,60 @@ public class ControlFlowSimplifier implements ASTTransform {
             changed = true;
         }
 
+        // The flat both-exit pair under a logically negated condition: `if (!C) { A... exitA } exitB;` and
+        // `if (C) { exitB } A... exitA;` are the same shape recovered from the two branch layouts javac and
+        // the recompiler emit, so the raw decompile oscillates between them across a round trip. Normalize
+        // to the positive condition with the single return as the guard and the (arbitrarily long) terminal
+        // arm flat after it. Restricted to a `!`/`!=` condition: a relational (`>=`, `>`) nested-guard chain
+        // is recovered identically from either layout when left alone but flattens differently when flipped,
+        // so it stays untouched. The return-then-throw rule above owns its narrower shape; a
+        // constant-equality guard keeps its form for the switch reconstructor.
+        if (!ifStmt.hasElse()
+                && isPurelyLogicalNegation(ifStmt.getCondition())
+                && !isSwitchChainGuard(ifStmt.getCondition())
+                && isTerminal(ifStmt.getThenBranch())
+                && index + 1 < parentList.size()
+                && unwrapSingleStatement(parentList.get(index + 1)) instanceof ReturnStmt) {
+            List<Statement> thenStmts = getStatements(ifStmt.getThenBranch());
+            Statement following = unwrapSingleStatement(parentList.get(index + 1));
+            invertCondition(ifStmt);
+            List<Statement> guardBody = new ArrayList<>();
+            guardBody.add(following);
+            ifStmt.setThenBranch(new BlockStmt(guardBody));
+            parentList.remove(index + 1);
+            for (int j = 0; j < thenStmts.size(); j++) {
+                parentList.add(index + 1 + j, thenStmts.get(j));
+            }
+            changed = true;
+        }
+
+        // A then-arm that falls through onto a literal return but contains its own early exits recovers
+        // from the recompiled layout - which duplicates the tiny shared return per path - as the flat guard
+        // chain. Canonicalize the nested form to that flat form: guard the shared return (with a duplicated
+        // literal) and splice the body after it. The containsExit gate leaves an ordinary side-effect `if`
+        // followed by a return untouched. Restricted to a purely logical (`!`/`!=`) condition: a relational
+        // nested guard chain flattens into a De-Morgan compound whose form differs between the two layouts,
+        // so flipping it here would not converge - only the swap rule above (which needs a terminal then-arm
+        // and does not splice) is safe on a relational.
+        if (!ifStmt.hasElse()
+                && isPurelyLogicalNegation(ifStmt.getCondition())
+                && !isSwitchChainGuard(ifStmt.getCondition())
+                && !isTerminal(ifStmt.getThenBranch())
+                && containsExit(ifStmt.getThenBranch())
+                && index + 1 < parentList.size()
+                && duplicableLiteralReturn(parentList.get(index + 1)) != null) {
+            Statement tailCopy = duplicableLiteralReturn(parentList.get(index + 1));
+            List<Statement> body = getStatements(ifStmt.getThenBranch());
+            invertCondition(ifStmt);
+            List<Statement> guardBody = new ArrayList<>();
+            guardBody.add(tailCopy);
+            ifStmt.setThenBranch(new BlockStmt(guardBody));
+            for (int j = 0; j < body.size(); j++) {
+                parentList.add(index + 1 + j, body.get(j));
+            }
+            changed = true;
+        }
+
         if (!ifStmt.hasElse()) {
             Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
             if (inner instanceof IfStmt) {
@@ -728,6 +782,81 @@ public class ControlFlowSimplifier implements ASTTransform {
     private boolean isTerminalLeaf(Statement stmt) {
         return stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
                 || stmt instanceof BreakStmt || stmt instanceof ContinueStmt;
+    }
+
+    /**
+     * True only for a syntactic logical negation - {@code !x} or {@code a != b} - excluding the relationals
+     * ({@code >}, {@code >=}). A relational nested-guard chain De-Morgans into a compound whose shape is
+     * layout-dependent, so flipping it would not converge; it recovers identically from either layout when
+     * left as recovered, so the both-exit normalization skips it.
+     */
+    private boolean isPurelyLogicalNegation(Expression e) {
+        if (e instanceof UnaryExpr) {
+            return ((UnaryExpr) e).getOperator() == UnaryOperator.NOT;
+        }
+        if (e instanceof BinaryExpr) {
+            return ((BinaryExpr) e).getOperator() == BinaryOperator.NE;
+        }
+        return false;
+    }
+
+    /**
+     * As {@link #isConstantEqualityGuard}, but a null literal does not count: null is never a switch label,
+     * so a null-check guard has no switch-chain form to preserve and may be normalized freely.
+     */
+    private boolean isSwitchChainGuard(Expression cond) {
+        if (cond instanceof UnaryExpr && ((UnaryExpr) cond).getOperator() == UnaryOperator.NOT) {
+            return isSwitchChainGuard(((UnaryExpr) cond).getOperand());
+        }
+        if (cond instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) cond;
+            if (b.getOperator() == BinaryOperator.EQ || b.getOperator() == BinaryOperator.NE) {
+                return (b.getLeft() instanceof LiteralExpr && ((LiteralExpr) b.getLeft()).getValue() != null)
+                        || (b.getRight() instanceof LiteralExpr && ((LiteralExpr) b.getRight()).getValue() != null);
+            }
+        }
+        return false;
+    }
+
+    /** True when the statement (recursively) contains a return or throw - the then-arm has early exits. */
+    private boolean containsExit(Statement stmt) {
+        if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
+            return true;
+        }
+        if (stmt instanceof BlockStmt) {
+            for (Statement s : ((BlockStmt) stmt).getStatements()) {
+                if (containsExit(s)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (stmt instanceof IfStmt) {
+            IfStmt f = (IfStmt) stmt;
+            return containsExit(f.getThenBranch())
+                    || (f.getElseBranch() != null && containsExit(f.getElseBranch()));
+        }
+        return false;
+    }
+
+    /**
+     * A fresh copy of {@code stmt} when it is a bare or literal-valued return - the only terminal cheap and
+     * side-effect-free enough to duplicate into a guard - else null.
+     */
+    private Statement duplicableLiteralReturn(Statement stmt) {
+        Statement s = unwrapSingleStatement(stmt);
+        if (!(s instanceof ReturnStmt)) {
+            return null;
+        }
+        Expression value = ((ReturnStmt) s).getValue();
+        if (value == null) {
+            return new ReturnStmt(null);
+        }
+        if (value instanceof LiteralExpr) {
+            LiteralExpr lit = (LiteralExpr) value;
+            return new ReturnStmt(new LiteralExpr(lit.getValue(), lit.getType()));
+        }
+        return null;
     }
 
     private boolean isNegativeCondition(Expression e) {
