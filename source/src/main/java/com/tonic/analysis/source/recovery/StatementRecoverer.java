@@ -4964,6 +4964,21 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             Set<IRBlock> prefixStops = new HashSet<>(stopBlocks);
             prefixStops.add(tryStart);
             out.addAll(recoverRegionHandoff(startBlock, prefixStops));
+            // The prefix stop keeps the handoff's direct steps before the try, but a legacy sub-walk inside
+            // it (an if-arm containing the try) recovers the try/catch through its own handler branch. When
+            // the prefix consumed the handler, it owned the whole region including the continuation;
+            // recovering the try again here would emit an empty duplicate after it.
+            if (processedTryHandlers.contains(handler)
+                    || processedHandlerBlocks.contains(handler.getHandlerBlock())) {
+                return out;
+            }
+            // A prefix that ends by terminating unconditionally consumed the try's shared continuation (a
+            // path bypassing a one-arm try to the merge): the try appended here would be unreachable dead
+            // code and the arm it was cut from has already been emitted without it. A guard-shaped prefix
+            // (its return inside an if) leaves the fall-through open and stages normally.
+            if (isTerminatingBlock(new BlockStmt(out))) {
+                return null;
+            }
         }
         processedTryHandlers.add(handler);
         if (handler.getHandlerBlock() != null) {
