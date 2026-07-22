@@ -201,6 +201,12 @@ public class PhiEliminator {
         Map<SSAValue, List<CopyInfo>> phiCopies = new HashMap<>();
 
         for (IRBlock block : method.getBlocks()) {
+            Set<SSAValue> mergePhiResults = new HashSet<>();
+            for (PhiInstruction p : block.getPhiInstructions()) {
+                if (p.getResult() != null) {
+                    mergePhiResults.add(p.getResult());
+                }
+            }
             for (PhiInstruction phi : block.getPhiInstructions()) {
                 SSAValue phiResult = phi.getResult();
                 if (phiResult == null) continue;
@@ -219,13 +225,35 @@ public class PhiEliminator {
 
                     CopyInstruction copy = new CopyInstruction(copyResult, incoming);
 
-                    IRInstruction terminator = pred.getTerminator();
-                    if (terminator != null) {
-                        int index = pred.getInstructions().indexOf(terminator);
-                        pred.insertInstruction(index, copy);
-                    } else {
-                        pred.addInstruction(copy);
+                    // Batching all back-edge copies at the block end leaves their sources resident on the
+                    // operand stack, so they are stored in reverse (LIFO) order - which the re-decompile reads
+                    // literally, reordering the loop body (`t += v; v = v/2` comes back as `v = v/2; t = t + v`).
+                    // Place a copy right after its source's definition (so its result stores immediately, in
+                    // computation order) ONLY when it is a cross-reader: its source reads a DIFFERENT
+                    // loop-carried phi that another copy on this edge overwrites. That is exactly the copy the
+                    // batch mis-orders. A for-induction step (`i = i + 1`, reads only its own phi) is NOT a
+                    // cross-reader, so it stays at the tail where the decompiler's for-loop recognition needs
+                    // it; independent copies are untouched, keeping already-idempotent layouts. The
+                    // no-later-use guard preserves parallel-copy semantics (a swap keeps its self phi live past
+                    // the source, so it stays batched, where storing after both reads is correct).
+                    int insertIndex = -1;
+                    if (incoming instanceof SSAValue) {
+                        IRInstruction def = ((SSAValue) incoming).getDefinition();
+                        if (def != null && def.getBlock() == pred) {
+                            int defIndex = pred.getInstructions().indexOf(def);
+                            if (defIndex >= 0 && !isUsedAfter(phiResult, pred, defIndex)
+                                    && readsOtherMergePhi(incoming, phiResult, mergePhiResults, pred)) {
+                                insertIndex = defIndex + 1;
+                            }
+                        }
                     }
+                    IRInstruction terminator = pred.getTerminator();
+                    if (insertIndex < 0) {
+                        insertIndex = terminator != null
+                                ? pred.getInstructions().indexOf(terminator)
+                                : pred.getInstructions().size();
+                    }
+                    pred.insertInstruction(insertIndex, copy);
 
                     phiCopies.computeIfAbsent(phiResult, k -> new ArrayList<>())
                         .add(new CopyInfo(copyResult, pred));
@@ -257,6 +285,51 @@ public class PhiEliminator {
         }
 
         method.setPhiCopyMapping(phiCopies);
+    }
+
+    /** Whether {@code value} is read by any instruction in {@code block} positioned after {@code afterIndex}. */
+    private boolean isUsedAfter(SSAValue value, IRBlock block, int afterIndex) {
+        List<IRInstruction> instrs = block.getInstructions();
+        for (IRInstruction use : value.getUses()) {
+            if (use.getBlock() == block && instrs.indexOf(use) > afterIndex) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether {@code src} (following its operand chain within {@code pred}) reads a merge phi result other than
+     * {@code selfPhi} - i.e. this copy's value depends on a different loop-carried variable that another copy on
+     * the same edge overwrites. Phi results are read boundaries: the walk stops at any of them.
+     */
+    private boolean readsOtherMergePhi(Value src, SSAValue selfPhi, Set<SSAValue> mergePhiResults, IRBlock pred) {
+        Set<SSAValue> visited = new HashSet<>();
+        Deque<Value> work = new ArrayDeque<>();
+        work.push(src);
+        while (!work.isEmpty()) {
+            Value v = work.pop();
+            if (!(v instanceof SSAValue)) {
+                continue;
+            }
+            SSAValue sv = (SSAValue) v;
+            if (!visited.add(sv)) {
+                continue;
+            }
+            if (mergePhiResults.contains(sv)) {
+                if (sv != selfPhi) {
+                    return true;
+                }
+                continue;
+            }
+            IRInstruction def = sv.getDefinition();
+            if (def != null && def.getBlock() == pred) {
+                for (Value op : def.getOperands()) {
+                    work.push(op);
+                }
+            }
+        }
+        return false;
     }
 
     private Value getDefaultValue(IRType type) {
