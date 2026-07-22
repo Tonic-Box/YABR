@@ -58,6 +58,7 @@ class MixedCatchFinallyClauseFidelityTest {
             + "}\n";
 
     private static String d1;
+    private static Class<?> recompiledClass;
 
     @BeforeAll
     static void compileAndDecompile() throws Exception {
@@ -71,6 +72,9 @@ class MixedCatchFinallyClauseFidelityTest {
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("MixedFin.class")));
         d1 = ClassDecompiler.decompile(cf);
+        ClassFile recovered = Recompile.recompiledClone(cf, pool);
+        assumeTrue(recovered != null, "MixedFin must be recompilable");
+        recompiledClass = TestUtils.loadAndVerify(recovered);
     }
 
     @Test
@@ -81,6 +85,19 @@ class MixedCatchFinallyClauseFidelityTest {
         assertTrue(finallyAt > 0, "the finally clause must be present:\n" + d1);
         assertTrue(d1.indexOf("fos.close", finallyAt) > 0 && d1.indexOf("dos.close", finallyAt) > 0,
                 "both guarded closes must live in the finally clause:\n" + d1);
+    }
+
+    @Test
+    void catchPathsReturnFalseAndNormalPathReturnsTrue() throws Exception {
+        Object inst = recompiledClass.getDeclaredConstructor().newInstance();
+        Path ok = Files.createTempDirectory("mixed-fin-run").resolve("out.bin");
+        Object normal = recompiledClass.getMethod("save", String.class).invoke(inst, ok.toString());
+        org.junit.jupiter.api.Assertions.assertEquals(Boolean.TRUE, normal,
+                "the normal path must return true (was mis-merged into the catch's spilled value)");
+        Object caught = recompiledClass.getMethod("save", String.class)
+                .invoke(inst, ok.resolveSibling("no-such-dir").resolve("x").toString());
+        org.junit.jupiter.api.Assertions.assertEquals(Boolean.FALSE, caught,
+                "the FileNotFoundException path must return false (its return was dropped from the clause)");
     }
 
     @Test

@@ -208,7 +208,19 @@ public class SingleUseInliner implements ASTTransform {
             ReturnStmt ret = (ReturnStmt) stmt;
             if (ret.getValue() != null) {
                 Expression newExpr = replaceInExpression(ret.getValue(), replacer);
-                return new ReturnStmt(newExpr);
+                // Inlining an int-typed spill into a boolean method's return surfaces the JVM's 0/1 form;
+                // render the boolean literal the source had.
+                if (ret.getMethodReturnType() == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN
+                        && newExpr instanceof LiteralExpr
+                        && ((LiteralExpr) newExpr).getValue() instanceof Integer) {
+                    int iv = (Integer) ((LiteralExpr) newExpr).getValue();
+                    if (iv == 0 || iv == 1) {
+                        newExpr = LiteralExpr.ofBoolean(iv != 0);
+                    }
+                }
+                ReturnStmt rebuilt = new ReturnStmt(newExpr);
+                rebuilt.setMethodReturnType(ret.getMethodReturnType());
+                return rebuilt;
             }
             return stmt;
         } else if (stmt instanceof IfStmt) {

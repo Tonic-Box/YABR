@@ -770,6 +770,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
                 List<Statement> finallyStmts = finallyBlock.getStatements();
                 tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyStmts);
+                filteredCatches = filterInlinedFinallyFromCatches(filteredCatches, finallyStmts);
 
                 // The blocks between the protected region's end and the handler hold the finally inlined on
                 // the normal exit path plus the region's real continuation (e.g. its return). Recover them
@@ -1029,6 +1030,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     if (finallyBlock != null) {
                         tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyBlock.getStatements());
                         tryBlock = new BlockStmt(tryStmts);
+                        filteredCatches = filterInlinedFinallyFromCatches(filteredCatches, finallyBlock.getStatements());
                     }
                     TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
                     stampFromBody(tryCatch, tryBlock);
@@ -1415,7 +1417,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // The one exception is a catch whose body contains its own nested TRY: the handler stores the exception
         // and gotos into that try, so the try-start (dominated by the handler block) must be recovered, or the
         // rest of the catch - including the caught exception variable's uses - is dropped.
-        if (!isGoto || handler.isCatchAll() || catchBodyHasNestedTry(handlerBlock)) {
+        if (!isGoto || handler.isCatchAll() || catchBodyHasNestedTry(handlerBlock)
+                || gotoStaysInCatch(handlerBlock)) {
             Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
             visitedHandlerBlocks.add(handlerBlock);
             recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts, handlerBlock);
@@ -1571,6 +1574,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             List<Statement> folded = filterInlinedFinallyFromTryStatements(
                     ((BlockStmt) clause.body()).getStatements(), finallyStmts);
+            // A catch that falls through to the join carries its copy as the body's TAIL (no return after
+            // it for the generic fold to anchor on); the real finally clause runs at the join, so the
+            // trailing copy folds away.
+            int n = folded.size();
+            int k = finallyStmts.size();
+            if (n >= k && isStatementSequenceMatchingFinally(folded, n - k, finallyStmts)) {
+                folded = new ArrayList<>(folded.subList(0, n - k));
+            }
             out.add(new CatchClause(clause.exceptionTypes(), clause.variableName(), new BlockStmt(folded)));
         }
         return out;
@@ -3340,6 +3351,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * Finds the block to continue from after a try-catch region.
      */
     private IRBlock findBlockAfterTryCatch(ExceptionHandler handler, Set<IRBlock> visited) {
+        IRBlock r = findBlockAfterTryCatch0(handler, visited);
+        if (System.getenv("DBG_RET") != null) {
+            System.err.println("FBAT h@" + (handler.getTryStart() == null ? "?" : handler.getTryStart().getBytecodeOffset())
+                    + "->" + (handler.getHandlerBlock() == null ? "?" : handler.getHandlerBlock().getBytecodeOffset())
+                    + " => " + (r == null ? "null" : r.getBytecodeOffset()) + " visited=" + visited.size());
+        }
+        return r;
+    }
+
+    private IRBlock findBlockAfterTryCatch0(ExceptionHandler handler, Set<IRBlock> visited) {
         IRBlock handlerBlock = handler.getHandlerBlock();
         if (handlerBlock != null) {
             for (IRBlock succ : handlerBlock.getSuccessors()) {
@@ -9169,7 +9190,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private void collectCatchConsumedBlocks(ExceptionHandler handler, Set<IRBlock> result) {
         IRBlock handlerBlock = handler.getHandlerBlock();
         result.add(handlerBlock);
-        if (isGotoTerminated(handlerBlock) && !handler.isCatchAll()) {
+        if (isGotoTerminated(handlerBlock) && !handler.isCatchAll()
+                && !gotoStaysInCatch(handlerBlock)) {
             return;
         }
         Deque<IRBlock> worklist = new ArrayDeque<>(handlerBlock.getSuccessors());
@@ -9196,6 +9218,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         IRInstruction terminator = block.getTerminator();
         return terminator instanceof SimpleInstruction
                 && ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO;
+    }
+
+    /**
+     * True when a goto-terminated catch entry jumps WITHIN its own body - its target is dominated by the
+     * handler block (e.g. the return-value spill falling into the inlined finally copy) - rather than out
+     * to the shared post-try merge. The former is catch code to consume and recover; the latter must stay
+     * unconsumed or the merge is swallowed into the catch.
+     */
+    private boolean gotoStaysInCatch(IRBlock handlerBlock) {
+        DominatorTree dt = context.getDominatorTree();
+        if (dt == null) {
+            return false;
+        }
+        for (IRBlock succ : handlerBlock.getSuccessors()) {
+            if (succ != handlerBlock && dt.dominates(handlerBlock, succ)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void collectReachableBlocks(IRBlock start, Set<IRBlock> result, Set<IRBlock> stopBlocks) {
