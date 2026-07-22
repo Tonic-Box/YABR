@@ -294,7 +294,9 @@ public class ExpressionRecoverer {
         if (def instanceof InvokeInstruction
                 || def instanceof NewInstruction
                 || def instanceof NewArrayInstruction) {
-            return true;
+            if (!(def instanceof InvokeInstruction) || !isSideEffectFreeCall((InvokeInstruction) def)) {
+                return true;
+            }
         }
         for (Value operand : def.getOperands()) {
             if (operandInlinesSideEffect(operand, seen)) {
@@ -302,6 +304,30 @@ public class ExpressionRecoverer {
             }
         }
         return false;
+    }
+
+    /**
+     * A call with no observable side effect, safe to re-evaluate if a guard duplicates it: the immutable
+     * {@code String} query methods. The call's operands are still checked by the caller's recursion, so a
+     * side-effecting receiver or argument keeps the whole operand impure.
+     */
+    private boolean isSideEffectFreeCall(InvokeInstruction invoke) {
+        if (!"java/lang/String".equals(invoke.getOwner())) {
+            return false;
+        }
+        switch (invoke.getName()) {
+            case "equals":
+            case "equalsIgnoreCase":
+            case "isEmpty":
+            case "length":
+            case "startsWith":
+            case "endsWith":
+            case "contains":
+            case "indexOf":
+                return true;
+            default:
+                return false;
+        }
     }
 
     /**
