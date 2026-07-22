@@ -648,16 +648,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (h.getHandlerBlock() == outerHandler.getHandlerBlock()
                     || sameTryRange(h, outerHandler)) {
                 outerHandlers.add(h);
-            } else if (h.getTryStart() != null
-                    && h.getTryStart().getBytecodeOffset() >= outerTryEndOffset) {
-                // A handler whose protected range begins at or past the outer try's end is not nested in the
-                // try BODY - it is a try inside the catch clause, or in the continuation after the whole
-                // try/catch. Leaving it out of innerHandlers keeps it unprocessed so the catch-clause recovery
-                // (which recovers a nested try in a catch body) or the continuation recovery owns it, instead
-                // of recoverWithNestedHandlers rebuilding it as a try-body handler and hoisting it out of the
-                // catch (dropping the caught exception variable's scope).
-                continue;
-            } else {
+            } else if (h.getTryStart() == null
+                    || h.getTryStart().getBytecodeOffset() < outerTryEndOffset) {
+                // Only a handler whose protected range begins before the outer try's end is nested in the
+                // try BODY. One at or past the end is a try inside the catch clause, or in the continuation
+                // after the whole try/catch; leaving it out of innerHandlers keeps it unprocessed so the
+                // catch-clause recovery (which recovers a nested try in a catch body) or the continuation
+                // recovery owns it, instead of recoverWithNestedHandlers rebuilding it as a try-body handler
+                // and hoisting it out of the catch (dropping the caught exception variable's scope).
                 innerHandlers.add(h);
             }
         }
@@ -721,7 +719,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // it to the engine directly instead of the legacy walk. It is wrapped in SynchronizedStmt below.
             tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
         } else if (hasFinally && !finallyDeduped) {
-            tryStmts = legacyBlockWalk(startBlock, stopBlocks);
+            tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
         } else if (hasFinally) {
             // A de-duplicated finally that WRITES A LOCAL must not let the try body absorb a boundary
             // terminal past its stops: the finally runs between the body and that terminal, so pulling it

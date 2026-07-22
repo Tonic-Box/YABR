@@ -98,7 +98,16 @@ public class ForLoopCounterFolder implements ASTTransform {
                 accounted += countUses(s.forStmt, var) + countUses(s.initStmt, var);
             }
             if (countUses(root, var) != accounted) {
-                continue; // used outside these loop segments - scoping to the loops would change meaning
+                // Used outside these loop segments - scoping to the loops would change meaning. But a
+                // counter with NO declaration anywhere must still be declared somewhere or the emitted
+                // source does not compile (the recovery leaves an induction counter's declaration to this
+                // fold); hoist a default-initialized declaration at the method top as the safety net.
+                if (findDeclaration(root, var) == null && !segs.isEmpty()) {
+                    root.getStatements().add(0, new VarDeclStmt(segs.get(0).type, var,
+                            defaultInitFor(segs.get(0).type)));
+                    changed = true;
+                }
+                continue;
             }
             for (Segment s : segs) {
                 s.forStmt.getInit().add(new VarDeclStmt(s.type, var, s.initValue));
@@ -111,6 +120,22 @@ public class ForLoopCounterFolder implements ASTTransform {
             changed = true;
         }
         return changed;
+    }
+
+    private Expression defaultInitFor(SourceType type) {
+        if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.LONG) {
+            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofLong(0L);
+        }
+        if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.FLOAT) {
+            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofFloat(0f);
+        }
+        if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.DOUBLE) {
+            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofDouble(0d);
+        }
+        if (type instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType) {
+            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofInt(0);
+        }
+        return com.tonic.analysis.source.ast.expr.LiteralExpr.ofNull();
     }
 
     private void collectHoistedCounters(Statement s, Map<String, List<Segment>> byVar) {
@@ -165,7 +190,7 @@ public class ForLoopCounterFolder implements ASTTransform {
         }
         SourceType type = updateVarType(f.getUpdate().get(0));
         if (type == null) {
-            type = ((VarRefExpr) assign.getLeft()).getType();
+            type = assign.getLeft().getType();
         }
         if (type == null) {
             return null;
@@ -191,10 +216,10 @@ public class ForLoopCounterFolder implements ASTTransform {
 
     private SourceType updateVarType(Expression update) {
         if (update instanceof UnaryExpr && ((UnaryExpr) update).getOperand() instanceof VarRefExpr) {
-            return ((VarRefExpr) ((UnaryExpr) update).getOperand()).getType();
+            return ((UnaryExpr) update).getOperand().getType();
         }
         if (update instanceof BinaryExpr && ((BinaryExpr) update).getLeft() instanceof VarRefExpr) {
-            return ((VarRefExpr) ((BinaryExpr) update).getLeft()).getType();
+            return ((BinaryExpr) update).getLeft().getType();
         }
         return null;
     }

@@ -654,12 +654,14 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (ws.getBody() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) ws.getBody());
                 changed |= stripRedundantSwitchContinue((BlockStmt) ws.getBody());
+                changed |= stripNoOpTailContinueGuard((BlockStmt) ws.getBody());
             }
         } else if (stmt instanceof ForStmt) {
             ForStmt fs = (ForStmt) stmt;
             if (fs.getBody() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) fs.getBody());
                 changed |= stripRedundantSwitchContinue((BlockStmt) fs.getBody());
+                changed |= stripNoOpTailContinueGuard((BlockStmt) fs.getBody());
             }
         } else if (stmt instanceof TryCatchStmt) {
             TryCatchStmt tc = (TryCatchStmt) stmt;
@@ -721,6 +723,71 @@ public class ControlFlowSimplifier implements ASTTransform {
         cases.set(last, rebuilt);
         return true;
     }
+
+    /**
+     * Removes a no-op guard at the very end of a loop body: {@code if (G) { continue; }} (unlabeled, no
+     * else) as the last statement continues either way - taken it continues explicitly, not taken it falls
+     * through to the back edge - so when {@code G} has no side effects the whole statement does nothing.
+     * The reaching-condition structurer emits such a guard for a settled fall-through tail; javac never
+     * does, and the leftover reference can also pin a loop counter out of its for-init scope.
+     */
+    private boolean stripNoOpTailContinueGuard(BlockStmt loopBody) {
+        List<Statement> stmts = loopBody.getStatements();
+        if (stmts.isEmpty() || !(stmts.get(stmts.size() - 1) instanceof IfStmt)) {
+            return false;
+        }
+        IfStmt guard = (IfStmt) stmts.get(stmts.size() - 1);
+        if (guard.hasElse()) {
+            return false;
+        }
+        Statement then = guard.getThenBranch();
+        List<Statement> thenStmts = then instanceof BlockStmt
+                ? ((BlockStmt) then).getStatements()
+                : java.util.Collections.singletonList(then);
+        if (thenStmts.size() != 1 || !(thenStmts.get(0) instanceof ContinueStmt)
+                || ((ContinueStmt) thenStmts.get(0)).hasLabel()) {
+            return false;
+        }
+        if (guard.getCondition().accept(TAIL_GUARD_PURITY)) {
+            return false;
+        }
+        stmts.remove(stmts.size() - 1);
+        return true;
+    }
+
+    /**
+     * The shared side-effect detector, additionally treating the immutable {@code String} query methods as
+     * effect-free: the tail guard's condition is typically a chain of {@code equals} tests, which are safe
+     * to discard along with the no-op guard. Receiver and arguments are still vetted.
+     */
+    private static final SideEffectDetector TAIL_GUARD_PURITY = new SideEffectDetector() {
+        @Override
+        public Boolean visitMethodCall(com.tonic.analysis.source.ast.expr.MethodCallExpr expr) {
+            switch (expr.getMethodName()) {
+                case "equals":
+                case "equalsIgnoreCase":
+                case "isEmpty":
+                case "length":
+                case "startsWith":
+                case "endsWith":
+                case "contains":
+                case "indexOf":
+                case "trim":
+                    break;
+                default:
+                    return true;
+            }
+            if (expr.getReceiver() != null && expr.getReceiver().accept(this)) {
+                return true;
+            }
+            for (com.tonic.analysis.source.ast.expr.Expression arg : expr.getArguments()) {
+                if (arg.accept(this)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
 
     private boolean simplifySwitchCases(SwitchStmt sw) {
         boolean changed = false;

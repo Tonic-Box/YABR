@@ -8,9 +8,12 @@ import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
  * expression kinds are assumed to have side effects. Shared by the AST cleanup transforms so they
  * agree on what is safe to remove or reorder.
  */
-public final class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
+public class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
 
     public static final SideEffectDetector INSTANCE = new SideEffectDetector();
+
+    protected SideEffectDetector() {
+    }
 
     @Override
     protected Boolean defaultValue() { return true; }
