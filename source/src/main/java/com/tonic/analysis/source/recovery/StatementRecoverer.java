@@ -1292,10 +1292,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return null;
     }
 
+    /**
+     * Recovered clauses per handler block. Clause recovery consumes shared walk state (processed-block
+     * marks), so a second recovery of the same handler - the outer scaffolding rebuilding a clause an
+     * inner recovery already produced - walks partially-consumed blocks and yields a truncated body (a
+     * finally rethrow clause losing its cleanup, leaving an empty {@code finally {}}). The first, complete
+     * recovery is authoritative for the block.
+     */
+    private final Map<IRBlock, CatchClause> recoveredClauses = new HashMap<>();
+
     private CatchClause recoverCatchClause(ExceptionHandler handler) {
         IRBlock handlerBlock = handler.getHandlerBlock();
         if (handlerBlock == null) {
             return null;
+        }
+        CatchClause cached = recoveredClauses.get(handlerBlock);
+        if (cached != null) {
+            return cached;
         }
 
         ReferenceSourceType exceptionType;
@@ -1358,12 +1371,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         catchBody.add(b);
                     }
                 }
+                // Stop at EVERY block outside the handler's dominated subtree, not just its direct exit
+                // successors: a clause ending in a return has no exit successor, and the walk's sequential
+                // fallback would otherwise run past the clause into sibling handlers or the method tail.
                 Set<IRBlock> bodyStops = new HashSet<>();
-                for (IRBlock b : catchBody) {
-                    for (IRBlock succ : b.getSuccessors()) {
-                        if (!catchBody.contains(succ)) {
-                            bodyStops.add(succ);
-                        }
+                for (IRBlock b : context.getIrMethod().getBlocks()) {
+                    if (!catchBody.contains(b)) {
+                        bodyStops.add(b);
+                    }
+                }
+                // The handler's own split entries (including a rethrower's self-protection edge) target
+                // this same handler block; the walk below would otherwise treat one as an unprocessed try
+                // starting inside the clause and re-enter try recovery on the clause's own body. This
+                // clause recovery IS those entries' recovery - consume them first.
+                for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
+                    if (eh.getHandlerBlock() == handlerBlock) {
+                        processedTryHandlers.add(eh);
                     }
                 }
                 List<Statement> structured = legacyBlockWalk(handlerBlock, bodyStops);
@@ -1375,7 +1398,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     filtered.add(st);
                 }
                 if (!filtered.isEmpty() && filtered.get(filtered.size() - 1) instanceof ThrowStmt) {
-                    return CatchClause.of(exceptionType, exceptionVarName, new BlockStmt(filtered));
+                    CatchClause structuredClause = CatchClause.of(exceptionType, exceptionVarName, new BlockStmt(filtered));
+                    recoveredClauses.putIfAbsent(handlerBlock, structuredClause);
+                    return structuredClause;
                 }
             }
         }
@@ -1431,7 +1456,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         BlockStmt handlerBody = new BlockStmt(filteredStmts.isEmpty() ? handlerStmts : filteredStmts);
 
-        return CatchClause.of(exceptionType, exceptionVarName, handlerBody);
+        CatchClause clause = CatchClause.of(exceptionType, exceptionVarName, handlerBody);
+        recoveredClauses.putIfAbsent(handlerBlock, clause);
+        return clause;
     }
 
     /**
@@ -1528,6 +1555,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             filtered.add(stmt);
         }
         return filtered;
+    }
+
+    /**
+     * Strips the inlined finally copies from user catch bodies: javac inlines the finally before each
+     * return/throw inside a catch just as it does in the try body, so once the finally clause exists the
+     * copies must fold out of every clause or the finally's effect doubles on the catch paths.
+     */
+    private List<CatchClause> filterInlinedFinallyFromCatches(List<CatchClause> catches, List<Statement> finallyStmts) {
+        List<CatchClause> out = new ArrayList<>(catches.size());
+        for (CatchClause clause : catches) {
+            if (!(clause.body() instanceof BlockStmt)) {
+                out.add(clause);
+                continue;
+            }
+            List<Statement> folded = filterInlinedFinallyFromTryStatements(
+                    ((BlockStmt) clause.body()).getStatements(), finallyStmts);
+            out.add(new CatchClause(clause.exceptionTypes(), clause.variableName(), new BlockStmt(folded)));
+        }
+        return out;
     }
 
     private List<Statement> filterInlinedFinallyFromTryStatements(List<Statement> statements, List<Statement> finallyStmts) {
@@ -2720,6 +2766,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
             List<Statement> finallyStmts = finallyBlock.getStatements();
             tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyStmts);
+            filteredCatches = filterInlinedFinallyFromCatches(filteredCatches, finallyStmts);
 
             // Skip the gap re-add when we stopped at a shared finally block: that block IS the normal-exit
             // finally + continuation and is now recovered once by the outer block sequence; pulling it in here
@@ -4973,17 +5020,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         boolean finallyNode = false;
         if (tryHasFinallyHandler(block)) {
-            // A finally-protected try can be a node when the rethrowing catch-all is the widest handler here
-            // (its merged window then covers the try body and any user catch bodies alongside it). The
-            // inlined finally copies are de-duplicated from the exits up front, so the consumed set is the
-            // window plus every handler chain and the join is the ordinary continuation. A layout where a
-            // user catch is the widest handler has a range asymmetry this static model does not own: the
-            // delegate recovery would rebuild the user catch as a NESTED try, hiding the try-side inlined
-            // copies one level below the statement fold (a doubled finally effect on the normal path).
-            if (!handlerRethrows(h) || handlerThrowsFreshException(h)) {
-                return null;
-            }
+            // A finally-protected try can be a node: the merged window is widened over EVERY same-start
+            // handler's family, so it covers the try body, the user catch bodies, the inlined finally
+            // copies between them, and the rethrower's own split ranges. The delegate is still handed the
+            // ORIGINAL widest pick (a user catch when ranges tie), matching what the legacy walk recovers -
+            // the flat try/catch/finally with the rethrow clause folded into the finally. The inlined
+            // copies are de-duplicated from the exits up front; a shape whose copies cannot be excised
+            // statically declines (leaving them would double the finally's effect on the normal path).
             finallyNode = true;
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+                if (sib.getHandlerBlock() == null || sib.getTryStart() == null
+                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+                    continue;
+                }
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                    if (eh.getHandlerBlock() == sib.getHandlerBlock() && eh.getTryEnd() != null
+                            && eh.getTryEnd().getBytecodeOffset() > endOff) {
+                        endOff = eh.getTryEnd().getBytecodeOffset();
+                    }
+                }
+            }
         }
         Set<IRBlock> consumed = new HashSet<>();
         for (IRBlock b : irMethod.getBlocks()) {
@@ -5186,29 +5242,53 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Completes the node decode for a pure try/finally: de-duplicates the inlined straight-line finally
-     * copies from the region's exits (declining when the template cannot account for every exit), consumes
-     * the handler chain, and joins at the single normal continuation the deduplicated exits converge on.
+     * Completes the node decode for a finally-protected try (with or without sibling user catches):
+     * de-duplicates the rethrower's inlined straight-line copies from the region's exits (declining when
+     * the template cannot account for every exit), consumes every same-start handler's chain, and joins at
+     * the single normal continuation the deduplicated exits converge on. The descriptor keeps the caller's
+     * handler pick, so the delegate recovery matches the legacy walk's flat clause folding.
      */
     private TryNodeDescriptor decodeFinallyTryNode(IRBlock block, ExceptionHandler h,
                                                    Set<IRBlock> consumed, DominatorTree dt) {
         IRMethod irMethod = context.getIrMethod();
+        ExceptionHandler rethrower = null;
+        List<ExceptionHandler> siblings = new ArrayList<>();
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+            if (eh.getHandlerBlock() == null || eh.getTryStart() == null
+                    || eh.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+                continue;
+            }
+            siblings.add(eh);
+            if (rethrower == null && handlerRethrows(eh) && !handlerThrowsFreshException(eh)) {
+                rethrower = eh;
+            }
+        }
+        if (rethrower == null) {
+            return null;
+        }
         List<ExceptionHandler> family = new ArrayList<>();
         for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-            if (eh.getHandlerBlock() == h.getHandlerBlock()) {
+            if (eh.getHandlerBlock() == rethrower.getHandlerBlock()) {
                 family.add(eh);
             }
         }
         if (!dedupStraightLineFinally(family)) {
             return null;
         }
-        for (IRBlock b : irMethod.getBlocks()) {
-            if (dt.dominates(h.getHandlerBlock(), b)) {
-                consumed.add(b);
+        Set<IRBlock> siblingBlocks = new HashSet<>();
+        for (ExceptionHandler sib : siblings) {
+            siblingBlocks.add(sib.getHandlerBlock());
+        }
+        for (ExceptionHandler sib : siblings) {
+            consumed.add(sib.getHandlerBlock());
+            for (IRBlock b : irMethod.getBlocks()) {
+                if (dt.dominates(sib.getHandlerBlock(), b)) {
+                    consumed.add(b);
+                }
             }
         }
         for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-            if (eh.getHandlerBlock() == null || eh.getHandlerBlock() == h.getHandlerBlock()) {
+            if (eh.getHandlerBlock() == null || siblingBlocks.contains(eh.getHandlerBlock())) {
                 continue;
             }
             if (consumed.contains(eh.getHandlerBlock())) {
@@ -5221,7 +5301,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         IRBlock after = null;
         for (IRBlock cb : consumed) {
-            if (cb != h.getHandlerBlock() && dt.dominates(h.getHandlerBlock(), cb)) {
+            if (cb != rethrower.getHandlerBlock() && dt.dominates(rethrower.getHandlerBlock(), cb)) {
                 continue;
             }
             for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
