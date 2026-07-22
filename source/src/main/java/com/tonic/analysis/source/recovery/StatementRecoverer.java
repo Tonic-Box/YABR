@@ -5293,9 +5293,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 family.add(eh);
             }
         }
-        if (!dedupStraightLineFinally(family)) {
-            return null;
-        }
+        // Excising the straight-line copies up front gives the cleanest body. A finally whose copies
+        // carry control flow cannot be excised statically, but the node stays decodable: the copies lie
+        // inside the widened window and are consumed with it, and the delegate recovery folds them out at
+        // statement level against the structurally recovered clause (try body, catch bodies, and the
+        // trailing fall-through copy alike).
+        dedupStraightLineFinally(family);
         Set<IRBlock> siblingBlocks = new HashSet<>();
         for (ExceptionHandler sib : siblings) {
             siblingBlocks.add(sib.getHandlerBlock());
