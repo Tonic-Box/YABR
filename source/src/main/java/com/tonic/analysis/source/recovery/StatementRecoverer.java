@@ -4977,7 +4977,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // (its merged window then covers the try body and any user catch bodies alongside it). The
             // inlined finally copies are de-duplicated from the exits up front, so the consumed set is the
             // window plus every handler chain and the join is the ordinary continuation. A layout where a
-            // user catch is the widest handler has a range asymmetry this static model does not own.
+            // user catch is the widest handler has a range asymmetry this static model does not own: the
+            // delegate recovery would rebuild the user catch as a NESTED try, hiding the try-side inlined
+            // copies one level below the statement fold (a doubled finally effect on the normal path).
             if (!handlerRethrows(h) || handlerThrowsFreshException(h)) {
                 return null;
             }
@@ -5030,18 +5032,31 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (finallyNode) {
             return decodeFinallyTryNode(block, h, consumed, dt);
         }
+        // A multi-block catch body (a catch with its own branches) is dominated by the handler entry;
+        // consume the whole subtree and scan ITS exits for the join, rather than declining on the
+        // handler's internal control flow. Only the catch's edges determine the join - the try body's
+        // own exits stay the delegate recovery's concern, as before.
+        Set<IRBlock> handlerBody = new HashSet<>();
+        handlerBody.add(h.getHandlerBlock());
+        for (IRBlock b : irMethod.getBlocks()) {
+            if (dt.dominates(h.getHandlerBlock(), b)) {
+                handlerBody.add(b);
+            }
+        }
+        consumed.addAll(handlerBody);
         IRBlock after = null;
-        for (IRBlock succ : h.getHandlerBlock().getSuccessors()) {
-            if (consumed.contains(succ)) {
-                continue;
+        for (IRBlock cb : handlerBody) {
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+                IRBlock succ = e.getKey();
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION
+                        || consumed.contains(succ) || dt.dominates(succ, cb)) {
+                    continue;
+                }
+                if (after != null && after != succ) {
+                    return null;
+                }
+                after = succ;
             }
-            if (dt.dominates(h.getHandlerBlock(), succ)) {
-                return null;
-            }
-            if (after != null && after != succ) {
-                return null;
-            }
-            after = succ;
         }
         if (after == null) {
             int best = Integer.MAX_VALUE;
