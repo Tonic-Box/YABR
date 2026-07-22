@@ -3351,13 +3351,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * Finds the block to continue from after a try-catch region.
      */
     private IRBlock findBlockAfterTryCatch(ExceptionHandler handler, Set<IRBlock> visited) {
-        IRBlock r = findBlockAfterTryCatch0(handler, visited);
-        if (System.getenv("DBG_RET") != null) {
-            System.err.println("FBAT h@" + (handler.getTryStart() == null ? "?" : handler.getTryStart().getBytecodeOffset())
-                    + "->" + (handler.getHandlerBlock() == null ? "?" : handler.getHandlerBlock().getBytecodeOffset())
-                    + " => " + (r == null ? "null" : r.getBytecodeOffset()) + " visited=" + visited.size());
+        IRBlock after = findBlockAfterTryCatch0(handler, visited);
+        // A continuation on an active outer stop boundary (a pushed loop exit, a finally gap's end) is
+        // owned by the enclosing recovery; walking it from here would pull outer code - e.g. the method's
+        // trailing return - into this nested region and mark it consumed, dropping it from its real place.
+        if (after != null && context.getAllStopBlocks().contains(after)) {
+            return null;
         }
-        return r;
+        return after;
     }
 
     private IRBlock findBlockAfterTryCatch0(ExceptionHandler handler, Set<IRBlock> visited) {
@@ -5441,15 +5442,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (revisitNext == null && stopBlocks.isEmpty()) {
                     // A re-visited region header (if/switch/loop) has two-plus successors, so
                     // getNextSequentialBlock stops the chain — but the fall-through past it continues
-                    // along the region merges to a shared trailing return that other arms already
-                    // emitted. Walk the merge chain and re-emit that return (a terminator is
-                    // idempotent) without re-adding the intermediate, already-emitted blocks, which
-                    // would duplicate them.
+                    // along the region merges to a trailing return. An already-emitted return is
+                    // re-emitted here (a terminator is idempotent) without re-adding the intermediate
+                    // blocks, which would duplicate them; a return no recovery has reached yet - e.g.
+                    // the method's own return after a try whose gap recovery pre-processed the blocks
+                    // between them - continues the walk there so it is not silently dropped.
                     IRBlock chain = current;
                     Set<IRBlock> chainSeen = new HashSet<>();
                     while (chain != null && chainSeen.add(chain)) {
-                        if (chain != current && isReturnBlock(chain) && context.isProcessed(chain)) {
-                            result.addAll(context.getStatements(chain));
+                        if (chain != current && isReturnBlock(chain)) {
+                            if (context.isProcessed(chain)) {
+                                result.addAll(context.getStatements(chain));
+                            } else {
+                                revisitNext = chain;
+                            }
                             break;
                         }
                         RegionInfo chainInfo = analyzer.getRegionInfo(chain);
