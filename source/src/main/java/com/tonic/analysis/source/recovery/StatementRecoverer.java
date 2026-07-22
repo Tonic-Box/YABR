@@ -5075,17 +5075,54 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // within the consumed range - its handler entry and every block that entry dominates must fall inside
         // the merged protected window, or the recovery would consume blocks the model cannot predict.
         DominatorTree nestDt = context.getDominatorTree();
+        Set<IRBlock> siblingHandlerBlocks = new HashSet<>();
+        if (finallyNode) {
+            // Only a finally that carries its OWN nested try (a guarded close wrapped in try/catch, whose
+            // protective entries also shadow the user catches' ranges) needs its sibling scaffolding
+            // blanket-consumed here - the delegate must own the whole construct. Every other finally keeps
+            // the narrower containment, whose staged de-duplicating route recovers it as the idempotence
+            // baseline is calibrated to.
+            boolean finallyCarriesOwnTry = false;
+            DominatorTree sibDt = context.getDominatorTree();
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+                if (sib.getHandlerBlock() == null || sib.getTryStart() == null
+                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()
+                        || !handlerRethrows(sib) || handlerThrowsFreshException(sib)) {
+                    continue;
+                }
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                    if (eh != sib && eh.getTryStart() != null && sibDt != null
+                            && (eh.getTryStart() == sib.getHandlerBlock()
+                                || sibDt.dominates(sib.getHandlerBlock(), eh.getTryStart()))) {
+                        finallyCarriesOwnTry = true;
+                        break;
+                    }
+                }
+                if (finallyCarriesOwnTry) {
+                    break;
+                }
+            }
+            if (finallyCarriesOwnTry) {
+                for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+                    if (sib.getHandlerBlock() != null && sib.getTryStart() != null
+                            && sib.getTryStart().getBytecodeOffset() == block.getBytecodeOffset()) {
+                        siblingHandlerBlocks.add(sib.getHandlerBlock());
+                    }
+                }
+            }
+        }
         for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
             if (eh.getHandlerBlock() == null || eh.getHandlerBlock() == h.getHandlerBlock()
                     || eh.getTryStart() == null) {
                 continue;
             }
-            int s = eh.getTryStart().getBytecodeOffset();
-            if (finallyNode && s == startOff) {
-                // A handler over the same try start is the finally's sibling user catch, not a nested try;
-                // the try/catch recovery folds it as a clause and the finally decode consumes its blocks.
+            if (siblingHandlerBlocks.contains(eh.getHandlerBlock())) {
+                // Any entry targeting a same-start sibling's handler block - the sibling's other split
+                // ranges included - is the finally/catch scaffolding itself, not a nested try; the finally
+                // decode consumes those handlers' whole subtrees.
                 continue;
             }
+            int s = eh.getTryStart().getBytecodeOffset();
             if (s >= startOff && s < endOff
                     && !processedTryHandlers.contains(eh)
                     && !processedHandlerBlocks.contains(eh.getHandlerBlock())) {
