@@ -511,6 +511,14 @@ public final class ReachingConditionStructurer {
                 if (stopBlocks.contains(s) || region.contains(s)) {
                     continue;
                 }
+                // A successor the region entry does not dominate is a shared merge reached from outside this
+                // region too (e.g. the continuation after a try/catch, reached from both the try and the
+                // catch) - it is owned by the enclosing structure, not this single-entry region. Treat it as
+                // an implicit region boundary rather than absorbing it and then declining the whole region on
+                // the single-entry check below; the surrounding recovery recovers it as the continuation.
+                if (s != entry && !dom.dominates(entry, s)) {
+                    continue;
+                }
                 work.add(s);
             }
         }
