@@ -5070,6 +5070,43 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 consumed.add(b);
             }
         }
+        if (finallyNode) {
+            // The widened window spans min..max over the sibling families' SPLIT ranges, and javac can lay
+            // the construct's continuation - the return the normal-exit copy converges on - in the gap
+            // between a family's ranges (before a catch body the family also protects). A terminal block in
+            // such a gap is protected by nothing and is the join the node must continue at, not part of the
+            // construct; leave it unconsumed so the join scan finds it.
+            List<int[]> protectedRanges = new ArrayList<>();
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+                if (sib.getHandlerBlock() == null || sib.getTryStart() == null
+                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+                    continue;
+                }
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                    if (eh.getHandlerBlock() == sib.getHandlerBlock()
+                            && eh.getTryStart() != null && eh.getTryEnd() != null) {
+                        protectedRanges.add(new int[]{eh.getTryStart().getBytecodeOffset(),
+                                eh.getTryEnd().getBytecodeOffset()});
+                    }
+                }
+            }
+            for (IRBlock b : new ArrayList<>(consumed)) {
+                if (!(b.getTerminator() instanceof ReturnInstruction)) {
+                    continue;
+                }
+                int off = b.getBytecodeOffset();
+                boolean covered = false;
+                for (int[] r : protectedRanges) {
+                    if (off >= r[0] && off < r[1]) {
+                        covered = true;
+                        break;
+                    }
+                }
+                if (!covered) {
+                    consumed.remove(b);
+                }
+            }
+        }
         // A different, unprocessed handler protecting a sub-range is a nested try. The try/catch recovery
         // handles nesting itself, so the node stays decodable as long as the nested catch code lies wholly
         // within the consumed range - its handler entry and every block that entry dominates must fall inside
