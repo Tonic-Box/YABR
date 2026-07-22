@@ -4920,21 +4920,28 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 || processedHandlerBlocks.contains(outer.getHandlerBlock())) {
             return null;
         }
-        // Delegate only a pure try/finally: with a catch clause of its own (a different unprocessed handler
-        // inside the range), the scaffolding cannot de-duplicate the inlined copies at the CFG level, and the
-        // legacy walk's own try recovery produces the cleaner form.
-        int outerStart = outer.getTryStart().getBytecodeOffset();
-        int outerEnd = outer.getTryEnd() != null ? outer.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
-        for (ExceptionHandler h : mergedHandlers) {
-            if (h == outer || h.getHandlerBlock() == outer.getHandlerBlock() || sameTryRange(h, outer)
-                    || h.getTryStart() == null
-                    || processedTryHandlers.contains(h)
-                    || processedHandlerBlocks.contains(h.getHandlerBlock())) {
-                continue;
-            }
-            int hs = h.getTryStart().getBytecodeOffset();
-            if (hs >= outerStart && hs < outerEnd) {
-                return null;
+        // A USER finally with a nested catch of its own (a different unprocessed handler inside the range) is
+        // left to the legacy walk: the outer-handler scaffolding cannot de-duplicate the inlined finally copies
+        // at the CFG level when inner handlers are present, and the legacy walk's own try recovery is the
+        // cleaner form for it. A SYNCHRONIZED region is the exception: its finally is a monitorexit that is
+        // dropped during recovery (no copies to place), and the legacy walk silently DROPS a nested catch
+        // inside a loop within the synchronized (a wait-loop's `catch (InterruptedException) {}`), producing
+        // uncompilable output - so a synchronized region with a nested catch is delegated to the scaffolding,
+        // which recovers the nested try/catch via recoverWithNestedHandlers.
+        if (detectSynchronizedLock(outer) == null) {
+            int outerStart = outer.getTryStart().getBytecodeOffset();
+            int outerEnd = outer.getTryEnd() != null ? outer.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
+            for (ExceptionHandler h : mergedHandlers) {
+                if (h == outer || h.getHandlerBlock() == outer.getHandlerBlock() || sameTryRange(h, outer)
+                        || h.getTryStart() == null
+                        || processedTryHandlers.contains(h)
+                        || processedHandlerBlocks.contains(h.getHandlerBlock())) {
+                    continue;
+                }
+                int hs = h.getTryStart().getBytecodeOffset();
+                if (hs >= outerStart && hs < outerEnd) {
+                    return null;
+                }
             }
         }
         List<Statement> out = new ArrayList<>();
