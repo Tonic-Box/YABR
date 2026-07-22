@@ -212,7 +212,16 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
-        exprLowerer.lowerCondition(whileStmt.getCondition(), bodyBlock, exitBlock);
+        if (isTrueLiteral(whileStmt.getCondition())) {
+            // `while (true)`: an infinite loop with no false-exit branch. Emitting a conditional test would
+            // make the exit block reachable by fall-through, and a value-returning method whose loop never
+            // exits normally would then get a synthetic void return there (a VerifyError). The exit block is
+            // reached only by a `break` inside the body.
+            condBlock.addInstruction(SimpleInstruction.createGoto(bodyBlock));
+            condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        } else {
+            exprLowerer.lowerCondition(whileStmt.getCondition(), bodyBlock, exitBlock);
+        }
 
         ctx.pushLoop(whileStmt.getLabel(), condBlock, exitBlock);
 
@@ -225,6 +234,11 @@ public class StatementLowerer {
 
         ctx.popLoop();
         ctx.setCurrentBlock(exitBlock);
+    }
+
+    private boolean isTrueLiteral(Expression e) {
+        return e instanceof com.tonic.analysis.source.ast.expr.LiteralExpr
+                && Boolean.TRUE.equals(((com.tonic.analysis.source.ast.expr.LiteralExpr) e).getValue());
     }
 
     private void lowerDoWhile(DoWhileStmt doWhile) {

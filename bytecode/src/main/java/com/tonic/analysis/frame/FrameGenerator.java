@@ -147,7 +147,10 @@ public class FrameGenerator {
             if (instr instanceof ConditionalBranchInstruction) {
                 ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
                 int target = offset + branch.getBranchOffset();
-                if (target > 0) {
+                // A target of 0 is only reachable as a back edge to the method entry (an infinite loop whose
+                // header sits at bci 0); the verifier still requires a stackmap frame there. A forward branch
+                // never targets 0, so >= 0 adds a frame only for that genuine back-edge case.
+                if (target >= 0) {
                     targets.add(target);
                 }
             }
@@ -156,7 +159,7 @@ public class FrameGenerator {
                 GotoInstruction gotoInstr =
                     (GotoInstruction) instr;
                 int target = offset + gotoBranchOffset(gotoInstr);
-                if (target > 0) {
+                if (target >= 0) {
                     targets.add(target);
                 }
             }
