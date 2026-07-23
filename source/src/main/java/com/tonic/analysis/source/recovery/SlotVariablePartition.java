@@ -432,6 +432,7 @@ public class SlotVariablePartition {
         // One name per component: the LVT name covering its offsets when available, else the slot-based
         // fallback (which keeps each split uniquely named when there is no debug info).
         Map<Integer, String> rootName = new HashMap<>();
+        Set<Integer> scopedRoots = new HashSet<>();
         for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet()) {
             int slot = se.getKey();
             Map<Integer, Integer> order = se.getValue();
@@ -461,6 +462,7 @@ public class SlotVariablePartition {
                         continue;
                     }
                     rootName.put(root, ce.getKey());
+                    scopedRoots.add(root);
                     used.add(ce.getKey());
                 }
             }
@@ -481,6 +483,62 @@ public class SlotVariablePartition {
                 rootName.put(root, name);
                 used.add(name);
             }
+        }
+
+        // Pass 3: a cross-slot spill copy adopts its source variable's name. javac spills a value into a
+        // fresh un-named slot around an inlined finally (`iload src; istore spill; [copy]; iload spill`);
+        // the spill component then falls back to a slot name while reads that resolve through the source
+        // keep its debug name, splitting one source variable into two inconsistent names. When the spill's
+        // single def is a bare load of another slot's debug-named, single-store variable - so the source
+        // cannot change between the copy and its reads - the spill IS that variable: name it so, and the
+        // spill assignment collapses as an identity store.
+        Map<Integer, List<StoreLocalInstruction>> rootStores = new HashMap<>();
+        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
+            if (e.getKey() instanceof StoreLocalInstruction) {
+                rootStores.computeIfAbsent(find(e.getValue().id), k -> new ArrayList<>())
+                        .add((StoreLocalInstruction) e.getKey());
+            }
+        }
+        for (Map.Entry<Integer, List<StoreLocalInstruction>> e : rootStores.entrySet()) {
+            int spillRoot = e.getKey();
+            if (scopedRoots.contains(spillRoot) || e.getValue().size() != 1) {
+                continue;
+            }
+            StoreLocalInstruction spill = e.getValue().get(0);
+            if (!(spill.getValue() instanceof SSAValue)) {
+                continue;
+            }
+            Integer srcRoot = null;
+            IRInstruction def = ((SSAValue) spill.getValue()).getDefinition();
+            if (def instanceof LoadLocalInstruction
+                    && ((LoadLocalInstruction) def).getLocalIndex() != spill.getLocalIndex()) {
+                Integer srcRep = loadReaching.get(def);
+                if (srcRep != null) {
+                    srcRoot = find(srcRep);
+                }
+            } else {
+                // The lifter forwards a value stored and immediately reloaded, so the spill stores the SAME
+                // SSA value as the source variable's own store, with no load in between.
+                for (Map.Entry<Integer, List<StoreLocalInstruction>> se : rootStores.entrySet()) {
+                    if (se.getKey() == spillRoot || se.getValue().size() != 1) {
+                        continue;
+                    }
+                    StoreLocalInstruction src = se.getValue().get(0);
+                    if (src.getValue() == spill.getValue()
+                            && src.getLocalIndex() != spill.getLocalIndex()) {
+                        srcRoot = se.getKey();
+                        break;
+                    }
+                }
+            }
+            if (srcRoot == null || !scopedRoots.contains(srcRoot)) {
+                continue;
+            }
+            List<StoreLocalInstruction> srcStores = rootStores.get(srcRoot);
+            if (srcStores == null || srcStores.size() != 1) {
+                continue;
+            }
+            rootName.put(spillRoot, rootName.get(srcRoot));
         }
 
         for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
