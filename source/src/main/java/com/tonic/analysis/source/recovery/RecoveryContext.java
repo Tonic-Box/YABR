@@ -33,6 +33,7 @@ public class RecoveryContext {
     private final Map<Integer, String> pendingNewLocalSlots = new HashMap<>();
 
     private final Set<String> declaredVariables = new HashSet<>();
+    private final Set<String> baselineDeclaredVariables = new HashSet<>();
 
     private final Map<String, com.tonic.analysis.source.ast.type.SourceType> declaredVariableTypes = new HashMap<>();
 
@@ -267,6 +268,22 @@ public class RecoveryContext {
      */
     public void clearDeclaredVariables() {
         declaredVariables.clear();
+    }
+
+    /**
+     * Snapshots the current declared set as the method's baseline (the pre-declared parameters), so a full
+     * re-pass can restore it. Without the restore, declarations emitted by a DISCARDED earlier attempt leak
+     * into the re-pass and its stores recover as bare assignments with the declarations gone.
+     */
+    public void baselineDeclaredVariables() {
+        baselineDeclaredVariables.clear();
+        baselineDeclaredVariables.addAll(declaredVariables);
+    }
+
+    /** Restores the declared set to the method baseline captured by {@link #baselineDeclaredVariables()}. */
+    public void resetDeclaredVariablesToBaseline() {
+        declaredVariables.clear();
+        declaredVariables.addAll(baselineDeclaredVariables);
     }
 
     /**

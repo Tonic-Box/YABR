@@ -52,6 +52,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,6 +93,7 @@ public final class ReachingConditionStructurer {
         private final Map<IRBlock, Integer> rpoIndex;
         private final Map<IRBlock, SwitchDescriptor> switchDescriptors;
         private final Map<IRBlock, SwitchNodeDescriptor> switchNodes;
+        private final Map<IRBlock, String> cachedConditions;
         private final Map<IRBlock, TryNodeDescriptor> tryNodes;
         private final boolean tryNodesEnabled;
         private final Set<IRBlock> regionStopBlocks;
@@ -114,6 +116,7 @@ public final class ReachingConditionStructurer {
             rpoIndex = s.rpoIndex;
             switchDescriptors = new HashMap<>(s.switchDescriptors);
             switchNodes = new HashMap<>(s.switchNodes);
+            cachedConditions = new LinkedHashMap<>(s.cachedConditions);
             tryNodes = new HashMap<>(s.tryNodes);
             tryNodesEnabled = s.tryNodesEnabled;
             regionStopBlocks = s.regionStopBlocks;
@@ -138,6 +141,8 @@ public final class ReachingConditionStructurer {
             s.switchDescriptors.putAll(switchDescriptors);
             s.switchNodes.clear();
             s.switchNodes.putAll(switchNodes);
+            s.cachedConditions.clear();
+            s.cachedConditions.putAll(cachedConditions);
             s.tryNodes.clear();
             s.tryNodes.putAll(tryNodes);
             s.tryNodesEnabled = tryNodesEnabled;
@@ -164,6 +169,7 @@ public final class ReachingConditionStructurer {
     private Map<IRBlock, Integer> rpoIndex;
     private final Map<IRBlock, SwitchDescriptor> switchDescriptors = new HashMap<>();
     private final Map<IRBlock, SwitchNodeDescriptor> switchNodes = new HashMap<>();
+    private final Map<IRBlock, String> cachedConditions = new LinkedHashMap<>();
     /** Opaque try nodes in the region, keyed by the try's entry block; populated only when enabled. */
     private final Map<IRBlock, TryNodeDescriptor> tryNodes = new HashMap<>();
     private boolean tryNodesEnabled;
@@ -235,6 +241,7 @@ public final class ReachingConditionStructurer {
         this.method = context.getIrMethod();
         switchDescriptors.clear();
         switchNodes.clear();
+        cachedConditions.clear();
         tryNodes.clear();
         this.tryNodesEnabled = allowTryNodes;
         this.regionStopBlocks = stopBlocks;
@@ -276,7 +283,18 @@ public final class ReachingConditionStructurer {
         } catch (BailToLegacy bail) {
             return null;
         }
-        return emit(entry);
+        List<Statement> emitted = emit(entry);
+        if (!cachedConditions.isEmpty()) {
+            // Default-initialized declarations for the cached-condition temporaries, at the region top so
+            // every guard mention is definitely assigned even on paths where the condition never ran.
+            List<Statement> withDecls = new ArrayList<>(cachedConditions.size() + emitted.size());
+            for (String temp : cachedConditions.values()) {
+                withDecls.add(new VarDeclStmt(PrimitiveSourceType.BOOLEAN, temp, LiteralExpr.ofBoolean(false)));
+            }
+            withDecls.addAll(emitted);
+            return withDecls;
+        }
+        return emitted;
     }
 
     /**
@@ -980,7 +998,16 @@ public final class ReachingConditionStructurer {
         if (b.getTerminator() instanceof SwitchInstruction) {
             return emitSwitch(b);
         }
-        List<Statement> own = bridge.recoverSimpleBlock(b);
+        List<Statement> own = new ArrayList<>(bridge.recoverSimpleBlock(b));
+        String cachedTemp = cachedConditions.get(b);
+        if (cachedTemp != null) {
+            // The one real evaluation of a cached side-effecting condition, at the block's own position;
+            // every guard mention of this atom renders as the temporary instead.
+            Expression cachedCond = bridge.recoverCondition(b, false);
+            own.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                    new VarRefExpr(cachedTemp, PrimitiveSourceType.BOOLEAN), cachedCond,
+                    PrimitiveSourceType.BOOLEAN)));
+        }
         if (!duplicating) {
             bridge.markRegionBlockProcessed(b, own);
         }
@@ -991,6 +1018,19 @@ public final class ReachingConditionStructurer {
         List<Statement> out = new ArrayList<>(own);
         out.addAll(structureChildren(b));
         return out;
+    }
+
+    /**
+     * The rendering of a branch block's condition inside a guard: the raw recovered expression, or - for a
+     * cached side-effecting condition - the boolean temporary assigned at the block's own position.
+     */
+    private Expression guardCondition(IRBlock block, boolean negate) {
+        String temp = cachedConditions.get(block);
+        if (temp == null) {
+            return bridge.recoverCondition(block, negate);
+        }
+        Expression ref = new VarRefExpr(temp, PrimitiveSourceType.BOOLEAN);
+        return negate ? new UnaryExpr(UnaryOperator.NOT, ref, PrimitiveSourceType.BOOLEAN) : ref;
     }
 
     /**
@@ -1842,14 +1882,14 @@ public final class ReachingConditionStructurer {
             int guarded = guardedArm(trueStmts, falseStmts);
             if (guarded >= 0) {
                 boolean guardTrue = guarded == 0;
-                Expression cond = bridge.recoverCondition(b, !guardTrue);
+                Expression cond = guardCondition(b, !guardTrue);
                 IfStmt guard = new IfStmt(cond,
                         new BlockStmt(guardTrue ? trueStmts : falseStmts), null);
                 stamp(guard, b);
                 out.add(guard);
                 out.addAll(guardTrue ? falseStmts : trueStmts);
             } else {
-                Expression cond = bridge.recoverCondition(b, true);
+                Expression cond = guardCondition(b, true);
                 IfStmt ifStmt = new IfStmt(cond, new BlockStmt(falseStmts),
                         trueStmts.isEmpty() ? null : new BlockStmt(trueStmts));
                 stamp(ifStmt, b);
@@ -2028,10 +2068,26 @@ public final class ReachingConditionStructurer {
         return formulas.truth;
     }
 
-    /** Fails to legacy if any atom in the guard names a block with a side-effecting condition. */
+    /**
+     * Caches every side-effecting condition a guard references: the block's condition is evaluated ONCE,
+     * into a boolean temporary assigned at the block's own position, and every guard mention renders as the
+     * temporary - so re-stating the guard cannot repeat the side effect. Unexecuted atoms keep the
+     * temporary's default; a reaching condition's value never depends on them (some executed conjunct
+     * already falsifies every disjunct off the taken path). A shape whose impure condition sits on a loop
+     * header or a non-branch terminator has no single assignment point here and still fails to legacy.
+     */
     private void requireGuardPure(BoolFormula guard) {
-        if (guardHasImpureAtom(guard)) {
-            throw new BailToLegacy();
+        LoopAnalysis loops = context.getLoopAnalysis();
+        for (int atom : atomsOf(guard.nnf, new HashSet<>())) {
+            IRBlock block = blockOfAtom.get(atom);
+            if (pureConditionBlock.contains(block) || cachedConditions.containsKey(block)) {
+                continue;
+            }
+            if (!(block.getTerminator() instanceof BranchInstruction)
+                    || (loops != null && loops.isLoopHeader(block))) {
+                throw new BailToLegacy();
+            }
+            cachedConditions.put(block, "guard" + guardTempCounter++);
         }
     }
 
@@ -2197,19 +2253,19 @@ public final class ReachingConditionStructurer {
             Bdd zero = formulas.bddZero();
             IRBlock block = blockOfAtom.get(n.var);
             if (n.low == zero) {
-                return conj(bridge.recoverCondition(block, false), emitNode(n.high));
+                return conj(guardCondition(block, false), emitNode(n.high));
             }
             if (n.high == zero) {
-                return conj(bridge.recoverCondition(block, true), emitNode(n.low));
+                return conj(guardCondition(block, true), emitNode(n.low));
             }
             if (n.high == one) {
-                return disj(bridge.recoverCondition(block, false), emitNode(n.low));
+                return disj(guardCondition(block, false), emitNode(n.low));
             }
             if (n.low == one) {
-                return disj(bridge.recoverCondition(block, true), emitNode(n.high));
+                return disj(guardCondition(block, true), emitNode(n.high));
             }
-            return disj(conj(bridge.recoverCondition(block, false), emitNode(n.high)),
-                    conj(bridge.recoverCondition(block, true), emitNode(n.low)));
+            return disj(conj(guardCondition(block, false), emitNode(n.high)),
+                    conj(guardCondition(block, true), emitNode(n.low)));
         }
 
         private void countRefs(Bdd n) {

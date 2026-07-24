@@ -358,6 +358,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         registerPendingNewInstructions(method);
         emitPhiDeclarations(method, statements);
+        // The declared baseline for full re-passes: parameters plus the phi declarations above. A re-pass
+        // resets to this point so block-level declarations from a discarded attempt become re-declarable.
+        context.getExpressionContext().baselineDeclaredVariables();
         splitClobberedIncrementReads(method);
 
         List<ExceptionHandler> handlers = method.getExceptionHandlers();

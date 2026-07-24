@@ -167,6 +167,9 @@ public class ControlFlowContext {
     public void resetProcessedBlocks() {
         processedBlocks.clear();
         blockStatements.clear();
+        // A full re-pass re-recovers every block; names declared by a prior (possibly discarded) attempt
+        // must be re-declarable or their stores come back as assignments without declarations.
+        getExpressionContext().resetDeclaredVariablesToBaseline();
     }
 
     public void setStatements(IRBlock block, List<Statement> stmts) {
