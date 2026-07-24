@@ -5155,37 +5155,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         DominatorTree nestDt = context.getDominatorTree();
         Set<IRBlock> siblingHandlerBlocks = new HashSet<>();
         if (finallyNode) {
-            // Only a finally that carries its OWN nested try (a guarded close wrapped in try/catch, whose
-            // protective entries also shadow the user catches' ranges) needs its sibling scaffolding
-            // blanket-consumed here - the delegate must own the whole construct. Every other finally keeps
-            // the narrower containment, whose staged de-duplicating route recovers it as the idempotence
-            // baseline is calibrated to.
-            boolean finallyCarriesOwnTry = false;
-            DominatorTree sibDt = context.getDominatorTree();
+            // The finally's sibling scaffolding - every same-start handler family, including the
+            // rethrower's own split ranges - is blanket-consumed: the delegate recovery owns the whole
+            // construct (flat clauses via the caller's handler pick, copies folded out of the try and
+            // catch bodies alike).
             for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
-                if (sib.getHandlerBlock() == null || sib.getTryStart() == null
-                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()
-                        || !handlerRethrows(sib) || handlerThrowsFreshException(sib)) {
-                    continue;
-                }
-                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-                    if (eh != sib && eh.getTryStart() != null && sibDt != null
-                            && (eh.getTryStart() == sib.getHandlerBlock()
-                                || sibDt.dominates(sib.getHandlerBlock(), eh.getTryStart()))) {
-                        finallyCarriesOwnTry = true;
-                        break;
-                    }
-                }
-                if (finallyCarriesOwnTry) {
-                    break;
-                }
-            }
-            if (finallyCarriesOwnTry) {
-                for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
-                    if (sib.getHandlerBlock() != null && sib.getTryStart() != null
-                            && sib.getTryStart().getBytecodeOffset() == block.getBytecodeOffset()) {
-                        siblingHandlerBlocks.add(sib.getHandlerBlock());
-                    }
+                if (sib.getHandlerBlock() != null && sib.getTryStart() != null
+                        && sib.getTryStart().getBytecodeOffset() == block.getBytecodeOffset()) {
+                    siblingHandlerBlocks.add(sib.getHandlerBlock());
                 }
             }
         }
