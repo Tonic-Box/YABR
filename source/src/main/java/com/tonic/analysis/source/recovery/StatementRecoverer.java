@@ -4871,10 +4871,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // from inside an engine emit is snapshot-protected by the delegate (emitTry/emitSwitchNode). A
         // shape the engine declines falls back to the walk exactly as before.
         if (rcsSubRegionSuppression == 0) {
-            List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
-            if (structured != null) {
-                return structured;
-            }
+            return recoverRegionHandoff(startBlock, stopBlocks);
         }
         return legacyBlockWalk(startBlock, stopBlocks);
     }
