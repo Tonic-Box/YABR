@@ -1394,7 +1394,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         processedTryHandlers.add(eh);
                     }
                 }
-                List<Statement> structured = legacyBlockWalk(handlerBlock, bodyStops);
+                List<Statement> structured = recoverBlockSequence(handlerBlock, bodyStops);
                 List<Statement> filtered = new ArrayList<>();
                 for (Statement st : structured) {
                     if (st instanceof VarDeclStmt && ((VarDeclStmt) st).getName().equals(exceptionVarName)) {
@@ -8220,11 +8220,32 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
-        rcsSubRegionSuppression++;
+        // Only the reconstructor-consumed switch shapes need the walk's exact case-body form: a string
+        // switch's scaffolding, a pattern typeSwitch, and a value-yielding switch whose merge phis converge
+        // the case values (the switch-expression fold matches those bodies statement-for-statement). A
+        // plain statement switch's case bodies structure natively like any other sub-region.
+        boolean suppress = detectStringSwitch(header) != null;
+        if (!suppress && header.getTerminator() instanceof SwitchInstruction) {
+            Value key = ((SwitchInstruction) header.getTerminator()).getKey();
+            if (key instanceof SSAValue) {
+                IRInstruction keyDef = ((SSAValue) key).getDefinition();
+                suppress = keyDef instanceof InvokeInstruction && ((InvokeInstruction) keyDef).isDynamic()
+                        && "typeSwitch".equals(((InvokeInstruction) keyDef).getName());
+            }
+        }
+        if (!suppress) {
+            IRBlock merge = findSwitchMerge(info);
+            suppress = merge != null && !merge.getPhiInstructions().isEmpty();
+        }
+        if (suppress) {
+            rcsSubRegionSuppression++;
+        }
         try {
             return recoverSwitch0(header, info);
         } finally {
-            rcsSubRegionSuppression--;
+            if (suppress) {
+                rcsSubRegionSuppression--;
+            }
         }
     }
 
