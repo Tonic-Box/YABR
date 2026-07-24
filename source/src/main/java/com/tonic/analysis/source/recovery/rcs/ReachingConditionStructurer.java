@@ -584,7 +584,15 @@ public final class ReachingConditionStructurer {
                 // catch) - it is owned by the enclosing structure, not this single-entry region. Treat it as
                 // an implicit region boundary rather than absorbing it and then declining the whole region on
                 // the single-entry check below; the surrounding recovery recovers it as the continuation.
+                // EXCEPTION: when every predecessor outside the entry's dominance is CATCH code (a handler
+                // entry or a block one dominates), the merge is this region's own try/catch join - the catch
+                // clause is recovered separately and falls through to it, and NO enclosing structure will
+                // place it. Skipping would truncate the region and silently lose the join (e.g. the method's
+                // trailing return); decline instead so the walking recovery emits the join in sequence.
                 if (s != entry && !dom.dominates(entry, s)) {
+                    if (outsidePredsAreCatchCode(s, entry)) {
+                        return false;
+                    }
                     continue;
                 }
                 work.add(s);
@@ -667,6 +675,35 @@ public final class ReachingConditionStructurer {
                 if (!isNodeJoin) {
                     return false;
                 }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * True when every predecessor of {@code s} that the region entry does not dominate is catch code - an
+     * exception handler's entry block or a block such an entry dominates. Such a merge belongs to this
+     * region (its only outside in-flow is the separately-recovered catch clause falling through).
+     */
+    private boolean outsidePredsAreCatchCode(IRBlock s, IRBlock entry) {
+        List<com.tonic.analysis.ssa.cfg.ExceptionHandler> handlers = method.getExceptionHandlers();
+        if (handlers == null || handlers.isEmpty()) {
+            return false;
+        }
+        for (IRBlock p : s.getPredecessors()) {
+            if (p == entry || dom.dominates(entry, p)) {
+                continue;
+            }
+            boolean catchCode = false;
+            for (com.tonic.analysis.ssa.cfg.ExceptionHandler h : handlers) {
+                IRBlock hb = h.getHandlerBlock();
+                if (hb != null && (hb == p || dom.dominates(hb, p))) {
+                    catchCode = true;
+                    break;
+                }
+            }
+            if (!catchCode) {
+                return false;
             }
         }
         return true;

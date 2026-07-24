@@ -4993,8 +4993,29 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         out.add(recovered);
         if (!isTerminatingRecoveredTry(recovered)) {
             IRBlock after = findBlockAfterTryCatch(handler, tryVisited);
+            // The try's normal exit is often an empty goto shell in front of the real continuation (the
+            // shared join past the catch). Resolve through it so the processed-return check below sees the
+            // join itself, not the shell.
+            int hops = 0;
+            while (after != null && after.getTerminator() instanceof SimpleInstruction
+                    && ((SimpleInstruction) after.getTerminator()).getOp() == SimpleOp.GOTO
+                    && after.getSuccessors().size() == 1
+                    && (after.getInstructions().isEmpty()
+                        || (after.getInstructions().size() == 1
+                            && after.getInstructions().get(0) == after.getTerminator()))
+                    && hops++ < 8) {
+                after = after.getSuccessors().iterator().next();
+            }
             if (after != null && !stopBlocks.contains(after)) {
-                out.addAll(recoverRegionHandoff(after, stopBlocks));
+                if (context.isProcessed(after) && isReturnBlock(after)) {
+                    // The continuation is a shared trailing return a prefix arm already absorbed (a guard's
+                    // early exit and the try's fall-through converge on one return block). The hand-off
+                    // emits nothing for a processed region, which would drop the fall-through's return
+                    // entirely; a return terminator is idempotent, so re-emit its recovered statements.
+                    out.addAll(context.getStatements(after));
+                } else {
+                    out.addAll(recoverRegionHandoff(after, stopBlocks));
+                }
             }
         }
         return out;
