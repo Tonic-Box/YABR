@@ -4860,12 +4860,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     /** Tracks handler blocks to prevent nested try-finally for same finally block */
     private final Set<IRBlock> processedHandlerBlocks = new HashSet<>();
 
+    /** Suppresses the RC-engine offer for sub-regions whose downstream consumers pattern-match the
+     * walk's exact output shape (switch case bodies feeding the switch-expression reconstructors). */
+    private int rcsSubRegionSuppression;
+
     public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks) {
-        // The RC engine structures a whole method at once. The legacy walk's own sub-recursion (if arms,
-        // loop bodies) must not be intercepted, or the two engines interleave on one region and corrupt
-        // shared phi/mark state - so only the top-level whole-method call is offered here. Exception-
-        // scaffolding pieces, which are handed off in full, go through recoverRegionHandoff instead.
-        if (startBlock == context.getIrMethod().getEntryBlock() && stopBlocks.isEmpty()) {
+        // The legacy walk's sub-recursion (if arms, loop bodies, case bodies) is offered to the RC engine
+        // like any other region: a sub-region pass preserves the surrounding recovery's processed marks
+        // (only the top-level whole-method pass owns the mark namespace), and a re-entrant pass launched
+        // from inside an engine emit is snapshot-protected by the delegate (emitTry/emitSwitchNode). A
+        // shape the engine declines falls back to the walk exactly as before.
+        if (rcsSubRegionSuppression == 0) {
             List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
             if (structured != null) {
                 return structured;
@@ -8195,6 +8200,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private List<Statement> recoverStringSwitchBody(IRBlock body, Set<IRBlock> bodyStops) {
+        rcsSubRegionSuppression++;
+        try {
+            return recoverStringSwitchBody0(body, bodyStops);
+        } finally {
+            rcsSubRegionSuppression--;
+        }
+    }
+
+    private List<Statement> recoverStringSwitchBody0(IRBlock body, Set<IRBlock> bodyStops) {
         Set<IRBlock> stopBlocks = new HashSet<>(bodyStops);
         stopBlocks.remove(body);
         context.pushStopBlocks(stopBlocks);
@@ -8206,6 +8220,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
+        rcsSubRegionSuppression++;
+        try {
+            return recoverSwitch0(header, info);
+        } finally {
+            rcsSubRegionSuppression--;
+        }
+    }
+
+    private Statement recoverSwitch0(IRBlock header, RegionInfo info) {
         context.markProcessed(header);
 
         List<Statement> headerStmts = recoverBlockInstructions(header);
@@ -8913,9 +8936,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return false;
         }
         for (IRBlock block : region) {
-            ExceptionHandler handler = findHandlerStartingAt(block);
-            if (handler != null && !processedTryHandlers.contains(handler)
-                    && !processedHandlerBlocks.contains(handler.getHandlerBlock())) {
+            // The widest UNPROCESSED handler, not widest-then-filtered: a split outer range can begin at
+            // the same block as a nested try, and the processed outer piece must not mask the nested
+            // handler (the engine would structure the region and silently drop the nested catch).
+            if (findUnprocessedHandlerStartingAt(block) != null) {
                 return true;
             }
         }
