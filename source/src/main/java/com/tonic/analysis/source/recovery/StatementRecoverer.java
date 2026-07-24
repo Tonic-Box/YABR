@@ -67,6 +67,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     @Override
+    public List<Statement> processedReturnStatements(IRBlock block) {
+        if (!context.isProcessed(block) || !isReturnBlock(block)) {
+            return Collections.emptyList();
+        }
+        return context.getStatements(block);
+    }
+
+    @Override
     public boolean isRegionBlockProcessed(IRBlock block) {
         return context.isProcessed(block);
     }
@@ -5001,16 +5009,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // The try's normal exit is often an empty goto shell in front of the real continuation (the
             // shared join past the catch). Resolve through it so the processed-return check below sees the
             // join itself, not the shell.
-            int hops = 0;
-            while (after != null && after.getTerminator() instanceof SimpleInstruction
-                    && ((SimpleInstruction) after.getTerminator()).getOp() == SimpleOp.GOTO
-                    && after.getSuccessors().size() == 1
-                    && (after.getInstructions().isEmpty()
-                        || (after.getInstructions().size() == 1
-                            && after.getInstructions().get(0) == after.getTerminator()))
-                    && hops++ < 8) {
-                after = after.getSuccessors().iterator().next();
-            }
+            after = resolveThroughGotoShells(after);
             if (after != null && !stopBlocks.contains(after)) {
                 if (context.isProcessed(after) && isReturnBlock(after)) {
                     // The continuation is a shared trailing return a prefix arm already absorbed (a guard's
@@ -5222,6 +5221,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         || consumed.contains(succ) || dt.dominates(succ, cb)) {
                     continue;
                 }
+                succ = resolveThroughGotoShells(succ);
+                if (consumed.contains(succ)) {
+                    continue;
+                }
                 if (after != null && after != succ) {
                     return null;
                 }
@@ -5427,6 +5430,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         || consumed.contains(succ) || dt.dominates(succ, cb)) {
                     continue;
                 }
+                // The try's fall-through often exits into a bare goto shell in front of the join the
+                // handler paths reach directly; both are the same continuation once resolved.
+                succ = resolveThroughGotoShells(succ);
+                if (consumed.contains(succ)) {
+                    continue;
+                }
                 if (after != null && after != succ) {
                     return null;
                 }
@@ -5437,6 +5446,35 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return null;
         }
         return new TryNodeDescriptor(h, consumed, after);
+    }
+
+    /**
+     * Resolves a continuation candidate through bare goto shells: an empty block (or one whose only
+     * instruction is its goto terminator) with a single successor is a jump pad in front of the real
+     * continuation, not the continuation itself. Bounded to reject pathological chains. When a collector
+     * is given, each traversed shell is added to it - a shell on a try node's exit path belongs to the
+     * node's consumed set, or it would dangle outside both the node and the region and break the model's
+     * predecessor mapping for the join.
+     */
+    private IRBlock resolveThroughGotoShells(IRBlock b) {
+        return resolveThroughGotoShells(b, null);
+    }
+
+    private IRBlock resolveThroughGotoShells(IRBlock b, Set<IRBlock> traversed) {
+        int hops = 0;
+        while (b != null && b.getTerminator() instanceof SimpleInstruction
+                && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.GOTO
+                && b.getSuccessors().size() == 1
+                && (b.getInstructions().isEmpty()
+                    || (b.getInstructions().size() == 1
+                        && b.getInstructions().get(0) == b.getTerminator()))
+                && hops++ < 8) {
+            if (traversed != null) {
+                traversed.add(b);
+            }
+            b = b.getSuccessors().iterator().next();
+        }
+        return b;
     }
 
     private boolean tryHasFinallyHandler(IRBlock tryStart) {

@@ -107,9 +107,11 @@ public final class ReachingConditionStructurer {
         private final boolean duplicating;
         private final long regionDupBudget;
         private final boolean suppressBoundaryTerminalAbsorption;
+        private final Set<IRBlock> skippedBoundaries;
 
         PassState(ReachingConditionStructurer s) {
             suppressBoundaryTerminalAbsorption = s.suppressBoundaryTerminalAbsorption;
+            skippedBoundaries = s.skippedBoundaries;
             method = s.method;
             dom = s.dom;
             region = s.region;
@@ -133,6 +135,7 @@ public final class ReachingConditionStructurer {
 
         void restore(ReachingConditionStructurer s) {
             s.suppressBoundaryTerminalAbsorption = suppressBoundaryTerminalAbsorption;
+            s.skippedBoundaries = skippedBoundaries;
             s.method = method;
             s.dom = dom;
             s.region = region;
@@ -178,6 +181,7 @@ public final class ReachingConditionStructurer {
      * the (de-duplicated) finally between it and the region, so absorbing it into the region would move its
      * evaluation before the finally. The host's continuation recovery places it instead. */
     private boolean suppressBoundaryTerminalAbsorption;
+    private Set<IRBlock> skippedBoundaries = new LinkedHashSet<>();
 
     public void setSuppressBoundaryTerminalAbsorption(boolean suppress) {
         this.suppressBoundaryTerminalAbsorption = suppress;
@@ -284,6 +288,13 @@ public final class ReachingConditionStructurer {
             return null;
         }
         List<Statement> emitted = emit(entry);
+        // A non-dominated boundary the collect skipped is normally the enclosing structure's continuation -
+        // but when an earlier pass already recovered it into a sibling arm and it is a return block, no
+        // enclosing recovery will place it again, and this region's fall-through would silently drop off
+        // the end of the method. A return terminator is idempotent, so re-emit it after the region.
+        if (!endsTerminal(emitted) && skippedBoundaries.size() == 1) {
+            emitted.addAll(bridge.processedReturnStatements(skippedBoundaries.iterator().next()));
+        }
         if (!cachedConditions.isEmpty()) {
             // Default-initialized declarations for the cached-condition temporaries, at the region top so
             // every guard mention is definitely assigned even on paths where the condition never ran.
@@ -541,6 +552,7 @@ public final class ReachingConditionStructurer {
      */
     private boolean collectRegion(IRBlock entry, Set<IRBlock> stopBlocks) {
         region = new LinkedHashSet<>();
+        skippedBoundaries = new LinkedHashSet<>();
         Deque<IRBlock> work = new ArrayDeque<>();
         work.add(entry);
         while (!work.isEmpty()) {
@@ -611,6 +623,7 @@ public final class ReachingConditionStructurer {
                     if (outsidePredsAreCatchCode(s, entry)) {
                         return false;
                     }
+                    skippedBoundaries.add(s);
                     continue;
                 }
                 work.add(s);

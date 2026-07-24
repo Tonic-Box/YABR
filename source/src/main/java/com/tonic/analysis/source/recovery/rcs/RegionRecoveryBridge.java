@@ -70,6 +70,13 @@ public interface RegionRecoveryBridge {
     boolean isRegionBlockProcessed(IRBlock block);
 
     /**
+     * The statements of a processed RETURN block, for idempotent re-emission - a trailing return two paths
+     * share is recovered once by the first path's pass; the other path re-emits the terminator instead of
+     * silently falling off the end of the method. Empty for a block that is not a bare processed return.
+     */
+    List<Statement> processedReturnStatements(IRBlock block);
+
+    /**
      * If {@code branch} heads a value-producing ternary diamond - both arms produce a single value that
      * merges at a phi feeding an expression, e.g. {@code x > y ? x : y} - collapses it to a cached
      * {@code TernaryExpr} (inlined where the merge block consumes it) and marks the two arm blocks emitted,
