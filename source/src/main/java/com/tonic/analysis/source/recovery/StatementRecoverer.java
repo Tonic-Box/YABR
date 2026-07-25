@@ -5508,6 +5508,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         IRBlock after = null;
+        boolean allExitsTerminal = false;
         for (IRBlock cb : consumed) {
             if (cb != rethrower.getHandlerBlock() && dt.dominates(rethrower.getHandlerBlock(), cb)) {
                 continue;
@@ -5525,9 +5526,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     continue;
                 }
                 if (after != null && after != succ) {
+                    // Two distinct continuations: when EVERY candidate is a terminal return tail (javac's
+                    // per-exit inlined finally copy carrying that exit's own return), the construct has no
+                    // external join at all - the delegate recovery owns those tails, re-attaching each
+                    // return behind the de-duplicated finally. Any non-terminal rival is a genuine second
+                    // join the node model cannot express.
+                    if (isTerminalReturnChain(after) && isTerminalReturnChain(succ)) {
+                        after = null;
+                        allExitsTerminal = true;
+                        break;
+                    }
                     return null;
                 }
                 after = succ;
+            }
+            if (allExitsTerminal) {
+                break;
             }
         }
         if (after == block) {
@@ -5563,6 +5577,30 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             b = b.getSuccessors().iterator().next();
         }
         return b;
+    }
+
+    /**
+     * A block whose straight-line chain (single normal successors) ends in a return within a few hops:
+     * the shape of javac's per-exit inlined finally copy carrying its exit's own return.
+     */
+    private boolean isTerminalReturnChain(IRBlock b) {
+        int hops = 0;
+        while (b != null && hops++ < 4) {
+            if (b.getTerminator() instanceof ReturnInstruction) {
+                return true;
+            }
+            IRBlock next = null;
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    if (next != null) {
+                        return false;
+                    }
+                    next = e.getKey();
+                }
+            }
+            b = next;
+        }
+        return false;
     }
 
     private boolean tryHasFinallyHandler(IRBlock tryStart) {

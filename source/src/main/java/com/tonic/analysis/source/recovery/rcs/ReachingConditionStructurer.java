@@ -316,7 +316,26 @@ public final class ReachingConditionStructurer {
     private void validate(IRBlock b) {
         LoopAnalysis loops = context.getLoopAnalysis();
         if (tryNodes.containsKey(b)) {
-            validateTryNode(b, loops);
+            if (loops != null && loops.isLoopHeader(b)) {
+                if (!loopWrapsTryNode(b, tryNodes.get(b))) {
+                    // The try wraps the loop (the back edge lives inside the consumed range): neither
+                    // emission order is faithful here - loop-first would run the finally every iteration.
+                    throw new BailToLegacy();
+                }
+                IRBlock breakTarget = findBreakTarget(b);
+                context.pushLoop(b, b, breakTarget, inductionLatch(b));
+                try {
+                    validateTryNode(b);
+                    validateChildren(b);
+                } finally {
+                    context.popLoop();
+                }
+                if (breakTarget != null && region.contains(breakTarget)) {
+                    validate(breakTarget);
+                }
+                return;
+            }
+            validateTryNode(b);
             return;
         }
         if (switchNodes.containsKey(b)) {
@@ -341,13 +360,11 @@ public final class ReachingConditionStructurer {
     }
 
     /**
-     * Side-effect-free dry run mirroring {@link #emitTry}: the node must not double as a loop header, no
-     * region block outside the node may jump into its consumed blocks, and the join it owns must validate.
+     * Side-effect-free dry run mirroring {@link #emitTry}: no region block outside the node may jump into
+     * its consumed blocks, and the join it owns must validate. A node doubling as a loop header is routed
+     * (or declined) by {@link #validate} before this runs.
      */
-    private void validateTryNode(IRBlock b, LoopAnalysis loops) {
-        if (loops != null && loops.isLoopHeader(b)) {
-            throw new BailToLegacy();
-        }
+    private void validateTryNode(IRBlock b) {
         TryNodeDescriptor node = tryNodes.get(b);
         for (IRBlock r : region) {
             if (r == b || tryNodes.containsKey(r)) {
@@ -1027,18 +1044,41 @@ public final class ReachingConditionStructurer {
 
     // ---- emission ------------------------------------------------------------------------------
 
+    /**
+     * True when the loop at {@code header} lies OUTSIDE the try node at the same block: every back edge to
+     * the header originates outside the node's consumed blocks, so the iteration wraps the try (the retry
+     * shape) and emitLoop may own it with the node as the body's head. A back edge from INSIDE the consumed
+     * set means the try wraps the loop - javac's protected range starts at the loop's first instruction -
+     * and loop-first emission would invert the nesting, running the finally on every iteration instead of
+     * once on exit.
+     */
+    private boolean loopWrapsTryNode(IRBlock header, TryNodeDescriptor node) {
+        for (IRBlock pred : header.getPredecessors()) {
+            if (isBackEdge(pred, header) && node.consumed().contains(pred)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** Emits {@code b}'s own statements followed by its dominator-tree children (its whole subtree). */
     private List<Statement> emit(IRBlock b) {
         if (!duplicating && bridge.isRegionBlockProcessed(b)) {
             return new ArrayList<>();
         }
+        LoopAnalysis loops = context.getLoopAnalysis();
         if (tryNodes.containsKey(b)) {
+            // A try node that doubles as a loop header (a retry loop whose body begins with the try - the
+            // back edge targets the try start) is emitted loop-first: emitLoop owns the iteration and the
+            // node becomes the body's head, so the loop's exits and the retry arm keep their meaning.
+            if (loops != null && loops.isLoopHeader(b) && loopWrapsTryNode(b, tryNodes.get(b))) {
+                return emitLoop(b);
+            }
             return emitTry(b);
         }
         if (switchNodes.containsKey(b)) {
             return emitSwitchNode(b);
         }
-        LoopAnalysis loops = context.getLoopAnalysis();
         if (loops != null && loops.isLoopHeader(b)) {
             return emitLoop(b);
         }
@@ -1384,10 +1424,18 @@ public final class ReachingConditionStructurer {
                 out.addAll(bridge.lowerInductionPhiInitsOnEdge(pred, header));
             }
         }
-        List<Statement> headerStmts = new ArrayList<>(bridge.recoverSimpleBlock(header));
-        bridge.markRegionBlockProcessed(header, headerStmts);
         IRBlock latch = inductionLatch(header);
-        context.pushLoop(header, header, breakTarget, latch);
+        List<Statement> headerStmts;
+        if (tryNodes.containsKey(header)) {
+            // The header IS the try node: emit it inside the loop frame so the delegate's recovery of the
+            // consumed dispatch classifies the retry back edge as a continue and the returns as loop exits.
+            context.pushLoop(header, header, breakTarget, latch);
+            headerStmts = emitTry(header);
+        } else {
+            headerStmts = new ArrayList<>(bridge.recoverSimpleBlock(header));
+            bridge.markRegionBlockProcessed(header, headerStmts);
+            context.pushLoop(header, header, breakTarget, latch);
+        }
 
         // Prefer while(cond): a pure conditional header with exactly one edge staying in the loop lifts
         // that test into the loop condition (rather than wrapping the body in `if (exit) break;`), which
