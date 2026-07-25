@@ -2962,6 +2962,227 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return chain;
     }
 
+    /**
+     * De-duplicates a finally whose body CARRIES CONTROL FLOW - a guarded close, javac's inlined copies of
+     * it being branchy subgraphs the contiguous matcher cannot see. The handler's dominated subtree between
+     * the caught-exception store and the rethrow is the template; each normal exit of the protected range
+     * must lead to an isomorphic copy (same instructions block-for-block under a parallel walk of the
+     * branch targets), and every copy path must converge on ONE continuation, mirroring the template's
+     * paths converging on the rethrow. Matched copies are excised instruction-wise - branch terminators
+     * stay, leaving empty guard shells whose conditions recover from their (pure) SSA values - so no edge
+     * is rewired and the cached dominator tree stays valid. All-or-nothing: an uncovered exit, a template
+     * or copy with its own nested try, or a second continuation declines the whole de-duplication.
+     */
+    private boolean dedupBranchySubgraphFinally(List<ExceptionHandler> rethrowers) {
+        IRMethod method = context.getIrMethod();
+        DominatorTree dt = context.getDominatorTree();
+        IRBlock root = rethrowers.get(0).getHandlerBlock();
+        if (method == null || dt == null || root == null) {
+            return false;
+        }
+        for (ExceptionHandler r : rethrowers) {
+            if (r.getHandlerBlock() != root) {
+                return false;
+            }
+        }
+        // The template is bounded by walking normal edges from the handler entry and STOPPING at the
+        // rethrow: dominance alone over-collects (a handler can dominate unrelated code past its athrow,
+        // and a sibling catch's own throw would read as a second rethrow). Exactly one athrow must
+        // terminate the walk, and every collected block must still be handler-exclusive.
+        Set<IRBlock> tblocks = new LinkedHashSet<>();
+        IRBlock rethrowBlk = null;
+        Deque<IRBlock> twork = new ArrayDeque<>();
+        twork.add(root);
+        while (!twork.isEmpty()) {
+            IRBlock b = twork.poll();
+            IRInstruction term = b.getTerminator();
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                if (rethrowBlk != null && rethrowBlk != b) {
+                    return false;
+                }
+                rethrowBlk = b;
+                continue;
+            }
+            if (!tblocks.add(b)) {
+                continue;
+            }
+            if (b != root && !dt.dominates(root, b)) {
+                return false;
+            }
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    twork.add(e.getKey());
+                }
+            }
+        }
+        if (rethrowBlk == null) {
+            return false;
+        }
+        for (IRBlock b : tblocks) {
+            if (findUnprocessedHandlerStartingAt(b) != null) {
+                return false;
+            }
+            for (IRInstruction ins : b.getInstructions()) {
+                if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
+                        && !(ins instanceof StoreLocalInstruction && b == root)
+                        && !isMatchableFinallyInstr(ins)) {
+                    return false;
+                }
+            }
+        }
+
+        Set<IRBlock> protectedBlocks = new HashSet<>();
+        for (ExceptionHandler r : rethrowers) {
+            int lo = r.getTryStart() == null ? -1 : r.getTryStart().getBytecodeOffset();
+            int hi = r.getTryEnd() == null ? -1 : r.getTryEnd().getBytecodeOffset();
+            if (lo < 0 || hi <= lo) {
+                return false;
+            }
+            for (IRBlock b : method.getBlocks()) {
+                int off = b.getBytecodeOffset();
+                if (off >= lo && off < hi) {
+                    protectedBlocks.add(b);
+                }
+            }
+        }
+        List<Map<IRBlock, IRBlock>> matches = new ArrayList<>();
+        for (IRBlock p : protectedBlocks) {
+            if (p.getTerminator() instanceof ReturnInstruction) {
+                return false;
+            }
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : p.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                        || protectedBlocks.contains(e.getKey()) || e.getKey() == root) {
+                    continue;
+                }
+                Map<IRBlock, IRBlock> map = matchFinallySubgraph(root, e.getKey(), tblocks, rethrowBlk);
+                if (map == null) {
+                    return false;
+                }
+                matches.add(map);
+            }
+        }
+        if (matches.isEmpty()) {
+            return false;
+        }
+        for (Map<IRBlock, IRBlock> map : matches) {
+            for (IRBlock copy : map.values()) {
+                for (IRInstruction ins : new ArrayList<>(copy.getInstructions())) {
+                    if (!ins.isTerminator() && !(ins instanceof CopyInstruction)) {
+                        copy.removeInstruction(ins);
+                    }
+                }
+            }
+        }
+        finallyDeduped.addAll(rethrowers);
+        return true;
+    }
+
+    /**
+     * Parallel walk of the template subtree and a candidate copy: instructions must match pairwise
+     * ({@link #sameFinallyInstr}), branches pair their true/false targets, and every template edge into the
+     * rethrow must correspond to the copy reaching one single continuation. Returns the template-to-copy
+     * block map, or null when the shapes differ.
+     */
+    private Map<IRBlock, IRBlock> matchFinallySubgraph(IRBlock troot, IRBlock croot,
+                                                       Set<IRBlock> tblocks, IRBlock rethrowBlk) {
+        Map<IRBlock, IRBlock> map = new LinkedHashMap<>();
+        Deque<IRBlock[]> work = new ArrayDeque<>();
+        work.add(new IRBlock[]{troot, croot});
+        IRBlock exit = null;
+        while (!work.isEmpty()) {
+            IRBlock[] pair = work.poll();
+            IRBlock t = pair[0];
+            IRBlock c = pair[1];
+            IRBlock seen = map.get(t);
+            if (seen != null) {
+                if (seen != c) {
+                    return null;
+                }
+                continue;
+            }
+            map.put(t, c);
+            List<IRInstruction> ti = matchableInstructions(t, t == troot);
+            List<IRInstruction> ci = matchableInstructions(c, false);
+            if (ti.size() != ci.size()) {
+                return null;
+            }
+            for (int i = 0; i < ti.size(); i++) {
+                if (!sameFinallyInstr(ti.get(i), ci.get(i))) {
+                    return null;
+                }
+            }
+            IRInstruction tt = t.getTerminator();
+            if (tt instanceof BranchInstruction) {
+                if (!(c.getTerminator() instanceof BranchInstruction)) {
+                    return null;
+                }
+                BranchInstruction tb = (BranchInstruction) tt;
+                BranchInstruction cb = (BranchInstruction) c.getTerminator();
+                IRBlock[][] pairs = {
+                        {tb.getTrueTarget(), cb.getTrueTarget()},
+                        {tb.getFalseTarget(), cb.getFalseTarget()}};
+                for (IRBlock[] pr : pairs) {
+                    if (pr[0] == rethrowBlk || !tblocks.contains(pr[0])) {
+                        if (exit != null && exit != pr[1]) {
+                            return null;
+                        }
+                        exit = pr[1];
+                    } else {
+                        work.add(pr);
+                    }
+                }
+            } else {
+                IRBlock tn = singleNormalSuccessor(t);
+                IRBlock cn = singleNormalSuccessor(c);
+                if (tn == null || cn == null) {
+                    return null;
+                }
+                if (tn == rethrowBlk || !tblocks.contains(tn)) {
+                    if (exit != null && exit != cn) {
+                        return null;
+                    }
+                    exit = cn;
+                } else {
+                    work.add(new IRBlock[]{tn, cn});
+                }
+            }
+        }
+        if (exit == null || map.containsValue(exit)) {
+            return null;
+        }
+        return map;
+    }
+
+    /** The block comparable-instruction list: terminators and SSA plumbing skipped; the template root
+     * additionally drops its leading caught-exception store. */
+    private List<IRInstruction> matchableInstructions(IRBlock b, boolean skipLeadingStore) {
+        List<IRInstruction> out = new ArrayList<>();
+        for (IRInstruction ins : b.getInstructions()) {
+            if (ins.isTerminator() || ins instanceof CopyInstruction) {
+                continue;
+            }
+            if (skipLeadingStore && out.isEmpty() && ins instanceof StoreLocalInstruction) {
+                continue;
+            }
+            out.add(ins);
+        }
+        return out;
+    }
+
+    private IRBlock singleNormalSuccessor(IRBlock b) {
+        IRBlock next = null;
+        for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+            if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                if (next != null) {
+                    return null;
+                }
+                next = e.getKey();
+            }
+        }
+        return next;
+    }
+
     private List<IRInstruction> straightLineFinallyTemplate(ExceptionHandler h) {
         List<IRBlock> chain = finallyHandlerChain(h);
         if (chain == null) {
@@ -3116,7 +3337,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         for (ExceptionHandler h : rethrowers) {
             List<IRInstruction> t = straightLineFinallyTemplate(h);
             if (t == null) {
-                return false;
+                return dedupBranchySubgraphFinally(rethrowers);
             }
             if (template == null) {
                 template = t;
