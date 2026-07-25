@@ -1002,7 +1002,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                 }
                 if (innerHasFinally) {
-                    dedupStraightLineFinally(sameRegionHandlers);
+                    boolean savedExtendedInner = extendedFinallyDedup;
+                    extendedFinallyDedup = true;
+                    try {
+                        dedupStraightLineFinally(sameRegionHandlers);
+                    } finally {
+                        extendedFinallyDedup = savedExtendedInner;
+                    }
                 }
 
                 IRBlock innerTryEnd = innerHandler.getTryEnd();
@@ -2753,7 +2759,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
-        boolean finallyDeduped = hasFinally && nestedHandlers.isEmpty() && dedupStraightLineFinally(sameRegionHandlers);
+        boolean savedExtendedSame = extendedFinallyDedup;
+        extendedFinallyDedup = true;
+        boolean finallyDeduped;
+        try {
+            finallyDeduped = hasFinally && nestedHandlers.isEmpty() && dedupStraightLineFinally(sameRegionHandlers);
+        } finally {
+            extendedFinallyDedup = savedExtendedSame;
+        }
         List<Statement> tryStmts;
         if (!nestedHandlers.isEmpty()) {
             for (ExceptionHandler h : nestedHandlers) {
@@ -3164,7 +3177,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (at >= 0) {
                     excisions.add(new ArrayList<>(b.getInstructions().subList(at, at + template.size())));
                 } else if (leavesRegion(b, protectedBlocks) && !isBareRethrowTail(b)) {
-                    return false;
+                    // The copy covering this exit may sit in the edge's TARGET instead of the leaving block
+                    // itself: javac places the inlined finally in a dedicated block between the protected
+                    // range and the continuation. A return leaving from inside the block has no such target
+                    // and stays uncovered.
+                    boolean coveredByTarget = !(b.getTerminator() instanceof ReturnInstruction);
+                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                        if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                            continue;
+                        }
+                        IRBlock t = e.getKey();
+                        if (protectedBlocks.contains(t) || handlerBlocks.contains(t) || isBareRethrowTail(t)) {
+                            continue;
+                        }
+                        if (contiguousTemplateStart(t, template) < 0) {
+                            coveredByTarget = false;
+                            break;
+                        }
+                    }
+                    if (!coveredByTarget) {
+                        return false;
+                    }
                 }
             }
         }
@@ -3234,7 +3267,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             visited.add(current);
 
             if (context.isProcessed(current)) {
-                result.addAll(context.getStatements(current));
+                // A block another recovery already emitted is re-emitted ONLY when it is a bare return -
+                // a terminator is idempotent, and the walk reaching it means this path's own return
+                // converged there. Re-adding any OTHER processed block would run its side effects twice:
+                // an inlined finally copy consumed by a clause fold, re-encountered by the continuation
+                // walk, would release a lock or close a stream a second time.
+                if (isReturnBlock(current)) {
+                    result.addAll(context.getStatements(current));
+                }
                 IRBlock revisitNext = getNextSequentialBlock(current);
                 if (revisitNext == null && stopBlocks.isEmpty()) {
                     // A re-visited region header (if/switch/loop) has two-plus successors, so
