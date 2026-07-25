@@ -183,7 +183,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (stringSwitch != null) {
             IRBlock exit = stringSwitchExit(stringSwitch);
             context.markProcessed(switchBlock);
-            out.add(recoverStringSwitch(switchBlock, stringSwitch, exit));
+            Statement sw = recoverStringSwitch(switchBlock, stringSwitch, exit);
+            if (sw instanceof BlockStmt) {
+                out.addAll(((BlockStmt) sw).getStatements());
+            } else {
+                out.add(sw);
+            }
             return out;
         }
         RegionInfo info = analyzer.getRegionInfo(switchBlock);
@@ -5749,7 +5754,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         IRBlock exit = stringSwitchExit(stringSwitch);
                         context.markProcessed(current);
                         Statement sw = recoverStringSwitch(current, stringSwitch, exit);
-                        result.add(sw);
+                        if (sw instanceof BlockStmt) {
+                            result.addAll(((BlockStmt) sw).getStatements());
+                        } else {
+                            result.add(sw);
+                        }
                         visited.addAll(stringSwitch.scaffolding);
                         current = (exit != null && !visited.contains(exit) && !stopBlocks.contains(exit))
                                 ? exit : null;
@@ -8192,6 +8201,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      */
     private Statement recoverStringSwitch(IRBlock header, StringSwitchInfo info, IRBlock exit) {
         SwitchInstruction indexSwitch = info.indexSwitch;
+        // The header's leading statements - the selector variable's own store (`String a = args[i]`) and
+        // anything before it - are user code, not scaffolding; dropping them with the header loses the
+        // assignment (and any side effect of its right-hand side) and leaves the selector undefined. The
+        // scaffolding proper starts at the hashCode dispatch.
+        List<Statement> lead = new ArrayList<>();
+        for (IRInstruction instr : header.getInstructions()) {
+            if (instr.isTerminator()) {
+                break;
+            }
+            if (instr instanceof InvokeInstruction && "hashCode".equals(((InvokeInstruction) instr).getName())) {
+                break;
+            }
+            if (context.shouldSkipInstruction(instr)) {
+                continue;
+            }
+            Statement stmt = recoverInstruction(instr);
+            if (stmt != null) {
+                lead.add(stmt);
+            }
+        }
         Expression selector = exprRecoverer.recoverOperand(info.stringValue);
 
         for (IRBlock block : info.scaffolding) {
@@ -8238,7 +8267,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         Statement switchStmt = new SwitchStmt(selector, cases);
         stampFromHeader(switchStmt, header);
-        return switchStmt;
+        if (lead.isEmpty()) {
+            return switchStmt;
+        }
+        List<Statement> out = new ArrayList<>(lead);
+        out.add(switchStmt);
+        return new BlockStmt(out);
     }
 
     private List<Statement> recoverStringSwitchBody(IRBlock body, Set<IRBlock> bodyStops) {

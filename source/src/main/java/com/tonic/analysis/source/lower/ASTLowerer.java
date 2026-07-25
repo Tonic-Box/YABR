@@ -142,6 +142,7 @@ public class ASTLowerer {
         new com.tonic.analysis.source.ast.transform.PatternInstanceOfDesugar().transform(body);
         new com.tonic.analysis.source.ast.transform.PatternSwitchDesugar(classPool).transform(body);
         new com.tonic.analysis.source.ast.transform.SwitchExpressionDesugar().transform(body);
+        new com.tonic.analysis.source.ast.transform.StringSwitchDesugar().transform(body);
 
         List<ParameterDecl> paramDecls = methodDecl.getParameters();
         List<SourceType> parameters = new ArrayList<>();
