@@ -1757,7 +1757,8 @@ public final class ReachingConditionStructurer {
             }
         }
         if (targets.size() <= 1) {
-            return targets.isEmpty() ? null : targets.iterator().next();
+            IRBlock only = targets.isEmpty() ? null : targets.iterator().next();
+            return breakReachesAfterLoop(header, only, loopBlocks) ? only : null;
         }
         // Several distinct exits: settle each to its non-terminal continuation (a terminating or inline body region
         // contributes none). All must reach ONE continuation - the single break target - else the divergence needs
@@ -1777,7 +1778,34 @@ public final class ReachingConditionStructurer {
         if (continuations.size() > 1) {
             throw new BailToLegacy();
         }
-        return continuations.isEmpty() ? null : continuations.iterator().next();
+        IRBlock cont = continuations.isEmpty() ? null : continuations.iterator().next();
+        return breakReachesAfterLoop(header, cont, loopBlocks) ? cont : null;
+    }
+
+    /**
+     * Whether an unlabeled {@code break} would actually land on {@code target}. A pure conditional header
+     * whose exit edge falls to a TERMINAL block is lifted to {@code while (cond)} with that terminal tail
+     * as the loop's after-text - so a {@code break} jumps to the terminal tail, NOT to a continuation some
+     * other exit chain reaches. javac never produces that combination for a real {@code break} (the header's
+     * false edge and every break land on one place); such a divergent chain is an arm that terminates on its
+     * own and must be inlined where its branch leaves the loop, which returning no break target arranges.
+     */
+    private boolean breakReachesAfterLoop(IRBlock header, IRBlock target, Set<IRBlock> loopBlocks) {
+        if (target == null) {
+            return true;
+        }
+        IRInstruction term = header.getTerminator();
+        if (!(term instanceof BranchInstruction)) {
+            return true;
+        }
+        BranchInstruction br = (BranchInstruction) term;
+        boolean tStays = loopBlocks.contains(br.getTrueTarget());
+        boolean fStays = loopBlocks.contains(br.getFalseTarget());
+        if (tStays == fStays) {
+            return true;
+        }
+        IRBlock exit = tStays ? br.getFalseTarget() : br.getTrueTarget();
+        return exit == target || !isTerminalBlock(exit);
     }
 
     /**
