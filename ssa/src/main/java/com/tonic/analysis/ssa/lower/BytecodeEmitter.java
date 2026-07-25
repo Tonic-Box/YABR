@@ -312,13 +312,25 @@ public class BytecodeEmitter {
             }
         }
 
+        Set<SSAValue> pinned = slotPinnedValues();
         for (Map.Entry<SSAValue, Constant> entry : literalResults.entrySet()) {
             SSAValue result = entry.getKey();
             if (useCounts.getOrDefault(result, 0) != 1) continue;
+            if (pinned.contains(result)) continue;
             if (!routesOperandsThroughLoads(singleUser.get(result))) continue;
             inlinedConstants.add(result);
             inlinedConstantValue.put(result, entry.getValue());
         }
+    }
+
+    /**
+     * Values the register allocator placed in an affinity home slot. Every definition of such a
+     * variable must materialize its store into the home slot - a try/finally's synthetic handler
+     * reads the slot at an arbitrary fault point - so these are never constant-inlined or kept
+     * stack-resident, exactly as javac stores every assignment of a source variable.
+     */
+    private Set<SSAValue> slotPinnedValues() {
+        return regAlloc.getAffinityPinnedValues();
     }
 
     /**
@@ -387,6 +399,8 @@ public class BytecodeEmitter {
         // first instruction expects it.
         stackResidentValues.addAll(method.getStackResidentPhiIncomings());
         stackResidentValues.addAll(method.getStackResidentPhiResults());
+        Set<SSAValue> pinned = slotPinnedValues();
+        stackResidentValues.removeAll(pinned);
 
         Map<SSAValue, Integer> useCounts = new HashMap<>();
         for (IRBlock block : method.getBlocksInOrder()) {
@@ -421,6 +435,7 @@ public class BytecodeEmitter {
                 // used once, so the slot - and its LocalVariableTable name - survive the round trip. Never keep
                 // it resident.
                 if (isCatchCapture(current)) continue;
+                if (pinned.contains(result)) continue;
 
                 int useCount = useCounts.getOrDefault(result, 0);
                 if (useCount != 1) continue;

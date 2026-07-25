@@ -99,11 +99,7 @@ class GuardedCloseFinallyFidelityTest {
         InvocationTargetException ex = assertThrows(InvocationTargetException.class,
                 () -> recompiledClass.getMethod("use", boolean.class).invoke(null, true));
         assertEquals(IllegalStateException.class, ex.getCause().getClass());
-        // The recompiled exception path currently evaluates the finally against the PRE-try binding
-        // of `in` (a separate, documented recompiler lowering bug: the guard reads stale null and
-        // skips the close). Pin only that the close never runs MORE than once here; tightening to
-        // exactly-once belongs to that lowering fix.
-        org.junit.jupiter.api.Assertions.assertTrue(closes() <= 1,
-                "the guarded close must not run twice on the exception path: " + d1);
+        assertEquals(1, closes(),
+                "the guarded close must run exactly once on the exception path: " + d1);
     }
 }

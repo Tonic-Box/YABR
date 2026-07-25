@@ -21,6 +21,9 @@ public class IRMethod {
 
     private final List<SSAValue> parameters;
     private final List<SourceLocal> sourceLocals = new ArrayList<>();
+    /** Pairs of SSA values the register allocator should place in ONE slot: a variable state a finally
+     * handler reads together with the state live on normal flow. See addSlotAffinity. */
+    private final List<SSAValue[]> slotAffinities = new ArrayList<>();
     private final List<IRBlock> blocks;
     private IRBlock entryBlock;
 
@@ -85,9 +88,21 @@ public class IRMethod {
     }
 
     /**
-     * Source-level locals (receiver, parameters, declared body variables) recorded during AST lowering,
-     * used to emit a LocalVariableTable. Empty for IR not produced from source (e.g. the bytecode-lift path).
+     * Requests that {@code a} and {@code b} share one local slot. Used by the try/finally lowering: the
+     * synthetic finally handler evaluates the finally against a variable's pre-try value while normal flow
+     * carries its in-try reassignment; unless both live in the variable's single slot, the handler reads a
+     * stale value (a guarded close reading null on the exception path, leaking the resource).
      */
+    public void addSlotAffinity(SSAValue a, SSAValue b) {
+        if (a != null && b != null && a != b) {
+            slotAffinities.add(new SSAValue[]{a, b});
+        }
+    }
+
+    public List<SSAValue[]> getSlotAffinities() {
+        return slotAffinities;
+    }
+
     public List<SourceLocal> getSourceLocals() {
         return sourceLocals;
     }

@@ -518,13 +518,12 @@ public class StatementLowerer {
             ctx.getCurrentBlock().addSuccessor(normalExit, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
-        // Variables reassigned inside the try: an exception can fire before the reassignment, so each handler must see
-        // the PRE-try value. Re-establishing them at catch entry (below) emits a StoreLocal there - a real def that
-        // forces a correct phi at the try/catch -> finally join, instead of a trivial phi that binds to the try's
-        // post-store value (undefined on the exception path -> "Bad local variable type" at verification).
-        // Inside a loop this snapshot is NOT re-established: it holds the pre-LOOP value, and binding the catch to
-        // it would reset a loop-carried variable on every caught iteration; there the catch keeps the variable's
-        // slot-carried value, which is the value at the fault point.
+        // Variables reassigned inside the try: a fault can fire before or after the reassignment, so a handler
+        // must read the variable AT ITS SLOT, where the fault-time value lives. Each handler (catch entry and
+        // the synthetic finally handler below) binds the try's final value - a slot-resident read at the remote
+        // use - and registers a slot affinity so the register allocator places the variable's every definition
+        // in one home slot: the pre-try init makes the slot definitely assigned before the protected range and
+        // each store keeps it current at any fault point.
         java.util.Map<String, SSAValue> postTryVars = ctx.snapshotVariables();
         java.util.List<String> reassignedInTry = new java.util.ArrayList<>();
         for (java.util.Map.Entry<String, SSAValue> e : preTryVars.entrySet()) {
@@ -563,10 +562,11 @@ public class StatementLowerer {
             catchBlock.addInstruction(SimpleInstruction.createCatch(exVar));
             ctx.declareLocal(exVarName, exVarIrType, false);
             ctx.setVariable(exVarName, exVar);
-            if (ctx.getLoopStack().isEmpty()) {
-                for (String name : reassignedInTry) {
-                    ctx.setVariable(name, preTryVars.get(name));
-                }
+            for (String name : reassignedInTry) {
+                SSAValue pre = preTryVars.get(name);
+                SSAValue post = postTryVars.get(name);
+                ctx.getIrMethod().addSlotAffinity(pre, post);
+                ctx.setVariable(name, post);
             }
 
             lower(catchClause.body());
@@ -606,8 +606,18 @@ public class StatementLowerer {
             // No declareLocal/named variable for the captured exception: it is only re-thrown (createThrow
             // uses the value directly), and naming it leaks a synthetic local (e.g. $finallyEx) into the LVT
             // that the decompiler then surfaces on a reused slot. The recovery matches the rethrow by slot.
+            // A variable reassigned in the try must be read by this handler AT ITS SLOT: the fault can occur
+            // before or after the reassignment, so only the slot holds the fault-time value. Binding the
+            // handler to the try's final value gives exactly that read - a call-result value is emitted as a
+            // slot load at a remote use (a pre-try constant would be inlined as a literal, freezing the guard
+            // to the pre-try state and e.g. skipping a guarded close on the exception path). The slot-affinity
+            // requests make the pre-try init, the in-try store and this read share the variable's one slot,
+            // so the slot is definitely assigned before the protected range and current at the fault.
             for (String name : reassignedInTry) {
-                ctx.setVariable(name, preTryVars.get(name));
+                SSAValue pre = preTryVars.get(name);
+                ctx.getIrMethod().addSlotAffinity(pre, postTryVars.get(name));
+                ctx.getIrMethod().addSlotAffinity(pre, normalFinallyVars.get(name));
+                ctx.setVariable(name, postTryVars.get(name));
             }
             lower(tryCatch.getFinallyBlock());
             if (ctx.getCurrentBlock().getTerminator() == null) {

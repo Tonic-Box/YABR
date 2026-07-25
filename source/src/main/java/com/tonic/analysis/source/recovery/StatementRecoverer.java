@@ -1390,24 +1390,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
 
         IRInstruction handlerTerminator = handlerBlock.getTerminator();
-        // A rethrowing catch-all whose handler body BRANCHES carries a control-flow finally
-        // (e.g. `if (in != null) in.close(); throw t;`). The flat successor walk below cannot recover
-        // that: it drops branch conditions and appends the arms in set order, so the finally body is
-        // lost (an empty `finally {}`, the exception-path cleanup gone). Recover the handler's
-        // dominator subtree as a structured region instead, bounded at the blocks that leave it. A
-        // linear handler keeps the flat walk, whose per-instruction recovery folds compound
-        // assignments the structured walk would split.
-        // A catch body that BRANCHES and RETHROWS cannot be recovered by the flat successor walk below:
-        // the walk drops the branch conditions and appends the arms in set order, so a conditional rethrow
-        // becomes unconditional and the guarded (swallow) arm's effects are lost. Recover the handler's
-        // dominator subtree as a structured region instead, bounded at the blocks that leave it. A linear
-        // handler - or a branchy one that never rethrows, whose arms converge harmlessly - keeps the flat
-        // walk, whose per-instruction recovery folds compound assignments the structured walk would split.
-        // The catch-all rethrower (a control-flow finally the catch carries) additionally REQUIRES the
-        // structured form to end in its rethrow; a typed conditional rethrower's swallow path ends the
-        // clause normally, so it only needs a non-empty structured form.
+        // A catch body that BRANCHES cannot be recovered by the flat successor walk below: the walk drops
+        // the branch conditions and appends the arms in set order, so a guarded arm's effects are lost
+        // (a conditional rethrow becomes unconditional; a guarded effect lands behind the other arm's
+        // return and is filtered out entirely). Recover the handler's dominator subtree as a structured
+        // region instead, bounded at the blocks that leave it. A linear handler keeps the flat walk,
+        // whose per-instruction recovery folds compound assignments the structured walk would split.
+        // A typed handler in a method that ALSO carries a finally (a rethrowing catch-all) keeps the
+        // flat walk too: its branches are javac's inlined finally copy, which the flat path folds
+        // against the finally template - the structured walk would resurrect the copy as a spurious
+        // nested try/finally around a raw slot temp. The catch-all rethrower itself REQUIRES the
+        // structured form to end in its rethrow; any other structured clause only needs to be non-empty.
         boolean rethrowCarrier = handler.isCatchAll() && handlerRethrows(handler);
-        if ((handler.isCatchAll() || handlerRethrows(handler)) && handlerSubtreeBranches(handlerBlock)) {
+        boolean finallyPresent = false;
+        for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
+            if (eh.isCatchAll() && eh.getHandlerBlock() != handlerBlock && handlerRethrows(eh)) {
+                finallyPresent = true;
+                break;
+            }
+        }
+        if ((handler.isCatchAll() || handlerRethrows(handler) || !finallyPresent)
+                && handlerSubtreeBranches(handlerBlock)) {
             DominatorTree hdt = context.getDominatorTree();
             if (hdt != null) {
                 Set<IRBlock> catchBody = new HashSet<>();

@@ -36,6 +36,7 @@ public class RegisterAllocator {
     private int reservedSlotCount; // Slots reserved for parameters, never released
     private Map<IRBlock, List<PhiInstruction>> phisByBlockCache;
     private Map<IRBlock, Set<SSAValue>> phiAwareLiveOutCache;
+    private final Set<SSAValue> affinityPinnedValues = new HashSet<>();
 
     public RegisterAllocator(IRMethod method, LivenessAnalysis liveness) {
         this.method = method;
@@ -107,6 +108,7 @@ public class RegisterAllocator {
         assignPhiCopiesToPhiResultSlots();
         coalesceCopySourcesIntoPhiSlots();
         coalesceReassignmentsIntoVariableSlots();
+        allocateAffinityGroups();
 
         for (LiveInterval interval : intervals) {
             SSAValue value = interval.value;
@@ -174,6 +176,121 @@ public class RegisterAllocator {
             active.add(interval);
             active.sort(Comparator.comparingInt(a -> a.end));
         }
+    }
+
+    /**
+     * Places every value of a variable named in a slot-affinity request into ONE exclusively claimed
+     * home slot. The lowering issues an affinity when a try/finally's synthetic handler reads the
+     * variable at its slot: that read is only correct if EVERY definition of the variable writes the
+     * one slot, since a fault can occur between any two of them. The group is the variable's recorded
+     * values plus the affinity values themselves (a loop-carried phi of the variable is not recorded)
+     * and the phi copies of all of those. Claiming before the linear scan makes the grouping total:
+     * the home slot is never released to the scan, so no foreign interval can land on it.
+     */
+    private void allocateAffinityGroups() {
+        List<SSAValue[]> affinities = method.getSlotAffinities();
+        if (affinities == null || affinities.isEmpty()) {
+            return;
+        }
+        Map<IRMethod.SourceLocal, Set<SSAValue>> groups = new LinkedHashMap<>();
+        for (SSAValue[] pair : affinities) {
+            IRMethod.SourceLocal local = namedLocalOf.get(pair[0]);
+            if (local == null) {
+                local = namedLocalOf.get(pair[1]);
+            }
+            if (local == null) {
+                continue;
+            }
+            Set<SSAValue> members = groups.computeIfAbsent(local, k -> new LinkedHashSet<>());
+            members.addAll(local.getValues());
+            members.add(pair[0]);
+            members.add(pair[1]);
+        }
+        Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
+        for (Map.Entry<IRMethod.SourceLocal, Set<SSAValue>> e : groups.entrySet()) {
+            IRMethod.SourceLocal local = e.getKey();
+            Set<SSAValue> members = e.getValue();
+            // A merge/loop phi of this variable is not recorded on the SourceLocal but must live in the
+            // home slot too: its incoming copies read group members, and leaving the phi on its own slot
+            // materializes those copies as real moves - a spurious extra variable on round trip. A phi
+            // whose every named incoming belongs to the group is the variable's own merge; closure to a
+            // fixpoint picks up phis feeding phis.
+            if (phiCopies != null) {
+                boolean grew = true;
+                while (grew) {
+                    grew = false;
+                    for (Map.Entry<SSAValue, List<CopyInfo>> pc : phiCopies.entrySet()) {
+                        SSAValue phiResult = pc.getKey();
+                        if (phiResult == null || members.contains(phiResult)) {
+                            continue;
+                        }
+                        boolean touches = false;
+                        boolean foreign = false;
+                        for (CopyInfo ci : pc.getValue()) {
+                            SSAValue src = copySource(ci);
+                            if (src == null) {
+                                continue;
+                            }
+                            if (members.contains(src)) {
+                                touches = true;
+                            } else if (namedLocalOf.get(src) != null) {
+                                foreign = true;
+                            }
+                        }
+                        if (touches && !foreign) {
+                            members.add(phiResult);
+                            grew = true;
+                        }
+                    }
+                }
+            }
+            int kind = storageKind(local.getType());
+            boolean twoSlot = local.getType().isTwoSlot();
+            boolean consistent = true;
+            for (SSAValue v : members) {
+                if (storageKind(v.getType()) != kind || v.getType().isTwoSlot() != twoSlot) {
+                    consistent = false;
+                    break;
+                }
+            }
+            if (!consistent) {
+                continue;
+            }
+            Integer home = null;
+            for (SSAValue v : members) {
+                if (method.getParameters().contains(v)) {
+                    home = allocation.get(v);
+                    break;
+                }
+            }
+            if (home == null) {
+                home = maxLocals;
+                maxLocals += twoSlot ? 2 : 1;
+            }
+            for (SSAValue v : members) {
+                allocation.put(v, home);
+                claimSlot(home, v);
+                if (phiCopies != null && phiCopies.containsKey(v)) {
+                    for (CopyInfo ci : phiCopies.get(v)) {
+                        allocation.put(ci.copyValue(), home);
+                    }
+                }
+            }
+            affinityPinnedValues.addAll(members);
+            slotType.put(home, local.getType());
+            if (twoSlot) {
+                slotType.put(home + 1, local.getType());
+            }
+        }
+    }
+
+    /**
+     * The values placed in an affinity home slot by {@link #allocateAffinityGroups}. The emitter must
+     * materialize every one of these (no constant inlining, no stack residency): each is a definition or
+     * merge of a variable whose slot a try/finally handler reads at an arbitrary fault point.
+     */
+    public Set<SSAValue> getAffinityPinnedValues() {
+        return affinityPinnedValues;
     }
 
     /** Whether {@code local} (a named source var, or null for an unnamed temp) may occupy {@code slot}. */
