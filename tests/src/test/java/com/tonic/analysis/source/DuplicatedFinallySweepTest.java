@@ -34,8 +34,9 @@ class DuplicatedFinallySweepTest {
      * Classes with a triaged, not-yet-fixed duplicate - all one family: the finally body CARRIES CONTROL
      * FLOW (a guarded close, a try-with-resources suppress dispatch), so its inlined copies are branchy
      * subgraphs the straight-line de-duplication cannot match, and one copy survives after the clause.
-     * Fixing the family needs subgraph-shaped template matching in the finally de-dup. This sweep found
-     * four of the five; they stay listed so the gate holds everywhere else. New entries must not be
+     * Fixing the family needs subgraph-shaped template matching in the finally de-dup. NativeLibraryLoader
+     * joined the list when its finally clause recovery was FIXED (the clause previously emptied entirely,
+     * which this scan cannot see); the surviving copy is the same family debt. New entries must not be
      * added without the same level of documentation.
      */
     private static final Set<String> KNOWN_REMAINING = Set.of(
@@ -43,7 +44,8 @@ class DuplicatedFinallySweepTest {
             "org/lwjgl/system/SharedLibraryLoader",
             "org/lwjgl/vulkan/awt/PlatformMacOSXVKCanvas",
             "org/lwjgl/vulkan/awt/PlatformWin32VKCanvas",
-            "org/lwjgl/vulkan/awt/PlatformX11VKCanvas");
+            "org/lwjgl/vulkan/awt/PlatformX11VKCanvas",
+            "com/jme3/system/NativeLibraryLoader");
 
     @Test
     void noStatementRepeatsItsOwnFinallyClause() throws Exception {

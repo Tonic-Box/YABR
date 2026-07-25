@@ -53,6 +53,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -525,7 +526,12 @@ public final class ReachingConditionStructurer {
                     throw new BailToLegacy();
                 }
                 if (!formulas.isTautology(guard)) {
-                    if (!reachedByFallThrough(c, b)) {
+                    // Purity (or caching) is needed whenever the emit pass will RENDER this guard: always
+                    // for a non-fall-through tail, and also for a fall-through tail that emit must guard
+                    // because another path completes the region normally without reaching it - the same
+                    // predicate emitSharedTail applies. Without this mirror the guard's impure atom is
+                    // never cached and the rendered guard would re-evaluate (or lose) the side effect.
+                    if (!reachedByFallThrough(c, b) || regionCompletesNormallySkipping(c, b)) {
                         requireGuardPure(guard);
                     }
                     // A rendered guard must stay bounded. The CSE emitter is linear in BDD size whenever
@@ -664,9 +670,37 @@ public final class ReachingConditionStructurer {
         // A region block absent from the method's normal-flow reverse-post-order is reached only through an
         // exception edge - e.g. the continuation after a try whose body cannot fall through (a try wrapping an
         // infinite loop) is reached solely via the catch; or a region rooted inside a catch. Append it after
-        // the in-RPO blocks so the atom and ordering passes have an index for it (they would otherwise
-        // dereference a null index). The single-entry-dominance and reducibility checks below still vet the
-        // region, and a genuinely unstructurable shape bails in the side-effect-free validate pass.
+        // the in-RPO blocks in a REGION-LOCAL reverse post order, not collection order: the reaching-condition
+        // propagation walks blocks by this index and silently skips a predecessor whose own condition is not
+        // yet computed (that skip is what terminates loop back edges) - a forward predecessor indexed AFTER
+        // its successor would have its contribution dropped and the successor's guard silently under-computed
+        // (a shared join's condition losing a whole disjunct).
+        List<IRBlock> postorder = new ArrayList<>();
+        Deque<IRBlock> dfs = new ArrayDeque<>();
+        Set<IRBlock> dfsSeen = new HashSet<>();
+        dfs.push(entry);
+        Deque<Iterator<IRBlock>> iters = new ArrayDeque<>();
+        iters.push(entry.getSuccessors().iterator());
+        dfsSeen.add(entry);
+        while (!dfs.isEmpty()) {
+            Iterator<IRBlock> it = iters.element();
+            if (it.hasNext()) {
+                IRBlock nxt = it.next();
+                if (region.contains(nxt) && dfsSeen.add(nxt)) {
+                    dfs.push(nxt);
+                    iters.push(nxt.getSuccessors().iterator());
+                }
+            } else {
+                postorder.add(dfs.pop());
+                iters.pop();
+            }
+        }
+        Collections.reverse(postorder);
+        for (IRBlock b : postorder) {
+            if (!rpoIndex.containsKey(b)) {
+                rpoIndex.put(b, i++);
+            }
+        }
         for (IRBlock b : region) {
             if (!rpoIndex.containsKey(b)) {
                 rpoIndex.put(b, i++);
@@ -2002,9 +2036,14 @@ public final class ReachingConditionStructurer {
             return emit(shared);
         }
         List<Statement> body = emit(shared);
-        if (last && endsTerminal(body)) {
+        if (last && endsTerminal(body) && !regionCompletesNormallySkipping(shared, dominator)) {
             // The final terminal tail catches every path that did not already return or throw; guarding
-            // it would leave a syntactic fall-through off the end of a value-returning method.
+            // it would leave a syntactic fall-through off the end of a value-returning method. This holds
+            // only when no path completes the region normally WITHOUT reaching this tail: an arm that
+            // falls through to a stop block (a catch clause's swallow arm reaching the clause end) skips
+            // the tail at runtime but would fall INTO the unguarded terminal syntactically - guard it for
+            // that shape. An arm that leaves via a loop or switch jump emits its own break/continue and
+            // is a syntactic exit, so it never falls into the tail and does not force the guard.
             return body;
         }
         BddEmitter em = new BddEmitter(guard.bdd);
@@ -2015,6 +2054,48 @@ public final class ReachingConditionStructurer {
         List<Statement> out = new ArrayList<>(em.declarations());
         out.add(g);
         return out;
+    }
+
+    /**
+     * True when some region block under {@code dominator} completes the region NORMALLY - a normal edge to
+     * a region stop block that is NOT an enclosing loop/switch jump target - on a path that does not reach
+     * {@code tail}. Such a path's emitted form has no exit statement (its fall-through IS the region end),
+     * so an unguarded terminal tail after it would wrongly execute. A jump exit (break/continue) emits its
+     * own transfer and never falls into the tail; at method level the region has no stop blocks at all.
+     */
+    private boolean regionCompletesNormallySkipping(IRBlock tail, IRBlock dominator) {
+        if (regionStopBlocks.isEmpty()) {
+            return false;
+        }
+        for (IRBlock b : region) {
+            if (b == tail || (b != dominator && !dom.dominates(dominator, b))) {
+                continue;
+            }
+            boolean normalNonJumpExit = false;
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                        || !regionStopBlocks.contains(e.getKey())) {
+                    continue;
+                }
+                if (context.classifyLoopJump(e.getKey()) != null
+                        || context.classifySwitchJump(e.getKey()) != null) {
+                    continue;
+                }
+                // A single-predecessor stop is this arm's PRIVATE continuation (javac's per-exit finally
+                // copy carrying the arm's own return): the enclosing recovery re-attaches it to this path,
+                // which therefore exits and never falls into the tail. Only a SHARED stop - a join other
+                // paths also reach - means this arm's emitted form genuinely falls through the region end.
+                if (e.getKey().getPredecessors().size() <= 1) {
+                    continue;
+                }
+                normalNonJumpExit = true;
+                break;
+            }
+            if (normalNonJumpExit && !reachWithin(b, dominator).contains(tail)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ---- reaching conditions -------------------------------------------------------------------

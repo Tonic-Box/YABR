@@ -1397,7 +1397,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // dominator subtree as a structured region instead, bounded at the blocks that leave it. A
         // linear handler keeps the flat walk, whose per-instruction recovery folds compound
         // assignments the structured walk would split.
-        if (handler.isCatchAll() && handlerRethrows(handler) && handlerSubtreeBranches(handlerBlock)) {
+        // A catch body that BRANCHES and RETHROWS cannot be recovered by the flat successor walk below:
+        // the walk drops the branch conditions and appends the arms in set order, so a conditional rethrow
+        // becomes unconditional and the guarded (swallow) arm's effects are lost. Recover the handler's
+        // dominator subtree as a structured region instead, bounded at the blocks that leave it. A linear
+        // handler - or a branchy one that never rethrows, whose arms converge harmlessly - keeps the flat
+        // walk, whose per-instruction recovery folds compound assignments the structured walk would split.
+        // The catch-all rethrower (a control-flow finally the catch carries) additionally REQUIRES the
+        // structured form to end in its rethrow; a typed conditional rethrower's swallow path ends the
+        // clause normally, so it only needs a non-empty structured form.
+        boolean rethrowCarrier = handler.isCatchAll() && handlerRethrows(handler);
+        if ((handler.isCatchAll() || handlerRethrows(handler)) && handlerSubtreeBranches(handlerBlock)) {
             DominatorTree hdt = context.getDominatorTree();
             if (hdt != null) {
                 Set<IRBlock> catchBody = new HashSet<>();
@@ -1433,7 +1443,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                     filtered.add(st);
                 }
-                if (!filtered.isEmpty() && filtered.get(filtered.size() - 1) instanceof ThrowStmt) {
+                boolean accept = rethrowCarrier
+                        ? (!filtered.isEmpty() && filtered.get(filtered.size() - 1) instanceof ThrowStmt)
+                        : !filtered.isEmpty();
+                if (accept) {
                     CatchClause structuredClause = CatchClause.of(exceptionType, exceptionVarName, new BlockStmt(filtered));
                     recoveredClauses.putIfAbsent(handlerBlock, structuredClause);
                     return structuredClause;
