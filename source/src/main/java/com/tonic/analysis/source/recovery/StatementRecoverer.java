@@ -3019,9 +3019,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return false;
         }
         for (IRBlock b : tblocks) {
-            if (findUnprocessedHandlerStartingAt(b) != null) {
-                return false;
-            }
             for (IRInstruction ins : b.getInstructions()) {
                 if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
                         && !(ins instanceof StoreLocalInstruction && b == root)
@@ -3045,14 +3042,66 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
-        List<Map<IRBlock, IRBlock>> matches = new ArrayList<>();
+        // A return INSIDE the protected range carries its own inlined copy before it: javac places the
+        // copy and the return in-range when the try ends by returning. Match those copies first - each
+        // must be a protected subgraph whose continuation IS an in-range return block - then every
+        // in-range return must be covered by one, and every normal exit LEAVING the range must land on a
+        // matched copy of its own.
+        Set<IRBlock> returnBlocks = new HashSet<>();
         for (IRBlock p : protectedBlocks) {
             if (p.getTerminator() instanceof ReturnInstruction) {
+                returnBlocks.add(p);
+            }
+        }
+        List<Map<IRBlock, IRBlock>> matches = new ArrayList<>();
+        Set<IRBlock> matchedCopyBlocks = new HashSet<>();
+        Set<IRBlock> coveredReturns = new HashSet<>();
+        if (!returnBlocks.isEmpty()) {
+            List<IRInstruction> rootSignature = matchableInstructions(root, true);
+            for (IRBlock candidate : protectedBlocks) {
+                if (returnBlocks.contains(candidate) || matchedCopyBlocks.contains(candidate)
+                        || candidate == root) {
+                    continue;
+                }
+                // Cheap prefilter before the full parallel walk: the copy's root must open with the same
+                // instruction as the template's, or the walk cannot possibly succeed.
+                List<IRInstruction> candSignature = matchableInstructions(candidate, false);
+                if (rootSignature.isEmpty() != candSignature.isEmpty()
+                        || (!rootSignature.isEmpty()
+                            && !sameFinallyInstr(rootSignature.get(0), candSignature.get(0)))) {
+                    continue;
+                }
+                Map<IRBlock, IRBlock> map = matchFinallySubgraph(root, candidate, tblocks, rethrowBlk);
+                if (map == null) {
+                    continue;
+                }
+                IRBlock exitOf = null;
+                for (IRBlock copy : map.values()) {
+                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : copy.getSuccessorEdgeTypes().entrySet()) {
+                        if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                                && !map.containsValue(e.getKey())) {
+                            exitOf = e.getKey();
+                        }
+                    }
+                }
+                if (exitOf != null && returnBlocks.contains(exitOf)) {
+                    matches.add(map);
+                    matchedCopyBlocks.addAll(map.values());
+                    coveredReturns.add(exitOf);
+                }
+            }
+            if (!coveredReturns.containsAll(returnBlocks)) {
                 return false;
+            }
+        }
+        for (IRBlock p : protectedBlocks) {
+            if (matchedCopyBlocks.contains(p)) {
+                continue;
             }
             for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : p.getSuccessorEdgeTypes().entrySet()) {
                 if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
-                        || protectedBlocks.contains(e.getKey()) || e.getKey() == root) {
+                        || protectedBlocks.contains(e.getKey()) || e.getKey() == root
+                        || matchedCopyBlocks.contains(e.getKey())) {
                     continue;
                 }
                 Map<IRBlock, IRBlock> map = matchFinallySubgraph(root, e.getKey(), tblocks, rethrowBlk);
@@ -3064,6 +3113,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         if (matches.isEmpty()) {
             return false;
+        }
+        // Excision must not gut a block that begins a live protected range of its own: its handler's
+        // recovery would find an empty try. The TEMPLATE may freely contain protected calls (javac guards
+        // a finally handler's close) - template blocks are only compared, never touched.
+        for (Map<IRBlock, IRBlock> map : matches) {
+            for (IRBlock copy : map.values()) {
+                if (findUnprocessedHandlerStartingAt(copy) != null) {
+                    return false;
+                }
+            }
         }
         for (Map<IRBlock, IRBlock> map : matches) {
             for (IRBlock copy : map.values()) {
@@ -3321,7 +3380,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         List<ExceptionHandler> rethrowers = new ArrayList<>();
         for (ExceptionHandler h : regionHandlers) {
-            if (handlerRethrows(h) && h.getTryStart() != null && h.getTryEnd() != null) {
+            // A handler that wraps the caught exception in a FRESH one is a user catch, not a finally:
+            // its body is no template, and admitting it here poisons the candidate set - one unmatchable
+            // pseudo-rethrower declines the whole de-duplication, real finally included.
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h)
+                    && h.getTryStart() != null && h.getTryEnd() != null) {
                 rethrowers.add(h);
             }
         }
