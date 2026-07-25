@@ -1741,6 +1741,30 @@ public class StructuralAnalyzer {
             }
         }
 
+        // A goto-terminated loop header with a back edge but NO conditional latch is an infinite loop
+        // whose exits are internal breaks/returns (`while (true) { ...; return; }`, a grow-and-retry). It
+        // is a genuine loop, not a SEQUENCE; classifying it as one leaves the body walked flat and the
+        // back edge dropped. Recover it as a `while (true)` whose body starts at the in-loop goto target.
+        if (loopAnalysis.isLoopHeader(block)) {
+            LoopAnalysis.Loop loop = findLoopWithHeader(block);
+            IRBlock bodyStart = null;
+            for (IRBlock succ : block.getSuccessors()) {
+                if (loop != null && loop.getBlocks().contains(succ) && succ != block) {
+                    bodyStart = succ;
+                    break;
+                }
+            }
+            if (loop != null && bodyStart != null) {
+                RegionInfo info = new RegionInfo(StructuredRegion.WHILE_LOOP, block);
+                info.setLoopBody(bodyStart);
+                info.setLoopExit(null);
+                info.setLoop(loop);
+                info.setConditionNegated(false);
+                regionInfos.put(block, info);
+                return;
+            }
+        }
+
         if (loopAnalysis.isInLoop(block)) {
             LoopAnalysis.Loop loop = loopAnalysis.getLoop(block);
             IRBlock header = loop.getHeader();

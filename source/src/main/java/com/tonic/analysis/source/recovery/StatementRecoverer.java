@@ -7738,9 +7738,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             stopBlocks.add(info.getLoopExit());
         } else if (info.getLoop() != null) {
             Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+            DominatorTree ldt = context.getDominatorTree();
             for (IRBlock loopBlock : loopBlocks) {
                 for (IRBlock succ : loopBlock.getSuccessors()) {
-                    if (!loopBlocks.contains(succ) && !isMethodExitBlock(succ)) {
+                    // A successor the header DOMINATES is inside the loop's exclusive region - an internal
+                    // return/throw path (which LoopAnalysis excludes from the loop body because it exits
+                    // the method and cannot reach the back edge). Stopping there would truncate the return.
+                    // Only a successor NOT dominated by the header is a genuine post-loop continuation - a
+                    // break target reached from elsewhere too - and belongs in the stop set.
+                    if (!loopBlocks.contains(succ) && !isMethodExitBlock(succ)
+                            && !(ldt != null && ldt.dominates(header, succ))) {
                         stopBlocks.add(succ);
                     }
                 }
@@ -7781,6 +7788,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 return labelIfTargeted(header, whileStmt);
             }
 
+            if (!(header.getTerminator() instanceof BranchInstruction)) {
+                List<Statement> body = new ArrayList<>(recoverBlockInstructions(header));
+                body.addAll(recoverBlockSequence(info.getLoopBody(), stopBlocks));
+                stripTrailingContinue(body);
+                WhileStmt infinite = new WhileStmt(LiteralExpr.ofBoolean(true), new BlockStmt(body));
+                stampFromHeader(infinite, header);
+                return labelIfTargeted(header, infinite);
+            }
             Expression condition = recoverCondition(header, info.isConditionNegated());
             List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
             stripTrailingContinue(bodyStmts);
@@ -9647,13 +9662,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return info.getLoopExit();
         }
 
-        // Find blocks outside the loop that are reachable from within
+        // Find blocks outside the loop that are reachable from within. A successor the header DOMINATES
+        // is an internal return/throw path (LoopAnalysis excludes it from the loop because it exits the
+        // method, not the loop); it is recovered inside the body, not the post-loop continuation. Returning
+        // one here appends a dead statement after an infinite loop - unreachable, and uncompilable to javac.
         if (info.getLoop() != null) {
             Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
+            DominatorTree ldt = context.getDominatorTree();
+            IRBlock header = info.getHeader();
             for (IRBlock loopBlock : loopBlocks) {
                 for (IRBlock succ : loopBlock.getSuccessors()) {
-                    if (!loopBlocks.contains(succ) && !visited.contains(succ) && !stopBlocks.contains(succ)) {
-                        // Found an unvisited block outside the loop
+                    if (!loopBlocks.contains(succ) && !visited.contains(succ) && !stopBlocks.contains(succ)
+                            && !(ldt != null && header != null && ldt.dominates(header, succ))) {
                         return succ;
                     }
                 }
