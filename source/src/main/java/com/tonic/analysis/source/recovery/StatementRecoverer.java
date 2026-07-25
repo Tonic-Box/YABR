@@ -249,13 +249,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             caseHeaders.remove(mergeBlock);
         }
 
-        // Decline a value-yielding switch (a switch expression javac lowered to a statement): its cases each
-        // compute a value that converges to a phi at the merge. The mature SwitchExpressionReconstructor path
-        // (reached via legacy recovery) folds those into `switch (sel) { case L -> e; ... }`; structuring the
-        // cases natively here would instead leave a spurious result temp. Statement switches (array/field stores,
-        // break-out-of-loop) have no such case-sourced merge phi and stay native.
+
+
+        // A value-yielding switch whose merge holds the value only ON THE STACK (a bare `return <phi>`,
+        // javac's lowering of `return switch (...)`) is declined: the legacy recovery inlines the return
+        // into each case and the reconstructor folds that to `return switch { case L -> e; }`; structuring
+        // it natively would materialize a temp the original never had. A merge that STORES the value to a
+        // local (an explicit `T v = switch ...` in the source) keeps its temp either way and structures
+        // natively - the reconstructor folds the assignment form on both paths.
         if (mergeBlock != null && switchYieldsValue(mergeBlock, caseHeaders, defaultTarget)) {
-            return null;
+            boolean slotBound = false;
+            for (IRInstruction ins : mergeBlock.getInstructions()) {
+                if (ins instanceof StoreLocalInstruction || ins instanceof LoadLocalInstruction) {
+                    slotBound = true;
+                    break;
+                }
+            }
+            if (!slotBound) {
+                return null;
+            }
         }
 
         List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
