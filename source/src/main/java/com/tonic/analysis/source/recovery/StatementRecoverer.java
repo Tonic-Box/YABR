@@ -5153,6 +5153,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // the merged protected window, or the recovery would consume blocks the model cannot predict.
         DominatorTree nestDt = context.getDominatorTree();
         Set<IRBlock> siblingHandlerBlocks = new HashSet<>();
+        if (!finallyNode) {
+            // A same-start handler with its own handler block is this try's sibling CATCH CLAUSE
+            // (a multi-catch), not a nested try: the delegate recovers every clause of the statement,
+            // so the node consumes the sibling's catch code and scans its exits for the join.
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+                if (sib.getHandlerBlock() != null && sib.getHandlerBlock() != h.getHandlerBlock()
+                        && sib.getTryStart() != null
+                        && sib.getTryStart().getBytecodeOffset() == block.getBytecodeOffset()
+                        && !processedTryHandlers.contains(sib)
+                        && !processedHandlerBlocks.contains(sib.getHandlerBlock())) {
+                    siblingHandlerBlocks.add(sib.getHandlerBlock());
+                }
+            }
+        }
         if (finallyNode) {
             // The finally's sibling scaffolding - every same-start handler family, including the
             // rethrower's own split ranges - is blanket-consumed: the delegate recovery owns the whole
@@ -5207,9 +5221,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // own exits stay the delegate recovery's concern, as before.
         Set<IRBlock> handlerBody = new HashSet<>();
         handlerBody.add(h.getHandlerBlock());
+        handlerBody.addAll(siblingHandlerBlocks);
         for (IRBlock b : irMethod.getBlocks()) {
-            if (dt.dominates(h.getHandlerBlock(), b)) {
-                handlerBody.add(b);
+            for (IRBlock entryBlock : handlerBody.toArray(new IRBlock[0])) {
+                if (dt.dominates(entryBlock, b)) {
+                    handlerBody.add(b);
+                    break;
+                }
             }
         }
         consumed.addAll(handlerBody);
