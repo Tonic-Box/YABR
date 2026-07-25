@@ -204,6 +204,12 @@ public final class ReachingConditionStructurer {
     /** Remaining per-region duplication budget (statements * sites), so several eligible tails cannot multiply. */
     private long regionDupBudget;
 
+    /** The catch join collectRegion declined on, recorded for the caller's sequence-cut segmentation. */
+    private IRBlock pendingCatchJoinSplit;
+
+    /** The sequence cut whose segment is being prepared: emitted right after this region, in sequence. */
+    private IRBlock activeSequenceCut;
+
     /** A duplicable tail's dominator subtree may span at most this many blocks. */
     private static final int MAX_TAIL_BLOCKS = 12;
     /** A single tail's total duplicated size (subtree blocks * reaching sites) may not exceed this. */
@@ -244,12 +250,7 @@ public final class ReachingConditionStructurer {
             return null;
         }
         this.method = context.getIrMethod();
-        switchDescriptors.clear();
-        switchNodes.clear();
-        cachedConditions.clear();
-        tryNodes.clear();
         this.tryNodesEnabled = allowTryNodes;
-        this.regionStopBlocks = stopBlocks;
         // The caller only offers this stage a wholesale region hand-off: the top-level whole-method call
         // or an exception-scaffolding piece (recoverRegionHandoff). The legacy walk's own sub-recursion
         // (if arms, loop bodies) is never routed here, so the two engines never interleave on one region.
@@ -268,15 +269,75 @@ public final class ReachingConditionStructurer {
             guardTempCounter = 0;
         }
 
+        // Segment the region at its catch joins. A merge whose outside in-flow is catch code is this
+        // region's own try/catch join: the separately-recovered catch clauses fall through to it, so it
+        // must be emitted IN SEQUENCE right after the try/catch - not guarded into some branch. Cutting
+        // the region there and structuring each segment in order realizes exactly that sequence natively.
+        // Every segment is validated (side-effect free) before ANY segment is emitted, since emitting
+        // mutates shared recovery state that a later decline could no longer hand to the legacy walk.
+        List<IRBlock> segStarts = new ArrayList<>();
+        List<Set<IRBlock>> segStops = new ArrayList<>();
+        IRBlock segStart = entry;
+        while (true) {
+            if (prepareRegion(segStart, stopBlocks)) {
+                segStarts.add(segStart);
+                segStops.add(stopBlocks);
+                break;
+            }
+            IRBlock split = pendingCatchJoinSplit;
+            pendingCatchJoinSplit = null;
+            if (split == null || !allowTryNodes) {
+                return null;
+            }
+            Set<IRBlock> headStops = new HashSet<>(stopBlocks);
+            headStops.add(split);
+            activeSequenceCut = split;
+            boolean headOk = prepareRegion(segStart, headStops) && soundSequenceCut(split, stopBlocks);
+            activeSequenceCut = null;
+            if (!headOk) {
+                return null;
+            }
+            segStarts.add(segStart);
+            segStops.add(headStops);
+            segStart = split;
+        }
+
+        List<Statement> out = new ArrayList<>();
+        for (int k = 0; k < segStarts.size(); k++) {
+            if (k > 0 || segStarts.size() > 1) {
+                // Re-establish this segment's per-pass state: segmentation prepared later segments over it.
+                activeSequenceCut = k + 1 < segStarts.size() ? segStarts.get(k + 1) : null;
+                boolean ok = prepareRegion(segStarts.get(k), segStops.get(k));
+                activeSequenceCut = null;
+                if (!ok) {
+                    return null;
+                }
+            }
+            out.addAll(emitPrepared(segStarts.get(k)));
+        }
+        return out;
+    }
+
+    /**
+     * Collects, atomizes and validates the region - everything up to (but excluding) the emit pass. Safe
+     * to repeat: it only writes this pass's own fields, never shared recovery state.
+     */
+    private boolean prepareRegion(IRBlock entry, Set<IRBlock> stopBlocks) {
+        switchDescriptors.clear();
+        switchNodes.clear();
+        cachedConditions.clear();
+        tryNodes.clear();
+        this.regionStopBlocks = stopBlocks;
+        pendingCatchJoinSplit = null;
         if (!collectRegion(entry, stopBlocks)) {
-            return null;
+            return false;
         }
         // A region containing an exception handler the surrounding recovery has not yet consumed is a
         // (nested) try this stage cannot structure - reaching conditions do not model exception edges.
         // Decline it so the try/catch scaffolding recovers it and hands this stage its handler-free pieces.
         // With try nodes enabled, collectRegion already turned every such try into a node or failed.
         if (!tryNodesEnabled && bridge.regionContainsUnprocessedHandler(region)) {
-            return null;
+            return false;
         }
         assignAtoms();
 
@@ -286,8 +347,59 @@ public final class ReachingConditionStructurer {
         try {
             validate(entry);
         } catch (BailToLegacy bail) {
-            return null;
+            return false;
         }
+        return true;
+    }
+
+    /**
+     * Whether cutting the region at {@code split} yields a faithful sequence. The head (already prepared,
+     * with {@code split} as a stop) must fall through only to the cut: no skipped boundary and no direct
+     * exit to a base stop may bypass it - such a path would wrongly run the tail's text. Every predecessor
+     * of the cut must be head code (region or node-consumed blocks), catch code falling through to the
+     * join, or tail code the cut dominates (a back edge of a loop the tail owns).
+     */
+    private boolean soundSequenceCut(IRBlock split, Set<IRBlock> baseStops) {
+        if (!skippedBoundaries.isEmpty()) {
+            return false;
+        }
+        for (IRBlock b : region) {
+            if (tryNodes.containsKey(b) || switchNodes.containsKey(b)) {
+                continue;
+            }
+            for (IRBlock s : b.getSuccessors()) {
+                if (baseStops.contains(s)) {
+                    return false;
+                }
+            }
+        }
+        for (IRBlock p : split.getPredecessors()) {
+            if (region.contains(p) || consumedByAnyNode(p) || isHandlerCode(p)
+                    || dom.dominates(split, p)) {
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    /** Whether {@code b} is exception-handler code: a handler entry block or a block one dominates. */
+    private boolean isHandlerCode(IRBlock b) {
+        List<com.tonic.analysis.ssa.cfg.ExceptionHandler> handlers = method.getExceptionHandlers();
+        if (handlers == null) {
+            return false;
+        }
+        for (com.tonic.analysis.ssa.cfg.ExceptionHandler h : handlers) {
+            IRBlock hb = h.getHandlerBlock();
+            if (hb != null && (hb == b || dom.dominates(hb, b))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The emit pass over a prepared region, with the boundary-return and cached-condition trailers. */
+    private List<Statement> emitPrepared(IRBlock entry) {
         List<Statement> emitted = emit(entry);
         // A non-dominated boundary the collect skipped is normally the enclosing structure's continuation -
         // but when an earlier pass already recovered it into a sibling arm and it is a return block, no
@@ -510,9 +622,12 @@ public final class ReachingConditionStructurer {
         // region, is the region's own terminal lost to the boundary - javac compiles `try { return foo(); }`
         // with the return past the protected range. Reaching conditions cannot place that terminal, and
         // structuring the region without it drops the return (and mis-inlines the value it carries), so
-        // decline to the legacy walk, which recovers the boundary.
+        // decline to the legacy walk, which recovers the boundary. Exempt the active sequence cut: that
+        // block is the NEXT segment, emitted directly after this region in one statement sequence, so the
+        // terminal and the value it reads are placed exactly as a single walk would place them.
         for (IRBlock s : b.getSuccessors()) {
-            if (!isBackEdge(b, s) && !region.contains(s) && context.classifyLoopJump(s) == null
+            if (!isBackEdge(b, s) && !region.contains(s) && s != activeSequenceCut
+                    && context.classifyLoopJump(s) == null
                     && isTerminalBlock(s) && terminalDependsOnRegion(s)) {
                 throw new BailToLegacy();
             }
@@ -644,6 +759,7 @@ public final class ReachingConditionStructurer {
                 // trailing return); decline instead so the walking recovery emits the join in sequence.
                 if (s != entry && !dom.dominates(entry, s)) {
                     if (outsidePredsAreCatchCode(s, entry)) {
+                        pendingCatchJoinSplit = s;
                         return false;
                     }
                     skippedBoundaries.add(s);
