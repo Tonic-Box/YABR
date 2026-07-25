@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -2347,6 +2348,18 @@ public final class ReachingConditionStructurer {
         IRInstruction term = pred.getTerminator();
         if (term instanceof BranchInstruction) {
             BranchInstruction branch = (BranchInstruction) term;
+            // A loop header's edge OUT of its own loop is the loop's structural exit: the loop runs as one
+            // node and control leaving it takes this edge unconditionally (its test is false by definition
+            // of the natural exit). Contributing the atom instead leaks the per-iteration exit test - often
+            // impure, e.g. Iterator.hasNext() - into every post-loop guard, where it cannot cancel and
+            // needlessly fails the purity requirement.
+            LoopAnalysis loops = context.getLoopAnalysis();
+            if (loops != null && loops.isLoopHeader(pred)) {
+                LoopAnalysis.Loop loop = loops.getLoop(pred);
+                if (loop != null && !loop.getBlocks().contains(succ)) {
+                    return formulas.truth;
+                }
+            }
             BoolFormula atom = formulas.atom(atomOf.get(pred));
             if (succ == branch.getTrueTarget()) {
                 return atom;
@@ -2376,7 +2389,10 @@ public final class ReachingConditionStructurer {
      */
     private void requireGuardPure(BoolFormula guard) {
         LoopAnalysis loops = context.getLoopAnalysis();
-        for (int atom : atomsOf(guard.nnf, new HashSet<>())) {
+        // Only the BDD's support matters: guards render exclusively from the (reduced) BDD, so an atom
+        // that cancelled out of it - e.g. a loop header's impure exit test whose contributions converge
+        // at a post-loop merge - is never evaluated by the emitted guard and needs no purity or caching.
+        for (int atom : bddSupport(guard.bdd, new HashSet<>())) {
             IRBlock block = blockOfAtom.get(atom);
             if (pureConditionBlock.contains(block) || cachedConditions.containsKey(block)) {
                 continue;
@@ -2387,6 +2403,23 @@ public final class ReachingConditionStructurer {
             }
             cachedConditions.put(block, "guard" + guardTempCounter++);
         }
+    }
+
+    /** The variables the (reduced) BDD actually tests - the guard's true dependency set. */
+    private Set<Integer> bddSupport(Bdd b, Set<Integer> into) {
+        Deque<Bdd> work = new ArrayDeque<>();
+        Set<Bdd> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        work.push(b);
+        while (!work.isEmpty()) {
+            Bdd n = work.pop();
+            if (n.isTerminal() || !seen.add(n)) {
+                continue;
+            }
+            into.add(n.var);
+            work.push(n.low);
+            work.push(n.high);
+        }
+        return into;
     }
 
     /** True when some atom of the guard names a block whose condition would inline a side effect. */
