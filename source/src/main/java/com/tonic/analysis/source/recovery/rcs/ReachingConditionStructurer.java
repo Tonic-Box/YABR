@@ -1140,7 +1140,19 @@ public final class ReachingConditionStructurer {
             return out;
         }
         if (nodeOwnsAfter(b, node)) {
-            out.addAll(emit(after));
+            if (!duplicating && bridge.isRegionBlockProcessed(after)) {
+                // The delegate consumed the join itself but not the blocks the join dominates - the
+                // dispatch and continuation after the try live there, and no other recovery will place
+                // them. Skip the consumed block's own statements and structure its subtree. A consumed
+                // RETURN join gets nothing: the delegate recovered it into the try body (javac places a
+                // returned terminal past the protected range), and re-emitting it here would put a second,
+                // unguarded copy after the catch clauses on the exception path.
+                if (bridge.processedReturnStatements(after).isEmpty()) {
+                    out.addAll(structureChildren(after));
+                }
+            } else {
+                out.addAll(emit(after));
+            }
         }
         return out;
     }
