@@ -6418,7 +6418,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     // external join at all - the delegate recovery owns those tails, re-attaching each
                     // return behind the de-duplicated finally. Any non-terminal rival is a genuine second
                     // join the node model cannot express.
-                    if (isTerminalReturnChain(after) && isTerminalReturnChain(succ)) {
+                    if (delegateOwnsExitTail(after, consumed, rethrower)
+                            && delegateOwnsExitTail(succ, consumed, rethrower)) {
                         after = null;
                         allExitsTerminal = true;
                         break;
@@ -6472,19 +6473,111 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * A block whose straight-line chain (single normal successors) ends in a return within a few hops:
-     * the shape of javac's per-exit inlined finally copy carrying its exit's own return.
+     * Whether an exit chain from the construct is a per-exit tail the DELEGATE recovery may own. Two
+     * sound cases: the chain is reachable ONLY from the consumed window (arbitrary code, exclusively the
+     * construct's), or it is a strictly BARE return chain (nothing but local loads/copies feeding a
+     * return - duplicating a bare return on another path is idempotent). A shared chain carrying real
+     * code is a genuine join: treating it as a tail duplicates or drops the shared continuation.
      */
-    private boolean isTerminalReturnChain(IRBlock b) {
+    private boolean delegateOwnsExitTail(IRBlock exit, Set<IRBlock> consumed, ExceptionHandler rethrower) {
+        return nodeOwnsExitTail(exit, consumed) || isBareReturnTail(exit)
+                || isFinallyCopyReturnTail(exit, rethrower);
+    }
+
+    /**
+     * An exit chain that is an inlined finally COPY feeding a return: every path branches only through
+     * local loads/stores/copies and calls that also occur in the rethrower's clause (the finally
+     * template), ending in returns. Such a tail duplicates only the finally's own effect on its exit
+     * path - exactly what the desugar itself does - so the delegate owns it even when the trailing
+     * return is shared with paths outside the construct.
+     */
+    private boolean isFinallyCopyReturnTail(IRBlock exit, ExceptionHandler rethrower) {
+        IRBlock hb = rethrower.getHandlerBlock();
+        DominatorTree dt = context.getDominatorTree();
+        if (hb == null || dt == null) {
+            return false;
+        }
+        Set<String> templateCalls = new HashSet<>();
+        for (IRBlock b : context.getIrMethod().getBlocks()) {
+            if (b != hb && !dt.dominates(hb, b)) {
+                continue;
+            }
+            for (IRInstruction ins : b.getInstructions()) {
+                if (ins instanceof InvokeInstruction) {
+                    InvokeInstruction iv = (InvokeInstruction) ins;
+                    templateCalls.add(iv.getOwner() + "." + iv.getName());
+                }
+            }
+        }
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(exit);
+        int budget = 24;
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            if (budget-- <= 0) {
+                return false;
+            }
+            for (IRInstruction ins : b.getInstructions()) {
+                if (ins.isTerminator() || ins instanceof CopyInstruction
+                        || ins instanceof LoadLocalInstruction || ins instanceof StoreLocalInstruction
+                        || ins instanceof ConstantInstruction) {
+                    continue;
+                }
+                if (ins instanceof InvokeInstruction && templateCalls.contains(
+                        ((InvokeInstruction) ins).getOwner() + "." + ((InvokeInstruction) ins).getName())) {
+                    continue;
+                }
+                return false;
+            }
+            if (b.getTerminator() instanceof ReturnInstruction) {
+                continue;
+            }
+            boolean any = false;
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    work.add(e.getKey());
+                    any = true;
+                }
+            }
+            if (!any) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * A strictly BARE return tail: blocks carrying nothing but local loads and copies (excised copy
+     * shells exempt - the delegate folds their leftovers), chained through single normal successors to a
+     * return, with no branches outside excised shells.
+     */
+    private boolean isBareReturnTail(IRBlock b) {
         int hops = 0;
         while (b != null && hops++ < 8) {
+            IRBlock excised = excisedCopyExits.get(b);
+            if (excised == null) {
+                for (IRInstruction ins : b.getInstructions()) {
+                    if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
+                            && !(ins instanceof LoadLocalInstruction)
+                            && !(ins instanceof StoreLocalInstruction)
+                            && !(ins instanceof ConstantInstruction)) {
+                        return false;
+                    }
+                }
+            }
             if (b.getTerminator() instanceof ReturnInstruction) {
                 return true;
             }
-            IRBlock excised = excisedCopyExits.get(b);
             if (excised != null) {
                 b = excised;
                 continue;
+            }
+            if (b.getTerminator() instanceof BranchInstruction) {
+                return false;
             }
             IRBlock next = null;
             for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
@@ -6498,6 +6591,33 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             b = next;
         }
         return false;
+    }
+
+    private boolean nodeOwnsExitTail(IRBlock exit, Set<IRBlock> consumed) {
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> chain = new HashSet<>();
+        work.add(exit);
+        int budget = 64;
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            if (!chain.add(b)) {
+                continue;
+            }
+            if (budget-- <= 0) {
+                return false;
+            }
+            for (IRBlock p : b.getPredecessors()) {
+                if (!consumed.contains(p) && !chain.contains(p)) {
+                    return false;
+                }
+            }
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    work.add(e.getKey());
+                }
+            }
+        }
+        return true;
     }
 
     private boolean tryHasFinallyHandler(IRBlock tryStart) {
