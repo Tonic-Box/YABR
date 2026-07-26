@@ -3625,8 +3625,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     ? ((LoadLocalInstruction) a).getLocalIndex() : ((StoreLocalInstruction) a).getLocalIndex();
             int tb = b instanceof LoadLocalInstruction
                     ? ((LoadLocalInstruction) b).getLocalIndex() : ((StoreLocalInstruction) b).getLocalIndex();
-            Integer bound = slotMap.putIfAbsent(ta, tb);
-            return bound == null || bound == tb;
+            Integer bound = slotMap.get(ta);
+            if (bound != null) {
+                return bound == tb;
+            }
+            // Only a slot the template DEFINES (first sight is a store - the handler's caught exception,
+            // a nested catch's variable) may correspond to a different copy slot. A slot first READ is
+            // one of the clause's free variables - the resource, the suppress flag - which javac's
+            // genuine inlined copies share verbatim with the clause; remapping those lets an isomorphic
+            // copy of a DIFFERENT resource cross-match and the wrong code be excised.
+            if (a instanceof LoadLocalInstruction && ta != tb) {
+                return false;
+            }
+            slotMap.put(ta, tb);
+            return true;
         }
         return sameFinallyInstr(a, b);
     }
