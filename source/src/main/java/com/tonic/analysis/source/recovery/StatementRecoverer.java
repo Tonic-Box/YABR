@@ -1454,6 +1454,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         ? (!filtered.isEmpty() && filtered.get(filtered.size() - 1) instanceof ThrowStmt)
                         : !filtered.isEmpty();
                 if (accept) {
+                    appendSharedReturnFallThrough(filtered, handlerBlock);
                     CatchClause structuredClause = CatchClause.of(exceptionType, exceptionVarName, new BlockStmt(filtered));
                     recoveredClauses.putIfAbsent(handlerBlock, structuredClause);
                     return structuredClause;
@@ -1511,11 +1512,52 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
 
-        BlockStmt handlerBody = new BlockStmt(filteredStmts.isEmpty() ? handlerStmts : filteredStmts);
+        List<Statement> bodyStmts = filteredStmts.isEmpty() ? handlerStmts : filteredStmts;
+        appendSharedReturnFallThrough(bodyStmts, handlerBlock);
+        BlockStmt handlerBody = new BlockStmt(bodyStmts);
 
         CatchClause clause = CatchClause.of(exceptionType, exceptionVarName, handlerBody);
         recoveredClauses.putIfAbsent(handlerBlock, clause);
         return clause;
+    }
+
+    /**
+     * A catch clause that falls through to a merge ALREADY consumed elsewhere would silently drop off the
+     * end of the method: the shared continuation (typically the method's trailing {@code return null})
+     * was absorbed into the try body's region, and no enclosing recovery places it again for the catch
+     * path. A return terminator is idempotent, so re-emit it at the clause end - exactly the treatment
+     * the region structurer gives its own consumed boundaries.
+     */
+    private void appendSharedReturnFallThrough(List<Statement> stmts, IRBlock handlerBlock) {
+        if (stmts.isEmpty() || isTerminatingBlock(new BlockStmt(stmts))) {
+            return;
+        }
+        DominatorTree dt = context.getDominatorTree();
+        if (dt == null) {
+            return;
+        }
+        Set<IRBlock> subtree = new HashSet<>();
+        subtree.add(handlerBlock);
+        for (IRBlock b : context.getIrMethod().getBlocks()) {
+            if (dt.dominates(handlerBlock, b)) {
+                subtree.add(b);
+            }
+        }
+        IRBlock join = null;
+        for (IRBlock b : subtree) {
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL || subtree.contains(e.getKey())) {
+                    continue;
+                }
+                if (join != null && join != e.getKey()) {
+                    return;
+                }
+                join = e.getKey();
+            }
+        }
+        if (join != null) {
+            stmts.addAll(processedReturnStatements(join));
+        }
     }
 
     /**
@@ -3025,6 +3067,62 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (rethrowBlk == null) {
             return false;
         }
+        // Absorb handlers wholly internal to the template: a finally clause commonly guards its own
+        // close with a private catch (`try { is.close(); } catch (IOException ex) { log(ex); }`), whose
+        // protected range lies entirely inside the collected blocks. The nested catch's subgraph IS part
+        // of the template; each inlined copy carries a mirrored nested handler that the parallel walk
+        // pairs and the excision retires.
+        Map<IRBlock, ExceptionHandler> nestedTemplate = new LinkedHashMap<>();
+        boolean absorbed = true;
+        while (absorbed) {
+            absorbed = false;
+            for (ExceptionHandler h : method.getExceptionHandlers()) {
+                IRBlock hb = h.getHandlerBlock();
+                if (hb == null || hb == root || tblocks.contains(hb) || nestedTemplate.containsKey(hb)
+                        || rethrowers.contains(h)) {
+                    continue;
+                }
+                Set<IRBlock> hTry = h.getTryBlocks();
+                if (hTry == null || hTry.isEmpty() || !tblocks.containsAll(hTry)) {
+                    continue;
+                }
+                Deque<IRBlock> hwork = new ArrayDeque<>();
+                hwork.add(hb);
+                List<IRBlock> hblocks = new ArrayList<>();
+                boolean ok = true;
+                Set<IRBlock> hseen = new HashSet<>();
+                while (!hwork.isEmpty()) {
+                    IRBlock b = hwork.poll();
+                    IRInstruction term = b.getTerminator();
+                    if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                        if (b != rethrowBlk) {
+                            ok = false;
+                            break;
+                        }
+                        continue;
+                    }
+                    if (tblocks.contains(b) || !hseen.add(b)) {
+                        continue;
+                    }
+                    if (!dt.dominates(root, b)) {
+                        ok = false;
+                        break;
+                    }
+                    hblocks.add(b);
+                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                        if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                            hwork.add(e.getKey());
+                        }
+                    }
+                }
+                if (!ok) {
+                    continue;
+                }
+                tblocks.addAll(hblocks);
+                nestedTemplate.put(hb, h);
+                absorbed = true;
+            }
+        }
         for (IRBlock b : tblocks) {
             for (IRInstruction ins : b.getInstructions()) {
                 if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
@@ -3035,6 +3133,21 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
 
+        // A pure rethrower - astore + athrow, an EMPTY template - carries no finally body and so has no
+        // inlined copies to excise: javac emits such an entry as another handler's self-protection over
+        // its own clause. Demanding that every exit land on a (nonexistent) copy would decline the whole
+        // region before the real clause's handler is ever tried; it is trivially de-duplicated instead.
+        boolean emptyTemplate = true;
+        for (IRBlock b : tblocks) {
+            if (!matchableInstructions(b, b == root).isEmpty()) {
+                emptyTemplate = false;
+                break;
+            }
+        }
+        if (emptyTemplate) {
+            finallyDeduped.addAll(rethrowers);
+            return true;
+        }
         Set<IRBlock> protectedBlocks = new HashSet<>();
         for (ExceptionHandler r : rethrowers) {
             int lo = r.getTryStart() == null ? -1 : r.getTryStart().getBytecodeOffset();
@@ -3049,6 +3162,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
+        // The clause's own blocks land in the protected set through javac's self-protection entry
+        // (the finally clause is covered by a rethrowing entry pointing at its own handler); the
+        // template is never a copy site, so it is excluded from the hunt.
+        protectedBlocks.removeAll(tblocks);
+        protectedBlocks.remove(root);
+        protectedBlocks.remove(rethrowBlk);
         // A return INSIDE the protected range carries its own inlined copy before it: javac places the
         // copy and the return in-range when the try ends by returning. Match those copies first - each
         // must be a protected subgraph whose continuation IS an in-range return block - then every
@@ -3063,6 +3182,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         List<Map<IRBlock, IRBlock>> matches = new ArrayList<>();
         Set<IRBlock> matchedCopyBlocks = new HashSet<>();
         Set<IRBlock> coveredReturns = new HashSet<>();
+        Set<ExceptionHandler> copyNestedHandlers = new HashSet<>();
         if (!returnBlocks.isEmpty()) {
             List<IRInstruction> rootSignature = matchableInstructions(root, true);
             for (IRBlock candidate : protectedBlocks) {
@@ -3078,7 +3198,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                             && !sameFinallyInstr(rootSignature.get(0), candSignature.get(0)))) {
                     continue;
                 }
-                Map<IRBlock, IRBlock> map = matchFinallySubgraph(root, candidate, tblocks, rethrowBlk);
+                Map<IRBlock, IRBlock> map =
+                        matchFinallySubgraph(root, candidate, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
                 if (map == null) {
                     continue;
                 }
@@ -3108,10 +3229,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : p.getSuccessorEdgeTypes().entrySet()) {
                 if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
                         || protectedBlocks.contains(e.getKey()) || e.getKey() == root
+                        || tblocks.contains(e.getKey())
                         || matchedCopyBlocks.contains(e.getKey())) {
                     continue;
                 }
-                Map<IRBlock, IRBlock> map = matchFinallySubgraph(root, e.getKey(), tblocks, rethrowBlk);
+                Map<IRBlock, IRBlock> map =
+                        matchFinallySubgraph(root, e.getKey(), tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
                 if (map == null) {
                     return false;
                 }
@@ -3126,7 +3249,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // a finally handler's close) - template blocks are only compared, never touched.
         for (Map<IRBlock, IRBlock> map : matches) {
             for (IRBlock copy : map.values()) {
-                if (findUnprocessedHandlerStartingAt(copy) != null) {
+                ExceptionHandler live = findUnprocessedHandlerStartingAt(copy);
+                if (live != null && !copyNestedHandlers.contains(live)) {
                     return false;
                 }
             }
@@ -3140,6 +3264,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
+        // The copies' mirrored nested handlers protect code that no longer exists; retire them fully -
+        // processed marks AND removal from the method's handler table - so no recovery path (including
+        // scaffolding that enumerated handler groups before this ran) resurrects an empty try around the
+        // excised blocks.
+        for (ExceptionHandler h : copyNestedHandlers) {
+            processedTryHandlers.add(h);
+            if (h.getHandlerBlock() != null) {
+                processedHandlerBlocks.add(h.getHandlerBlock());
+            }
+            method.getExceptionHandlers().remove(h);
+        }
         finallyDeduped.addAll(rethrowers);
         return true;
     }
@@ -3151,11 +3286,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * block map, or null when the shapes differ.
      */
     private Map<IRBlock, IRBlock> matchFinallySubgraph(IRBlock troot, IRBlock croot,
-                                                       Set<IRBlock> tblocks, IRBlock rethrowBlk) {
+                                                       Set<IRBlock> tblocks, IRBlock rethrowBlk,
+                                                       Map<IRBlock, ExceptionHandler> nestedTemplate,
+                                                       Set<ExceptionHandler> copyNestedHandlers) {
         Map<IRBlock, IRBlock> map = new LinkedHashMap<>();
+        Map<Integer, Integer> slotMap = new HashMap<>();
         Deque<IRBlock[]> work = new ArrayDeque<>();
-        work.add(new IRBlock[]{troot, croot});
+        // The template root holds only the caught-exception store; the clause's first real block may be
+        // its successor (javac splits the astore into its own block when the clause is itself protected).
+        // A copy has no store, so the parallel walk starts at the template's first MEANINGFUL block.
+        IRBlock tstart = troot;
+        while (matchableInstructions(tstart, tstart == troot).isEmpty()
+                && !(tstart.getTerminator() instanceof BranchInstruction)) {
+            IRBlock nxt = singleNormalSuccessor(tstart);
+            if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk) {
+                break;
+            }
+            tstart = nxt;
+        }
+        work.add(new IRBlock[]{tstart, croot});
         IRBlock exit = null;
+        List<ExceptionHandler> pendingCopyNested = new ArrayList<>();
         while (!work.isEmpty()) {
             IRBlock[] pair = work.poll();
             IRBlock t = pair[0];
@@ -3168,13 +3319,55 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
             map.put(t, c);
+            // A template block protected by an absorbed nested handler must find the SAME nested catch
+            // mirrored on the copy side: a copy-side handler of the same catch type protecting this copy
+            // block, foreign to the template. Their handler subgraphs join the parallel walk; the copy's
+            // handler is retired with the excision.
+            for (Map.Entry<IRBlock, ExceptionHandler> nt : nestedTemplate.entrySet()) {
+                ExceptionHandler th = nt.getValue();
+                if (th.getTryBlocks() == null || !th.getTryBlocks().contains(t)) {
+                    continue;
+                }
+                ExceptionHandler ch = null;
+                for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+                    if (h == th || h.getHandlerBlock() == null || tblocks.contains(h.getHandlerBlock())
+                            || h.getTryBlocks() == null || !h.getTryBlocks().contains(c)
+                            || nestedTemplate.containsKey(h.getHandlerBlock())) {
+                        continue;
+                    }
+                    if (h.isCatchAll() != th.isCatchAll()) {
+                        continue;
+                    }
+                    if (!h.isCatchAll() && !h.getCatchType().getInternalName()
+                            .equals(th.getCatchType().getInternalName())) {
+                        continue;
+                    }
+                    boolean copySideOnly = true;
+                    for (IRBlock tb : h.getTryBlocks()) {
+                        if (tblocks.contains(tb)) {
+                            copySideOnly = false;
+                            break;
+                        }
+                    }
+                    if (!copySideOnly) {
+                        continue;
+                    }
+                    ch = h;
+                    break;
+                }
+                if (ch == null) {
+                    return null;
+                }
+                work.add(new IRBlock[]{th.getHandlerBlock(), ch.getHandlerBlock()});
+                pendingCopyNested.add(ch);
+            }
             List<IRInstruction> ti = matchableInstructions(t, t == troot);
             List<IRInstruction> ci = matchableInstructions(c, false);
             if (ti.size() != ci.size()) {
                 return null;
             }
             for (int i = 0; i < ti.size(); i++) {
-                if (!sameFinallyInstr(ti.get(i), ci.get(i))) {
+                if (!sameFinallyInstr(ti.get(i), ci.get(i), slotMap)) {
                     return null;
                 }
             }
@@ -3217,6 +3410,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (exit == null || map.containsValue(exit)) {
             return null;
         }
+        copyNestedHandlers.addAll(pendingCopyNested);
         return map;
     }
 
@@ -3306,6 +3500,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return ins instanceof FieldAccessInstruction || ins instanceof InvokeInstruction
                 || ins instanceof ConstantInstruction || ins instanceof LoadLocalInstruction
                 || ins instanceof StoreLocalInstruction;
+    }
+
+    /**
+     * As {@link #sameFinallyInstr(IRInstruction, IRInstruction)}, but local slots are compared through a
+     * consistent correspondence built during one subgraph match: the template's slot binds to the copy's
+     * on first sight and must agree afterwards. javac gives a nested catch's exception variable a DEEPER
+     * slot inside the finally clause than inside the inlined copies (the handler's own caught exception
+     * occupies one), so raw slot equality wrongly rejects otherwise verbatim copies.
+     */
+    private boolean sameFinallyInstr(IRInstruction a, IRInstruction b, Map<Integer, Integer> slotMap) {
+        if (slotMap != null && a.getClass() == b.getClass()
+                && (a instanceof LoadLocalInstruction || a instanceof StoreLocalInstruction)) {
+            int ta = a instanceof LoadLocalInstruction
+                    ? ((LoadLocalInstruction) a).getLocalIndex() : ((StoreLocalInstruction) a).getLocalIndex();
+            int tb = b instanceof LoadLocalInstruction
+                    ? ((LoadLocalInstruction) b).getLocalIndex() : ((StoreLocalInstruction) b).getLocalIndex();
+            Integer bound = slotMap.putIfAbsent(ta, tb);
+            return bound == null || bound == tb;
+        }
+        return sameFinallyInstr(a, b);
     }
 
     /** Structural equality of two finally instructions, ignoring SSA operand identity (verbatim javac copies). */
