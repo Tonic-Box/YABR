@@ -3212,6 +3212,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         }
                     }
                 }
+                if (exitOf != null) {
+                    exitOf = resolveThroughEmptyChain(exitOf);
+                }
                 if (exitOf != null && returnBlocks.contains(exitOf)) {
                     matches.add(map);
                     matchedCopyBlocks.addAll(map.values());
@@ -3233,8 +3236,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         || matchedCopyBlocks.contains(e.getKey())) {
                     continue;
                 }
+                IRBlock cand = resolveThroughEmptyChain(e.getKey());
                 Map<IRBlock, IRBlock> map =
-                        matchFinallySubgraph(root, e.getKey(), tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
+                        matchFinallySubgraph(root, cand, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
                 if (map == null) {
                     return false;
                 }
@@ -3256,6 +3260,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         for (Map<IRBlock, IRBlock> map : matches) {
+            IRBlock copyRoot = null;
+            IRBlock copyExit = null;
+            for (Map.Entry<IRBlock, IRBlock> e : map.entrySet()) {
+                if (copyRoot == null) {
+                    copyRoot = e.getValue();
+                }
+                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> se
+                        : e.getValue().getSuccessorEdgeTypes().entrySet()) {
+                    if (se.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                            && !map.containsValue(se.getKey())) {
+                        copyExit = se.getKey();
+                    }
+                }
+            }
+            if (copyRoot != null && copyExit != null) {
+                excisedCopyExits.put(copyRoot, copyExit);
+            }
             for (IRBlock copy : map.values()) {
                 for (IRInstruction ins : new ArrayList<>(copy.getInstructions())) {
                     if (!ins.isTerminator() && !(ins instanceof CopyInstruction)) {
@@ -3267,13 +3288,33 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // The copies' mirrored nested handlers protect code that no longer exists; retire them fully -
         // processed marks AND removal from the method's handler table - so no recovery path (including
         // scaffolding that enumerated handler groups before this ran) resurrects an empty try around the
-        // excised blocks.
+        // excised blocks. The same applies to ANY handler whose whole protected range the excision
+        // emptied (a chained inner copy's suppress catch reached through the exit resolution).
         for (ExceptionHandler h : copyNestedHandlers) {
             processedTryHandlers.add(h);
             if (h.getHandlerBlock() != null) {
                 processedHandlerBlocks.add(h.getHandlerBlock());
             }
             method.getExceptionHandlers().remove(h);
+        }
+        for (ExceptionHandler h : new ArrayList<>(method.getExceptionHandlers())) {
+            Set<IRBlock> hTry = h.getTryBlocks();
+            if (h.getHandlerBlock() == null || hTry == null || hTry.isEmpty()
+                    || processedTryHandlers.contains(h) || tblocks.contains(h.getHandlerBlock())) {
+                continue;
+            }
+            boolean allEmpty = true;
+            for (IRBlock tb : hTry) {
+                if (!matchableInstructions(tb, false).isEmpty()) {
+                    allEmpty = false;
+                    break;
+                }
+            }
+            if (allEmpty) {
+                processedTryHandlers.add(h);
+                processedHandlerBlocks.add(h.getHandlerBlock());
+                method.getExceptionHandlers().remove(h);
+            }
         }
         finallyDeduped.addAll(rethrowers);
         return true;
@@ -3503,6 +3544,74 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
+     * Follows {@code b} through blocks with no comparable instructions and a single normal successor -
+     * an already-excised copy of an inner finally, or a plain goto connector - to the block where a
+     * template match can begin. Returns {@code b} itself when it holds instructions.
+     */
+    private IRBlock resolveThroughEmptyChain(IRBlock b) {
+        Set<IRBlock> seen = new HashSet<>();
+        while (b != null && seen.add(b)) {
+            IRBlock excised = excisedCopyExits.get(b);
+            if (excised != null) {
+                b = excised;
+                continue;
+            }
+            if (!matchableInstructions(b, false).isEmpty()) {
+                return b;
+            }
+            IRBlock next = singleNormalSuccessor(b);
+            if (next == null) {
+                return b;
+            }
+            b = next;
+        }
+        return b;
+    }
+
+    /**
+     * True when {@code h}'s handler chain performs nothing but local shuffling before its rethrow - no
+     * call, field access or other observable effect. javac's try-with-resources suppress catch spills the
+     * caught throwable into the suppress flag and rethrows; such a handler is a catch CLAUSE, carries no
+     * finally body, and has no inlined copies for the de-duplication to hunt.
+     */
+    private boolean isLocalSpillRethrower(ExceptionHandler h) {
+        IRBlock hb = h.getHandlerBlock();
+        if (hb == null) {
+            return false;
+        }
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(hb);
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            for (IRInstruction ins : b.getInstructions()) {
+                if (ins.isTerminator() || ins instanceof CopyInstruction) {
+                    continue;
+                }
+                if (!(ins instanceof LoadLocalInstruction) && !(ins instanceof StoreLocalInstruction)) {
+                    return false;
+                }
+            }
+            IRInstruction term = b.getTerminator();
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                continue;
+            }
+            if (term instanceof BranchInstruction) {
+                return false;
+            }
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    work.add(e.getKey());
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * As {@link #sameFinallyInstr(IRInstruction, IRInstruction)}, but local slots are compared through a
      * consistent correspondence built during one subgraph match: the template's slot binds to the copy's
      * on first sight and must agree afterwards. javac gives a nested catch's exception variable a DEEPER
@@ -3582,6 +3691,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private final Set<ExceptionHandler> finallyDeduped = new HashSet<>();
+    /** Each excised finally copy's root mapped to its continuation, so a later (outer) group's exit hunt
+     * resolves through the emptied - possibly branchy - copy to where its own copy begins. */
+    private final Map<IRBlock, IRBlock> excisedCopyExits = new HashMap<>();
     /** Widens the finally de-duplication (arithmetic templates, split-handler chains, shared-exit
      * coverage) for the staged finally-after-prelude path only; the long-standing call sites keep the
      * narrower acceptance their gated output is calibrated to. */
@@ -3603,8 +3715,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         for (ExceptionHandler h : regionHandlers) {
             // A handler that wraps the caught exception in a FRESH one is a user catch, not a finally:
             // its body is no template, and admitting it here poisons the candidate set - one unmatchable
-            // pseudo-rethrower declines the whole de-duplication, real finally included.
-            if (handlerRethrows(h) && !handlerThrowsFreshException(h)
+            // pseudo-rethrower declines the whole de-duplication, real finally included. Likewise a
+            // rethrower that only shuffles locals - javac's try-with-resources suppress catch
+            // (`catch (Throwable t) { suppressed = t; throw t; }`) - has no observable finally body and
+            // no inlined copies to hunt; it is recovered as the catch clause it is.
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && !isLocalSpillRethrower(h)
                     && h.getTryStart() != null && h.getTryEnd() != null) {
                 rethrowers.add(h);
             }
@@ -3621,7 +3736,33 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         for (ExceptionHandler h : rethrowers) {
             List<IRInstruction> t = straightLineFinallyTemplate(h);
             if (t == null) {
-                return dedupBranchySubgraphFinally(rethrowers);
+                // Independent finally handlers (two try-with-resources resources in one region) form
+                // separate groups keyed by handler block; each group's all-or-nothing invariant is its
+                // own, and the region is de-duplicated only when EVERY group is.
+                Map<IRBlock, List<ExceptionHandler>> byRoot = new LinkedHashMap<>();
+                for (ExceptionHandler r : rethrowers) {
+                    byRoot.computeIfAbsent(r.getHandlerBlock(), k -> new ArrayList<>()).add(r);
+                }
+                // Nested finallys chain their inlined copies at shared exits (the inner resource's close
+                // runs before the outer's). De-duplicate INNER groups first - smallest protected span -
+                // so an outer group's exit hunt can resolve through the already-excised inner copies.
+                List<List<ExceptionHandler>> groups = new ArrayList<>(byRoot.values());
+                groups.sort(Comparator.comparingInt(g -> {
+                    int span = 0;
+                    for (ExceptionHandler r : g) {
+                        int lo = r.getTryStart() == null ? 0 : r.getTryStart().getBytecodeOffset();
+                        int hi = r.getTryEnd() == null ? 0 : r.getTryEnd().getBytecodeOffset();
+                        span += Math.max(0, hi - lo);
+                    }
+                    return span;
+                }));
+                for (List<ExceptionHandler> group : groups) {
+                    boolean ok = dedupBranchySubgraphFinally(group);
+                    if (!ok) {
+                        return false;
+                    }
+                }
+                return true;
             }
             if (template == null) {
                 template = t;
