@@ -78,8 +78,18 @@ public final class ReachingConditionStructurer {
     /** Thrown internally to abandon the region and fall back to legacy recovery. */
     private static final class BailToLegacy extends RuntimeException {
         BailToLegacy() {
-            super(null, null, false, false);
+            super(null, null, false, System.getProperty("rcs.measure") != null);
         }
+    }
+
+    private void measureDecline(String reason, IRBlock entry) {
+        if (System.getProperty("rcs.measure") == null) {
+            return;
+        }
+        IRMethod m = context.getIrMethod();
+        System.err.println("[rcs-decline] " + reason + " tryNodes=" + tryNodesEnabled
+                + " entry=" + (entry == null ? "?" : entry.getBytecodeOffset())
+                + " " + m.getOwnerClass() + "#" + m.getName() + m.getDescriptor());
     }
 
     /**
@@ -348,6 +358,8 @@ public final class ReachingConditionStructurer {
         try {
             validate(entry);
         } catch (BailToLegacy bail) {
+            StackTraceElement[] st = bail.getStackTrace();
+            measureDecline("bail@" + (st.length > 0 ? st[0].getLineNumber() : -1), entry);
             return false;
         }
         return true;
@@ -362,6 +374,7 @@ public final class ReachingConditionStructurer {
      */
     private boolean soundSequenceCut(IRBlock split, Set<IRBlock> baseStops) {
         if (!skippedBoundaries.isEmpty()) {
+            measureDecline("cut:skipped-boundary", split);
             return false;
         }
         for (IRBlock b : region) {
@@ -370,6 +383,7 @@ public final class ReachingConditionStructurer {
             }
             for (IRBlock s : b.getSuccessors()) {
                 if (baseStops.contains(s)) {
+                    measureDecline("cut:base-stop-exit@" + b.getBytecodeOffset() + "->" + s.getBytecodeOffset(), split);
                     return false;
                 }
             }
@@ -704,6 +718,7 @@ public final class ReachingConditionStructurer {
                 // resumes at the join. An undecodable try shape fails the whole region.
                 TryNodeDescriptor node = bridge.decodeTryNode(b);
                 if (node == null) {
+                    measureDecline("collect:tryNode-undecodable@" + b.getBytecodeOffset(), b);
                     return false;
                 }
                 tryNodes.put(b, node);
@@ -726,6 +741,7 @@ public final class ReachingConditionStructurer {
                     // cannot bound (a case leaving anywhere but the single merge) fails the region.
                     SwitchNodeDescriptor node = decodeSwitchNode(b);
                     if (node == null) {
+                        measureDecline("collect:switchNode-undecodable@" + b.getBytecodeOffset(), b);
                         return false;
                     }
                     switchNodes.put(b, node);
@@ -760,6 +776,7 @@ public final class ReachingConditionStructurer {
                 // trailing return); decline instead so the walking recovery emits the join in sequence.
                 if (s != entry && !dom.dominates(entry, s)) {
                     if (outsidePredsAreCatchCode(s, entry)) {
+                        measureDecline("collect:catch-join@" + s.getBytecodeOffset(), s);
                         pendingCatchJoinSplit = s;
                         return false;
                     }
@@ -792,6 +809,7 @@ public final class ReachingConditionStructurer {
         }
         // Irreducible flow (a cycle that is not a dominance back edge) cannot be structured here.
         if (hasNonBackCycle(entry, new HashSet<>(), new HashSet<>())) {
+            measureDecline("collect:irreducible", entry);
             return false;
         }
         rpoIndex = new HashMap<>();
@@ -843,6 +861,7 @@ public final class ReachingConditionStructurer {
         // Every non-entry region block must be dominated by the entry (single-entry region).
         for (IRBlock b : region) {
             if (b != entry && !dom.dominates(entry, b)) {
+                measureDecline("collect:multi-entry@" + b.getBytecodeOffset(), b);
                 return false;
             }
         }
@@ -872,6 +891,7 @@ public final class ReachingConditionStructurer {
                     }
                 }
                 if (!isNodeJoin) {
+                    measureDecline("collect:consumed-idom@" + b.getBytecodeOffset(), b);
                     return false;
                 }
             }

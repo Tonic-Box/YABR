@@ -3259,6 +3259,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
+        if (System.getProperty("fin.dbg") != null) {
+            for (Map<IRBlock, IRBlock> m : matches) {
+                StringBuilder sb = new StringBuilder("EXCISE root=" + root.getBytecodeOffset() + " copy=[");
+                for (IRBlock cb : m.values()) {
+                    sb.append(cb.getBytecodeOffset()).append(" ");
+                }
+                System.err.println(sb + "]");
+            }
+        }
         for (Map<IRBlock, IRBlock> map : matches) {
             IRBlock copyRoot = null;
             IRBlock copyExit = null;
@@ -3376,6 +3385,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                             || nestedTemplate.containsKey(h.getHandlerBlock())) {
                         continue;
                     }
+                    // The mirror must be structurally the template handler's twin - an enclosing clause
+                    // handler also covers this copy block and shares the catch type, but protects a far
+                    // larger range and is no nested close-guard.
+                    if (th.getTryBlocks() != null && h.getTryBlocks().size() != th.getTryBlocks().size()) {
+                        continue;
+                    }
+                    // A genuine nested close-guard SWALLOWS (logs or suppresses and falls through); a
+                    // finally/suppress CLAUSE rethrows. An enclosing clause handler covers this copy
+                    // block with the same catch type but rethrows - it is no mirror.
+                    if (handlerRethrows(h)) {
+                        continue;
+                    }
                     if (h.isCatchAll() != th.isCatchAll()) {
                         continue;
                     }
@@ -3397,7 +3418,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
                 if (ch == null) {
-                    return null;
+                    // No mirrored handler on the copy side: javac's modern try-with-resources desugar
+                    // protects the close ONLY inside the exception-path clause (addSuppressed), while the
+                    // normal-path copy closes unprotected - an intentional asymmetry. The copy simply
+                    // never traverses the protected variant; nothing to pair or retire.
+                    continue;
                 }
                 work.add(new IRBlock[]{th.getHandlerBlock(), ch.getHandlerBlock()});
                 pendingCopyNested.add(ch);
@@ -3419,11 +3444,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
                 BranchInstruction tb = (BranchInstruction) tt;
                 BranchInstruction cb = (BranchInstruction) c.getTerminator();
+                // Verbatim copies branch on the SAME comparison; pairing arms across different
+                // condition kinds lets an unrelated conditional masquerade as the template's guard.
+                if (tb.getCondition() != cb.getCondition()) {
+                    return null;
+                }
                 IRBlock[][] pairs = {
                         {tb.getTrueTarget(), cb.getTrueTarget()},
                         {tb.getFalseTarget(), cb.getFalseTarget()}};
                 for (IRBlock[] pr : pairs) {
-                    if (pr[0] == rethrowBlk || !tblocks.contains(pr[0])) {
+                    if (pr[0] == rethrowBlk || !tblocks.contains(pr[0])
+                            || (leadsOnlyToRethrow(pr[0], tblocks, rethrowBlk)
+                                && !matchableShapeEquals(pr[0], pr[1], slotMap))) {
                         if (exit != null && exit != pr[1]) {
                             return null;
                         }
@@ -3438,7 +3470,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (tn == null || cn == null) {
                     return null;
                 }
-                if (tn == rethrowBlk || !tblocks.contains(tn)) {
+                if (tn == rethrowBlk || !tblocks.contains(tn)
+                        || (leadsOnlyToRethrow(tn, tblocks, rethrowBlk)
+                            && !matchableShapeEquals(tn, cn, slotMap))) {
                     if (exit != null && exit != cn) {
                         return null;
                     }
@@ -3541,6 +3575,72 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return ins instanceof FieldAccessInstruction || ins instanceof InvokeInstruction
                 || ins instanceof ConstantInstruction || ins instanceof LoadLocalInstruction
                 || ins instanceof StoreLocalInstruction;
+    }
+
+    /**
+     * Whether {@code t}'s and {@code c}'s comparable instructions match shape-for-shape under a PROBE
+     * copy of the slot correspondence - a lookahead that decides whether a rethrow-prep template block
+     * still has a copy counterpart (older desugars inline the whole clause tail into each copy) or the
+     * copy already exited to its continuation (the modern fused desugar).
+     */
+    private boolean matchableShapeEquals(IRBlock t, IRBlock c, Map<Integer, Integer> slotMap) {
+        List<IRInstruction> ti = matchableInstructions(t, false);
+        List<IRInstruction> ci = matchableInstructions(c, false);
+        if (ti.size() != ci.size()) {
+            return false;
+        }
+        Map<Integer, Integer> probe = new HashMap<>(slotMap);
+        for (int i = 0; i < ti.size(); i++) {
+            if (!sameFinallyInstr(ti.get(i), ci.get(i), probe)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * True when every path from {@code b} within the template reaches the rethrow carrying only local
+     * LOADS - the caught exception being staged for its {@code athrow}. Such rethrow PREP has no copy
+     * counterpart (a copy exits to the normal continuation right after the finally body), so the walk
+     * treats it as part of the rethrow boundary.
+     */
+    private boolean leadsOnlyToRethrow(IRBlock b, Set<IRBlock> tblocks, IRBlock rethrowBlk) {
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(b);
+        while (!work.isEmpty()) {
+            IRBlock x = work.poll();
+            if (x == rethrowBlk || !seen.add(x)) {
+                continue;
+            }
+            if (!tblocks.contains(x)) {
+                return false;
+            }
+            for (IRInstruction ins : x.getInstructions()) {
+                if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
+                        && !(ins instanceof LoadLocalInstruction)) {
+                    return false;
+                }
+            }
+            IRInstruction term = x.getTerminator();
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                continue;
+            }
+            if (term instanceof BranchInstruction) {
+                return false;
+            }
+            boolean any = false;
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : x.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    work.add(e.getKey());
+                    any = true;
+                }
+            }
+            if (!any) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -5789,6 +5889,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     public TryNodeDescriptor decodeTryNode(IRBlock block) {
         ExceptionHandler h = findUnprocessedHandlerStartingAt(block);
         if (h == null || h.getHandlerBlock() == null) {
+            if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#1 block=" + block.getBytecodeOffset());
             return null;
         }
         IRMethod irMethod = context.getIrMethod();
@@ -5806,6 +5907,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (startOff < 0 || endOff <= startOff || block.getBytecodeOffset() != startOff) {
+            if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#2 block=" + block.getBytecodeOffset());
             return null;
         }
         boolean finallyNode = false;
@@ -5933,6 +6035,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                 }
                 if (!contained) {
+                    if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#3 block=" + block.getBytecodeOffset());
                     return null;
                 }
             }
@@ -5972,6 +6075,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     continue;
                 }
                 if (after != null && after != succ) {
+                    if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#4 block=" + block.getBytecodeOffset());
                     return null;
                 }
                 after = succ;
@@ -5987,10 +6091,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
             if (after != null && dt.dominates(h.getHandlerBlock(), after)) {
+                if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#5 block=" + block.getBytecodeOffset());
                 return null;
             }
         }
         if (after == block) {
+            if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#6 block=" + block.getBytecodeOffset());
             return null;
         }
         return new TryNodeDescriptor(h, consumed, after);
@@ -6127,6 +6233,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (rethrower == null) {
+            if (System.getProperty("fin.dbg") != null) System.err.println("FINNODE bail#1");
             return null;
         }
         List<ExceptionHandler> family = new ArrayList<>();
@@ -6194,6 +6301,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         allExitsTerminal = true;
                         break;
                     }
+                    if (System.getProperty("fin.dbg") != null) System.err.println("FINNODE bail#2");
                     return null;
                 }
                 after = succ;
@@ -6203,6 +6311,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (after == block) {
+            if (System.getProperty("fin.dbg") != null) System.err.println("FINNODE bail#3");
             return null;
         }
         return new TryNodeDescriptor(h, consumed, after);
