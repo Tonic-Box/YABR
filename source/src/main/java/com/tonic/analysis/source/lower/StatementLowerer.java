@@ -223,7 +223,7 @@ public class StatementLowerer {
             exprLowerer.lowerCondition(whileStmt.getCondition(), bodyBlock, exitBlock);
         }
 
-        ctx.pushLoop(whileStmt.getLabel(), condBlock, exitBlock);
+        ctx.pushLoop(whileStmt.getLabel(), condBlock, exitBlock, finallyStack.size());
 
         ctx.setCurrentBlock(bodyBlock);
         lower(whileStmt.getBody());
@@ -249,7 +249,7 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(bodyBlock));
         ctx.getCurrentBlock().addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
-        ctx.pushLoop(doWhile.getLabel(), condBlock, exitBlock);
+        ctx.pushLoop(doWhile.getLabel(), condBlock, exitBlock, finallyStack.size());
 
         ctx.setCurrentBlock(bodyBlock);
         lower(doWhile.getBody());
@@ -287,7 +287,7 @@ public class StatementLowerer {
             condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         }
 
-        ctx.pushLoop(forStmt.getLabel(), updateBlock, exitBlock);
+        ctx.pushLoop(forStmt.getLabel(), updateBlock, exitBlock, finallyStack.size());
 
         ctx.setCurrentBlock(bodyBlock);
         lower(forStmt.getBody());
@@ -335,7 +335,7 @@ public class StatementLowerer {
         condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
         condBlock.addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
-        ctx.pushLoop(forEach.getLabel(), updateBlock, exitBlock);
+        ctx.pushLoop(forEach.getLabel(), updateBlock, exitBlock, finallyStack.size());
 
         ctx.setCurrentBlock(bodyBlock);
         index = ctx.getVariable(indexName);
@@ -417,7 +417,7 @@ public class StatementLowerer {
 
         // A switch is a break-only scope: an unlabeled break leaves it at exitBlock, but an unlabeled continue must
         // pass through to the enclosing loop's update (null continue-target keeps the resolver searching outward).
-        ctx.pushLoop(null, null, exitBlock);
+        ctx.pushLoop(null, null, exitBlock, finallyStack.size());
 
         for (int i = 0; i < cases.size(); i++) {
             ctx.setCurrentBlock(caseBlocks[i]);
@@ -476,15 +476,47 @@ public class StatementLowerer {
     }
 
     private void lowerBreak(BreakStmt breakStmt) {
-        IRBlock target = ctx.getBreakTarget(breakStmt.getTargetLabel());
+        LoweringContext.LoopTargets frame = ctx.getBreakFrame(breakStmt.getTargetLabel());
+        drainFinallyAboveDepth(frame.finallyDepth());
+        if (ctx.getCurrentBlock().getTerminator() != null) {
+            return;
+        }
+        IRBlock target = frame.breakTarget();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(target));
         ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
     }
 
     private void lowerContinue(ContinueStmt contStmt) {
-        IRBlock target = ctx.getContinueTarget(contStmt.getTargetLabel());
+        LoweringContext.LoopTargets frame = ctx.getContinueFrame(contStmt.getTargetLabel());
+        drainFinallyAboveDepth(frame.finallyDepth());
+        if (ctx.getCurrentBlock().getTerminator() != null) {
+            return;
+        }
+        IRBlock target = frame.continueTarget();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(target));
         ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+    }
+
+    /**
+     * Runs the cleanups an abrupt jump crosses: every finally/monitor-release pushed since the target
+     * loop or switch was entered (the entries above {@code targetDepth}), top-most first - mirroring
+     * how {@link #lowerReturn} drains the whole stack. A {@code break}/{@code continue} that leaves a
+     * {@code synchronized} inside the loop must emit that block's {@code monitorexit} before jumping,
+     * otherwise the monitor leaks and the round trip throws {@code IllegalMonitorStateException}.
+     */
+    private void drainFinallyAboveDepth(int targetDepth) {
+        int toDrain = finallyStack.size() - targetDepth;
+        int drained = 0;
+        for (Statement fin : finallyStack) {
+            if (drained >= toDrain) {
+                break;
+            }
+            if (ctx.getCurrentBlock().getTerminator() != null) {
+                return;
+            }
+            lower(fin);
+            drained++;
+        }
     }
 
     private void lowerTryCatch(TryCatchStmt tryCatch) {

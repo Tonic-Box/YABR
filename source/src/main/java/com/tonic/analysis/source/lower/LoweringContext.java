@@ -303,8 +303,8 @@ public class LoweringContext {
      * @param continueTarget block to jump to for continue
      * @param breakTarget block to jump to for break
      */
-    public void pushLoop(String label, IRBlock continueTarget, IRBlock breakTarget) {
-        LoopTargets targets = new LoopTargets(continueTarget, breakTarget);
+    public void pushLoop(String label, IRBlock continueTarget, IRBlock breakTarget, int finallyDepth) {
+        LoopTargets targets = new LoopTargets(continueTarget, breakTarget, finallyDepth);
         loopStack.push(targets);
         if (label != null) {
             labelMap.put(label, targets);
@@ -345,17 +345,44 @@ public class LoweringContext {
      * Gets the break target for the current or labeled loop.
      */
     public IRBlock getBreakTarget(String label) {
+        return getBreakFrame(label).breakTarget();
+    }
+
+    /**
+     * Resolves the loop/switch frame a {@code break} targets - the labeled frame, else the innermost.
+     */
+    public LoopTargets getBreakFrame(String label) {
         if (label != null) {
             LoopTargets targets = labelMap.get(label);
             if (targets == null) {
                 throw new LoweringException("Unknown label: " + label);
             }
-            return targets.breakTarget();
+            return targets;
         }
         if (loopStack.isEmpty()) {
             throw new LoweringException("Break outside of loop");
         }
-        return loopStack.peek().breakTarget();
+        return loopStack.peek();
+    }
+
+    /**
+     * Resolves the loop frame a {@code continue} targets - the labeled frame, else the innermost frame
+     * with a continue-target (skipping break-only switch frames).
+     */
+    public LoopTargets getContinueFrame(String label) {
+        if (label != null) {
+            LoopTargets targets = labelMap.get(label);
+            if (targets == null) {
+                throw new LoweringException("Unknown label: " + label);
+            }
+            return targets;
+        }
+        for (LoopTargets targets : loopStack) {
+            if (targets.continueTarget() != null) {
+                return targets;
+            }
+        }
+        throw new LoweringException("Continue outside of loop");
     }
 
     /**
@@ -456,13 +483,23 @@ public class LoweringContext {
     public static final class LoopTargets {
         private final IRBlock continueTarget;
         private final IRBlock breakTarget;
+        private final int finallyDepth;
 
-        public LoopTargets(IRBlock continueTarget, IRBlock breakTarget) {
+        public LoopTargets(IRBlock continueTarget, IRBlock breakTarget, int finallyDepth) {
             this.continueTarget = continueTarget;
             this.breakTarget = breakTarget;
+            this.finallyDepth = finallyDepth;
         }
 
         public IRBlock continueTarget() { return continueTarget; }
         public IRBlock breakTarget() { return breakTarget; }
+
+        /**
+         * The lowerer's finally-stack size at the moment this loop/switch was entered. A {@code break}
+         * or {@code continue} that leaves this frame must first run every cleanup pushed after it - the
+         * {@code monitorexit} of an enclosing {@code synchronized} inside the loop, or an intervening
+         * {@code finally} - which are exactly the entries above this depth.
+         */
+        public int finallyDepth() { return finallyDepth; }
     }
 }

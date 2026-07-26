@@ -60,8 +60,6 @@ class StressCorpusTest {
             "SFinallyControlFlow", "SCatchInFinally",
             // recompiler lowering crash
             "SBreakFromTry", "STryReturnMutation",
-            // monitor leak on the round-tripped synchronized shape
-            "SSyncExit",
             // exception-path behavior diverges after the round trip
             "SReturnInFinally"
     ));
