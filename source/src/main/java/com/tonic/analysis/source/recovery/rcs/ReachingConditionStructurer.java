@@ -373,6 +373,7 @@ public final class ReachingConditionStructurer {
      */
     private boolean soundSequenceCut(IRBlock split, Set<IRBlock> baseStops) {
         if (!skippedBoundaries.isEmpty()) {
+            trace("cut-decline skipped-boundaries split=" + split.getBytecodeOffset());
             return false;
         }
         for (IRBlock b : region) {
@@ -381,6 +382,8 @@ public final class ReachingConditionStructurer {
             }
             for (IRBlock s : b.getSuccessors()) {
                 if (baseStops.contains(s)) {
+                    trace("cut-decline base-stop-exit b=" + b.getBytecodeOffset()
+                            + " s=" + s.getBytecodeOffset());
                     return false;
                 }
             }
@@ -390,6 +393,8 @@ public final class ReachingConditionStructurer {
                     || dom.dominates(split, p)) {
                 continue;
             }
+            trace("cut-decline foreign-pred split=" + split.getBytecodeOffset()
+                    + " p=" + p.getBytecodeOffset());
             return false;
         }
         return true;
@@ -719,6 +724,7 @@ public final class ReachingConditionStructurer {
                 // resumes at the join. An undecodable try shape fails the whole region.
                 TryNodeDescriptor node = bridge.decodeTryNode(b);
                 if (node == null) {
+                    trace("collect-decline try-node b=" + b.getBytecodeOffset());
                     return false;
                 }
                 tryNodes.put(b, node);
@@ -741,6 +747,7 @@ public final class ReachingConditionStructurer {
                     // cannot bound (a case leaving anywhere but the single merge) fails the region.
                     SwitchNodeDescriptor node = decodeSwitchNode(b);
                     if (node == null) {
+                        trace("collect-decline switch-node b=" + b.getBytecodeOffset());
                         return false;
                     }
                     switchNodes.put(b, node);
@@ -775,6 +782,7 @@ public final class ReachingConditionStructurer {
                 // trailing return); decline instead so the walking recovery emits the join in sequence.
                 if (s != entry && !dom.dominates(entry, s)) {
                     if (outsidePredsAreCatchCode(s, entry)) {
+                        trace("collect-decline catch-join s=" + s.getBytecodeOffset());
                         pendingCatchJoinSplit = s;
                         return false;
                     }
@@ -807,6 +815,7 @@ public final class ReachingConditionStructurer {
         }
         // Irreducible flow (a cycle that is not a dominance back edge) cannot be structured here.
         if (hasNonBackCycle(entry, new HashSet<>(), new HashSet<>())) {
+            trace("collect-decline irreducible entry=" + entry.getBytecodeOffset());
             return false;
         }
         rpoIndex = new HashMap<>();
