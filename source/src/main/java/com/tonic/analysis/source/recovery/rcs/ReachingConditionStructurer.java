@@ -2237,7 +2237,8 @@ public final class ReachingConditionStructurer {
         // term. So keep any guard where an impure atom appears under an OR.
         if (formulas.isTautology(guard)
                 || (guardHasImpureAtom(guard) && !impureAtomUnderDisjunction(guard.nnf, false)
-                        && reachedByFallThrough(shared, dominator))) {
+                        && reachedByFallThrough(shared, dominator)
+                        && !impureAtomExitsToSkippedBoundary(guard))) {
             return emit(shared);
         }
         List<Statement> body = emit(shared);
@@ -2420,6 +2421,29 @@ public final class ReachingConditionStructurer {
             work.push(n.high);
         }
         return into;
+    }
+
+    /**
+     * True when an impure atom's OTHER edge leaves the region for a skipped boundary. The fall-through
+     * unguard assumes the condition was already emitted as an exit test (`if (c) continue; tail`), so
+     * re-stating it would repeat the side effect - but an edge to a skipped boundary emits NOTHING: the
+     * enclosing structure owns that continuation. Unguarding there erases the condition evaluation
+     * entirely, side effects included; the guard must be kept (its impure atoms are cached into
+     * temporaries by the purity machinery, evaluated once at their own position).
+     */
+    private boolean impureAtomExitsToSkippedBoundary(BoolFormula guard) {
+        for (int atom : atomsOf(guard.nnf, new HashSet<>())) {
+            IRBlock block = blockOfAtom.get(atom);
+            if (pureConditionBlock.contains(block)) {
+                continue;
+            }
+            for (IRBlock s : block.getSuccessors()) {
+                if (!region.contains(s) && skippedBoundaries.contains(s)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** True when some atom of the guard names a block whose condition would inline a side effect. */
