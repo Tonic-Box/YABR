@@ -5952,6 +5952,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     @Override
+    public boolean isRetiredHandlerBlock(IRBlock block) {
+        return processedHandlerBlocks.contains(block);
+    }
+
+    @Override
     public TryNodeDescriptor decodeTryNode(IRBlock block) {
         ExceptionHandler h = findUnprocessedHandlerStartingAt(block);
         if (h == null || h.getHandlerBlock() == null) {

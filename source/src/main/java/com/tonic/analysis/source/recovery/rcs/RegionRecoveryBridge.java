@@ -122,6 +122,13 @@ public interface RegionRecoveryBridge {
     boolean startsUnprocessedHandler(IRBlock block);
 
     /**
+     * Whether {@code block} is the entry of an exception handler the surrounding recovery has already
+     * consumed - a retired copy-side guard catch or a de-duplicated finally's scaffolding. Such a block's
+     * text is recovered inside the owning clause, so region machinery treats it like live handler code.
+     */
+    boolean isRetiredHandlerBlock(IRBlock block);
+
+    /**
      * Statically decodes the try starting at {@code block} into an opaque {@link TryNodeDescriptor} - the
      * blocks the try/catch recovery will consume and the single join it continues at - without recovering or
      * marking anything. Returns null for a shape the node model does not own (a nested unprocessed try in the

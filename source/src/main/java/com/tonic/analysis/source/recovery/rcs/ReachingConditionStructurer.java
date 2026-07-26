@@ -400,15 +400,23 @@ public final class ReachingConditionStructurer {
         return true;
     }
 
-    /** Whether {@code b} is exception-handler code: a handler entry block or a block one dominates. */
+    /**
+     * Whether {@code b} is exception-handler code: a live handler entry block, a RETIRED one (a
+     * de-duplicated finally's scaffolding, whose text the owning clause recovers), or a block either
+     * dominates.
+     */
     private boolean isHandlerCode(IRBlock b) {
         List<com.tonic.analysis.ssa.cfg.ExceptionHandler> handlers = method.getExceptionHandlers();
-        if (handlers == null) {
-            return false;
+        if (handlers != null) {
+            for (com.tonic.analysis.ssa.cfg.ExceptionHandler h : handlers) {
+                IRBlock hb = h.getHandlerBlock();
+                if (hb != null && (hb == b || dom.dominates(hb, b))) {
+                    return true;
+                }
+            }
         }
-        for (com.tonic.analysis.ssa.cfg.ExceptionHandler h : handlers) {
-            IRBlock hb = h.getHandlerBlock();
-            if (hb != null && (hb == b || dom.dominates(hb, b))) {
+        for (IRBlock x = b; x != null; x = dom.getImmediateDominator(x)) {
+            if (bridge.isRetiredHandlerBlock(x)) {
                 return true;
             }
         }
