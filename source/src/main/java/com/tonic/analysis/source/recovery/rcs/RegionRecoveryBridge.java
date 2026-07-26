@@ -92,6 +92,14 @@ public interface RegionRecoveryBridge {
      */
     boolean canStructureSwitchRegion(IRBlock switchBlock);
 
+    /**
+     * True when {@code switchBlock} may become an opaque switch NODE - recovered wholesale by the host at
+     * its structural position. Unlike {@link #canStructureSwitchRegion} this does not exclude a switch
+     * inside a loop: the node delegate recovers the switch with the enclosing loop's frames pushed, so a
+     * case's continue-to-latch resolves to the loop jump it is.
+     */
+    boolean canStructureSwitchNode(IRBlock switchBlock);
+
     /** The block reached after {@code switchBlock} (its merge), or null when every case exits the method. */
     IRBlock switchMergeBlock(IRBlock switchBlock);
 

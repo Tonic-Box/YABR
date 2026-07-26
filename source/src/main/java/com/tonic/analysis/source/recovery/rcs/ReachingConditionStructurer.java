@@ -929,7 +929,7 @@ public final class ReachingConditionStructurer {
      * loop header, or with a case leaving anywhere else is not modelled and returns null.
      */
     private SwitchNodeDescriptor decodeSwitchNode(IRBlock b) {
-        if (!bridge.canStructureSwitchRegion(b)) {
+        if (!bridge.canStructureSwitchNode(b)) {
             return null;
         }
         LoopAnalysis loops = context.getLoopAnalysis();

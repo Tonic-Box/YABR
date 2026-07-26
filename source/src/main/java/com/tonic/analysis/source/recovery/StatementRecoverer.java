@@ -142,6 +142,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
     @Override
     public boolean canStructureSwitchRegion(IRBlock switchBlock) {
+        // A switch inside a loop shares the loop's continue target as its merge and its induction phis flow
+        // through the case bodies; structuring it as an opaque unit misplaces those. Leave it to the legacy
+        // walk, which recovers the loop and switch together.
+        return canStructureSwitchNode(switchBlock)
+                && (context.getLoopAnalysis() == null || !context.getLoopAnalysis().isInLoop(switchBlock));
+    }
+
+    @Override
+    public boolean canStructureSwitchNode(IRBlock switchBlock) {
         if (!(switchBlock.getTerminator() instanceof SwitchInstruction)) {
             return false;
         }
@@ -155,15 +164,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         Value key = ((SwitchInstruction) switchBlock.getTerminator()).getKey();
         if (key instanceof SSAValue) {
             IRInstruction def = ((SSAValue) key).getDefinition();
-            if (def instanceof InvokeInstruction && ((InvokeInstruction) def).isDynamic()
-                    && "typeSwitch".equals(((InvokeInstruction) def).getName())) {
-                return false;
-            }
+            return !(def instanceof InvokeInstruction) || !((InvokeInstruction) def).isDynamic()
+                    || !"typeSwitch".equals(((InvokeInstruction) def).getName());
         }
-        // A switch inside a loop shares the loop's continue target as its merge and its induction phis flow
-        // through the case bodies; structuring it as an opaque unit misplaces those. Leave it to the legacy
-        // walk, which recovers the loop and switch together.
-        return context.getLoopAnalysis() == null || !context.getLoopAnalysis().isInLoop(switchBlock);
+        return true;
     }
 
     @Override
