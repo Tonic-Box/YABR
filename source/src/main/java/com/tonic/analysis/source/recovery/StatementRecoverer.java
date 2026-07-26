@@ -3259,15 +3259,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
-        if (System.getProperty("fin.dbg") != null) {
-            for (Map<IRBlock, IRBlock> m : matches) {
-                StringBuilder sb = new StringBuilder("EXCISE root=" + root.getBytecodeOffset() + " copy=[");
-                for (IRBlock cb : m.values()) {
-                    sb.append(cb.getBytecodeOffset()).append(" ");
-                }
-                System.err.println(sb + "]");
-            }
-        }
         for (Map<IRBlock, IRBlock> map : matches) {
             IRBlock copyRoot = null;
             IRBlock copyExit = null;
@@ -5889,7 +5880,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     public TryNodeDescriptor decodeTryNode(IRBlock block) {
         ExceptionHandler h = findUnprocessedHandlerStartingAt(block);
         if (h == null || h.getHandlerBlock() == null) {
-            if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#1 block=" + block.getBytecodeOffset());
             return null;
         }
         IRMethod irMethod = context.getIrMethod();
@@ -5907,7 +5897,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (startOff < 0 || endOff <= startOff || block.getBytecodeOffset() != startOff) {
-            if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#2 block=" + block.getBytecodeOffset());
             return null;
         }
         boolean finallyNode = false;
@@ -6035,7 +6024,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                 }
                 if (!contained) {
-                    if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#3 block=" + block.getBytecodeOffset());
                     return null;
                 }
             }
@@ -6075,7 +6063,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     continue;
                 }
                 if (after != null && after != succ) {
-                    if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#4 block=" + block.getBytecodeOffset());
                     return null;
                 }
                 after = succ;
@@ -6091,12 +6078,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
             if (after != null && dt.dominates(h.getHandlerBlock(), after)) {
-                if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#5 block=" + block.getBytecodeOffset());
                 return null;
             }
         }
         if (after == block) {
-            if (System.getProperty("fin.dbg") != null) System.err.println("TRYNODE bail#6 block=" + block.getBytecodeOffset());
             return null;
         }
         return new TryNodeDescriptor(h, consumed, after);
@@ -6233,7 +6218,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (rethrower == null) {
-            if (System.getProperty("fin.dbg") != null) System.err.println("FINNODE bail#1");
             return null;
         }
         List<ExceptionHandler> family = new ArrayList<>();
@@ -6301,7 +6285,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         allExitsTerminal = true;
                         break;
                     }
-                    if (System.getProperty("fin.dbg") != null) System.err.println("FINNODE bail#2");
                     return null;
                 }
                 after = succ;
@@ -6311,7 +6294,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (after == block) {
-            if (System.getProperty("fin.dbg") != null) System.err.println("FINNODE bail#3");
             return null;
         }
         return new TryNodeDescriptor(h, consumed, after);
