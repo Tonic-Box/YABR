@@ -1,0 +1,680 @@
+package com.tonic.analysis.oracle;
+
+import com.tonic.analysis.source.decompile.ClassDecompiler;
+import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
+import com.tonic.testutil.TestUtils;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.TestFactory;
+
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+/**
+ * A stress corpus of hand-written control-flow edge cases compiled with the LOCAL javac - the
+ * modern desugar layouts (split protected ranges, fused resource clauses, string-switch
+ * scaffolding) that the aged application-jar corpora cannot exercise. Every fixture executes a
+ * deterministic {@code static int check()} twice - once from the original bytecode, once from the
+ * decompile-recompile round trip - and the two values must agree, so the assertion is semantic
+ * rather than textual. Fixtures reproducing a DOCUMENTED pre-existing defect are listed in
+ * {@link #KNOWN_BROKEN}: the harness asserts they still fail (a silent fix or a new break of the
+ * documentation both surface) without failing the suite.
+ */
+class StressCorpusTest {
+
+    private static final class Fixture {
+        final String name;
+        final String source;
+
+        Fixture(String name, String source) {
+            this.name = name;
+            this.source = source;
+        }
+    }
+
+    /**
+     * Fixtures whose round trip is known-wrong today, tagged by observed failure kind; the whole set is
+     * the modern-javac burn-in backlog (stress-corpus-findings memory note). The harness asserts each
+     * still fails, so a silent fix or a new regression of the documentation both surface.
+     */
+    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(Arrays.asList(
+            // catch+finally double-effect on the split-range layout (finally-phase2-findings)
+            "SGuardedCloseShared",
+            // sentinel-twr unequal-path fall-through / crc-guard fusion (catch-join-sequence-split)
+            "SSentinelTwr",
+            // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
+            "SShiftMask", "SStringMachine", "SRecursionTry", "SSharedReturnMaze", "STwrInLoop",
+            "SSwitchZoo", "SConditionMonster",
+            // recompiled bytecode fails verification
+            "SFinallyControlFlow", "SMultiCatch", "SCatchInFinally", "SLongDoubleSlots",
+            // recompiler lowering crash
+            "SBreakFromTry", "STryReturnMutation",
+            // decompiler crash
+            "SArrayMaze",
+            // monitor leak on the round-tripped synchronized shape
+            "SSyncExit",
+            // exception-path behavior diverges after the round trip
+            "SReturnInFinally"
+    ));
+
+    private static final List<Fixture> FIXTURES = List.of(
+        new Fixture("SSharedReturnMaze", "public class SSharedReturnMaze {\n"
+            + "    static int log = 0;\n"
+            + "    static int work(int x) { if (x == 3) throw new IllegalStateException(); return x * 7; }\n"
+            + "    static int one(int x) {\n"
+            + "        int r = -1;\n"
+            + "        try {\n"
+            + "            if (x == 0) { return 100; }\n"
+            + "            r = work(x);\n"
+            + "        } catch (IllegalStateException e) {\n"
+            + "            log += 1000;\n"
+            + "        } finally {\n"
+            + "            log += 10;\n"
+            + "        }\n"
+            + "        return r;\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        log = 0;\n"
+            + "        int s = one(0) + 3 * one(2) + 7 * one(3);\n"
+            + "        return s * 31 + log;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("STwrNested", "import java.io.ByteArrayInputStream;\n"
+            + "import java.io.IOException;\n"
+            + "import java.io.InputStream;\n"
+            + "public class STwrNested {\n"
+            + "    static int closes = 0;\n"
+            + "    static InputStream open(int v) { closes++; return new ByteArrayInputStream(new byte[]{(byte) v}); }\n"
+            + "    static int use(boolean deep) throws IOException {\n"
+            + "        try (InputStream a = open(5); InputStream b = open(9)) {\n"
+            + "            int v = a.read() + b.read();\n"
+            + "            if (deep) {\n"
+            + "                try (InputStream c = open(11)) {\n"
+            + "                    return v + c.read();\n"
+            + "                }\n"
+            + "            }\n"
+            + "            return v;\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() throws IOException {\n"
+            + "        closes = 0;\n"
+            + "        int s = use(false) * 13 + use(true);\n"
+            + "        return s * 100 + closes;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("STwrInLoop", "import java.io.ByteArrayInputStream;\n"
+            + "import java.io.IOException;\n"
+            + "import java.io.InputStream;\n"
+            + "public class STwrInLoop {\n"
+            + "    static int closes = 0;\n"
+            + "    static InputStream open(int v) { return new ByteArrayInputStream(new byte[]{(byte) v, (byte) (v + 1)}); }\n"
+            + "    public static int check() throws IOException {\n"
+            + "        closes = 0;\n"
+            + "        int acc = 0;\n"
+            + "        for (int i = 0; i < 6; i++) {\n"
+            + "            try (InputStream in = open(i)) {\n"
+            + "                int v = in.read();\n"
+            + "                if (v == 2) { continue; }\n"
+            + "                if (v == 4) { break; }\n"
+            + "                acc = acc * 3 + v;\n"
+            + "            } finally {\n"
+            + "                closes++;\n"
+            + "            }\n"
+            + "        }\n"
+            + "        return acc * 100 + closes;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SSentinelTwr", "import java.io.IOException;\n"
+            + "public class SSentinelTwr {\n"
+            + "    static int closes = 0;\n"
+            + "    static int opens = 0;\n"
+            + "    static int open() { opens++; return opens; }\n"
+            + "    static void close(int h) { closes += h; }\n"
+            + "    static long crc(int h, boolean same) { return same ? 42L : 42L + h; }\n"
+            + "    static int use(boolean present, boolean same) {\n"
+            + "        if (present) {\n"
+            + "            int source = open();\n"
+            + "            Throwable t1 = null;\n"
+            + "            try {\n"
+            + "                int target = open();\n"
+            + "                Throwable t2 = null;\n"
+            + "                try {\n"
+            + "                    if (crc(source, same) == crc(target, same)) {\n"
+            + "                        return 500;\n"
+            + "                    }\n"
+            + "                } catch (Throwable t) {\n"
+            + "                    t2 = t;\n"
+            + "                    throw t;\n"
+            + "                } finally {\n"
+            + "                    if (t2 == null) { close(target); } else { close(target); }\n"
+            + "                }\n"
+            + "            } catch (Throwable t) {\n"
+            + "                t1 = t;\n"
+            + "                throw new RuntimeException(t);\n"
+            + "            } finally {\n"
+            + "                if (t1 == null) { close(source); } else { close(source); }\n"
+            + "            }\n"
+            + "        }\n"
+            + "        return 900 + closes;\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        closes = 0; opens = 0;\n"
+            + "        int a = use(false, false);\n"
+            + "        int b = use(true, true);\n"
+            + "        int c = use(true, false);\n"
+            + "        return a + 7 * b + 31 * c + 1000 * closes;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SLabeledMatrix", "public class SLabeledMatrix {\n"
+            + "    public static int check() {\n"
+            + "        int acc = 0;\n"
+            + "        outer:\n"
+            + "        for (int i = 0; i < 5; i++) {\n"
+            + "            for (int j = 0; j < 5; j++) {\n"
+            + "                if (i * j == 6) { break outer; }\n"
+            + "                if ((i + j) % 3 == 0) { continue outer; }\n"
+            + "                switch (i * 10 + j) {\n"
+            + "                    case 1: acc += 1; break;\n"
+            + "                    case 12: acc += 100; continue outer;\n"
+            + "                    case 23: acc += 1000; break outer;\n"
+            + "                    default: acc += 2;\n"
+            + "                }\n"
+            + "                acc = acc * 2 + j;\n"
+            + "            }\n"
+            + "            acc += 7;\n"
+            + "        }\n"
+            + "        return acc;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SSwitchZoo", "public class SSwitchZoo {\n"
+            + "    static int dense(int x) {\n"
+            + "        int r = 0;\n"
+            + "        switch (x) {\n"
+            + "            case 0: r += 1;\n"
+            + "            case 1: r += 2; break;\n"
+            + "            case 2: r += 4;\n"
+            + "            default: r += 8;\n"
+            + "            case 3: r += 16; break;\n"
+            + "            case 4: r += 32;\n"
+            + "        }\n"
+            + "        return r;\n"
+            + "    }\n"
+            + "    static int strings(String s) {\n"
+            + "        switch (s) {\n"
+            + "            case \"aa\": return 3;\n"
+            + "            case \"bb\": return 5;\n"
+            + "            case \"Ea\": return 7;\n"
+            + "            case \"FB\": return 11;\n"
+            + "            default: return 13;\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        int s = 0;\n"
+            + "        for (int i = -1; i < 6; i++) { s = s * 3 + dense(i); }\n"
+            + "        for (String k : new String[]{\"aa\", \"bb\", \"Ea\", \"FB\", \"zz\"}) { s = s * 5 + strings(k); }\n"
+            + "        return s;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SConditionMonster", "public class SConditionMonster {\n"
+            + "    static int calls = 0;\n"
+            + "    static boolean t(int id) { calls += id; return true; }\n"
+            + "    static boolean f(int id) { calls += id * 100; return false; }\n"
+            + "    public static int check() {\n"
+            + "        calls = 0;\n"
+            + "        int acc = 0;\n"
+            + "        if (t(1) && (f(2) || t(3)) && !(f(4) && t(5))) { acc += 1; }\n"
+            + "        if (f(6) || t(7) && f(8) || !t(9) || t(10)) { acc += 2; }\n"
+            + "        boolean b = t(11) == !f(12);\n"
+            + "        if (b ^ f(13)) { acc += 4; }\n"
+            + "        for (int i = 0; i < 4 && !f(14); i++) { acc += i; }\n"
+            + "        return acc * 100000 + calls;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SDoWhileWeird", "public class SDoWhileWeird {\n"
+            + "    public static int check() {\n"
+            + "        int acc = 0;\n"
+            + "        int i = 0;\n"
+            + "        do {\n"
+            + "            i++;\n"
+            + "            if (i % 3 == 0) { continue; }\n"
+            + "            int j = i;\n"
+            + "            do {\n"
+            + "                j--;\n"
+            + "                if (j == 2) { break; }\n"
+            + "                acc += j;\n"
+            + "            } while (j > 0);\n"
+            + "            acc = acc * 2 + i;\n"
+            + "        } while (i < 7);\n"
+            + "        return acc;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SSyncExit", "public class SSyncExit {\n"
+            + "    static final Object L1 = new Object();\n"
+            + "    static final Object L2 = new Object();\n"
+            + "    static int events = 0;\n"
+            + "    static int grab(int x) {\n"
+            + "        synchronized (L1) {\n"
+            + "            events++;\n"
+            + "            if (x == 0) { return 10; }\n"
+            + "            synchronized (L2) {\n"
+            + "                events += 100;\n"
+            + "                if (x == 1) { return 20; }\n"
+            + "            }\n"
+            + "            events += 10000;\n"
+            + "        }\n"
+            + "        return 30;\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        events = 0;\n"
+            + "        int s = grab(0) + grab(1) + grab(2);\n"
+            + "        int loops = 0;\n"
+            + "        for (int i = 0; i < 5; i++) {\n"
+            + "            synchronized (L1) {\n"
+            + "                if (i == 3) { break; }\n"
+            + "                loops += i;\n"
+            + "            }\n"
+            + "        }\n"
+            + "        return s * 1000 + events + loops;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SFinallyControlFlow", "public class SFinallyControlFlow {\n"
+            + "    static int trail = 0;\n"
+            + "    static int one(int x) {\n"
+            + "        int r;\n"
+            + "        try {\n"
+            + "            if (x > 2) { throw new IllegalArgumentException(); }\n"
+            + "            r = x * 5;\n"
+            + "        } catch (IllegalArgumentException e) {\n"
+            + "            r = -x;\n"
+            + "        } finally {\n"
+            + "            for (int i = 0; i < x; i++) {\n"
+            + "                if (i == 2) { trail += 50; } else { trail += 1; }\n"
+            + "            }\n"
+            + "            if (x % 2 == 0) { trail *= 3; }\n"
+            + "        }\n"
+            + "        return r;\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        trail = 0;\n"
+            + "        int s = 0;\n"
+            + "        for (int x = 0; x < 5; x++) { s = s * 7 + one(x); }\n"
+            + "        return s * 1000 + trail;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SReturnInFinally", "@SuppressWarnings(\"finally\")\n"
+            + "public class SReturnInFinally {\n"
+            + "    static int x = 0;\n"
+            + "    static int sneaky(boolean blow) {\n"
+            + "        try {\n"
+            + "            if (blow) { throw new RuntimeException(); }\n"
+            + "            return x++;\n"
+            + "        } finally {\n"
+            + "            if (x > 5) { return 777; }\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        x = 0;\n"
+            + "        int s = sneaky(false) + sneaky(false);\n"
+            + "        x = 9;\n"
+            + "        s += sneaky(false) * 3 + sneaky(true) * 5;\n"
+            + "        return s * 10 + x;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SBreakFromTry", "public class SBreakFromTry {\n"
+            + "    static int cleans = 0;\n"
+            + "    public static int check() {\n"
+            + "        cleans = 0;\n"
+            + "        int acc = 0;\n"
+            + "        for (int i = 0; i < 8; i++) {\n"
+            + "            try {\n"
+            + "                if (i == 5) { break; }\n"
+            + "                if (i % 2 == 0) { continue; }\n"
+            + "                acc += i;\n"
+            + "            } finally {\n"
+            + "                cleans++;\n"
+            + "            }\n"
+            + "        }\n"
+            + "        return acc * 100 + cleans;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SMultiCatch", "public class SMultiCatch {\n"
+            + "    static int fire(int kind) throws Exception {\n"
+            + "        switch (kind) {\n"
+            + "            case 0: throw new IllegalStateException(\"a\");\n"
+            + "            case 1: throw new IllegalArgumentException(\"b\");\n"
+            + "            case 2: throw new java.io.IOException(\"c\");\n"
+            + "            default: return kind * 9;\n"
+            + "        }\n"
+            + "    }\n"
+            + "    static int one(int kind) {\n"
+            + "        try {\n"
+            + "            return fire(kind);\n"
+            + "        } catch (IllegalStateException | IllegalArgumentException e) {\n"
+            + "            return 40 + e.getMessage().length();\n"
+            + "        } catch (Exception e) {\n"
+            + "            throw new RuntimeException(\"wrap\", e);\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        int s = one(0) + one(1) * 3 + one(5) * 7;\n"
+            + "        try {\n"
+            + "            s += one(2);\n"
+            + "        } catch (RuntimeException e) {\n"
+            + "            s += 900 + e.getMessage().length();\n"
+            + "        }\n"
+            + "        return s;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SCatchInFinally", "public class SCatchInFinally {\n"
+            + "    static int notes = 0;\n"
+            + "    static void risky(boolean b) { if (b) throw new IllegalStateException(); }\n"
+            + "    static int one(boolean outer, boolean inner) {\n"
+            + "        try {\n"
+            + "            risky(outer);\n"
+            + "            return 5;\n"
+            + "        } catch (IllegalStateException e) {\n"
+            + "            notes += 1;\n"
+            + "            return 6;\n"
+            + "        } finally {\n"
+            + "            try {\n"
+            + "                risky(inner);\n"
+            + "                notes += 10;\n"
+            + "            } catch (IllegalStateException e) {\n"
+            + "                notes += 100;\n"
+            + "            }\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        notes = 0;\n"
+            + "        int s = one(false, false) + 3 * one(true, false) + 7 * one(false, true) + 11 * one(true, true);\n"
+            + "        return s * 10000 + notes;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SLongDoubleSlots", "public class SLongDoubleSlots {\n"
+            + "    public static int check() {\n"
+            + "        long a = 0x1234_5678_9ABCL;\n"
+            + "        int gap = 3;\n"
+            + "        double d = 2.5;\n"
+            + "        long b = a >>> gap;\n"
+            + "        double e = d * gap - 0.25;\n"
+            + "        long c = (a ^ b) % 1_000_003L;\n"
+            + "        int f = (int) (c + (long) (e * 100));\n"
+            + "        for (int i = 0; i < 4; i++) {\n"
+            + "            a = a * 31 + i;\n"
+            + "            d = d / 2 + i;\n"
+            + "            f = f * 3 + (int) (a % 97) + (int) d;\n"
+            + "        }\n"
+            + "        return f;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SArrayMaze", "public class SArrayMaze {\n"
+            + "    public static int check() {\n"
+            + "        int[][] grid = new int[][]{{1, 2, 3}, {4, 5}, {}, {6}};\n"
+            + "        int[] flat = new int[]{9, 8, 7, 6, 5};\n"
+            + "        int s = 0;\n"
+            + "        for (int[] row : grid) {\n"
+            + "            for (int v : row) { s = s * 2 + v; }\n"
+            + "            s += row.length;\n"
+            + "        }\n"
+            + "        int[][][] cube = new int[2][3][2];\n"
+            + "        cube[1][2][0] = 11;\n"
+            + "        cube[0][1][1] = 13;\n"
+            + "        for (int i = 0; i < 2; i++)\n"
+            + "            for (int j = 0; j < 3; j++)\n"
+            + "                for (int k = 0; k < 2; k++)\n"
+            + "                    s += cube[i][j][k] * (i + j + k);\n"
+            + "        return s * 31 + flat[s % 5];\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SStringMachine", "public class SStringMachine {\n"
+            + "    public static int check() {\n"
+            + "        StringBuilder sb = new StringBuilder();\n"
+            + "        String acc = \"\";\n"
+            + "        for (int i = 0; i < 5; i++) {\n"
+            + "            acc = acc + i + \"-\";\n"
+            + "            sb.append(i % 2 == 0 ? \"e\" : \"o\").append(i);\n"
+            + "        }\n"
+            + "        String s = sb + \"|\" + acc;\n"
+            + "        int h = 7;\n"
+            + "        for (int i = 0; i < s.length(); i++) {\n"
+            + "            char ch = s.charAt(i);\n"
+            + "            h = h * 31 + (ch == '-' ? 1 : ch);\n"
+            + "        }\n"
+            + "        return h;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("STernaryChain", "public class STernaryChain {\n"
+            + "    static int calls = 0;\n"
+            + "    static int c(int v) { calls++; return v; }\n"
+            + "    public static int check() {\n"
+            + "        calls = 0;\n"
+            + "        int s = 0;\n"
+            + "        for (int x = 0; x < 6; x++) {\n"
+            + "            int v = x < 2 ? c(x * 10) : x < 4 ? (x == 2 ? c(7) : c(8)) : c(x) > 4 ? 99 : -99;\n"
+            + "            s = s * 3 + v;\n"
+            + "            int w = (x % 2 == 0 ? s : v) + (x > 3 ? c(1) : 0);\n"
+            + "            s += w % 13;\n"
+            + "        }\n"
+            + "        return s * 100 + calls;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SRecursionTry", "public class SRecursionTry {\n"
+            + "    static int depthEvents = 0;\n"
+            + "    static int dive(int n) {\n"
+            + "        try {\n"
+            + "            if (n <= 0) { return 1; }\n"
+            + "            if (n == 3) { throw new IllegalStateException(); }\n"
+            + "            return n * dive(n - 1);\n"
+            + "        } catch (IllegalStateException e) {\n"
+            + "            return 1000 + dive(n - 2);\n"
+            + "        } finally {\n"
+            + "            depthEvents++;\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        depthEvents = 0;\n"
+            + "        int s = dive(6);\n"
+            + "        return s * 100 + depthEvents;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SSwitchInSwitch", "public class SSwitchInSwitch {\n"
+            + "    public static int check() {\n"
+            + "        int acc = 0;\n"
+            + "        for (int a = 0; a < 4; a++) {\n"
+            + "            for (int b = 0; b < 4; b++) {\n"
+            + "                switch (a) {\n"
+            + "                    case 0:\n"
+            + "                        switch (b) {\n"
+            + "                            case 1: acc += 1; break;\n"
+            + "                            case 2: acc += 2; break;\n"
+            + "                            default: acc += 3;\n"
+            + "                        }\n"
+            + "                        break;\n"
+            + "                    case 1:\n"
+            + "                        if (b == 2) { acc *= 2; break; }\n"
+            + "                        switch (b) { case 0: acc += 5; default: acc += 7; }\n"
+            + "                        break;\n"
+            + "                    default:\n"
+            + "                        acc += a * b;\n"
+            + "                }\n"
+            + "            }\n"
+            + "        }\n"
+            + "        return acc;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SStateMachine", "public class SStateMachine {\n"
+            + "    public static int check() {\n"
+            + "        int state = 0;\n"
+            + "        int acc = 0;\n"
+            + "        int fuel = 40;\n"
+            + "        while (true) {\n"
+            + "            if (fuel-- <= 0) { break; }\n"
+            + "            switch (state) {\n"
+            + "                case 0:\n"
+            + "                    acc += 1;\n"
+            + "                    state = acc % 3 == 0 ? 2 : 1;\n"
+            + "                    continue;\n"
+            + "                case 1:\n"
+            + "                    acc *= 2;\n"
+            + "                    if (acc > 50) { state = 3; continue; }\n"
+            + "                    state = 0;\n"
+            + "                    break;\n"
+            + "                case 2:\n"
+            + "                    acc -= 3;\n"
+            + "                    state = 1;\n"
+            + "                    break;\n"
+            + "                default:\n"
+            + "                    return acc * 10 + fuel;\n"
+            + "            }\n"
+            + "            acc++;\n"
+            + "        }\n"
+            + "        return -acc;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("STryReturnMutation", "public class STryReturnMutation {\n"
+            + "    static int x;\n"
+            + "    static int grab() {\n"
+            + "        try {\n"
+            + "            return x++;\n"
+            + "        } finally {\n"
+            + "            x += 100;\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        x = 5;\n"
+            + "        int a = grab();\n"
+            + "        int b = grab();\n"
+            + "        return a * 1000 + b * 10 + (x % 7);\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SThrowAsFlow", "public class SThrowAsFlow {\n"
+            + "    static int find(int[] data, int needle) {\n"
+            + "        try {\n"
+            + "            for (int i = 0; ; i++) {\n"
+            + "                if (data[i] == needle) { return i; }\n"
+            + "            }\n"
+            + "        } catch (ArrayIndexOutOfBoundsException e) {\n"
+            + "            return -1;\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        int[] d = {4, 8, 15, 16, 23, 42};\n"
+            + "        int s = 0;\n"
+            + "        for (int n : new int[]{15, 42, 99, 4}) { s = s * 10 + (find(d, n) + 2); }\n"
+            + "        return s;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SGuardedCloseShared", "import java.io.IOException;\n"
+            + "import java.io.Reader;\n"
+            + "import java.io.StringReader;\n"
+            + "public class SGuardedCloseShared {\n"
+            + "    public static int closes = 0;\n"
+            + "    public static int notes = 0;\n"
+            + "    static Reader open() { return new StringReader(\"payload\"); }\n"
+            + "    static String work(Reader in, boolean fail) {\n"
+            + "        if (fail) { throw new IllegalStateException(); }\n"
+            + "        return \"ok\";\n"
+            + "    }\n"
+            + "    static void note() { notes++; }\n"
+            + "    static String use(boolean skip, boolean fail) {\n"
+            + "        String result = null;\n"
+            + "        Reader in = null;\n"
+            + "        try {\n"
+            + "            if (skip) { return null; }\n"
+            + "            in = open();\n"
+            + "            result = work(in, fail);\n"
+            + "        } catch (IllegalStateException e) {\n"
+            + "            note();\n"
+            + "        } finally {\n"
+            + "            if (in != null) {\n"
+            + "                try { in.close(); closes++; } catch (IOException e2) { note(); }\n"
+            + "            }\n"
+            + "        }\n"
+            + "        return result;\n"
+            + "    }\n"
+            + "    public static int check() {\n"
+            + "        closes = 0; notes = 0;\n"
+            + "        int s = 0;\n"
+            + "        s += use(true, false) == null ? 1 : 2;\n"
+            + "        s += \"ok\".equals(use(false, false)) ? 10 : 20;\n"
+            + "        s += use(false, true) == null ? 100 : 200;\n"
+            + "        return s * 1000 + closes * 10 + notes;\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SShiftMask", "public class SShiftMask {\n"
+            + "    public static int check() {\n"
+            + "        int acc = 0;\n"
+            + "        for (int i = 1; i < 33; i += 7) {\n"
+            + "            acc ^= (0xDEAD_BEEF >>> (i & 31)) + (0xCAFE << (i % 13));\n"
+            + "            acc = Integer.rotateLeft(acc, 3) | (i & 1);\n"
+            + "            acc += Integer.bitCount(acc) * Integer.numberOfTrailingZeros(acc | 256);\n"
+            + "        }\n"
+            + "        return acc;\n"
+            + "    }\n"
+            + "}\n")
+    );
+
+    @TestFactory
+    List<DynamicTest> stressCorpus() {
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        assumeTrue(compiler != null, "no JDK compiler available");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (Fixture f : FIXTURES) {
+            tests.add(DynamicTest.dynamicTest(f.name, () -> runFixture(compiler, f)));
+        }
+        return tests;
+    }
+
+    private void runFixture(JavaCompiler compiler, Fixture f) throws Exception {
+        Path dir = Files.createTempDirectory("stress-" + f.name);
+        Path src = dir.resolve(f.name + ".java");
+        Files.writeString(src, f.source);
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
+                f.name + " fixture compiled");
+
+        Object original;
+        try (URLClassLoader origLoader = new URLClassLoader(new java.net.URL[]{dir.toUri().toURL()}, null)) {
+            original = origLoader.loadClass(f.name).getMethod("check").invoke(null);
+        }
+
+        ClassPool pool = TestUtils.emptyPool();
+        ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve(f.name + ".class")));
+        String d1 = ClassDecompiler.decompile(cf);
+        assertFalse(d1.contains("Failed to decompile"),
+                f.name + " must decompile every method:\n" + d1);
+
+        boolean expectBroken = KNOWN_BROKEN.contains(f.name);
+        Object roundTripped;
+        try {
+            ClassFile recovered = Recompile.recompiledClone(cf, pool);
+            assertNotNull(recovered, f.name + " must be recompilable");
+            roundTripped = TestUtils.loadAndVerify(recovered).getMethod("check").invoke(null);
+        } catch (Throwable t) {
+            if (expectBroken) {
+                return;
+            }
+            throw new AssertionError(f.name + " round trip failed to load/run: " + t + "\n" + d1, t);
+        }
+        if (expectBroken) {
+            assertFalse(original.equals(roundTripped),
+                    f.name + " is documented KNOWN_BROKEN but now round-trips equal (" + original
+                    + ") - promote it to a passing fixture and update the memory notes");
+            return;
+        }
+        assertEquals(original, roundTripped,
+                f.name + " original and round-tripped check() must agree:\n" + d1);
+    }
+}
