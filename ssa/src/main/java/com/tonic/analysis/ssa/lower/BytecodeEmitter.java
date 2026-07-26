@@ -1849,7 +1849,16 @@ public class BytecodeEmitter {
     private void emitNewArray(NewArrayInstruction instr) throws IOException {
         IRType elemType = instr.getElementType();
 
-        if (elemType instanceof PrimitiveType) {
+        // A multi-count allocation is always MULTIANEWARRAY, even when the base element is primitive
+        // (`new int[2][3]` builds int[][] from two counts). This must precede the primitive check, which
+        // otherwise emits a single-dimension NEWARRAY and drops the extra counts.
+        if (instr.isMultiDimensional()) {
+            String desc = instr.getResult().getType().getDescriptor();
+            int classRef = constPool.findOrAddClass(desc).getIndex(constPool);
+            emit(Opcode.MULTIANEWARRAY.getCode());
+            emitShort((short) classRef);
+            emit((byte) instr.getDimensions().size());
+        } else if (elemType instanceof PrimitiveType) {
             PrimitiveType prim = (PrimitiveType) elemType;
             emit(Opcode.NEWARRAY.getCode());
             int atype;
@@ -1882,12 +1891,6 @@ public class BytecodeEmitter {
                     throw new IllegalStateException("Unknown primitive type: " + prim);
             }
             emit((byte) atype);
-        } else if (instr.isMultiDimensional()) {
-            String desc = instr.getResult().getType().getDescriptor();
-            int classRef = constPool.findOrAddClass(desc).getIndex(constPool);
-            emit(Opcode.MULTIANEWARRAY.getCode());
-            emitShort((short) classRef);
-            emit((byte) instr.getDimensions().size());
         } else {
             String className = elemType.getDescriptor();
             if (className.startsWith("L") && className.endsWith(";")) {
