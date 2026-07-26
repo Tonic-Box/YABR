@@ -442,9 +442,11 @@ public final class ReachingConditionStructurer {
         if (tryNodes.containsKey(b)) {
             if (loops != null && loops.isLoopHeader(b)) {
                 if (!loopWrapsTryNode(b, tryNodes.get(b))) {
-                    // The try wraps the loop (the back edge lives inside the consumed range): neither
-                    // emission order is faithful here - loop-first would run the finally every iteration.
-                    throw new BailToLegacy();
+                    // The try wraps the loop (the back edge lives inside the consumed range): the node is
+                    // emitted try-first and its delegate recovery owns the whole iteration, so no loop
+                    // context is pushed here - nothing outside the node may target the loop.
+                    validateTryNode(b);
+                    return;
                 }
                 IRBlock breakTarget = findBreakTarget(b);
                 context.pushLoop(b, b, breakTarget, inductionLatch(b));
