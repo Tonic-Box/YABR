@@ -1000,6 +1000,13 @@ public class BytecodeEmitter {
                 if (receiverPreload.containsKey(windowStartInstr)) {
                     continue;
                 }
+                // A handler-entry CATCH captures the exception the JVM left on the stack and must be the
+                // block's first emitted operation. Preloading `left` before it would push a value under the
+                // exception, and the CATCH's astore would then capture that value instead. Leave `left` to
+                // load at its use.
+                if (isCatchCapture(windowStartInstr)) {
+                    continue;
+                }
                 receiverPreload.put(windowStartInstr, left);
                 skipReceiver.add(op);
                 stackResidentValues.add(right);

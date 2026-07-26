@@ -2580,6 +2580,7 @@ public final class ReachingConditionStructurer {
         private final Set<Bdd> hoisted = new HashSet<>();
         private final Map<Bdd, Long> inlineCostMemo = new HashMap<>();
         private final Map<Bdd, String> tempName = new HashMap<>();
+        private final Map<IRBlock, String> iteHoist = new HashMap<>();
         private final List<Statement> decls = new ArrayList<>();
 
         BddEmitter(Bdd root) {
@@ -2650,6 +2651,24 @@ public final class ReachingConditionStructurer {
             }
             if (n.low == one) {
                 return disj(guardCondition(block, true), emitNode(n.high));
+            }
+            // The full if-then-else renders this atom's condition TWICE (as `cond` and `!cond`). When
+            // that condition has a side effect (a method call) and is not already hoisted into a temp,
+            // evaluate it once into a boolean temp here so the two references do not double-run it - the
+            // guard's caching pass does not fire for every rendered arm, so the emitter must be
+            // self-sufficient.
+            if (bridge.conditionInlinesSideEffect(block) && !cachedConditions.containsKey(block)
+                    && !iteHoist.containsKey(block)) {
+                String name = "cse" + (guardTempCounter++);
+                decls.add(new VarDeclStmt(PrimitiveSourceType.BOOLEAN, name, guardCondition(block, false)));
+                iteHoist.put(block, name);
+            }
+            String hoistedName = iteHoist.get(block);
+            if (hoistedName != null) {
+                Expression pos = new VarRefExpr(hoistedName, PrimitiveSourceType.BOOLEAN);
+                Expression neg = new UnaryExpr(UnaryOperator.NOT,
+                        new VarRefExpr(hoistedName, PrimitiveSourceType.BOOLEAN), PrimitiveSourceType.BOOLEAN);
+                return disj(conj(pos, emitNode(n.high)), conj(neg, emitNode(n.low)));
             }
             return disj(conj(guardCondition(block, false), emitNode(n.high)),
                     conj(guardCondition(block, true), emitNode(n.low)));

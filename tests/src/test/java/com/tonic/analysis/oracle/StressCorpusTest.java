@@ -55,9 +55,9 @@ class StressCorpusTest {
             "SSentinelTwr",
             // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
             "SRecursionTry", "SSharedReturnMaze", "STwrInLoop",
-            "SSwitchZoo", "SConditionMonster",
+            "SSwitchZoo",
             // recompiled bytecode fails verification
-            "SFinallyControlFlow", "SMultiCatch", "SCatchInFinally",
+            "SFinallyControlFlow", "SCatchInFinally",
             // recompiler lowering crash
             "SBreakFromTry", "STryReturnMutation",
             // monitor leak on the round-tripped synchronized shape
