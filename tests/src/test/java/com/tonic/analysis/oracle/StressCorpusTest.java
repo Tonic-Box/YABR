@@ -54,10 +54,10 @@ class StressCorpusTest {
             // sentinel-twr unequal-path fall-through / crc-guard fusion (catch-join-sequence-split)
             "SSentinelTwr",
             // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
-            "SStringMachine", "SRecursionTry", "SSharedReturnMaze", "STwrInLoop",
+            "SRecursionTry", "SSharedReturnMaze", "STwrInLoop",
             "SSwitchZoo", "SConditionMonster",
             // recompiled bytecode fails verification
-            "SFinallyControlFlow", "SMultiCatch", "SCatchInFinally", "SLongDoubleSlots",
+            "SFinallyControlFlow", "SMultiCatch", "SCatchInFinally",
             // recompiler lowering crash
             "SBreakFromTry", "STryReturnMutation",
             // decompiler crash
@@ -435,6 +435,19 @@ class StressCorpusTest {
             + "                for (int k = 0; k < 2; k++)\n"
             + "                    s += cube[i][j][k] * (i + j + k);\n"
             + "        return s * 31 + flat[s % 5];\n"
+            + "    }\n"
+            + "}\n"),
+        new Fixture("SArray2D", "public class SArray2D {\n"
+            + "    public static int check() {\n"
+            + "        int[][] grid = {{1, 2, 3}, {4, 5}, {}, {6}};\n"
+            + "        int s = 0;\n"
+            + "        for (int[] row : grid) {\n"
+            + "            s += row.length;\n"
+            + "            for (int v : row) { s = s * 2 + v; }\n"
+            + "        }\n"
+            + "        int[] flat = new int[]{9, 8, 7};\n"
+            + "        for (int i = 0; i < flat.length; i++) { s += flat[i] * i; }\n"
+            + "        return s;\n"
             + "    }\n"
             + "}\n"),
         new Fixture("SStringMachine", "public class SStringMachine {\n"

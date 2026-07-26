@@ -166,9 +166,30 @@ public class SwitchExpressionReconstructor implements ASTTransform {
             if (result == null) {
                 return null;
             }
+            // An arm value that READS the assigned variable is an accumulation carried across
+            // fall-through (`r += k`), not a self-contained value - a switch EXPRESSION binds each arm
+            // to a fresh value with no prior binding, so folding one silently drops the accumulation
+            // (and the fall-through it depends on). A real switch expression's arm never reads the
+            // target, so this rejects exactly the mis-fold.
+            if (referencesVar(result, varName)) {
+                return null;
+            }
             arms.add(new SwitchExpr.Arm(armLabels(c), c.isDefault(), result));
         }
         return new SwitchExpr(sw.getSelector(), arms, type);
+    }
+
+    /** Whether {@code expr} contains any reference to the variable named {@code varName}. */
+    private static boolean referencesVar(Expression expr, String varName) {
+        if (expr instanceof VarRefExpr) {
+            return varName.equals(((VarRefExpr) expr).getName());
+        }
+        for (ASTNode child : expr.getChildren()) {
+            if (child instanceof Expression && referencesVar((Expression) child, varName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** If {@code stmts} is exactly {@code v = expr;} (with an optional trailing break), returns expr. */

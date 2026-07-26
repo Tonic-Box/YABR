@@ -387,7 +387,14 @@ public class ExpressionLowerer {
             }
         }
         left = widenIfNeeded(left, resultType);
-        right = widenIfNeeded(right, resultType);
+        // A shift's count operand is ALWAYS int, never widened to the (possibly long) result type: the
+        // JVM shift instructions (ishl/lshl/...) take a long-or-int value and an INT count. Widening the
+        // count to long stacks a long_2nd where the verifier expects an integer.
+        if (op == BinaryOperator.SHL || op == BinaryOperator.SHR || op == BinaryOperator.USHR) {
+            right = widenIfNeeded(right, PrimitiveType.INT);
+        } else {
+            right = widenIfNeeded(right, resultType);
+        }
 
         SSAValue result = ctx.newValue(resultType);
         BinaryOpInstruction instr = new BinaryOpInstruction(result, irOp, left, right);
@@ -1523,13 +1530,27 @@ public class ExpressionLowerer {
         SourceType declaredType = arr.getType();
         IRType elementType;
 
-        SourceType arrayType = resolveArrayType(arr.getArray());
-        if (arrayType instanceof ArraySourceType) {
-            elementType = ((ArraySourceType) arrayType).getElementType().toIRType();
-        } else if (declaredType != null && declaredType != ReferenceSourceType.OBJECT) {
-            elementType = declaredType.toIRType();
+        // The lowered array value already carries its exact IR type, propagated through nested accesses
+        // (`cube[i][j]` - which resolveArrayType, keyed on VarRef/FieldAccess, cannot see). An index
+        // peels ONE array level: `[[I` -> `[I`, `[I` -> the base element.
+        if (array.getType() instanceof ArrayType) {
+            ArrayType at = (ArrayType) array.getType();
+            elementType = at.getDimensions() > 1
+                    ? new ArrayType(at.getElementType(), at.getDimensions() - 1)
+                    : at.getElementType();
         } else {
-            elementType = new ReferenceType("java/lang/Object");
+            SourceType arrayType = resolveArrayType(arr.getArray());
+            if (arrayType instanceof ArraySourceType) {
+                ArraySourceType ast = (ArraySourceType) arrayType;
+                SourceType immediate = ast.getDimensions() > 1
+                        ? new ArraySourceType(ast.getComponentType(), ast.getDimensions() - 1)
+                        : ast.getComponentType();
+                elementType = immediate.toIRType();
+            } else if (declaredType != null && declaredType != ReferenceSourceType.OBJECT) {
+                elementType = declaredType.toIRType();
+            } else {
+                elementType = new ReferenceType("java/lang/Object");
+            }
         }
 
         SSAValue result = ctx.newValue(elementType);
@@ -1678,7 +1699,12 @@ public class ExpressionLowerer {
             dims.add(lower(dim));
         }
 
-        IRType elementType = getElementType(newArr.getType());
+        // The instruction's element type is the result peeled by the number of COUNT dimensions, not
+        // the flattened base: `new int[2][]` supplies one count and builds an array whose elements are
+        // int[] (ANEWARRAY [I -> int[][]). Flattening to the base int would emit NEWARRAY int -> int[].
+        // For a fully-counted allocation (`new int[2][3]`) the peel reaches the base and the emitter
+        // picks MULTIANEWARRAY from the >1 count.
+        IRType elementType = peelArrayType(newArr.getType(), dims.size());
         IRType arrayType = newArr.getType().toIRType();
         SSAValue result = ctx.newValue(arrayType);
 
@@ -1718,6 +1744,24 @@ public class ExpressionLowerer {
             return arr.getElementType().toIRType();
         }
         throw new LoweringException("Expected array type: " + arrayType);
+    }
+
+    /**
+     * Removes {@code count} array levels from {@code arrayType}, returning the type of a value reached
+     * by {@code count} index operations (or allocated by an allocation supplying {@code count} lengths).
+     * `peel(int[][][], 1)` is {@code int[][]}; `peel(int[][], 2)` is the base {@code int}.
+     */
+    private IRType peelArrayType(SourceType arrayType, int count) {
+        if (!(arrayType instanceof ArraySourceType)) {
+            throw new LoweringException("Expected array type: " + arrayType);
+        }
+        int total = ((ArraySourceType) arrayType).getTotalDimensions();
+        SourceType base = ((ArraySourceType) arrayType).getElementType();
+        int remaining = total - count;
+        if (remaining <= 0) {
+            return base.toIRType();
+        }
+        return new ArraySourceType(base, remaining).toIRType();
     }
 
     private Value lowerCast(CastExpr cast) {

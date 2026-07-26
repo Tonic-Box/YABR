@@ -1835,15 +1835,24 @@ public class Parser {
 
     private Expression parseNewArray(SourceType elementType, SourceLocation loc) {
         List<Expression> dimensions = new ArrayList<>();
+        int emptyDims = 0;
 
         while (match(TokenType.LBRACKET)) {
             if (check(TokenType.RBRACKET)) {
                 advance();
-                dimensions.add(null);
+                emptyDims++;
             } else {
                 dimensions.add(parseExpression());
                 consume(TokenType.RBRACKET, "Expected ']'");
             }
+        }
+
+        // A trailing unspecified dimension (`new int[4][]`) is not an allocation count - it deepens the
+        // ELEMENT type by one array level. Folding it here matches the recovery's representation
+        // (element type carries the empty levels, dimensions holds only the sized counts) so lowering,
+        // emission, and every visitor see one consistent shape with no null dimension entries.
+        for (int i = 0; i < emptyDims; i++) {
+            elementType = new ArraySourceType(elementType);
         }
 
         ArrayInitExpr initializer = null;

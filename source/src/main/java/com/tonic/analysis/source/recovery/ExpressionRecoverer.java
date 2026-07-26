@@ -151,7 +151,12 @@ public class ExpressionRecoverer {
                 LoadLocalInstruction load = (LoadLocalInstruction) def;
                 SSAValue loadResult = load.getResult();
 
-                if (loadResult != null && context.isMaterialized(loadResult)) {
+                if (loadResult != null) {
+                    // A load is always a READ of the variable the reaching-definition partition named
+                    // it after - scoped correctly across slot reuse. The slot-name map is only a
+                    // fallback for unnamed loads: it holds the slot's LATEST recovery-time name, which
+                    // a stack phi's synthetic can poison (a ternary's join adopting the slot),
+                    // splitting the store/load web and silently orphaning the variable.
                     String name = context.getVariableName(loadResult);
                     if (name != null) {
                         SourceType type = typeRecoverer.recoverType(loadResult);

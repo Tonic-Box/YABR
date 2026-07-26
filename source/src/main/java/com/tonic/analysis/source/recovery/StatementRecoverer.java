@@ -4760,7 +4760,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // evaluate base() twice). Instead bind the value to this phi's variable, materialize it, and pin it, so
         // its single definition emits `result = base(s)` in place and the condition and phi both read `result`.
         // Without this the value is inlined into the condition, its store is lost, and the variable is undeclared.
-        if (!entryApplied) {
+        // Binding only makes sense for a SLOT-BACKED phi, whose name IS the source variable. A stack
+        // phi (a ternary's value join) carries a synthetic name: stealing its dominating operand into
+        // that name severs the operand's real store/load web - the operand's own variable is left
+        // assigned-but-unread while every use reads the synthetic, which only ever holds this default.
+        if (!entryApplied && (partitionName(phi) != null || getLocalIndexFromPhi(phi) >= 0)) {
             Value dominating = findDominatingOperand(phi);
             if (dominating instanceof SSAValue && !isSafeEntryInit(dominating)
                     && entryDominatesPhi(dominating, phi)
