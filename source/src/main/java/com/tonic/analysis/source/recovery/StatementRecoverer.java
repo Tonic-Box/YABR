@@ -1635,7 +1635,60 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
 
         List<Statement> finallyStmts = new ArrayList<>(stmts.subList(0, stmts.size() - 1));
+        finallyStmts.replaceAll(this::unwrapSuppressScaffold);
         return new BlockStmt(finallyStmts);
+    }
+
+    /**
+     * Folds javac's try-with-resources suppress scaffolding out of a finally body. The exception-path
+     * clause guards each close with {@code try { r.close(); } catch (Throwable t) { primary.addSuppressed(t); }},
+     * but {@code primary} is the clause's caught exception, which a source-level {@code finally} cannot
+     * name; the recovered finally keeps the plain close, matching the single-resource convention.
+     */
+    private Statement unwrapSuppressScaffold(Statement stmt) {
+        if (stmt instanceof IfStmt) {
+            IfStmt ifs = (IfStmt) stmt;
+            Statement then = unwrapSuppressScaffold(ifs.getThenBranch());
+            if (then != ifs.getThenBranch() && ifs.getElseBranch() == null) {
+                return new IfStmt(ifs.getCondition(), then, null, ifs.getLocation());
+            }
+            return stmt;
+        }
+        if (stmt instanceof BlockStmt) {
+            List<Statement> inner = ((BlockStmt) stmt).getStatements();
+            List<Statement> out = new ArrayList<>(inner.size());
+            boolean changed = false;
+            for (Statement s : inner) {
+                Statement u = unwrapSuppressScaffold(s);
+                changed |= u != s;
+                out.add(u);
+            }
+            return changed ? new BlockStmt(out) : stmt;
+        }
+        if (!(stmt instanceof TryCatchStmt)) {
+            return stmt;
+        }
+        TryCatchStmt tcs = (TryCatchStmt) stmt;
+        if (tcs.hasFinally() || tcs.hasResources() || tcs.getCatches().size() != 1) {
+            return stmt;
+        }
+        CatchClause cc = tcs.getCatches().get(0);
+        Statement cbody = cc.body();
+        List<Statement> cstmts = cbody instanceof BlockStmt
+                ? ((BlockStmt) cbody).getStatements() : Collections.singletonList(cbody);
+        if (cstmts.size() != 1 || !(cstmts.get(0) instanceof ExprStmt)) {
+            return stmt;
+        }
+        Expression e = ((ExprStmt) cstmts.get(0)).getExpression();
+        if (!(e instanceof MethodCallExpr) || !"addSuppressed".equals(((MethodCallExpr) e).getMethodName())) {
+            return stmt;
+        }
+        MethodCallExpr call = (MethodCallExpr) e;
+        if (call.getArguments().size() != 1 || !(call.getArguments().get(0) instanceof VarRefExpr)
+                || !cc.variableName().equals(((VarRefExpr) call.getArguments().get(0)).getName())) {
+            return stmt;
+        }
+        return tcs.getTryBlock();
     }
 
     private List<Statement> filterOrphanFinallyThrows(List<Statement> statements, Set<String> finallyExceptionVars) {
@@ -3031,6 +3084,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         for (ExceptionHandler r : rethrowers) {
             if (r.getHandlerBlock() != root) {
+                trace("finally-dedup bail#1 root=" + root.getBytecodeOffset());
                 return false;
             }
         }
@@ -3047,6 +3101,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             IRInstruction term = b.getTerminator();
             if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
                 if (rethrowBlk != null && rethrowBlk != b) {
+                    trace("finally-dedup bail#2 root=" + root.getBytecodeOffset());
                     return false;
                 }
                 rethrowBlk = b;
@@ -3056,6 +3111,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
             if (b != root && !dt.dominates(root, b)) {
+                trace("finally-dedup bail#3 root=" + root.getBytecodeOffset());
                 return false;
             }
             for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
@@ -3065,6 +3121,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (rethrowBlk == null) {
+            trace("finally-dedup bail#4 root=" + root.getBytecodeOffset());
             return false;
         }
         // Absorb handlers wholly internal to the template: a finally clause commonly guards its own
@@ -3128,6 +3185,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
                         && !(ins instanceof StoreLocalInstruction && b == root)
                         && !isMatchableFinallyInstr(ins)) {
+                    trace("finally-dedup bail#5 root=" + root.getBytecodeOffset());
                     return false;
                 }
             }
@@ -3153,6 +3211,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             int lo = r.getTryStart() == null ? -1 : r.getTryStart().getBytecodeOffset();
             int hi = r.getTryEnd() == null ? -1 : r.getTryEnd().getBytecodeOffset();
             if (lo < 0 || hi <= lo) {
+                trace("finally-dedup bail#6 root=" + root.getBytecodeOffset());
                 return false;
             }
             for (IRBlock b : method.getBlocks()) {
@@ -3222,6 +3281,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
             if (!coveredReturns.containsAll(returnBlocks)) {
+                trace("finally-dedup bail#7 root=" + root.getBytecodeOffset());
                 return false;
             }
         }
@@ -3240,12 +3300,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 Map<IRBlock, IRBlock> map =
                         matchFinallySubgraph(root, cand, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
                 if (map == null) {
+                    trace("finally-dedup bail#8 root=" + root.getBytecodeOffset());
                     return false;
                 }
                 matches.add(map);
             }
         }
         if (matches.isEmpty()) {
+            trace("finally-dedup bail#9 root=" + root.getBytecodeOffset());
             return false;
         }
         // Excision must not gut a block that begins a live protected range of its own: its handler's
@@ -3254,7 +3316,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         for (Map<IRBlock, IRBlock> map : matches) {
             for (IRBlock copy : map.values()) {
                 ExceptionHandler live = findUnprocessedHandlerStartingAt(copy);
-                if (live != null && !copyNestedHandlers.contains(live)) {
+                // A range boundary of a handler in the SAME dedup offering is not a live nested try:
+                // that family's own group excises its copies, and the whole construct is consumed
+                // together (an inner resource's copy legitimately starts the outer family's next
+                // protected range).
+                if (live != null && !copyNestedHandlers.contains(live)
+                        && !currentDedupOffering.contains(live)) {
+                    trace("finally-dedup bail#10 root=" + root.getBytecodeOffset());
                     return false;
                 }
             }
@@ -3794,6 +3862,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private final Set<ExceptionHandler> finallyDeduped = new HashSet<>();
+    /** The rethrower families offered to the current (possibly partitioned) de-duplication together. */
+    private final Set<ExceptionHandler> currentDedupOffering = new HashSet<>();
     /** Each excised finally copy's root mapped to its continuation, so a later (outer) group's exit hunt
      * resolves through the emptied - possibly branchy - copy to where its own copy begins. */
     private final Map<IRBlock, IRBlock> excisedCopyExits = new HashMap<>();
@@ -3846,6 +3916,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 for (ExceptionHandler r : rethrowers) {
                     byRoot.computeIfAbsent(r.getHandlerBlock(), k -> new ArrayList<>()).add(r);
                 }
+                currentDedupOffering.clear();
+                currentDedupOffering.addAll(rethrowers);
                 // Nested finallys chain their inlined copies at shared exits (the inner resource's close
                 // runs before the outer's). De-duplicate INNER groups first - smallest protected span -
                 // so an outer group's exit hunt can resolve through the already-excised inner copies.
@@ -3861,6 +3933,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }));
                 for (List<ExceptionHandler> group : groups) {
                     boolean ok = dedupBranchySubgraphFinally(group);
+                    trace("finally-dedup group root=" + group.get(0).getHandlerBlock().getBytecodeOffset()
+                            + " ok=" + ok);
                     if (!ok) {
                         return false;
                     }
@@ -6082,8 +6156,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (after == block) {
+            trace("finally-node decline block=" + block.getBytecodeOffset() + " self-join");
             return null;
         }
+        trace("finally-node OK block=" + block.getBytecodeOffset()
+                + " after=" + (after == null ? "none" : after.getBytecodeOffset()));
         return new TryNodeDescriptor(h, consumed, after);
     }
 
@@ -6218,12 +6295,67 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (rethrower == null) {
+            trace("finally-node decline block=" + block.getBytecodeOffset() + " no-rethrower");
             return null;
         }
         List<ExceptionHandler> family = new ArrayList<>();
         for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
             if (eh.getHandlerBlock() == rethrower.getHandlerBlock()) {
                 family.add(eh);
+            }
+        }
+        // A nested resource's fused scaffolding - javac's modern try-with-resources lays an INNER
+        // rethrowing family (suppress catch fused with its close clause) inside the outer window, at
+        // its own start offset. Offer those families to the de-duplication together (the partitioned
+        // dedup orders inner-first and resolves chained copies) and consume their clause subtrees, or
+        // the continuation scan reads the inner clause and the surviving inner copies as extra joins.
+        Set<IRBlock> nestedRethrowerBlocks = new HashSet<>();
+        // The widening is for the ACYCLIC fused try-with-resources shape only. A construct wrapping a
+        // loop (the try-around-infinite-retry family) has its own recovery: consuming its inner
+        // scaffolding here excises the loop's exit logic and the recompiled loop never terminates.
+        boolean windowHasLoop = false;
+        if (context.getLoopAnalysis() != null) {
+            for (IRBlock cb : consumed) {
+                if (context.getLoopAnalysis().isLoopHeader(cb)) {
+                    windowHasLoop = true;
+                    break;
+                }
+            }
+        }
+        for (ExceptionHandler eh : windowHasLoop ? java.util.Collections.<ExceptionHandler>emptyList()
+                : irMethod.getExceptionHandlers()) {
+            if (eh.getHandlerBlock() == null || eh.getHandlerBlock() == rethrower.getHandlerBlock()
+                    || eh.getTryStart() == null || !consumed.contains(eh.getTryStart())
+                    || !handlerRethrows(eh) || handlerThrowsFreshException(eh)
+                    || isLocalSpillRethrower(eh)) {
+                continue;
+            }
+            // A clause's own nested close-guard also reaches the rethrow, but it is the clause's
+            // scaffolding, not a resource family of its own: its handler sits inside another family
+            // handler's dominated subtree.
+            boolean insideClause = dt.dominates(rethrower.getHandlerBlock(), eh.getHandlerBlock());
+            if (!insideClause) {
+                for (ExceptionHandler fam : irMethod.getExceptionHandlers()) {
+                    if (fam.getHandlerBlock() != null && fam.getHandlerBlock() != eh.getHandlerBlock()
+                            && fam != eh && handlerRethrows(fam) && !isLocalSpillRethrower(fam)
+                            && dt.dominates(fam.getHandlerBlock(), eh.getHandlerBlock())) {
+                        insideClause = true;
+                        break;
+                    }
+                }
+            }
+            if (insideClause) {
+                continue;
+            }
+            family.add(eh);
+            nestedRethrowerBlocks.add(eh.getHandlerBlock());
+        }
+        for (IRBlock nrb : nestedRethrowerBlocks) {
+            consumed.add(nrb);
+            for (IRBlock b : irMethod.getBlocks()) {
+                if (dt.dominates(nrb, b)) {
+                    consumed.add(b);
+                }
             }
         }
         // Excising the straight-line copies up front gives the cleanest body. A finally whose copies
@@ -6285,6 +6417,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         allExitsTerminal = true;
                         break;
                     }
+                    trace("finally-node decline block=" + block.getBytecodeOffset() + " second-join="
+                            + succ.getBytecodeOffset() + " first=" + after.getBytecodeOffset());
                     return null;
                 }
                 after = succ;
@@ -6296,6 +6430,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (after == block) {
             return null;
         }
+        trace("finally-node OK block=" + block.getBytecodeOffset()
+                + " after=" + (after == null ? "terminal" : after.getBytecodeOffset())
+                + " consumed=" + consumed.size() + " hasLoop=" + windowHasLoop);
         return new TryNodeDescriptor(h, consumed, after);
     }
 
@@ -6334,9 +6471,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      */
     private boolean isTerminalReturnChain(IRBlock b) {
         int hops = 0;
-        while (b != null && hops++ < 4) {
+        while (b != null && hops++ < 8) {
             if (b.getTerminator() instanceof ReturnInstruction) {
                 return true;
+            }
+            IRBlock excised = excisedCopyExits.get(b);
+            if (excised != null) {
+                b = excised;
+                continue;
             }
             IRBlock next = null;
             for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
@@ -6412,8 +6554,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return best;
     }
 
+    /** Whether {@code -Dyabr.trace} route/decode diagnostics are enabled (dormant otherwise). */
+    private static final boolean TRACE = System.getProperty("yabr.trace") != null;
+
+    /** Emits a route/decode diagnostic when {@code -Dyabr.trace} is set. */
+    private static void trace(String msg) {
+        if (TRACE) {
+            System.err.println("[yabr] " + msg);
+        }
+    }
+
     /** The schema-based structural walk: the legacy recovery the RC engine falls back to for a declined region. */
     private List<Statement> legacyBlockWalk(IRBlock startBlock, Set<IRBlock> stopBlocks) {
+        trace("legacy-walk method=" + context.getIrMethod().getName()
+                + " entry=" + startBlock.getBytecodeOffset());
         List<Statement> result = new ArrayList<>();
         Set<IRBlock> visited = new HashSet<>();
         IRBlock current = startBlock;
