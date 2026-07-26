@@ -6178,7 +6178,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (h.getHandlerBlock() != null) {
             processedHandlerBlocks.add(h.getHandlerBlock());
         }
-        return recoverTryCatch(block, h, stopBlocks, new HashSet<>(alreadyEmitted));
+        // A node whose continuation is a genuine CODE join (not a return tail) hands that boundary to
+        // the delegate: without it, a split-range desugar fools the delegate's offset-based
+        // continuation scan and the try body absorbs the region's own continuation. The stop goes on
+        // the CONTEXT stack too - the delegate's inner walks (if arms, clause bodies) build their stop
+        // sets from it, not from the passed parameter. Return continuations are NOT pushed: walks
+        // legitimately emit a converging return per path (idempotent), and stopping them drops it.
+        IRBlock after = node.after();
+        if (after == null || after.getTerminator() instanceof ReturnInstruction
+                || (context.getLoopAnalysis() != null && context.getLoopAnalysis().getLoop(block) != null)) {
+            return recoverTryCatch(block, h, stopBlocks, new HashSet<>(alreadyEmitted));
+        }
+        Set<IRBlock> stops = new HashSet<>(stopBlocks);
+        stops.add(after);
+        context.pushStopBlocks(stops);
+        try {
+            return recoverTryCatch(block, h, stops, new HashSet<>(alreadyEmitted));
+        } finally {
+            context.popStopBlocks();
+        }
     }
 
     @Override
@@ -6423,6 +6441,21 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         after = null;
                         allExitsTerminal = true;
                         break;
+                    }
+                    // Exactly one candidate is delegate-owned AND the other is a genuine CODE
+                    // continuation (not a return tail the delegate should also own): the code
+                    // continuation is the construct's one join. A terminal rival keeps the decline -
+                    // accepting it hands the delegate a boundary it re-attaches on the wrong path.
+                    boolean acyclicContext = context.getLoopAnalysis() == null
+                            || context.getLoopAnalysis().getLoop(block) == null;
+                    if (acyclicContext && delegateOwnsExitTail(succ, consumed, rethrower)
+                            && !(after.getTerminator() instanceof ReturnInstruction)) {
+                        continue;
+                    }
+                    if (acyclicContext && delegateOwnsExitTail(after, consumed, rethrower)
+                            && !(succ.getTerminator() instanceof ReturnInstruction)) {
+                        after = succ;
+                        continue;
                     }
                     trace("finally-node decline block=" + block.getBytecodeOffset() + " second-join="
                             + succ.getBytecodeOffset() + " first=" + after.getBytecodeOffset());
