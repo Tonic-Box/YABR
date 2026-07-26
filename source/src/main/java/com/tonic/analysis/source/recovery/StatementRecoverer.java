@@ -727,7 +727,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         IRBlock startBlock = (tryStart != null) ? tryStart : entry;
         boolean hasFinally = false;
         for (ExceptionHandler h : outerHandlers) {
-            if (handlerRethrows(h) && !handlerThrowsFreshException(h)) {
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)) {
                 hasFinally = true;
                 break;
             }
@@ -2844,9 +2844,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
-        boolean hasFinally = handlerRethrows(mainHandler) && !handlerThrowsFreshException(mainHandler);
+        boolean hasFinally = handlerRethrows(mainHandler) && !handlerThrowsFreshException(mainHandler)
+                && isFinallyCatchType(mainHandler);
         for (ExceptionHandler h : sameRegionHandlers) {
-            if (handlerRethrows(h) && !handlerThrowsFreshException(h)) {
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)) {
                 hasFinally = true;
             }
         }
@@ -6506,6 +6507,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
+     * Whether the handler's declared type is one javac (catch-any) or the recompiler
+     * ({@code Throwable}) uses for a finally's synthetic rethrow handler. A NARROWER typed catch that
+     * rethrows ({@code catch (IllegalArgumentException ex) { throw ex; }}) is a genuine user clause,
+     * not finally scaffolding.
+     */
+    private boolean isFinallyCatchType(ExceptionHandler h) {
+        return h.isCatchAll() || h.getCatchType() == null
+                || "java/lang/Throwable".equals(h.getCatchType().getInternalName());
+    }
+
+    /**
      * Whether the block sits inside an enclosing loop's body - i.e. some loop containing it has a DIFFERENT
      * header block. A block that is itself a loop header (a try that wraps the loop) is not "inside" the body.
      */
@@ -6567,7 +6579,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     /** The schema-based structural walk: the legacy recovery the RC engine falls back to for a declined region. */
     private List<Statement> legacyBlockWalk(IRBlock startBlock, Set<IRBlock> stopBlocks) {
         trace("legacy-walk method=" + context.getIrMethod().getName()
-                + " entry=" + startBlock.getBytecodeOffset());
+                + " entry=" + startBlock.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(3).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         List<Statement> result = new ArrayList<>();
         Set<IRBlock> visited = new HashSet<>();
         IRBlock current = startBlock;

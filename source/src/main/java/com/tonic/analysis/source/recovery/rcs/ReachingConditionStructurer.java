@@ -75,10 +75,17 @@ import java.util.Set;
  */
 public final class ReachingConditionStructurer {
 
-    /** Thrown internally to abandon the region and fall back to legacy recovery. */
+    private static final boolean TRACE = System.getProperty("yabr.trace") != null;
+
+    private static void trace(String msg) {
+        if (TRACE) {
+            System.err.println("[yabr] " + msg);
+        }
+    }
+
     private static final class BailToLegacy extends RuntimeException {
         BailToLegacy() {
-            super(null, null, false, false);
+            super(null, null, false, TRACE);
         }
     }
 
@@ -331,6 +338,7 @@ public final class ReachingConditionStructurer {
         this.regionStopBlocks = stopBlocks;
         pendingCatchJoinSplit = null;
         if (!collectRegion(entry, stopBlocks)) {
+            trace("rcs-decline collect entry=" + entry.getBytecodeOffset());
             return false;
         }
         // A region containing an exception handler the surrounding recovery has not yet consumed is a
@@ -338,6 +346,7 @@ public final class ReachingConditionStructurer {
         // Decline it so the try/catch scaffolding recovers it and hands this stage its handler-free pieces.
         // With try nodes enabled, collectRegion already turned every such try into a node or failed.
         if (!tryNodesEnabled && bridge.regionContainsUnprocessedHandler(region)) {
+            trace("rcs-decline unprocessed-handler entry=" + entry.getBytecodeOffset());
             return false;
         }
         assignAtoms();
@@ -348,6 +357,8 @@ public final class ReachingConditionStructurer {
         try {
             validate(entry);
         } catch (BailToLegacy bail) {
+            trace("rcs-decline validate entry=" + entry.getBytecodeOffset()
+                    + (bail.getStackTrace().length > 0 ? " at=" + bail.getStackTrace()[0].getLineNumber() : ""));
             return false;
         }
         return true;
@@ -630,6 +641,8 @@ public final class ReachingConditionStructurer {
             if (!isBackEdge(b, s) && !region.contains(s) && s != activeSequenceCut
                     && context.classifyLoopJump(s) == null
                     && isTerminalBlock(s) && terminalDependsOnRegion(s)) {
+                trace("boundary-terminal bail b=" + b.getBytecodeOffset() + " s=" + s.getBytecodeOffset()
+                        + " nodeB=" + (tryNodes.containsKey(b) || switchNodes.containsKey(b)));
                 throw new BailToLegacy();
             }
         }
