@@ -116,7 +116,23 @@ public class WhileToForCanonicalizer implements ASTTransform {
                 && ((BinaryExpr) e).getLeft() instanceof VarRefExpr) {
             VarRefExpr lv = (VarRefExpr) ((BinaryExpr) e).getLeft();
             Expression u = toUnaryStep(lv.getName(), lv.getType(), ((BinaryExpr) e).getRight());
-            return u == null ? null : new Step(lv.getName(), u);
+            if (u != null) {
+                return new Step(lv.getName(), u);
+            }
+            // A non-unit stride (`i = i + 7`) is just as much a counted step; the assignment itself
+            // becomes the for-update.
+            Expression rhs = ((BinaryExpr) e).getRight();
+            if (rhs instanceof BinaryExpr) {
+                BinaryExpr r = (BinaryExpr) rhs;
+                if ((r.getOperator() == BinaryOperator.ADD || r.getOperator() == BinaryOperator.SUB)
+                        && r.getLeft() instanceof VarRefExpr
+                        && ((VarRefExpr) r.getLeft()).getName().equals(lv.getName())
+                        && r.getRight() instanceof LiteralExpr
+                        && ((LiteralExpr) r.getRight()).getValue() instanceof Number) {
+                    return new Step(lv.getName(), e);
+                }
+            }
+            return null;
         }
         return null;
     }

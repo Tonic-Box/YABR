@@ -18,9 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -56,7 +54,7 @@ class StressCorpusTest {
             // sentinel-twr unequal-path fall-through / crc-guard fusion (catch-join-sequence-split)
             "SSentinelTwr",
             // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
-            "SShiftMask", "SStringMachine", "SRecursionTry", "SSharedReturnMaze", "STwrInLoop",
+            "SStringMachine", "SRecursionTry", "SSharedReturnMaze", "STwrInLoop",
             "SSwitchZoo", "SConditionMonster",
             // recompiled bytecode fails verification
             "SFinallyControlFlow", "SMultiCatch", "SCatchInFinally", "SLongDoubleSlots",
@@ -669,8 +667,7 @@ class StressCorpusTest {
             throw new AssertionError(f.name + " round trip failed to load/run: " + t + "\n" + d1, t);
         }
         if (expectBroken) {
-            assertFalse(original.equals(roundTripped),
-                    f.name + " is documented KNOWN_BROKEN but now round-trips equal (" + original
+            assertNotEquals(original, roundTripped, f.name + " is documented KNOWN_BROKEN but now round-trips equal (" + original
                     + ") - promote it to a passing fixture and update the memory notes");
             return;
         }

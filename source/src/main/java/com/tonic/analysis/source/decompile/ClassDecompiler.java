@@ -1241,17 +1241,24 @@ public class ClassDecompiler {
             // Only additional transforms from config are applied.
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
+            dumpStage(method.getName(), body, "00-raw");
             astSimplifier.transform(body);
+            dumpStage(method.getName(), body, "01-simplify");
             patternInstanceOf.transform(body);
             singleUseInliner.transform(body);
+            dumpStage(method.getName(), body, "03-inline");
             deadStoreEliminator.transform(body);
+            dumpStage(method.getName(), body, "04-deadstore");
             deadVarEliminator.transform(body);
+            dumpStage(method.getName(), body, "05-deadvar");
             // Re-simplify: the eliminators above can empty a then-branch (leaving
             // `if (c) {} else { ... }`), which the first pass could not see. A second pass
             // inverts/cleans those.
             astSimplifier.transform(body);
             varargsReconstructor.transform(body);
+            dumpStage(method.getName(), body, "07-pre-hoist");
             declarationHoister.transform(body);
+            dumpStage(method.getName(), body, "08-post-hoist");
         // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
         // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
         singleUseInliner.transform(body);
@@ -1297,6 +1304,16 @@ public class ClassDecompiler {
         writer.dedent();
         writer.writeLine("}");
         recordMethodSpan(method.getName() + method.getDesc(), spanStart, writer.getCurrentLine() - 1);
+    }
+
+
+    private static void dumpStage(String methodName, com.tonic.analysis.source.ast.stmt.BlockStmt body, String stage) {
+        String want = System.getProperty("yabr.dump");
+        if (want == null || !want.equals(methodName)) {
+            return;
+        }
+        System.err.println("[stage] " + stage);
+        System.err.println(com.tonic.analysis.source.ast.ASTPrinter.formatCompact(body));
     }
 
     private void recordMethodSpan(String methodKey, int startLine, int endLine) {
