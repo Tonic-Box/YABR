@@ -7092,11 +7092,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                     if (phiVarName != null) {
                         Expression value = exprRecoverer.recover(constInstr);
-                        if (!context.getExpressionContext().isDeclared(phiVarName)) {
+                        // A phi-feeding constant is normally folded into the phi variable's declaration
+                        // default - but NOT when an exception handler reads the variable's slot: the
+                        // handler observes the slot at fault time, so the init must exist as a real
+                        // statement before the protected range (and the declaration with it), or the
+                        // handler's read references a variable declared inside the try it covers.
+                        boolean handlerRead = slotReadByReachableHandler(constInstr, result);
+                        if (!handlerRead && !context.getExpressionContext().isDeclared(phiVarName)) {
                             context.getExpressionContext().cacheExpression(result, value);
                             return null;
                         }
-                        if (isDefaultValue(value)) {
+                        if (!handlerRead && isDefaultValue(value)) {
                             context.getExpressionContext().cacheExpression(result, value);
                             return null;
                         }
@@ -7326,7 +7332,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // intervening reassignment (`result = fValue; ... result = 0.0f`) makes the later default store a
             // genuine re-initialization; eliding it there drops a live write and silently changes the value.
             if (isDefaultValue(value) && context.getLoopStack().isEmpty()
-                    && !hasDominatingNonDefaultStore(store)) {
+                    && !hasDominatingNonDefaultStore(store)
+                    && !slotReadByReachableHandler(store, null)) {
                 return null;
             }
             if (value instanceof VarRefExpr) {
@@ -7347,6 +7354,90 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         context.getExpressionContext().markDeclared(name);
         return new VarDeclStmt(type, name, value);
     }
+
+    /**
+     * True when the slot written by {@code instr} (a StoreLocal, or the definition a StoreLocal in the same
+     * block consumes as {@code storedValue}) is read inside an exception handler protecting blocks reachable
+     * from it. Such a handler observes the slot at the fault point, so a default init to the slot is LIVE on
+     * the exception path even when normal-flow dominance says it is redundant - eliding it either changes
+     * the handler's read or strands the variable's declaration inside the try the handler covers.
+     */
+    private boolean slotReadByReachableHandler(IRInstruction instr, SSAValue storedValue) {
+        IRBlock origin = instr.getBlock();
+        if (origin == null) {
+            return false;
+        }
+        int slot = -1;
+        if (instr instanceof StoreLocalInstruction) {
+            slot = ((StoreLocalInstruction) instr).getLocalIndex();
+        } else if (storedValue != null) {
+            for (IRInstruction ins : origin.getInstructions()) {
+                if (ins instanceof StoreLocalInstruction
+                        && ((StoreLocalInstruction) ins).getValue() == storedValue) {
+                    slot = ((StoreLocalInstruction) ins).getLocalIndex();
+                    break;
+                }
+            }
+        }
+        if (slot < 0) {
+            return false;
+        }
+        if (handlerReadSlots == null) {
+            handlerReadSlots = new LinkedHashMap<>();
+            DominatorTree dt = context.getDominatorTree();
+            for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+                IRBlock hb = h.getHandlerBlock();
+                Set<IRBlock> tryBlocks = h.getTryBlocks();
+                if (hb == null || tryBlocks == null || tryBlocks.isEmpty()) {
+                    continue;
+                }
+                Set<Integer> reads = new HashSet<>();
+                for (IRBlock b : context.getIrMethod().getBlocks()) {
+                    if (b != hb && (dt == null || !dt.dominates(hb, b))) {
+                        continue;
+                    }
+                    for (IRInstruction ins : b.getInstructions()) {
+                        if (ins instanceof LoadLocalInstruction) {
+                            reads.add(((LoadLocalInstruction) ins).getLocalIndex());
+                        }
+                    }
+                }
+                if (!reads.isEmpty()) {
+                    handlerReadSlots.put(h, reads);
+                }
+            }
+        }
+        for (Map.Entry<ExceptionHandler, Set<Integer>> e : handlerReadSlots.entrySet()) {
+            if (!e.getValue().contains(slot)) {
+                continue;
+            }
+            Set<IRBlock> tryBlocks = e.getKey().getTryBlocks();
+            boolean covers = tryBlocks.contains(origin);
+            if (!covers) {
+                Deque<IRBlock> work = new ArrayDeque<>();
+                Set<IRBlock> seen = new HashSet<>();
+                work.add(origin);
+                while (!work.isEmpty()) {
+                    IRBlock b = work.poll();
+                    if (!seen.add(b)) {
+                        continue;
+                    }
+                    if (tryBlocks.contains(b)) {
+                        covers = true;
+                        break;
+                    }
+                    work.addAll(b.getSuccessors());
+                }
+            }
+            if (covers) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Slots each handler's dominated subtree loads, built once per method for the elision guard. */
+    private Map<ExceptionHandler, Set<Integer>> handlerReadSlots;
 
     /**
      * True when a non-default value is written to {@code store}'s slot on the path reaching it - either earlier
