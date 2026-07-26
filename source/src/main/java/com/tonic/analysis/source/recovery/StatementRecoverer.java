@@ -2953,6 +2953,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             tryBlock = new BlockStmt(tryStmts);
         }
 
+        // A finally whose split exception-table ranges are sub-ranges of the catch's range (javac splits
+        // the finally range around returns/breaks in the try) is classified as a nested handler and
+        // recovered as the try body's own try/finally - so it is absent from sameRegionHandlers and the
+        // catch-copy strip above (gated on a same-region finally) never runs. javac still inlined that
+        // finally before each catch exit, so without stripping it the finally runs twice on the caught
+        // path (once as the nested finally on the exception unwind, once as the catch's inlined copy).
+        // Strip the catch copies against the nested finally's already-recovered body.
+        if (finallyExceptionVars.isEmpty() && !filteredCatches.isEmpty()) {
+            BlockStmt nestedFinally = firstNestedFinallyBlock(tryStmts);
+            if (nestedFinally != null && !nestedFinally.getStatements().isEmpty()) {
+                filteredCatches = filterInlinedFinallyFromCatches(filteredCatches, nestedFinally.getStatements());
+            }
+        }
+
         Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(mainHandler) : null;
         if (syncLock != null) {
             SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
@@ -2963,6 +2977,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
         stampFromBody(tryCatch, tryBlock);
         return tryCatch;
+    }
+
+    /** The finally body of the first nested {@code try/finally} in a recovered statement list, if any. */
+    private BlockStmt firstNestedFinallyBlock(List<Statement> stmts) {
+        for (Statement s : stmts) {
+            if (s instanceof TryCatchStmt) {
+                TryCatchStmt t = (TryCatchStmt) s;
+                if (t.getFinallyBlock() instanceof BlockStmt
+                        && !((BlockStmt) t.getFinallyBlock()).getStatements().isEmpty()) {
+                    return (BlockStmt) t.getFinallyBlock();
+                }
+            }
+        }
+        return null;
     }
 
     /**

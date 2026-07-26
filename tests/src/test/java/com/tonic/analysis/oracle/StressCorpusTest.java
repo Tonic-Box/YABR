@@ -54,7 +54,7 @@ class StressCorpusTest {
             // sentinel-twr unequal-path fall-through / crc-guard fusion (catch-join-sequence-split)
             "SSentinelTwr",
             // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
-            "SRecursionTry", "SSharedReturnMaze", "STwrInLoop",
+            "SRecursionTry", "STwrInLoop",
             "SSwitchZoo",
             // recompiled bytecode fails verification
             "SFinallyControlFlow", "SCatchInFinally",
