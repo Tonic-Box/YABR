@@ -8673,12 +8673,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private List<Statement> recoverStringSwitchBody(IRBlock body, Set<IRBlock> bodyStops) {
-        rcsSubRegionSuppression++;
-        try {
-            return recoverStringSwitchBody0(body, bodyStops);
-        } finally {
-            rcsSubRegionSuppression--;
-        }
+        return recoverStringSwitchBody0(body, bodyStops);
     }
 
     private List<Statement> recoverStringSwitchBody0(IRBlock body, Set<IRBlock> bodyStops) {
