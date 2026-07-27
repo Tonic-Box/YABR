@@ -1195,6 +1195,37 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
 
+
+            // A structural region inside the try-sequence walk is offered to the reaching-condition
+            // engine FIRST, at EXACTLY the schema recovery's own scope - bounded at the structure's merge
+            // or loop exit - so the offered region never spans a handler boundary and the walk's
+            // continuation is identical to the schema dispatch's. The schema recoverers below remain only
+            // as the decline fallback.
+            IRBlock rcsBound = null;
+            switch (info.getType()) {
+                case IF_THEN:
+                case IF_THEN_ELSE:
+                    rcsBound = info.getMergeBlock();
+                    break;
+                case WHILE_LOOP:
+                case DO_WHILE_LOOP:
+                case FOR_LOOP:
+                    rcsBound = info.getLoopExit();
+                    break;
+                default:
+                    break;
+            }
+            if (rcsBound != null && !visited.contains(rcsBound)) {
+                Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
+                boundedStops.add(rcsBound);
+                List<Statement> structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops);
+                if (structuredRegion != null) {
+                    result.addAll(structuredRegion);
+                    current = stopBlocks.contains(rcsBound) || context.isProcessed(rcsBound) ? null : rcsBound;
+                    continue;
+                }
+            }
+
             switch (info.getType()) {
                 case IF_THEN: {
                     Statement ifStmt = recoverIfThen(current, info);
