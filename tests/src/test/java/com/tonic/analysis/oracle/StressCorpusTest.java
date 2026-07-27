@@ -49,14 +49,10 @@ class StressCorpusTest {
      * still fails, so a silent fix or a new regression of the documentation both surface.
      */
     private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(Arrays.asList(
-            // catch+finally double-effect on the split-range layout (finally-phase2-findings)
-            "SGuardedCloseShared",
             // sentinel-twr unequal-path fall-through / crc-guard fusion (catch-join-sequence-split)
             "SSentinelTwr",
-            // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
-            "SRecursionTry", "STwrInLoop",
             // recompiled bytecode fails verification
-            "SFinallyControlFlow", "SCatchInFinally"
+            "SFinallyControlFlow"
     ));
 
     private static final List<Fixture> FIXTURES = List.of(

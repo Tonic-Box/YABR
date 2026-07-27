@@ -123,6 +123,11 @@ public class ExpressionLowerer {
         SourceType leftType = bin.getLeft().getType();
         SourceType rightType = bin.getRight().getType();
         SourceType commonType = getCommonComparisonType(leftType, rightType);
+        // The AST operand types can be unset (a parsed call's return type is not resolved on the
+        // expression), which defaults the comparison to int and emits an integer compare over a
+        // two-slot value. The lowered VALUES carry the true JVM types - widen the comparison to
+        // the widest lowered operand type, mirroring the reference check above.
+        commonType = widestOfValues(commonType, left, right);
         IRType commonIRType = commonType.toIRType();
 
         left = widenIfNeeded(left, commonIRType);
@@ -689,6 +694,11 @@ public class ExpressionLowerer {
         SourceType leftType = bin.getLeft().getType();
         SourceType rightType = bin.getRight().getType();
         SourceType commonType = getCommonComparisonType(leftType, rightType);
+        // The AST operand types can be unset (a parsed call's return type is not resolved on the
+        // expression), which defaults the comparison to int and emits an integer compare over a
+        // two-slot value. The lowered VALUES carry the true JVM types - widen the comparison to
+        // the widest lowered operand type, mirroring the reference check above.
+        commonType = widestOfValues(commonType, left, right);
         IRType commonIRType = commonType.toIRType();
 
         left = widenIfNeeded(left, commonIRType);
@@ -1986,6 +1996,30 @@ public class ExpressionLowerer {
 
     private static boolean isReferenceValue(Value v) {
         return v != null && v.getType() != null && v.getType().isReference();
+    }
+
+    /**
+     * Widens {@code astCommon} to the widest primitive type among the lowered operand VALUES. The AST
+     * types under-report (an unresolved call defaults to int); a value's IR type is the JVM truth.
+     */
+    private static SourceType widestOfValues(SourceType astCommon, Value left, Value right) {
+        SourceType widest = astCommon;
+        for (Value v : new Value[]{left, right}) {
+            if (v == null || v.getType() == null) {
+                continue;
+            }
+            IRType t = v.getType();
+            if (t == PrimitiveType.DOUBLE) {
+                return PrimitiveSourceType.DOUBLE;
+            }
+            if (t == PrimitiveType.FLOAT && widest != PrimitiveSourceType.DOUBLE) {
+                widest = PrimitiveSourceType.FLOAT;
+            } else if (t == PrimitiveType.LONG
+                    && widest != PrimitiveSourceType.DOUBLE && widest != PrimitiveSourceType.FLOAT) {
+                widest = PrimitiveSourceType.LONG;
+            }
+        }
+        return widest;
     }
 
     private SourceType getCommonComparisonType(SourceType left, SourceType right) {

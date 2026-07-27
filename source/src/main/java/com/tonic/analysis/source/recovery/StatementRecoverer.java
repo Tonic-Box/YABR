@@ -1838,6 +1838,40 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
 
+            if (stmt instanceof TryCatchStmt) {
+                // A finally body that itself is a try/catch (a guarded call) makes each inlined copy a
+                // TryCatchStmt too - test the copy match BEFORE descending, or the descent consumes the
+                // statement and the copy is never folded.
+                if (isStatementSequenceMatchingFinally(statements, i, finallyStmts)) {
+                    int nextIdx = i + finallyStmts.size();
+                    Statement next = nextIdx < statements.size() ? statements.get(nextIdx) : null;
+                    if (next == null || next instanceof ReturnStmt || next instanceof ThrowStmt
+                            || next instanceof BreakStmt || next instanceof ContinueStmt) {
+                        i = nextIdx;
+                        continue;
+                    }
+                }
+                // javac splits an outer finally's protected range around the returns in its try, so the
+                // range's pieces can recover as a nested try/catch whose body and catch clauses still carry
+                // the outer finally's inlined copies before their returns. Fold inside the nested construct
+                // too - its try body and catch bodies are part of the same protected range. The nested
+                // construct's own finally clause is left alone (it is a different finally, not a copy site).
+                TryCatchStmt tcs = (TryCatchStmt) stmt;
+                Statement newTry = filterInlinedFinallyFromBranch(tcs.getTryBlock(), finallyStmts);
+                List<CatchClause> newCatches = new ArrayList<>();
+                for (CatchClause cc : tcs.getCatches()) {
+                    newCatches.add(new CatchClause(cc.exceptionTypes(), cc.variableName(),
+                            filterInlinedFinallyFromBranch(cc.body(), finallyStmts)));
+                }
+                TryCatchStmt rebuiltTry = new TryCatchStmt(
+                        newTry instanceof BlockStmt ? newTry : new BlockStmt(Collections.singletonList(newTry)),
+                        newCatches, tcs.getFinallyBlock());
+                Locations.copy(tcs, rebuiltTry);
+                result.add(rebuiltTry);
+                i++;
+                continue;
+            }
+
             if (stmt instanceof DoWhileStmt) {
                 DoWhileStmt doWhileStmt = (DoWhileStmt) stmt;
                 Statement newBody = filterInlinedFinallyFromBranch(doWhileStmt.getBody(), finallyStmts);
@@ -1879,11 +1913,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         i = nextIdx;
                         continue;
                     }
+                } else {
+                    // A trailing copy with nothing after it is the fall-through exit's inlined finally: the
+                    // body falls through into the finally clause, which runs the same statements again.
+                    i = nextIdx;
+                    continue;
                 }
             }
 
             result.add(stmt);
             i++;
+        }
+        // Folding a copy out can leave residue stranded after a try/catch whose every path now returns -
+        // the continuation's own return the try absorbed, or another exit's guard-dropped copy. Java
+        // rejects unreachable code outright, so statements after a terminating try/catch at the same level
+        // can only be recovery residue; lowering them produces dead blocks that fail verification.
+        for (int j = 0; j < result.size() - 1; j++) {
+            if (result.get(j) instanceof TryCatchStmt
+                    && isTerminatingTryCatch((TryCatchStmt) result.get(j))) {
+                result.subList(j + 1, result.size()).clear();
+                break;
+            }
         }
         return result;
     }
@@ -2015,7 +2065,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * {@code bind}, which is populated when their declarations line up.
      */
     private boolean statementMatchesFinally(Statement cand, Statement fin, Map<String, String> bind) {
-        if (cand == null || fin == null || cand.getClass() != fin.getClass()) {
+        if (cand == null || fin == null) {
+            return false;
+        }
+        // A guard-dropped copy: the finally is `if (x != null) { <cleanup> }` but the copy on a path where
+        // the guard is decided lost its if-shell (the CFG-level de-dup excised the guard block), leaving the
+        // bare cleanup. Match the copy against the guard's then-branch.
+        if (fin instanceof IfStmt && !(cand instanceof IfStmt) && ((IfStmt) fin).getElseBranch() == null) {
+            List<Statement> thenStmts = flattenToStatements(((IfStmt) fin).getThenBranch());
+            if (thenStmts.size() == 1 && statementMatchesFinally(cand, thenStmts.get(0), bind)) {
+                return true;
+            }
+        }
+        if (cand.getClass() != fin.getClass()) {
             return false;
         }
         if (fin instanceof VarDeclStmt) {
@@ -2043,7 +2105,54 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             return ce != null && fe != null && expressionMatchesFinally(ce, fe, bind);
         }
+        if (fin instanceof TryCatchStmt) {
+            // A finally body that itself contains a try/catch (a guarded call inside the finally) is inlined
+            // with FRESH catch-variable names in each copy, so the name-sensitive generic match never sees
+            // the copies. Match structurally, binding each clause's exception variable like a declared temp.
+            TryCatchStmt ft = (TryCatchStmt) fin;
+            TryCatchStmt ct = (TryCatchStmt) cand;
+            if (ft.getCatches().size() != ct.getCatches().size()
+                    || (ft.getFinallyBlock() == null) != (ct.getFinallyBlock() == null)
+                    || !blockMatchesFinally(ct.getTryBlock(), ft.getTryBlock(), bind, false)) {
+                return false;
+            }
+            for (int ci = 0; ci < ft.getCatches().size(); ci++) {
+                CatchClause fc = ft.getCatches().get(ci);
+                CatchClause cc = ct.getCatches().get(ci);
+                if (fc.exceptionTypes().size() != cc.exceptionTypes().size()) {
+                    return false;
+                }
+                bind.put(fc.variableName(), cc.variableName());
+                // The copy's catch may absorb the exit's own return/throw as its tail (the clause falls
+                // through to the exit the copy was inlined before); tolerate that one trailing statement.
+                if (!blockMatchesFinally(cc.body(), fc.body(), bind, true)) {
+                    return false;
+                }
+            }
+            return ft.getFinallyBlock() == null
+                    || blockMatchesFinally(ct.getFinallyBlock(), ft.getFinallyBlock(), bind, false);
+        }
         return statementsMatch(cand, fin);
+    }
+
+    /** Element-wise {@link #statementMatchesFinally} over two statement bodies (blocks or single statements). */
+    private boolean blockMatchesFinally(Statement cand, Statement fin, Map<String, String> bind,
+                                        boolean tolerateTrailingExit) {
+        List<Statement> cs = flattenToStatements(cand);
+        List<Statement> fs = flattenToStatements(fin);
+        if (cs.size() != fs.size()) {
+            if (!tolerateTrailingExit || cs.size() != fs.size() + 1
+                    || !(cs.get(cs.size() - 1) instanceof ReturnStmt
+                        || cs.get(cs.size() - 1) instanceof ThrowStmt)) {
+                return false;
+            }
+        }
+        for (int i = 0; i < fs.size(); i++) {
+            if (!statementMatchesFinally(cs.get(i), fs.get(i), bind)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean expressionMatchesFinally(Expression cand, Expression fin, Map<String, String> bind) {
@@ -2808,6 +2917,33 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return mc.getReceiver() instanceof VarRefExpr ? ((VarRefExpr) mc.getReceiver()).getName() : null;
     }
 
+    /**
+     * Whether {@code h} is a split piece of a construct ENCLOSING the {@code [mainStart, mainEnd)} region
+     * that an outer recovery already owns: some exception-table entry targeting the same handler block
+     * protects code outside the region, and the handler block is marked processed (the enclosing region is
+     * mid-recovery above us). javac splits an outer finally's range around the returns in its try, so a
+     * piece can lie entirely inside an inner catch's range while its siblings cover the catch body beyond
+     * it. Treating such a piece as a nested handler rebuilds it as a phantom inner try/finally whose body
+     * then runs twice; the enclosing region's own recovery owns it. When no outer recovery owns the block,
+     * the piece is kept nested - that nested form is how the region's finally clause materializes at all.
+     */
+    private boolean isEnclosingHandlerPiece(ExceptionHandler h, int mainStart, int mainEnd) {
+        if (h.getHandlerBlock() == null || !processedHandlerBlocks.contains(h.getHandlerBlock())) {
+            return false;
+        }
+        for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
+            if (eh.getHandlerBlock() != h.getHandlerBlock()
+                    || eh.getTryStart() == null || eh.getTryEnd() == null) {
+                continue;
+            }
+            if (eh.getTryStart().getBytecodeOffset() < mainStart
+                    || eh.getTryEnd().getBytecodeOffset() > mainEnd) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Statement recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler,
                                           Set<IRBlock> originalStopBlocks, Set<IRBlock> visited) {
         IRMethod irMethod = context.getIrMethod();
@@ -2915,7 +3051,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
                 int hStart = h.getTryStart().getBytecodeOffset();
                 int hEnd = h.getTryEnd().getBytecodeOffset();
-                if (hStart >= mainStart && hEnd <= mainEnd) {
+                if (hStart >= mainStart && hEnd <= mainEnd && !isEnclosingHandlerPiece(h, mainStart, mainEnd)) {
                     nestedHandlers.add(h);
                 }
             }

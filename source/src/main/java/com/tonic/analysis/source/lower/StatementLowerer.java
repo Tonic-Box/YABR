@@ -667,15 +667,26 @@ public class StatementLowerer {
             ctx.getIrMethod().addExceptionHandler(finallyAll);
             ctx.restoreVariables(normalFinallyVars);
 
-            ctx.setCurrentBlock(finallyBlock);
-            lower(tryCatch.getFinallyBlock());
-            if (ctx.getCurrentBlock().getTerminator() == null) {
-                ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
-                ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            // Lower the shared normal-path finally copy only when some path actually falls through to it.
+            // When the try and every catch end in a return/throw, each exit already ran the finally via the
+            // finally-stack drain and nothing jumps here; lowering the copy anyway leaves an unreachable
+            // finally body and a dangling exit block whose synthesized return fails verification.
+            if (!finallyBlock.getPredecessors().isEmpty()) {
+                ctx.setCurrentBlock(finallyBlock);
+                lower(tryCatch.getFinallyBlock());
+                if (ctx.getCurrentBlock().getTerminator() == null) {
+                    ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
+                    ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                }
             }
         }
 
-        ctx.setCurrentBlock(exitBlock);
+        // Mirror lowerIf: when no path reaches the exit (every try/catch path returned or threw), stay on
+        // the current terminated block so the method-end synthesized return is not emitted into a dead
+        // block - a bare return in a value-returning method fails verification.
+        if (!exitBlock.getPredecessors().isEmpty()) {
+            ctx.setCurrentBlock(exitBlock);
+        }
     }
 
     /**
