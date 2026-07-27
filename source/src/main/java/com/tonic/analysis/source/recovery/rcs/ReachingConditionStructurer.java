@@ -1445,7 +1445,7 @@ public final class ReachingConditionStructurer {
     /** Builds one {@code case}/{@code default} from its decoded labels and structured body. */
     private SwitchCase buildSwitchCase(SwitchDescriptor.CaseSpec spec, List<Statement> body, boolean fallsThrough) {
         if (spec.isDefault()) {
-            return SwitchCase.defaultCase(body);
+            return SwitchCase.defaultCase(body).withFallsThrough(fallsThrough);
         }
         if (!spec.exprLabels().isEmpty()) {
             return SwitchCase.ofExpressions(spec.exprLabels(), body).withFallsThrough(fallsThrough);

@@ -55,11 +55,10 @@ class StressCorpusTest {
             "SSentinelTwr",
             // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
             "SRecursionTry", "STwrInLoop",
-            "SSwitchZoo",
             // recompiled bytecode fails verification
             "SFinallyControlFlow", "SCatchInFinally",
             // recompiler lowering crash
-            "SBreakFromTry", "STryReturnMutation",
+            "SBreakFromTry",
             // exception-path behavior diverges after the round trip
             "SReturnInFinally"
     ));

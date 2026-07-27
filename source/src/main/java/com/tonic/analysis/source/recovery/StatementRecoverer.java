@@ -297,8 +297,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (defaultTarget != null) {
-            cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), Collections.emptyList(), true,
-                    emptyDefault ? null : defaultTarget));
+            SwitchDescriptor.CaseSpec defaultCase = new SwitchDescriptor.CaseSpec(
+                    Collections.emptyList(), Collections.emptyList(), true, emptyDefault ? null : defaultTarget);
+            // Place the default at its layout (bytecode-offset) position among the value cases, not blindly
+            // last: a default that FALLS THROUGH to a following case (`case 2: ...; default: ...; case 3: ...`)
+            // must sit between the cases it flows from and into, or the fall-through chain is broken and the
+            // default's statements are dropped from the intervening path. An empty default (falls to the merge)
+            // has no fall-through and stays last.
+            if (emptyDefault) {
+                cases.add(defaultCase);
+            } else {
+                int defOffset = defaultTarget.getBytecodeOffset();
+                int pos = cases.size();
+                for (int i = 0; i < cases.size(); i++) {
+                    IRBlock target = cases.get(i).header();
+                    if (target != null && target.getBytecodeOffset() > defOffset) {
+                        pos = i;
+                        break;
+                    }
+                }
+                cases.add(pos, defaultCase);
+            }
         }
 
         return new SwitchDescriptor(switchBlock, selector, mergeBlock, cases, caseHeaders);

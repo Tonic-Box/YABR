@@ -39,7 +39,7 @@ public class SingleUseInliner implements ASTTransform {
         boolean madeProgress;
 
         do {
-            madeProgress = inlineSingleUseVars(block.getStatements());
+            madeProgress = inlineSingleUseVars(block.getStatements(), Collections.emptySet());
             if (madeProgress) {
                 changed = true;
             }
@@ -48,7 +48,17 @@ public class SingleUseInliner implements ASTTransform {
         return changed;
     }
 
-    private boolean inlineSingleUseVars(List<Statement> stmts) {
+    /**
+     * @param escapeRefs names of variables that, though declared in the current statement list, are read
+     *        from an enclosing scope this list sits inside - specifically a {@code try} body whose value
+     *        is used after the try (or in its catch/finally). javac saves such a value to a temp before the
+     *        inlined finally (e.g. {@code return x++} in a try/finally), which recovery declares inside the
+     *        try and the declaration hoister later lifts to method scope. Inlining and removing that
+     *        declaration first would orphan the outside read, so a name in {@code escapeRefs} is never
+     *        inlined-and-removed. Only try boundaries populate this set, so ordinary nested temps (loop
+     *        counters, if-arm locals) are unaffected.
+     */
+    private boolean inlineSingleUseVars(List<Statement> stmts, Set<String> escapeRefs) {
         boolean changed = false;
 
         for (int i = 0; i < stmts.size(); i++) {
@@ -65,7 +75,8 @@ public class SingleUseInliner implements ASTTransform {
 
                 UsageInfo usage = analyzeUsage(stmts, i, varName);
 
-                if (usage.count == 1 && usage.canInline && usage.usageStmtIndex > i) {
+                if (usage.count == 1 && usage.canInline && usage.usageStmtIndex > i
+                        && !escapeRefs.contains(varName)) {
                     if (tryInline(stmts, i, usage.usageStmtIndex, varName, init)) {
                         changed = true;
                         i--;
@@ -74,12 +85,36 @@ public class SingleUseInliner implements ASTTransform {
                 }
             }
 
-            if (transformNested(stmt)) {
+            Set<String> tryBodyEscape = escapeRefs;
+            if (stmt instanceof TryCatchStmt) {
+                tryBodyEscape = new HashSet<>(escapeRefs);
+                for (int j = i + 1; j < stmts.size(); j++) {
+                    addFreeRefs(stmts.get(j), tryBodyEscape);
+                }
+                TryCatchStmt tc = (TryCatchStmt) stmt;
+                for (CatchClause clause : tc.getCatches()) {
+                    if (clause.body() != null) {
+                        addFreeRefs(clause.body(), tryBodyEscape);
+                    }
+                }
+                if (tc.getFinallyBlock() != null) {
+                    addFreeRefs(tc.getFinallyBlock(), tryBodyEscape);
+                }
+            }
+
+            if (transformNested(stmt, escapeRefs, tryBodyEscape)) {
                 changed = true;
             }
         }
 
         return changed;
+    }
+
+    /** Adds the free variable names of a subtree (referenced but not declared within it) to {@code out}. */
+    private void addFreeRefs(Statement stmt, Set<String> out) {
+        FreeRefCollector c = new FreeRefCollector();
+        stmt.accept(c);
+        out.addAll(c.free());
     }
 
     private static class UsageInfo {
@@ -403,80 +438,80 @@ public class SingleUseInliner implements ASTTransform {
         }
     }
 
-    private boolean transformNested(Statement stmt) {
+    private boolean transformNested(Statement stmt, Set<String> escapeRefs, Set<String> tryBodyEscape) {
         boolean changed = false;
 
         if (stmt instanceof WhileStmt) {
             WhileStmt whileStmt = (WhileStmt) stmt;
             if (whileStmt.getBody() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) whileStmt.getBody()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) whileStmt.getBody()).getStatements(), escapeRefs);
             }
         } else if (stmt instanceof DoWhileStmt) {
             DoWhileStmt doWhile = (DoWhileStmt) stmt;
             if (doWhile.getBody() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) doWhile.getBody()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) doWhile.getBody()).getStatements(), escapeRefs);
             }
         } else if (stmt instanceof ForStmt) {
             ForStmt forStmt = (ForStmt) stmt;
             if (forStmt.getBody() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) forStmt.getBody()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) forStmt.getBody()).getStatements(), escapeRefs);
             }
         } else if (stmt instanceof ForEachStmt) {
             ForEachStmt forEach = (ForEachStmt) stmt;
             if (forEach.getBody() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) forEach.getBody()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) forEach.getBody()).getStatements(), escapeRefs);
             }
         } else if (stmt instanceof IfStmt) {
             IfStmt ifStmt = (IfStmt) stmt;
             if (ifStmt.getThenBranch() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) ifStmt.getThenBranch()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) ifStmt.getThenBranch()).getStatements(), escapeRefs);
             }
             if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) ifStmt.getElseBranch()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) ifStmt.getElseBranch()).getStatements(), escapeRefs);
             }
         } else if (stmt instanceof TryCatchStmt) {
             TryCatchStmt tryCatch = (TryCatchStmt) stmt;
             if (tryCatch.getTryBlock() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) tryCatch.getTryBlock()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) tryCatch.getTryBlock()).getStatements(), tryBodyEscape);
             }
             for (CatchClause clause : tryCatch.getCatches()) {
                 if (clause.body() instanceof BlockStmt) {
-                    changed |= inlineSingleUseVars(((BlockStmt) clause.body()).getStatements());
+                    changed |= inlineSingleUseVars(((BlockStmt) clause.body()).getStatements(), escapeRefs);
                 }
             }
             if (tryCatch.getFinallyBlock() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) tryCatch.getFinallyBlock()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) tryCatch.getFinallyBlock()).getStatements(), escapeRefs);
             }
         } else if (stmt instanceof SwitchStmt) {
             SwitchStmt switchStmt = (SwitchStmt) stmt;
             for (SwitchCase caseStmt : switchStmt.getCases()) {
                 List<Statement> caseStmts = caseStmt.statements();
                 if (caseStmts instanceof ArrayList) {
-                    changed |= inlineSingleUseVars(caseStmts);
+                    changed |= inlineSingleUseVars(caseStmts, escapeRefs);
                 }
             }
         } else if (stmt instanceof SynchronizedStmt) {
             SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;
             if (syncStmt.getBody() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) syncStmt.getBody()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) syncStmt.getBody()).getStatements(), escapeRefs);
             }
         } else if (stmt instanceof BlockStmt) {
-            changed |= inlineSingleUseVars(((BlockStmt) stmt).getStatements());
+            changed |= inlineSingleUseVars(((BlockStmt) stmt).getStatements(), escapeRefs);
         }
 
-        changed |= transformLambdasInStatement(stmt);
+        changed |= transformLambdasInStatement(stmt, escapeRefs);
 
         return changed;
     }
 
-    private boolean transformLambdasInStatement(Statement stmt) {
+    private boolean transformLambdasInStatement(Statement stmt, Set<String> escapeRefs) {
         boolean changed = false;
         LambdaFinder finder = new LambdaFinder();
         stmt.accept(finder);
 
         for (LambdaExpr lambda : finder.lambdas) {
             if (lambda.isBlockBody() && lambda.getBlockBody() instanceof BlockStmt) {
-                changed |= inlineSingleUseVars(((BlockStmt) lambda.getBlockBody()).getStatements());
+                changed |= inlineSingleUseVars(((BlockStmt) lambda.getBlockBody()).getStatements(), escapeRefs);
             }
         }
         return changed;
@@ -525,6 +560,30 @@ public class SingleUseInliner implements ASTTransform {
                 return null;
             }
             return super.visitBinary(expr);
+        }
+    }
+
+    /** Collects a subtree's free variable names: referenced but not declared within it. */
+    private static class FreeRefCollector extends AbstractSourceVisitor<Void> {
+        private final Set<String> referenced = new HashSet<>();
+        private final Set<String> declared = new HashSet<>();
+
+        Set<String> free() {
+            Set<String> f = new HashSet<>(referenced);
+            f.removeAll(declared);
+            return f;
+        }
+
+        @Override
+        public Void visitVarRef(VarRefExpr expr) {
+            referenced.add(expr.getName());
+            return super.visitVarRef(expr);
+        }
+
+        @Override
+        public Void visitVarDecl(VarDeclStmt stmt) {
+            declared.add(stmt.getName());
+            return super.visitVarDecl(stmt);
         }
     }
 
