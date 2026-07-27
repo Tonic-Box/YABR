@@ -1835,7 +1835,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 int nextIdx = i + finallyStmts.size();
                 if (nextIdx < statements.size()) {
                     Statement next = statements.get(nextIdx);
-                    if (next instanceof ReturnStmt || next instanceof ThrowStmt) {
+                    // javac inlines the finally before EVERY abrupt exit of the protected range, not only
+                    // returns and throws: a break or continue out of the try runs the finally too. Fold the
+                    // copy away before those as well - correct because the finally is re-emitted when the
+                    // break/continue is lowered (the enclosing loop's cleanup drain).
+                    if (next instanceof ReturnStmt || next instanceof ThrowStmt
+                            || next instanceof BreakStmt || next instanceof ContinueStmt) {
                         i = nextIdx;
                         continue;
                     }
@@ -2069,13 +2074,30 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         gapStmts = filterOrphanFinallyThrows(gapStmts, finallyExceptionVars);
         gapStmts = filterInlinedFinallyFromTryStatements(gapStmts, finallyBlock.getStatements());
-        // Drop any standalone inlined-finally statement (one not folded into a preceding return by the filter
-        // above), so a side-effecting finally like `x += 2` appears only in the finally, not also in the body.
+        // Drop the standalone inlined-finally copy the gap carries (the try's normal-exit copy not folded
+        // into a preceding return above), so a side-effecting finally like `x += 2` appears only in the
+        // finally, not also in the body. Match it as a WHOLE temp-bound sequence, not per statement: the
+        // finally materializes its value into a single-use temp whose name differs between copies
+        // (`int i13 = x+1; x = i13` versus the finally's `int i16 = x+1; x = i16`), so a per-statement
+        // match drops the name-insensitive declaration but keeps the store that reads it - orphaning the
+        // temp (an undefined-variable recompile failure).
+        List<Statement> finStmts = finallyBlock.getStatements();
+        if (finStmts.isEmpty()) {
+            return gapStmts;
+        }
         List<Statement> deduped = new ArrayList<>();
-        for (Statement stmt : gapStmts) {
-            if (!isStatementInFinallyBlock(stmt, finallyBlock.getStatements())) {
-                deduped.add(stmt);
+        int gi = 0;
+        while (gi < gapStmts.size()) {
+            if (isStatementSequenceMatchingFinally(gapStmts, gi, finStmts)) {
+                gi += finStmts.size();
+                continue;
             }
+            if (isStatementInFinallyBlock(gapStmts.get(gi), finStmts)) {
+                gi++;
+                continue;
+            }
+            deduped.add(gapStmts.get(gi));
+            gi++;
         }
         return deduped;
     }

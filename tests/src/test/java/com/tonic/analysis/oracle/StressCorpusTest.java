@@ -57,8 +57,6 @@ class StressCorpusTest {
             "SRecursionTry", "STwrInLoop",
             // recompiled bytecode fails verification
             "SFinallyControlFlow", "SCatchInFinally",
-            // recompiler lowering crash
-            "SBreakFromTry",
             // exception-path behavior diverges after the round trip
             "SReturnInFinally"
     ));
