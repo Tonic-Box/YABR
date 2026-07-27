@@ -13,7 +13,6 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,10 +47,7 @@ class StressCorpusTest {
      * the modern-javac burn-in backlog (stress-corpus-findings memory note). The harness asserts each
      * still fails, so a silent fix or a new regression of the documentation both surface.
      */
-    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(List.of(
-            // sentinel-twr unequal-path fall-through / crc-guard fusion (catch-join-sequence-split)
-            "SSentinelTwr"
-    ));
+    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>();
 
     private static final List<Fixture> FIXTURES = List.of(
         new Fixture("SSharedReturnMaze", "public class SSharedReturnMaze {\n"

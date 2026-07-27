@@ -761,7 +761,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // even with inner handlers present. Restricted to a loop-carrying template: a guard-only finally
             // (a try-with-resources sentinel close) is already recovered correctly by other paths and must
             // not be re-routed here. Only this loop path consumes the excised shells (inside the window).
-            boolean loopFinally = !innerHandlers.isEmpty() && finallyTemplateHasLoop(outerHandlers);
+            boolean loopFinally = !innerHandlers.isEmpty()
+                    && !finallyTemplateHasNestedHandler(outerHandlers)
+                    && (finallyTemplateHasLoop(outerHandlers) || regionHasNestedFinally(innerHandlers));
             finallyDeduped = hasFinally
                     && (innerHandlers.isEmpty() || loopFinally)
                     && dedupStraightLineFinally(outerHandlers, loopFinally);
@@ -1107,6 +1109,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 IRBlock tryEnd = innerHandler.getTryEnd();
                 if (tryEnd != null) {
                     visited.add(tryEnd);
+                    // The block at the try end can be an EXCISED copy of the finally whose exit merely
+                    // reloads a return value stashed inside the try - javac's layout for a return-exit,
+                    // where the try body recovery already absorbed that return as its boundary terminal.
+                    // Walking on would re-emit it as an unconditional trailing return that the construct's
+                    // fall-through path would wrongly adopt; the real fall-through continues elsewhere.
+                    if (excisedCopyExits.containsKey(tryEnd)
+                            && isStashReloadReturn(excisedCopyExits.get(tryEnd), tryRangeBlocks(innerHandler))
+                            && containsReturn(tryStmts)) {
+                        current = null;
+                        continue;
+                    }
                     IRBlock next = null;
                     for (IRBlock succ : tryEnd.getSuccessors()) {
                         if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
@@ -3314,13 +3327,49 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Whether the finally template (the rethrow handler's subgraph, from its caught-exception store to the
-     * trailing {@code athrow}) contains a LOOP. A loop-carrying finally body is the shape whose javac-inlined
-     * copies are restructured beyond what the statement-level fold or the straight-line de-dup can match, and
-     * it is the only shape the branchy consume-shells de-dup is enabled for. A guard-only finally (a
-     * try-with-resources sentinel close: nested {@code if}s, no back edge) is excluded, so its already-correct
-     * recovery is left untouched.
+     * Whether the finally template (the rethrow handler's dominated subgraph up to its athrow) contains a
+     * nested exception handler - the try-with-resources suppress {@code try close catch addSuppressed}. Such
+     * a template is already recovered correctly by the fused-twr/suppress paths and must not be routed
+     * through the branchy consume-shells de-duplication; a plain sentinel-close template is safe.
      */
+    private boolean finallyTemplateHasNestedHandler(List<ExceptionHandler> outerHandlers) {
+        DominatorTree dt = context.getDominatorTree();
+        if (dt == null) {
+            return false;
+        }
+        for (ExceptionHandler h : outerHandlers) {
+            IRBlock root = h.getHandlerBlock();
+            if (root == null || !handlerRethrows(h)) {
+                continue;
+            }
+            for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers()) {
+                if (other == h || other.getHandlerBlock() == null || other.getTryBlocks() == null) {
+                    continue;
+                }
+                for (IRBlock tb : other.getTryBlocks()) {
+                    if (tb != root && dt.dominates(root, tb)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether some inner (nested) handler in the region is itself a finally - the pre-fused sentinel
+     * try-with-resources shape, whose outer finally's protected range javac splits around the inner
+     * construct's exits.
+     */
+    private boolean regionHasNestedFinally(List<ExceptionHandler> innerHandlers) {
+        for (ExceptionHandler h : innerHandlers) {
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean finallyTemplateHasLoop(List<ExceptionHandler> outerHandlers) {
         LoopAnalysis la = context.getLoopAnalysis();
         DominatorTree dt = context.getDominatorTree();
@@ -3505,8 +3554,29 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // consume-shells path needs the raw ranges (its copies sit in the gaps); every other caller keeps
         // the passed (possibly merged) handler view for byte-identical behavior.
         Set<IRBlock> protectedBlocks = new HashSet<>();
+        // A template with a nested protected range of its own (the try-with-resources suppress
+        // {@code try close catch addSuppressed}) is matched under the absorbed-handler pairing, whose
+        // behavior is calibrated to the caller-passed range view; only a PLAIN template widens to the raw
+        // split ranges. The dominator test is used (not the absorbed map) - absorption can decline while
+        // the nested try still exists, and a false widening lets condition-bearing code masquerade as a
+        // copy and be gutted.
+        boolean templateHasNestedTry = false;
+        for (ExceptionHandler other : method.getExceptionHandlers()) {
+            if (other.getHandlerBlock() == root || other.getTryBlocks() == null) {
+                continue;
+            }
+            for (IRBlock tb : other.getTryBlocks()) {
+                if (tb != root && dt.dominates(root, tb)) {
+                    templateHasNestedTry = true;
+                    break;
+                }
+            }
+            if (templateHasNestedTry) {
+                break;
+            }
+        }
         List<ExceptionHandler> rangeSource;
-        if (consumeShells) {
+        if (consumeShells || !templateHasNestedTry) {
             rangeSource = new ArrayList<>();
             for (ExceptionHandler r : method.getExceptionHandlers()) {
                 if (r.getHandlerBlock() == root) {
@@ -3626,15 +3696,31 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // Excision must not gut a block that begins a live protected range of its own: its handler's
         // recovery would find an empty try. The TEMPLATE may freely contain protected calls (javac guards
         // a finally handler's close) - template blocks are only compared, never touched.
+        Set<IRBlock> allCopyBlocks = new HashSet<>();
+        for (Map<IRBlock, IRBlock> m : matches) {
+            allCopyBlocks.addAll(m.values());
+        }
         for (Map<IRBlock, IRBlock> map : matches) {
             for (IRBlock copy : map.values()) {
                 ExceptionHandler live = findUnprocessedHandlerStartingAt(copy);
                 // A range boundary of a handler in the SAME dedup offering is not a live nested try:
                 // that family's own group excises its copies, and the whole construct is consumed
                 // together (an inner resource's copy legitimately starts the outer family's next
-                // protected range).
+                // protected range). A handler that merely BORDERS the copy - its protected range keeps
+                // blocks outside every excised copy - stays intact too: only gutting its whole range
+                // would leave its recovery an empty try.
+                boolean handlerKeepsContent = false;
+                if (!templateHasNestedTry && live != null && live.getTryBlocks() != null) {
+                    for (IRBlock tb : live.getTryBlocks()) {
+                        if (!allCopyBlocks.contains(tb) && !matchableInstructions(tb, false).isEmpty()) {
+                            handlerKeepsContent = true;
+                            break;
+                        }
+                    }
+                }
                 if (live != null && !copyNestedHandlers.contains(live)
-                        && !currentDedupOffering.contains(live)) {
+                        && !currentDedupOffering.contains(live)
+                        && !handlerKeepsContent) {
                     trace("finally-dedup bail#10 root=" + root.getBytecodeOffset());
                     return false;
                 }
@@ -3871,6 +3957,91 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         copyNestedHandlers.addAll(pendingCopyNested);
         return map;
+    }
+
+    /** The blocks of every raw exception-table range sharing {@code handler}'s handler block. */
+    private Set<IRBlock> tryRangeBlocks(ExceptionHandler handler) {
+        Set<IRBlock> out = new HashSet<>();
+        if (handler.getHandlerBlock() == null) {
+            return out;
+        }
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+            if (h.getHandlerBlock() != handler.getHandlerBlock() || h.getTryBlocks() == null) {
+                continue;
+            }
+            out.addAll(h.getTryBlocks());
+        }
+        return out;
+    }
+
+    /** Whether the statement tree contains a return - recursion via the structural children. */
+    private boolean containsReturn(List<Statement> stmts) {
+        for (Statement st : stmts) {
+            if (st instanceof ReturnStmt) {
+                return true;
+            }
+            if (st instanceof BlockStmt && containsReturn(((BlockStmt) st).getStatements())) {
+                return true;
+            }
+            if (st instanceof IfStmt) {
+                IfStmt is = (IfStmt) st;
+                if (containsReturn(flattenToStatements(is.getThenBranch()))) {
+                    return true;
+                }
+                if (is.getElseBranch() != null && containsReturn(flattenToStatements(is.getElseBranch()))) {
+                    return true;
+                }
+            }
+            if (st instanceof TryCatchStmt) {
+                TryCatchStmt tc = (TryCatchStmt) st;
+                if (containsReturn(flattenToStatements(tc.getTryBlock()))) {
+                    return true;
+                }
+                for (CatchClause cc : tc.getCatches()) {
+                    if (containsReturn(flattenToStatements(cc.body()))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether {@code exit} is a stash-reload return - {@code load_local k; return} where the store to
+     * {@code k} lives inside the protected range, i.e. javac's stashed boundary return whose value the try
+     * body already owns.
+     */
+    private boolean isStashReloadReturn(IRBlock exit, Set<IRBlock> protectedBlocks) {
+        LoadLocalInstruction load = null;
+        for (IRInstruction ins : exit.getInstructions()) {
+            if (ins instanceof CopyInstruction) {
+                continue;
+            }
+            if (ins instanceof LoadLocalInstruction && load == null) {
+                load = (LoadLocalInstruction) ins;
+                continue;
+            }
+            if (ins instanceof ReturnInstruction && load != null) {
+                continue;
+            }
+            if (ins.isTerminator()) {
+                continue;
+            }
+            return false;
+        }
+        if (load == null || !(exit.getTerminator() instanceof ReturnInstruction)) {
+            return false;
+        }
+        int slot = load.getLocalIndex();
+        for (IRBlock pb : protectedBlocks) {
+            for (IRInstruction ins : pb.getInstructions()) {
+                if (ins instanceof StoreLocalInstruction && ((StoreLocalInstruction) ins).getLocalIndex() == slot) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** The block comparable-instruction list: terminators and SSA plumbing skipped; the template root
