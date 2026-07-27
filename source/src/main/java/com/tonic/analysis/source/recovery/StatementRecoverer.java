@@ -8908,6 +8908,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverIfThenElse(IRBlock header, RegionInfo info) {
+        trace("schema-recovery kind=if-else method=" + context.getIrMethod().getName()
+                + " header=" + header.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         context.markProcessed(header);
 
         List<Statement> headerStmts = recoverBlockInstructions(header);
@@ -9125,6 +9130,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverWhileLoop(IRBlock header, RegionInfo info) {
+        trace("schema-recovery kind=while method=" + context.getIrMethod().getName()
+                + " header=" + header.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         Statement loop = recoverWhileLoop0(header, info);
         // The for-region pre-pass marks the induction init in the header's preheader for skipping,
         // expecting recoverForLoop to inline it as the for-init. When the same header is instead
@@ -9218,6 +9228,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverDoWhileLoop(IRBlock header, RegionInfo info) {
+        trace("schema-recovery kind=do-while method=" + context.getIrMethod().getName()
+                + " header=" + header.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         if (info.getLatchBlock() != null) {
             return recoverLatchDoWhile(header, info);
         }
@@ -9376,6 +9391,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverForLoop(IRBlock header, RegionInfo info) {
+        trace("schema-recovery kind=for method=" + context.getIrMethod().getName()
+                + " header=" + header.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         context.markProcessed(header);
 
         IRBlock incrementBlock = info.getIncrementBlock();
@@ -10091,6 +10111,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverSwitch(IRBlock header, RegionInfo info) {
+        trace("schema-recovery kind=switch method=" + context.getIrMethod().getName()
+                + " header=" + header.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         // Only the reconstructor-consumed switch shapes need the walk's exact case-body form: a string
         // switch's scaffolding, a pattern typeSwitch, and a value-yielding switch whose merge phis converge
         // the case values (the switch-expression fold matches those bodies statement-for-statement). A
