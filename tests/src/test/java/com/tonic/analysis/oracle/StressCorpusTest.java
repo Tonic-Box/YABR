@@ -56,9 +56,7 @@ class StressCorpusTest {
             // counter-init dropped/reordered around the hoisted declaration (silent wrong values)
             "SRecursionTry", "STwrInLoop",
             // recompiled bytecode fails verification
-            "SFinallyControlFlow", "SCatchInFinally",
-            // exception-path behavior diverges after the round trip
-            "SReturnInFinally"
+            "SFinallyControlFlow", "SCatchInFinally"
     ));
 
     private static final List<Fixture> FIXTURES = List.of(

@@ -1360,6 +1360,33 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      */
     private final Map<IRBlock, CatchClause> recoveredClauses = new HashMap<>();
 
+    /**
+     * Rewrites a trailing {@code if (c) { <terminates> } else { X }} to {@code if (c) <terminates>; X},
+     * recursing on the hoisted tail, so a nested rethrow ends up as the last statement. Only the tail is
+     * hoisted (an earlier terminating if already dominates everything after it); a non-terminating then-arm,
+     * or an if without an else, is left as is.
+     */
+    private List<Statement> hoistTerminalThenElse(List<Statement> stmts) {
+        if (stmts.isEmpty()) {
+            return stmts;
+        }
+        Statement last = stmts.get(stmts.size() - 1);
+        if (!(last instanceof IfStmt)) {
+            return stmts;
+        }
+        IfStmt ifs = (IfStmt) last;
+        if (!ifs.hasElse() || ifs.getElseBranch() == null
+                || !isTerminatingBlock(new BlockStmt(flattenToStatements(ifs.getThenBranch())))) {
+            return stmts;
+        }
+        List<Statement> out = new ArrayList<>(stmts.subList(0, stmts.size() - 1));
+        IfStmt noElse = new IfStmt(ifs.getCondition(), ifs.getThenBranch());
+        Locations.copy(ifs, noElse);
+        out.add(noElse);
+        out.addAll(hoistTerminalThenElse(flattenToStatements(ifs.getElseBranch())));
+        return out;
+    }
+
     private CatchClause recoverCatchClause(ExceptionHandler handler) {
         IRBlock handlerBlock = handler.getHandlerBlock();
         if (handlerBlock == null) {
@@ -1468,6 +1495,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         continue;
                     }
                     filtered.add(st);
+                }
+                // A control-flow finally's rethrow handler recovers as `if (c) { <swallow return> } else
+                // { throw e }` - the throw nested in the else, not a bare trailing statement. Hoist a
+                // terminating then-arm's else to a sibling so the rethrow becomes the clause's trailing throw
+                // (the shape the accept below and extractFinallyBody both key on), turning the body into
+                // `if (c) return ...; throw e`. Straight-line handlers are unchanged (no trailing if/else).
+                if (rethrowCarrier) {
+                    filtered = hoistTerminalThenElse(filtered);
                 }
                 boolean accept = rethrowCarrier
                         ? (!filtered.isEmpty() && filtered.get(filtered.size() - 1) instanceof ThrowStmt)

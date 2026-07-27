@@ -152,12 +152,16 @@ public class StatementLowerer {
         // is an immutable snapshot, so a finally that reassigns the same variable cannot clobber it.
         Value retVal = value != null ? exprLowerer.lower(value) : null;
 
-        for (Statement fin : finallyStack) {
-            if (ctx.getCurrentBlock().getTerminator() != null) {
-                return;
-            }
-            lower(fin);
+        // Run each enclosing finally, innermost first, POPPING it before lowering it: a finally may itself
+        // contain a `return` (or break/throw), and Java runs the finallys ENCLOSING that finally, not the
+        // finally again (JLS 14.20.2) - keeping it on the stack would make its own return re-drain it
+        // forever. If a finally exits abruptly it has already drained the ones enclosing it, so stop.
+        Deque<Statement> saved = new ArrayDeque<>(finallyStack);
+        while (!finallyStack.isEmpty() && ctx.getCurrentBlock().getTerminator() == null) {
+            lower(finallyStack.pop());
         }
+        finallyStack.clear();
+        finallyStack.addAll(saved);
         if (ctx.getCurrentBlock().getTerminator() != null) {
             return;
         }
