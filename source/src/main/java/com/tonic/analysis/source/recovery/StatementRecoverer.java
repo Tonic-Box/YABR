@@ -766,8 +766,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     && (finallyTemplateHasLoop(outerHandlers) || regionHasNestedFinally(innerHandlers));
             finallyDeduped = hasFinally
                     && dedupStraightLineFinally(outerHandlers, loopFinally);
+            // A finally NESTED under this construct (the outer handler is a plain catch) gets the same
+            // eager excision - opportunistic and all-or-nothing, so a shape not fully accounted for is
+            // left untouched for the nested recovery.
+            if (regionHasNestedFinally(innerHandlers)) {
+                dedupStraightLineFinally(innerHandlers, false);
+            }
         } finally {
             extendedFinallyDedup = savedExtendedDedup;
+        }
+        // Either excision above retires the copies' mirrored handlers from the method table; this list was
+        // built beforehand and would rebuild empty constructs around the excised blocks (and stop the
+        // clause walks at their stale range starts).
+        if (!innerHandlers.isEmpty()) {
+            Set<IRBlock> liveHandlerBlocks = new HashSet<>();
+            for (ExceptionHandler lh : context.getIrMethod().getExceptionHandlers()) {
+                liveHandlerBlocks.add(lh.getHandlerBlock());
+            }
+            innerHandlers.removeIf(h -> h.getHandlerBlock() != null
+                    && !liveHandlerBlocks.contains(h.getHandlerBlock()));
         }
         List<Statement> tryStmts;
         if (!innerHandlers.isEmpty()) {
@@ -2285,20 +2302,34 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Recursively recovers the blocks of a catch body, starting from {@code successors} of the catch handler
-     * block and bounded to the catch body itself: {@code catchEntry} (the handler block) and everything it
-     * dominates. A block NOT dominated by {@code catchEntry} is the shared merge after the whole try/catch
-     * (reached from the try's normal exit too) and must not be pulled into the catch. A goto out of the
-     * handler usually leads there, which is why a goto normally stops the walk; the exception is a catch whose
-     * body contains its own nested try (recovered below as a nested try/catch/finally so the caught exception
-     * variable stays in scope, instead of the try's blocks being walked flat and its finally hoisted out).
+     * A return block whose every live predecessor is either inside the clause's dominated subtree or an
+     * EMPTIED inlined-finally copy block (nothing but the caught-exception copy and its terminator left):
+     * before the excision the copy's mirrored handler also flowed into it, so the pre-excision dominator
+     * tree classifies it as a shared merge - but post-excision the clause is its only real in-flow, and
+     * skipping it would drop the clause's own return.
      */
+    private boolean isCatchExclusiveTail(IRBlock block, IRBlock catchEntry, DominatorTree dt) {
+        if (!(block.getTerminator() instanceof ReturnInstruction)) {
+            return false;
+        }
+        for (IRBlock p : block.getPredecessors()) {
+            if (dt.dominates(catchEntry, p)) {
+                continue;
+            }
+            if (!excisedFinallyCopyBlocks.contains(p)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void recoverHandlerBlocks(Collection<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts,
                                       IRBlock catchEntry) {
         DominatorTree dt = context.getDominatorTree();
         for (IRBlock block : successors) {
             if (visited.contains(block)) continue;
-            if (catchEntry != null && dt != null && block != catchEntry && !dt.dominates(catchEntry, block)) {
+            if (catchEntry != null && dt != null && block != catchEntry && !dt.dominates(catchEntry, block)
+                    && !isCatchExclusiveTail(block, catchEntry, dt)) {
                 continue; // outside the catch body - the shared post-try-catch merge
             }
 
@@ -2377,6 +2408,21 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
 
             if (isGoto) {
+                // A goto normally leaves the clause for the shared merge and stops the walk. But when it
+                // resolves - through the emptied inlined-finally copy chain - to the clause's OWN return
+                // (shared-looking only because the copy's now-emptied mirrored handler also flowed into
+                // it pre-excision), stopping would drop that return and the clause would wrongly fall
+                // through to the construct's continuation.
+                IRBlock tgt = singleNormalSuccessor(block);
+                if (tgt != null) {
+                    tgt = resolveThroughEmptyChain(tgt);
+                }
+                if (tgt != null && !visited.contains(tgt) && dt != null && catchEntry != null
+                        && excisedFinallyCopyBlocks.contains(block)
+                        && tgt.getTerminator() instanceof ReturnInstruction
+                        && (dt.dominates(catchEntry, tgt) || isCatchExclusiveTail(tgt, catchEntry, dt))) {
+                    recoverHandlerBlocks(Collections.singletonList(tgt), visited, stmts, catchEntry);
+                }
                 continue;
             }
 
@@ -3634,7 +3680,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         Set<IRBlock> coveredReturns = new HashSet<>();
         Set<ExceptionHandler> copyNestedHandlers = new HashSet<>();
         if (!returnBlocks.isEmpty()) {
-            List<IRInstruction> rootSignature = matchableInstructions(root, true);
+            // The signature comes from the template's first MEANINGFUL block: the root may hold only the
+            // caught-exception store (split into its own block when the clause is itself protected), and
+            // an empty signature would prefilter every candidate away.
+            IRBlock sigBlock = root;
+            while (matchableInstructions(sigBlock, sigBlock == root).isEmpty()
+                    && !(sigBlock.getTerminator() instanceof BranchInstruction)) {
+                IRBlock nxt = singleNormalSuccessor(sigBlock);
+                if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk) {
+                    break;
+                }
+                sigBlock = nxt;
+            }
+            List<IRInstruction> rootSignature = matchableInstructions(sigBlock, sigBlock == root);
             for (IRBlock candidate : protectedBlocks) {
                 if (returnBlocks.contains(candidate) || matchedCopyBlocks.contains(candidate)
                         || candidate == root) {
@@ -3759,6 +3817,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         copy.removeInstruction(ins);
                         hadOwnWork = true;
                     }
+                }
+                if (hadOwnWork) {
+                    excisedFinallyCopyBlocks.add(copy);
                 }
                 // On the finally-with-user-catch path the copies sit INSIDE the recovered window (the
                 // finally's range is split around them), so the body walk would re-emit the excised shells
@@ -4086,6 +4147,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (chain == null) {
             return null;
         }
+        // A finally body carrying its own catch (a chain block protected by another handler) is no
+        // straight-line template even when the normal-path chain is linear: its inlined copies bear
+        // MIRRORED nested handlers that only the branchy matcher's nested-template pairing retires -
+        // a contiguous excision would strip the copies' try sides and strand the mirrored catches.
+        for (IRBlock cb : chain) {
+            for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers()) {
+                if (other != h && other.getTryBlocks() != null && other.getTryBlocks().contains(cb)
+                        && other.getHandlerBlock() != h.getHandlerBlock()) {
+                    return null;
+                }
+            }
+        }
 
         IRBlock lastBlock = chain.isEmpty() ? null : chain.get(chain.size() - 1);
         if (lastBlock == null) {
@@ -4372,6 +4445,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     /** Each excised finally copy's root mapped to its continuation, so a later (outer) group's exit hunt
      * resolves through the emptied - possibly branchy - copy to where its own copy begins. */
     private final Map<IRBlock, IRBlock> excisedCopyExits = new HashMap<>();
+    /** Every block emptied by a finally-copy excision; recoveries distinguish these from naturally empty
+     * blocks (a recompiled layout's synthetic goto bridges), which must not change walk behavior. */
+    private final Set<IRBlock> excisedFinallyCopyBlocks = new HashSet<>();
     /** Widens the finally de-duplication (arithmetic templates, split-handler chains, shared-exit
      * coverage) for the staged finally-after-prelude path only; the long-standing call sites keep the
      * narrower acceptance their gated output is calibrated to. */
