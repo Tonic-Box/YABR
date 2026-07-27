@@ -58,6 +58,13 @@ public interface RegionRecoveryBridge {
     List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ);
 
     /**
+     * The still-unconsumed for-induction inits of {@code header}'s preheader: init stores the for-region
+     * pre-pass marked for skipping that no {@code for}-init or phi copy will re-emit (the header carries no
+     * phi for the slot - a handler-only loop). Recovered as declarations, consumed exactly once.
+     */
+    List<Statement> recoverUnconsumedForLoopInits(IRBlock header);
+
+    /**
      * True when some block in {@code region} starts an exception handler the surrounding recovery has not
      * yet consumed - a nested try the engine must decline so the try/catch scaffolding recovers it.
      */

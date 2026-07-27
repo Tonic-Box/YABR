@@ -1573,6 +1573,10 @@ public final class ReachingConditionStructurer {
                 out.addAll(bridge.lowerInductionPhiInitsOnEdge(pred, header));
             }
         }
+        // A handler-only loop can carry no phi for its counter, so neither the edge copies above nor a
+        // for-init fold ever realize the init the for-region pre-pass marked for skipping; re-emit it here
+        // or the counter is undeclared.
+        out.addAll(bridge.recoverUnconsumedForLoopInits(header));
         IRBlock latch = inductionLatch(header);
         List<Statement> headerStmts;
         if (tryNodes.containsKey(header)) {

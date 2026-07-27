@@ -6003,6 +6003,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
     /** Tracks try handlers that have already been processed to avoid infinite loops */
     private final Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
+    /** For-loop induction inits already re-emitted (as a for-init or in front of a while), never twice. */
+    private final Set<IRInstruction> consumedForLoopInits = new HashSet<>();
     /** Tracks handler blocks to prevent nested try-finally for same finally block */
     private final Set<IRBlock> processedHandlerBlocks = new HashSet<>();
 
@@ -8857,6 +8859,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverWhileLoop(IRBlock header, RegionInfo info) {
+        Statement loop = recoverWhileLoop0(header, info);
+        // The for-region pre-pass marks the induction init in the header's preheader for skipping,
+        // expecting recoverForLoop to inline it as the for-init. When the same header is instead
+        // recovered as a while (a handler-clause loop whose counter carries no phi), the skipped init
+        // has no re-emission point and the counter is silently undeclared. Re-emit it before the loop.
+        List<Statement> inits = recoverUnconsumedForLoopInits(header);
+        if (inits.isEmpty()) {
+            return loop;
+        }
+        inits.add(loop);
+        return new BlockStmt(inits);
+    }
+
+    private Statement recoverWhileLoop0(IRBlock header, RegionInfo info) {
         context.markProcessed(header);
 
         Set<IRBlock> stopBlocks = new HashSet<>();
@@ -9121,6 +9137,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     if (instr instanceof StoreLocalInstruction) {
                         StoreLocalInstruction store = (StoreLocalInstruction) instr;
                         if (store.getLocalIndex() == targetLocal) {
+                            consumedForLoopInits.add(instr);
                             Statement initStmt = recoverStoreLocalAsForInit(store);
                             initStmts.add(initStmt);
                         }
@@ -10347,6 +10364,62 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     @Override
     public List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ) {
         return lowerPhisOnEdge(pred, succ, true);
+    }
+
+    @Override
+    public List<Statement> recoverUnconsumedForLoopInits(IRBlock header) {
+        // Scoped to loops living inside an exception handler's subtree: only there does the counter
+        // carry no phi (handler-entry code is not merged into SSA form the same way), leaving the marked
+        // init with no other re-emission point. A normal loop's init is realized by the for-init fold or
+        // a phi edge copy; re-emitting it here would re-declare the counter at the preheader with the
+        // slot-unified type and break the recompiled layout's fixed point.
+        DominatorTree dt = context.getDominatorTree();
+        boolean handlerOnly = false;
+        if (dt != null) {
+            for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+                if (h.getHandlerBlock() != null
+                        && (h.getHandlerBlock() == header || dt.dominates(h.getHandlerBlock(), header))) {
+                    handlerOnly = true;
+                    break;
+                }
+            }
+        }
+        if (!handlerOnly) {
+            return Collections.emptyList();
+        }
+        List<Statement> inits = new ArrayList<>();
+        LoopAnalysis.Loop loop = context.getLoopAnalysis() != null
+                ? context.getLoopAnalysis().getLoop(header) : null;
+        for (IRBlock pred : header.getPredecessors()) {
+            if (loop != null && loop.contains(pred)) {
+                continue;
+            }
+            for (IRInstruction instr : pred.getInstructions()) {
+                if (!(instr instanceof StoreLocalInstruction) || !context.isForLoopInit(instr)
+                        || consumedForLoopInits.contains(instr)) {
+                    continue;
+                }
+                StoreLocalInstruction store = (StoreLocalInstruction) instr;
+                // A phi at the header for this slot owns the init: its edge copy (or the for-init fold)
+                // realizes the value, and re-emitting here would duplicate it.
+                boolean phiOwned = false;
+                for (PhiInstruction phi : header.getPhiInstructions()) {
+                    if (isPhiForLocal(phi, store.getLocalIndex(), loop)) {
+                        phiOwned = true;
+                        break;
+                    }
+                }
+                if (phiOwned) {
+                    continue;
+                }
+                consumedForLoopInits.add(instr);
+                Statement initStmt = recoverStoreLocalAsForInit(store);
+                if (initStmt != null) {
+                    inits.add(initStmt);
+                }
+            }
+        }
+        return inits;
     }
 
     private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ, boolean inductionOnly) {
