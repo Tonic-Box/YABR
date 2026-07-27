@@ -1218,7 +1218,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (rcsBound != null && !visited.contains(rcsBound)) {
                 Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
                 boundedStops.add(rcsBound);
-                List<Statement> structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops);
+                List<Statement> structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops, true);
                 if (structuredRegion != null) {
                     result.addAll(structuredRegion);
                     current = stopBlocks.contains(rcsBound) || context.isProcessed(rcsBound) ? null : rcsBound;
