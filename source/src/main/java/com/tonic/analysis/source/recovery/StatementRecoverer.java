@@ -765,7 +765,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     && !finallyTemplateHasNestedHandler(outerHandlers)
                     && (finallyTemplateHasLoop(outerHandlers) || regionHasNestedFinally(innerHandlers));
             finallyDeduped = hasFinally
-                    && (innerHandlers.isEmpty() || loopFinally)
                     && dedupStraightLineFinally(outerHandlers, loopFinally);
         } finally {
             extendedFinallyDedup = savedExtendedDedup;
@@ -1811,8 +1810,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return out;
     }
 
+    /** Diagnostic kill switch for the statement-level inlined-finally folds: with
+     * {@code -Dyabr.disable.finally.folds} set they pass statements through untouched, measuring how much
+     * of the copy removal the CFG-level de-duplication owns on its own (the fold-retirement burn-down). */
+    private static final boolean FOLDS_DISABLED = System.getProperty("yabr.disable.finally.folds") != null;
+
     private List<Statement> filterInlinedFinallyFromTryStatements(List<Statement> statements, List<Statement> finallyStmts) {
-        if (finallyStmts == null || finallyStmts.isEmpty()) {
+        if (FOLDS_DISABLED || finallyStmts == null || finallyStmts.isEmpty()) {
             return statements;
         }
         List<Statement> result = new ArrayList<>();
@@ -3112,7 +3116,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         extendedFinallyDedup = true;
         boolean finallyDeduped;
         try {
-            finallyDeduped = hasFinally && nestedHandlers.isEmpty() && dedupStraightLineFinally(sameRegionHandlers);
+            // Attempted with nested handlers present too: a finally whose body carries its own catch
+            // inlines copies bearing MIRRORED nested handlers, which are exactly what the branchy
+            // matcher's nested-template pairing excises (all-or-nothing, so a shape it cannot fully
+            // account for leaves the IR untouched and the statement-level folds still apply).
+            finallyDeduped = hasFinally && dedupStraightLineFinally(sameRegionHandlers);
         } finally {
             extendedFinallyDedup = savedExtendedSame;
         }
@@ -4078,6 +4086,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (chain == null) {
             return null;
         }
+
         IRBlock lastBlock = chain.isEmpty() ? null : chain.get(chain.size() - 1);
         if (lastBlock == null) {
             return null;
@@ -4403,12 +4412,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (finallyDeduped.containsAll(rethrowers)) {
             return true;
         }
-        List<IRInstruction> template = null;
-        Set<IRBlock> protectedBlocks = new HashSet<>();
-        Set<IRBlock> handlerBlocks = new HashSet<>();
         for (ExceptionHandler h : rethrowers) {
-            List<IRInstruction> t = straightLineFinallyTemplate(h);
-            if (t == null) {
+            if (straightLineFinallyTemplate(h) == null) {
                 // Independent finally handlers (two try-with-resources resources in one region) form
                 // separate groups keyed by handler block; each group's all-or-nothing invariant is its
                 // own, and the region is de-duplicated only when EVERY group is.
@@ -4432,7 +4437,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     return span;
                 }));
                 for (List<ExceptionHandler> group : groups) {
-                    boolean ok = dedupBranchySubgraphFinally(group, consumeShells);
+                    // A mixed family (a branchy close guard alongside a straight-line accumulator) must
+                    // not force every group branchy: a group whose own template IS straight-line gets the
+                    // contiguous excision - the branchy matcher walks an empty template subtree for a
+                    // single-block finally and would succeed without excising anything.
+                    boolean ok = dedupContiguousGroup(group) || dedupBranchySubgraphFinally(group, consumeShells);
                     trace("finally-dedup group root=" + group.get(0).getHandlerBlock().getBytecodeOffset()
                             + " ok=" + ok);
                     if (!ok) {
@@ -4440,6 +4449,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                 }
                 return true;
+            }
+        }
+        return dedupContiguousGroup(rethrowers);
+    }
+
+    /**
+     * The contiguous (straight-line template) de-duplication for one rethrower group: every exit of the
+     * group's protected ranges must carry a contiguous copy of the template (in the leaving block or the
+     * edge's target), and all copies are excised together. Returns false - leaving the IR untouched - for
+     * a branchy template or an uncovered exit.
+     */
+    private boolean dedupContiguousGroup(List<ExceptionHandler> rethrowers) {
+        IRMethod method = context.getIrMethod();
+        List<IRInstruction> template = null;
+        Set<IRBlock> protectedBlocks = new HashSet<>();
+        Set<IRBlock> handlerBlocks = new HashSet<>();
+        for (ExceptionHandler h : rethrowers) {
+            List<IRInstruction> t = straightLineFinallyTemplate(h);
+            if (t == null) {
+                return false;
             }
             if (template == null) {
                 template = t;
@@ -4461,6 +4490,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 handlerBlocks.add(h.getHandlerBlock());
             }
         }
+        // A self-protecting entry (the finally body covered by its own handler) would put the handler
+        // chain in the protected set and excise the clause itself; the template blocks are never copies.
+        protectedBlocks.removeAll(handlerBlocks);
         if (protectedBlocks.isEmpty()) {
             return false;
         }
@@ -4538,6 +4570,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (excisions.isEmpty()) {
+            trace("finally-dedup contiguous no-copies root="
+                    + (handlerBlocks.isEmpty() ? -1 : handlerBlocks.iterator().next().getBytecodeOffset()));
             return false;
         }
         for (List<IRInstruction> run : excisions) {
@@ -4545,6 +4579,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 ins.getBlock().removeInstruction(ins);
             }
         }
+        trace("finally-dedup contiguous ok excised=" + excisions.size());
         finallyDeduped.addAll(rethrowers);
         return true;
     }
@@ -6894,12 +6929,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
-        // Excising the straight-line copies up front gives the cleanest body. A finally whose copies
-        // carry control flow cannot be excised statically, but the node stays decodable: the copies lie
-        // inside the widened window and are consumed with it, and the delegate recovery folds them out at
-        // statement level against the structurally recovered clause (try body, catch bodies, and the
-        // trailing fall-through copy alike).
-        dedupStraightLineFinally(family);
+        // Excising the straight-line copies up front gives the cleanest body - EXTENDED, so arithmetic
+        // templates (`log += 10`) and split-handler chains are excised here too instead of leaking to the
+        // statement-level folds. A finally whose copies carry control flow cannot be excised statically,
+        // but the node stays decodable: the copies lie inside the widened window and are consumed with it,
+        // and the delegate recovery folds them out at statement level against the structurally recovered
+        // clause (try body, catch bodies, and the trailing fall-through copy alike).
+        boolean savedDecodeExtended = extendedFinallyDedup;
+        extendedFinallyDedup = true;
+        try {
+            dedupStraightLineFinally(family);
+        } finally {
+            extendedFinallyDedup = savedDecodeExtended;
+        }
         Set<IRBlock> siblingBlocks = new HashSet<>();
         for (ExceptionHandler sib : siblings) {
             siblingBlocks.add(sib.getHandlerBlock());
