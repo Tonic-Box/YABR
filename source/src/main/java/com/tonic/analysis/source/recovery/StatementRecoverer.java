@@ -755,8 +755,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         extendedFinallyDedup = true;
         boolean finallyDeduped;
         try {
-            finallyDeduped = hasFinally && innerHandlers.isEmpty()
-                    && dedupStraightLineFinally(outerHandlers);
+            // A finally whose body carries a LOOP inlines branchy copies that only the CFG-level subgraph
+            // de-duplication can excise (the statement-level folds cannot match their restructured shapes),
+            // and javac splits its protected range around a nested user catch - so the range de-dup must run
+            // even with inner handlers present. Restricted to a loop-carrying template: a guard-only finally
+            // (a try-with-resources sentinel close) is already recovered correctly by other paths and must
+            // not be re-routed here. Only this loop path consumes the excised shells (inside the window).
+            boolean loopFinally = !innerHandlers.isEmpty() && finallyTemplateHasLoop(outerHandlers);
+            finallyDeduped = hasFinally
+                    && (innerHandlers.isEmpty() || loopFinally)
+                    && dedupStraightLineFinally(outerHandlers, loopFinally);
         } finally {
             extendedFinallyDedup = savedExtendedDedup;
         }
@@ -3306,6 +3314,50 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
+     * Whether the finally template (the rethrow handler's subgraph, from its caught-exception store to the
+     * trailing {@code athrow}) contains a LOOP. A loop-carrying finally body is the shape whose javac-inlined
+     * copies are restructured beyond what the statement-level fold or the straight-line de-dup can match, and
+     * it is the only shape the branchy consume-shells de-dup is enabled for. A guard-only finally (a
+     * try-with-resources sentinel close: nested {@code if}s, no back edge) is excluded, so its already-correct
+     * recovery is left untouched.
+     */
+    private boolean finallyTemplateHasLoop(List<ExceptionHandler> outerHandlers) {
+        LoopAnalysis la = context.getLoopAnalysis();
+        DominatorTree dt = context.getDominatorTree();
+        if (la == null || dt == null) {
+            return false;
+        }
+        for (ExceptionHandler h : outerHandlers) {
+            IRBlock root = h.getHandlerBlock();
+            if (root == null || !handlerRethrows(h)) {
+                continue;
+            }
+            Deque<IRBlock> work = new ArrayDeque<>();
+            Set<IRBlock> seen = new HashSet<>();
+            work.add(root);
+            while (!work.isEmpty()) {
+                IRBlock b = work.poll();
+                if (!seen.add(b)) {
+                    continue;
+                }
+                if (la.isLoopHeader(b) && dt.dominates(root, b)) {
+                    return true;
+                }
+                IRInstruction term = b.getTerminator();
+                if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                    continue;
+                }
+                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL && dt.dominates(root, e.getKey())) {
+                        work.add(e.getKey());
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * De-duplicates a finally whose body CARRIES CONTROL FLOW - a guarded close, javac's inlined copies of
      * it being branchy subgraphs the contiguous matcher cannot see. The handler's dominated subtree between
      * the caught-exception store and the rethrow is the template; each normal exit of the protected range
@@ -3316,7 +3368,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * is rewired and the cached dominator tree stays valid. All-or-nothing: an uncovered exit, a template
      * or copy with its own nested try, or a second continuation declines the whole de-duplication.
      */
-    private boolean dedupBranchySubgraphFinally(List<ExceptionHandler> rethrowers) {
+    private boolean dedupBranchySubgraphFinally(List<ExceptionHandler> rethrowers, boolean consumeShells) {
         IRMethod method = context.getIrMethod();
         DominatorTree dt = context.getDominatorTree();
         IRBlock root = rethrowers.get(0).getHandlerBlock();
@@ -3447,8 +3499,24 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             finallyDeduped.addAll(rethrowers);
             return true;
         }
+        // The RAW exception-table entries targeting this handler block give the true split ranges; the
+        // inlined copies LIVE in the gaps between them, so a merged min..max span would swallow the copies
+        // into the protected set and the exit hunt would never find a copy root. Only the loop-carrying
+        // consume-shells path needs the raw ranges (its copies sit in the gaps); every other caller keeps
+        // the passed (possibly merged) handler view for byte-identical behavior.
         Set<IRBlock> protectedBlocks = new HashSet<>();
-        for (ExceptionHandler r : rethrowers) {
+        List<ExceptionHandler> rangeSource;
+        if (consumeShells) {
+            rangeSource = new ArrayList<>();
+            for (ExceptionHandler r : method.getExceptionHandlers()) {
+                if (r.getHandlerBlock() == root) {
+                    rangeSource.add(r);
+                }
+            }
+        } else {
+            rangeSource = rethrowers;
+        }
+        for (ExceptionHandler r : rangeSource) {
             int lo = r.getTryStart() == null ? -1 : r.getTryStart().getBytecodeOffset();
             int hi = r.getTryEnd() == null ? -1 : r.getTryEnd().getBytecodeOffset();
             if (lo < 0 || hi <= lo) {
@@ -3461,6 +3529,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     protectedBlocks.add(b);
                 }
             }
+        }
+        if (protectedBlocks.isEmpty()) {
+            trace("finally-dedup bail#6 root=" + root.getBytecodeOffset());
+            return false;
         }
         // The clause's own blocks land in the protected set through javac's self-protection entry
         // (the finally clause is covered by a rethrowing entry pointing at its own handler); the
@@ -3587,10 +3659,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 excisedCopyExits.put(copyRoot, copyExit);
             }
             for (IRBlock copy : map.values()) {
+                boolean hadOwnWork = false;
                 for (IRInstruction ins : new ArrayList<>(copy.getInstructions())) {
                     if (!ins.isTerminator() && !(ins instanceof CopyInstruction)) {
                         copy.removeInstruction(ins);
+                        hadOwnWork = true;
                     }
+                }
+                // On the finally-with-user-catch path the copies sit INSIDE the recovered window (the
+                // finally's range is split around them), so the body walk would re-emit the excised shells
+                // as skeleton loops; consume them outright. Only blocks the excision actually emptied are
+                // consumed - a block the parallel walk merely passed through still holds the protected
+                // body's own work. The gap-resident shells of the other paths stay walkable: their guard
+                // conditions are recovered from the shells by the existing folds.
+                if (consumeShells && hadOwnWork) {
+                    consumedFinallyShells.add(copy);
+                    context.markProcessed(copy);
                 }
             }
         }
@@ -4121,6 +4205,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * the caller keeps the legacy body walk and statement-level fold. Returns true when the body was de-duplicated.
      */
     private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers) {
+        return dedupStraightLineFinally(regionHandlers, false);
+    }
+
+    private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers, boolean consumeShells) {
         IRMethod method = context.getIrMethod();
         if (method == null) {
             return false;
@@ -4173,7 +4261,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     return span;
                 }));
                 for (List<ExceptionHandler> group : groups) {
-                    boolean ok = dedupBranchySubgraphFinally(group);
+                    boolean ok = dedupBranchySubgraphFinally(group, consumeShells);
                     trace("finally-dedup group root=" + group.get(0).getHandlerBlock().getBytecodeOffset()
                             + " ok=" + ok);
                     if (!ok) {
@@ -4525,8 +4613,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             IRMethod irMethod = context.getIrMethod();
             IRBlock best = null;
             for (IRBlock block : irMethod.getBlocks()) {
+                // An excised inlined-finally copy carries no statements and is marked processed; picking it
+                // as the continuation would land on a dead shell and drop the real continuation past it (the
+                // method's trailing return). Skip consumed shells so the nearest LIVE block past the end wins.
                 if (block.getBytecodeOffset() >= endOffset && !visited.contains(block)
                         && block != handler.getHandlerBlock()
+                        && !consumedFinallyShells.contains(block)
+                        && !(!consumedFinallyShells.isEmpty() && context.isProcessed(block))
                         && (best == null || block.getBytecodeOffset() < best.getBytecodeOffset())) {
                     best = block;
                 }
@@ -6005,6 +6098,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private final Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
     /** For-loop induction inits already re-emitted (as a for-init or in front of a while), never twice. */
     private final Set<IRInstruction> consumedForLoopInits = new HashSet<>();
+    /** Excised inlined-finally copy blocks consumed outright; the walk and continuation route around them. */
+    private final Set<IRBlock> consumedFinallyShells = new HashSet<>();
     /** Tracks handler blocks to prevent nested try-finally for same finally block */
     private final Set<IRBlock> processedHandlerBlocks = new HashSet<>();
 
@@ -10414,9 +10509,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
                 consumedForLoopInits.add(instr);
                 Statement initStmt = recoverStoreLocalAsForInit(store);
-                if (initStmt != null) {
-                    inits.add(initStmt);
-                }
+                inits.add(initStmt);
             }
         }
         return inits;

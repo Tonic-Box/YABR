@@ -48,11 +48,9 @@ class StressCorpusTest {
      * the modern-javac burn-in backlog (stress-corpus-findings memory note). The harness asserts each
      * still fails, so a silent fix or a new regression of the documentation both surface.
      */
-    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(Arrays.asList(
+    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(List.of(
             // sentinel-twr unequal-path fall-through / crc-guard fusion (catch-join-sequence-split)
-            "SSentinelTwr",
-            // recompiled bytecode fails verification
-            "SFinallyControlFlow"
+            "SSentinelTwr"
     ));
 
     private static final List<Fixture> FIXTURES = List.of(
