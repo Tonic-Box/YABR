@@ -401,7 +401,8 @@ public final class ReachingConditionStructurer {
             for (IRBlock pred : b.getPredecessors()) {
                 if (isBackEdge(pred, b) && !region.contains(pred) && !consumedByAnyNode(pred)) {
                     trace("rcs-decline latch-outside entry=" + entry.getBytecodeOffset()
-                            + " header=" + b.getBytecodeOffset());
+                            + " header=" + b.getBytecodeOffset()
+                            + " pred=" + pred.getBytecodeOffset());
                     return false;
                 }
             }

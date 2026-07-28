@@ -7863,6 +7863,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * silently truncated, dropping real code.
      */
     private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {
+        // A stop that is an unprocessed try's start STRICTLY inside the offered construct is the walk's
+        // own hand-off boundary, not the construct's: the engine models that try as an opaque node, so
+        // the offer spans it. Without this, a loop whose body opens a try is cut at its first block.
+        DominatorTree dt = context.getDominatorTree();
+        if (dt != null) {
+            offeredStops.removeIf(stop -> stop != entry && stop != bound
+                    && dt.dominates(entry, stop)
+                    && findUnprocessedHandlerStartingAt(stop) != null);
+        }
         Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
         boolean exitsOk = exits != null && (exits.isEmpty()
                 || (bound != null && exits.size() == 1 && exits.contains(bound)));
