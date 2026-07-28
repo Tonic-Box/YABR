@@ -1976,6 +1976,18 @@ public final class ReachingConditionStructurer {
         }
         if (targets.size() <= 1) {
             IRBlock only = targets.isEmpty() ? null : targets.iterator().next();
+            // A single raw target may still be a break-path INTERMEDIATE carrying its own branches (a
+            // guarded resource close before leaving the loop). Settle it to its continuation exactly as
+            // the multi-exit path does; a shape that will not settle keeps the raw target's handling.
+            if (only != null && dominatedByNonHeaderLoopBlock(only, header, loopBlocks)) {
+                try {
+                    IRBlock settled = settleExit(followExitIntermediates(only, loopBlocks), header, loopBlocks);
+                    if (settled != null) {
+                        only = settled;
+                    }
+                } catch (BailToLegacy ignored) {
+                }
+            }
             return breakReachesAfterLoop(header, only, loopBlocks) ? only : null;
         }
         // Several distinct exits: settle each to its non-terminal continuation (a terminating or inline body region

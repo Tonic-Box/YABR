@@ -1271,12 +1271,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
                 case DO_WHILE_LOOP:
-                    throw retiredDoWhileRecovery(current);
-                case FOR_LOOP: {
-                    result.add(recoverForLoop(current, info));
-                    current = findLoopExit(info, visited, stopBlocks);
-                    break;
-                }
+                    throw retiredLoopRecovery("do-while", current);
+                case FOR_LOOP:
+                    throw retiredLoopRecovery("for", current);
                 case GUARD_CLAUSE: {
                     Statement guardStmt = recoverGuardClause(current, info);
                     // Collect pending statements (header computations) BEFORE the guard
@@ -5204,7 +5201,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         current = getNextSequentialBlock(current);
                         break;
                     }
-                    throw retiredDoWhileRecovery(current);
+                    throw retiredLoopRecovery("do-while", current);
                 }
                 case FOR_LOOP: {
                     if (loopCutByStops(info, stopBlocks)) {
@@ -5215,9 +5212,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         current = getNextSequentialBlock(current);
                         break;
                     }
-                    result.add(recoverForLoop(current, info));
-                    current = findLoopExit(info, visited, new HashSet<>());
-                    break;
+                    throw retiredLoopRecovery("for", current);
                 }
                 case GUARD_CLAUSE: {
                     Statement guardStmt = recoverGuardClause(current, info);
@@ -7651,13 +7646,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     // A try INSIDE a loop may exit both to its in-loop continuation and - via a break in
                     // the try body - out of the loop. The in-loop continuation is the node's join; the
                     // loop model owns the break edge (it stays visible on the consumed blocks' CFG edges,
-                    // where the loop's break-target scan finds it, and the delegate emits the jump).
-                    // Only a FLAT protected body qualifies: with another handler nested in the window,
-                    // the delegate's body walk re-attaches the jump paths inside the wrong handler scope.
-                    // A SYNCHRONIZED region does not qualify either - its delegate rebuilds the body from
-                    // the monitor scaffolding and drops the out-of-loop jump.
-                    if (!acyclicContext
-                            && !consumedNestsAnotherHandler(block, consumed, siblingBlocks, rethrower)) {
+                    // where the loop's break-target scan finds it and settles it through guarded-close
+                    // intermediates, and the delegate emits the jump).
+                    if (!acyclicContext) {
                         LoopAnalysis.Loop encl = context.getLoopAnalysis().getLoop(block);
                         boolean afterIn = encl.getBlocks().contains(after);
                         boolean succIn = encl.getBlocks().contains(succ);
@@ -7716,28 +7707,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             b = b.getSuccessors().iterator().next();
         }
         return b;
-    }
-
-    /**
-     * Whether the consumed window nests a FOREIGN handler - one beyond the node's own try start whose
-     * handler is neither the node's rethrower nor one of its catch siblings. The node's own finally
-     * commonly spans SPLIT table ranges (a break or continue in the try body cuts the range), whose
-     * later range starts are not nesting.
-     */
-    private boolean consumedNestsAnotherHandler(IRBlock tryStart, Set<IRBlock> consumed,
-                                                Set<IRBlock> siblingBlocks, ExceptionHandler rethrower) {
-        for (IRBlock cb : consumed) {
-            if (cb == tryStart) {
-                continue;
-            }
-            ExceptionHandler eh = findUnprocessedHandlerStartingAt(cb);
-            if (eh == null || eh.getHandlerBlock() == rethrower.getHandlerBlock()
-                    || siblingBlocks.contains(eh.getHandlerBlock())) {
-                continue;
-            }
-            return true;
-        }
-        return false;
     }
 
     /**
@@ -8205,12 +8174,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
                 case DO_WHILE_LOOP:
-                    throw retiredDoWhileRecovery(current);
-                case FOR_LOOP: {
-                    result.add(recoverForLoop(current, info));
-                    current = findLoopExit(info, visited, stopBlocks);
-                    break;
-                }
+                    throw retiredLoopRecovery("do-while", current);
+                case FOR_LOOP:
+                    throw retiredLoopRecovery("for", current);
                 case SWITCH: {
                     StringSwitchInfo stringSwitch = detectStringSwitch(current);
                     if (stringSwitch != null) {
@@ -9921,7 +9887,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         Statement loop = recoverWhileLoop0(header, info);
         // The for-region pre-pass marks the induction init in the header's preheader for skipping,
-        // expecting recoverForLoop to inline it as the for-init. When the same header is instead
+        // expecting a for-shaped recovery to inline it as the for-init. When the same header is instead
         // recovered as a while (a handler-clause loop whose counter carries no phi), the skipped init
         // has no re-emission point and the counter is silently undeclared. Re-emit it before the loop.
         List<Statement> inits = recoverUnconsumedForLoopInits(header);
@@ -10012,14 +9978,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * The schema do-while recoverer is retired: every do-while now structures through the
-     * reaching-condition engine (natively, via the loop-cut guard, or via the opaque try node).
-     * A dispatch arm still classifying a region as a schema do-while signals a routing gap to fix
-     * on the engine side, so it fails loudly rather than degrading silently.
+     * A retired schema loop recoverer's dispatch arm: every loop of the kind now structures through
+     * the reaching-condition engine (natively, via the loop-cut guard, or via the opaque try node).
+     * A dispatch arm still classifying a region as one signals a routing gap to fix on the engine
+     * side, so it fails loudly rather than degrading silently.
      */
-    private IllegalStateException retiredDoWhileRecovery(IRBlock header) {
-        return new IllegalStateException("schema do-while recovery retired; unrouted do-while at offset "
-                + header.getBytecodeOffset() + " in " + context.getIrMethod().getName());
+    private IllegalStateException retiredLoopRecovery(String kind, IRBlock header) {
+        return new IllegalStateException("schema " + kind + " recovery retired; unrouted " + kind
+                + " at offset " + header.getBytecodeOffset() + " in " + context.getIrMethod().getName());
     }
 
     /** Wraps a recovered loop in a {@link LabeledStmt} when an inner non-local jump created a label for its header. */
@@ -10035,197 +10001,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 stmts.remove(stmts.size() - 1);
             }
         }
-    }
-
-    /** True when a loop's increment block contains only the induction update (no merged body work). */
-    private boolean isIncrementBlockPure(IRBlock block, Set<IRInstruction> incrementInstructions) {
-        if (block == null) {
-            return true;
-        }
-        // The increment block may be suppressed (folded into the for-update) only if it contains NOTHING but
-        // the loop-counter update: every non-terminator instruction must be the update itself or transitively
-        // feed it. A previous check only flagged non-increment local stores, so a side-effecting call sharing
-        // the block (e.g. `clearPassword(); i = i + 1;`) was silently dropped - which broke the loop's
-        // `continue` and let the recovery bleed into and duplicate the block after it.
-        Map<SSAValue, IRInstruction> defs = new HashMap<>();
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr.getResult() != null) {
-                defs.put(instr.getResult(), instr);
-            }
-        }
-        Set<IRInstruction> needed = new HashSet<>(incrementInstructions);
-        List<IRInstruction> work = new ArrayList<>(incrementInstructions);
-        while (!work.isEmpty()) {
-            IRInstruction instr = work.remove(work.size() - 1);
-            for (Value operand : instr.getOperands()) {
-                if (operand instanceof SSAValue) {
-                    IRInstruction def = defs.get((SSAValue) operand);
-                    if (def != null && needed.add(def)) {
-                        work.add(def);
-                    }
-                }
-            }
-        }
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr.isTerminator()) {
-                continue;
-            }
-            if (!needed.contains(instr)) {
-                // A dead pure value (an unused `load_local`/`const` the iinc lift leaves behind, whose
-                // value the induction actually reads from the header phi) is SSA noise, not body work
-                // merged into the increment. Ignore it; only genuine work makes the block impure.
-                if (isDeadPureInstruction(instr)) {
-                    continue;
-                }
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /** A value-producing instruction with no side effect whose result is unused (dead SSA noise). */
-    private boolean isDeadPureInstruction(IRInstruction instr) {
-        if (!(instr instanceof LoadLocalInstruction || instr instanceof ConstantInstruction
-                || instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction)) {
-            return false;
-        }
-        SSAValue result = instr.getResult();
-        return result != null && result.getUses().isEmpty();
-    }
-
-    private Statement recoverForLoop(IRBlock header, RegionInfo info) {
-        trace("schema-recovery kind=for method=" + context.getIrMethod().getName()
-                + " header=" + header.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        context.markProcessed(header);
-
-        IRBlock incrementBlock = info.getIncrementBlock();
-        int targetLocal = info.getInductionLocalIndex();
-
-        if (incrementBlock == null || targetLocal < 0) {
-            // No usable counter store: the "increment" the classifier found is not a real for-counter
-            // (targetLocal < 0 is a standalone ADD/SUB such as an address computation `base + i*stride`
-            // in the body). Recover as a while loop, which lifts an at-top induction update the header
-            // itself performs (`for (i = n; --i >= 0;)`); a plain while that ignored that update would
-            // drop it and loop forever.
-            return recoverWhileLoop(header, info);
-        }
-
-        context.getExpressionContext().pushForLoopScope();
-        try {
-            List<Statement> initStmts = new ArrayList<>();
-
-            for (IRBlock pred : header.getPredecessors()) {
-                if (info.getLoop() != null && info.getLoop().contains(pred)) {
-                    continue;
-                }
-
-                for (IRInstruction instr : pred.getInstructions()) {
-                    if (instr instanceof StoreLocalInstruction) {
-                        StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                        if (store.getLocalIndex() == targetLocal) {
-                            consumedForLoopInits.add(instr);
-                            Statement initStmt = recoverStoreLocalAsForInit(store);
-                            initStmts.add(initStmt);
-                        }
-                    }
-                }
-            }
-
-            List<Statement> headerStmts = recoverHeaderLeadingStatements(header, targetLocal);
-
-            Expression condition = recoverCondition(header, info.isConditionNegated());
-
-            List<Expression> updateExprs = new ArrayList<>();
-            Set<IRInstruction> incrementInstructions = new HashSet<>();
-            for (IRInstruction instr : incrementBlock.getInstructions()) {
-                if (instr.isTerminator()) continue;
-
-                if (instr instanceof StoreLocalInstruction) {
-                    StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                    if (store.getLocalIndex() == targetLocal) {
-                        Expression updateExpr = recoverUpdateExpression(store);
-                        updateExprs.add(updateExpr);
-                        incrementInstructions.add(instr);
-                    }
-                }
-            }
-
-            Set<IRBlock> stopBlocks = new HashSet<>();
-            stopBlocks.add(header);
-            if (info.getLoopExit() != null) {
-                stopBlocks.add(info.getLoopExit());
-            } else if (info.getLoop() != null) {
-                Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
-                for (IRBlock loopBlock : loopBlocks) {
-                    for (IRBlock succ : loopBlock.getSuccessors()) {
-                        if (!loopBlocks.contains(succ)) {
-                            stopBlocks.add(succ);
-                        }
-                    }
-                }
-            }
-
-            IRBlock bodyBlock = info.getLoopBody();
-            boolean bodyIsIncrement = bodyBlock == incrementBlock;
-            // The increment block is PURE when it holds only the induction update. An impure one also
-            // carries body work javac merged into it (e.g. `publish(); Thread.sleep(); i++;`): it must
-            // NOT be folded into the for-update, and it must NOT be the continue target — jumping there
-            // would skip its trailing body statements (mirrors recoverWhileLoop's impure-latch guard).
-            boolean incrementPure = !bodyIsIncrement
-                    && isIncrementBlockPure(incrementBlock, incrementInstructions);
-
-            context.pushStopBlocks(stopBlocks);
-            context.pushSkipInstructions(incrementInstructions);
-            context.pushLoop(header, incrementPure ? incrementBlock : null, info.getLoopExit());
-            try {
-                if (incrementPure) {
-                    context.markProcessed(incrementBlock);
-                }
-
-                List<Statement> bodyStmts = recoverBlockSequence(bodyBlock, stopBlocks);
-                stripTrailingContinue(bodyStmts);
-
-                ForStmt forStmt;
-                if (headerStmts.isEmpty()) {
-                    forStmt = new ForStmt(initStmts, condition, updateExprs, new BlockStmt(bodyStmts));
-                } else {
-                    // The header recomputes a value each iteration (e.g. a loop bound like min(x,10) the
-                    // emitter materialized into a header local because the operand stack must be empty at the
-                    // back-edge) - it cannot sit in the for-condition slot. Emit those statements at the top
-                    // of the body and turn the loop condition into an early break, keeping the loop
-                    // structured and round-trip stable instead of dropping the call (which would force the
-                    // whole method into the $pc$ dispatch fallback on refresh).
-                    List<Statement> merged = new ArrayList<>(headerStmts);
-                    Expression breakCond = recoverCondition(header, !info.isConditionNegated());
-                    List<Statement> breakBody = new ArrayList<>();
-                    breakBody.add(new BreakStmt());
-                    merged.add(new IfStmt(breakCond, new BlockStmt(breakBody)));
-                    merged.addAll(bodyStmts);
-                    forStmt = new ForStmt(initStmts, null, updateExprs, new BlockStmt(merged));
-                }
-                stampFromHeader(forStmt, header);
-                return labelIfTargeted(header, forStmt);
-            } finally {
-                context.popLoop();
-                context.popSkipInstructions();
-                context.popStopBlocks();
-            }
-        } finally {
-            context.getExpressionContext().popForLoopScope();
-        }
-    }
-
-    /**
-     * Recovers a loop header's leading statements - non-induction local stores. Normally empty (a clean
-     * header is just the condition and induction phi); non-empty only when the emitter materialized a
-     * per-iteration computation (e.g. a re-evaluated loop bound) into a header local, which the standard
-     * for-loop shape would otherwise drop.
-     */
-    private List<Statement> recoverHeaderLeadingStatements(IRBlock header, int inductionLocal) {
-        return recoverHeaderLeadingStatements(header, inductionLocal, false);
     }
 
     /**
@@ -10373,22 +10148,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             context.getExpressionContext().markDeclaredInForLoopInit(localName);
             return new VarDeclStmt(storedType, localName, valueExpr);
         }
-    }
-
-    private Expression recoverUpdateExpression(StoreLocalInstruction store) {
-        int localIndex = store.getLocalIndex();
-        Value storedValue = store.getValue();
-
-        SourceType storedType = typeRecoverer.recoverType(storedValue);
-        String localName = partitionName(store);
-        if (localName == null) {
-            localName = getNameForLocalSlotWithType(localIndex, storedType);
-        }
-
-        Expression valueExpr = recoverExpressionDirectly(storedValue, storedType);
-
-        VarRefExpr target = new VarRefExpr(localName, storedType, null);
-        return new BinaryExpr(BinaryOperator.ASSIGN, target, valueExpr, storedType);
     }
 
     private Expression recoverExpressionDirectly(Value value, SourceType typeHint) {
