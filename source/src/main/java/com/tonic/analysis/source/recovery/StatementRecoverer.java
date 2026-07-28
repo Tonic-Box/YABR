@@ -3506,7 +3506,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             tryStmts = recoverWithNestedHandlers(startBlock, nestedHandlers, tryStopBlocks);
         } else {
-            tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited, hasFinally && !finallyDeduped);
+            // A synchronized region's "inlined copies" are monitor instructions the statement recovery
+            // drops outright - they never inflate a guard arm - so its body takes the engine offers
+            // like any de-duplicated try. Only a REAL finally's surviving copies force the skip mode.
+            boolean monitorScaffold = mainHandler.getHandlerBlock() != null
+                    && blockContainsMonitorExit(mainHandler.getHandlerBlock());
+            tryStmts = recoverBlocksForTry(startBlock, tryStopBlocks, visited,
+                    hasFinally && !finallyDeduped && !monitorScaffold);
         }
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
@@ -7720,8 +7726,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (exitChainCrossesContextStop(exit)) {
             return false;
         }
-        return nodeOwnsExitTail(exit, consumed) || isBareReturnTail(exit)
-                || isFinallyCopyReturnTail(exit, rethrower);
+        // The exclusive-reachability claim holds only for a DE-DUPLICATED finally, whose delegate
+        // re-attaches each per-exit tail behind the extracted clause. A construct whose copies were
+        // never excised (a synchronized region's release scaffold) has no such re-attachment pass:
+        // claiming its tail hides the real continuation from the region model and drops the code.
+        // A bare or copy-carrying RETURN tail stays claimable - re-emitting a return is idempotent.
+        if (finallyDeduped.contains(rethrower) && nodeOwnsExitTail(exit, consumed)) {
+            return true;
+        }
+        return isBareReturnTail(exit) || isFinallyCopyReturnTail(exit, rethrower);
     }
 
     /**
