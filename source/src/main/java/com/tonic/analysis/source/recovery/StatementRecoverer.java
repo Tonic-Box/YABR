@@ -7989,6 +7989,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (System.getProperty("yabr.trace.offer") != null) {
             System.err.println("[OFFER] entry=" + entry.getBytecodeOffset()
                     + " bound=" + (bound == null ? "null" : bound.getBytecodeOffset())
+                    + " stops=" + offeredStops.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
+                        .sorted().collect(java.util.stream.Collectors.joining(","))
                     + " exits=" + (exits == null ? "probe-decline"
                         : exits.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
                             .collect(java.util.stream.Collectors.joining(",")))
