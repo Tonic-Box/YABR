@@ -27,6 +27,10 @@ tasks.named<Test>("test") {
     systemProperty("junit.jupiter.execution.parallel.enabled", "false")
     // Forward the opt-in jar path for VerifySweepTest to the forked test JVM (unset -> the test skips).
     System.getProperty("verify.sweep.jar")?.let { systemProperty("verify.sweep.jar", it) }
+    // Forward every yabr.* property (trace and debug toggles) so a suite can run under a probe flag.
+    System.getProperties().stringPropertyNames()
+        .filter { it.startsWith("yabr.") }
+        .forEach { systemProperty(it, System.getProperty(it)) }
     finalizedBy(tasks.named("jacocoTestReport"))
 }
 

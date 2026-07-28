@@ -3383,6 +3383,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
 
+        // Claim the region's clause set before recovering the body: a body walk's engine attempt would
+        // otherwise node-ify the construct's own family as a fresh try - re-recovering the construct
+        // inside itself and synthesizing nested tries around the user catches.
+        for (ExceptionHandler h : sameRegionHandlers) {
+            processedTryHandlers.add(h);
+            if (h.getHandlerBlock() != null) {
+                processedHandlerBlocks.add(h.getHandlerBlock());
+            }
+        }
         Set<IRBlock> tryStopBlocks = new HashSet<>(originalStopBlocks);
         for (ExceptionHandler h : sameRegionHandlers) {
             if (h.getHandlerBlock() != null) {
@@ -5087,6 +5096,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                                                 boolean skipReachingConditions) {
         if (!skipReachingConditions) {
             List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+            if (structured == null) {
+                // A nested try inside this body becomes an opaque node instead of failing the region.
+                structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks, true);
+            }
             if (structured != null) {
                 return structured;
             }
