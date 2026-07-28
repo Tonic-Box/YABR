@@ -1716,10 +1716,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Checks if a catch clause represents a finally-rethrow pattern.
-     * A finally-rethrow pattern is a catch-all (Throwable) that ends with throwing the caught exception.
-     */
-    /**
      * Whether the rethrowing clause is a REAL finally rather than a user-written
      * {@code catch (Throwable t) { cleanup; throw t; }} (bytecode-identical by rethrow shape and, on a
      * recompiled layout, by catch type). Evidence, in order: a verbatim inlined copy of the handler body
@@ -1739,6 +1735,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (hb == null) {
             return true;
         }
+        return handlerHasFinallyEvidence(hb);
+    }
+
+    /**
+     * Whether the rethrowing handler at {@code hb} is a REAL finally rather than a user-written
+     * {@code catch (Throwable t) { cleanup; throw t; }} (bytecode-identical by rethrow shape and, on a
+     * recompiled layout, by catch type). Evidence, in order: a verbatim inlined copy of the handler body -
+     * in the gaps between javac's split protected ranges, or inside a recompiled layout's whole-range
+     * entry at exit position, where the catch-rethrow and finally forms are the same construct; a TRUE
+     * catch-any entry (source cannot express one); the de-duplication having excised this family; a
+     * monitorexit in the handler (a synchronized release, whose copies are dropped before recovery).
+     */
+    private boolean handlerHasFinallyEvidence(IRBlock hb) {
         List<ExceptionHandler> hbEntries = new ArrayList<>();
         for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
             if (h.getHandlerBlock() == hb) {
@@ -1770,17 +1779,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                 }
                 for (IRBlock b : context.getIrMethod().getBlocks()) {
-                    if (chainBlocks.contains(b) || contiguousTemplateStart(b, template) < 0) {
+                    if (chainBlocks.contains(b) || probeTemplateStart(b, template) < 0) {
                         continue;
                     }
                     if (!rangeBlocks.contains(b)) {
-                        // javac's layout: the copies live in the gaps between the split ranges.
                         return true;
                     }
-                    // A recompiled layout inlines the copy INSIDE the single whole-range entry; it is a
-                    // genuine exit copy only at exit position - the block returns, or leaves the range.
-                    // (Cleanup text at exit position converts soundly either way: `try{A; X; return}
-                    // catch(T){X; throw}` and `try{A; return} finally{X}` are the same construct.)
                     if (b.getTerminator() instanceof ReturnInstruction) {
                         return true;
                     }
@@ -4295,16 +4299,28 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (chain == null) {
             return null;
         }
-        // A finally body carrying its own catch (a chain block protected by another handler) is no
-        // straight-line template even when the normal-path chain is linear: its inlined copies bear
-        // MIRRORED nested handlers that only the branchy matcher's nested-template pairing retires -
-        // a contiguous excision would strip the copies' try sides and strand the mirrored catches.
-        for (IRBlock cb : chain) {
-            for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers()) {
-                if (other != h && other.getTryBlocks() != null && other.getTryBlocks().contains(cb)
-                        && other.getHandlerBlock() != h.getHandlerBlock()) {
-                    return null;
-                }
+        // A finally body carrying its own catch - a handler whose WHOLE protected range lies within the
+        // chain - is no straight-line template even when the normal-path chain is linear: its inlined
+        // copies bear MIRRORED nested handlers that only the branchy matcher's nested-template pairing
+        // retires. An ENCLOSING handler that merely covers the chain along with much else (an outer
+        // catch wrapping the whole construct) does not disqualify the template.
+        Set<IRBlock> chainSet = new HashSet<>(chain);
+        Map<IRBlock, Set<IRBlock>> otherRanges = new LinkedHashMap<>();
+        for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers()) {
+            if (other == h || other.getTryBlocks() == null || other.getTryBlocks().isEmpty()
+                    || other.getHandlerBlock() == h.getHandlerBlock()
+                    || other.getHandlerBlock() == null) {
+                continue;
+            }
+            otherRanges.computeIfAbsent(other.getHandlerBlock(), k -> new HashSet<>())
+                    .addAll(other.getTryBlocks());
+        }
+        for (Set<IRBlock> union : otherRanges.values()) {
+            // Judged on the handler's WHOLE protected range across its entries: an enclosing catch also
+            // protects blocks outside the chain (its other range pieces), while a genuinely
+            // nested-in-template catch protects chain blocks only.
+            if (chainSet.containsAll(union)) {
+                return null;
             }
         }
 
@@ -4565,10 +4581,29 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * The start index of a contiguous run in {@code block} matching {@code template} instruction-for-instruction, or
-     * -1 when none. The run must be strictly inside the block (a terminator or return-value setup follows), so a bare
-     * rethrow tail is never mistaken for an inlined copy.
+     * As {@link #contiguousTemplateStart} but for the EVIDENCE probe: the run may fill the whole block
+     * (a copy often occupies exactly one block), as long as the block is not a bare rethrow tail - only
+     * an {@code athrow}-terminated whole-block match could mistake the handler itself for a copy.
      */
+    private int probeTemplateStart(IRBlock block, List<IRInstruction> template) {
+        int strict = contiguousTemplateStart(block, template);
+        if (strict >= 0) {
+            return strict;
+        }
+        List<IRInstruction> in = block.getInstructions();
+        int n = template.size();
+        int start = in.size() - n;
+        if (start < 0 || isBareRethrowTail(block)) {
+            return -1;
+        }
+        for (int i = 0; i < n; i++) {
+            if (!sameFinallyInstr(template.get(i), in.get(start + i))) {
+                return -1;
+            }
+        }
+        return start;
+    }
+
     private int contiguousTemplateStart(IRBlock block, List<IRInstruction> template) {
         List<IRInstruction> in = block.getInstructions();
         int n = template.size();
@@ -4626,7 +4661,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // (`catch (Throwable t) { suppressed = t; throw t; }`) - has no observable finally body and
             // no inlined copies to hunt; it is recovered as the catch clause it is.
             if (handlerRethrows(h) && !handlerThrowsFreshException(h) && !isLocalSpillRethrower(h)
-                    && h.getTryStart() != null && h.getTryEnd() != null) {
+                    && h.getTryStart() != null && h.getTryEnd() != null
+                    && (h.isCatchAll() || h.getHandlerBlock() == null
+                        || handlerHasFinallyEvidence(h.getHandlerBlock()))) {
+                // A typed rethrower without finally evidence is a user catch-rethrow, not a finally: it
+                // has no inlined copies to hunt, and offering it would decline the whole family - sinking
+                // the REAL finallies offered alongside it.
                 rethrowers.add(h);
             }
         }
