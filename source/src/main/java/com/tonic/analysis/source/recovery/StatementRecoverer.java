@@ -1202,26 +1202,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // continuation is identical to the schema dispatch's. The schema recoverers below remain only
             // as the decline fallback.
             IRBlock rcsBound = null;
-            boolean terminalLoop = false;
+            boolean terminalRegion = false;
             switch (info.getType()) {
                 case IF_THEN:
                 case IF_THEN_ELSE:
                     rcsBound = info.getMergeBlock();
+                    // An if with no merge block has terminating arms (every path returns or throws);
+                    // like an exit-less loop it is offered unbounded, and the walk has no continuation.
+                    terminalRegion = rcsBound == null;
                     break;
                 case WHILE_LOOP:
                 case DO_WHILE_LOOP:
                 case FOR_LOOP:
                     rcsBound = info.getLoopExit();
-                    // A loop with no exit block runs to the method's end (every leaving path returns or
-                    // throws); the structure is offered unbounded and the walk has no continuation.
-                    terminalLoop = rcsBound == null;
+                    terminalRegion = rcsBound == null;
                     break;
                 default:
                     break;
             }
-            if (terminalLoop) {
+            if (terminalRegion) {
                 Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops);
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops, true);
                 if (exits != null && exits.isEmpty()) {
                     List<Statement> structuredRegion =
                             rcsStructurer.tryStructureRegion(current, boundedStops, true);
@@ -1238,11 +1239,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 // Preflight: the offered structure must flow ONLY into its own bound. A foreign stop
                 // reachable from inside (an inner-try start cutting an arm or a loop body) would be
                 // silently truncated - the walk never continues there - dropping real code.
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops);
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops, true);
                 List<Statement> structuredRegion = null;
                 if (exits != null && (exits.isEmpty()
                         || (exits.size() == 1 && exits.contains(rcsBound)))) {
-                    structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops);
+                    structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops, true);
                 }
                 if (structuredRegion != null) {
                     result.addAll(structuredRegion);
@@ -5134,24 +5135,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // finally's inlined copies there, which inflate a guard's exit arm and flip its orientation.
             if (!skipReachingConditions) {
                 IRBlock bodyBound = null;
-                boolean bodyTerminalLoop = false;
+                boolean bodyTerminalRegion = false;
                 switch (info.getType()) {
                     case IF_THEN:
                     case IF_THEN_ELSE:
                         bodyBound = info.getMergeBlock();
+                        bodyTerminalRegion = bodyBound == null;
                         break;
                     case WHILE_LOOP:
                     case DO_WHILE_LOOP:
                     case FOR_LOOP:
                         bodyBound = info.getLoopExit();
-                        bodyTerminalLoop = bodyBound == null;
+                        bodyTerminalRegion = bodyBound == null;
                         break;
                     default:
                         break;
                 }
-                if (bodyTerminalLoop) {
+                if (bodyTerminalRegion) {
                     Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
-                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
                     if (exits != null && exits.isEmpty()) {
                         List<Statement> structuredRegion =
                                 rcsStructurer.tryStructureRegion(current, offeredStops, true);
@@ -5164,7 +5166,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 } else if (bodyBound != null && !visited.contains(bodyBound)) {
                     Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
                     offeredStops.add(bodyBound);
-                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
                     if (exits != null && (exits.isEmpty()
                             || (exits.size() == 1 && exits.contains(bodyBound)))) {
                         List<Statement> structuredRegion =
@@ -7996,24 +7998,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // continuation is identical to the schema dispatch's. The schema recoverers below remain only
             // as the decline fallback.
             IRBlock walkBound = null;
-            boolean walkTerminalLoop = false;
+            boolean walkTerminalRegion = false;
             switch (info.getType()) {
                 case IF_THEN:
                 case IF_THEN_ELSE:
                     walkBound = info.getMergeBlock();
+                    walkTerminalRegion = walkBound == null;
                     break;
                 case WHILE_LOOP:
                 case DO_WHILE_LOOP:
                 case FOR_LOOP:
                     walkBound = info.getLoopExit();
-                    walkTerminalLoop = walkBound == null;
+                    walkTerminalRegion = walkBound == null;
                     break;
                 default:
                     break;
             }
-            if (walkTerminalLoop) {
+            if (walkTerminalRegion) {
                 Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
                 if (exits != null && exits.isEmpty()) {
                     List<Statement> structuredRegion =
                             rcsStructurer.tryStructureRegion(current, offeredStops, true);
@@ -8026,7 +8029,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             } else if (walkBound != null && !visited.contains(walkBound)) {
                 Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
                 offeredStops.add(walkBound);
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
                 if (exits != null && (exits.isEmpty()
                         || (exits.size() == 1 && exits.contains(walkBound)))) {
                     List<Statement> structuredRegion =

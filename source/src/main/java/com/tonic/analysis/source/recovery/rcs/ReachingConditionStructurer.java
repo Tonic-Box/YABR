@@ -254,11 +254,20 @@ public final class ReachingConditionStructurer {
      * mid-structure by a foreign stop would silently drop the code beyond it.
      */
     public Set<IRBlock> probeRegionExits(IRBlock entry, Set<IRBlock> stopBlocks) {
+        return probeRegionExits(entry, stopBlocks, false);
+    }
+
+    /**
+     * As above; with {@code allowTryNodes} the probe models each try in the region as an opaque node,
+     * matching what a subsequent {@code tryStructureRegion(entry, stops, true)} would structure - without
+     * it, a region containing any try fails the probe outright and the caller never consults the engine.
+     */
+    public Set<IRBlock> probeRegionExits(IRBlock entry, Set<IRBlock> stopBlocks, boolean allowTryNodes) {
         if (entry == null) {
             return null;
         }
         this.method = context.getIrMethod();
-        this.tryNodesEnabled = false;
+        this.tryNodesEnabled = allowTryNodes;
         this.dom = context.getDominatorTree();
         if (dom == null) {
             return null;
@@ -268,7 +277,7 @@ public final class ReachingConditionStructurer {
         }
         Set<IRBlock> exits = new HashSet<>();
         for (IRBlock rb : region) {
-            for (IRBlock succ : rb.getSuccessors()) {
+            for (IRBlock succ : modelSuccessors(rb)) {
                 if (stopBlocks.contains(succ) && !isBackEdge(rb, succ)) {
                     exits.add(succ);
                 }
@@ -322,9 +331,11 @@ public final class ReachingConditionStructurer {
                 segStops.add(stopBlocks);
                 break;
             }
+            // Segmentation is sound with or without try nodes: each segment re-runs the full prepare,
+            // where a handler-bearing segment still declines under the node-less mode.
             IRBlock split = pendingCatchJoinSplit;
             pendingCatchJoinSplit = null;
-            if (split == null || !allowTryNodes) {
+            if (split == null) {
                 return null;
             }
             Set<IRBlock> headStops = new HashSet<>(stopBlocks);
