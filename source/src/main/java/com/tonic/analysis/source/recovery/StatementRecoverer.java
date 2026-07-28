@@ -761,9 +761,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // even with inner handlers present. Restricted to a loop-carrying template: a guard-only finally
             // (a try-with-resources sentinel close) is already recovered correctly by other paths and must
             // not be re-routed here. Only this loop path consumes the excised shells (inside the window).
-            boolean loopFinally = !innerHandlers.isEmpty()
-                    && !finallyTemplateHasNestedHandler(outerHandlers)
-                    && (finallyTemplateHasLoop(outerHandlers) || regionHasNestedFinally(innerHandlers));
+            boolean loopFinally = !finallyTemplateHasNestedHandler(outerHandlers)
+                    && (finallyTemplateHasLoop(outerHandlers)
+                        || (!innerHandlers.isEmpty() && regionHasNestedFinally(innerHandlers)));
             finallyDeduped = hasFinally
                     && dedupStraightLineFinally(outerHandlers, loopFinally);
             // A finally NESTED under this construct (the outer handler is a plain catch) gets the same
@@ -1580,8 +1580,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (rethrowCarrier) {
                     filtered = hoistTerminalThenElse(filtered);
                 }
+                // A rethrow carrier must END in its rethrow - but a clause whose body CARRIES CONTROL
+                // FLOW keeps that rethrow nested inside the recovered structure (a loop-carrying finally
+                // recovers as `while (true) { ...; throw e; }`), which is equally the clause terminal.
                 boolean accept = rethrowCarrier
-                        ? (!filtered.isEmpty() && filtered.get(filtered.size() - 1) instanceof ThrowStmt)
+                        ? (!filtered.isEmpty() && endsInRethrow(filtered.get(filtered.size() - 1)))
                         : !filtered.isEmpty();
                 if (accept) {
                     appendSharedReturnFallThrough(filtered, handlerBlock);
@@ -1832,6 +1835,97 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
+    /** Whether {@code s} is a rethrow, or a structure whose exit ends in one. */
+    private boolean endsInRethrow(Statement s) {
+        if (s instanceof ThrowStmt) {
+            return true;
+        }
+        if (s instanceof BlockStmt) {
+            List<Statement> inner = ((BlockStmt) s).getStatements();
+            return !inner.isEmpty() && endsInRethrow(inner.get(inner.size() - 1));
+        }
+        if (s instanceof WhileStmt) {
+            return containsRethrow(((WhileStmt) s).getBody());
+        }
+        if (s instanceof IfStmt) {
+            IfStmt ifs = (IfStmt) s;
+            return ifs.getThenBranch() != null && endsInRethrow(ifs.getThenBranch())
+                    && ifs.getElseBranch() != null && endsInRethrow(ifs.getElseBranch());
+        }
+        return false;
+    }
+
+    /** Whether the statement tree contains a throw on some path. */
+    private boolean containsRethrow(Statement s) {
+        if (s instanceof ThrowStmt) {
+            return true;
+        }
+        if (s instanceof BlockStmt) {
+            for (Statement inner : ((BlockStmt) s).getStatements()) {
+                if (containsRethrow(inner)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (s instanceof IfStmt) {
+            IfStmt ifs = (IfStmt) s;
+            return (ifs.getThenBranch() != null && containsRethrow(ifs.getThenBranch()))
+                    || (ifs.getElseBranch() != null && containsRethrow(ifs.getElseBranch()));
+        }
+        if (s instanceof WhileStmt) {
+            return containsRethrow(((WhileStmt) s).getBody());
+        }
+        return false;
+    }
+
+    /** The rethrow ending {@code s} - the statement itself, or the one nested at the end of its structure. */
+    private ThrowStmt trailingRethrow(Statement s) {
+        if (s instanceof ThrowStmt) {
+            return (ThrowStmt) s;
+        }
+        if (s instanceof BlockStmt) {
+            List<Statement> inner = ((BlockStmt) s).getStatements();
+            return inner.isEmpty() ? null : trailingRethrow(inner.get(inner.size() - 1));
+        }
+        if (s instanceof WhileStmt) {
+            return firstNestedThrow(((WhileStmt) s).getBody());
+        }
+        if (s instanceof IfStmt) {
+            IfStmt ifs = (IfStmt) s;
+            ThrowStmt t = ifs.getThenBranch() == null ? null : trailingRethrow(ifs.getThenBranch());
+            return t != null ? t
+                    : (ifs.getElseBranch() == null ? null : trailingRethrow(ifs.getElseBranch()));
+        }
+        return null;
+    }
+
+    /** The first throw in the statement tree, or null. */
+    private ThrowStmt firstNestedThrow(Statement s) {
+        if (s instanceof ThrowStmt) {
+            return (ThrowStmt) s;
+        }
+        if (s instanceof BlockStmt) {
+            for (Statement inner : ((BlockStmt) s).getStatements()) {
+                ThrowStmt t = firstNestedThrow(inner);
+                if (t != null) {
+                    return t;
+                }
+            }
+            return null;
+        }
+        if (s instanceof IfStmt) {
+            IfStmt ifs = (IfStmt) s;
+            ThrowStmt t = ifs.getThenBranch() == null ? null : firstNestedThrow(ifs.getThenBranch());
+            return t != null ? t
+                    : (ifs.getElseBranch() == null ? null : firstNestedThrow(ifs.getElseBranch()));
+        }
+        if (s instanceof WhileStmt) {
+            return firstNestedThrow(((WhileStmt) s).getBody());
+        }
+        return null;
+    }
+
     private boolean isFinallyRethrowPattern(CatchClause clause) {
         if (clause == null) return false;
 
@@ -1849,10 +1943,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         List<Statement> stmts = ((BlockStmt) body).getStatements();
         if (stmts.isEmpty()) return false;
 
-        Statement lastStmt = stmts.get(stmts.size() - 1);
-        if (!(lastStmt instanceof ThrowStmt)) return false;
-
-        ThrowStmt throwStmt = (ThrowStmt) lastStmt;
+        // The rethrow ends the clause - as its trailing statement, or nested at the end of a structure
+        // when the clause body carries control flow.
+        ThrowStmt throwStmt = trailingRethrow(stmts.get(stmts.size() - 1));
+        if (throwStmt == null) {
+            return false;
+        }
         Expression thrown = throwStmt.getException();
 
         if (thrown instanceof VarRefExpr) {
@@ -1877,9 +1973,72 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return new BlockStmt(Collections.emptyList());
         }
 
-        List<Statement> finallyStmts = new ArrayList<>(stmts.subList(0, stmts.size() - 1));
+        // The clause ends in its rethrow, which the finally body drops. A clause whose body CARRIES
+        // CONTROL FLOW keeps that rethrow nested inside the recovered structure (a loop-carrying finally
+        // recovers as `while (true) { ...; throw e; }`), so dropping the trailing statement would discard
+        // the whole structure. Strip the rethrow in place instead, leaving the body intact.
+        Statement last = stmts.get(stmts.size() - 1);
+        List<Statement> finallyStmts;
+        if (last instanceof ThrowStmt) {
+            finallyStmts = new ArrayList<>(stmts.subList(0, stmts.size() - 1));
+        } else {
+            finallyStmts = new ArrayList<>();
+            for (Statement st : stmts) {
+                Statement stripped = stripTrailingRethrow(st);
+                if (stripped != null) {
+                    finallyStmts.add(stripped);
+                }
+            }
+        }
         finallyStmts.replaceAll(this::unwrapSuppressScaffold);
         return new BlockStmt(finallyStmts);
+    }
+
+    /**
+     * Removes the caught-exception rethrow ending a recovered clause structure, keeping the structure: a
+     * loop-carrying finally clause recovers as {@code while (true) { body; if (exit) throw e; }}, whose
+     * rethrow is the loop exit rather than a trailing statement.
+     */
+    private Statement stripTrailingRethrow(Statement s) {
+        return stripTrailingRethrow(s, false);
+    }
+
+    /**
+     * As above; {@code inLoop} marks that the rethrow being removed is a LOOP EXIT - dropping it outright
+     * would leave the loop endless, so it becomes a {@code break}.
+     */
+    private Statement stripTrailingRethrow(Statement s, boolean inLoop) {
+        if (s instanceof ThrowStmt) {
+            return inLoop ? new BreakStmt() : null;
+        }
+        if (s instanceof BlockStmt) {
+            List<Statement> kept = new ArrayList<>();
+            for (Statement inner : ((BlockStmt) s).getStatements()) {
+                Statement stripped = stripTrailingRethrow(inner, inLoop);
+                if (stripped != null) {
+                    kept.add(stripped);
+                }
+            }
+            return kept.isEmpty() ? null : new BlockStmt(kept);
+        }
+        if (s instanceof IfStmt) {
+            IfStmt ifs = (IfStmt) s;
+            Statement then = ifs.getThenBranch() == null ? null : stripTrailingRethrow(ifs.getThenBranch(), inLoop);
+            Statement els = ifs.getElseBranch() == null ? null : stripTrailingRethrow(ifs.getElseBranch(), inLoop);
+            if (then == null && els == null) {
+                return null;
+            }
+            if (then == null) {
+                return new IfStmt(invertCondition(ifs.getCondition()), els, null, ifs.getLocation());
+            }
+            return new IfStmt(ifs.getCondition(), then, els, ifs.getLocation());
+        }
+        if (s instanceof WhileStmt) {
+            WhileStmt w = (WhileStmt) s;
+            Statement body = stripTrailingRethrow(w.getBody(), true);
+            return body == null ? null : new WhileStmt(w.getCondition(), body, w.getLabel());
+        }
+        return s;
     }
 
     /**
@@ -2159,15 +2318,24 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (dt == null) {
             return false;
         }
-        if (handlerBlock.getTerminator() instanceof BranchInstruction) {
+        // A SWITCH branches too: a clause whose body is a switch needs the structured recovery just as
+        // much as one holding an if - the flat successor walk appends the case bodies in set order and
+        // collapses the construct to a single case.
+        if (isBranching(handlerBlock)) {
             return true;
         }
         for (IRBlock b : context.getIrMethod().getBlocks()) {
-            if (dt.dominates(handlerBlock, b) && b.getTerminator() instanceof BranchInstruction) {
+            if (dt.dominates(handlerBlock, b) && isBranching(b)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** Whether {@code b} ends in a multi-way transfer - a conditional branch or a switch. */
+    private boolean isBranching(IRBlock b) {
+        IRInstruction term = b.getTerminator();
+        return term instanceof BranchInstruction || term instanceof SwitchInstruction;
     }
 
     /**
@@ -6655,6 +6823,29 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
+    /**
+     * Whether {@code b} lies inside a switch case body - some block in the method switches, and {@code b}
+     * is one of its case targets or dominated by one.
+     */
+    private boolean enclosingSwitchCase(IRBlock b) {
+        DominatorTree dt = context.getDominatorTree();
+        IRMethod m = context.getIrMethod();
+        if (dt == null || m == null) {
+            return false;
+        }
+        for (IRBlock sb : m.getBlocks()) {
+            if (!(sb.getTerminator() instanceof SwitchInstruction) || sb == b) {
+                continue;
+            }
+            for (IRBlock target : sb.getSuccessors()) {
+                if (target == b || dt.dominates(target, b)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /** Whether every block of {@code loop} lies within {@code handler}'s merged protected range. */
     private boolean loopWithinTryRange(LoopAnalysis.Loop loop, ExceptionHandler handler) {
         if (handler == null || handler.getTryStart() == null) {
@@ -6690,6 +6881,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 // loop. A try that WRAPS a loop (its start block is that loop's header) is fine - the loop is
                 // wholly within the protected range. Decline only when an ENCLOSING loop (one whose header is
                 // a different block) contains the try start.
+                // A try INSIDE a switch case has no linear staging: the case bodies are branches of the
+                // switch, so prefix-try-continuation sequencing hoists the try out of the construct.
+                if (enclosingSwitchCase(b)) {
+                    return null;
+                }
                 if (context.getLoopAnalysis() != null) {
                     ExceptionHandler stageHandler = findUnprocessedHandlerStartingAt(b);
                     LoopAnalysis.Loop enclosing = context.getLoopAnalysis().getLoop(b);

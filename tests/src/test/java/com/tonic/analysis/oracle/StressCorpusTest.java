@@ -47,17 +47,7 @@ class StressCorpusTest {
      * the modern-javac burn-in backlog (stress-corpus-findings memory note). The harness asserts each
      * still fails, so a silent fix or a new regression of the documentation both surface.
      */
-    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(List.of(
-            // A do-while whose body contains a try: the recovery inverts the nesting (the try hoisted to
-            // wrap the loop - changing per-iteration catch semantics to loop-aborting) and drops the
-            // trailing return. The linear staging declines correctly; the engine's latch-outside decline
-            // fires correctly (the bounded region cuts the latch); the fallback chain then miscompiles.
-            "SDoWhileTryZoo",
-            // A switch with a try inside a case: the case's try/catch is hoisted out of the switch (an
-            // empty try after the construct, the catch and shared return misplaced), and the recompiled
-            // bytecode underflows the operand stack.
-            "SSwitchTryZoo"
-    ));
+    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>();
 
     private static final List<Fixture> FIXTURES = List.of(
         new Fixture("SDoWhileTryZoo", "public class SDoWhileTryZoo {\n"
