@@ -1265,11 +1265,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                     break;
                 }
-                case WHILE_LOOP: {
-                    result.add(recoverWhileLoop(current, info));
-                    current = findLoopExit(info, visited, stopBlocks);
-                    break;
-                }
+                case WHILE_LOOP:
+                    throw retiredLoopRecovery("while", current);
                 case DO_WHILE_LOOP:
                     throw retiredLoopRecovery("do-while", current);
                 case FOR_LOOP:
@@ -3495,10 +3492,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             for (ExceptionHandler h : nestedHandlers) {
                 // Pre-marking a nested handler as processed prevents the try body's own walk from rebuilding
                 // it. But a nested handler whose try-start sits INSIDE a loop body (not one that wraps a loop)
-                // is not recovered by recoverWithInnerTryCatch directly - the enclosing loop is delegated to
-                // recoverWhileLoop, whose body walk recovers the nested try/catch through the processed set and
-                // so needs it left unprocessed. Pre-marking it there drops the catch (a recompiler can split
-                // the outer catch range so its second piece begins at the same in-loop block, colliding).
+                // is not recovered by recoverWithInnerTryCatch directly - the enclosing loop's body recovery
+                // reaches the nested try/catch through the processed set and so needs it left unprocessed.
+                // Pre-marking it there drops the catch (a recompiler can split the outer catch range so its
+                // second piece begins at the same in-loop block, colliding).
                 if (isInsideLoopBody(h.getTryStart())) {
                     continue;
                 }
@@ -5116,16 +5113,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // A structural region met by the try-body walk is offered to the reaching-condition engine
             // FIRST at exactly the schema recovery's own scope, mirroring the walk-level offers: bounded
             // at the structure's merge or loop exit through the sole-exit preflight, or unbounded for a
-            // loop with no exit block. The offer is withheld in the skip mode - the body still carries a
-            // finally's inlined copies there, which inflate a guard's exit arm and flip its orientation.
-            if (!skipReachingConditions) {
+            // loop with no exit block. In the skip mode - the body still carries a finally's inlined
+            // copies - only LOOP kinds are offered: the copies inflate a GUARD's exit arm and flip its
+            // orientation, so if kinds keep the walk, while a loop bounded at its own exit is unaffected.
+            {
                 IRBlock bodyBound = null;
                 boolean bodyTerminalRegion = false;
                 switch (info.getType()) {
                     case IF_THEN:
                     case IF_THEN_ELSE:
-                        bodyBound = info.getMergeBlock();
-                        bodyTerminalRegion = bodyBound == null;
+                        if (!skipReachingConditions) {
+                            bodyBound = info.getMergeBlock();
+                            bodyTerminalRegion = bodyBound == null;
+                        }
                         break;
                     case WHILE_LOOP:
                     case DO_WHILE_LOOP:
@@ -5188,9 +5188,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         current = getNextSequentialBlock(current);
                         break;
                     }
-                    result.add(recoverWhileLoop(current, info));
-                    current = findLoopExit(info, visited, new HashSet<>());
-                    break;
+                    throw retiredLoopRecovery("while", current);
                 }
                 case DO_WHILE_LOOP: {
                     if (loopCutByStops(info, stopBlocks)) {
@@ -7907,16 +7905,44 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // A stop that is an unprocessed try's start STRICTLY inside the offered construct is the walk's
         // own hand-off boundary, not the construct's: the engine models that try as an opaque node, so
         // the offer spans it. Without this, a loop whose body opens a try is cut at its first block.
+        // A stop that is a BARE terminator strictly inside the construct is released too: a bare return
+        // is idempotent (the walks already re-emit a converging return per path), so the region may
+        // absorb it as its own exit arm's terminal rather than refusing on a second boundary.
+        // A bound that is itself a bare goto pad fronts the construct's real continuation: resolve it,
+        // so the pad is absorbed in-region and the offer is judged against the landing.
+        if (bound != null) {
+            IRBlock landing = resolveThroughGotoShells(bound);
+            if (landing != bound) {
+                offeredStops.remove(bound);
+                offeredStops.add(landing);
+                bound = landing;
+            }
+        }
         DominatorTree dt = context.getDominatorTree();
         if (dt != null) {
-            offeredStops.removeIf(stop -> stop != entry && stop != bound
+            IRBlock finalBound = bound;
+            offeredStops.removeIf(stop -> stop != entry && stop != finalBound
                     && dt.dominates(entry, stop)
-                    && findUnprocessedHandlerStartingAt(stop) != null);
+                    && (findUnprocessedHandlerStartingAt(stop) != null
+                        || isSimpleTerminatorBlock(stop)));
         }
+        // A BOUNDED offer must actually flow into its bound: the caller resumes there, so a region
+        // that exits nowhere (every path terminal) would have absorbed code the caller re-emits after
+        // the bound - the construct duplicates. Only an UNBOUNDED (terminal) offer accepts empty exits.
         Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
-        boolean exitsOk = exits != null && (exits.isEmpty()
-                || (bound != null && exits.size() == 1 && exits.contains(bound)));
-        return exitsOk ? rcsStructurer.tryStructureRegion(entry, offeredStops, true) : null;
+        boolean exitsOk = exits != null && (bound == null
+                ? exits.isEmpty()
+                : exits.size() == 1 && exits.contains(bound));
+        List<Statement> out = exitsOk ? rcsStructurer.tryStructureRegion(entry, offeredStops, true) : null;
+        if (System.getProperty("yabr.trace.offer") != null) {
+            System.err.println("[OFFER] entry=" + entry.getBytecodeOffset()
+                    + " bound=" + (bound == null ? "null" : bound.getBytecodeOffset())
+                    + " exits=" + (exits == null ? "probe-decline"
+                        : exits.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
+                            .collect(java.util.stream.Collectors.joining(",")))
+                    + " ok=" + (out != null));
+        }
+        return out;
     }
 
     private ExceptionHandler findUnprocessedHandlerStartingAt(IRBlock block) {
@@ -8168,11 +8194,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                     break;
                 }
-                case WHILE_LOOP: {
-                    result.add(recoverWhileLoop(current, info));
-                    current = findLoopExit(info, visited, stopBlocks);
-                    break;
-                }
+                case WHILE_LOOP:
+                    throw retiredLoopRecovery("while", current);
                 case DO_WHILE_LOOP:
                     throw retiredLoopRecovery("do-while", current);
                 case FOR_LOOP:
@@ -9468,6 +9491,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverIfThen(IRBlock header, RegionInfo info) {
+        trace("schema-recovery kind=if-then method=" + context.getIrMethod().getName()
+                + " header=" + header.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         context.markProcessed(header);
 
         List<Statement> headerStmts = recoverBlockInstructions(header);
@@ -9587,6 +9615,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement recoverGuardClause(IRBlock header, RegionInfo info) {
+        trace("schema-recovery kind=guard method=" + context.getIrMethod().getName()
+                + " header=" + header.getBytecodeOffset()
+                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
         List<Statement> headerStmts = recoverBlockInstructions(header);
 
         // For guard clauses, conditionNegated=true means we need to negate the bytecode condition
@@ -9879,104 +9912,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return statements;
     }
 
-    private Statement recoverWhileLoop(IRBlock header, RegionInfo info) {
-        trace("schema-recovery kind=while method=" + context.getIrMethod().getName()
-                + " header=" + header.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        Statement loop = recoverWhileLoop0(header, info);
-        // The for-region pre-pass marks the induction init in the header's preheader for skipping,
-        // expecting a for-shaped recovery to inline it as the for-init. When the same header is instead
-        // recovered as a while (a handler-clause loop whose counter carries no phi), the skipped init
-        // has no re-emission point and the counter is silently undeclared. Re-emit it before the loop.
-        List<Statement> inits = recoverUnconsumedForLoopInits(header);
-        if (inits.isEmpty()) {
-            return loop;
-        }
-        inits.add(loop);
-        return new BlockStmt(inits);
-    }
-
-    private Statement recoverWhileLoop0(IRBlock header, RegionInfo info) {
-        context.markProcessed(header);
-
-        Set<IRBlock> stopBlocks = new HashSet<>();
-        stopBlocks.add(header);
-        if (info.getLoopExit() != null) {
-            stopBlocks.add(info.getLoopExit());
-        } else if (info.getLoop() != null) {
-            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
-            DominatorTree ldt = context.getDominatorTree();
-            for (IRBlock loopBlock : loopBlocks) {
-                for (IRBlock succ : loopBlock.getSuccessors()) {
-                    // A successor the header DOMINATES is inside the loop's exclusive region - an internal
-                    // return/throw path (which LoopAnalysis excludes from the loop body because it exits
-                    // the method and cannot reach the back edge). Stopping there would truncate the return.
-                    // Only a successor NOT dominated by the header is a genuine post-loop continuation - a
-                    // break target reached from elsewhere too - and belongs in the stop set.
-                    if (!loopBlocks.contains(succ) && !isMethodExitBlock(succ)
-                            && !(ldt != null && ldt.dominates(header, succ))) {
-                        stopBlocks.add(succ);
-                    }
-                }
-            }
-        }
-
-        // Push stop blocks so inner control structures respect loop exits
-        context.pushStopBlocks(stopBlocks);
-        context.pushLoop(header, header, info.getLoopExit());
-        try {
-            // An at-top induction update (javac's `for (i = n; --i >= 0;)` puts `i = i +/- c` in the
-            // header, before the exit test) must be lifted or it is dropped and the loop reads
-            // out of bounds. Lift it only when the header branch is a GENUINE loop exit whose taken
-            // edge leaves the loop for good: when the "exit" block immediately re-enters the loop it
-            // is a continue in disguise (e.g. a `\r`-skip straight back to the header), not the exit,
-            // so turning it into a break would corrupt the loop. Restricted to constant induction
-            // steps - a header that instead fuses reads/assigns into the condition (a tokenizer's
-            // `c = (char) read()`) is left to the faithful $pc$ dispatch rather than mis-structured.
-            boolean genuineExit = info.getLoopExit() != null && info.getLoop() != null
-                    && info.getLoopExit().getSuccessors().stream()
-                        .noneMatch(s -> info.getLoop().getBlocks().contains(s));
-            List<Statement> headerStmts = genuineExit
-                    ? recoverHeaderLeadingStatements(header, -1, true)
-                    : java.util.Collections.emptyList();
-            if (!headerStmts.isEmpty()) {
-                // Emit the induction update at the top of the body and turn the loop condition into
-                // an early break, keeping the update on every iteration.
-                List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
-                stripTrailingContinue(bodyStmts);
-                List<Statement> merged = new ArrayList<>(headerStmts);
-                Expression breakCond = recoverCondition(header, !info.isConditionNegated());
-                List<Statement> breakBody = new ArrayList<>();
-                breakBody.add(new BreakStmt());
-                merged.add(new IfStmt(breakCond, new BlockStmt(breakBody)));
-                merged.addAll(bodyStmts);
-                WhileStmt whileStmt = new WhileStmt(LiteralExpr.ofBoolean(true), new BlockStmt(merged));
-                stampFromHeader(whileStmt, header);
-                return labelIfTargeted(header, whileStmt);
-            }
-
-            if (!(header.getTerminator() instanceof BranchInstruction)) {
-                List<Statement> body = new ArrayList<>(recoverBlockInstructions(header));
-                body.addAll(recoverBlockSequence(info.getLoopBody(), stopBlocks));
-                stripTrailingContinue(body);
-                WhileStmt infinite = new WhileStmt(LiteralExpr.ofBoolean(true), new BlockStmt(body));
-                stampFromHeader(infinite, header);
-                return labelIfTargeted(header, infinite);
-            }
-            Expression condition = recoverCondition(header, info.isConditionNegated());
-            List<Statement> bodyStmts = recoverBlockSequence(info.getLoopBody(), stopBlocks);
-            stripTrailingContinue(bodyStmts);
-            WhileStmt whileStmt = new WhileStmt(condition, new BlockStmt(bodyStmts));
-            stampFromHeader(whileStmt, header);
-            return labelIfTargeted(header, whileStmt);
-        } finally {
-            context.popLoop();
-            context.popStopBlocks();
-        }
-    }
-
     /**
      * A retired schema loop recoverer's dispatch arm: every loop of the kind now structures through
      * the reaching-condition engine (natively, via the loop-cut guard, or via the opaque try node).
@@ -9988,121 +9923,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 + " at offset " + header.getBytecodeOffset() + " in " + context.getIrMethod().getName());
     }
 
-    /** Wraps a recovered loop in a {@link LabeledStmt} when an inner non-local jump created a label for its header. */
-    private Statement labelIfTargeted(IRBlock loopHeader, Statement loop) {
-        return context.hasLabel(loopHeader) ? new LabeledStmt(context.getLabel(loopHeader), loop) : loop;
-    }
 
-    /** Drops a redundant trailing unlabeled {@code continue} (the body's natural fall-through to the next iteration). */
-    private void stripTrailingContinue(List<Statement> stmts) {
-        if (!stmts.isEmpty()) {
-            Statement last = stmts.get(stmts.size() - 1);
-            if (last instanceof ContinueStmt && !((ContinueStmt) last).hasLabel()) {
-                stmts.remove(stmts.size() - 1);
-            }
-        }
-    }
-
-    /**
-     * When {@code inductionOnly} is set, restricts recovery to constant induction steps of their own
-     * slot ({@code i = i +/- const}) - the update javac lifts to a loop's header for a pre-inc/dec
-     * idiom. Other header stores are left alone (they belong to the plain-while or $pc$ recovery).
-     */
-    private List<Statement> recoverHeaderLeadingStatements(IRBlock header, int inductionLocal, boolean inductionOnly) {
-        List<Statement> stmts = new ArrayList<>();
-        for (IRInstruction instr : header.getInstructions()) {
-            if (!(instr instanceof StoreLocalInstruction)) {
-                continue;
-            }
-            StoreLocalInstruction st = (StoreLocalInstruction) instr;
-            if (st.getLocalIndex() == inductionLocal || context.shouldSkipInstruction(instr)) {
-                continue;
-            }
-            if (inductionOnly && !isConstantInductionStore(st)) {
-                continue;
-            }
-
-            // Recover the stored VALUE from its defining expression (the materialized call), not the slot
-            // variable: the value is named after its own slot, so the usual store recovery collapses it to a
-            // dropped self-assignment (local = local) and loses the call. Recovering the definition yields
-            // the actual `min(x, 10)`.
-            Value value = st.getValue();
-            Expression valueExpr;
-            if (value instanceof SSAValue && ((SSAValue) value).getDefinition() != null) {
-                valueExpr = exprRecoverer.recover(((SSAValue) value).getDefinition());
-            } else {
-                valueExpr = exprRecoverer.recoverOperand(value);
-            }
-
-            // Name + type via the reaching-definition partition (NOT the slot's last name), so a reused slot
-            // resolves to the SAME variable the condition's load uses - otherwise the bound assigns to a
-            // different (wrongly-typed) partition than the comparison reads.
-            SourceType valueType = typeRecoverer.recoverType(value);
-            String name = partitionName(st);
-            if (name == null) {
-                name = getNameForLocalSlotWithType(st.getLocalIndex(), valueType);
-            }
-            SourceType type = getLocalSlotUnifiedType(name);
-            if (type == null) {
-                type = valueType;
-            }
-            if (context.getExpressionContext().isDeclared(name)) {
-                stmts.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
-                        new VarRefExpr(name, type, null), valueExpr, type)));
-            } else {
-                context.getExpressionContext().markDeclared(name);
-                stmts.add(new VarDeclStmt(type, name, valueExpr));
-            }
-        }
-        return stmts;
-    }
-
-    /**
-     * True when a store writes a constant induction step of its own slot ({@code i = i +/- const}) -
-     * the shape javac lifts to a loop header for a pre-increment/decrement condition like {@code --i}.
-     */
-    private boolean isConstantInductionStore(StoreLocalInstruction store) {
-        if (!(store.getValue() instanceof SSAValue)) {
-            return false;
-        }
-        IRInstruction def = ((SSAValue) store.getValue()).getDefinition();
-        if (!(def instanceof BinaryOpInstruction)) {
-            return false;
-        }
-        BinaryOpInstruction bin = (BinaryOpInstruction) def;
-        if (bin.getOp() != BinaryOp.ADD && bin.getOp() != BinaryOp.SUB) {
-            return false;
-        }
-        boolean leftConst = isConstantIrValue(bin.getLeft());
-        boolean rightConst = isConstantIrValue(bin.getRight());
-        if (leftConst == rightConst) {
-            return false;
-        }
-        Value nonConst = leftConst ? bin.getRight() : bin.getLeft();
-        if (!(nonConst instanceof SSAValue)) {
-            return false;
-        }
-        IRInstruction nonConstDef = ((SSAValue) nonConst).getDefinition();
-        // A non-loop step reads the slot directly.
-        if (nonConstDef instanceof LoadLocalInstruction) {
-            return ((LoadLocalInstruction) nonConstDef).getLocalIndex() == store.getLocalIndex();
-        }
-        // The usual loop shape: the slot's header value is a phi merging the initial value with this
-        // store's own result on the back-edge (`i_phi = φ(init, i_next); i_next = i_phi +/- const`).
-        if (nonConstDef instanceof PhiInstruction) {
-            for (Value incoming : ((PhiInstruction) nonConstDef).getIncomingValues().values()) {
-                if (incoming == store.getValue()) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean isConstantIrValue(Value v) {
-        return v instanceof Constant
-                || (v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
-    }
 
     private Statement recoverStoreLocalAsForInit(StoreLocalInstruction store) {
         int localIndex = store.getLocalIndex();
@@ -11587,47 +11408,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return terminator instanceof ReturnInstruction;
     }
 
-    private boolean isMethodExitBlock(IRBlock block) {
-        if (block == null) return false;
-        IRInstruction terminator = block.getTerminator();
-        if (terminator instanceof ReturnInstruction) {
-            return true;
-        }
-        if (terminator instanceof SimpleInstruction) {
-            return ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW;
-        }
-        return false;
-    }
-
-    /**
-     * Finds the exit block for a loop, handling cases where the exit block
-     * is not directly set (when both loop header successors are in the loop).
-     */
-    private IRBlock findLoopExit(RegionInfo info, Set<IRBlock> visited, Set<IRBlock> stopBlocks) {
-        if (info.getLoopExit() != null) {
-            return info.getLoopExit();
-        }
-
-        // Find blocks outside the loop that are reachable from within. A successor the header DOMINATES
-        // is an internal return/throw path (LoopAnalysis excludes it from the loop because it exits the
-        // method, not the loop); it is recovered inside the body, not the post-loop continuation. Returning
-        // one here appends a dead statement after an infinite loop - unreachable, and uncompilable to javac.
-        if (info.getLoop() != null) {
-            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
-            DominatorTree ldt = context.getDominatorTree();
-            IRBlock header = info.getHeader();
-            for (IRBlock loopBlock : loopBlocks) {
-                for (IRBlock succ : loopBlock.getSuccessors()) {
-                    if (!loopBlocks.contains(succ) && !visited.contains(succ) && !stopBlocks.contains(succ)
-                            && !(ldt != null && header != null && ldt.dominates(header, succ))) {
-                        return succ;
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
 
     private IRBlock findSwitchMerge(RegionInfo info) {
         Set<IRBlock> caseTargets = new HashSet<>(info.getSwitchCases().values());

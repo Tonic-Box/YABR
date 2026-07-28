@@ -568,7 +568,9 @@ public final class ReachingConditionStructurer {
                 continue;
             }
             for (IRBlock s : r.getSuccessors()) {
-                if (s != b && node.consumed().contains(s)) {
+                // A bare goto pad the node annexed (an exit connector consumed with its chain) is not
+                // node interior: jumping to it is jumping to its landing, which the region models.
+                if (s != b && node.consumed().contains(s) && !isGotoOnly(s)) {
                     throw new BailToLegacy();
                 }
             }
