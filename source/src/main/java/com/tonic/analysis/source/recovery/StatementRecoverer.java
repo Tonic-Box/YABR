@@ -7976,7 +7976,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             offeredStops.removeIf(stop -> stop != entry && stop != finalBound
                     && dt.dominates(entry, stop)
                     && (findUnprocessedHandlerStartingAt(stop) != null
-                        || isSimpleTerminatorBlock(stop)));
+                        || isBareReturnTail(stop)));
         }
         // A BOUNDED offer must actually flow into its bound: the caller resumes there, so a region
         // that exits nowhere (every path terminal) would have absorbed code the caller re-emits after
