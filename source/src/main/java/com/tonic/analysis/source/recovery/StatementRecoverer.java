@@ -1221,30 +1221,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
             }
             if (terminalRegion) {
-                Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops, true);
-                if (exits != null && exits.isEmpty()) {
-                    List<Statement> structuredRegion =
-                            rcsStructurer.tryStructureRegion(current, boundedStops, true);
-                    if (structuredRegion != null) {
-                        result.addAll(structuredRegion);
-                        current = null;
-                        continue;
-                    }
+                List<Statement> structuredRegion =
+                        offerRegionToEngine(current, new HashSet<>(combinedStops), null);
+                if (structuredRegion != null) {
+                    result.addAll(structuredRegion);
+                    current = null;
+                    continue;
                 }
             }
             if (rcsBound != null && !visited.contains(rcsBound)) {
                 Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
                 boundedStops.add(rcsBound);
-                // Preflight: the offered structure must flow ONLY into its own bound. A foreign stop
-                // reachable from inside (an inner-try start cutting an arm or a loop body) would be
-                // silently truncated - the walk never continues there - dropping real code.
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops, true);
-                List<Statement> structuredRegion = null;
-                if (exits != null && (exits.isEmpty()
-                        || (exits.size() == 1 && exits.contains(rcsBound)))) {
-                    structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops, true);
-                }
+                List<Statement> structuredRegion = offerRegionToEngine(current, boundedStops, rcsBound);
                 if (structuredRegion != null) {
                     result.addAll(structuredRegion);
                     current = stopBlocks.contains(rcsBound) || context.isProcessed(rcsBound) ? null : rcsBound;
@@ -5152,31 +5140,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         break;
                 }
                 if (bodyTerminalRegion) {
-                    Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
-                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
-                    if (exits != null && exits.isEmpty()) {
-                        List<Statement> structuredRegion =
-                                rcsStructurer.tryStructureRegion(current, offeredStops, true);
-                        if (structuredRegion != null) {
-                            result.addAll(structuredRegion);
-                            current = null;
-                            continue;
-                        }
+                    List<Statement> structuredRegion =
+                            offerRegionToEngine(current, new HashSet<>(stopBlocks), null);
+                    if (structuredRegion != null) {
+                        result.addAll(structuredRegion);
+                        current = null;
+                        continue;
                     }
                 } else if (bodyBound != null && !visited.contains(bodyBound)) {
                     Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
                     offeredStops.add(bodyBound);
-                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
-                    if (exits != null && (exits.isEmpty()
-                            || (exits.size() == 1 && exits.contains(bodyBound)))) {
-                        List<Statement> structuredRegion =
-                                rcsStructurer.tryStructureRegion(current, offeredStops, true);
-                        if (structuredRegion != null) {
-                            result.addAll(structuredRegion);
-                            current = stopBlocks.contains(bodyBound) || context.isProcessed(bodyBound)
-                                    ? null : bodyBound;
-                            continue;
-                        }
+                    List<Statement> structuredRegion = offerRegionToEngine(current, offeredStops, bodyBound);
+                    if (structuredRegion != null) {
+                        result.addAll(structuredRegion);
+                        current = stopBlocks.contains(bodyBound) || context.isProcessed(bodyBound)
+                                ? null : bodyBound;
+                        continue;
                     }
                 }
             }
@@ -7551,6 +7530,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         IRBlock after = null;
         boolean allExitsTerminal = false;
+        Set<IRBlock> exitShells = new HashSet<>();
         for (IRBlock cb : consumed) {
             if (cb != rethrower.getHandlerBlock() && dt.dominates(rethrower.getHandlerBlock(), cb)) {
                 continue;
@@ -7562,8 +7542,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     continue;
                 }
                 // The try's fall-through often exits into a bare goto shell in front of the join the
-                // handler paths reach directly; both are the same continuation once resolved.
-                succ = resolveThroughGotoShells(succ);
+                // handler paths reach directly; both are the same continuation once resolved. The shells
+                // are collected into the node - left out, a shell on the exit path dangles outside both
+                // the node and the region (e.g. as a loop's back-edge source) and breaks the model.
+                succ = resolveThroughGotoShells(succ, exitShells);
                 if (consumed.contains(succ)) {
                     continue;
                 }
@@ -7629,6 +7611,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (after == block) {
             return null;
         }
+        consumed.addAll(exitShells);
         trace("finally-node OK block=" + block.getBytecodeOffset()
                 + " after=" + (after == null ? "terminal" : after.getBytecodeOffset())
                 + " consumed=" + consumed.size() + " hasLoop=" + windowHasLoop);
@@ -7874,7 +7857,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
-    /** The handler whose protected range starts at {@code block} and which no recovery has consumed yet. */
+    /**
+     * Offers a structural region to the reaching-condition engine at the schema recovery scope. The
+     * preflight requires the region to flow only into {@code bound} (or nowhere, when {@code bound} is
+     * null - a terminal region whose every leaving path returns or throws); a foreign exit would be
+     * silently truncated, dropping real code.
+     */
+    private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {
+        Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
+        boolean exitsOk = exits != null && (exits.isEmpty()
+                || (bound != null && exits.size() == 1 && exits.contains(bound)));
+        return exitsOk ? rcsStructurer.tryStructureRegion(entry, offeredStops, true) : null;
+    }
+
     private ExceptionHandler findUnprocessedHandlerStartingAt(IRBlock block) {
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
@@ -8015,31 +8010,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
             }
             if (walkTerminalRegion) {
-                Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
-                if (exits != null && exits.isEmpty()) {
-                    List<Statement> structuredRegion =
-                            rcsStructurer.tryStructureRegion(current, offeredStops, true);
-                    if (structuredRegion != null) {
-                        result.addAll(structuredRegion);
-                        current = null;
-                        continue;
-                    }
+                List<Statement> structuredRegion =
+                        offerRegionToEngine(current, new HashSet<>(stopBlocks), null);
+                if (structuredRegion != null) {
+                    result.addAll(structuredRegion);
+                    current = null;
+                    continue;
                 }
             } else if (walkBound != null && !visited.contains(walkBound)) {
                 Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
                 offeredStops.add(walkBound);
-                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops, true);
-                if (exits != null && (exits.isEmpty()
-                        || (exits.size() == 1 && exits.contains(walkBound)))) {
-                    List<Statement> structuredRegion =
-                            rcsStructurer.tryStructureRegion(current, offeredStops, true);
-                    if (structuredRegion != null) {
-                        result.addAll(structuredRegion);
-                        current = stopBlocks.contains(walkBound) || context.isProcessed(walkBound)
-                                ? null : walkBound;
-                        continue;
-                    }
+                List<Statement> structuredRegion = offerRegionToEngine(current, offeredStops, walkBound);
+                if (structuredRegion != null) {
+                    result.addAll(structuredRegion);
+                    current = stopBlocks.contains(walkBound) || context.isProcessed(walkBound)
+                            ? null : walkBound;
+                    continue;
                 }
             }
 
