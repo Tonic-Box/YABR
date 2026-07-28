@@ -6833,7 +6833,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * so the RC engine may structure it without interleaving with the legacy walk.
      */
     private List<Statement> recoverRegionHandoff(IRBlock startBlock, Set<IRBlock> stopBlocks) {
-        List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
+        // A stop that is a bare goto pad jumping BACK to a block that dominates it is a loop's own
+        // latch pad past a try range's end - the construct's internal edge, not a boundary. The engine
+        // attempts run without it so the loop can close; the staging and the legacy walk keep the
+        // original stops, whose continuation semantics they are built around.
+        Set<IRBlock> engineStops = stopBlocks;
+        DominatorTree handoffDt = context.getDominatorTree();
+        if (handoffDt != null) {
+            for (IRBlock stop : stopBlocks) {
+                if (isLatchPad(stop, handoffDt)) {
+                    if (engineStops == stopBlocks) {
+                        engineStops = new HashSet<>(stopBlocks);
+                    }
+                    engineStops.remove(stop);
+                }
+            }
+        }
+        List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, engineStops);
         if (structured != null) {
             return structured;
         }
@@ -6843,11 +6859,28 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         // No linear staging (a try inside a loop body or on one arm of a branch): let the engine place
         // each try as an opaque composite node at its structural position.
-        structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks, true);
+        structured = rcsStructurer.tryStructureRegion(startBlock, engineStops, true);
         if (structured != null) {
             return structured;
         }
         return legacyBlockWalk(startBlock, stopBlocks);
+    }
+
+    /** Whether {@code b} is a bare goto pad whose single successor dominates it - a loop latch pad. */
+    private boolean isLatchPad(IRBlock b, DominatorTree dt) {
+        if (b.getSuccessors().size() != 1) {
+            return false;
+        }
+        List<IRInstruction> instrs = b.getInstructions();
+        boolean bare = instrs.isEmpty()
+                || (instrs.size() == 1 && instrs.get(0) == b.getTerminator()
+                    && b.getTerminator() instanceof SimpleInstruction
+                    && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.GOTO);
+        if (!bare) {
+            return false;
+        }
+        IRBlock target = b.getSuccessors().iterator().next();
+        return dt.dominates(target, b);
     }
 
     /**
