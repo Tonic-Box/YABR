@@ -1077,6 +1077,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                 }
 
+                // Claim this region's handlers before recovering the body: a body construct sharing the
+                // try's start block would otherwise be node-ified by the engine offers as a fresh try -
+                // the very construct this arm is recovering - entangling the offer with its own caller.
+                for (ExceptionHandler h : sameRegionHandlers) {
+                    processedTryHandlers.add(h);
+                    if (h.getHandlerBlock() != null) {
+                        processedHandlerBlocks.add(h.getHandlerBlock());
+                    }
+                }
                 List<Statement> tryStmts;
                 if (!remainingHandlers.isEmpty()) {
                     Set<IRBlock> remainingTryStarts = new HashSet<>();
