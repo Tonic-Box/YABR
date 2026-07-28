@@ -7274,12 +7274,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             trace("finally-node decline block=" + block.getBytecodeOffset() + " self-join");
             return null;
         }
-        // A try-side fall-through that leaves through bare goto pads ONTO AN ENCLOSING LOOP'S BACK EDGE
-        // leaves those pads dangling outside both the node and the region, breaking the loop's latch
-        // model. Exactly that chain is consumed into the node; every other exit keeps its blocks - the
-        // catch's continuation stays the node's join, and unrelated pads stay the region's own.
+        // A try INSIDE a loop whose catch jumps OUT of the loop must not take the catch's target as the
+        // node's join: the try's own in-loop continuation is the join (the walk resumes inside the loop,
+        // keeping the latch in the region model), and the loop model owns the catch's exit edge, which
+        // the delegate emits as the loop jump. Bare goto pads on the try-side chain are consumed with it
+        // - left out they dangle outside both the node and the region and break the latch model.
         LoopAnalysis loopsForPads = context.getLoopAnalysis();
+        LoopAnalysis.Loop enclosingLoop = loopsForPads == null ? null : loopsForPads.getLoop(block);
         if (loopsForPads != null) {
+            boolean afterOutOfLoop = enclosingLoop != null && after != null
+                    && !enclosingLoop.getBlocks().contains(after);
             Set<IRBlock> exitPads = new HashSet<>();
             for (IRBlock cb : consumed) {
                 if (handlerBody.contains(cb)) {
@@ -7292,9 +7296,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                     Set<IRBlock> chain = new HashSet<>();
                     IRBlock landing = resolveThroughGotoShells(e.getKey(), chain);
-                    LoopAnalysis.Loop landingLoop = landing == null ? null : loopsForPads.getLoop(landing);
+                    if (landing == null) {
+                        continue;
+                    }
+                    LoopAnalysis.Loop landingLoop = loopsForPads.getLoop(landing);
                     if (landingLoop != null && landingLoop.getHeader() == landing
                             && landingLoop.getBlocks().contains(block)) {
+                        exitPads.addAll(chain);
+                    } else if (afterOutOfLoop && enclosingLoop.getBlocks().contains(landing)) {
+                        after = landing;
+                        afterOutOfLoop = false;
                         exitPads.addAll(chain);
                     }
                 }
