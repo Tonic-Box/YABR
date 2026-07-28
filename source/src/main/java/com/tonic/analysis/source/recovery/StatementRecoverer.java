@@ -1202,6 +1202,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // continuation is identical to the schema dispatch's. The schema recoverers below remain only
             // as the decline fallback.
             IRBlock rcsBound = null;
+            boolean terminalLoop = false;
             switch (info.getType()) {
                 case IF_THEN:
                 case IF_THEN_ELSE:
@@ -1211,9 +1212,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 case DO_WHILE_LOOP:
                 case FOR_LOOP:
                     rcsBound = info.getLoopExit();
+                    // A loop with no exit block runs to the method's end (every leaving path returns or
+                    // throws); the structure is offered unbounded and the walk has no continuation.
+                    terminalLoop = rcsBound == null;
                     break;
                 default:
                     break;
+            }
+            if (terminalLoop) {
+                Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops);
+                if (exits != null && exits.isEmpty()) {
+                    List<Statement> structuredRegion =
+                            rcsStructurer.tryStructureRegion(current, boundedStops, true);
+                    if (structuredRegion != null) {
+                        result.addAll(structuredRegion);
+                        current = null;
+                        continue;
+                    }
+                }
             }
             if (rcsBound != null && !visited.contains(rcsBound)) {
                 Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
@@ -1264,11 +1281,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
-                case DO_WHILE_LOOP: {
-                    result.add(recoverDoWhileLoop(current, info));
-                    current = findLoopExit(info, visited, stopBlocks);
-                    break;
-                }
+                case DO_WHILE_LOOP:
+                    throw retiredDoWhileRecovery(current);
                 case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
                     current = findLoopExit(info, visited, stopBlocks);
@@ -5113,6 +5127,58 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
 
+            // A structural region met by the try-body walk is offered to the reaching-condition engine
+            // FIRST at exactly the schema recovery's own scope, mirroring the walk-level offers: bounded
+            // at the structure's merge or loop exit through the sole-exit preflight, or unbounded for a
+            // loop with no exit block. The offer is withheld in the skip mode - the body still carries a
+            // finally's inlined copies there, which inflate a guard's exit arm and flip its orientation.
+            if (!skipReachingConditions) {
+                IRBlock bodyBound = null;
+                boolean bodyTerminalLoop = false;
+                switch (info.getType()) {
+                    case IF_THEN:
+                    case IF_THEN_ELSE:
+                        bodyBound = info.getMergeBlock();
+                        break;
+                    case WHILE_LOOP:
+                    case DO_WHILE_LOOP:
+                    case FOR_LOOP:
+                        bodyBound = info.getLoopExit();
+                        bodyTerminalLoop = bodyBound == null;
+                        break;
+                    default:
+                        break;
+                }
+                if (bodyTerminalLoop) {
+                    Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
+                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                    if (exits != null && exits.isEmpty()) {
+                        List<Statement> structuredRegion =
+                                rcsStructurer.tryStructureRegion(current, offeredStops, true);
+                        if (structuredRegion != null) {
+                            result.addAll(structuredRegion);
+                            current = null;
+                            continue;
+                        }
+                    }
+                } else if (bodyBound != null && !visited.contains(bodyBound)) {
+                    Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
+                    offeredStops.add(bodyBound);
+                    Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                    if (exits != null && (exits.isEmpty()
+                            || (exits.size() == 1 && exits.contains(bodyBound)))) {
+                        List<Statement> structuredRegion =
+                                rcsStructurer.tryStructureRegion(current, offeredStops, true);
+                        if (structuredRegion != null) {
+                            result.addAll(structuredRegion);
+                            current = stopBlocks.contains(bodyBound) || context.isProcessed(bodyBound)
+                                    ? null : bodyBound;
+                            continue;
+                        }
+                    }
+                }
+            }
+
             switch (info.getType()) {
                 case IF_THEN: {
                     Statement ifStmt = recoverIfThen(current, info);
@@ -5157,9 +5223,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         current = getNextSequentialBlock(current);
                         break;
                     }
-                    result.add(recoverDoWhileLoop(current, info));
-                    current = findLoopExit(info, visited, new HashSet<>());
-                    break;
+                    throw retiredDoWhileRecovery(current);
                 }
                 case FOR_LOOP: {
                     if (loopCutByStops(info, stopBlocks)) {
@@ -7528,6 +7592,28 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         after = succ;
                         continue;
                     }
+                    // A try INSIDE a loop may exit both to its in-loop continuation and - via a break in
+                    // the try body - out of the loop. The in-loop continuation is the node's join; the
+                    // loop model owns the break edge (it stays visible on the consumed blocks' CFG edges,
+                    // where the loop's break-target scan finds it, and the delegate emits the jump).
+                    // Only a FLAT protected body qualifies: with another handler nested in the window,
+                    // the delegate's body walk re-attaches the jump paths inside the wrong handler scope.
+                    // A SYNCHRONIZED region does not qualify either - its delegate rebuilds the body from
+                    // the monitor scaffolding and drops the out-of-loop jump.
+                    if (!acyclicContext
+                            && !blockContainsMonitorExit(rethrower.getHandlerBlock())
+                            && !consumedNestsAnotherHandler(block, consumed, siblingBlocks, rethrower)) {
+                        LoopAnalysis.Loop encl = context.getLoopAnalysis().getLoop(block);
+                        boolean afterIn = encl.getBlocks().contains(after);
+                        boolean succIn = encl.getBlocks().contains(succ);
+                        if (afterIn && !succIn) {
+                            continue;
+                        }
+                        if (succIn && !afterIn) {
+                            after = succ;
+                            continue;
+                        }
+                    }
                     trace("finally-node decline block=" + block.getBytecodeOffset() + " second-join="
                             + succ.getBytecodeOffset() + " first=" + after.getBytecodeOffset());
                     return null;
@@ -7574,6 +7660,28 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             b = b.getSuccessors().iterator().next();
         }
         return b;
+    }
+
+    /**
+     * Whether the consumed window nests a FOREIGN handler - one beyond the node's own try start whose
+     * handler is neither the node's rethrower nor one of its catch siblings. The node's own finally
+     * commonly spans SPLIT table ranges (a break or continue in the try body cuts the range), whose
+     * later range starts are not nesting.
+     */
+    private boolean consumedNestsAnotherHandler(IRBlock tryStart, Set<IRBlock> consumed,
+                                                Set<IRBlock> siblingBlocks, ExceptionHandler rethrower) {
+        for (IRBlock cb : consumed) {
+            if (cb == tryStart) {
+                continue;
+            }
+            ExceptionHandler eh = findUnprocessedHandlerStartingAt(cb);
+            if (eh == null || eh.getHandlerBlock() == rethrower.getHandlerBlock()
+                    || siblingBlocks.contains(eh.getHandlerBlock())) {
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -7881,6 +7989,57 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
 
+            // A structural region met by the walk is offered to the reaching-condition engine FIRST, at
+            // exactly the schema recovery's own scope - bounded at the structure's merge or loop exit, or
+            // unbounded for a loop with no exit block (every leaving path returns or throws). The offered
+            // region never spans a handler boundary the engine cannot node-model, and the walk's
+            // continuation is identical to the schema dispatch's. The schema recoverers below remain only
+            // as the decline fallback.
+            IRBlock walkBound = null;
+            boolean walkTerminalLoop = false;
+            switch (info.getType()) {
+                case IF_THEN:
+                case IF_THEN_ELSE:
+                    walkBound = info.getMergeBlock();
+                    break;
+                case WHILE_LOOP:
+                case DO_WHILE_LOOP:
+                case FOR_LOOP:
+                    walkBound = info.getLoopExit();
+                    walkTerminalLoop = walkBound == null;
+                    break;
+                default:
+                    break;
+            }
+            if (walkTerminalLoop) {
+                Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                if (exits != null && exits.isEmpty()) {
+                    List<Statement> structuredRegion =
+                            rcsStructurer.tryStructureRegion(current, offeredStops, true);
+                    if (structuredRegion != null) {
+                        result.addAll(structuredRegion);
+                        current = null;
+                        continue;
+                    }
+                }
+            } else if (walkBound != null && !visited.contains(walkBound)) {
+                Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
+                offeredStops.add(walkBound);
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, offeredStops);
+                if (exits != null && (exits.isEmpty()
+                        || (exits.size() == 1 && exits.contains(walkBound)))) {
+                    List<Statement> structuredRegion =
+                            rcsStructurer.tryStructureRegion(current, offeredStops, true);
+                    if (structuredRegion != null) {
+                        result.addAll(structuredRegion);
+                        current = stopBlocks.contains(walkBound) || context.isProcessed(walkBound)
+                                ? null : walkBound;
+                        continue;
+                    }
+                }
+            }
+
             switch (info.getType()) {
                 case IF_THEN: {
                     Statement ifStmt = recoverIfThen(current, info);
@@ -7976,11 +8135,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     current = findLoopExit(info, visited, stopBlocks);
                     break;
                 }
-                case DO_WHILE_LOOP: {
-                    result.add(recoverDoWhileLoop(current, info));
-                    current = findLoopExit(info, visited, stopBlocks);
-                    break;
-                }
+                case DO_WHILE_LOOP:
+                    throw retiredDoWhileRecovery(current);
                 case FOR_LOOP: {
                     result.add(recoverForLoop(current, info));
                     current = findLoopExit(info, visited, stopBlocks);
@@ -9786,96 +9942,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
     }
 
-    private Statement recoverDoWhileLoop(IRBlock header, RegionInfo info) {
-        trace("schema-recovery kind=do-while method=" + context.getIrMethod().getName()
-                + " header=" + header.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        if (info.getLatchBlock() != null) {
-            return recoverLatchDoWhile(header, info);
-        }
-        context.markProcessed(header);
-
-        Set<IRBlock> stopBlocks = new HashSet<>();
-        stopBlocks.add(header);
-        if (info.getLoopExit() != null) {
-            stopBlocks.add(info.getLoopExit());
-        } else if (info.getLoop() != null) {
-            Set<IRBlock> loopBlocks = info.getLoop().getBlocks();
-            for (IRBlock loopBlock : loopBlocks) {
-                for (IRBlock succ : loopBlock.getSuccessors()) {
-                    if (!loopBlocks.contains(succ) && !isMethodExitBlock(succ)) {
-                        stopBlocks.add(succ);
-                    }
-                }
-            }
-        }
-
-        context.pushStopBlocks(stopBlocks);
-        try {
-            // Single-block do-while: body, bottom condition and back-edge share the header, so its
-            // own non-terminator instructions are the body (recoverBlockSequence would stop on the
-            // header immediately, since it is its own stop block).
-            List<Statement> bodyStmts = info.getLoopBody() == header
-                    ? recoverBlockInstructions(header)
-                    : recoverBlockSequence(info.getLoopBody(), stopBlocks);
-            BlockStmt body = new BlockStmt(bodyStmts);
-            Expression condition = recoverCondition(header, info.isConditionNegated());
-            DoWhileStmt doWhileStmt = new DoWhileStmt(body, condition);
-            stampFromHeader(doWhileStmt, header);
-            return doWhileStmt;
-        } finally {
-            context.popStopBlocks();
-        }
-    }
-
     /**
-     * Recovers a bottom-tested do-while whose header carries body control flow. The body runs
-     * from the header (temporarily reclassified as its own conditional so the sequence walk does
-     * not re-enter the loop) up to the latch, whose leading instructions close the body and whose
-     * branch is the loop condition.
+     * The schema do-while recoverer is retired: every do-while now structures through the
+     * reaching-condition engine (natively, via the loop-cut guard, or via the opaque try node).
+     * A dispatch arm still classifying a region as a schema do-while signals a routing gap to fix
+     * on the engine side, so it fails loudly rather than degrading silently.
      */
-    private Statement recoverLatchDoWhile(IRBlock header, RegionInfo info) {
-        IRBlock latch = info.getLatchBlock();
-        Set<IRBlock> stopBlocks = new HashSet<>();
-        stopBlocks.add(latch);
-        if (info.getLoopExit() != null) {
-            stopBlocks.add(info.getLoopExit());
-        }
-        context.pushStopBlocks(stopBlocks);
-        // The latch is a continue target only when it is the bare test: jumping to an impure latch
-        // runs its trailing body statements first, which a source-level continue would skip.
-        context.pushLoop(header, latchIsBareTest(latch) ? latch : null, info.getLoopExit());
-        Map<IRBlock, RegionInfo> infos = analyzer.getRegionInfos();
-        RegionInfo headerView = info.getHeaderConditional() != null
-                ? info.getHeaderConditional()
-                : new RegionInfo(ControlFlowContext.StructuredRegion.SEQUENCE, header);
-        RegionInfo saved = infos.put(header, headerView);
-        try {
-            List<Statement> bodyStmts = new ArrayList<>(recoverBlockSequence(header, stopBlocks));
-            stripTrailingContinue(bodyStmts);
-            bodyStmts.addAll(recoverBlockInstructions(latch));
-            context.markProcessed(latch);
-            Expression condition = recoverCondition(latch, info.isConditionNegated());
-            DoWhileStmt doWhileStmt = new DoWhileStmt(new BlockStmt(bodyStmts), condition);
-            stampFromHeader(doWhileStmt, header);
-            return labelIfTargeted(header, doWhileStmt);
-        } finally {
-            infos.put(header, saved);
-            context.popLoop();
-            context.popStopBlocks();
-        }
-    }
-
-    /** True when the latch holds nothing but its branch — the shape a source continue can target. */
-    private boolean latchIsBareTest(IRBlock latch) {
-        for (IRInstruction instr : latch.getInstructions()) {
-            if (!instr.isTerminator() && instr.getResult() == null) {
-                return false;
-            }
-        }
-        return true;
+    private IllegalStateException retiredDoWhileRecovery(IRBlock header) {
+        return new IllegalStateException("schema do-while recovery retired; unrouted do-while at offset "
+                + header.getBytecodeOffset() + " in " + context.getIrMethod().getName());
     }
 
     /** Wraps a recovered loop in a {@link LabeledStmt} when an inner non-local jump created a label for its header. */
