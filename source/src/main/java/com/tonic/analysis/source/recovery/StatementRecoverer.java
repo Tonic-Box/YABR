@@ -1218,7 +1218,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (rcsBound != null && !visited.contains(rcsBound)) {
                 Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
                 boundedStops.add(rcsBound);
-                List<Statement> structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops, true);
+                // Preflight: the offered structure must flow ONLY into its own bound. A foreign stop
+                // reachable from inside (an inner-try start cutting an arm or a loop body) would be
+                // silently truncated - the walk never continues there - dropping real code.
+                Set<IRBlock> exits = rcsStructurer.probeRegionExits(current, boundedStops);
+                List<Statement> structuredRegion = null;
+                if (exits != null && (exits.isEmpty()
+                        || (exits.size() == 1 && exits.contains(rcsBound)))) {
+                    structuredRegion = rcsStructurer.tryStructureRegion(current, boundedStops);
+                }
                 if (structuredRegion != null) {
                     result.addAll(structuredRegion);
                     current = stopBlocks.contains(rcsBound) || context.isProcessed(rcsBound) ? null : rcsBound;

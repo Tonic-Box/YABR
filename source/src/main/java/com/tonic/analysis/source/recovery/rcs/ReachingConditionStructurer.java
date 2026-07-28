@@ -248,6 +248,36 @@ public final class ReachingConditionStructurer {
     }
 
     /**
+     * Side-effect-free preflight: prepares the region exactly as {@link #tryStructureRegion} would and
+     * returns the STOP blocks its flow exits into, or null when the region declines. A caller that plans
+     * to emit only up to one designated continuation must verify no OTHER stop is reachable - a region cut
+     * mid-structure by a foreign stop would silently drop the code beyond it.
+     */
+    public Set<IRBlock> probeRegionExits(IRBlock entry, Set<IRBlock> stopBlocks) {
+        if (entry == null) {
+            return null;
+        }
+        this.method = context.getIrMethod();
+        this.tryNodesEnabled = false;
+        this.dom = context.getDominatorTree();
+        if (dom == null) {
+            return null;
+        }
+        if (!prepareRegion(entry, stopBlocks)) {
+            return null;
+        }
+        Set<IRBlock> exits = new HashSet<>();
+        for (IRBlock rb : region) {
+            for (IRBlock succ : rb.getSuccessors()) {
+                if (stopBlocks.contains(succ) && !isBackEdge(rb, succ)) {
+                    exits.add(succ);
+                }
+            }
+        }
+        return exits;
+    }
+
+    /**
      * As {@link #tryStructureRegion(IRBlock, Set)}, and with {@code allowTryNodes} set additionally treats
      * each try in the region as an opaque composite node (delegated to the host's try/catch recovery at its
      * structural position) instead of declining the region. Offered separately so the linear staging path,
@@ -348,6 +378,22 @@ public final class ReachingConditionStructurer {
         if (!tryNodesEnabled && bridge.regionContainsUnprocessedHandler(region)) {
             trace("rcs-decline unprocessed-handler entry=" + entry.getBytecodeOffset());
             return false;
+        }
+        // A loop whose latch the stops cut away cannot be structured: the region holds the header but not
+        // the back edge, so the loop body's code lies beyond the boundary and emitting would produce an
+        // EMPTY loop, silently dropping the body. Every back-edge predecessor of an in-region block must
+        // itself be in the region (a node's consumed blocks count as in).
+        for (IRBlock b : region) {
+            if (Boolean.getBoolean("yabr.debug.no.latch.check")) {
+                break;
+            }
+            for (IRBlock pred : b.getPredecessors()) {
+                if (isBackEdge(pred, b) && !region.contains(pred) && !consumedByAnyNode(pred)) {
+                    trace("rcs-decline latch-outside entry=" + entry.getBytecodeOffset()
+                            + " header=" + b.getBytecodeOffset());
+                    return false;
+                }
+            }
         }
         assignAtoms();
 

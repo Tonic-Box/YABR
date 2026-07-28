@@ -47,9 +47,61 @@ class StressCorpusTest {
      * the modern-javac burn-in backlog (stress-corpus-findings memory note). The harness asserts each
      * still fails, so a silent fix or a new regression of the documentation both surface.
      */
-    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>();
+    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(List.of(
+            // A user `catch (Throwable t) { cleanup; throw t; }` wrapping a fused try-with-resources is
+            // bytecode-identical to a finally handler by rethrow shape; the clause conversion turns it
+            // into a finally, gutting the resource body and running the cleanup on the normal path
+            // (the SharedLibraryLoader.canWrite shape). The discriminator is copy evidence - a real
+            // finally's exits carry inlined copies, a user catch's carry none - but gating the
+            // conversion on it destabilizes recompiled-layout renderings (TwrFin fixed point).
+            "SFusedTwrCleanup"
+    ));
 
     private static final List<Fixture> FIXTURES = List.of(
+        new Fixture("SFusedTwrCleanup", "import java.io.ByteArrayInputStream;\n"
+            + "import java.io.IOException;\n"
+            + "import java.io.InputStream;\n"
+            + "public class SFusedTwrCleanup {\n"
+            + "    static int notes = 0;\n"
+            + "    static int opens = 0;\n"
+            + "    static InputStream open(int v) { opens++; return new ByteArrayInputStream(new byte[]{(byte) v}); }\n"
+            + "    static void work(boolean fail) { if (fail) throw new IllegalStateException(); }\n"
+            + "    static boolean canWrite(boolean present, boolean fail, boolean useCb) throws IOException {\n"
+            + "        if (present) {\n"
+            + "            if (fail) { return false; }\n"
+            + "            notes += 1;\n"
+            + "        } else {\n"
+            + "            try {\n"
+            + "                work(fail);\n"
+            + "            } catch (IllegalStateException e) {\n"
+            + "                return false;\n"
+            + "            }\n"
+            + "        }\n"
+            + "        try {\n"
+            + "            notes += 10;\n"
+            + "            if (useCb) {\n"
+            + "                try (InputStream r = open(7)) {\n"
+            + "                    notes += r.read();\n"
+            + "                }\n"
+            + "            }\n"
+            + "            notes += 1000;\n"
+            + "            return true;\n"
+            + "        } catch (Throwable t) {\n"
+            + "            if (notes > 5) {\n"
+            + "                notes += 100;\n"
+            + "            }\n"
+            + "            throw t;\n"
+            + "        }\n"
+            + "    }\n"
+            + "    public static int check() throws IOException {\n"
+            + "        notes = 0; opens = 0;\n"
+            + "        int a = canWrite(true, true, false) ? 1 : 0;\n"
+            + "        int b = canWrite(true, false, true) ? 1 : 0;\n"
+            + "        int c = canWrite(false, false, false) ? 1 : 0;\n"
+            + "        int d = canWrite(false, true, true) ? 1 : 0;\n"
+            + "        return a + 2 * b + 4 * c + 8 * d + 100 * notes + 1000000 * opens;\n"
+            + "    }\n"
+            + "}\n"),
         new Fixture("SSharedReturnMaze", "public class SSharedReturnMaze {\n"
             + "    static int log = 0;\n"
             + "    static int work(int x) { if (x == 3) throw new IllegalStateException(); return x * 7; }\n"
