@@ -141,7 +141,7 @@ public interface RegionRecoveryBridge {
      * marking anything. Returns null for a shape the node model does not own (a nested unprocessed try in the
      * range, a catch with internal control flow, or an ambiguous join), which then declines.
      */
-    TryNodeDescriptor decodeTryNode(IRBlock block);
+    TryNodeDescriptor decodeTryNode(IRBlock block, Set<IRBlock> regionStops);
 
     /**
      * Recovers the try node starting at {@code block} as one statement via the host's try/catch machinery,

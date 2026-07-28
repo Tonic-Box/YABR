@@ -790,7 +790,7 @@ public final class ReachingConditionStructurer {
             if (tryNodesEnabled && bridge.startsUnprocessedHandler(b)) {
                 // The try becomes an opaque node: its consumed blocks stay outside the region and the walk
                 // resumes at the join. An undecodable try shape fails the whole region.
-                TryNodeDescriptor node = bridge.decodeTryNode(b);
+                TryNodeDescriptor node = bridge.decodeTryNode(b, stopBlocks);
                 if (node == null) {
                     trace("collect-decline try-node b=" + b.getBytecodeOffset());
                     return false;

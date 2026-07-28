@@ -3547,7 +3547,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     && mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null) {
                 List<Statement> gapStmts = recoverFinallyGap(
                     mainHandler.getTryEnd(), mainHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
-
                 if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts))) {
                     tryStmts = new ArrayList<>(tryStmts);
                     tryStmts.addAll(gapStmts);
@@ -7092,7 +7091,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     @Override
-    public TryNodeDescriptor decodeTryNode(IRBlock block) {
+    public TryNodeDescriptor decodeTryNode(IRBlock block, Set<IRBlock> regionStops) {
+        this.decodeRegionStops = regionStops == null ? Collections.emptySet() : regionStops;
         ExceptionHandler h = findUnprocessedHandlerStartingAt(block);
         if (h == null || h.getHandlerBlock() == null) {
             return null;
@@ -7715,6 +7715,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * code is a genuine join: treating it as a tail duplicates or drops the shared continuation.
      */
     private boolean delegateOwnsExitTail(IRBlock exit, Set<IRBlock> consumed, ExceptionHandler rethrower) {
+        // A tail crossing an active outer stop boundary belongs to the ENCLOSING recovery: the node's
+        // delegate stops there and cannot emit the rest, whatever the tail's shape.
+        if (exitChainCrossesContextStop(exit)) {
+            return false;
+        }
         return nodeOwnsExitTail(exit, consumed) || isBareReturnTail(exit)
                 || isFinallyCopyReturnTail(exit, rethrower);
     }
@@ -7824,6 +7829,40 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
             b = next;
+        }
+        return false;
+    }
+
+    /** The offering region's stop set, captured at decode entry for the tail-ownership checks. */
+    private Set<IRBlock> decodeRegionStops = Collections.emptySet();
+
+    /**
+     * Whether the successor closure from {@code exit} (bounded) touches a boundary the node's delegate
+     * must stop at - an active context stop or the offering region's own stop set.
+     */
+    private boolean exitChainCrossesContextStop(IRBlock exit) {
+        Set<IRBlock> contextStops = new HashSet<>(context.getAllStopBlocks());
+        contextStops.addAll(decodeRegionStops);
+        if (contextStops.isEmpty()) {
+            return false;
+        }
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(exit);
+        int budget = 64;
+        while (!work.isEmpty() && budget-- > 0) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            if (contextStops.contains(b)) {
+                return true;
+            }
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    work.add(e.getKey());
+                }
+            }
         }
         return false;
     }
