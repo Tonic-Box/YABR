@@ -47,15 +47,7 @@ class StressCorpusTest {
      * the modern-javac burn-in backlog (stress-corpus-findings memory note). The harness asserts each
      * still fails, so a silent fix or a new regression of the documentation both surface.
      */
-    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>(List.of(
-            // A user `catch (Throwable t) { cleanup; throw t; }` wrapping a fused try-with-resources is
-            // bytecode-identical to a finally handler by rethrow shape; the clause conversion turns it
-            // into a finally, gutting the resource body and running the cleanup on the normal path
-            // (the SharedLibraryLoader.canWrite shape). The discriminator is copy evidence - a real
-            // finally's exits carry inlined copies, a user catch's carry none - but gating the
-            // conversion on it destabilizes recompiled-layout renderings (TwrFin fixed point).
-            "SFusedTwrCleanup"
-    ));
+    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>();
 
     private static final List<Fixture> FIXTURES = List.of(
         new Fixture("SFusedTwrCleanup", "import java.io.ByteArrayInputStream;\n"

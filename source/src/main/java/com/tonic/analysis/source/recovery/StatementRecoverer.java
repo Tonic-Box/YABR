@@ -834,7 +834,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             Set<String> finallyExceptionVars = new HashSet<>();
 
             for (CatchClause clause : catchClauses) {
-                if (isFinallyRethrowPattern(clause)) {
+                if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
                     finallyBlock = extractFinallyBody(clause);
                     finallyExceptionVars.add(clause.variableName());
                 } else {
@@ -1101,7 +1101,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     BlockStmt finallyBlock = null;
                     List<CatchClause> filteredCatches = new ArrayList<>();
                     for (CatchClause clause : catchClauses) {
-                        if (isFinallyRethrowPattern(clause)) {
+                        if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
                             finallyBlock = extractFinallyBody(clause);
                         } else {
                             filteredCatches.add(clause);
@@ -1719,6 +1719,115 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * Checks if a catch clause represents a finally-rethrow pattern.
      * A finally-rethrow pattern is a catch-all (Throwable) that ends with throwing the caught exception.
      */
+    /**
+     * Whether the rethrowing clause is a REAL finally rather than a user-written
+     * {@code catch (Throwable t) { cleanup; throw t; }} (bytecode-identical by rethrow shape and, on a
+     * recompiled layout, by catch type). Evidence, in order: a verbatim inlined copy of the handler body
+     * outside its protected ranges (javac inlines the finally before every exit; user cleanup text
+     * appears nowhere else); a TRUE catch-any entry (source cannot express one); the de-duplication
+     * having excised this family; a monitorexit in the handler (a synchronized release, whose copies
+     * are dropped before recovery). Unknown provenance keeps the conversion.
+     */
+    private boolean clauseHasFinallyEvidence(CatchClause clause) {
+        IRBlock hb = null;
+        for (Map.Entry<IRBlock, CatchClause> e : recoveredClauses.entrySet()) {
+            if (e.getValue() == clause) {
+                hb = e.getKey();
+                break;
+            }
+        }
+        if (hb == null) {
+            return true;
+        }
+        List<ExceptionHandler> hbEntries = new ArrayList<>();
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+            if (h.getHandlerBlock() == hb) {
+                hbEntries.add(h);
+            }
+        }
+        boolean savedEvidenceExtended = extendedFinallyDedup;
+        extendedFinallyDedup = true;
+        try {
+            List<IRInstruction> template = hbEntries.isEmpty()
+                    ? null : straightLineFinallyTemplate(hbEntries.get(0));
+            if (template != null && !template.isEmpty()) {
+                Set<IRBlock> chainBlocks = new HashSet<>();
+                List<IRBlock> chain = finallyHandlerChain(hbEntries.get(0));
+                if (chain != null) {
+                    chainBlocks.addAll(chain);
+                }
+                Set<IRBlock> rangeBlocks = new HashSet<>();
+                for (ExceptionHandler h : hbEntries) {
+                    if (h.getTryStart() == null || h.getTryEnd() == null) {
+                        continue;
+                    }
+                    int lo = h.getTryStart().getBytecodeOffset();
+                    int hi = h.getTryEnd().getBytecodeOffset();
+                    for (IRBlock b : context.getIrMethod().getBlocks()) {
+                        if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi) {
+                            rangeBlocks.add(b);
+                        }
+                    }
+                }
+                for (IRBlock b : context.getIrMethod().getBlocks()) {
+                    if (chainBlocks.contains(b) || contiguousTemplateStart(b, template) < 0) {
+                        continue;
+                    }
+                    if (!rangeBlocks.contains(b)) {
+                        // javac's layout: the copies live in the gaps between the split ranges.
+                        return true;
+                    }
+                    // A recompiled layout inlines the copy INSIDE the single whole-range entry; it is a
+                    // genuine exit copy only at exit position - the block returns, or leaves the range.
+                    // (Cleanup text at exit position converts soundly either way: `try{A; X; return}
+                    // catch(T){X; throw}` and `try{A; return} finally{X}` are the same construct.)
+                    if (b.getTerminator() instanceof ReturnInstruction) {
+                        return true;
+                    }
+                    for (IRBlock succ : b.getSuccessors()) {
+                        if (!rangeBlocks.contains(succ) && !chainBlocks.contains(succ)
+                                && succ != hb) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } finally {
+            extendedFinallyDedup = savedEvidenceExtended;
+        }
+        for (ExceptionHandler h : hbEntries) {
+            if (h.isCatchAll()) {
+                return true;
+            }
+        }
+        for (ExceptionHandler d : finallyDeduped) {
+            if (d.getHandlerBlock() == hb) {
+                return true;
+            }
+        }
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(hb);
+        int budget = 40;
+        while (!work.isEmpty() && budget-- > 0) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            for (IRInstruction ins : b.getInstructions()) {
+                if (ins instanceof SimpleInstruction
+                        && ((SimpleInstruction) ins).getOp() == SimpleOp.MONITOREXIT) {
+                    return true;
+                }
+            }
+            work.addAll(b.getSuccessors());
+        }
+        if (TRACE) {
+            trace("clause-evidence NONE handler=" + hb.getBytecodeOffset());
+        }
+        return false;
+    }
+
     private boolean isFinallyRethrowPattern(CatchClause clause) {
         if (clause == null) return false;
 
@@ -2759,7 +2868,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         Set<String> finallyVars = new HashSet<>();
         List<CatchClause> catchClauses = new ArrayList<>();
         for (CatchClause clause : userClauses) {
-            if (isFinallyRethrowPattern(clause)) {
+            if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
                 finallyBlock = extractFinallyBody(clause);
                 finallyVars.add(clause.variableName());
             } else {
@@ -3247,7 +3356,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         BlockStmt finallyBlock = null;
         List<CatchClause> filteredCatches = new ArrayList<>();
         for (CatchClause clause : catchClauses) {
-            if (isFinallyRethrowPattern(clause)) {
+            if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
                 finallyBlock = extractFinallyBody(clause);
                 finallyExceptionVars.add(clause.variableName());
             } else {
