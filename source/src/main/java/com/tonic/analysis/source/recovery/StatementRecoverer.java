@@ -7274,6 +7274,34 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             trace("finally-node decline block=" + block.getBytecodeOffset() + " self-join");
             return null;
         }
+        // A try-side fall-through that leaves through bare goto pads ONTO AN ENCLOSING LOOP'S BACK EDGE
+        // leaves those pads dangling outside both the node and the region, breaking the loop's latch
+        // model. Exactly that chain is consumed into the node; every other exit keeps its blocks - the
+        // catch's continuation stays the node's join, and unrelated pads stay the region's own.
+        LoopAnalysis loopsForPads = context.getLoopAnalysis();
+        if (loopsForPads != null) {
+            Set<IRBlock> exitPads = new HashSet<>();
+            for (IRBlock cb : consumed) {
+                if (handlerBody.contains(cb)) {
+                    continue;
+                }
+                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                            || consumed.contains(e.getKey())) {
+                        continue;
+                    }
+                    Set<IRBlock> chain = new HashSet<>();
+                    IRBlock landing = resolveThroughGotoShells(e.getKey(), chain);
+                    LoopAnalysis.Loop landingLoop = landing == null ? null : loopsForPads.getLoop(landing);
+                    if (landingLoop != null && landingLoop.getHeader() == landing
+                            && landingLoop.getBlocks().contains(block)) {
+                        exitPads.addAll(chain);
+                    }
+                }
+            }
+            exitPads.remove(after);
+            consumed.addAll(exitPads);
+        }
         trace("finally-node OK block=" + block.getBytecodeOffset()
                 + " after=" + (after == null ? "none" : after.getBytecodeOffset()));
         return new TryNodeDescriptor(h, consumed, after);
