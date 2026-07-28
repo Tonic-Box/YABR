@@ -4115,6 +4115,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         }
                     }
                 }
+                // A live handler whose WHOLE protected range lies within the matched copies is the copy's
+                // own internal guard (a finally body's close-guard, inlined along with each copy): it is
+                // consumed with the copy like a nested-template mirror. A handler whose range extends
+                // beyond the copies protects REAL code the match merely resembles - the bail stands.
+                if (live != null && !copyNestedHandlers.contains(live)
+                        && live.getTryBlocks() != null && !live.getTryBlocks().isEmpty()) {
+                    boolean copyInternal = true;
+                    for (IRBlock tb : live.getTryBlocks()) {
+                        if (!allCopyBlocks.contains(tb)) {
+                            copyInternal = false;
+                            break;
+                        }
+                    }
+                    if (copyInternal) {
+                        copyNestedHandlers.add(live);
+                    }
+                }
                 if (live != null && !copyNestedHandlers.contains(live)
                         && !currentDedupOffering.contains(live)
                         && !handlerKeepsContent) {
