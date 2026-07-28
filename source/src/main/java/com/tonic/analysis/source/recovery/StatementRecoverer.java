@@ -7585,8 +7585,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     // A SYNCHRONIZED region does not qualify either - its delegate rebuilds the body from
                     // the monitor scaffolding and drops the out-of-loop jump.
                     if (!acyclicContext
-                            && (System.getProperty("yabr.debug.sync.arbitration") != null
-                                || !blockContainsMonitorExit(rethrower.getHandlerBlock()))
                             && !consumedNestsAnotherHandler(block, consumed, siblingBlocks, rethrower)) {
                         LoopAnalysis.Loop encl = context.getLoopAnalysis().getLoop(block);
                         boolean afterIn = encl.getBlocks().contains(after);

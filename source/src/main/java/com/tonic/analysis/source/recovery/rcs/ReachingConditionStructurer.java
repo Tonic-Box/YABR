@@ -1960,6 +1960,13 @@ public final class ReachingConditionStructurer {
                 // intermediate is not pulled out after the loop to run unconditionally.
                 if (dominatedByNonHeaderLoopBlock(v, header, loopBlocks) && v.getSuccessors().size() == 1) {
                     target = v.getSuccessors().iterator().next();
+                    // The intermediate may lead through bare goto connectors (a monitorexit copy's exit
+                    // pad) before the real continuation; the break targets where the chain lands.
+                    int hops = 0;
+                    while (target != null && isGotoOnly(target)
+                            && target.getSuccessors().size() == 1 && hops++ < 8) {
+                        target = target.getSuccessors().iterator().next();
+                    }
                 } else if (isTerminalBlock(v)) {
                     continue; // a natural terminal (return/throw) exit is inlined in the body, not a break target
                 }
