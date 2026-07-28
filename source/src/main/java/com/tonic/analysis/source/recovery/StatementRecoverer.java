@@ -4968,16 +4968,40 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
                 case WHILE_LOOP: {
+                    if (loopCutByStops(info, stopBlocks)) {
+                        List<Statement> headerStmts = recoverSimpleBlock(current);
+                        result.addAll(headerStmts);
+                        context.setStatements(current, headerStmts);
+                        context.markProcessed(current);
+                        current = getNextSequentialBlock(current);
+                        break;
+                    }
                     result.add(recoverWhileLoop(current, info));
                     current = findLoopExit(info, visited, new HashSet<>());
                     break;
                 }
                 case DO_WHILE_LOOP: {
+                    if (loopCutByStops(info, stopBlocks)) {
+                        List<Statement> headerStmts = recoverSimpleBlock(current);
+                        result.addAll(headerStmts);
+                        context.setStatements(current, headerStmts);
+                        context.markProcessed(current);
+                        current = getNextSequentialBlock(current);
+                        break;
+                    }
                     result.add(recoverDoWhileLoop(current, info));
                     current = findLoopExit(info, visited, new HashSet<>());
                     break;
                 }
                 case FOR_LOOP: {
+                    if (loopCutByStops(info, stopBlocks)) {
+                        List<Statement> headerStmts = recoverSimpleBlock(current);
+                        result.addAll(headerStmts);
+                        context.setStatements(current, headerStmts);
+                        context.markProcessed(current);
+                        current = getNextSequentialBlock(current);
+                        break;
+                    }
                     result.add(recoverForLoop(current, info));
                     current = findLoopExit(info, visited, new HashSet<>());
                     break;
@@ -6614,14 +6638,42 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Recovers a region that the RC engine declined because it contains a try, by staging it linearly:
-     * the handler-free prefix (recovered recursively, so the RC engine structures it), the try itself
-     * (delegated to {@link #recoverTryCatch} with the same visited/continuation semantics as the legacy
-     * walk), then the continuation after the try (recovered recursively, so a further try stages again).
-     * Applies only when every path from {@code startBlock} reaches one unique try or terminates - a try
-     * on just one arm of a branch, or a prefix path that bypasses the try to a stop block, has no linear
-     * staging and returns null so the caller keeps the legacy walk.
+     * Whether {@code info}'s loop is CUT by the walk's stop blocks - some loop block (typically the
+     * latch beyond a try's protected range) is a stop. Structuring the loop from inside such a walk
+     * would absorb blocks an outer recovery owns; the header is emitted as a plain block instead and
+     * the outer recovery closes the loop.
      */
+    private boolean loopCutByStops(RegionInfo info, Set<IRBlock> stops) {
+        if (info.getLoop() == null) {
+            return false;
+        }
+        for (IRBlock lb : info.getLoop().getBlocks()) {
+            if (stops.contains(lb)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether every block of {@code loop} lies within {@code handler}'s merged protected range. */
+    private boolean loopWithinTryRange(LoopAnalysis.Loop loop, ExceptionHandler handler) {
+        if (handler == null || handler.getTryStart() == null) {
+            return false;
+        }
+        int lo = handler.getTryStart().getBytecodeOffset();
+        int hi = mergedTryEndOffset(handler);
+        if (hi < 0) {
+            return false;
+        }
+        for (IRBlock lb : loop.getBlocks()) {
+            int off = lb.getBytecodeOffset();
+            if (off < lo || off >= hi) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private List<Statement> recoverSequentialTryStages(IRBlock startBlock, Set<IRBlock> stopBlocks) {
         Set<IRBlock> prefix = new HashSet<>();
         Deque<IRBlock> work = new ArrayDeque<>();
@@ -6639,9 +6691,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 // wholly within the protected range. Decline only when an ENCLOSING loop (one whose header is
                 // a different block) contains the try start.
                 if (context.getLoopAnalysis() != null) {
+                    ExceptionHandler stageHandler = findUnprocessedHandlerStartingAt(b);
                     LoopAnalysis.Loop enclosing = context.getLoopAnalysis().getLoop(b);
                     while (enclosing != null) {
-                        if (enclosing.getHeader() != b) {
+                        // "Try wraps loop" is judged by CONTAINMENT, not header identity: a do-while whose
+                        // body STARTS with the try makes the try-start block the loop header too, but the
+                        // latch lies outside the protected range - staging that shape hoists the try out
+                        // of the loop. Only a loop wholly within the range stages linearly.
+                        if (!loopWithinTryRange(enclosing, stageHandler)) {
                             return null;
                         }
                         enclosing = enclosing.getParent();
