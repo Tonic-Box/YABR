@@ -125,6 +125,14 @@ public interface RegionRecoveryBridge {
      */
     SwitchDescriptor decodeSwitch(IRBlock switchBlock);
 
+    /**
+     * The switch header's own statements for emission before the {@code switch}: for an ordinary
+     * switch the block's plain recovery, but for a desugared selector (a string switch's
+     * hashCode/equals scaffold) only the user code BEFORE the dispatch scaffolding - and the
+     * scaffold blocks are marked processed so nothing re-walks them.
+     */
+    List<Statement> recoverSwitchHeaderStatements(IRBlock header);
+
     /** True when {@code block} starts the protected range of an exception handler no recovery has consumed. */
     boolean startsUnprocessedHandler(IRBlock block);
 

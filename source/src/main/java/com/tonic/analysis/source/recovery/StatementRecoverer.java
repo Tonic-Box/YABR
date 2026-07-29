@@ -224,8 +224,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 return null;
             }
         }
-        if (detectStringSwitch(switchBlock) != null) {
-            return null;
+        StringSwitchInfo stringInfo = detectStringSwitch(switchBlock);
+        if (stringInfo != null) {
+            return decodeStringSwitchDescriptor(switchBlock, stringInfo);
         }
 
         Expression selector = exprRecoverer.recoverOperand(key);
@@ -320,6 +321,96 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
 
         return new SwitchDescriptor(switchBlock, selector, mergeBlock, cases, caseHeaders);
+    }
+
+    /** String-switch scaffolds admitted by {@link #decodeStringSwitchDescriptor}, keyed by the hash-dispatch header. */
+    private final Map<IRBlock, StringSwitchInfo> stringSwitchScaffolds = new HashMap<>();
+
+    /**
+     * Decodes javac's two-phase string switch into a structuring-ready descriptor over the INDEX
+     * switch: selector = the original string expression, labels = the string literals mapped through
+     * the hashCode/equals scaffold, case headers = the index switch's targets. The scaffold blocks
+     * stay outside the engine's region (the model follows the descriptor's case headers, not the raw
+     * dispatch edges) and are marked processed when the header's statements are emitted.
+     */
+    private SwitchDescriptor decodeStringSwitchDescriptor(IRBlock header, StringSwitchInfo info) {
+        SwitchInstruction indexSwitch = info.indexSwitch;
+        IRBlock merge = stringSwitchExit(info);
+
+        Map<Integer, List<String>> indexToLiterals = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : info.literalToIndex.entrySet()) {
+            indexToLiterals.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
+        }
+        Map<IRBlock, List<Expression>> targetToLabels = new LinkedHashMap<>();
+        for (Map.Entry<Integer, IRBlock> entry : indexSwitch.getCases().entrySet()) {
+            List<String> literals = indexToLiterals.get(entry.getKey());
+            if (literals == null) {
+                continue;
+            }
+            List<Expression> labels = targetToLabels.computeIfAbsent(entry.getKey() == null ? null : entry.getValue(),
+                    k -> new ArrayList<>());
+            for (String literal : literals) {
+                labels.add(LiteralExpr.ofString(literal));
+            }
+        }
+        if (targetToLabels.isEmpty()) {
+            return null;
+        }
+
+        Expression selector = exprRecoverer.recoverOperand(info.stringValue);
+        IRBlock defaultTarget = indexSwitch.getDefaultTarget();
+        boolean emptyDefault = defaultTarget != null && defaultTarget == merge;
+
+        Set<IRBlock> caseHeaders = new HashSet<>(targetToLabels.keySet());
+        if (defaultTarget != null && !emptyDefault) {
+            caseHeaders.add(defaultTarget);
+        }
+        if (merge != null) {
+            caseHeaders.remove(merge);
+        }
+
+        List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
+        for (Map.Entry<IRBlock, List<Expression>> entry : targetToLabels.entrySet()) {
+            cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), entry.getValue(), false, entry.getKey()));
+        }
+        if (defaultTarget != null) {
+            cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), Collections.emptyList(), true,
+                    emptyDefault ? null : defaultTarget));
+        }
+
+        stringSwitchScaffolds.put(header, info);
+        return new SwitchDescriptor(header, selector, merge, cases, caseHeaders, true);
+    }
+
+    @Override
+    public List<Statement> recoverSwitchHeaderStatements(IRBlock header) {
+        StringSwitchInfo info = stringSwitchScaffolds.get(header);
+        if (info == null) {
+            return recoverSimpleBlock(header);
+        }
+        // User code before the dispatch scaffolding (the selector's own store and anything above it);
+        // the scaffolding proper starts at the hashCode call. Mirrors the walk's string recovery.
+        List<Statement> lead = new ArrayList<>();
+        for (IRInstruction instr : header.getInstructions()) {
+            if (instr.isTerminator()) {
+                break;
+            }
+            if (instr instanceof InvokeInstruction && "hashCode".equals(((InvokeInstruction) instr).getName())) {
+                break;
+            }
+            if (context.shouldSkipInstruction(instr)) {
+                continue;
+            }
+            Statement stmt = recoverInstruction(instr);
+            if (stmt != null) {
+                lead.add(stmt);
+            }
+        }
+        for (IRBlock block : info.scaffolding) {
+            context.markProcessed(block);
+            context.setStatements(block, Collections.emptyList());
+        }
+        return lead;
     }
 
     /**

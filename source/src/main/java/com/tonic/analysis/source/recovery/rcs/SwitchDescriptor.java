@@ -20,14 +20,28 @@ public final class SwitchDescriptor {
     private final IRBlock merge;
     private final List<CaseSpec> cases;
     private final Set<IRBlock> caseHeaders;
+    private final boolean desugaredSelector;
 
     public SwitchDescriptor(IRBlock header, Expression selector, IRBlock merge, List<CaseSpec> cases,
                             Set<IRBlock> caseHeaders) {
+        this(header, selector, merge, cases, caseHeaders, false);
+    }
+
+    public SwitchDescriptor(IRBlock header, Expression selector, IRBlock merge, List<CaseSpec> cases,
+                            Set<IRBlock> caseHeaders, boolean desugaredSelector) {
         this.header = header;
         this.selector = selector;
         this.merge = merge;
         this.cases = cases;
         this.caseHeaders = caseHeaders;
+        this.desugaredSelector = desugaredSelector;
+    }
+
+    /** Whether the raw CFG edges out of the header are a desugared dispatch scaffold (a string
+     * switch's hashCode/equals chains) rather than the case bodies: the model must follow the
+     * descriptor's case headers and merge instead of the raw successors. */
+    public boolean desugaredSelector() {
+        return desugaredSelector;
     }
 
     /** The switch block itself. */

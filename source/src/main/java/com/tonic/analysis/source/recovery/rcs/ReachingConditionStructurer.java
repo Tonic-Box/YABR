@@ -931,6 +931,27 @@ public final class ReachingConditionStructurer {
                 if (merge != null && !stopBlocks.contains(merge) && !region.contains(merge)) {
                     work.add(merge);
                 }
+                if (desc.desugaredSelector()) {
+                    // The model's edges from a desugared-selector switch are its case headers, not
+                    // the raw CFG successors: the dispatch scaffold (a string switch's
+                    // hashCode/equals chains) stays outside the region, consumed by the descriptor.
+                    for (IRBlock s : desc.caseHeaders()) {
+                        if (isBackEdge(b, s) || stopBlocks.contains(s) || region.contains(s)) {
+                            continue;
+                        }
+                        if (s != entry && !dom.dominates(entry, s)) {
+                            if (outsidePredsAreCatchCode(s, entry)) {
+                                trace("collect-decline catch-join s=" + s.getBytecodeOffset());
+                                pendingCatchJoinSplit = s;
+                                return false;
+                            }
+                            skippedBoundaries.add(s);
+                            continue;
+                        }
+                        work.add(s);
+                    }
+                    continue;
+                }
             }
             for (IRBlock s : b.getSuccessors()) {
                 if (isBackEdge(b, s)) {
@@ -1169,6 +1190,14 @@ public final class ReachingConditionStructurer {
         if (sw != null) {
             return sw.after() != null ? Collections.singletonList(sw.after()) : Collections.emptyList();
         }
+        SwitchDescriptor desc = switchDescriptors.get(b);
+        if (desc != null && desc.desugaredSelector()) {
+            List<IRBlock> out = new ArrayList<>(desc.caseHeaders());
+            if (desc.merge() != null && !out.contains(desc.merge())) {
+                out.add(desc.merge());
+            }
+            return out;
+        }
         return b.getSuccessors();
     }
 
@@ -1178,6 +1207,24 @@ public final class ReachingConditionStructurer {
      */
     private List<IRBlock> modelPredecessors(IRBlock n) {
         List<IRBlock> out = new ArrayList<>(n.getPredecessors());
+        for (Map.Entry<IRBlock, SwitchDescriptor> e : switchDescriptors.entrySet()) {
+            if (!e.getValue().desugaredSelector()) {
+                continue;
+            }
+            boolean caseEdge = e.getValue().caseHeaders().contains(n);
+            boolean emptyCaseToMerge = false;
+            if (e.getValue().merge() == n) {
+                for (SwitchDescriptor.CaseSpec spec : e.getValue().cases()) {
+                    if (spec.header() == null) {
+                        emptyCaseToMerge = true;
+                        break;
+                    }
+                }
+            }
+            if ((caseEdge || emptyCaseToMerge) && !out.contains(e.getKey())) {
+                out.add(e.getKey());
+            }
+        }
         for (Map.Entry<IRBlock, TryNodeDescriptor> e : tryNodes.entrySet()) {
             if (e.getValue().after() == n) {
                 out.add(e.getKey());
@@ -1560,7 +1607,7 @@ public final class ReachingConditionStructurer {
     private List<Statement> emitSwitch(IRBlock b) {
         SwitchDescriptor desc = switchDescriptor(b);
         IRBlock merge = switchMerge(b, desc);
-        List<Statement> own = bridge.recoverSimpleBlock(b);
+        List<Statement> own = bridge.recoverSwitchHeaderStatements(b);
         if (!duplicating) {
             bridge.markRegionBlockProcessed(b, own);
         }
@@ -1605,6 +1652,13 @@ public final class ReachingConditionStructurer {
                 continue;
             }
             out.addAll(emit(c));
+        }
+        // A desugared selector's merge is immediately dominated by the dispatch scaffold, not by the
+        // switch block, so the dominator walk above never reaches it; emit it here as the switch's
+        // continuation.
+        if (desc.desugaredSelector() && merge != null && region.contains(merge)
+                && !bridge.isRegionBlockProcessed(merge) && !duplicating) {
+            out.addAll(emit(merge));
         }
         return out;
     }
