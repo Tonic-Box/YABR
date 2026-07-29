@@ -101,6 +101,13 @@ class RoundTripIdempotenceTest {
         }
         System.out.println(report);
 
+        // Drift is asserted separately from idempotence, and is the stronger property: a class that
+        // converges after one round trip normalizes, whereas one that keeps changing has no stable
+        // representation at all. Recovery reached drift-free before it reached fully idempotent, so
+        // pinning it here stops that ground being given back while the remaining two are worked on.
+        assertTrue(drifts.isEmpty(),
+                "round-trip must not oscillate: " + stable + "/" + graded + " stable; drifts=" + drifts);
+
         assertTrue(notIdempotent.isEmpty() && notVerifying.isEmpty(),
                 "round-trip not a fixed point: " + pass + "/" + graded + " idempotent; "
                         + "not-idempotent=" + notIdempotent + " not-verifying=" + notVerifying);

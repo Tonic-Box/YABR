@@ -183,16 +183,23 @@ public class ControlFlowSimplifier implements ASTTransform {
             changed = true;
         }
 
-        // Canonicalize branch polarity: when both arms are present and neither is terminal, prefer the positive
-        // condition (== over !=, dropping a leading !) with the arms in that order. Recompiling an if/else can flip
-        // which arm becomes the branch fall-through, so the raw decompile oscillates between the two equivalent
-        // polarities across a round trip; normalizing to the positive form on every pass makes it a fixed point.
-        // Restricted to non-terminal arms so it never competes with the early-exit / terminal-else rules, which own
-        // the single-exit shapes.
-        if (ifStmt.hasElse()
-                && isNegativeCondition(ifStmt.getCondition())
-                && !isEmptyBlock(ifStmt.getThenBranch()) && !isEmptyBlock(ifStmt.getElseBranch())
-                && !isTerminal(ifStmt.getThenBranch()) && !isTerminal(ifStmt.getElseBranch())) {
+        // Canonicalize branch polarity: with both arms present, prefer the positive condition (== over !=,
+        // dropping a leading !) and put the arms in that order. Lowering an if/else flips which arm becomes the
+        // branch fall-through, so the raw decompile alternates between the two equivalent polarities across a
+        // round trip; normalizing on every pass makes it a fixed point, because the pair (positive condition,
+        // arm reached under it) is a property of the program rather than of block order.
+        // An if whose arms EXIT is included - that is the shape the structurer leaves in raw lowering form, and
+        // the one that oscillated - but only for a purely logical negation (`!x` / `x != y`), and never for a
+        // `selector == constant` dispatch, whose negated nesting the switch reconstructors fold. Relationals are
+        // excluded there: they carry their own canonicalization, and widening to them re-nested arms and shifted
+        // declarations in classes that were already fixed points. Non-terminal arms keep the historical rule.
+        boolean exitingArm = isTerminal(ifStmt.getThenBranch()) || isTerminal(ifStmt.getElseBranch());
+        boolean orientable = exitingArm
+                ? isPurelyLogicalNegation(ifStmt.getCondition())
+                        && !isConstantEqualityGuard(ifStmt.getCondition())
+                : isNegativeCondition(ifStmt.getCondition());
+        if (ifStmt.hasElse() && orientable
+                && !isEmptyBlock(ifStmt.getThenBranch()) && !isEmptyBlock(ifStmt.getElseBranch())) {
             Statement thenBody = ifStmt.getThenBranch();
             invertCondition(ifStmt);
             ifStmt.setThenBranch(ifStmt.getElseBranch());
@@ -299,12 +306,12 @@ public class ControlFlowSimplifier implements ASTTransform {
             int thenLen = getStatements(ifStmt.getThenBranch()).size();
             int elseLen = getStatements(ifStmt.getElseBranch()).size();
             if (thenExits && thenLen < elseLen && !isConstantEqualityGuard(ifStmt.getCondition())) {
-                // Both arms exit and the then is strictly shorter: it is already the guard the reaching-condition
-                // structurer would choose (the single-statement early exit), so keep it and flatten the else after it
-                // rather than flipping to guard the longer else with a negated condition - which would oscillate on
-                // round trip. Excluded for a `selector == constant` guard: negating it to `selector != constant` and
-                // nesting is exactly the chain form the switch reconstructor folds, so those keep the guard-the-else
-                // path below.
+                // Both arms exit and the condition is already positive: keep the then arm as the guard and flatten
+                // the else after it. Selecting on the condition's polarity rather than on arm LENGTHS is what makes
+                // this a round-trip fixed point - statement counts shift with layout, so the old size tie-break
+                // flipped the arms on alternate passes. Excluded for a `selector == constant` guard: negating it to
+                // `selector != constant` and nesting is exactly the chain form the switch reconstructor folds, so
+                // those keep the guard-the-else path below.
                 List<Statement> elseStmts = getStatements(ifStmt.getElseBranch());
                 ifStmt.setElseBranch(null);
                 for (int j = 0; j < elseStmts.size(); j++) {
@@ -1118,9 +1125,6 @@ public class ControlFlowSimplifier implements ASTTransform {
         }
     }
 
-    /**
-     * Removes redundant statements: self-assignments, consecutive duplicates, empty blocks.
-     */
     /**
      * Drops every statement following an unconditional exit in the same list. Java rejects unreachable
      * statements outright, so a recovered {@code continue; return;} tail is not merely redundant - it
