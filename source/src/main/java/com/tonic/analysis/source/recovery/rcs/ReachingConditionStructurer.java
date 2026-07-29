@@ -1586,8 +1586,12 @@ public final class ReachingConditionStructurer {
                     continue;
                 }
                 body = new ArrayList<>();
+            } else if (spec.header() == null) {
+                // The case jumps straight to the merge: its only content is the phi contribution that
+                // edge carries (a switch expression's arm value), which no block emission ever lowers.
+                body = merge != null ? new ArrayList<>(bridge.lowerPhisOnEdge(b, merge)) : new ArrayList<>();
             } else {
-                body = spec.header() == null ? new ArrayList<>() : emit(spec.header());
+                body = emit(spec.header());
             }
             cases.add(buildSwitchCase(spec, body, caseFallsThrough(spec, desc)));
         }

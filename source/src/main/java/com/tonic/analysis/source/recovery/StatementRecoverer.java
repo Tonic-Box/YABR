@@ -9473,7 +9473,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // genuine re-initialization; eliding it there drops a live write and silently changes the value.
             boolean inLoopBlock = context.getLoopAnalysis() != null
                     && context.getLoopAnalysis().getLoop(store.getBlock()) != null;
+            // A default store inside a switch CASE is that arm's own assignment converging on the
+            // merge (a switch expression's phi input): eliding it in favor of the declaration's
+            // initializer empties the arm and the switch-expression fold loses the default value.
             if (isDefaultValue(value) && context.getLoopStack().isEmpty() && !inLoopBlock
+                    && !context.inInnermostSwitchCase(store.getBlock())
                     && !hasDominatingNonDefaultStore(store)
                     && !slotReadByReachableHandler(store, null)) {
                 return null;
@@ -9818,6 +9822,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return stmt;
         }
         return tcs.getTryBlock();
+    }
+
+    private Statement recoverIrreducible(IRBlock header) {
+        Set<IRBlock> blocks = new HashSet<>();
+        collectReachableBlocks(header, blocks, new HashSet<>());
+        return new IRRegionStmt(new ArrayList<>(blocks));
     }
 
     /**
@@ -10328,7 +10338,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         && "typeSwitch".equals(((InvokeInstruction) keyDef).getName());
             }
         }
-        if (!suppress) {
+        if (!suppress && System.getProperty("yabr.debug.lift.phi.suppress") == null) {
             IRBlock merge = findSwitchMerge(info);
             suppress = merge != null && !merge.getPhiInstructions().isEmpty();
         }
@@ -10573,11 +10583,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
-    private Statement recoverIrreducible(IRBlock header) {
-        Set<IRBlock> blocks = new HashSet<>();
-        collectReachableBlocks(header, blocks, new HashSet<>());
-        return new IRRegionStmt(new ArrayList<>(blocks));
-    }
 
     private static final String DISPATCH_LABEL = "$dispatch$";
 
