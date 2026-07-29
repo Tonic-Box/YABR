@@ -737,12 +737,13 @@ public final class ReachingConditionStructurer {
         // decline to the legacy walk, which recovers the boundary. Exempt the active sequence cut: that
         // block is the NEXT segment, emitted directly after this region in one statement sequence, so the
         // terminal and the value it reads are placed exactly as a single walk would place them.
-        for (IRBlock s : b.getSuccessors()) {
+        // Model successors, not raw CFG edges: a try node's only continuation is its join - its other
+        // CFG exits are per-path tails the decode already vetted as the DELEGATE's to re-attach.
+        for (IRBlock s : modelSuccessors(b)) {
             if (!isBackEdge(b, s) && !region.contains(s) && s != activeSequenceCut
                     && context.classifyLoopJump(s) == null
                     && isTerminalBlock(s) && terminalDependsOnRegion(s)) {
-                trace("boundary-terminal bail b=" + b.getBytecodeOffset() + " s=" + s.getBytecodeOffset()
-                        + " nodeB=" + (tryNodes.containsKey(b) || switchNodes.containsKey(b)));
+                trace("boundary-terminal bail b=" + b.getBytecodeOffset() + " s=" + s.getBytecodeOffset());
                 throw new BailToLegacy();
             }
         }

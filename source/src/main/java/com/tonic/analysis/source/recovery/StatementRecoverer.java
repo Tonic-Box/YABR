@@ -7442,20 +7442,73 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return out;
     }
 
-    /** True when any of the {@code handlers}' finally templates writes a local variable (a StoreLocal). */
+    /** Whether a store is a handler's caught-exception spill: its value chains through copies to the
+     * raw exception (a definition-less SSA value), not to anything the finally body computed. */
+    private boolean isExceptionSpill(StoreLocalInstruction store) {
+        Value v = store.getValue();
+        Set<IRInstruction> seen = new HashSet<>();
+        int hops = 0;
+        while (v instanceof SSAValue && hops++ < 4) {
+            IRInstruction def = ((SSAValue) v).getDefinition();
+            if (def == null || !seen.add(def)) {
+                // No definition, or a self-referential copy cycle: the raw incoming exception.
+                return true;
+            }
+            if (!(def instanceof CopyInstruction)) {
+                return false;
+            }
+            v = ((CopyInstruction) def).getSource();
+        }
+        return !(v instanceof SSAValue);
+    }
+
     private boolean finallyWritesLocal(List<ExceptionHandler> handlers) {
         for (ExceptionHandler h : handlers) {
             if (!handlerRethrows(h) || handlerThrowsFreshException(h)) {
                 continue;
             }
             List<IRInstruction> template = straightLineFinallyTemplate(h);
-            if (template == null) {
-                return true;
+            if (template != null) {
+                for (IRInstruction ins : template) {
+                    if (ins instanceof StoreLocalInstruction) {
+                        return true;
+                    }
+                }
+                continue;
             }
-            for (IRInstruction ins : template) {
-                if (ins instanceof StoreLocalInstruction) {
+            // The template can be unextractable AFTER the de-duplication excised the copies; the
+            // HANDLER side is never touched by excision, so scan its straight-line chain instead.
+            // The caught exception's own spill (the store the rethrow reloads) is scaffolding, not a
+            // finally body write.
+            IRBlock hb = h.getHandlerBlock();
+            int hops = 0;
+            while (hb != null && hops++ < 8) {
+                for (IRInstruction ins : hb.getInstructions()) {
+                    if (ins instanceof StoreLocalInstruction && !isExceptionSpill((StoreLocalInstruction) ins)) {
+                        return true;
+                    }
+                }
+                if (hb.getTerminator() instanceof SimpleInstruction
+                        && ((SimpleInstruction) hb.getTerminator()).getOp() == SimpleOp.ATHROW) {
+                    break;
+                }
+                IRBlock next = null;
+                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : hb.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                        if (next != null) {
+                            return true;
+                        }
+                        next = e.getKey();
+                    }
+                }
+                if (next == null && !(hb.getTerminator() instanceof SimpleInstruction
+                        && ((SimpleInstruction) hb.getTerminator()).getOp() == SimpleOp.ATHROW)) {
                     return true;
                 }
+                hb = next;
+            }
+            if (hops >= 8) {
+                return true;
             }
         }
         return false;
@@ -7630,6 +7683,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     if (acyclicContext && delegateOwnsExitTail(after, consumed, rethrower)
                             && !(succ.getTerminator() instanceof ReturnInstruction)) {
                         after = succ;
+                        continue;
+                    }
+                    // A rival that is a SHARED terminal (reached from outside the window too, so not
+                    // delegate-owned) is the construct's join even when it is a return: the offering
+                    // region re-emits a converging terminal once per reaching path, and the delegate's
+                    // own absorption of the tail covers only its in-construct paths.
+                    if (acyclicContext && delegateOwnsExitTail(after, consumed, rethrower)
+                            && !delegateOwnsExitTail(succ, consumed, rethrower)) {
+                        after = succ;
+                        continue;
+                    }
+                    if (acyclicContext && delegateOwnsExitTail(succ, consumed, rethrower)
+                            && !delegateOwnsExitTail(after, consumed, rethrower)) {
                         continue;
                     }
                     // A rival that is one of the offering REGION'S OWN STOPS is the region's boundary,
