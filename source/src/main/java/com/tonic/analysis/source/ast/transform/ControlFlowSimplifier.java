@@ -63,7 +63,8 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         boolean passChanged;
         do {
-            passChanged = removeRedundantStatements(stmts);
+            passChanged = removeUnreachableStatements(stmts);
+            passChanged |= removeRedundantStatements(stmts);
             passChanged |= moveDeclarationsToFirstUse(stmts);
             changed |= passChanged;
         } while (passChanged);
@@ -654,6 +655,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (ws.getBody() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) ws.getBody());
                 changed |= stripRedundantSwitchContinue((BlockStmt) ws.getBody());
+                changed |= stripTailContinue(ws.getBody());
                 changed |= stripNoOpTailContinueGuard((BlockStmt) ws.getBody());
             }
         } else if (stmt instanceof ForStmt) {
@@ -661,6 +663,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (fs.getBody() instanceof BlockStmt) {
                 changed |= transform((BlockStmt) fs.getBody());
                 changed |= stripRedundantSwitchContinue((BlockStmt) fs.getBody());
+                changed |= stripTailContinue(fs.getBody());
                 changed |= stripNoOpTailContinueGuard((BlockStmt) fs.getBody());
             }
         } else if (stmt instanceof TryCatchStmt) {
@@ -1118,6 +1121,62 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Removes redundant statements: self-assignments, consecutive duplicates, empty blocks.
      */
+    /**
+     * Drops every statement following an unconditional exit in the same list. Java rejects unreachable
+     * statements outright, so a recovered {@code continue; return;} tail is not merely redundant - it
+     * does not compile. Only a bare exit is treated as terminal here; a block or {@code if} whose paths
+     * all exit is left alone, since its own statement list is cleaned by the recursion.
+     */
+    private boolean removeUnreachableStatements(List<Statement> stmts) {
+        for (int i = 0; i < stmts.size() - 1; i++) {
+            if (!isUnconditionalExit(stmts.get(i))) {
+                continue;
+            }
+            while (stmts.size() > i + 1) {
+                stmts.remove(stmts.size() - 1);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isUnconditionalExit(Statement stmt) {
+        return stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
+                || stmt instanceof BreakStmt || stmt instanceof ContinueStmt;
+    }
+
+    /**
+     * Removes an unlabeled {@code continue} in TAIL position of a loop body: control reaches the back
+     * edge whether it runs or falls through, so it is a no-op the source never had. Descends through a
+     * trailing block and through both arms of a trailing {@code if} (each arm independently falls to the
+     * back edge), but never into a nested loop, switch or try, where {@code continue} binds elsewhere or
+     * carries finally semantics. A lone {@code continue} is kept so an arm is never emptied - the
+     * neighbouring guard rules own that shape.
+     */
+    private boolean stripTailContinue(Statement tail) {
+        if (tail instanceof BlockStmt) {
+            List<Statement> stmts = ((BlockStmt) tail).getStatements();
+            if (stmts.isEmpty()) {
+                return false;
+            }
+            Statement last = stmts.get(stmts.size() - 1);
+            if (stmts.size() > 1 && last instanceof ContinueStmt && !((ContinueStmt) last).hasLabel()) {
+                stmts.remove(stmts.size() - 1);
+                return true;
+            }
+            return stripTailContinue(last);
+        }
+        if (tail instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) tail;
+            boolean changed = stripTailContinue(ifStmt.getThenBranch());
+            if (ifStmt.hasElse()) {
+                changed |= stripTailContinue(ifStmt.getElseBranch());
+            }
+            return changed;
+        }
+        return false;
+    }
+
     private boolean removeRedundantStatements(List<Statement> stmts) {
         boolean changed = false;
 
