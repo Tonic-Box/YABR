@@ -689,7 +689,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 structured = rcsStructurer.tryStructureRegion(entry, new HashSet<>(), true);
             }
             if (structured == null) {
-                structured = legacyBlockWalk(entry);
+                throw retiredSchemaRecovery("handler-prelude", entry);
             }
             result.addAll(structured);
         }
@@ -6810,7 +6810,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (rcsSubRegionSuppression == 0) {
             return recoverRegionHandoff(startBlock, stopBlocks);
         }
-        return legacyBlockWalk(startBlock);
+        throw retiredSchemaRecovery("suppressed-sub-region", startBlock);
     }
 
     /**
@@ -6850,7 +6850,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (structured != null) {
             return structured;
         }
-        return legacyBlockWalk(startBlock);
+        throw retiredSchemaRecovery("region-handoff", startBlock);
     }
 
     /** Whether {@code b} is a bare goto pad whose single successor dominates it - a loop latch pad. */
@@ -7023,8 +7023,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         Set<IRBlock> tryVisited = new HashSet<>(prefix);
         Statement recovered = recoverTryCatch(tryStart, handler, stopBlocks, tryVisited);
         if (recovered == null) {
-            out.addAll(legacyBlockWalk(tryStart));
-            return out;
+            throw retiredSchemaRecovery("try-stage", tryStart);
         }
         out.add(recovered);
         if (!isTerminatingRecoveredTry(recovered)) {
@@ -7400,8 +7399,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     @Override
-    public List<Statement> legacyWalk(IRBlock start, Set<IRBlock> stopBlocks) {
-        return legacyBlockWalk(start);
+    public void unrecoveredTryNode(IRBlock block) {
+        throw retiredSchemaRecovery("try-node", block);
     }
 
 
@@ -8433,15 +8432,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
     }
 
-    /**
-     * The retired schema-based structural walk's dispatch point: every region now structures through
-     * the reaching-condition engine, so a route still falling through to here signals a routing gap.
-     * For a handler-free method {@link MethodRecoverer} converts the signal into the faithful
-     * dispatch-loop re-recovery, the totality fallback.
-     */
-    private List<Statement> legacyBlockWalk(IRBlock startBlock) {
-        throw retiredSchemaRecovery("legacy-walk", startBlock);
-    }
 
 
 

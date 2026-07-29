@@ -170,6 +170,11 @@ public interface RegionRecoveryBridge {
     /** Whether a statement recovered by {@link #recoverTryNode} leaves no normal fall-through. */
     boolean recoveredTryTerminates(Statement recovered);
 
-    /** The legacy schema walk over {@code [start, stopBlocks)}, for a node whose delegate recovery declined. */
-    List<Statement> legacyWalk(IRBlock start, Set<IRBlock> stopBlocks);
+    /**
+     * Signals that the host's try recovery produced nothing for a try node the engine had decoded -
+     * a routing gap, since every region structures through the engine. Never returns normally; the
+     * host raises a retired-route signal, which {@code MethodRecoverer} converts into the faithful
+     * dispatch-loop re-recovery for a handler-free method.
+     */
+    void unrecoveredTryNode(IRBlock block);
 }

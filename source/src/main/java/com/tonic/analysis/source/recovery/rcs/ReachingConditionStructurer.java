@@ -1503,11 +1503,7 @@ public final class ReachingConditionStructurer {
         try {
             stmt = bridge.recoverTryNode(b, node, regionStopBlocks, alreadyEmitted);
             if (stmt == null) {
-                Set<IRBlock> walkStops = new HashSet<>(regionStopBlocks);
-                if (node.after() != null) {
-                    walkStops.add(node.after());
-                }
-                out.addAll(bridge.legacyWalk(b, walkStops));
+                bridge.unrecoveredTryNode(b);
             }
         } finally {
             saved.restore(this);
