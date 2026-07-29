@@ -5772,7 +5772,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 context.getExpressionContext().pinToVariable(dominatingValue);
             }
         }
-        statements.add(new VarDeclStmt(type, name, initValue));
+        VarDeclStmt phiDecl = new VarDeclStmt(type, name, initValue);
+        if (partitionName(phi) == null && getLocalIndexFromPhi(phi) < 0) {
+            // A slot-less stack phi has no source variable behind it: this declaration is the
+            // recovery's own carrier (e.g. a value-yielding switch's merge), not source shape.
+            phiDecl.markSynthetic();
+        }
+        statements.add(phiDecl);
     }
 
     /**
@@ -10338,10 +10344,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         && "typeSwitch".equals(((InvokeInstruction) keyDef).getName());
             }
         }
-        if (!suppress && System.getProperty("yabr.debug.lift.phi.suppress") == null) {
-            IRBlock merge = findSwitchMerge(info);
-            suppress = merge != null && !merge.getPhiInstructions().isEmpty();
-        }
+        // A value-yielding switch (merge phis converging the case values) no longer needs the walk's
+        // case-body form: the switch-expression fold reads a passive arm's value off the declared
+        // initializer and dissolves a synthetic carrier, so engine-structured bodies fold identically.
+
         if (suppress) {
             rcsSubRegionSuppression++;
         }

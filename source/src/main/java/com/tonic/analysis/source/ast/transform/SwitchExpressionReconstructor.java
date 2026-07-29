@@ -73,12 +73,25 @@ public class SwitchExpressionReconstructor implements ASTTransform {
             VarDeclStmt decl = (VarDeclStmt) stmts.get(i);
             SwitchStmt sw = (SwitchStmt) stmts.get(i + 1);
 
-            SwitchExpr folded = tryFoldAssignmentSwitch(decl.getName(), decl.getType(), sw);
+            SwitchExpr folded = tryFoldAssignmentSwitch(decl, sw);
             if (folded != null) {
-                VarDeclStmt foldedDecl = new VarDeclStmt(decl.getType(), decl.getName(), folded);
-                Locations.copy(decl, foldedDecl);
-                stmts.set(i, foldedDecl);
-                stmts.remove(i + 1);
+                // A SYNTHETIC carrier (a materialized stack phi, not a source local) immediately
+                // returned, with no other use, is the return idiom itself: `return switch (sel)
+                // { ... };`. A real local keeps its declaration - the source had one.
+                if (decl.isSynthetic()
+                        && i + 2 < stmts.size() && isReturnOf(stmts.get(i + 2), decl.getName())
+                        && !anyReferences(stmts, i + 3, decl.getName())) {
+                    ReturnStmt returnStmt = new ReturnStmt(folded);
+                    Locations.copy(decl, returnStmt);
+                    stmts.set(i, returnStmt);
+                    stmts.remove(i + 2);
+                    stmts.remove(i + 1);
+                } else {
+                    VarDeclStmt foldedDecl = new VarDeclStmt(decl.getType(), decl.getName(), folded);
+                    Locations.copy(decl, foldedDecl);
+                    stmts.set(i, foldedDecl);
+                    stmts.remove(i + 1);
+                }
                 changed = true;
                 continue;
             }
@@ -155,14 +168,21 @@ public class SwitchExpressionReconstructor implements ASTTransform {
         return assign.getRight();
     }
 
-    private SwitchExpr tryFoldAssignmentSwitch(String varName, com.tonic.analysis.source.ast.type.SourceType type,
-                                               SwitchStmt sw) {
+    private SwitchExpr tryFoldAssignmentSwitch(VarDeclStmt decl, SwitchStmt sw) {
         if (!sw.hasDefault()) {
             return null;
         }
+        String varName = decl.getName();
+        com.tonic.analysis.source.ast.type.SourceType type = decl.getType();
         List<SwitchExpr.Arm> arms = new ArrayList<>();
         for (SwitchCase c : sw.getCases()) {
             Expression result = singleAssignmentValue(c.statements(), varName);
+            if (result == null && !c.fallsThrough() && isPassiveArm(c.statements())
+                    && isPureInitializer(decl.getInitializer())) {
+                // An arm that assigns nothing and leaves the switch keeps the declared initial
+                // value: its yielded value IS the (pure) initializer.
+                result = decl.getInitializer();
+            }
             if (result == null) {
                 return null;
             }
@@ -177,6 +197,38 @@ public class SwitchExpressionReconstructor implements ASTTransform {
             arms.add(new SwitchExpr.Arm(armLabels(c), c.isDefault(), result));
         }
         return new SwitchExpr(sw.getSelector(), arms, type);
+    }
+
+    /** Whether an arm body carries no effect at all: empty, or a lone {@code break}. */
+    private static boolean isPassiveArm(List<Statement> stmts) {
+        return stmts.isEmpty() || (stmts.size() == 1 && stmts.get(0) instanceof BreakStmt);
+    }
+
+    /** Whether an initializer may be re-homed into an arm: a literal or a plain variable read. */
+    private static boolean isPureInitializer(Expression init) {
+        return init instanceof LiteralExpr || init instanceof VarRefExpr;
+    }
+
+    /** Whether any statement from {@code from} onward references the variable. */
+    private static boolean anyReferences(List<Statement> stmts, int from, String varName) {
+        for (int i = from; i < stmts.size(); i++) {
+            if (referencesNode(stmts.get(i), varName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean referencesNode(ASTNode node, String varName) {
+        if (node instanceof VarRefExpr && varName.equals(((VarRefExpr) node).getName())) {
+            return true;
+        }
+        for (ASTNode child : node.getChildren()) {
+            if (referencesNode(child, varName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether {@code expr} contains any reference to the variable named {@code varName}. */

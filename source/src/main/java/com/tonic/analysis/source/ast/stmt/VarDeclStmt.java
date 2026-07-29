@@ -19,6 +19,10 @@ public final class VarDeclStmt implements Statement {
     private Expression initializer;
     private boolean useVarKeyword;
     private boolean isFinal;
+    /** A declaration the recovery materialized for a slot-less stack value (a merge phi with no
+     * source variable behind it), as opposed to a declaration of a real local. Reconstruction
+     * passes may dissolve a synthetic carrier entirely; a real local's declaration is source shape. */
+    private boolean synthetic;
     private SourceLocation location;
     private ASTNode parent;
 
@@ -42,6 +46,14 @@ public final class VarDeclStmt implements Statement {
 
     public VarDeclStmt(SourceType type, String name) {
         this(type, name, null, false, false, SourceLocation.UNKNOWN);
+    }
+
+    public boolean isSynthetic() {
+        return synthetic;
+    }
+
+    public void markSynthetic() {
+        this.synthetic = true;
     }
 
     public SourceType getType() {
