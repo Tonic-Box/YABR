@@ -8,7 +8,6 @@ import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
-import com.tonic.analysis.source.recovery.ControlFlowContext.FieldKey;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
 import com.tonic.analysis.source.recovery.rcs.SwitchDescriptor;
 import com.tonic.analysis.source.recovery.rcs.TryNodeDescriptor;
@@ -1258,30 +1257,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
 
             switch (info.getType()) {
-                case IF_THEN: {
-                    Statement ifStmt = recoverIfThen(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    result.add(ifStmt);
-                    IRBlock merge = info.getMergeBlock();
-                    if (merge != null && !visited.contains(merge) && !stopBlocks.contains(merge)) {
-                        current = merge;
-                    } else {
-                        current = null;
-                    }
-                    break;
-                }
-                case IF_THEN_ELSE: {
-                    Statement ifStmt = recoverIfThenElse(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    result.add(ifStmt);
-                    IRBlock merge = info.getMergeBlock();
-                    if (merge != null && !visited.contains(merge) && !stopBlocks.contains(merge)) {
-                        current = merge;
-                    } else {
-                        current = null;
-                    }
-                    break;
-                }
+                case IF_THEN:
+                    throw retiredSchemaRecovery("if-then", current);
+                case IF_THEN_ELSE:
+                    throw retiredSchemaRecovery("if-else", current);
                 case WHILE_LOOP:
                     throw retiredSchemaRecovery("while", current);
                 case DO_WHILE_LOOP:
@@ -2048,57 +2027,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return s;
     }
 
-    /**
-     * Folds javac's try-with-resources suppress scaffolding out of a finally body. The exception-path
-     * clause guards each close with {@code try { r.close(); } catch (Throwable t) { primary.addSuppressed(t); }},
-     * but {@code primary} is the clause's caught exception, which a source-level {@code finally} cannot
-     * name; the recovered finally keeps the plain close, matching the single-resource convention.
-     */
-    private Statement unwrapSuppressScaffold(Statement stmt) {
-        if (stmt instanceof IfStmt) {
-            IfStmt ifs = (IfStmt) stmt;
-            Statement then = unwrapSuppressScaffold(ifs.getThenBranch());
-            if (then != ifs.getThenBranch() && ifs.getElseBranch() == null) {
-                return new IfStmt(ifs.getCondition(), then, null, ifs.getLocation());
-            }
-            return stmt;
-        }
-        if (stmt instanceof BlockStmt) {
-            List<Statement> inner = ((BlockStmt) stmt).getStatements();
-            List<Statement> out = new ArrayList<>(inner.size());
-            boolean changed = false;
-            for (Statement s : inner) {
-                Statement u = unwrapSuppressScaffold(s);
-                changed |= u != s;
-                out.add(u);
-            }
-            return changed ? new BlockStmt(out) : stmt;
-        }
-        if (!(stmt instanceof TryCatchStmt)) {
-            return stmt;
-        }
-        TryCatchStmt tcs = (TryCatchStmt) stmt;
-        if (tcs.hasFinally() || tcs.hasResources() || tcs.getCatches().size() != 1) {
-            return stmt;
-        }
-        CatchClause cc = tcs.getCatches().get(0);
-        Statement cbody = cc.body();
-        List<Statement> cstmts = cbody instanceof BlockStmt
-                ? ((BlockStmt) cbody).getStatements() : Collections.singletonList(cbody);
-        if (cstmts.size() != 1 || !(cstmts.get(0) instanceof ExprStmt)) {
-            return stmt;
-        }
-        Expression e = ((ExprStmt) cstmts.get(0)).getExpression();
-        if (!(e instanceof MethodCallExpr) || !"addSuppressed".equals(((MethodCallExpr) e).getMethodName())) {
-            return stmt;
-        }
-        MethodCallExpr call = (MethodCallExpr) e;
-        if (call.getArguments().size() != 1 || !(call.getArguments().get(0) instanceof VarRefExpr)
-                || !cc.variableName().equals(((VarRefExpr) call.getArguments().get(0)).getName())) {
-            return stmt;
-        }
-        return tcs.getTryBlock();
-    }
 
     private List<Statement> filterOrphanFinallyThrows(List<Statement> statements, Set<String> finallyExceptionVars) {
         List<Statement> filtered = new ArrayList<>();
@@ -5224,27 +5152,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
 
             switch (info.getType()) {
-                case IF_THEN: {
-                    Statement ifStmt = recoverIfThen(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    result.add(ifStmt);
-                    current = info.getMergeBlock();
-                    break;
-                }
-                case IF_THEN_ELSE: {
-                    Statement ifStmt = recoverIfThenElse(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    result.add(ifStmt);
-                    // A merge that is a loop boundary was only reached as a post-dominator:
-                    // both arms already carry their own jumps, so walking to it would append
-                    // a spurious break/continue after the if/else.
-                    IRBlock merge = info.getMergeBlock();
-                    current = merge != null && stopBlocks.contains(merge)
-                            && context.classifyLoopJump(merge) != null
-                            ? null
-                            : merge;
-                    break;
-                }
+                case IF_THEN:
+                    throw retiredSchemaRecovery("if-then", current);
+                case IF_THEN_ELSE:
+                    throw retiredSchemaRecovery("if-else", current);
                 case WHILE_LOOP: {
                     if (loopCutByStops(info, stopBlocks)) {
                         List<Statement> headerStmts = recoverSimpleBlock(current);
@@ -5483,13 +5394,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return isTerminatingStatement(branch);
     }
 
-    private boolean isAllPathsTerminating(IfStmt ifStmt) {
-        if (ifStmt.getElseBranch() == null) {
-            return false;
-        }
-        return isTerminatingBranch(ifStmt.getThenBranch())
-            && isTerminatingBranch(ifStmt.getElseBranch());
-    }
 
     /** Map from local slot name to unified type (computed from all assignments) */
     private final Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
@@ -8091,12 +7995,31 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private OfferResult offerTerminalRegion(IRBlock entry, Set<IRBlock> offeredStops) {
         releaseInternalStops(entry, offeredStops, null);
         Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
-        if (exits == null || exits.size() > 1
-                || (!exits.isEmpty() && System.getProperty("yabr.debug.single.exit") == null)) {
+        Set<IRBlock> flaggedTails = new HashSet<>();
+        if (exits != null && exits.size() > 1) {
+            exits = retryOfferReleases(entry, offeredStops, null, exits, flaggedTails);
+        }
+        if (exits == null || exits.size() > 1) {
+            if (System.getProperty("yabr.trace.offer") != null) {
+                System.err.println("[OFFER-T] entry=" + entry.getBytecodeOffset()
+                        + " refused exits=" + (exits == null ? "probe-decline"
+                            : exits.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
+                                .sorted().collect(java.util.stream.Collectors.joining(","))));
+            }
+            if (!flaggedTails.isEmpty()) {
+                rcsStructurer.setBoundaryDuplicableTails(null);
+            }
             return null;
         }
         IRBlock continuation = exits.isEmpty() ? null : exits.iterator().next();
-        List<Statement> out = rcsStructurer.tryStructureRegion(entry, offeredStops, true);
+        List<Statement> out;
+        try {
+            out = rcsStructurer.tryStructureRegion(entry, offeredStops, true);
+        } finally {
+            if (!flaggedTails.isEmpty()) {
+                rcsStructurer.setBoundaryDuplicableTails(null);
+            }
+        }
         if (System.getProperty("yabr.trace.offer") != null) {
             System.err.println("[OFFER-T] entry=" + entry.getBytecodeOffset()
                     + " cont=" + (continuation == null ? "null" : continuation.getBytecodeOffset())
@@ -8215,67 +8138,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // that exits nowhere (every path terminal) would have absorbed code the caller re-emits after
         // the bound - the construct duplicates. Only an UNBOUNDED (terminal) offer accepts empty exits.
         Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
-        boolean exitsOk = exits != null && (bound == null
-                ? exits.isEmpty()
-                : exits.size() == 1 && exits.contains(bound));
+        boolean exitsOk = boundSatisfied(exits, bound);
         // A bounded construct may ALSO fall out through the end boundary of a handler range still
         // being recovered (a split-range desugar lays a terminal arm across it) and on into a bare
         // return: both are the construct's own terminal tail, not rival continuations. Release such
         // extra exits and re-probe; the retry never touches an offer that already met its contract.
         Set<IRBlock> flaggedTails = new HashSet<>();
         if (allowTailRelease && !exitsOk && bound != null && exits != null && exits.contains(bound)) {
-            DominatorTree dt = context.getDominatorTree();
-            Set<IRBlock> released = new HashSet<>();
-            for (int round = 0; dt != null && round < 8; round++) {
-                Set<IRBlock> extras = new HashSet<>(exits);
-                extras.remove(bound);
-                extras.removeAll(flaggedTails);
-                boolean releasable = !extras.isEmpty() || !flaggedTails.isEmpty();
-                Set<IRBlock> toFlag = new HashSet<>();
-                for (IRBlock extra : extras) {
-                    boolean insideReleasedTail = false;
-                    for (IRBlock r : released) {
-                        if (dt.dominates(r, extra)) {
-                            insideReleasedTail = true;
-                            break;
-                        }
-                    }
-                    if (insideReleasedTail
-                            || (endsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
-                            || (followsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
-                            || (isTerminalTail(extra) && dt.dominates(entry, extra))) {
-                        continue;
-                    }
-                    // A shared terminal tail the entry does NOT dominate cannot be absorbed into the
-                    // region (multi-entry); the engine inlines it once at the region's convergence
-                    // instead, while it stays a stop for everyone else.
-                    if (isTerminalTail(extra)) {
-                        toFlag.add(extra);
-                        continue;
-                    }
-                    releasable = false;
-                    break;
-                }
-                if (!releasable || extras.isEmpty()) {
-                    break;
-                }
-                extras.removeAll(toFlag);
-                flaggedTails.addAll(toFlag);
-                released.addAll(extras);
-                offeredStops.removeAll(extras);
-                IRBlock finalBound = bound;
-                offeredStops.removeIf(stop -> stop != finalBound && !flaggedTails.contains(stop)
-                        && released.stream().anyMatch(r -> dt.dominates(r, stop)));
-                rcsStructurer.setBoundaryDuplicableTails(flaggedTails);
-                exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
-                if (exits == null || !exits.contains(bound)) {
-                    break;
-                }
-                if (exits.size() == 1) {
-                    exitsOk = true;
-                    break;
-                }
-            }
+            exits = retryOfferReleases(entry, offeredStops, bound, exits, flaggedTails);
+            exitsOk = boundSatisfied(exits, bound);
         }
         List<Statement> out;
         try {
@@ -8296,6 +8167,89 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     + " ok=" + (out != null));
         }
         return out;
+    }
+
+    /**
+     * Whether a probed exit set satisfies the offer's bound contract: an unbounded offer accepts only
+     * empty exits; a bounded one accepts exactly the bound - or a single goto-only shell fronting it
+     * (a loop latch pad the enclosing recovery owns; the region falls out into it and the walk resumes
+     * at the bound just as after the schema dispatch).
+     */
+    private boolean boundSatisfied(Set<IRBlock> exits, IRBlock bound) {
+        if (exits == null) {
+            return false;
+        }
+        if (bound == null) {
+            return exits.isEmpty();
+        }
+        if (exits.size() != 1) {
+            return false;
+        }
+        IRBlock only = exits.iterator().next();
+        return only == bound || resolveThroughGotoShells(only) == bound;
+    }
+
+    /**
+     * The failed-probe retry shared by the bounded and terminal offers: releases extra exits that are
+     * an in-progress construct's own boundaries - a claimed handler range's end, its scaffolding-added
+     * successor, a dominated terminal tail, or anything dominated by an already-released block - and
+     * FLAGS a shared terminal tail the entry does not dominate for the engine's boundary-tail
+     * duplication (it stays a stop). Re-probes after each round; returns the final exit set (null when
+     * a probe declined). {@code offeredStops} and {@code flaggedTails} are mutated in place; the caller
+     * owns clearing the engine's flagged-tail set after the offer.
+     */
+    private Set<IRBlock> retryOfferReleases(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound,
+                                            Set<IRBlock> exits, Set<IRBlock> flaggedTails) {
+        DominatorTree dt = context.getDominatorTree();
+        Set<IRBlock> released = new HashSet<>();
+        for (int round = 0; dt != null && round < 8; round++) {
+            Set<IRBlock> extras = new HashSet<>(exits);
+            if (bound != null) {
+                extras.remove(bound);
+            }
+            extras.removeAll(flaggedTails);
+            boolean releasable = !extras.isEmpty() || !flaggedTails.isEmpty();
+            Set<IRBlock> toFlag = new HashSet<>();
+            for (IRBlock extra : extras) {
+                boolean insideReleasedTail = false;
+                for (IRBlock r : released) {
+                    if (dt.dominates(r, extra)) {
+                        insideReleasedTail = true;
+                        break;
+                    }
+                }
+                if (insideReleasedTail
+                        || (endsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
+                        || (followsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
+                        || (isTerminalTail(extra) && dt.dominates(entry, extra))) {
+                    continue;
+                }
+                // A shared terminal tail the entry does NOT dominate cannot be absorbed into the
+                // region (multi-entry); the engine inlines it once at the region's convergence
+                // instead, while it stays a stop for everyone else.
+                if (isTerminalTail(extra)) {
+                    toFlag.add(extra);
+                    continue;
+                }
+                releasable = false;
+                break;
+            }
+            if (!releasable || extras.isEmpty()) {
+                break;
+            }
+            extras.removeAll(toFlag);
+            flaggedTails.addAll(toFlag);
+            released.addAll(extras);
+            offeredStops.removeAll(extras);
+            offeredStops.removeIf(stop -> stop != bound && !flaggedTails.contains(stop)
+                    && released.stream().anyMatch(r -> dt.dominates(r, stop)));
+            rcsStructurer.setBoundaryDuplicableTails(flaggedTails);
+            exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
+            if (exits == null || (bound != null && !exits.contains(bound)) || exits.size() <= 1) {
+                return exits;
+            }
+        }
+        return exits;
     }
 
     /**
@@ -8505,95 +8459,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
 
             switch (info.getType()) {
-                case IF_THEN: {
-                    Statement ifStmt = recoverIfThen(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    if (ifStmt != null) {
-                        result.add(ifStmt);
-                        if (isTerminatingStatement(ifStmt)) {
-                            current = null;
-                            break;
-                        }
-                    }
-                    IRBlock merge = info.getMergeBlock();
-                    if (merge != null) {
-                        if (stopBlocks.contains(merge) && isReturnBlock(merge)
-                                && context.classifyLoopJump(merge) != null) {
-                            // The merge is a RETURN block that is also the enclosing loop's boundary: a
-                            // shared exit reached only as a post-dominator. Don't inline its return here (it
-                            // would duplicate the shared return into one branch and drop it from the others);
-                            // the enclosing structure emits it once. A non-return loop-boundary merge falls
-                            // through to `current = merge` below so the plain fall-through break is emitted.
-                            current = null;
-                        } else if (stopBlocks.contains(merge) && isReturnBlock(merge)) {
-                            if (isMergeSharedBeyondIf(merge, current, info)) {
-                                // The merge is a return reached from a sibling region too - e.g. the
-                                // shared tail after a switch that several case bodies converge on.
-                                // Inlining it here consumes it for this branch and drops it from the
-                                // siblings; the enclosing structure (which walks to it once the switch
-                                // is recovered) emits it a single time. Just break out.
-                                current = null;
-                            } else {
-                                List<Statement> returnStmts = recoverSimpleBlock(merge);
-                                result.addAll(returnStmts);
-                                context.markProcessed(merge);
-                                current = null;
-                            }
-                        } else if (context.isProcessed(merge) && isReturnBlock(merge) && ifStmt != null) {
-                            if (isAllPathsTerminating((IfStmt) ifStmt)) {
-                                List<Statement> returnStmts = recoverSimpleBlock(merge);
-                                result.addAll(returnStmts);
-                                current = null;
-                            } else {
-                                // The if's fall-through reaches this return merge, but the merge was
-                                // already visited while recovering the then-branch (a nested if sharing
-                                // it), so handing it back to the loop would skip it as visited and run the
-                                // fall-through off the method end. Emit its recovered return here instead.
-                                List<Statement> returnStmts = context.getStatements(merge);
-                                if (returnStmts == null || returnStmts.isEmpty()) {
-                                    returnStmts = recoverSimpleBlock(merge);
-                                }
-                                result.addAll(returnStmts);
-                                current = null;
-                            }
-                        } else {
-                            current = merge;
-                        }
-                    } else {
-                        current = findNextUnprocessedBlock(current, visited, stopBlocks);
-                    }
-                    break;
-                }
-                case IF_THEN_ELSE: {
-                    Statement ifStmt = recoverIfThenElse(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    if (ifStmt != null) {
-                        result.add(ifStmt);
-                        if (isTerminatingStatement(ifStmt)) {
-                            current = null;
-                            break;
-                        }
-                    }
-                    IRBlock merge = info.getMergeBlock();
-                    if (merge != null) {
-                        // A merge that is a loop boundary was only reached as a post-dominator:
-                        // both arms already carry their own jumps, so walking to it would append
-                        // a spurious break/continue after the if/else.
-                        current = stopBlocks.contains(merge) && context.classifyLoopJump(merge) != null
-                                ? null
-                                : merge;
-                    } else if (ifStmt instanceof IfStmt
-                            && isTerminatingStatement(((IfStmt) ifStmt).getThenBranch())) {
-                        // No merge and the then-branch exits (returns/throws): the else's tail leaves the
-                        // straight-line flow too (it loops back to the enclosing loop), so there is no
-                        // continuation. Searching for a "next" block would walk into the then-branch's own
-                        // already-recovered blocks and re-add them, duplicating that branch after the if/else.
-                        current = null;
-                    } else {
-                        current = findNextUnprocessedBlock(current, visited, stopBlocks);
-                    }
-                    break;
-                }
+                case IF_THEN:
+                    throw retiredSchemaRecovery("if-then", current);
+                case IF_THEN_ELSE:
+                    throw retiredSchemaRecovery("if-else", current);
                 case WHILE_LOOP:
                     throw retiredSchemaRecovery("while", current);
                 case DO_WHILE_LOOP:
@@ -8670,52 +8539,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return result;
     }
 
-    /**
-     * Finds the next unprocessed block when the merge block is null.
-     * This handles cases where control flow doesn't have a clear merge point
-     * (e.g., if both branches return or throw).
-     */
-    private IRBlock findNextUnprocessedBlock(IRBlock current, Set<IRBlock> visited, Set<IRBlock> stopBlocks) {
-        IRBlock next = getNextSequentialBlock(current);
-        if (next != null && !visited.contains(next) && !stopBlocks.contains(next)) {
-            return next;
-        }
 
-        for (IRBlock succ : current.getSuccessors()) {
-            if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
-                return succ;
-            }
-        }
-
-        IRMethod method = context.getIrMethod();
-        for (IRBlock block : method.getBlocks()) {
-            if (!visited.contains(block) && !stopBlocks.contains(block) && !context.isProcessed(block)) {
-                if (isReachableFromEntry(block, method)) {
-                    return block;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Checks if a block is reachable from the method entry.
-     */
-    private boolean isReachableFromEntry(IRBlock target, IRMethod method) {
-        Set<IRBlock> reachable = new HashSet<>();
-        Queue<IRBlock> worklist = new LinkedList<>();
-        worklist.add(method.getEntryBlock());
-
-        while (!worklist.isEmpty()) {
-            IRBlock b = worklist.poll();
-            if (reachable.contains(b)) continue;
-            reachable.add(b);
-            if (b == target) return true;
-            worklist.addAll(b.getSuccessors());
-        }
-        return false;
-    }
 
     @Override
     public List<Statement> recoverSimpleBlock(IRBlock block) {
@@ -9856,402 +9680,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Rescues a branch whose body recovered to empty because its only path is a goto into a
-     * pure-exit block (throw / void-return) that an enclosing region adopted as its merge/stop
-     * block. Without this, such a branch collapses to {@code if (cond) {}} and the exit silently
-     * vanishes (e.g. the second guard of a shared-throw bounds check). The exit block is recovered
-     * and cached so the enclosing region's own emission of that block stays consistent.
-     */
-    private List<Statement> emitExitIfBranchVanished(List<Statement> branchStmts, IRBlock branchTarget) {
-        if (!branchStmts.isEmpty() || branchTarget == null || !analyzer.isPureExitBlock(branchTarget)) {
-            return branchStmts;
-        }
-        IRBlock exit = branchTarget;
-        Set<IRBlock> seen = new HashSet<>();
-        while (exit != null && seen.add(exit) && !exit.getSuccessors().isEmpty()) {
-            exit = exit.getSuccessors().iterator().next();
-        }
-        if (exit == null) {
-            return branchStmts;
-        }
-        if (context.isProcessed(exit)) {
-            return new ArrayList<>(context.getStatements(exit));
-        }
-        List<Statement> exitStmts = recoverSimpleBlock(exit);
-        if (exitStmts.isEmpty()) {
-            return branchStmts;
-        }
-        context.setStatements(exit, exitStmts);
-        context.markProcessed(exit);
-        return exitStmts;
-    }
-
-    private Statement recoverIfThen(IRBlock header, RegionInfo info) {
-        trace("schema-recovery kind=if-then method=" + context.getIrMethod().getName()
-                + " header=" + header.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        context.markProcessed(header);
-
-        List<Statement> headerStmts = recoverBlockInstructions(header);
-
-        SSAValue conditionValue = getConditionValue(header);
-        CompareOp conditionOp = getConditionOp(header);
-
-        if (info.isConditionNegated() && isConditionKnownFalse(conditionValue)) {
-            if (conditionOp == CompareOp.IFNE) {
-                Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
-                if (info.getMergeBlock() != null) {
-                    stopBlocks.add(info.getMergeBlock());
-                }
-                context.pushStopBlocks(stopBlocks);
-                context.getExpressionContext().pushBranchScope();
-                List<Statement> thenStmts;
-                try {
-                    thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
-                } finally {
-                    context.getExpressionContext().popBranchScope();
-                    context.popStopBlocks();
-                }
-                if (!headerStmts.isEmpty()) {
-                    context.addPendingStatements(headerStmts);
-                }
-                if (thenStmts.isEmpty()) {
-                    return null;
-                } else if (thenStmts.size() == 1) {
-                    return thenStmts.get(0);
-                } else {
-                    return new BlockStmt(thenStmts);
-                }
-            }
-        }
-
-        // For a short-circuit compound condition the true edge reaches the body (then) and the false
-        // edge the merge; reconstruct the whole boolean expression over its condition blocks.
-        Expression condition = info.getConditionBlocks() != null
-                ? reconstructCompoundCondition(header, info.getThenBlock(), info.getMergeBlock(), info.getConditionBlocks())
-                : null;
-        if (condition == null) {
-            condition = recoverCondition(header, info.isConditionNegated());
-        }
-
-        // A loop-body conditional whose then-arm is the enclosing loop's continue target and whose merge
-        // is the loop's exit is a conditional break: entering the then loops back, falling through leaves.
-        // Recover it as `if (breakCond) break;` - the then-arm is the implicit continue, and the exit is a
-        // shared block the enclosing structure emits once (never this branch's private return).
-        if (info.getConditionBlocks() == null && info.getThenBlock() != null && info.getMergeBlock() != null) {
-            ControlFlowContext.LoopJump thenJump = context.classifyLoopJump(info.getThenBlock());
-            ControlFlowContext.LoopJump mergeJump = context.classifyLoopJump(info.getMergeBlock());
-            if (thenJump != null && thenJump.kind == ControlFlowContext.JumpKind.CONTINUE
-                    && mergeJump != null && mergeJump.kind == ControlFlowContext.JumpKind.BREAK) {
-                Expression breakCond = recoverCondition(header, !info.isConditionNegated());
-                Statement brk = mergeJump.loopHeader != null
-                        ? new BreakStmt(context.getOrCreateLabel(mergeJump.loopHeader))
-                        : new BreakStmt();
-                IfStmt guard = new IfStmt(breakCond, brk, null);
-                stampFromHeader(guard, header);
-                if (!headerStmts.isEmpty()) {
-                    context.addPendingStatements(headerStmts);
-                }
-                return guard;
-            }
-        }
-
-        Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
-        if (info.getMergeBlock() != null) {
-            stopBlocks.add(info.getMergeBlock());
-        }
-
-        Set<SSAValue> knownFalse = new HashSet<>();
-        Set<FieldKey> knownFalseFields = new HashSet<>();
-        boolean canTrackKnownFalse = (conditionOp == CompareOp.IFNE && info.isConditionNegated())
-                                  || (conditionOp == CompareOp.IFEQ && !info.isConditionNegated());
-        if (canTrackKnownFalse && conditionValue != null) {
-            knownFalse.add(conditionValue);
-            FieldKey fieldKey = extractFieldKey(conditionValue);
-            if (fieldKey != null) {
-                knownFalseFields.add(fieldKey);
-            }
-        }
-        context.pushKnownFalseValues(knownFalse);
-        context.pushKnownFalseFields(knownFalseFields);
-        context.pushStopBlocks(stopBlocks);
-        context.getExpressionContext().pushBranchScope();
-        List<Statement> thenStmts;
-        try {
-            thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
-        } finally {
-            context.getExpressionContext().popBranchScope();
-            context.popStopBlocks();
-            context.popKnownFalseFields();
-            context.popKnownFalseValues();
-        }
-
-        thenStmts = emitExitIfBranchVanished(thenStmts, info.getThenBlock());
-
-        if (isAndConditionChain(thenStmts)) {
-            Statement mergedIf = mergeAndConditions(condition, thenStmts);
-            stampFromHeader(mergedIf, header);
-            if (!headerStmts.isEmpty()) {
-                context.addPendingStatements(headerStmts);
-            }
-            return mergedIf;
-        }
-
-        BlockStmt thenBlock = new BlockStmt(thenStmts);
-
-        IfStmt ifStmt = new IfStmt(condition, thenBlock, null);
-        stampFromHeader(ifStmt, header);
-
-        if (!headerStmts.isEmpty()) {
-            context.addPendingStatements(headerStmts);
-        }
-        return ifStmt;
-    }
-
-
-    /**
-     * Reconstructs a short-circuit compound condition ({@code A && B}, {@code A || B}, or any mix) as
-     * one boolean expression over its condition blocks, where the true edge reaches {@code trueExit}
-     * and the false edge {@code falseExit}. Marks the non-header condition blocks processed. Returns
-     * null when the DAG is not a clean short-circuit chain (the caller then recovers the header
-     * condition alone).
-     */
-    private Expression reconstructCompoundCondition(IRBlock header, IRBlock trueExit, IRBlock falseExit,
-                                                    Set<IRBlock> conditionBlocks) {
-        Expression expr = CompoundConditionBuilder.build(header, trueExit, falseExit, conditionBlocks,
-                this::recoverCondition);
-        if (expr != null) {
-            for (IRBlock conditionBlock : conditionBlocks) {
-                if (conditionBlock != header) {
-                    context.markProcessed(conditionBlock);
-                }
-            }
-        }
-        return expr;
-    }
-
-    /**
-     * Counts the negation operators in a reconstructed condition, used to pick the polarity
-     * (true-arm orientation) that reads with the fewest {@code !}s.
-     */
-    private int countNots(Expression expr) {
-        if (expr == null) {
-            return 0;
-        }
-        if (expr instanceof UnaryExpr) {
-            UnaryExpr unary = (UnaryExpr) expr;
-            int self = unary.getOperator() == UnaryOperator.NOT ? 1 : 0;
-            return self + countNots(unary.getOperand());
-        }
-        if (expr instanceof BinaryExpr) {
-            BinaryExpr binary = (BinaryExpr) expr;
-            return countNots(binary.getLeft()) + countNots(binary.getRight());
-        }
-        return 0;
-    }
-
-    private Statement recoverIfThenElse(IRBlock header, RegionInfo info) {
-        trace("schema-recovery kind=if-else method=" + context.getIrMethod().getName()
-                + " header=" + header.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        context.markProcessed(header);
-
-        List<Statement> headerStmts = recoverBlockInstructions(header);
-
-        SSAValue conditionValue = getConditionValue(header);
-        CompareOp conditionOp = getConditionOp(header);
-
-        if (info.getConditionBlocks() == null && isConditionKnownFalse(conditionValue)) {
-            if (conditionOp == CompareOp.IFNE) {
-                Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
-                if (info.getMergeBlock() != null) {
-                    stopBlocks.add(info.getMergeBlock());
-                }
-                context.pushStopBlocks(stopBlocks);
-                context.getExpressionContext().pushBranchScope();
-                List<Statement> elseStmts;
-                try {
-                    elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
-                } finally {
-                    context.getExpressionContext().popBranchScope();
-                    context.popStopBlocks();
-                }
-                if (!headerStmts.isEmpty()) {
-                    context.addPendingStatements(headerStmts);
-                }
-                if (elseStmts.isEmpty()) {
-                    return null;
-                } else if (elseStmts.size() == 1) {
-                    return elseStmts.get(0);
-                } else {
-                    return new BlockStmt(elseStmts);
-                }
-            }
-        }
-
-        // For a short-circuit compound condition the true edge reaches the then arm and the false edge
-        // the else arm; reconstruct the whole boolean expression over its condition blocks. Either exit
-        // can be the then arm - orient toward the polarity that needs fewer negations so the condition
-        // reads naturally (`a && b`, not `!a || !b` with the arms swapped).
-        Expression condition = null;
-        if (info.getConditionBlocks() != null) {
-            Expression asThen = CompoundConditionBuilder.build(header, info.getThenBlock(),
-                    info.getElseBlock(), info.getConditionBlocks(), this::recoverCondition);
-            Expression asElse = CompoundConditionBuilder.build(header, info.getElseBlock(),
-                    info.getThenBlock(), info.getConditionBlocks(), this::recoverCondition);
-            if (asElse != null && (asThen == null || countNots(asElse) < countNots(asThen))) {
-                IRBlock swap = info.getThenBlock();
-                info.setThenBlock(info.getElseBlock());
-                info.setElseBlock(swap);
-                condition = asElse;
-            } else {
-                condition = asThen;
-            }
-            if (condition != null) {
-                for (IRBlock conditionBlock : info.getConditionBlocks()) {
-                    if (conditionBlock != header) {
-                        context.markProcessed(conditionBlock);
-                    }
-                }
-            }
-        }
-        if (condition == null) {
-            condition = recoverCondition(header, info.isConditionNegated());
-        }
-        Set<IRBlock> stopBlocks = new HashSet<>(context.getAllStopBlocks());
-        if (info.getMergeBlock() != null) {
-            stopBlocks.add(info.getMergeBlock());
-        }
-
-        SSAValue condValue = getConditionValue(header);
-        List<Statement> thenStmts;
-        List<Statement> elseStmts;
-        Set<SSAValue> knownFalseForThen = new HashSet<>();
-        Set<SSAValue> knownFalseForElse = new HashSet<>();
-        Set<FieldKey> knownFalseFieldsForThen = new HashSet<>();
-        Set<FieldKey> knownFalseFieldsForElse = new HashSet<>();
-        if (condValue != null && info.getConditionBlocks() == null) {
-            FieldKey fieldKey = extractFieldKey(condValue);
-            boolean knownFalseThen = (conditionOp == CompareOp.IFNE && info.isConditionNegated())
-                                  || (conditionOp == CompareOp.IFEQ && !info.isConditionNegated());
-            boolean knownFalseElse = (conditionOp == CompareOp.IFNE && !info.isConditionNegated())
-                                  || (conditionOp == CompareOp.IFEQ && info.isConditionNegated());
-            if (knownFalseThen) {
-                knownFalseForThen.add(condValue);
-                if (fieldKey != null) {
-                    knownFalseFieldsForThen.add(fieldKey);
-                }
-            }
-            if (knownFalseElse) {
-                knownFalseForElse.add(condValue);
-                if (fieldKey != null) {
-                    knownFalseFieldsForElse.add(fieldKey);
-                }
-            }
-        }
-        context.pushStopBlocks(stopBlocks);
-        context.pushKnownFalseValues(knownFalseForThen);
-        context.pushKnownFalseFields(knownFalseFieldsForThen);
-        context.getExpressionContext().pushBranchScope();
-        try {
-            thenStmts = recoverBlockSequence(info.getThenBlock(), stopBlocks);
-        } finally {
-            context.getExpressionContext().popBranchScope();
-            context.popKnownFalseFields();
-            context.popKnownFalseValues();
-        }
-        context.pushKnownFalseValues(knownFalseForElse);
-        context.pushKnownFalseFields(knownFalseFieldsForElse);
-        context.getExpressionContext().pushBranchScope();
-        try {
-            elseStmts = recoverBlockSequence(info.getElseBlock(), stopBlocks);
-        } finally {
-            context.getExpressionContext().popBranchScope();
-            context.popKnownFalseFields();
-            context.popKnownFalseValues();
-            context.popStopBlocks();
-        }
-
-        if (isBooleanReturnPattern(thenStmts, elseStmts)) {
-            Statement booleanReturn = collapseToBooleanReturn(condition, thenStmts);
-            if (!headerStmts.isEmpty()) {
-                context.addPendingStatements(headerStmts);
-            }
-            return booleanReturn;
-        }
-
-        if (isOrConditionChain(thenStmts, elseStmts)) {
-            Statement mergedIf = mergeOrConditions(condition, thenStmts, elseStmts);
-            stampFromHeader(mergedIf, header);
-            if (!headerStmts.isEmpty()) {
-                context.addPendingStatements(headerStmts);
-            }
-            return mergedIf;
-        }
-
-        boolean boolPhiPattern = isBooleanPhiReturnPattern(thenStmts, elseStmts, info.getMergeBlock());
-        if (boolPhiPattern) {
-            Statement booleanReturn = collapsePhiToBooleanReturn(condition, info.getMergeBlock());
-            if (booleanReturn != null) {
-                if (info.getMergeBlock() != null) {
-                    context.markProcessed(info.getMergeBlock());
-                }
-                if (!headerStmts.isEmpty()) {
-                    context.addPendingStatements(headerStmts);
-                }
-                return booleanReturn;
-            }
-        }
-
-        PhiInstruction booleanPhi = findBooleanPhiAssignmentPatternIR(info);
-        if (booleanPhi != null) {
-            collapseToBooleanPhiExpressionIR(condition, booleanPhi, info.getThenBlock());
-            context.markProcessed(info.getThenBlock());
-            context.markProcessed(info.getElseBlock());
-            if (!headerStmts.isEmpty()) {
-                context.addPendingStatements(headerStmts);
-                return new BlockStmt(new ArrayList<>());
-            }
-            return null;
-        }
-
-        PhiInstruction ternaryPhi = findTernaryPhiPattern(info);
-        // Don't collapse to a ternary when the merged value feeds ANOTHER phi (a nested if/else-if merge):
-        // the collapsed value is cached but the outer merge can't consume it as a statement, so its arm would
-        // be orphaned and dropped. Recover this if/else as a statement so the outer recovery keeps it. A value
-        // that is also stored into a local is exempt: the store materializes it as a real assignment (`v = t`),
-        // and any phi that reads it (e.g. a loop-carried counter) consumes the local, so nothing is orphaned.
-        if (ternaryPhi != null && getPhiUsingValue(ternaryPhi.getResult()) != null
-                && !hasStoreLocalUse(ternaryPhi.getResult())) {
-            ternaryPhi = null;
-        }
-        if (ternaryPhi != null) {
-            collapseToTernaryPhiExpression(condition, ternaryPhi, info.getThenBlock(), info.getElseBlock());
-            context.markProcessed(info.getThenBlock());
-            context.markProcessed(info.getElseBlock());
-            if (!headerStmts.isEmpty()) {
-                context.addPendingStatements(headerStmts);
-            }
-            return null;
-        }
-
-        BlockStmt thenBlock = new BlockStmt(thenStmts);
-        BlockStmt elseBlock = new BlockStmt(elseStmts);
-
-        IfStmt ifStmt = new IfStmt(condition, thenBlock, elseBlock);
-        stampFromHeader(ifStmt, header);
-
-        if (!headerStmts.isEmpty()) {
-            context.addPendingStatements(headerStmts);
-        }
-        return ifStmt;
-    }
-
-    /**
      * Recovers non-terminator instructions from a block.
      * This is used to emit setup instructions before structured control flow.
      */
@@ -10275,16 +9703,76 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
+     * Folds javac's try-with-resources suppress scaffolding out of a finally body. The exception-path
+     * clause guards each close with {@code try { r.close(); } catch (Throwable t) { primary.addSuppressed(t); }},
+     * but {@code primary} is the clause's caught exception, which a source-level {@code finally} cannot
+     * name; the recovered finally keeps the plain close, matching the single-resource convention.
+     */
+    private Statement unwrapSuppressScaffold(Statement stmt) {
+        if (stmt instanceof IfStmt) {
+            IfStmt ifs = (IfStmt) stmt;
+            Statement then = unwrapSuppressScaffold(ifs.getThenBranch());
+            if (then != ifs.getThenBranch() && ifs.getElseBranch() == null) {
+                return new IfStmt(ifs.getCondition(), then, null, ifs.getLocation());
+            }
+            return stmt;
+        }
+        if (stmt instanceof BlockStmt) {
+            List<Statement> inner = ((BlockStmt) stmt).getStatements();
+            List<Statement> out = new ArrayList<>(inner.size());
+            boolean changed = false;
+            for (Statement s : inner) {
+                Statement u = unwrapSuppressScaffold(s);
+                changed |= u != s;
+                out.add(u);
+            }
+            return changed ? new BlockStmt(out) : stmt;
+        }
+        if (!(stmt instanceof TryCatchStmt)) {
+            return stmt;
+        }
+        TryCatchStmt tcs = (TryCatchStmt) stmt;
+        if (tcs.hasFinally() || tcs.hasResources() || tcs.getCatches().size() != 1) {
+            return stmt;
+        }
+        CatchClause cc = tcs.getCatches().get(0);
+        Statement cbody = cc.body();
+        List<Statement> cstmts = cbody instanceof BlockStmt
+                ? ((BlockStmt) cbody).getStatements() : Collections.singletonList(cbody);
+        if (cstmts.size() != 1 || !(cstmts.get(0) instanceof ExprStmt)) {
+            return stmt;
+        }
+        Expression e = ((ExprStmt) cstmts.get(0)).getExpression();
+        if (!(e instanceof MethodCallExpr) || !"addSuppressed".equals(((MethodCallExpr) e).getMethodName())) {
+            return stmt;
+        }
+        MethodCallExpr call = (MethodCallExpr) e;
+        if (call.getArguments().size() != 1 || !(call.getArguments().get(0) instanceof VarRefExpr)
+                || !cc.variableName().equals(((VarRefExpr) call.getArguments().get(0)).getName())) {
+            return stmt;
+        }
+        return tcs.getTryBlock();
+    }
+
+    /**
      * A retired schema recoverer's dispatch arm: every region of the kind now structures through
      * the reaching-condition engine (natively, via the loop-cut guard, or via the opaque try node).
      * A dispatch arm still classifying a region as one signals a routing gap to fix on the engine
-     * side, so it fails loudly rather than degrading silently.
+     * side, so it fails loudly rather than degrading silently. {@link MethodRecoverer} catches the
+     * typed signal for a handler-free method and re-recovers it as a faithful dispatch loop - the
+     * totality fallback for shapes no structured route owns (e.g. irreducible flow).
      */
-    private IllegalStateException retiredSchemaRecovery(String kind, IRBlock header) {
-        return new IllegalStateException("schema " + kind + " recovery retired; unrouted " + kind
+    private RetiredSchemaRecoveryException retiredSchemaRecovery(String kind, IRBlock header) {
+        return new RetiredSchemaRecoveryException("schema " + kind + " recovery retired; unrouted " + kind
                 + " at offset " + header.getBytecodeOffset() + " in " + context.getIrMethod().getName());
     }
 
+    /** Signals a region classification whose schema recoverer is retired and which no engine route owned. */
+    public static final class RetiredSchemaRecoveryException extends IllegalStateException {
+        RetiredSchemaRecoveryException(String message) {
+            super(message);
+        }
+    }
 
 
     private Statement recoverStoreLocalAsForInit(StoreLocalInstruction store) {
@@ -11689,54 +11177,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return types;
     }
 
-    private SSAValue getConditionValue(IRBlock block) {
-        IRInstruction terminator = block.getTerminator();
-        if (terminator instanceof BranchInstruction) {
-            BranchInstruction branch = (BranchInstruction) terminator;
-            Value left = branch.getLeft();
-            if (left instanceof SSAValue) {
-                return (SSAValue) left;
-            }
-        }
-        return null;
-    }
 
-    private CompareOp getConditionOp(IRBlock block) {
-        IRInstruction terminator = block.getTerminator();
-        if (terminator instanceof BranchInstruction) {
-            BranchInstruction branch = (BranchInstruction) terminator;
-            return branch.getCondition();
-        }
-        return null;
-    }
 
-    private FieldKey extractFieldKey(SSAValue value) {
-        if (value == null) {
-            return null;
-        }
-        IRInstruction def = value.getDefinition();
-        if (def instanceof FieldAccessInstruction) {
-            FieldAccessInstruction fai = (FieldAccessInstruction) def;
-            if (fai.isLoad()) {
-                return new FieldKey(fai.getOwner(), fai.getName());
-            }
-        }
-        return null;
-    }
 
-    private boolean isConditionKnownFalse(SSAValue value) {
-        if (value == null) {
-            return false;
-        }
-        if (context.isKnownFalse(value)) {
-            return true;
-        }
-        FieldKey fieldKey = extractFieldKey(value);
-        if (fieldKey != null) {
-            return context.isFieldKnownFalse(fieldKey.getOwner(), fieldKey.getFieldName());
-        }
-        return false;
-    }
 
     private BinaryOperator negateOperator(
             BinaryOperator op) {
@@ -11882,30 +11325,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         collectReachableBlocks(start, result, Collections.emptySet());
     }
 
-    /**
-     * True when {@code merge} is reached not only through this if (its header {@code current} and the
-     * then/else body) but from at least one predecessor outside it - a shared convergence point such
-     * as the tail after a switch that multiple case bodies fall into. Inlining such a return merge
-     * into one branch strips it from the siblings, so the caller must leave it for the enclosing
-     * structure to emit once.
-     */
-    private boolean isMergeSharedBeyondIf(IRBlock merge, IRBlock current, RegionInfo info) {
-        Set<IRBlock> owned = new HashSet<>();
-        owned.add(current);
-        Set<IRBlock> boundary = Collections.singleton(merge);
-        if (info.getThenBlock() != null) {
-            collectReachableBlocks(info.getThenBlock(), owned, boundary);
-        }
-        if (info.getElseBlock() != null) {
-            collectReachableBlocks(info.getElseBlock(), owned, boundary);
-        }
-        for (IRBlock pred : merge.getPredecessors()) {
-            if (!owned.contains(pred)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     /**
      * Marks exactly the blocks a catch clause's recovery consumes: the walk stops at goto,
@@ -11979,154 +11398,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
     }
 
-    /**
-     * Checks if the then/else branches form a boolean return pattern.
-     * Pattern: if(cond) return true/false; else return false/true;
-     * This is common in bytecode for boolean comparison methods.
-     */
-    private boolean isBooleanReturnPattern(List<Statement> thenStmts, List<Statement> elseStmts) {
-        if (thenStmts.size() != 1 || elseStmts.size() != 1) {
-            return false;
-        }
 
-        Statement thenStmt = thenStmts.get(0);
-        Statement elseStmt = elseStmts.get(0);
 
-        if (!(thenStmt instanceof ReturnStmt)) {
-            return false;
-        }
-        if (!(elseStmt instanceof ReturnStmt)) {
-            return false;
-        }
 
-        ReturnStmt thenRet = (ReturnStmt) thenStmt;
-        ReturnStmt elseRet = (ReturnStmt) elseStmt;
 
-        return isBooleanLiteral(thenRet.getValue()) && isBooleanLiteral(elseRet.getValue());
-    }
 
-    /**
-     * Checks if an expression is a boolean literal (true/false or integer 0/1).
-     */
-    private boolean isBooleanLiteral(Expression expr) {
-        if (expr instanceof LiteralExpr) {
-            LiteralExpr lit = (LiteralExpr) expr;
-            Object val = lit.getValue();
-            if (val instanceof Boolean) {
-                return true;
-            }
-            if (val instanceof Integer) {
-                int i = (Integer) val;
-                return i == 0 || i == 1;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Gets the boolean value from a literal expression.
-     */
-    private boolean getBooleanValue(Expression expr) {
-        if (expr instanceof LiteralExpr) {
-            LiteralExpr lit = (LiteralExpr) expr;
-            Object val = lit.getValue();
-            if (val instanceof Boolean) {
-                return (Boolean) val;
-            }
-            if (val instanceof Integer) {
-                Integer i = (Integer) val;
-                return i != 0;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Collapses a boolean return pattern into a single return statement.
-     * if(cond) return true; else return false; -> return cond;
-     * if(cond) return false; else return true; -> return !cond;
-     */
-    private Statement collapseToBooleanReturn(Expression condition, List<Statement> thenStmts) {
-        ReturnStmt thenRet = (ReturnStmt) thenStmts.get(0);
-        boolean thenValue = getBooleanValue(thenRet.getValue());
-
-        if (thenValue) {
-            return new ReturnStmt(condition);
-        } else {
-            return new ReturnStmt(new UnaryExpr(UnaryOperator.NOT, condition,
-                    PrimitiveSourceType.BOOLEAN));
-        }
-    }
-
-    /**
-     * Checks for a PHI-based boolean return pattern.
-     * This pattern occurs when both branches are empty/trivial (just assign constants)
-     * and the merge block has a PHI of boolean values followed by return.
-     */
-    private boolean isBooleanPhiReturnPattern(List<Statement> thenStmts, List<Statement> elseStmts, IRBlock mergeBlock) {
-        if (thenStmts.size() > 1 || elseStmts.size() > 1) {
-            return false;
-        }
-
-        if (mergeBlock == null) {
-            return false;
-        }
-
-        if (mergeBlock.getPhiInstructions().size() != 1) {
-            return false;
-        }
-
-        List<IRInstruction> mergeInstrs = mergeBlock.getInstructions();
-        if (mergeInstrs.size() != 1 || !(mergeInstrs.get(0) instanceof ReturnInstruction)) {
-            return false;
-        }
-
-        PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
-        for (Value val : phi.getOperands()) {
-            Integer boolValue = extractBooleanConstant(val);
-            if (boolValue == null) {
-                return false;
-            }
-        }
-
-        ReturnInstruction ret = (ReturnInstruction) mergeInstrs.get(0);
-        return ret.getReturnValue() == phi.getResult();
-    }
-
-    /**
-     * Collapses a PHI-based boolean return pattern into a single return statement.
-     * Examines the PHI's incoming values to determine if condition should be negated.
-     */
-    private Statement collapsePhiToBooleanReturn(Expression condition, IRBlock mergeBlock) {
-        if (mergeBlock == null) {
-            return null;
-        }
-
-        PhiInstruction phi = mergeBlock.getPhiInstructions().get(0);
-
-        List<Value> operands = phi.getOperands();
-        if (operands.size() != 2) {
-            return null;
-        }
-
-        Integer val0 = extractBooleanConstant(operands.get(0));
-        Integer val1 = extractBooleanConstant(operands.get(1));
-
-        if (val0 == null || val1 == null) {
-            return null;
-        }
-
-        if (val0.equals(val1)) {
-            return null;
-        }
-
-        if (val0 == 1) {
-            return new ReturnStmt(condition);
-        } else {
-            Expression negatedCondition = invertCondition(condition);
-            return new ReturnStmt(negatedCondition);
-        }
-    }
 
     /**
      * Inverts a condition expression.
@@ -12248,216 +11524,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return null;
     }
 
-    /**
-     * Checks if the then/else branches form an OR condition chain pattern.
-     * Pattern: if(a) { body } else { if(b) { sameBody } ... }
-     * This is how bytecode represents "if (a || b) { body }".
-     */
-    private boolean isOrConditionChain(List<Statement> thenStmts, List<Statement> elseStmts) {
-        if (elseStmts.size() != 1) {
-            return false;
-        }
-        if (!(elseStmts.get(0) instanceof IfStmt)) {
-            return false;
-        }
 
-        IfStmt nestedIf = (IfStmt) elseStmts.get(0);
 
-        Statement nestedThenBranch = nestedIf.getThenBranch();
-        List<Statement> nestedThen;
-        if (nestedThenBranch instanceof BlockStmt) {
-            BlockStmt nestedBlock = (BlockStmt) nestedThenBranch;
-            nestedThen = nestedBlock.getStatements();
-        } else {
-            nestedThen = List.of(nestedThenBranch);
-        }
 
-        return statementsEqual(thenStmts, nestedThen);
-    }
 
-    /**
-     * Merges OR condition chains into a single if statement with OR conditions.
-     * if(a) { body } else { if(b) { body } else { elseBody } }
-     * becomes: if(a || b) { body } else { elseBody }
-     */
-    private Statement mergeOrConditions(Expression cond1, List<Statement> thenStmts,
-                                         List<Statement> elseStmts) {
-        IfStmt nestedIf = (IfStmt) elseStmts.get(0);
-        Expression cond2 = nestedIf.getCondition();
 
-        Expression merged = new BinaryExpr(BinaryOperator.OR, cond1, cond2,
-                PrimitiveSourceType.BOOLEAN);
 
-        Statement nestedElseBranch = nestedIf.getElseBranch();
-        List<Statement> finalElseStmts = null;
 
-        if (nestedElseBranch != null) {
-            List<Statement> nestedElse;
-            if (nestedElseBranch instanceof BlockStmt) {
-                BlockStmt nestedBlock = (BlockStmt) nestedElseBranch;
-                nestedElse = nestedBlock.getStatements();
-            } else {
-                nestedElse = List.of(nestedElseBranch);
-            }
-
-            if (isOrConditionChain(thenStmts, nestedElse)) {
-                return mergeOrConditions(merged, thenStmts, nestedElse);
-            }
-            finalElseStmts = nestedElse;
-        }
-
-        BlockStmt thenBlock = new BlockStmt(thenStmts);
-        BlockStmt elseBlock = (finalElseStmts != null && !finalElseStmts.isEmpty())
-                ? new BlockStmt(finalElseStmts) : null;
-        return new IfStmt(merged, thenBlock, elseBlock);
-    }
-
-    /**
-     * Compares two lists of statements for structural equality.
-     * Used to detect if two code paths have the same body (for OR condition merging).
-     */
-    private boolean statementsEqual(List<Statement> a, List<Statement> b) {
-        if (a.size() != b.size()) {
-            return false;
-        }
-        for (int i = 0; i < a.size(); i++) {
-            if (!statementEqual(a.get(i), b.get(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Compares two statements for structural equality.
-     */
-    private boolean statementEqual(Statement a, Statement b) {
-        if (a == b) return true;
-        if (a == null || b == null) return false;
-        if (a.getClass() != b.getClass()) return false;
-
-        return a.toString().equals(b.toString());
-    }
-
-    /**
-     * Checks if the then statements form an AND condition chain pattern.
-     * Pattern: if(a) { if(b) { if(c) { body } } }
-     * This is how bytecode represents "if (a && b && c) { body }".
-     * The nested ifs must have no else branches for this pattern.
-     */
-    private boolean isAndConditionChain(List<Statement> thenStmts) {
-        if (thenStmts.size() != 1) {
-            return false;
-        }
-        if (!(thenStmts.get(0) instanceof IfStmt)) {
-            return false;
-        }
-        IfStmt nestedIf = (IfStmt) thenStmts.get(0);
-        return nestedIf.getElseBranch() == null;
-    }
-
-    /**
-     * Merges AND condition chains into a single if statement with AND conditions.
-     * if(a) { if(b) { if(c) { body } } }
-     * becomes: if(a && b && c) { body }
-     */
-    private Statement mergeAndConditions(Expression outerCondition, List<Statement> thenStmts) {
-        List<Expression> conditions = new ArrayList<>();
-        conditions.add(outerCondition);
-        Statement body = collectAndChainConditions(thenStmts, conditions);
-
-        Expression merged = conditions.get(0);
-        for (int i = 1; i < conditions.size(); i++) {
-            merged = new BinaryExpr(BinaryOperator.AND, merged, conditions.get(i),
-                    PrimitiveSourceType.BOOLEAN);
-        }
-
-        return new IfStmt(merged, body, null);
-    }
-
-    /**
-     * Recursively collects conditions from nested AND chain ifs.
-     * Returns the innermost body (the actual code to execute).
-     */
-    private Statement collectAndChainConditions(List<Statement> stmts, List<Expression> conditions) {
-        if (stmts.size() != 1 || !(stmts.get(0) instanceof IfStmt)) {
-            if (stmts.size() == 1) {
-                return stmts.get(0);
-            }
-            return new BlockStmt(stmts);
-        }
-
-        IfStmt ifStmt = (IfStmt) stmts.get(0);
-        if (ifStmt.getElseBranch() != null) {
-            return ifStmt;
-        }
-
-        conditions.add(ifStmt.getCondition());
-
-        Statement thenBranch = ifStmt.getThenBranch();
-        List<Statement> nestedStmts;
-        if (thenBranch instanceof BlockStmt) {
-            nestedStmts = ((BlockStmt) thenBranch).getStatements();
-        } else {
-            nestedStmts = List.of(thenBranch);
-        }
-
-        if (nestedStmts.size() == 1 && nestedStmts.get(0) instanceof IfStmt) {
-            IfStmt nested = (IfStmt) nestedStmts.get(0);
-            if (nested.getElseBranch() == null) {
-                return collectAndChainConditions(nestedStmts, conditions);
-            }
-        }
-
-        return thenBranch;
-    }
-
-    /**
-     * Finds a PHI instruction that is assigned boolean constants (0/1) from the then/else branches.
-     * Works at the IR level by examining the blocks directly rather than recovered statements.
-     * <p>
-     * Pattern in IR:
-     *   B_then: v1 = const 0; goto B_merge
-     *   B_else: v2 = const 1; goto B_merge
-     *   B_merge: PHI = phi [v1, B_then], [v2, B_else]
-     * <p>
-     * This is how bytecode represents boolean expressions like !method() when used in larger expressions.
-     *
-     * @param info Region info with then/else/merge block information
-     * @return The PHI instruction if this pattern is detected, null otherwise
-     */
-    private PhiInstruction findBooleanPhiAssignmentPatternIR(RegionInfo info) {
-        IRBlock thenBlock = info.getThenBlock();
-        IRBlock elseBlock = info.getElseBlock();
-        IRBlock mergeBlock = info.getMergeBlock();
-
-        if (thenBlock == null || elseBlock == null || mergeBlock == null) {
-            return null;
-        }
-
-        Integer thenConst = extractSingleBooleanConstant(thenBlock);
-        Integer elseConst = extractSingleBooleanConstant(elseBlock);
-
-        if (thenConst == null || elseConst == null) {
-            return null;
-        }
-
-        if (thenConst.equals(elseConst)) {
-            return null;
-        }
-
-        if (hasMultipleConditionalPredecessors(thenBlock) || hasMultipleConditionalPredecessors(elseBlock)) {
-            return null;
-        }
-
-        for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
-            if (phiReceivesBooleanConstants(phi, thenBlock, elseBlock)) {
-                return phi;
-            }
-        }
-
-        return null;
-    }
 
     private boolean hasMultipleConditionalPredecessors(IRBlock block) {
         Set<IRBlock> preds = block.getPredecessors();
@@ -12474,67 +11547,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return conditionalCount > 1;
     }
 
-    /**
-     * Extracts a single boolean constant (0 or 1) from a block that only contains
-     * a constant instruction and a goto terminator.
-     */
-    private Integer extractSingleBooleanConstant(IRBlock block) {
-        List<IRInstruction> instructions = block.getInstructions();
 
-        if (instructions.isEmpty() || instructions.size() > 2) {
-            return null;
-        }
-
-        ConstantInstruction constInstr = null;
-        for (IRInstruction instr : instructions) {
-            if (instr instanceof ConstantInstruction) {
-                constInstr = (ConstantInstruction) instr;
-            } else if (instr instanceof SimpleInstruction) {
-                SimpleInstruction simple = (SimpleInstruction) instr;
-                if (simple.getOp() != SimpleOp.GOTO) {
-                    if (!instr.isTerminator()) {
-                        return null;
-                    }
-                }
-            } else if (!instr.isTerminator()) {
-                return null;
-            }
-        }
-
-        if (constInstr == null) {
-            return null;
-        }
-
-        return extractBooleanConstant(constInstr.getConstant());
-    }
-
-    /**
-     * Checks if a PHI instruction receives boolean constants from the then/else blocks.
-     */
-    private boolean phiReceivesBooleanConstants(PhiInstruction phi, IRBlock thenBlock, IRBlock elseBlock) {
-        List<Value> operands = phi.getOperands();
-        Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
-
-        if (operands.size() != 2 || incomingBlocks.size() != 2) {
-            return false;
-        }
-
-        boolean hasThen = incomingBlocks.contains(thenBlock);
-        boolean hasElse = incomingBlocks.contains(elseBlock);
-
-        if (!hasThen || !hasElse) {
-            return false;
-        }
-
-        for (Value val : operands) {
-            Integer constVal = extractBooleanConstant(val);
-            if (constVal == null) {
-                return false;
-            }
-        }
-
-        return true;
-    }
 
     /**
      * Checks if all phi operands are boolean constants (0 or 1).
@@ -12554,45 +11567,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return true;
     }
 
-    /**
-     * Gets the boolean constant value (0 or 1) that the then block contributes to a PHI.
-     */
-    private int getThenBlockBooleanValue(PhiInstruction phi, IRBlock thenBlock) {
-        List<Value> operands = phi.getOperands();
-        Set<IRBlock> incomingBlocks = phi.getIncomingBlocks();
 
-        List<IRBlock> blockList = new ArrayList<>(incomingBlocks);
-        for (int i = 0; i < blockList.size(); i++) {
-            if (blockList.get(i) == thenBlock) {
-                Integer val = extractBooleanConstant(operands.get(i));
-                return val != null ? val : 0;
-            }
-        }
-        return 0;
-    }
-
-    /**
-     * Collapses a boolean PHI assignment pattern to a cached boolean expression.
-     * Instead of emitting: if(cond) { i = 0; } else { i = 1; }
-     * We cache the expression !cond (or cond) for the PHI result, so when it's used
-     * in expressions like (x & i), it becomes (x & !cond).
-     */
-    private void collapseToBooleanPhiExpressionIR(Expression condition, PhiInstruction phi, IRBlock thenBlock) {
-        int thenVal = getThenBlockBooleanValue(phi, thenBlock);
-
-        Expression booleanExpr;
-        if (thenVal == 1) {
-            booleanExpr = condition;
-        } else {
-            booleanExpr = invertCondition(condition);
-        }
-
-        SSAValue phiResult = phi.getResult();
-        if (phiResult != null) {
-            context.getExpressionContext().cacheExpression(phiResult, booleanExpr);
-            context.getExpressionContext().unmarkMaterialized(phiResult);
-        }
-    }
 
     /**
      * Pre-pass to collect for-loop initializer instructions before block processing.
@@ -12691,20 +11666,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
-    /**
-     * Detects a general ternary pattern where then/else blocks each produce a single value
-     * that feeds into a PHI in the merge block. This pattern occurs with code like:
-     * x == null ? "" : x
-     * <p>
-     * The bytecode pattern is:
-     * - if(cond) goto thenBlock else elseBlock
-     * - thenBlock: load value1, goto mergeBlock
-     * - elseBlock: load value2, goto mergeBlock
-     * - mergeBlock: PHI(value1, value2), use PHI in method call/assignment
-     */
-    private PhiInstruction findTernaryPhiPattern(RegionInfo info) {
-        return findTernaryPhi(info.getThenBlock(), info.getElseBlock(), info.getMergeBlock());
-    }
 
     /**
      * The phi in {@code mergeBlock} that a diamond over {@code thenBlock}/{@code elseBlock} collapses to a

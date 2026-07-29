@@ -528,16 +528,30 @@ public class MethodRecoverer {
             initializeRecovery();
         }
 
-        BlockStmt body = statementRecoverer.recoverMethod();
+        List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
+        boolean noHandlers = handlers == null || handlers.isEmpty();
+        boolean dispatchAvailable = noHandlers && !Boolean.getBoolean("dispatch.off");
+        BlockStmt body;
+        try {
+            body = statementRecoverer.recoverMethod();
+        } catch (StatementRecoverer.RetiredSchemaRecoveryException retired) {
+            // No structured route owned a region (e.g. irreducible flow the engine declines): the
+            // faithful dispatch loop is the totality fallback. A handler-bearing method cannot take
+            // it (a flat dispatch loop cannot model the try/catch regions), so there the signal
+            // stays a loud routing gap.
+            if (!dispatchAvailable) {
+                throw retired;
+            }
+            initializeRecovery();
+            return statementRecoverer.recoverMethodAsDispatch();
+        }
 
         // Completeness guarantee: if any observable operation reachable in the bytecode is absent
         // from the recovered source (a dropped block, by any mechanism), re-recover the whole
         // method as a faithful dispatch loop on a FRESH context (the first pass mutated
         // materialization/declaration state). Skipped for methods with exception handlers, where a
         // flat dispatch loop cannot model the try/catch regions.
-        List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
-        boolean noHandlers = handlers == null || handlers.isEmpty();
-        if (noHandlers && !Boolean.getBoolean("dispatch.off")
+        if (dispatchAvailable
                 && (statementRecoverer.hasDroppedOperations(body) || hasTypeSwitchRestartLoop())) {
             initializeRecovery();
             body = statementRecoverer.recoverMethodAsDispatch();
