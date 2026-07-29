@@ -1275,20 +1275,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
                 case WHILE_LOOP:
-                    throw retiredLoopRecovery("while", current);
+                    throw retiredSchemaRecovery("while", current);
                 case DO_WHILE_LOOP:
-                    throw retiredLoopRecovery("do-while", current);
+                    throw retiredSchemaRecovery("do-while", current);
                 case FOR_LOOP:
-                    throw retiredLoopRecovery("for", current);
-                case GUARD_CLAUSE: {
-                    Statement guardStmt = recoverGuardClause(current, info);
-                    // Collect pending statements (header computations) BEFORE the guard
-                    result.addAll(context.collectPendingStatements());
-                    result.add(guardStmt);
-                    context.markProcessed(current);
-                    current = info.getElseBlock();
-                    break;
-                }
+                    throw retiredSchemaRecovery("for", current);
+                case GUARD_CLAUSE:
+                    throw retiredSchemaRecovery("guard", current);
                 default: {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
                     result.addAll(blockStmts);
@@ -5232,7 +5225,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         current = getNextSequentialBlock(current);
                         break;
                     }
-                    throw retiredLoopRecovery("while", current);
+                    throw retiredSchemaRecovery("while", current);
                 }
                 case DO_WHILE_LOOP: {
                     if (loopCutByStops(info, stopBlocks)) {
@@ -5243,7 +5236,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         current = getNextSequentialBlock(current);
                         break;
                     }
-                    throw retiredLoopRecovery("do-while", current);
+                    throw retiredSchemaRecovery("do-while", current);
                 }
                 case FOR_LOOP: {
                     if (loopCutByStops(info, stopBlocks)) {
@@ -5254,16 +5247,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         current = getNextSequentialBlock(current);
                         break;
                     }
-                    throw retiredLoopRecovery("for", current);
+                    throw retiredSchemaRecovery("for", current);
                 }
-                case GUARD_CLAUSE: {
-                    Statement guardStmt = recoverGuardClause(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    result.add(guardStmt);
-                    context.markProcessed(current);
-                    current = info.getElseBlock();
-                    break;
-                }
+                case GUARD_CLAUSE:
+                    throw retiredSchemaRecovery("guard", current);
                 default: {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
                     result.addAll(blockStmts);
@@ -8316,11 +8303,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
                 case WHILE_LOOP:
-                    throw retiredLoopRecovery("while", current);
+                    throw retiredSchemaRecovery("while", current);
                 case DO_WHILE_LOOP:
-                    throw retiredLoopRecovery("do-while", current);
+                    throw retiredSchemaRecovery("do-while", current);
                 case FOR_LOOP:
-                    throw retiredLoopRecovery("for", current);
+                    throw retiredSchemaRecovery("for", current);
                 case SWITCH: {
                     StringSwitchInfo stringSwitch = detectStringSwitch(current);
                     if (stringSwitch != null) {
@@ -8341,14 +8328,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                     break;
                 }
-                case GUARD_CLAUSE: {
-                    Statement guardStmt = recoverGuardClause(current, info);
-                    result.addAll(context.collectPendingStatements());
-                    result.add(guardStmt);
-                    context.markProcessed(current);
-                    current = info.getElseBlock();
-                    break;
-                }
+                case GUARD_CLAUSE:
+                    throw retiredSchemaRecovery("guard", current);
                 case IRREDUCIBLE: {
                     result.add(recoverIrreducible(current));
                     current = null;
@@ -9735,40 +9716,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return ifStmt;
     }
 
-    private Statement recoverGuardClause(IRBlock header, RegionInfo info) {
-        trace("schema-recovery kind=guard method=" + context.getIrMethod().getName()
-                + " header=" + header.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        List<Statement> headerStmts = recoverBlockInstructions(header);
-
-        // For guard clauses, conditionNegated=true means we need to negate the bytecode condition
-        // to get the guard clause condition (the condition under which we exit early)
-        Expression condition = recoverCondition(header, info.isConditionNegated());
-
-        IRBlock exitBlock = info.getThenBlock();
-        List<Statement> exitStmts = recoverSimpleBlock(exitBlock);
-        context.markProcessed(exitBlock);
-
-        Statement exitStmt;
-        if (exitStmts.isEmpty()) {
-            exitStmt = new BlockStmt(Collections.emptyList());
-        } else if (exitStmts.size() == 1) {
-            exitStmt = exitStmts.get(0);
-        } else {
-            exitStmt = new BlockStmt(exitStmts);
-        }
-
-        IfStmt guardStmt = new IfStmt(condition, exitStmt, null);
-        stampFromHeader(guardStmt, header);
-
-        if (!headerStmts.isEmpty()) {
-            context.addPendingStatements(headerStmts);
-        }
-
-        return guardStmt;
-    }
 
     /**
      * Reconstructs a short-circuit compound condition ({@code A && B}, {@code A || B}, or any mix) as
@@ -10034,12 +9981,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * A retired schema loop recoverer's dispatch arm: every loop of the kind now structures through
+     * A retired schema recoverer's dispatch arm: every region of the kind now structures through
      * the reaching-condition engine (natively, via the loop-cut guard, or via the opaque try node).
      * A dispatch arm still classifying a region as one signals a routing gap to fix on the engine
      * side, so it fails loudly rather than degrading silently.
      */
-    private IllegalStateException retiredLoopRecovery(String kind, IRBlock header) {
+    private IllegalStateException retiredSchemaRecovery(String kind, IRBlock header) {
         return new IllegalStateException("schema " + kind + " recovery retired; unrouted " + kind
                 + " at offset " + header.getBytecodeOffset() + " in " + context.getIrMethod().getName());
     }
