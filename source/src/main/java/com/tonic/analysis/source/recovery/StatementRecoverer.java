@@ -1240,7 +1240,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (offered != null) {
                     result.addAll(offered.statements);
                     current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
-                            && !context.isProcessed(offered.continuation) ? offered.continuation : null;
+                            && (!context.isProcessed(offered.continuation)
+                                || isTerminalTail(offered.continuation)) ? offered.continuation : null;
                     continue;
                 }
             }
@@ -1250,7 +1251,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 List<Statement> structuredRegion = offerRegionToEngine(current, boundedStops, rcsBound);
                 if (structuredRegion != null) {
                     result.addAll(structuredRegion);
-                    current = stopBlocks.contains(rcsBound) || context.isProcessed(rcsBound) ? null : rcsBound;
+                    current = stopBlocks.contains(rcsBound)
+                            || (context.isProcessed(rcsBound) && !isTerminalTail(rcsBound)) ? null : rcsBound;
                     continue;
                 }
             }
@@ -4199,6 +4201,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (h.getHandlerBlock() != null) {
                 processedHandlerBlocks.add(h.getHandlerBlock());
             }
+            if (h.getTryStart() != null) {
+                retiredTryBoundaries.add(h.getTryStart());
+            }
             method.getExceptionHandlers().remove(h);
         }
         for (ExceptionHandler h : new ArrayList<>(method.getExceptionHandlers())) {
@@ -4217,6 +4222,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (allEmpty) {
                 processedTryHandlers.add(h);
                 processedHandlerBlocks.add(h.getHandlerBlock());
+                if (h.getTryStart() != null) {
+                    retiredTryBoundaries.add(h.getTryStart());
+                }
                 method.getExceptionHandlers().remove(h);
             }
         }
@@ -4827,6 +4835,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private final Set<ExceptionHandler> finallyDeduped = new HashSet<>();
+
+    /** Try-range start blocks of handlers the de-duplication RETIRED from the method's handler table. */
+    private final Set<IRBlock> retiredTryBoundaries = new HashSet<>();
     /** The rethrower families offered to the current (possibly partitioned) de-duplication together. */
     private final Set<ExceptionHandler> currentDedupOffering = new HashSet<>();
     /** Each excised finally copy's root mapped to its continuation, so a later (outer) group's exit hunt
@@ -5162,12 +5173,21 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             {
                 IRBlock bodyBound = null;
                 boolean bodyTerminalRegion = false;
+                boolean strictOffer = false;
                 switch (info.getType()) {
                     case IF_THEN:
                     case IF_THEN_ELSE:
                         if (!skipReachingConditions) {
                             bodyBound = info.getMergeBlock();
                             bodyTerminalRegion = bodyBound == null;
+                        } else if (info.getMergeBlock() != null
+                                && regionIsCopyFree(current, info.getMergeBlock(), stopBlocks)) {
+                            // A surviving inlined copy always precedes an exit from the protected range,
+                            // so a diamond whose blocks reach no terminal and whose single exit is its
+                            // own non-terminal merge cannot contain one - safe to structure even while
+                            // the body still carries the finally's copies elsewhere.
+                            bodyBound = info.getMergeBlock();
+                            strictOffer = true;
                         }
                         break;
                     case WHILE_LOOP:
@@ -5184,16 +5204,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     if (offered != null) {
                         result.addAll(offered.statements);
                         current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
-                                && !context.isProcessed(offered.continuation) ? offered.continuation : null;
+                                && (!context.isProcessed(offered.continuation)
+                                || isTerminalTail(offered.continuation)) ? offered.continuation : null;
                         continue;
                     }
                 } else if (bodyBound != null && !visited.contains(bodyBound)) {
                     Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
                     offeredStops.add(bodyBound);
-                    List<Statement> structuredRegion = offerRegionToEngine(current, offeredStops, bodyBound);
+                    List<Statement> structuredRegion =
+                            offerRegionToEngine(current, offeredStops, bodyBound, !strictOffer);
                     if (structuredRegion != null) {
                         result.addAll(structuredRegion);
-                        current = stopBlocks.contains(bodyBound) || context.isProcessed(bodyBound)
+                        current = stopBlocks.contains(bodyBound)
+                                || (context.isProcessed(bodyBound) && !isTerminalTail(bodyBound))
                                 ? null : bodyBound;
                         continue;
                     }
@@ -7383,6 +7406,32 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     @Override
+    public List<Statement> recoverBoundaryTail(IRBlock tail) {
+        if (!isTerminalTail(tail)) {
+            return null;
+        }
+        List<Statement> out = new ArrayList<>();
+        IRBlock b = tail;
+        int hops = 0;
+        while (b != null && hops++ < 8) {
+            out.addAll(recoverSimpleBlock(b));
+            if (b.getTerminator() instanceof ReturnInstruction
+                    || (b.getTerminator() instanceof SimpleInstruction
+                        && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW)) {
+                return out;
+            }
+            IRBlock next = null;
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    next = e.getKey();
+                }
+            }
+            b = next;
+        }
+        return null;
+    }
+
+    @Override
     public Statement recoverTryNode(IRBlock block, TryNodeDescriptor node, Set<IRBlock> stopBlocks,
                                     Set<IRBlock> alreadyEmitted) {
         ExceptionHandler h = node.handler();
@@ -7847,10 +7896,44 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * A strictly BARE return tail: blocks carrying nothing but local loads and copies (excised copy
-     * shells exempt - the delegate folds their leftovers), chained through single normal successors to a
-     * return, with no branches outside excised shells.
+     * A straight terminal tail: blocks chained through single normal successors (excised copy shells
+     * skipped) into a return or throw, with no branching. The walks re-emit such a converging
+     * terminal once per reaching path, so a region offer may absorb it as its own arm's terminal;
+     * the duplicate emissions cover exclusive paths and each executes at most once.
      */
+    private boolean isTerminalTail(IRBlock b) {
+        int hops = 0;
+        while (b != null && hops++ < 8) {
+            if (b.getTerminator() instanceof ReturnInstruction) {
+                return true;
+            }
+            if (b.getTerminator() instanceof SimpleInstruction
+                    && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW) {
+                return true;
+            }
+            IRBlock excised = excisedCopyExits.get(b);
+            if (excised != null) {
+                b = excised;
+                continue;
+            }
+            if (b.getTerminator() instanceof BranchInstruction
+                    || b.getTerminator() instanceof SwitchInstruction) {
+                return false;
+            }
+            IRBlock next = null;
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    if (next != null) {
+                        return false;
+                    }
+                    next = e.getKey();
+                }
+            }
+            b = next;
+        }
+        return false;
+    }
+
     private boolean isBareReturnTail(IRBlock b) {
         int hops = 0;
         while (b != null && hops++ < 8) {
@@ -8041,7 +8124,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 && dt.dominates(entry, stop)
                 && (findUnprocessedHandlerStartingAt(stop) != null
                     || isBareReturnTail(stop)
-                    || startsClaimedHandlerRange(stop)));
+                    || startsClaimedHandlerRange(stop)
+                    || retiredTryBoundaries.contains(stop)));
     }
 
     /**
@@ -8067,7 +8151,49 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
+    /**
+     * Whether the construct spanned from {@code entry} to {@code merge} can hold a surviving inlined
+     * finally copy: every copy precedes an exit from the protected range, so a span whose reachable
+     * blocks (up to the merge and the walk's stops) carry no return/throw terminator - the merge
+     * itself included - is copy-free and safe to structure while copies survive elsewhere.
+     */
+    private boolean regionIsCopyFree(IRBlock entry, IRBlock merge, Set<IRBlock> stopBlocks) {
+        if (isTerminalBlockShape(merge)) {
+            return false;
+        }
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(entry);
+        seen.add(entry);
+        while (!work.isEmpty()) {
+            IRBlock b = work.poll();
+            if (isTerminalBlockShape(b)) {
+                return false;
+            }
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                IRBlock succ = e.getKey();
+                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL || succ == merge
+                        || stopBlocks.contains(succ) || !seen.add(succ)) {
+                    continue;
+                }
+                work.add(succ);
+            }
+        }
+        return true;
+    }
+
+    private boolean isTerminalBlockShape(IRBlock b) {
+        return b.getTerminator() instanceof ReturnInstruction
+                || (b.getTerminator() instanceof SimpleInstruction
+                    && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW);
+    }
+
     private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {
+        return offerRegionToEngine(entry, offeredStops, bound, true);
+    }
+
+    private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound,
+                                                boolean allowTailRelease) {
         // A stop that is an unprocessed try's start STRICTLY inside the offered construct is the walk's
         // own hand-off boundary, not the construct's: the engine models that try as an opaque node, so
         // the offer spans it. Without this, a loop whose body opens a try is cut at its first block.
@@ -8092,7 +8218,73 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         boolean exitsOk = exits != null && (bound == null
                 ? exits.isEmpty()
                 : exits.size() == 1 && exits.contains(bound));
-        List<Statement> out = exitsOk ? rcsStructurer.tryStructureRegion(entry, offeredStops, true) : null;
+        // A bounded construct may ALSO fall out through the end boundary of a handler range still
+        // being recovered (a split-range desugar lays a terminal arm across it) and on into a bare
+        // return: both are the construct's own terminal tail, not rival continuations. Release such
+        // extra exits and re-probe; the retry never touches an offer that already met its contract.
+        Set<IRBlock> flaggedTails = new HashSet<>();
+        if (allowTailRelease && !exitsOk && bound != null && exits != null && exits.contains(bound)) {
+            DominatorTree dt = context.getDominatorTree();
+            Set<IRBlock> released = new HashSet<>();
+            for (int round = 0; dt != null && round < 8; round++) {
+                Set<IRBlock> extras = new HashSet<>(exits);
+                extras.remove(bound);
+                extras.removeAll(flaggedTails);
+                boolean releasable = !extras.isEmpty() || !flaggedTails.isEmpty();
+                Set<IRBlock> toFlag = new HashSet<>();
+                for (IRBlock extra : extras) {
+                    boolean insideReleasedTail = false;
+                    for (IRBlock r : released) {
+                        if (dt.dominates(r, extra)) {
+                            insideReleasedTail = true;
+                            break;
+                        }
+                    }
+                    if (insideReleasedTail
+                            || (endsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
+                            || (followsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
+                            || (isTerminalTail(extra) && dt.dominates(entry, extra))) {
+                        continue;
+                    }
+                    // A shared terminal tail the entry does NOT dominate cannot be absorbed into the
+                    // region (multi-entry); the engine inlines it once at the region's convergence
+                    // instead, while it stays a stop for everyone else.
+                    if (isTerminalTail(extra)) {
+                        toFlag.add(extra);
+                        continue;
+                    }
+                    releasable = false;
+                    break;
+                }
+                if (!releasable || extras.isEmpty()) {
+                    break;
+                }
+                extras.removeAll(toFlag);
+                flaggedTails.addAll(toFlag);
+                released.addAll(extras);
+                offeredStops.removeAll(extras);
+                IRBlock finalBound = bound;
+                offeredStops.removeIf(stop -> stop != finalBound && !flaggedTails.contains(stop)
+                        && released.stream().anyMatch(r -> dt.dominates(r, stop)));
+                rcsStructurer.setBoundaryDuplicableTails(flaggedTails);
+                exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
+                if (exits == null || !exits.contains(bound)) {
+                    break;
+                }
+                if (exits.size() == 1) {
+                    exitsOk = true;
+                    break;
+                }
+            }
+        }
+        List<Statement> out;
+        try {
+            out = exitsOk ? rcsStructurer.tryStructureRegion(entry, offeredStops, true) : null;
+        } finally {
+            if (!flaggedTails.isEmpty()) {
+                rcsStructurer.setBoundaryDuplicableTails(null);
+            }
+        }
         if (System.getProperty("yabr.trace.offer") != null) {
             System.err.println("[OFFER] entry=" + entry.getBytecodeOffset()
                     + " bound=" + (bound == null ? "null" : bound.getBytecodeOffset())
@@ -8104,6 +8296,51 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     + " ok=" + (out != null));
         }
         return out;
+    }
+
+    /**
+     * Whether {@code b} sits at the exclusive end offset of a CLAIMED handler's protected range
+     * (claimed but its clause not yet emitted) - the in-progress construct's own boundary, which a
+     * terminal arm inside the body may legitimately cross on its way out.
+     */
+    private boolean endsClaimedHandlerRange(IRBlock b) {
+        List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
+        if (handlers == null) {
+            return false;
+        }
+        for (ExceptionHandler h : handlers) {
+            IRBlock te = h.getTryEnd();
+            boolean endsHere = te == b
+                    || (te != null && te.getBytecodeOffset() == b.getBytecodeOffset());
+            if (endsHere && h.getHandlerBlock() != null
+                    && processedHandlerBlocks.contains(h.getHandlerBlock())
+                    && !context.isProcessed(h.getHandlerBlock())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether {@code b} directly follows a CLAIMED handler's protected range (a successor of its
+     * exclusive try-end block, claimed but not yet emitted) - a stop the scaffolding added for that
+     * in-progress construct's own boundary, which an offer spanning the construct may cross.
+     */
+    private boolean followsClaimedHandlerRange(IRBlock b) {
+        List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
+        if (handlers == null) {
+            return false;
+        }
+        for (ExceptionHandler h : handlers) {
+            IRBlock te = h.getTryEnd();
+            if (te != null && h.getHandlerBlock() != null
+                    && processedHandlerBlocks.contains(h.getHandlerBlock())
+                    && !context.isProcessed(h.getHandlerBlock())
+                    && te.getSuccessors().contains(b)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ExceptionHandler findUnprocessedHandlerStartingAt(IRBlock block) {
@@ -8250,7 +8487,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (offered != null) {
                     result.addAll(offered.statements);
                     current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
-                            && !context.isProcessed(offered.continuation) ? offered.continuation : null;
+                            && (!context.isProcessed(offered.continuation)
+                                || isTerminalTail(offered.continuation)) ? offered.continuation : null;
                     continue;
                 }
             } else if (walkBound != null && !visited.contains(walkBound)) {
@@ -8259,7 +8497,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 List<Statement> structuredRegion = offerRegionToEngine(current, offeredStops, walkBound);
                 if (structuredRegion != null) {
                     result.addAll(structuredRegion);
-                    current = stopBlocks.contains(walkBound) || context.isProcessed(walkBound)
+                    current = stopBlocks.contains(walkBound)
+                    || (context.isProcessed(walkBound) && !isTerminalTail(walkBound))
                             ? null : walkBound;
                     continue;
                 }
@@ -9342,7 +9581,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // the hoisted declaration ran once) AND with no non-default store to the slot dominating this one. An
             // intervening reassignment (`result = fValue; ... result = 0.0f`) makes the later default store a
             // genuine re-initialization; eliding it there drops a live write and silently changes the value.
-            if (isDefaultValue(value) && context.getLoopStack().isEmpty()
+            boolean inLoopBlock = context.getLoopAnalysis() != null
+                    && context.getLoopAnalysis().getLoop(store.getBlock()) != null;
+            if (isDefaultValue(value) && context.getLoopStack().isEmpty() && !inLoopBlock
                     && !hasDominatingNonDefaultStore(store)
                     && !slotReadByReachableHandler(store, null)) {
                 return null;

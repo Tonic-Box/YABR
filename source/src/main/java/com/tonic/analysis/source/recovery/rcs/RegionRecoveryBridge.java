@@ -144,6 +144,14 @@ public interface RegionRecoveryBridge {
     TryNodeDescriptor decodeTryNode(IRBlock block, Set<IRBlock> regionStops);
 
     /**
+     * Recovers a straight terminal tail (single-successor blocks chaining into a return/throw) as fresh
+     * statements, without marking the blocks processed: the engine inlines the tail once inside a region
+     * whose flow converges on it, while the enclosing recovery still emits its own copy on the paths that
+     * reach the tail from outside. Returns null when the shape is not such a tail.
+     */
+    List<Statement> recoverBoundaryTail(IRBlock tail);
+
+    /**
      * Recovers the try node starting at {@code block} as one statement via the host's try/catch machinery,
      * marking its handler and blocks consumed. {@code alreadyEmitted} are the region blocks recovered before
      * the node, excluded from the try's own walk. Returns null when the machinery cannot recover the shape.

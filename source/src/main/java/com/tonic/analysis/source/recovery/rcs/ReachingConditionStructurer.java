@@ -117,10 +117,14 @@ public final class ReachingConditionStructurer {
         private final long regionDupBudget;
         private final boolean suppressBoundaryTerminalAbsorption;
         private final Set<IRBlock> skippedBoundaries;
+        private final Set<IRBlock> boundaryDuplicableTails;
+        private final Map<IRBlock, IRBlock> boundaryTailPlacement;
 
         PassState(ReachingConditionStructurer s) {
             suppressBoundaryTerminalAbsorption = s.suppressBoundaryTerminalAbsorption;
             skippedBoundaries = s.skippedBoundaries;
+            boundaryDuplicableTails = s.boundaryDuplicableTails;
+            boundaryTailPlacement = new HashMap<>(s.boundaryTailPlacement);
             method = s.method;
             dom = s.dom;
             region = s.region;
@@ -145,6 +149,9 @@ public final class ReachingConditionStructurer {
         void restore(ReachingConditionStructurer s) {
             s.suppressBoundaryTerminalAbsorption = suppressBoundaryTerminalAbsorption;
             s.skippedBoundaries = skippedBoundaries;
+            s.boundaryDuplicableTails = boundaryDuplicableTails;
+            s.boundaryTailPlacement.clear();
+            s.boundaryTailPlacement.putAll(boundaryTailPlacement);
             s.method = method;
             s.dom = dom;
             s.region = region;
@@ -194,6 +201,19 @@ public final class ReachingConditionStructurer {
 
     public void setSuppressBoundaryTerminalAbsorption(boolean suppress) {
         this.suppressBoundaryTerminalAbsorption = suppress;
+    }
+
+    /** Stop blocks the host permits this offer to inline ONCE at the region's convergence onto them:
+     * straight terminal tails shared with the enclosing structure. The enclosing recovery re-emits its
+     * own copy on the paths reaching a tail from outside the region - exclusive paths, each executing
+     * the tail at most once, mirroring the walking recovery's converging-terminal duplication. */
+    private Set<IRBlock> boundaryDuplicableTails = Collections.emptySet();
+    /** Placement per admitted tail: the region block whose whole subtree converges on the tail; the
+     * tail's statements follow that block's structured children. Computed in prepareRegion. */
+    private final Map<IRBlock, IRBlock> boundaryTailPlacement = new HashMap<>();
+
+    public void setBoundaryDuplicableTails(Set<IRBlock> tails) {
+        this.boundaryDuplicableTails = tails == null ? Collections.emptySet() : tails;
     }
     private Map<IRBlock, Integer> atomOf;
     private List<IRBlock> blockOfAtom;
@@ -278,7 +298,8 @@ public final class ReachingConditionStructurer {
         Set<IRBlock> exits = new HashSet<>();
         for (IRBlock rb : region) {
             for (IRBlock succ : modelSuccessors(rb)) {
-                if (stopBlocks.contains(succ) && !isBackEdge(rb, succ)) {
+                if (stopBlocks.contains(succ) && !isBackEdge(rb, succ)
+                        && !boundaryTailPlacement.containsKey(succ)) {
                     exits.add(succ);
                 }
             }
@@ -377,6 +398,7 @@ public final class ReachingConditionStructurer {
         cachedConditions.clear();
         tryNodes.clear();
         this.regionStopBlocks = stopBlocks;
+        boundaryTailPlacement.clear();
         pendingCatchJoinSplit = null;
         if (!collectRegion(entry, stopBlocks)) {
             trace("rcs-decline collect entry=" + entry.getBytecodeOffset());
@@ -406,6 +428,9 @@ public final class ReachingConditionStructurer {
                     return false;
                 }
             }
+        }
+        if (!placeBoundaryTails()) {
+            return false;
         }
         assignAtoms();
 
@@ -769,6 +794,81 @@ public final class ReachingConditionStructurer {
                 validate(c);
             }
         }
+    }
+
+    /**
+     * Admits each host-flagged boundary tail the region flows into: finds the placement block - the
+     * lowest common dominator of the tail's in-region predecessors - and verifies the placement's whole
+     * region subtree converges on the tail (every model path reaches it and nothing else escapes), so
+     * appending the tail's statements after that block's structured children is plain fall-through.
+     * A flagged tail the region cannot host this way fails the region.
+     */
+    private boolean placeBoundaryTails() {
+        for (IRBlock tail : boundaryDuplicableTails) {
+            List<IRBlock> preds = new ArrayList<>();
+            for (IRBlock rb : region) {
+                if (modelSuccessors(rb).contains(tail)) {
+                    preds.add(rb);
+                }
+            }
+            if (preds.isEmpty()) {
+                continue;
+            }
+            IRBlock lcd = preds.get(0);
+            for (int i = 1; i < preds.size(); i++) {
+                IRBlock p = preds.get(i);
+                while (lcd != null && !dom.dominates(lcd, p)) {
+                    lcd = dom.getImmediateDominator(lcd);
+                }
+            }
+            while (lcd != null && !region.contains(lcd)) {
+                lcd = dom.getImmediateDominator(lcd);
+            }
+            if (lcd == null) {
+                trace("rcs-decline tail-place no-lcd tail=" + tail.getBytecodeOffset());
+                return false;
+            }
+            Deque<IRBlock> work = new ArrayDeque<>();
+            Set<IRBlock> seen = new HashSet<>();
+            work.add(lcd);
+            seen.add(lcd);
+            while (!work.isEmpty()) {
+                IRBlock b = work.poll();
+                if (isTerminalBlock(b) && !tryNodes.containsKey(b)) {
+                    trace("rcs-decline tail-place terminal-inside tail=" + tail.getBytecodeOffset()
+                            + " b=" + b.getBytecodeOffset());
+                    return false;
+                }
+                boolean anySucc = false;
+                for (IRBlock succ : modelSuccessors(b)) {
+                    if (isBackEdge(b, succ)) {
+                        continue;
+                    }
+                    anySucc = true;
+                    if (succ == tail) {
+                        continue;
+                    }
+                    if (!region.contains(succ)) {
+                        trace("rcs-decline tail-place escapes tail=" + tail.getBytecodeOffset()
+                                + " via=" + b.getBytecodeOffset() + " to=" + succ.getBytecodeOffset());
+                        return false;
+                    }
+                    if (seen.add(succ)) {
+                        work.add(succ);
+                    }
+                }
+                if (!anySucc && !isTerminalBlock(b)) {
+                    TryNodeDescriptor node = tryNodes.get(b);
+                    if (node == null || node.after() != tail) {
+                        trace("rcs-decline tail-place dead-end tail=" + tail.getBytecodeOffset()
+                                + " b=" + b.getBytecodeOffset());
+                        return false;
+                    }
+                }
+            }
+            boundaryTailPlacement.put(tail, lcd);
+        }
+        return true;
     }
 
     /**
@@ -2212,6 +2312,7 @@ public final class ReachingConditionStructurer {
                     seq.addAll(jump);
                 }
             }
+            appendPlacedBoundaryTails(b, seq);
             return seq;
         }
         BranchInstruction branch = (BranchInstruction) term;
@@ -2268,7 +2369,24 @@ public final class ReachingConditionStructurer {
         for (int i = 0; i < sharedChildren.size(); i++) {
             out.addAll(emitSharedTail(sharedChildren.get(i), b, i == sharedChildren.size() - 1));
         }
+        appendPlacedBoundaryTails(b, out);
         return out;
+    }
+
+    /** Appends each admitted boundary tail placed at {@code b}: the whole subtree converges on it, so its
+     * freshly recovered statements follow as plain fall-through. */
+    private void appendPlacedBoundaryTails(IRBlock b, List<Statement> out) {
+        for (Map.Entry<IRBlock, IRBlock> e : boundaryTailPlacement.entrySet()) {
+            if (e.getValue() != b) {
+                continue;
+            }
+            List<Statement> tail = bridge.recoverBoundaryTail(e.getKey());
+            if (tail == null) {
+                throw new IllegalStateException("admitted boundary tail unrecoverable at "
+                        + e.getKey().getBytecodeOffset());
+            }
+            out.addAll(tail);
+        }
     }
 
     /**
@@ -2894,6 +3012,11 @@ public final class ReachingConditionStructurer {
             // End of case: control leaves the switch at its merge, or falls through to the next case. The break
             // (or fall-through) is realized structurally by the case's fallsThrough flag and the emitter, so the
             // edge carries only its phi assignments, if any.
+            return new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
+        }
+        if (boundaryTailPlacement.containsKey(target)) {
+            // Flow converges on an admitted boundary tail: the tail's statements follow the placement
+            // block's children, so this edge is plain fall-through and carries only its phi moves.
             return new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
         }
         if (isCaseContinueToLatch(from, target)) {
