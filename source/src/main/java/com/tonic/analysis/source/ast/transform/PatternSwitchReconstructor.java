@@ -313,6 +313,31 @@ public class PatternSwitchReconstructor implements ASTTransform {
             return false;
         }
 
+        // A pattern binding is arm-scoped in source, but the bytecode reuses its slot across arms, so
+        // the merge's phi for it lowers to a copy in the OTHER arms (`comp = temp;`). Those copies are
+        // dead once the switch expression folds (the binding's declaration goes with it), so collect
+        // every arm's bindings up front and treat a copy into one as scaffolding, not a result.
+        Set<String> patternBindings = new HashSet<>();
+        for (int k = 0; k <= caseTypeNames.size(); k++) {
+            SwitchCase probe = k == caseTypeNames.size() ? defaultCase : byLabel.get(k);
+            if (probe == null) {
+                continue;
+            }
+            ArmInfo probed = analyzeStructuredArm(probe.statements(), selector, Collections.emptySet());
+            if (probed == null) {
+                continue;
+            }
+            if (probed.deconstructTemp != null) {
+                patternBindings.add(probed.deconstructTemp);
+            }
+            if (probed.binding != null) {
+                patternBindings.add(probed.binding);
+            }
+            for (SwitchExpr.Component comp : probed.components) {
+                patternBindings.add(comp.getBinding());
+            }
+        }
+
         List<SwitchExpr.Arm> arms = new ArrayList<>();
         Set<String> bindings = new HashSet<>();
         String resultVar = null;
@@ -326,7 +351,7 @@ public class PatternSwitchReconstructor implements ASTTransform {
             if (isDefault && isMatchExceptionThrow(c.statements())) {
                 continue; // exhaustive (sealed) switch: the synthetic MatchException default has no source arm
             }
-            ArmInfo a = analyzeStructuredArm(c.statements(), selector);
+            ArmInfo a = analyzeStructuredArm(c.statements(), selector, patternBindings);
             if (a == null) {
                 return false;
             }
@@ -384,6 +409,19 @@ public class PatternSwitchReconstructor implements ASTTransform {
         for (int j = index - 1; j >= 0; j--) {
             if (stmts.get(j) instanceof VarDeclStmt && resultVar.equals(((VarDeclStmt) stmts.get(j)).getName())) {
                 VarDeclStmt decl = (VarDeclStmt) stmts.get(j);
+                // A SYNTHETIC carrier (the recovery's own value variable, not a source local) whose
+                // only use is the return right after the switch is the return form itself.
+                if (decl.isSynthetic() && index + 1 < stmts.size()
+                        && isReturnOfVar(stmts.get(index + 1), resultVar)
+                        && !referencedAfter(stmts, index + 2, resultVar)) {
+                    ReturnStmt returnStmt = new ReturnStmt(switchExpr);
+                    Locations.copy(stmts.get(index), returnStmt);
+                    stmts.set(index, returnStmt);
+                    stmts.remove(index + 1);
+                    stmts.remove(j);
+                    removeDeadDeclsByName(stmts, bindings);
+                    return true;
+                }
                 VarDeclStmt foldedDecl = new VarDeclStmt(decl.getType(), resultVar, switchExpr);
                 Locations.copy(decl, foldedDecl);
                 stmts.set(j, foldedDecl);
@@ -400,6 +438,28 @@ public class PatternSwitchReconstructor implements ASTTransform {
         return true;
     }
 
+    /** Whether any statement from {@code from} onward mentions the variable. */
+    private static boolean referencedAfter(List<Statement> stmts, int from, String name) {
+        for (int i = from; i < stmts.size(); i++) {
+            if (mentions(stmts.get(i), name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean mentions(ASTNode node, String name) {
+        if (node instanceof VarRefExpr && name.equals(((VarRefExpr) node).getName())) {
+            return true;
+        }
+        for (ASTNode child : node.getChildren()) {
+            if (mentions(child, name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isReturnOfVar(Statement s, String name) {
         return s instanceof ReturnStmt && ((ReturnStmt) s).getValue() instanceof VarRefExpr
                 && name.equals(((VarRefExpr) ((ReturnStmt) s).getValue()).getName());
@@ -409,7 +469,8 @@ public class PatternSwitchReconstructor implements ASTTransform {
      * An arm body {@code [binding = (T) selector;] resultVar = expr;} terminated by either a
      * {@code break} (assignment form) or {@code return resultVar} / {@code return expr} (return form).
      */
-    private ArmInfo analyzeStructuredArm(List<Statement> body, Expression selector) {
+    private ArmInfo analyzeStructuredArm(List<Statement> body, Expression selector,
+                                         Set<String> patternBindings) {
         ArmInfo info = new ArmInfo();
         for (Statement s : body) {
             if (s instanceof BreakStmt) {
@@ -455,6 +516,11 @@ public class PatternSwitchReconstructor implements ASTTransform {
             } else if (info.isDeconstruction && isAccessorCall(rhs, info.deconstructTemp)) {
                 // A component bound by assignment to a pre-declared local: `b = temp.comp();`
                 info.components.add(new SwitchExpr.Component(rhs.getType(), lhs));
+            } else if (patternBindings.contains(lhs) && rhs instanceof VarRefExpr) {
+                // A copy into ANOTHER arm's pattern binding: the merge phi for a slot the bytecode
+                // reuses across arms. The binding's declaration is removed with the fold, so the copy
+                // is dead - it is scaffolding, not this arm's result.
+                continue;
             } else {
                 info.resultVar = lhs;
                 info.result = rhs;

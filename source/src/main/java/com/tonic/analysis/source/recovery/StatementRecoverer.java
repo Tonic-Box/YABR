@@ -154,19 +154,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             return false;
         }
         RegionInfo info = analyzer.getRegionInfo(switchBlock);
-        if (info == null || info.getType() != ControlFlowContext.StructuredRegion.SWITCH) {
-            return false;
-        }
-        // A pattern switch dispatches on `typeSwitch(selector, index)`; the pattern/switch-expression
-        // reconstructors fold that (and its null-check and index scaffolding) into `switch (selector)`. The
-        // native path would recover the raw dispatch and strand the scaffolding, so leave it to the legacy walk.
-        Value key = ((SwitchInstruction) switchBlock.getTerminator()).getKey();
-        if (key instanceof SSAValue) {
-            IRInstruction def = ((SSAValue) key).getDefinition();
-            return !(def instanceof InvokeInstruction) || !((InvokeInstruction) def).isDynamic()
-                    || !"typeSwitch".equals(((InvokeInstruction) def).getName());
-        }
-        return true;
+        return info != null && info.getType() == ControlFlowContext.StructuredRegion.SWITCH;
     }
 
     @Override
@@ -217,13 +205,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         SwitchInstruction sw = (SwitchInstruction) switchBlock.getTerminator();
         Value key = sw.getKey();
-        if (key instanceof SSAValue) {
-            IRInstruction def = ((SSAValue) key).getDefinition();
-            if (def instanceof InvokeInstruction && ((InvokeInstruction) def).isDynamic()
-                    && "typeSwitch".equals(((InvokeInstruction) def).getName())) {
-                return null;
-            }
-        }
         StringSwitchInfo stringInfo = detectStringSwitch(switchBlock);
         if (stringInfo != null) {
             return decodeStringSwitchDescriptor(switchBlock, stringInfo);
@@ -10422,19 +10403,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
                         .skip(1).limit(4).map(StackTraceElement::getLineNumber)
                         .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        // Only the reconstructor-consumed switch shapes need the walk's exact case-body form: a string
-        // switch's scaffolding, a pattern typeSwitch, and a value-yielding switch whose merge phis converge
-        // the case values (the switch-expression fold matches those bodies statement-for-statement). A
-        // plain statement switch's case bodies structure natively like any other sub-region.
+        // A string switch reached here is one the native decoder declined (an unmatched scaffold shape);
+        // its case bodies keep the walk's form, which this recovery's own re-sugaring expects.
         boolean suppress = detectStringSwitch(header) != null;
-        if (!suppress && header.getTerminator() instanceof SwitchInstruction) {
-            Value key = ((SwitchInstruction) header.getTerminator()).getKey();
-            if (key instanceof SSAValue) {
-                IRInstruction keyDef = ((SSAValue) key).getDefinition();
-                suppress = keyDef instanceof InvokeInstruction && ((InvokeInstruction) keyDef).isDynamic()
-                        && "typeSwitch".equals(((InvokeInstruction) keyDef).getName());
-            }
-        }
         // A value-yielding switch (merge phis converging the case values) no longer needs the walk's
         // case-body form: the switch-expression fold reads a passive arm's value off the declared
         // initializer and dissolves a synthetic carrier, so engine-structured bodies fold identically.
