@@ -30,9 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ControlFlowSimplifier implements ASTTransform {
 
-    /** How many times the mutually-enabling guard-merge and materialization-collapse rules re-run. */
-    private static final int COLLAPSE_ROUNDS = 4;
-
     /** The method body of the in-progress top-level {@code transform} call; whole-method passes read it. */
     private BlockStmt methodRoot;
 
@@ -78,22 +75,16 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= inlineSingleUseBooleans(stmts);
 
-        // These rules feed each other: merging two guards into one compound condition is what creates the
-        // materialization shape the collapse recognizes, while a collapse can expose a further merge. Running
-        // them once in a fixed order leaves whichever shape was formed last unsimplified, so iterate to a
-        // fixed point - bounded, so a pair of rules that ever undid each other could not spin.
-        for (int round = 0; round < COLLAPSE_ROUNDS; round++) {
-            boolean roundChanged = collapseConditionalMaterialization(stmts);
-            roundChanged |= collapseReturnedBooleanPhi(stmts);
-            roundChanged |= mergeSequentialGuards(stmts);
-            roundChanged |= mergeComplementaryGuards(stmts);
-            roundChanged |= flattenNestedNegatedGuards(stmts);
-            roundChanged |= collapseGuardWithSharedEarlyExit(stmts);
-            changed |= roundChanged;
-            if (!roundChanged) {
-                break;
-            }
-        }
+        changed |= collapseConditionalMaterialization(stmts);
+        changed |= collapseReturnedBooleanPhi(stmts);
+
+        changed |= mergeSequentialGuards(stmts);
+
+        changed |= mergeComplementaryGuards(stmts);
+
+        changed |= flattenNestedNegatedGuards(stmts);
+
+        changed |= collapseGuardWithSharedEarlyExit(stmts);
 
         for (int i = 0; i < stmts.size(); i++) {
             Statement stmt = stmts.get(i);
