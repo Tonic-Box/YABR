@@ -1606,11 +1606,18 @@ public final class ReachingConditionStructurer {
      */
     private List<Statement> emitSwitch(IRBlock b) {
         SwitchDescriptor desc = switchDescriptor(b);
-        IRBlock merge = switchMerge(b, desc);
         List<Statement> own = bridge.recoverSwitchHeaderStatements(b);
         if (!duplicating) {
             bridge.markRegionBlockProcessed(b, own);
         }
+        List<Statement> out = new ArrayList<>(own);
+        out.addAll(emitSwitchStatement(b, desc));
+        return out;
+    }
+
+    /** The {@code switch} statement for {@code b} and the children trailing it, without the block's own statements. */
+    private List<Statement> emitSwitchStatement(IRBlock b, SwitchDescriptor desc) {
+        IRBlock merge = switchMerge(b, desc);
         IRBlock latch = context.innermostLoopLatch();
         Set<IRBlock> enclosing = context.switchBoundaries();
         context.pushSwitch(b, merge, desc.caseHeaders());
@@ -1643,7 +1650,7 @@ public final class ReachingConditionStructurer {
             cases.add(buildSwitchCase(spec, body, caseFallsThrough(spec, desc)));
         }
         context.popSwitch();
-        List<Statement> out = new ArrayList<>(own);
+        List<Statement> out = new ArrayList<>();
         SwitchStmt switchStmt = new SwitchStmt(desc.selector(), cases);
         stamp(switchStmt, b);
         out.add(switchStmt);
@@ -1842,6 +1849,12 @@ public final class ReachingConditionStructurer {
                     body.addAll(emit(c));
                 }
             }
+        } else if (header.getTerminator() instanceof SwitchInstruction
+                && switchDescriptors.containsKey(header)) {
+            // The header IS the switch (a restart-dispatch loop): structureChildren would treat the
+            // switch as a plain single-successor block and never build the statement, so emit the
+            // switch itself as the loop body.
+            body.addAll(emitSwitchStatement(header, switchDescriptors.get(header)));
         } else {
             body.addAll(structureChildren(header));
         }

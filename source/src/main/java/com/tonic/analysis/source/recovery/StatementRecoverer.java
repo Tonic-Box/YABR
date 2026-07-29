@@ -241,25 +241,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
 
 
-        // A value-yielding switch whose merge holds the value only ON THE STACK (a bare `return <phi>`,
-        // javac's lowering of `return switch (...)`) is declined: the legacy recovery inlines the return
-        // into each case and the reconstructor folds that to `return switch { case L -> e; }`; structuring
-        // it natively would materialize a temp the original never had. A merge that STORES the value to a
-        // local (an explicit `T v = switch ...` in the source) keeps its temp either way and structures
-        // natively - the reconstructor folds the assignment form on both paths.
-        if (mergeBlock != null && switchYieldsValue(mergeBlock, caseHeaders, defaultTarget)) {
-            boolean slotBound = false;
-            for (IRInstruction ins : mergeBlock.getInstructions()) {
-                if (ins instanceof StoreLocalInstruction || ins instanceof LoadLocalInstruction) {
-                    slotBound = true;
-                    break;
-                }
-            }
-            if (!slotBound) {
-                return null;
-            }
-        }
-
         List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
         for (Map.Entry<IRBlock, List<Integer>> entry : targetToCases.entrySet()) {
             IRBlock target = entry.getKey();
@@ -394,35 +375,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return lead;
     }
 
-    /**
-     * Whether the switch is a return switch expression: its merge block directly returns a phi fed by two or more
-     * of the switch's own case targets, i.e. every case computes the returned value (a {@code return switch (sel) {
-     * case L -> e; ... }} javac lowered to a result temp). Native structuring would leave a spurious result temp
-     * that the return fold cannot remove, so these decline to the switch-expression reconstruction path. A statement
-     * switch that merely assigns a variable used later has a merge phi too, but its merge does not return it, so it
-     * stays native; a loop-induction phi is fed by the loop header, not the case targets.
-     */
-    private boolean switchYieldsValue(IRBlock mergeBlock, Set<IRBlock> caseHeaders, IRBlock defaultTarget) {
-        IRInstruction term = mergeBlock.getTerminator();
-        if (!(term instanceof com.tonic.analysis.ssa.ir.ReturnInstruction)) {
-            return false;
-        }
-        Value ret = ((com.tonic.analysis.ssa.ir.ReturnInstruction) term).getReturnValue();
-        if (!(ret instanceof SSAValue)) {
-            return false;
-        }
-        IRInstruction def = ((SSAValue) ret).getDefinition();
-        if (!(def instanceof PhiInstruction) || !mergeBlock.getPhiInstructions().contains(def)) {
-            return false;
-        }
-        int fromCases = 0;
-        for (IRBlock in : ((PhiInstruction) def).getIncomingBlocks()) {
-            if (caseHeaders.contains(in) || in == defaultTarget) {
-                fromCases++;
-            }
-        }
-        return fromCases >= 2;
-    }
 
     /**
      * Pre-declares parameter names so that stores to parameter slots
@@ -737,7 +689,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 structured = rcsStructurer.tryStructureRegion(entry, new HashSet<>(), true);
             }
             if (structured == null) {
-                structured = legacyBlockWalk(entry, handlerBlocks);
+                structured = legacyBlockWalk(entry);
             }
             result.addAll(structured);
         }
@@ -6858,7 +6810,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (rcsSubRegionSuppression == 0) {
             return recoverRegionHandoff(startBlock, stopBlocks);
         }
-        return legacyBlockWalk(startBlock, stopBlocks);
+        return legacyBlockWalk(startBlock);
     }
 
     /**
@@ -6898,7 +6850,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (structured != null) {
             return structured;
         }
-        return legacyBlockWalk(startBlock, stopBlocks);
+        return legacyBlockWalk(startBlock);
     }
 
     /** Whether {@code b} is a bare goto pad whose single successor dominates it - a loop latch pad. */
@@ -7071,7 +7023,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         Set<IRBlock> tryVisited = new HashSet<>(prefix);
         Statement recovered = recoverTryCatch(tryStart, handler, stopBlocks, tryVisited);
         if (recovered == null) {
-            out.addAll(legacyBlockWalk(tryStart, stopBlocks));
+            out.addAll(legacyBlockWalk(tryStart));
             return out;
         }
         out.add(recovered);
@@ -7449,7 +7401,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
     @Override
     public List<Statement> legacyWalk(IRBlock start, Set<IRBlock> stopBlocks) {
-        return legacyBlockWalk(start, stopBlocks);
+        return legacyBlockWalk(start);
     }
 
 
@@ -8481,206 +8433,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
     }
 
-    /** The schema-based structural walk: the legacy recovery the RC engine falls back to for a declined region. */
-    private List<Statement> legacyBlockWalk(IRBlock startBlock, Set<IRBlock> stopBlocks) {
-        trace("legacy-walk method=" + context.getIrMethod().getName()
-                + " entry=" + startBlock.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(3).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        List<Statement> result = new ArrayList<>();
-        Set<IRBlock> visited = new HashSet<>();
-        IRBlock current = startBlock;
-
-        while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
-            ExceptionHandler tryHandler = findUnprocessedHandlerStartingAt(current);
-            if (tryHandler != null) {
-                processedTryHandlers.add(tryHandler);
-                if (tryHandler.getHandlerBlock() != null) {
-                    processedHandlerBlocks.add(tryHandler.getHandlerBlock());
-                }
-                Set<IRBlock> tryVisited = new HashSet<>(visited);
-                Statement recovered = recoverTryCatch(current, tryHandler, stopBlocks, tryVisited);
-                if (recovered != null) {
-                    result.add(recovered);
-                    visited.addAll(tryVisited);
-                    if (isTerminatingRecoveredTry(recovered)) {
-                        current = null;
-                    } else {
-                        current = findBlockAfterTryCatch(tryHandler, visited);
-                    }
-                    continue;
-                }
-            }
-
-            visited.add(current);
-
-            if (context.isProcessed(current)) {
-                result.addAll(context.getStatements(current));
-                IRBlock revisitNext = getNextSequentialBlock(current);
-                if (revisitNext == null && stopBlocks.isEmpty()) {
-                    // A re-visited region header (if/switch/loop) has two-plus successors, so
-                    // getNextSequentialBlock stops the chain — but the fall-through past it continues
-                    // along the region merges to a trailing return. An already-emitted return is
-                    // re-emitted here (a terminator is idempotent) without re-adding the intermediate
-                    // blocks, which would duplicate them; a return no recovery has reached yet - e.g.
-                    // the method's own return after a try whose gap recovery pre-processed the blocks
-                    // between them - continues the walk there so it is not silently dropped.
-                    IRBlock chain = current;
-                    Set<IRBlock> chainSeen = new HashSet<>();
-                    while (chain != null && chainSeen.add(chain)) {
-                        if (chain != current && isReturnBlock(chain)) {
-                            if (context.isProcessed(chain)) {
-                                result.addAll(context.getStatements(chain));
-                            } else {
-                                revisitNext = chain;
-                            }
-                            break;
-                        }
-                        RegionInfo chainInfo = analyzer.getRegionInfo(chain);
-                        chain = chainInfo != null && chainInfo.getMergeBlock() != null
-                                ? chainInfo.getMergeBlock()
-                                : getNextSequentialBlock(chain);
-                    }
-                }
-                current = revisitNext;
-                continue;
-            }
-
-            RegionInfo info = analyzer.getRegionInfo(current);
-            if (info == null) {
-                List<Statement> blockStmts = recoverSimpleBlock(current);
-                result.addAll(blockStmts);
-                context.setStatements(current, blockStmts);
-                context.markProcessed(current);
-                current = getNextSequentialBlock(current);
-                continue;
-            }
-
-            // A structural region met by the walk is offered to the reaching-condition engine FIRST, at
-            // exactly the schema recovery's own scope - bounded at the structure's merge or loop exit, or
-            // unbounded for a loop with no exit block (every leaving path returns or throws). The offered
-            // region never spans a handler boundary the engine cannot node-model, and the walk's
-            // continuation is identical to the schema dispatch's. The schema recoverers below remain only
-            // as the decline fallback.
-            IRBlock walkBound = null;
-            boolean walkTerminalRegion = false;
-            switch (info.getType()) {
-                case IF_THEN:
-                case IF_THEN_ELSE:
-                    walkBound = info.getMergeBlock();
-                    walkTerminalRegion = walkBound == null;
-                    break;
-                case WHILE_LOOP:
-                case DO_WHILE_LOOP:
-                case FOR_LOOP:
-                    walkBound = info.getLoopExit();
-                    walkTerminalRegion = walkBound == null;
-                    break;
-                default:
-                    break;
-            }
-            if (walkTerminalRegion) {
-                OfferResult offered = offerTerminalRegion(current, new HashSet<>(stopBlocks));
-                if (offered != null) {
-                    result.addAll(offered.statements);
-                    current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
-                            && (!context.isProcessed(offered.continuation)
-                                || isTerminalTail(offered.continuation)) ? offered.continuation : null;
-                    continue;
-                }
-            } else if (walkBound != null && !visited.contains(walkBound)) {
-                Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
-                offeredStops.add(walkBound);
-                List<Statement> structuredRegion = offerRegionToEngine(current, offeredStops, walkBound);
-                if (structuredRegion != null) {
-                    result.addAll(structuredRegion);
-                    current = stopBlocks.contains(walkBound)
-                    || (context.isProcessed(walkBound) && !isTerminalTail(walkBound))
-                            ? null : walkBound;
-                    continue;
-                }
-            }
-
-            switch (info.getType()) {
-                case IF_THEN:
-                    throw retiredSchemaRecovery("if-then", current);
-                case IF_THEN_ELSE:
-                    throw retiredSchemaRecovery("if-else", current);
-                case WHILE_LOOP:
-                    throw retiredSchemaRecovery("while", current);
-                case DO_WHILE_LOOP:
-                    throw retiredSchemaRecovery("do-while", current);
-                case FOR_LOOP:
-                    throw retiredSchemaRecovery("for", current);
-                case SWITCH: {
-                    StringSwitchInfo stringSwitch = detectStringSwitch(current);
-                    if (stringSwitch != null) {
-                        IRBlock exit = stringSwitchExit(stringSwitch);
-                        context.markProcessed(current);
-                        Statement sw = recoverStringSwitch(current, stringSwitch, exit);
-                        if (sw instanceof BlockStmt) {
-                            result.addAll(((BlockStmt) sw).getStatements());
-                        } else {
-                            result.add(sw);
-                        }
-                        visited.addAll(stringSwitch.scaffolding);
-                        current = (exit != null && !visited.contains(exit) && !stopBlocks.contains(exit))
-                                ? exit : null;
-                    } else {
-                        result.add(recoverSwitch(current, info));
-                        current = findSwitchMerge(info);
-                    }
-                    break;
-                }
-                case GUARD_CLAUSE:
-                    throw retiredSchemaRecovery("guard", current);
-                case IRREDUCIBLE: {
-                    result.add(recoverIrreducible(current));
-                    current = null;
-                    break;
-                }
-                default: {
-                    List<Statement> blockStmts = recoverSimpleBlock(current);
-                    result.addAll(blockStmts);
-                    context.setStatements(current, blockStmts);
-                    context.markProcessed(current);
-                    current = getNextSequentialBlock(current);
-                    break;
-                }
-            }
-        }
-
-        // A path that exits this sequence into a loop's exit (break) or continue-target (continue) is an
-        // explicit jump. The innermost loop yields an unlabeled break/continue; an enclosing loop yields a
-        // labeled one. A redundant trailing `continue` to the innermost loop is stripped by the loop recovery.
-        if (current != null) {
-            ControlFlowContext.LoopJump jump = context.classifyLoopJump(current);
-            if (jump != null) {
-                String label = jump.loopHeader != null ? context.getOrCreateLabel(jump.loopHeader) : null;
-                if (jump.kind == ControlFlowContext.JumpKind.BREAK) {
-                    result.add(label != null ? new BreakStmt(label) : new BreakStmt());
-                } else {
-                    result.add(label != null ? new ContinueStmt(label) : new ContinueStmt());
-                }
-                return result;
-            }
-        }
-
-        if (current != null && stopBlocks.contains(current) && !visited.contains(current)) {
-            // Only absorb a trailing terminator (e.g. a return) that is not the shared continuation of a
-            // try/catch. A return block that a try body falls into AND a catch jumps to is the continuation
-            // after the try/catch, not the try's own terminator; absorbing it emits a spurious `return;` inside
-            // the try. (A switch/if merge-return reached only from normal case blocks is still absorbed.)
-            if (isSimpleTerminatorBlock(current)
-                    && (visited.containsAll(current.getPredecessors()) || !isReachedFromCatchHandler(current))) {
-                List<Statement> termStmts = recoverSimpleBlock(current);
-                result.addAll(termStmts);
-                visited.add(current);
-            }
-        }
-
-        return result;
+    /**
+     * The retired schema-based structural walk's dispatch point: every region now structures through
+     * the reaching-condition engine, so a route still falling through to here signals a routing gap.
+     * For a handler-free method {@link MethodRecoverer} converts the signal into the faithful
+     * dispatch-loop re-recovery, the totality fallback.
+     */
+    private List<Statement> legacyBlockWalk(IRBlock startBlock) {
+        throw retiredSchemaRecovery("legacy-walk", startBlock);
     }
 
 
@@ -9902,11 +9662,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return tcs.getTryBlock();
     }
 
-    private Statement recoverIrreducible(IRBlock header) {
-        Set<IRBlock> blocks = new HashSet<>();
-        collectReachableBlocks(header, blocks, new HashSet<>());
-        return new IRRegionStmt(new ArrayList<>(blocks));
-    }
 
     /**
      * A retired schema recoverer's dispatch arm: every region of the kind now structures through

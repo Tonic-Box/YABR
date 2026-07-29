@@ -1,7 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.transform.PatternSwitchReconstructor;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
@@ -193,34 +192,6 @@ public class MethodRecoverer {
         }
     }
 
-    /**
-     * True when a {@code SwitchBootstraps.typeSwitch} switch block is also a loop header — the
-     * restart loop {@code javac} emits for a guarded pattern ({@code case T t when cond}), where the
-     * guard-fail edge re-dispatches with an incremented restart index. The generic structurer does
-     * not recognize a switch-terminated loop header, dropping the back-edge; the faithful {@code $pc$}
-     * dispatch form preserves it, and {@link PatternSwitchReconstructor} folds it back into a guard.
-     */
-    private boolean hasTypeSwitchRestartLoop() {
-        if (loopAnalysis == null) {
-            return false;
-        }
-        for (IRBlock block : irMethod.getBlocks()) {
-            IRInstruction term = block.getTerminator();
-            if (!(term instanceof SwitchInstruction)) {
-                continue;
-            }
-            Value key = ((SwitchInstruction) term).getKey();
-            if (key instanceof SSAValue) {
-                IRInstruction def = ((SSAValue) key).getDefinition();
-                if (def instanceof InvokeInstruction && ((InvokeInstruction) def).isDynamic()
-                        && "typeSwitch".equals(((InvokeInstruction) def).getName())
-                        && loopAnalysis.isLoopHeader(block)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     /** True when {@code block} allocates a {@code java.lang.MatchException} (a synthetic rethrow handler). */
     private boolean rethrowsAsMatchException(IRBlock block) {
@@ -551,8 +522,7 @@ public class MethodRecoverer {
         // method as a faithful dispatch loop on a FRESH context (the first pass mutated
         // materialization/declaration state). Skipped for methods with exception handlers, where a
         // flat dispatch loop cannot model the try/catch regions.
-        if (dispatchAvailable
-                && (statementRecoverer.hasDroppedOperations(body) || hasTypeSwitchRestartLoop())) {
+        if (dispatchAvailable && statementRecoverer.hasDroppedOperations(body)) {
             initializeRecovery();
             body = statementRecoverer.recoverMethodAsDispatch();
         }

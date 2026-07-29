@@ -15,6 +15,9 @@ import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.BreakStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.expr.UnaryExpr;
+import com.tonic.analysis.source.ast.expr.UnaryOperator;
+import com.tonic.analysis.source.ast.stmt.ContinueStmt;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
@@ -67,6 +70,11 @@ public class PatternSwitchReconstructor implements ASTTransform {
         boolean changed = false;
         for (int i = 0; i < stmts.size(); i++) {
             WhileStmt loop = asDispatchLoop(stmts.get(i));
+            if (loop != null && tryFoldRestartLoop(stmts, i, loop)) {
+                changed = true;
+                i = -1; // list mutated; restart scan
+                continue;
+            }
             if (loop != null) {
                 Folded f = tryFold(loop);
                 if (f != null) {
@@ -288,6 +296,212 @@ public class PatternSwitchReconstructor implements ASTTransform {
         String cn = ((NewExpr) ex).getClassName();
         return cn != null && (cn.endsWith("/MatchException") || cn.equals("MatchException")
                 || cn.endsWith("$MatchException"));
+    }
+
+    /**
+     * Folds javac's restart-dispatch lowering of a GUARDED pattern switch, as the structuring engine
+     * recovers it:
+     * <pre>
+     *   while (true) {
+     *       switch (typeSwitch(sel, idx)) {
+     *           case k: T b = (T) sel;
+     *                   if (!guard) { idx = k + 1; continue; }   // guard failed: try the next case
+     *                   r = e; break;
+     *           default: r = e; break;
+     *       }
+     *       return r;
+     *   }
+     *     =&gt;  return switch (sel) { case T b when guard -&gt; e; ... default -&gt; e; };
+     * </pre>
+     * The restart arm is what a failing guard compiles to, so its negated condition IS the source
+     * guard. Returns false for any shape that does not match exactly.
+     */
+    private boolean tryFoldRestartLoop(List<Statement> stmts, int index, WhileStmt loop) {
+        if (!isTrueLiteral(loop.getCondition()) || !(loop.getBody() instanceof BlockStmt)) {
+            return false;
+        }
+        List<Statement> body = ((BlockStmt) loop.getBody()).getStatements();
+        if (body.size() != 2 || !isTypeSwitchStmt(body.get(0))) {
+            return false;
+        }
+        SwitchStmt sw = (SwitchStmt) body.get(0);
+        InvokeDynamicExpr typeSwitch = (InvokeDynamicExpr) sw.getSelector();
+        if (typeSwitch.getArguments().size() < 2) {
+            return false;
+        }
+        Expression selector = typeSwitch.getArguments().get(0);
+        if (!(typeSwitch.getArguments().get(1) instanceof VarRefExpr)) {
+            return false;
+        }
+        String restartVar = ((VarRefExpr) typeSwitch.getArguments().get(1)).getName();
+        List<String> caseTypeNames = typeSwitch.getBootstrapClassArgs();
+
+        Statement tail = body.get(1);
+        if (!(tail instanceof ReturnStmt) || !(((ReturnStmt) tail).getValue() instanceof VarRefExpr)) {
+            return false;
+        }
+        String resultVar = ((VarRefExpr) ((ReturnStmt) tail).getValue()).getName();
+
+        Map<Integer, SwitchCase> byLabel = new HashMap<>();
+        SwitchCase defaultCase = null;
+        for (SwitchCase c : sw.getCases()) {
+            if (c.isDefault()) {
+                defaultCase = c;
+            } else {
+                for (Integer l : c.labels()) {
+                    byLabel.put(l, c);
+                }
+            }
+        }
+        if (defaultCase == null) {
+            return false;
+        }
+
+        List<SwitchExpr.Arm> arms = new ArrayList<>();
+        Set<String> bindings = new HashSet<>();
+        SourceType resultType = null;
+        for (int k = 0; k <= caseTypeNames.size(); k++) {
+            boolean isDefault = k == caseTypeNames.size();
+            SwitchCase c = isDefault ? defaultCase : byLabel.get(k);
+            if (c == null) {
+                return false;
+            }
+            if (isDefault && isMatchExceptionThrow(c.statements())) {
+                continue;
+            }
+            RestartArm arm = analyzeRestartArm(c.statements(), selector, restartVar, resultVar);
+            if (arm == null) {
+                return false;
+            }
+            if (resultType == null && arm.result != null) {
+                resultType = arm.result.getType();
+            }
+            if (isDefault) {
+                arms.add(new SwitchExpr.Arm(new ArrayList<>(), true, arm.result));
+                continue;
+            }
+            SourceType type = arm.bindingType != null ? arm.bindingType
+                    : new ReferenceSourceType(caseTypeNames.get(k), Collections.emptyList());
+            if (arm.binding != null) {
+                bindings.add(arm.binding);
+            }
+            arms.add(new SwitchExpr.Arm(new ArrayList<>(), false, type,
+                    arm.binding != null ? arm.binding : synthBinding(type), null, arm.guard, arm.result));
+        }
+
+        SwitchExpr switchExpr = new SwitchExpr(selector, arms, resultType);
+        ReturnStmt returnStmt = new ReturnStmt(switchExpr);
+        Locations.copy(stmts.get(index), returnStmt);
+        stmts.set(index, returnStmt);
+        bindings.add(resultVar);
+        bindings.add(restartVar);
+        removeDeadDeclsByName(stmts, bindings);
+        return true;
+    }
+
+    /**
+     * One arm of a restart-dispatch switch: {@code [T b = (T) sel;] [if (!guard) { idx = N; continue; }]
+     * r = e; break;}. The optional restart {@code if} carries the arm's guard, negated.
+     */
+    private RestartArm analyzeRestartArm(List<Statement> body, Expression selector,
+                                         String restartVar, String resultVar) {
+        RestartArm arm = new RestartArm();
+        for (Statement s : body) {
+            if (s instanceof BreakStmt) {
+                continue;
+            }
+            if (s instanceof VarDeclStmt) {
+                VarDeclStmt decl = (VarDeclStmt) s;
+                if (decl.hasInitializer() && decl.getInitializer() instanceof CastExpr
+                        && sameExpr(((CastExpr) decl.getInitializer()).getExpression(), selector)) {
+                    arm.binding = decl.getName();
+                    arm.bindingType = decl.getType();
+                    continue;
+                }
+                return null;
+            }
+            if (s instanceof IfStmt) {
+                IfStmt iff = (IfStmt) s;
+                if (arm.guard != null || iff.getElseBranch() != null || !isRestartBody(iff.getThenBranch(), restartVar)) {
+                    return null;
+                }
+                // The compiled test jumps to the next case when the guard FAILS, so the source guard
+                // is its negation.
+                arm.guard = negate(iff.getCondition());
+                continue;
+            }
+            if (!(s instanceof ExprStmt) || !(((ExprStmt) s).getExpression() instanceof BinaryExpr)) {
+                return null;
+            }
+            BinaryExpr assign = (BinaryExpr) ((ExprStmt) s).getExpression();
+            if (assign.getOperator() != BinaryOperator.ASSIGN || !(assign.getLeft() instanceof VarRefExpr)) {
+                return null;
+            }
+            String lhs = ((VarRefExpr) assign.getLeft()).getName();
+            if (assign.getRight() instanceof CastExpr
+                    && sameExpr(((CastExpr) assign.getRight()).getExpression(), selector)) {
+                arm.binding = lhs;
+                arm.bindingType = assign.getRight().getType();
+                continue;
+            }
+            if (!resultVar.equals(lhs)) {
+                return null;
+            }
+            arm.result = assign.getRight();
+        }
+        return arm.result == null ? null : arm;
+    }
+
+    /** Whether a branch body is exactly the restart pair {@code idx = N; continue;}. */
+    private boolean isRestartBody(Statement branch, String restartVar) {
+        List<Statement> stmts = branch instanceof BlockStmt
+                ? ((BlockStmt) branch).getStatements() : Collections.singletonList(branch);
+        if (stmts.size() != 2 || !(stmts.get(1) instanceof ContinueStmt)
+                || ((ContinueStmt) stmts.get(1)).hasLabel()) {
+            return false;
+        }
+        if (!(stmts.get(0) instanceof ExprStmt)
+                || !(((ExprStmt) stmts.get(0)).getExpression() instanceof BinaryExpr)) {
+            return false;
+        }
+        BinaryExpr assign = (BinaryExpr) ((ExprStmt) stmts.get(0)).getExpression();
+        return assign.getOperator() == BinaryOperator.ASSIGN
+                && assign.getLeft() instanceof VarRefExpr
+                && restartVar.equals(((VarRefExpr) assign.getLeft()).getName());
+    }
+
+    /** The source-level negation of a compiled guard-failure test. */
+    private Expression negate(Expression cond) {
+        if (cond instanceof UnaryExpr && ((UnaryExpr) cond).getOperator() == UnaryOperator.NOT) {
+            return ((UnaryExpr) cond).getOperand();
+        }
+        if (cond instanceof BinaryExpr) {
+            BinaryExpr b = (BinaryExpr) cond;
+            BinaryOperator flipped = negateComparison(b.getOperator());
+            if (flipped != null) {
+                return new BinaryExpr(flipped, b.getLeft(), b.getRight(), b.getType());
+            }
+        }
+        return new UnaryExpr(UnaryOperator.NOT, cond, cond.getType());
+    }
+
+    private BinaryOperator negateComparison(BinaryOperator op) {
+        switch (op) {
+            case EQ: return BinaryOperator.NE;
+            case NE: return BinaryOperator.EQ;
+            case LT: return BinaryOperator.GE;
+            case LE: return BinaryOperator.GT;
+            case GT: return BinaryOperator.LE;
+            case GE: return BinaryOperator.LT;
+            default: return null;
+        }
+    }
+
+    private static final class RestartArm {
+        String binding;
+        SourceType bindingType;
+        Expression guard;
+        Expression result;
     }
 
     private boolean tryFoldStructured(List<Statement> stmts, int index, SwitchStmt sw) {
@@ -516,12 +730,10 @@ public class PatternSwitchReconstructor implements ASTTransform {
             } else if (info.isDeconstruction && isAccessorCall(rhs, info.deconstructTemp)) {
                 // A component bound by assignment to a pre-declared local: `b = temp.comp();`
                 info.components.add(new SwitchExpr.Component(rhs.getType(), lhs));
-            } else if (patternBindings.contains(lhs) && rhs instanceof VarRefExpr) {
-                // A copy into ANOTHER arm's pattern binding: the merge phi for a slot the bytecode
-                // reuses across arms. The binding's declaration is removed with the fold, so the copy
-                // is dead - it is scaffolding, not this arm's result.
-                continue;
-            } else {
+            } else if (!(patternBindings.contains(lhs) && rhs instanceof VarRefExpr)) {
+                // Anything but a copy into ANOTHER arm's pattern binding, which is the merge phi for
+                // a slot the bytecode reuses across arms: the binding's declaration is removed with
+                // the fold, so that copy is dead scaffolding rather than this arm's result.
                 info.resultVar = lhs;
                 info.result = rhs;
             }
