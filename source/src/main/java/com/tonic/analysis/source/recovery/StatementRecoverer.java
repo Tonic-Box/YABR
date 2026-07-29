@@ -7679,6 +7679,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         after = succ;
                         continue;
                     }
+                    // A rival that is one of the offering REGION'S OWN STOPS is the region's boundary,
+                    // not a second join of the construct: the delegate's walks stop there (the engine
+                    // pushes the boundary onto the context stack), and the region model reaches the
+                    // boundary through the kept join's continuation. Keep the in-region join.
+                    if (decodeRegionStops.contains(succ) && !decodeRegionStops.contains(after)) {
+                        continue;
+                    }
+                    if (decodeRegionStops.contains(after) && !decodeRegionStops.contains(succ)) {
+                        after = succ;
+                        continue;
+                    }
                     // A try INSIDE a loop may exit both to its in-loop continuation and - via a break in
                     // the try body - out of the loop. The in-loop continuation is the node's join; the
                     // loop model owns the break edge (it stays visible on the consumed blocks' CFG edges,
