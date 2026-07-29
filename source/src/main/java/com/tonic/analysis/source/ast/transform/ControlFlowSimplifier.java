@@ -30,6 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ControlFlowSimplifier implements ASTTransform {
 
+    /** How many times the mutually-enabling guard-merge and materialization-collapse rules re-run. */
+    private static final int COLLAPSE_ROUNDS = 4;
+
     /** The method body of the in-progress top-level {@code transform} call; whole-method passes read it. */
     private BlockStmt methodRoot;
 
@@ -75,16 +78,22 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= inlineSingleUseBooleans(stmts);
 
-        changed |= collapseConditionalMaterialization(stmts);
-        changed |= collapseReturnedBooleanPhi(stmts);
-
-        changed |= mergeSequentialGuards(stmts);
-
-        changed |= mergeComplementaryGuards(stmts);
-
-        changed |= flattenNestedNegatedGuards(stmts);
-
-        changed |= collapseGuardWithSharedEarlyExit(stmts);
+        // These rules feed each other: merging two guards into one compound condition is what creates the
+        // materialization shape the collapse recognizes, while a collapse can expose a further merge. Running
+        // them once in a fixed order leaves whichever shape was formed last unsimplified, so iterate to a
+        // fixed point - bounded, so a pair of rules that ever undid each other could not spin.
+        for (int round = 0; round < COLLAPSE_ROUNDS; round++) {
+            boolean roundChanged = collapseConditionalMaterialization(stmts);
+            roundChanged |= collapseReturnedBooleanPhi(stmts);
+            roundChanged |= mergeSequentialGuards(stmts);
+            roundChanged |= mergeComplementaryGuards(stmts);
+            roundChanged |= flattenNestedNegatedGuards(stmts);
+            roundChanged |= collapseGuardWithSharedEarlyExit(stmts);
+            changed |= roundChanged;
+            if (!roundChanged) {
+                break;
+            }
+        }
 
         for (int i = 0; i < stmts.size(); i++) {
             Statement stmt = stmts.get(i);
@@ -877,7 +886,16 @@ public class ControlFlowSimplifier implements ASTTransform {
             return ((UnaryExpr) e).getOperator() == UnaryOperator.NOT;
         }
         if (e instanceof BinaryExpr) {
-            return ((BinaryExpr) e).getOperator() == BinaryOperator.NE;
+            BinaryExpr binary = (BinaryExpr) e;
+            BinaryOperator op = binary.getOperator();
+            if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+                // De Morgan: a conjunction of negations IS a negation (`a != null && !b()` reads as
+                // `!(a == null || b())`), so it inverts to a positive guard just like a leaf does. Every
+                // operand must be one, or inverting would leave a negation behind and not converge.
+                return isPurelyLogicalNegation(binary.getLeft())
+                        && isPurelyLogicalNegation(binary.getRight());
+            }
+            return op == BinaryOperator.NE;
         }
         return false;
     }
@@ -1003,7 +1021,15 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         if (expr instanceof BinaryExpr) {
             BinaryExpr binary = (BinaryExpr) expr;
-            BinaryOperator flipped = flipComparison(binary.getOperator());
+            BinaryOperator op = binary.getOperator();
+            if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+                // Push the negation inward rather than wrapping the whole condition: `!(a && b)` reads as
+                // `!a || !b`, which is the form the source had and the one a further inversion cancels
+                // cleanly. Wrapping instead leaves a `!(...)` that no later rule unwraps.
+                return new BinaryExpr(op == BinaryOperator.AND ? BinaryOperator.OR : BinaryOperator.AND,
+                        negate(binary.getLeft()), negate(binary.getRight()), binary.getType());
+            }
+            BinaryOperator flipped = flipComparison(op);
             if (flipped != null) {
                 return new BinaryExpr(flipped, binary.getLeft(), binary.getRight(), binary.getType());
             }
@@ -1849,7 +1875,11 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
             Expression v1 = simpleAssignValue(inner);
             Expression cond = ifStmt.getCondition();
-            if (v1 == null || isSideEffecting(v1) || isSideEffecting(cond)
+            // The condition may have side effects: folding `t = false; if (C) { t = true; }` into
+            // `t = C` evaluates C exactly once, at the same point in the sequence, because the
+            // declaration and the guard are adjacent. It is the VALUES that must stay effect-free -
+            // one of them is dropped by the fold - and the condition must not read the variable.
+            if (v1 == null || isSideEffecting(v1)
                     || countVariableUses(cond, var) > 0 || countVariableUses(v1, var) > 0) {
                 continue;
             }

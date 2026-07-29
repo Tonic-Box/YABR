@@ -74,6 +74,11 @@ public class SingleUseInliner implements ASTTransform {
                 }
 
                 UsageInfo usage = analyzeUsage(stmts, i, varName);
+                if (System.getProperty("yabr.trace.inline") != null) {
+                    System.err.println("[INLINE] var=" + varName + " count=" + usage.count
+                            + " canInline=" + usage.canInline + " useIdx=" + usage.usageStmtIndex
+                            + " declIdx=" + i + " escaped=" + escapeRefs.contains(varName));
+                }
 
                 if (usage.count == 1 && usage.canInline && usage.usageStmtIndex > i
                         && !escapeRefs.contains(varName)) {
