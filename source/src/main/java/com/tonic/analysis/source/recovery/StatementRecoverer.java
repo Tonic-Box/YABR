@@ -1013,6 +1013,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         combinedStops.addAll(innerTryStarts);
 
         while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
+            if (System.getProperty("yabr.trace.walk") != null) {
+                System.err.println("[WALK] at=" + current.getBytecodeOffset()
+                        + " processed=" + context.isProcessed(current)
+                        + " info=" + (analyzer.getRegionInfo(current) == null ? "null"
+                            : analyzer.getRegionInfo(current).getType()));
+            }
             if (!innerTryStarts.contains(current)) {
                 visited.add(current);
             }
@@ -7991,11 +7997,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private OfferResult offerTerminalRegion(IRBlock entry, Set<IRBlock> offeredStops) {
         releaseInternalStops(entry, offeredStops, null);
         Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
-        if (exits == null || !exits.isEmpty()) {
+        if (exits == null || exits.size() > 1
+                || (!exits.isEmpty() && System.getProperty("yabr.debug.single.exit") == null)) {
             return null;
         }
+        IRBlock continuation = exits.isEmpty() ? null : exits.iterator().next();
         List<Statement> out = rcsStructurer.tryStructureRegion(entry, offeredStops, true);
-        return out == null ? null : new OfferResult(out, null);
+        if (System.getProperty("yabr.trace.offer") != null) {
+            System.err.println("[OFFER-T] entry=" + entry.getBytecodeOffset()
+                    + " cont=" + (continuation == null ? "null" : continuation.getBytecodeOffset())
+                    + " stops=" + offeredStops.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
+                        .sorted().collect(java.util.stream.Collectors.joining(","))
+                    + " ok=" + (out != null)
+                    + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
+                        .skip(1).limit(3).map(StackTraceElement::getLineNumber)
+                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
+        }
+        return out == null ? null : new OfferResult(out, continuation);
     }
 
     /**
