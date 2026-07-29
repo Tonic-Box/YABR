@@ -1230,11 +1230,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
             }
             if (terminalRegion) {
-                List<Statement> structuredRegion =
-                        offerRegionToEngine(current, new HashSet<>(combinedStops), null);
-                if (structuredRegion != null) {
-                    result.addAll(structuredRegion);
-                    current = null;
+                OfferResult offered = offerTerminalRegion(current, new HashSet<>(combinedStops));
+                if (offered != null) {
+                    result.addAll(offered.statements);
+                    current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
+                            && !context.isProcessed(offered.continuation) ? offered.continuation : null;
                     continue;
                 }
             }
@@ -5181,11 +5181,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         break;
                 }
                 if (bodyTerminalRegion) {
-                    List<Statement> structuredRegion =
-                            offerRegionToEngine(current, new HashSet<>(stopBlocks), null);
-                    if (structuredRegion != null) {
-                        result.addAll(structuredRegion);
-                        current = null;
+                    OfferResult offered = offerTerminalRegion(current, new HashSet<>(stopBlocks));
+                    if (offered != null) {
+                        result.addAll(offered.statements);
+                        current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
+                                && !context.isProcessed(offered.continuation) ? offered.continuation : null;
                         continue;
                     }
                 } else if (bodyBound != null && !visited.contains(bodyBound)) {
@@ -7986,12 +7986,47 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return false;
     }
 
+    /** An accepted engine offer: the structured statements and where the walk resumes (null = nowhere). */
+    private static final class OfferResult {
+        final List<Statement> statements;
+        final IRBlock continuation;
+        OfferResult(List<Statement> statements, IRBlock continuation) {
+            this.statements = statements;
+            this.continuation = continuation;
+        }
+    }
+
     /**
-     * Offers a structural region to the reaching-condition engine at the schema recovery scope. The
-     * preflight requires the region to flow only into {@code bound} (or nowhere, when {@code bound} is
-     * null - a terminal region whose every leaving path returns or throws); a foreign exit would be
-     * silently truncated, dropping real code.
+     * Offers a region with no analyzer-known bound. Every path may end inside it (the walk has no
+     * continuation), or the region may flow into exactly ONE stop - then it is really a bounded
+     * construct whose join the analyzer did not name, and the walk resumes at that exit.
      */
+    private OfferResult offerTerminalRegion(IRBlock entry, Set<IRBlock> offeredStops) {
+        releaseInternalStops(entry, offeredStops, null);
+        Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
+        if (exits == null || !exits.isEmpty()) {
+            return null;
+        }
+        List<Statement> out = rcsStructurer.tryStructureRegion(entry, offeredStops, true);
+        return out == null ? null : new OfferResult(out, null);
+    }
+
+    /**
+     * Releases stops the offered construct owns internally: an unprocessed try's start (the engine
+     * models it as a node) and a bare return tail (duplication-idempotent), both strictly dominated
+     * by the entry and distinct from the bound.
+     */
+    private void releaseInternalStops(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {
+        DominatorTree dt = context.getDominatorTree();
+        if (dt == null) {
+            return;
+        }
+        offeredStops.removeIf(stop -> stop != entry && stop != bound
+                && dt.dominates(entry, stop)
+                && (findUnprocessedHandlerStartingAt(stop) != null
+                    || isBareReturnTail(stop)));
+    }
+
     private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {
         // A stop that is an unprocessed try's start STRICTLY inside the offered construct is the walk's
         // own hand-off boundary, not the construct's: the engine models that try as an opaque node, so
@@ -8009,14 +8044,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 bound = landing;
             }
         }
-        DominatorTree dt = context.getDominatorTree();
-        if (dt != null) {
-            IRBlock finalBound = bound;
-            offeredStops.removeIf(stop -> stop != entry && stop != finalBound
-                    && dt.dominates(entry, stop)
-                    && (findUnprocessedHandlerStartingAt(stop) != null
-                        || isBareReturnTail(stop)));
-        }
+        releaseInternalStops(entry, offeredStops, bound);
         // A BOUNDED offer must actually flow into its bound: the caller resumes there, so a region
         // that exits nowhere (every path terminal) would have absorbed code the caller re-emits after
         // the bound - the construct duplicates. Only an UNBOUNDED (terminal) offer accepts empty exits.
@@ -8178,11 +8206,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
             }
             if (walkTerminalRegion) {
-                List<Statement> structuredRegion =
-                        offerRegionToEngine(current, new HashSet<>(stopBlocks), null);
-                if (structuredRegion != null) {
-                    result.addAll(structuredRegion);
-                    current = null;
+                OfferResult offered = offerTerminalRegion(current, new HashSet<>(stopBlocks));
+                if (offered != null) {
+                    result.addAll(offered.statements);
+                    current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
+                            && !context.isProcessed(offered.continuation) ? offered.continuation : null;
                     continue;
                 }
             } else if (walkBound != null && !visited.contains(walkBound)) {
