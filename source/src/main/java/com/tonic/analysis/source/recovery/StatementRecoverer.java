@@ -8029,7 +8029,31 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         offeredStops.removeIf(stop -> stop != entry && stop != bound
                 && dt.dominates(entry, stop)
                 && (findUnprocessedHandlerStartingAt(stop) != null
-                    || isBareReturnTail(stop)));
+                    || isBareReturnTail(stop)
+                    || startsClaimedHandlerRange(stop)));
+    }
+
+    /**
+     * Whether {@code b} starts a protected range of a CLAIMED handler still being recovered (claimed
+     * but its clause not yet emitted). Such a range boundary is the in-progress construct's internal
+     * scaffolding - javac splits ranges around early exits - not a nested try the offer must stop at.
+     */
+    private boolean startsClaimedHandlerRange(IRBlock b) {
+        List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
+        if (handlers == null) {
+            return false;
+        }
+        for (ExceptionHandler h : handlers) {
+            IRBlock ts = h.getTryStart();
+            boolean startsHere = ts == b
+                    || (ts != null && ts.getBytecodeOffset() == b.getBytecodeOffset());
+            if (startsHere && h.getHandlerBlock() != null
+                    && processedHandlerBlocks.contains(h.getHandlerBlock())
+                    && !context.isProcessed(h.getHandlerBlock())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {

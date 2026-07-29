@@ -935,6 +935,8 @@ public final class ReachingConditionStructurer {
         // Every non-entry region block must be dominated by the entry (single-entry region).
         for (IRBlock b : region) {
             if (b != entry && !dom.dominates(entry, b)) {
+                trace("collect-decline multi-entry entry=" + entry.getBytecodeOffset()
+                        + " b=" + b.getBytecodeOffset());
                 return false;
             }
         }
