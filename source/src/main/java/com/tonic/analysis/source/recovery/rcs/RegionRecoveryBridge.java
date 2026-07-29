@@ -92,30 +92,9 @@ public interface RegionRecoveryBridge {
      */
     boolean tryCollapseTernaryDiamond(IRBlock branch);
 
-    /**
-     * True when {@code switchBlock} is a native integer/enum {@code tableswitch}/{@code lookupswitch} the host
-     * can recover as a {@code switch}. A string switch (hash-plus-index scaffolding) returns false, so the
-     * engine declines the whole region and the legacy walk recovers it.
-     */
-    boolean canStructureSwitchRegion(IRBlock switchBlock);
 
-    /**
-     * True when {@code switchBlock} may become an opaque switch NODE - recovered wholesale by the host at
-     * its structural position. Unlike {@link #canStructureSwitchRegion} this does not exclude a switch
-     * inside a loop: the node delegate recovers the switch with the enclosing loop's frames pushed, so a
-     * case's continue-to-latch resolves to the loop jump it is.
-     */
-    boolean canStructureSwitchNode(IRBlock switchBlock);
 
-    /** The block reached after {@code switchBlock} (its merge), or null when every case exits the method. */
-    IRBlock switchMergeBlock(IRBlock switchBlock);
 
-    /**
-     * Recovers {@code switchBlock} as a {@code switch} statement: its case bodies are recovered here (bounded
-     * by the merge) and their blocks - and the switch header - are marked emitted. The returned statements are
-     * the switch (preceded by any header statements). The merge block is left for the caller to emit next.
-     */
-    List<Statement> recoverSwitchRegion(IRBlock switchBlock);
 
     /**
      * Decodes {@code switchBlock} into a structuring-ready {@link SwitchDescriptor} - selector, merge, ordered

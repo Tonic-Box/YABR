@@ -139,60 +139,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return succs.size() == 1 ? succs.iterator().next() : null;
     }
 
-    @Override
-    public boolean canStructureSwitchRegion(IRBlock switchBlock) {
-        // A switch inside a loop shares the loop's continue target as its merge and its induction phis flow
-        // through the case bodies; structuring it as an opaque unit misplaces those. Leave it to the legacy
-        // walk, which recovers the loop and switch together.
-        return canStructureSwitchNode(switchBlock)
-                && (context.getLoopAnalysis() == null || !context.getLoopAnalysis().isInLoop(switchBlock));
-    }
 
-    @Override
-    public boolean canStructureSwitchNode(IRBlock switchBlock) {
-        if (!(switchBlock.getTerminator() instanceof SwitchInstruction)) {
-            return false;
-        }
-        RegionInfo info = analyzer.getRegionInfo(switchBlock);
-        return info != null && info.getType() == ControlFlowContext.StructuredRegion.SWITCH;
-    }
 
-    @Override
-    public IRBlock switchMergeBlock(IRBlock switchBlock) {
-        StringSwitchInfo stringSwitch = detectStringSwitch(switchBlock);
-        if (stringSwitch != null) {
-            return stringSwitchExit(stringSwitch);
-        }
-        RegionInfo info = analyzer.getRegionInfo(switchBlock);
-        return info == null ? null : findSwitchMerge(info);
-    }
 
-    @Override
-    public List<Statement> recoverSwitchRegion(IRBlock switchBlock) {
-        List<Statement> out = new ArrayList<>();
-        StringSwitchInfo stringSwitch = detectStringSwitch(switchBlock);
-        if (stringSwitch != null) {
-            IRBlock exit = stringSwitchExit(stringSwitch);
-            context.markProcessed(switchBlock);
-            Statement sw = recoverStringSwitch(switchBlock, stringSwitch, exit);
-            if (sw instanceof BlockStmt) {
-                out.addAll(((BlockStmt) sw).getStatements());
-            } else {
-                out.add(sw);
-            }
-            return out;
-        }
-        RegionInfo info = analyzer.getRegionInfo(switchBlock);
-        Statement sw = recoverSwitch(switchBlock, info);
-        // recoverSwitch wraps header statements and the switch in a block; flatten so they stay in the
-        // enclosing sequence rather than nesting in a bare `{ }`.
-        if (sw instanceof BlockStmt) {
-            out.addAll(((BlockStmt) sw).getStatements());
-        } else {
-            out.add(sw);
-        }
-        return out;
-    }
 
     @Override
     public SwitchDescriptor decodeSwitch(IRBlock switchBlock) {
@@ -6797,20 +6746,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     /** Tracks handler blocks to prevent nested try-finally for same finally block */
     private final Set<IRBlock> processedHandlerBlocks = new HashSet<>();
 
-    /** Suppresses the RC-engine offer for sub-regions whose downstream consumers pattern-match the
-     * walk's exact output shape (switch case bodies feeding the switch-expression reconstructors). */
-    private int rcsSubRegionSuppression;
-
     public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks) {
-        // The legacy walk's sub-recursion (if arms, loop bodies, case bodies) is offered to the RC engine
-        // like any other region: a sub-region pass preserves the surrounding recovery's processed marks
-        // (only the top-level whole-method pass owns the mark namespace), and a re-entrant pass launched
-        // from inside an engine emit is snapshot-protected by the delegate (emitTry/emitSwitchNode). A
-        // shape the engine declines falls back to the walk exactly as before.
-        if (rcsSubRegionSuppression == 0) {
-            return recoverRegionHandoff(startBlock, stopBlocks);
-        }
-        throw retiredSchemaRecovery("suppressed-sub-region", startBlock);
+        // Every sub-region (an if arm, a loop body, a clause body) is a region hand-off: a sub-region
+        // pass preserves the surrounding recovery's processed marks (only the top-level whole-method
+        // pass owns the mark namespace), and a re-entrant pass launched from inside an engine emit is
+        // snapshot-protected by the delegate.
+        return recoverRegionHandoff(startBlock, stopBlocks);
     }
 
     /**
@@ -8470,22 +8411,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
     }
 
-    /**
-     * Stamps a recovered control-flow statement with its header's bytecode offset, preferring the
-     * branch/switch terminator's provenance and falling back to the block's start offset.
-     */
-    private void stampFromHeader(Statement stmt, IRBlock header) {
-        if (stmt == null || header == null || stmt.getLocation().hasOffset()) {
-            return;
-        }
-        int offset = header.getTerminator() != null ? header.getTerminator().getBytecodeOffset() : -1;
-        if (offset < 0) {
-            offset = header.getBytecodeOffset();
-        }
-        if (offset >= 0) {
-            stmt.setLocation(SourceLocation.fromOffset(offset));
-        }
-    }
 
     /** Stamps a wrapper statement (e.g. try/catch) from the first stamped statement in its body. */
     private void stampFromBody(Statement stmt, BlockStmt body) {
@@ -9577,28 +9502,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return new VarDeclStmt(type, name, value);
     }
 
-    /**
-     * Recovers non-terminator instructions from a block.
-     * This is used to emit setup instructions before structured control flow.
-     */
-    private List<Statement> recoverBlockInstructions(IRBlock block) {
-        List<Statement> statements = new ArrayList<>();
-
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr.isTerminator()) {
-                continue;
-            }
-            if (context.shouldSkipInstruction(instr)) {
-                continue;
-            }
-            Statement stmt = recoverInstruction(instr);
-            if (stmt != null) {
-                statements.add(stmt);
-            }
-        }
-
-        return statements;
-    }
 
     /**
      * Folds javac's try-with-resources suppress scaffolding out of a finally body. The exception-path
@@ -10046,267 +9949,10 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return null;
     }
 
-    /**
-     * Rebuilds a {@code switch (s)} from a detected two-phase string switch. Each {@code equals} literal maps to
-     * a dense index, and that index's body in the second switch becomes the string case's body; index-switch
-     * cases sharing a body collapse into consecutive {@code case "x":} labels.
-     */
-    private Statement recoverStringSwitch(IRBlock header, StringSwitchInfo info, IRBlock exit) {
-        SwitchInstruction indexSwitch = info.indexSwitch;
-        // The header's leading statements - the selector variable's own store (`String a = args[i]`) and
-        // anything before it - are user code, not scaffolding; dropping them with the header loses the
-        // assignment (and any side effect of its right-hand side) and leaves the selector undefined. The
-        // scaffolding proper starts at the hashCode dispatch.
-        List<Statement> lead = new ArrayList<>();
-        for (IRInstruction instr : header.getInstructions()) {
-            if (instr.isTerminator()) {
-                break;
-            }
-            if (instr instanceof InvokeInstruction && "hashCode".equals(((InvokeInstruction) instr).getName())) {
-                break;
-            }
-            if (context.shouldSkipInstruction(instr)) {
-                continue;
-            }
-            Statement stmt = recoverInstruction(instr);
-            if (stmt != null) {
-                lead.add(stmt);
-            }
-        }
-        Expression selector = exprRecoverer.recoverOperand(info.stringValue);
 
-        for (IRBlock block : info.scaffolding) {
-            context.markProcessed(block);
-            context.setStatements(block, Collections.emptyList());
-        }
 
-        Map<Integer, List<String>> indexToLiterals = new LinkedHashMap<>();
-        for (Map.Entry<String, Integer> entry : info.literalToIndex.entrySet()) {
-            indexToLiterals.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
-        }
 
-        // Every case body stops at the other case bodies and at the block following the whole switch, so a
-        // body that breaks does not bleed into a sibling case or the continuation.
-        Set<IRBlock> bodyStops = new LinkedHashSet<>(indexSwitch.getCases().values());
-        if (indexSwitch.getDefaultTarget() != null) {
-            bodyStops.add(indexSwitch.getDefaultTarget());
-        }
-        if (exit != null) {
-            bodyStops.add(exit);
-        }
 
-        Map<IRBlock, List<String>> bodyToLiterals = new LinkedHashMap<>();
-        for (Map.Entry<Integer, IRBlock> entry : indexSwitch.getCases().entrySet()) {
-            List<String> literals = indexToLiterals.get(entry.getKey());
-            if (literals != null) {
-                bodyToLiterals.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).addAll(literals);
-            }
-        }
-
-        List<SwitchCase> cases = new ArrayList<>();
-        for (Map.Entry<IRBlock, List<String>> entry : bodyToLiterals.entrySet()) {
-            List<Statement> stmts = recoverStringSwitchBody(entry.getKey(), bodyStops);
-            List<Expression> labels = new ArrayList<>();
-            for (String literal : entry.getValue()) {
-                labels.add(LiteralExpr.ofString(literal));
-            }
-            cases.add(SwitchCase.ofExpressions(labels, stmts));
-        }
-
-        if (indexSwitch.getDefaultTarget() != null) {
-            cases.add(SwitchCase.defaultCase(recoverStringSwitchBody(indexSwitch.getDefaultTarget(), bodyStops)));
-        }
-
-        Statement switchStmt = new SwitchStmt(selector, cases);
-        stampFromHeader(switchStmt, header);
-        if (lead.isEmpty()) {
-            return switchStmt;
-        }
-        List<Statement> out = new ArrayList<>(lead);
-        out.add(switchStmt);
-        return new BlockStmt(out);
-    }
-
-    private List<Statement> recoverStringSwitchBody(IRBlock body, Set<IRBlock> bodyStops) {
-        return recoverStringSwitchBody0(body, bodyStops);
-    }
-
-    private List<Statement> recoverStringSwitchBody0(IRBlock body, Set<IRBlock> bodyStops) {
-        Set<IRBlock> stopBlocks = new HashSet<>(bodyStops);
-        stopBlocks.remove(body);
-        context.pushStopBlocks(stopBlocks);
-        try {
-            return recoverBlockSequence(body, stopBlocks);
-        } finally {
-            context.popStopBlocks();
-        }
-    }
-
-    private Statement recoverSwitch(IRBlock header, RegionInfo info) {
-        trace("schema-recovery kind=switch method=" + context.getIrMethod().getName()
-                + " header=" + header.getBytecodeOffset()
-                + " from=" + java.util.Arrays.stream(new Throwable().getStackTrace())
-                        .skip(1).limit(4).map(StackTraceElement::getLineNumber)
-                        .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
-        // A string switch reached here is one the native decoder declined (an unmatched scaffold shape);
-        // its case bodies keep the walk's form, which this recovery's own re-sugaring expects.
-        boolean suppress = detectStringSwitch(header) != null;
-        // A value-yielding switch (merge phis converging the case values) no longer needs the walk's
-        // case-body form: the switch-expression fold reads a passive arm's value off the declared
-        // initializer and dissolves a synthetic carrier, so engine-structured bodies fold identically.
-
-        if (suppress) {
-            rcsSubRegionSuppression++;
-        }
-        try {
-            return recoverSwitch0(header, info);
-        } finally {
-            if (suppress) {
-                rcsSubRegionSuppression--;
-            }
-        }
-    }
-
-    private Statement recoverSwitch0(IRBlock header, RegionInfo info) {
-        context.markProcessed(header);
-
-        List<Statement> headerStmts = recoverBlockInstructions(header);
-
-        IRInstruction terminator = header.getTerminator();
-        Expression selector;
-        if (terminator instanceof SwitchInstruction) {
-            selector = exprRecoverer.recoverOperand(((SwitchInstruction) terminator).getKey());
-        } else if (info.getSwitchSelector() != null) {
-            // Comparison-chain switch synthesized by StructuralAnalyzer: the header's
-            // terminator is a branch, and the selector is carried on the region.
-            selector = exprRecoverer.recoverOperand(info.getSwitchSelector());
-        } else {
-            return new IRRegionStmt(List.of(header));
-        }
-
-        // Detect and simplify enum switch map pattern:
-        // SwitchMapClass.$SwitchMap$pkg$EnumName[enumVar.ordinal()] -> enumVar
-        EnumSwitchInfo enumInfo = detectEnumSwitchPattern(selector);
-        boolean enumNamesResolved = false;
-        if (enumInfo != null) {
-            if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo)) {
-                // Enum constants resolved (the $SwitchMap$ holder is available): switch (e) { case CONST: }.
-                selector = enumInfo.enumVariable;
-                enumNamesResolved = true;
-            } else {
-                // Holder class not in the pool, so the dense $SwitchMap$ indices cannot be mapped to
-                // constant names. Fall back to switch (e.ordinal()) with the raw indices, which recompiles.
-                selector = enumInfo.ordinalExpression;
-            }
-        }
-
-        List<SwitchCase> cases = new ArrayList<>();
-
-        IRBlock mergeBlock = findSwitchMerge(info);
-        Set<IRBlock> baseStopBlocks = new HashSet<>();
-        if (mergeBlock != null) {
-            baseStopBlocks.add(mergeBlock);
-        }
-        // For a synthesized comparison-chain switch, the dispatch spine blocks are not
-        // case bodies; stop there so a fall-through case body cannot bleed into the chain.
-        if (info.getSwitchSpineBlocks() != null) {
-            baseStopBlocks.addAll(info.getSwitchSpineBlocks());
-        }
-
-        Map<IRBlock, List<Integer>> targetToCases = new LinkedHashMap<>();
-        for (Map.Entry<Integer, IRBlock> entry : info.getSwitchCases().entrySet()) {
-            targetToCases.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
-        }
-
-        Set<IRBlock> allCaseTargets = new HashSet<>(targetToCases.keySet());
-        if (info.getDefaultTarget() != null) {
-            allCaseTargets.add(info.getDefaultTarget());
-        }
-
-        // A case "falls through" only if it reaches ANOTHER case BODY - never the switch's merge/exit block.
-        // When the default is empty its target IS the merge, so a case that breaks (jumps to the merge) would
-        // otherwise look like a fall-through into the default and lose its `break`. Exclude the merge.
-        Set<IRBlock> fallThroughTargets = new HashSet<>(allCaseTargets);
-        if (mergeBlock != null) {
-            fallThroughTargets.remove(mergeBlock);
-        }
-
-        for (Map.Entry<IRBlock, List<Integer>> entry : targetToCases.entrySet()) {
-            IRBlock target = entry.getKey();
-            List<Integer> labels = entry.getValue();
-
-            Set<IRBlock> stopBlocks = new HashSet<>(baseStopBlocks);
-            for (IRBlock otherTarget : allCaseTargets) {
-                if (otherTarget != target) {
-                    stopBlocks.add(otherTarget);
-                }
-            }
-
-            context.pushStopBlocks(stopBlocks);
-            List<Statement> caseStmts;
-            try {
-                caseStmts = recoverBlockSequence(target, stopBlocks);
-            } finally {
-                context.popStopBlocks();
-            }
-
-            boolean fallsThrough = caseFallsThrough(target, stopBlocks, fallThroughTargets);
-
-            if (enumNamesResolved) {
-                List<Expression> enumLabels = new ArrayList<>();
-                for (Integer caseValue : labels) {
-                    String constantName = EnumSwitchMapRegistry.getInstance()
-                            .lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue);
-                    SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
-                    enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
-                }
-                cases.add(SwitchCase.ofExpressions(enumLabels, caseStmts).withFallsThrough(fallsThrough));
-                continue;
-            }
-
-            cases.add(SwitchCase.of(labels, caseStmts).withFallsThrough(fallsThrough));
-        }
-
-        if (info.getDefaultTarget() != null) {
-            if (mergeBlock != null && info.getDefaultTarget() == mergeBlock) {
-                cases.add(SwitchCase.defaultCase(Collections.emptyList()));
-            } else {
-                Set<IRBlock> defaultStopBlocks = new HashSet<>(baseStopBlocks);
-                for (IRBlock otherTarget : allCaseTargets) {
-                    if (otherTarget != info.getDefaultTarget()) {
-                        defaultStopBlocks.add(otherTarget);
-                    }
-                }
-                context.pushStopBlocks(defaultStopBlocks);
-                List<Statement> defaultStmts;
-                try {
-                    defaultStmts = recoverBlockSequence(info.getDefaultTarget(), defaultStopBlocks);
-                } finally {
-                    context.popStopBlocks();
-                }
-                // A `return`/`throw` tail shared by the default and a case body (e.g.
-                // `case: if (a && b) return true; default: return false;`) is consumed when the case
-                // absorbs it, leaving the default empty and the method falling off its end. Re-emit the
-                // terminator directly for the default so its exit is preserved.
-                IRInstruction defTerm = info.getDefaultTarget().getTerminator();
-                boolean defIsTerminal = defTerm instanceof ReturnInstruction
-                        || (defTerm instanceof SimpleInstruction && ((SimpleInstruction) defTerm).getOp() == SimpleOp.ATHROW);
-                if (defaultStmts.isEmpty() && defIsTerminal) {
-                    defaultStmts = recoverSimpleBlock(info.getDefaultTarget());
-                }
-                cases.add(SwitchCase.defaultCase(defaultStmts));
-            }
-        }
-
-        Statement switchStmt = new SwitchStmt(selector, cases);
-        stampFromHeader(switchStmt, header);
-        if (!headerStmts.isEmpty()) {
-            List<Statement> combined = new ArrayList<>(headerStmts);
-            combined.add(switchStmt);
-            return new BlockStmt(combined);
-        }
-        return switchStmt;
-    }
 
     private static class EnumSwitchInfo {
         Expression enumVariable;
@@ -10371,30 +10017,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return true;
     }
 
-    /**
-     * True when a case body flows off its end into another case body (source-level fall-through), as opposed
-     * to breaking to the merge block or returning/throwing. The case region is everything reachable from
-     * {@code caseTarget} without crossing a stop block; an edge from that region into a different case target
-     * is a fall-through (javac never branches between case bodies except by falling through).
-     */
-    private boolean caseFallsThrough(IRBlock caseTarget, Set<IRBlock> stopBlocks, Set<IRBlock> caseTargets) {
-        Set<IRBlock> region = new HashSet<>();
-        Deque<IRBlock> work = new ArrayDeque<>();
-        region.add(caseTarget);
-        work.add(caseTarget);
-        while (!work.isEmpty()) {
-            IRBlock b = work.poll();
-            for (IRBlock s : b.getSuccessors()) {
-                if (s != caseTarget && caseTargets.contains(s)) {
-                    return true;
-                }
-                if (!stopBlocks.contains(s) && region.add(s)) {
-                    work.add(s);
-                }
-            }
-        }
-        return false;
-    }
 
 
     private static final String DISPATCH_LABEL = "$dispatch$";

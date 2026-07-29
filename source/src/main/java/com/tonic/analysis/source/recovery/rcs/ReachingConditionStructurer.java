@@ -101,7 +101,6 @@ public final class ReachingConditionStructurer {
         private final Set<IRBlock> region;
         private final Map<IRBlock, Integer> rpoIndex;
         private final Map<IRBlock, SwitchDescriptor> switchDescriptors;
-        private final Map<IRBlock, SwitchNodeDescriptor> switchNodes;
         private final Map<IRBlock, String> cachedConditions;
         private final Map<IRBlock, TryNodeDescriptor> tryNodes;
         private final boolean tryNodesEnabled;
@@ -130,7 +129,6 @@ public final class ReachingConditionStructurer {
             region = s.region;
             rpoIndex = s.rpoIndex;
             switchDescriptors = new HashMap<>(s.switchDescriptors);
-            switchNodes = new HashMap<>(s.switchNodes);
             cachedConditions = new LinkedHashMap<>(s.cachedConditions);
             tryNodes = new HashMap<>(s.tryNodes);
             tryNodesEnabled = s.tryNodesEnabled;
@@ -158,8 +156,6 @@ public final class ReachingConditionStructurer {
             s.rpoIndex = rpoIndex;
             s.switchDescriptors.clear();
             s.switchDescriptors.putAll(switchDescriptors);
-            s.switchNodes.clear();
-            s.switchNodes.putAll(switchNodes);
             s.cachedConditions.clear();
             s.cachedConditions.putAll(cachedConditions);
             s.tryNodes.clear();
@@ -187,7 +183,6 @@ public final class ReachingConditionStructurer {
     private Set<IRBlock> region;
     private Map<IRBlock, Integer> rpoIndex;
     private final Map<IRBlock, SwitchDescriptor> switchDescriptors = new HashMap<>();
-    private final Map<IRBlock, SwitchNodeDescriptor> switchNodes = new HashMap<>();
     private final Map<IRBlock, String> cachedConditions = new LinkedHashMap<>();
     /** Opaque try nodes in the region, keyed by the try's entry block; populated only when enabled. */
     private final Map<IRBlock, TryNodeDescriptor> tryNodes = new HashMap<>();
@@ -394,7 +389,6 @@ public final class ReachingConditionStructurer {
      */
     private boolean prepareRegion(IRBlock entry, Set<IRBlock> stopBlocks) {
         switchDescriptors.clear();
-        switchNodes.clear();
         cachedConditions.clear();
         tryNodes.clear();
         this.regionStopBlocks = stopBlocks;
@@ -460,7 +454,7 @@ public final class ReachingConditionStructurer {
             return false;
         }
         for (IRBlock b : region) {
-            if (tryNodes.containsKey(b) || switchNodes.containsKey(b)) {
+            if (tryNodes.containsKey(b)) {
                 continue;
             }
             for (IRBlock s : b.getSuccessors()) {
@@ -560,10 +554,6 @@ public final class ReachingConditionStructurer {
             validateTryNode(b);
             return;
         }
-        if (switchNodes.containsKey(b)) {
-            validateSwitchNode(b, loops);
-            return;
-        }
         if (loops != null && loops.isLoopHeader(b)) {
             IRBlock breakTarget = findBreakTarget(b);
             context.pushLoop(b, b, breakTarget, inductionLatch(b));
@@ -625,49 +615,7 @@ public final class ReachingConditionStructurer {
         return idom == b || node.consumed().contains(idom);
     }
 
-    /**
-     * Side-effect-free dry run mirroring {@link #emitSwitchNode}: no region block may jump into the node's
-     * consumed blocks, and the merge it owns must validate.
-     */
-    private void validateSwitchNode(IRBlock b, LoopAnalysis loops) {
-        if (loops != null && loops.isLoopHeader(b)) {
-            throw new BailToLegacy();
-        }
-        SwitchNodeDescriptor node = switchNodes.get(b);
-        for (IRBlock r : region) {
-            if (r == b || tryNodes.containsKey(r) || switchNodes.containsKey(r)) {
-                continue;
-            }
-            for (IRBlock s : r.getSuccessors()) {
-                if (s != b && node.consumed().contains(s)) {
-                    throw new BailToLegacy();
-                }
-            }
-        }
-        IRBlock after = node.after();
-        if (after == null || !region.contains(after) || isBackEdge(b, after)) {
-            return;
-        }
-        if (context.classifyLoopJump(after) != null || context.classifySwitchJump(after) != null) {
-            return;
-        }
-        if (switchNodeOwnsAfter(b, node)) {
-            validate(after);
-        }
-    }
 
-    /**
-     * True when the node itself must emit its merge: the merge's immediate dominator is the node or lies in
-     * its consumed blocks, so no other region block's dominator walk places it.
-     */
-    private boolean switchNodeOwnsAfter(IRBlock b, SwitchNodeDescriptor node) {
-        IRBlock after = node.after();
-        if (after == null || !region.contains(after)) {
-            return false;
-        }
-        IRBlock idom = dom.getImmediateDominator(after);
-        return idom == b || node.consumed().contains(idom);
-    }
 
     /**
      * Side-effect-free dry run mirroring {@link #emitSwitch}: pushes the switch scope, validates each case body,
@@ -910,22 +858,10 @@ public final class ReachingConditionStructurer {
                 // the decoder does not own (string, pattern, comparison-chain) declines the whole region.
                 SwitchDescriptor desc = switchDescriptor(b);
                 if (desc == null) {
-                    // A switch the native decoder does not own (string scaffolding, a value-yielding switch
-                    // expression) becomes an opaque node recovered wholesale by the host's switch machinery
-                    // at its structural position; the region resumes at the merge. A shape the node model
-                    // cannot bound (a case leaving anywhere but the single merge) fails the region.
-                    SwitchNodeDescriptor node = decodeSwitchNode(b);
-                    if (node == null) {
-                        trace("collect-decline switch-node b=" + b.getBytecodeOffset());
-                        return false;
-                    }
-                    switchNodes.put(b, node);
-                    IRBlock join = node.after();
-                    if (join != null && !stopBlocks.contains(join) && !region.contains(join)
-                            && !isBackEdge(b, join)) {
-                        work.add(join);
-                    }
-                    continue;
+                    // Every switch the decoders own structures in-region; a shape they do not own
+                    // fails the region, and the host's totality fallback recovers the method.
+                    trace("collect-decline switch b=" + b.getBytecodeOffset());
+                    return false;
                 }
                 IRBlock merge = desc.merge();
                 if (merge != null && !stopBlocks.contains(merge) && !region.contains(merge)) {
@@ -991,7 +927,7 @@ public final class ReachingConditionStructurer {
         while (absorbed) {
             absorbed = false;
             for (IRBlock b : new ArrayList<>(region)) {
-                if (tryNodes.containsKey(b) || switchNodes.containsKey(b)) {
+                if (tryNodes.containsKey(b)) {
                     continue; // a node's real successors are its own consumed blocks
                 }
                 for (IRBlock s : b.getSuccessors()) {
@@ -1065,7 +1001,7 @@ public final class ReachingConditionStructurer {
         // With try nodes, a region block whose immediate dominator lies inside a node's consumed set is
         // reachable only through the try; the dominator walk would never place it. The node emits its own
         // join directly, so only the join may have a consumed dominator.
-        if (!tryNodes.isEmpty() || !switchNodes.isEmpty()) {
+        if (!tryNodes.isEmpty()) {
             for (IRBlock b : region) {
                 if (b == entry) {
                     continue;
@@ -1076,12 +1012,6 @@ public final class ReachingConditionStructurer {
                 }
                 boolean isNodeJoin = false;
                 for (Map.Entry<IRBlock, TryNodeDescriptor> e : tryNodes.entrySet()) {
-                    if (e.getValue().after() == b && e.getValue().consumed().contains(idom)) {
-                        isNodeJoin = true;
-                        break;
-                    }
-                }
-                for (Map.Entry<IRBlock, SwitchNodeDescriptor> e : switchNodes.entrySet()) {
                     if (e.getValue().after() == b && e.getValue().consumed().contains(idom)) {
                         isNodeJoin = true;
                         break;
@@ -1130,52 +1060,9 @@ public final class ReachingConditionStructurer {
                 return true;
             }
         }
-        for (SwitchNodeDescriptor node : switchNodes.values()) {
-            if (node.consumed().contains(b)) {
-                return true;
-            }
-        }
         return false;
     }
 
-    /**
-     * Statically decodes a switch region the native decoder declined into an opaque node: the consumed set
-     * is the switch head's dominator subtree minus the merge and its own subtree, and every normal edge out
-     * of the consumed blocks must land back in the set or on the single merge. A switch inside a loop, on a
-     * loop header, or with a case leaving anywhere else is not modelled and returns null.
-     */
-    private SwitchNodeDescriptor decodeSwitchNode(IRBlock b) {
-        if (!bridge.canStructureSwitchNode(b)) {
-            return null;
-        }
-        LoopAnalysis loops = context.getLoopAnalysis();
-        if (loops != null && loops.isLoopHeader(b)) {
-            return null;
-        }
-        IRBlock after = bridge.switchMergeBlock(b);
-        Set<IRBlock> consumed = new LinkedHashSet<>();
-        for (IRBlock x : method.getBlocks()) {
-            if (x != b && dom.dominates(b, x)
-                    && !(after != null && (x == after || dom.dominates(after, x)))) {
-                consumed.add(x);
-            }
-        }
-        List<IRBlock> scan = new ArrayList<>(consumed);
-        scan.add(b);
-        for (IRBlock c : scan) {
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : c.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION) {
-                    continue;
-                }
-                IRBlock succ = e.getKey();
-                if (succ == after || consumed.contains(succ)) {
-                    continue;
-                }
-                return null;
-            }
-        }
-        return new SwitchNodeDescriptor(consumed, after);
-    }
 
     /**
      * The successors of {@code b} in the structuring model: a try node's only edge is to its join; every
@@ -1185,10 +1072,6 @@ public final class ReachingConditionStructurer {
         TryNodeDescriptor node = tryNodes.get(b);
         if (node != null) {
             return node.after() != null ? Collections.singletonList(node.after()) : Collections.emptyList();
-        }
-        SwitchNodeDescriptor sw = switchNodes.get(b);
-        if (sw != null) {
-            return sw.after() != null ? Collections.singletonList(sw.after()) : Collections.emptyList();
         }
         SwitchDescriptor desc = switchDescriptors.get(b);
         if (desc != null && desc.desugaredSelector()) {
@@ -1226,11 +1109,6 @@ public final class ReachingConditionStructurer {
             }
         }
         for (Map.Entry<IRBlock, TryNodeDescriptor> e : tryNodes.entrySet()) {
-            if (e.getValue().after() == n) {
-                out.add(e.getKey());
-            }
-        }
-        for (Map.Entry<IRBlock, SwitchNodeDescriptor> e : switchNodes.entrySet()) {
             if (e.getValue().after() == n) {
                 out.add(e.getKey());
             }
@@ -1435,9 +1313,6 @@ public final class ReachingConditionStructurer {
             }
             return emitTry(b);
         }
-        if (switchNodes.containsKey(b)) {
-            return emitSwitchNode(b);
-        }
         if (loops != null && loops.isLoopHeader(b)) {
             return emitLoop(b);
         }
@@ -1552,48 +1427,6 @@ public final class ReachingConditionStructurer {
         return out;
     }
 
-    /**
-     * Emits an opaque switch node: the whole switch region (a string switch's scaffolding, a value-yielding
-     * switch expression) is recovered by the host machinery at this structural position, then the node
-     * continues at its merge - emitted here when the node owns it, realized as the enclosing loop's
-     * break/continue when the merge is a loop boundary, or left to the merge's own dominator placement.
-     */
-    private List<Statement> emitSwitchNode(IRBlock b) {
-        SwitchNodeDescriptor node = switchNodes.get(b);
-        List<Statement> out = new ArrayList<>();
-        // The delegate recovery may hand pieces back through the region hand-off, which re-enters this
-        // structurer; snapshot this pass's state so a nested pass cannot clobber the emit in flight.
-        PassState saved = new PassState(this);
-        try {
-            out.addAll(bridge.recoverSwitchRegion(b));
-        } finally {
-            saved.restore(this);
-        }
-        IRBlock after = node.after();
-        if (after == null || isBackEdge(b, after)) {
-            return out;
-        }
-        ControlFlowContext.LoopJump jump = context.classifyLoopJump(after);
-        if (jump != null) {
-            if (jump.kind == ControlFlowContext.JumpKind.CONTINUE) {
-                out.add(jump.loopHeader != null
-                        ? new ContinueStmt(context.getOrCreateLabel(jump.loopHeader))
-                        : new ContinueStmt());
-            } else {
-                out.add(jump.loopHeader != null
-                        ? new BreakStmt(context.getOrCreateLabel(jump.loopHeader))
-                        : new BreakStmt());
-            }
-            return out;
-        }
-        if (context.classifySwitchJump(after) != null) {
-            return out;
-        }
-        if (switchNodeOwnsAfter(b, node)) {
-            out.addAll(emit(after));
-        }
-        return out;
-    }
 
     /**
      * Emits a native {@code switch}, structuring each case body in-region so its exits become the enclosing loop's
@@ -2644,7 +2477,7 @@ public final class ReachingConditionStructurer {
 
     /** The boolean predicate labelling the edge {@code pred -> succ}. */
     private BoolFormula edgePredicate(IRBlock pred, IRBlock succ) {
-        if (tryNodes.containsKey(pred) || switchNodes.containsKey(pred)) {
+        if (tryNodes.containsKey(pred)) {
             // A node's only modeled edge is the unconditional continuation to its join; its real
             // terminator belongs to the code the delegate recovers.
             return formulas.truth;
