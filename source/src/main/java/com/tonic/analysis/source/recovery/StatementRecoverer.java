@@ -8496,6 +8496,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * recoverable type or the name is already taken (leaving the caller's default path).
      */
     private Statement materializeClobberedLoad(SSAValue result, Expression value) {
+        return materializeIntoTemporary(result, value, "v" + result.getId());
+    }
+
+    /**
+     * Declares {@code value} into a temporary under {@code name} and binds later reads to it, pinning the
+     * expression to this position in the statement sequence. Returns null when the value has no recoverable
+     * type or the name is already taken, leaving the caller's default path.
+     */
+    private Statement materializeIntoTemporary(SSAValue result, Expression value, String name) {
         SourceType type = value.getType();
         if (type == null) {
             type = typeRecoverer.recoverType(result);
@@ -8503,7 +8512,6 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (type == null) {
             return null;
         }
-        String name = "v" + result.getId();
         if (context.getExpressionContext().isDeclared(name)) {
             return null;
         }
@@ -8511,6 +8519,40 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
         return new VarDeclStmt(type, name, value);
+    }
+
+    /**
+     * A name for a captured call result, taken from the call itself: {@code getEnteredPassword()} names its
+     * temporary {@code enteredPassword}. Deriving it from the callee rather than the SSA value keeps it the
+     * same whichever bytecode layout the method was compiled from, which an id-based name is not. Returns
+     * null when no stable name is available, leaving the caller on its existing path.
+     */
+    private String temporaryNameForCall(InvokeInstruction invoke) {
+        String method = invoke.getName();
+        if (method == null || method.isEmpty() || "<init>".equals(method) || "<clinit>".equals(method)) {
+            return null;
+        }
+        String base = method;
+        for (String prefix : new String[]{"get", "is", "read", "fetch"}) {
+            if (method.length() > prefix.length() && method.startsWith(prefix)
+                    && Character.isUpperCase(method.charAt(prefix.length()))) {
+                base = method.substring(prefix.length());
+                break;
+            }
+        }
+        base = Character.toLowerCase(base.charAt(0)) + base.substring(1);
+        if (!Character.isJavaIdentifierStart(base.charAt(0))) {
+            return null;
+        }
+        for (int i = 1; i < base.length(); i++) {
+            if (!Character.isJavaIdentifierPart(base.charAt(i))) {
+                return null;
+            }
+        }
+        // A taken name declines rather than taking a numbered variant: which names are already in scope
+        // depends on the layout being decompiled, so a suffix would differ between round-trip generations
+        // and turn a stable output into an oscillating one.
+        return context.getExpressionContext().isDeclared(base) ? null : base;
     }
 
     private final Set<SSAValue> splitIncrementTemps = new HashSet<>();
@@ -8796,6 +8838,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (result.getUses().isEmpty()) {
                 Expression expr = exprRecoverer.recover(invoke);
                 return new ExprStmt(expr);
+            }
+            if (exprRecoverer.inliningWouldReorderEffects(result)) {
+                // The value stays on the stack across a statement that has its own effect. Rendering the
+                // call at its use site would print the two effects in the wrong order, so capture it into
+                // a temporary here and let the use read that name.
+                String name = temporaryNameForCall(invoke);
+                if (name != null) {
+                    Expression expr = exprRecoverer.recover(invoke);
+                    Statement captured = materializeIntoTemporary(result, expr, name);
+                    if (captured != null) {
+                        return captured;
+                    }
+                }
             }
             if (isIntermediateValue(result)) {
                 Expression expr = exprRecoverer.recover(invoke);

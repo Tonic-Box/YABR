@@ -213,6 +213,12 @@ public final class ReachingConditionStructurer {
     private Map<IRBlock, Integer> atomOf;
     private List<IRBlock> blockOfAtom;
     private Set<IRBlock> pureConditionBlock;
+    /**
+     * Blocks whose branch condition reached the output as a real {@code if}. A reaching-condition guard only
+     * ever re-states conditions the emitted structure already evaluates, so this records which ones it does -
+     * the fact is about a block's emitted form and stays true once established, hence no per-region reset.
+     */
+    private final Set<IRBlock> materializedConditions = new HashSet<>();
     private Set<IRBlock> exceptionFreeConditionBlock;
     private Map<Bdd, Boolean> subtreeExceptionFreeMemo;
     private int guardTempCounter;
@@ -2266,6 +2272,7 @@ public final class ReachingConditionStructurer {
                 stamp(ifStmt, b);
                 out.add(ifStmt);
             }
+            materializedConditions.add(b);
         }
         for (int i = 0; i < sharedChildren.size(); i++) {
             out.addAll(emitSharedTail(sharedChildren.get(i), b, i == sharedChildren.size() - 1));
@@ -2378,6 +2385,15 @@ public final class ReachingConditionStructurer {
             return emit(shared);
         }
         List<Statement> body = emit(shared);
+        // A merge block that emits nothing contributes only its guard. Guarding an empty body is a no-op
+        // unless the guard is the sole place a side-effecting condition is evaluated, so drop it once every
+        // impure atom names a block that already emitted its condition as an `if`. Keeping it would leave
+        // `if (a || f()) { }` in the output, which no later pass may remove (a comparison is not a legal
+        // statement, so the call cannot be extracted without changing short-circuit order) and which blocks
+        // the surrounding materialization folds.
+        if (body.isEmpty() && impureAtomsAlreadyEmitted(guard)) {
+            return body;
+        }
         if (last && endsTerminal(body) && !regionCompletesNormallySkipping(shared, dominator)) {
             // The final terminal tail catches every path that did not already return or throw; guarding
             // it would leave a syntactic fall-through off the end of a value-returning method. This holds
@@ -2580,6 +2596,25 @@ public final class ReachingConditionStructurer {
             }
         }
         return false;
+    }
+
+    /**
+     * True when every side-effecting atom of the guard names a block whose condition already reached the
+     * output as an {@code if}, so re-stating the guard evaluates nothing that has not run. A pure atom is
+     * trivially safe to drop; an impure one whose block never emitted its own condition is not, because the
+     * guard would then be the only evaluation of that condition.
+     */
+    private boolean impureAtomsAlreadyEmitted(BoolFormula guard) {
+        for (int atom : atomsOf(guard.nnf, new HashSet<>())) {
+            IRBlock block = blockOfAtom.get(atom);
+            if (pureConditionBlock.contains(block)) {
+                continue;
+            }
+            if (!materializedConditions.contains(block)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** True when some atom of the guard names a block whose condition would inline a side effect. */

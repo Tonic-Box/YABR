@@ -249,6 +249,77 @@ public class ExpressionRecoverer {
         return false;
     }
 
+    /**
+     * True when inlining a side-effecting definition at its use would move it past another side effect.
+     * Bytecode may leave a call's result on the stack across an unrelated statement; rendering that value
+     * at the use site then prints the two calls in the opposite order to the one the program performs, so
+     * the value must instead take a name and stay where it is.
+     * <p>
+     * Only the operands of the use itself may sit in between: those are the evaluation of the same
+     * expression, so inlining reproduces their order exactly. Anything else with an effect - a void call,
+     * an allocation, a store - is a statement of its own and must keep its position.
+     * <p>
+     * Scoped to a definition and use in the SAME block, and never to a phi use: a value that crosses a
+     * block boundary or merges at a phi is placed by the machinery that owns those forms (slot naming,
+     * phi copies), and second-guessing it here would drop the value instead of moving it.
+     */
+    public boolean inliningWouldReorderEffects(SSAValue value) {
+        IRInstruction def = value == null ? null : value.getDefinition();
+        if (!hasEffect(def) || value.getUses().size() != 1) {
+            return false;
+        }
+        IRInstruction use = value.getUses().get(0);
+        IRBlock block = def.getBlock();
+        if (block == null || use.getBlock() != block || use instanceof PhiInstruction) {
+            return false;
+        }
+        List<IRInstruction> instrs = block.getInstructions();
+        int from = instrs.indexOf(def);
+        int to = instrs.indexOf(use);
+        if (from < 0 || to < 0 || to < from) {
+            return false;
+        }
+        Set<Value> feedsUse = operandClosure(use);
+        for (int i = from + 1; i < to; i++) {
+            IRInstruction between = instrs.get(i);
+            if (hasEffect(between) && !feedsUse.contains(between.getResult())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Every value the instruction consumes, transitively through definitions in the same block. */
+    private Set<Value> operandClosure(IRInstruction use) {
+        Set<Value> seen = new HashSet<>();
+        java.util.Deque<Value> work = new java.util.ArrayDeque<>(use.getOperands());
+        while (!work.isEmpty()) {
+            Value v = work.poll();
+            if (v == null || !seen.add(v)) {
+                continue;
+            }
+            if (v instanceof SSAValue) {
+                IRInstruction d = ((SSAValue) v).getDefinition();
+                if (d != null && d.getBlock() == use.getBlock()) {
+                    work.addAll(d.getOperands());
+                }
+            }
+        }
+        return seen;
+    }
+
+    /** True for instruction kinds whose execution is observable, so their order may not be changed. */
+    private boolean hasEffect(IRInstruction instr) {
+        if (instr instanceof InvokeInstruction || instr instanceof NewInstruction
+                || instr instanceof NewArrayInstruction) {
+            return true;
+        }
+        if (instr instanceof FieldAccessInstruction) {
+            return ((FieldAccessInstruction) instr).isStore();
+        }
+        return instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isStore();
+    }
+
     private boolean shouldForceInline(IRInstruction def, SSAValue ssa) {
         if (def == null) {
             return false;
@@ -260,7 +331,7 @@ public class ExpressionRecoverer {
         }
         if (def instanceof InvokeInstruction) {
             int useCount = ssa.getUses().size();
-            return useCount <= 1;
+            return useCount <= 1 && !inliningWouldReorderEffects(ssa);
         }
         // A single-use constant must render as its literal, never as a (possibly mis-materialized)
         // variable reference: a constant used directly as an operand was not a named local at that use.
