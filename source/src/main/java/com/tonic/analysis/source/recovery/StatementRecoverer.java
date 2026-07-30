@@ -2663,10 +2663,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * The first instruction in a catch handler typically stores the exception to a local.
      */
     private String findExceptionVariableName(IRBlock handlerBlock) {
+        SlotVariablePartition partition = context.getExpressionContext().getSlotPartition();
         for (IRInstruction instr : handlerBlock.getInstructions()) {
             if (instr instanceof StoreLocalInstruction) {
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                return "local" + store.getLocalIndex();
+                // The partition names the slot this store writes, so a caught exception is called what the
+                // source called it. Composing the name from the slot number here ignored that entirely, and
+                // named the variable `localN` even where the class records a name for it.
+                String named = partition == null ? null : partition.nameForStore(store);
+                return named != null ? named : "local" + store.getLocalIndex();
             }
             if (instr instanceof CopyInstruction) {
                 CopyInstruction copy = (CopyInstruction) instr;
@@ -5659,10 +5664,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         String name = partitionName(phi);
         String nameFromMethodRecoverer = context.getExpressionContext().getVariableName(result);
         if (name == null) {
-            if (nameFromMethodRecoverer != null && nameFromMethodRecoverer.startsWith("local")) {
+            int localIndex = getLocalIndexFromPhi(phi);
+            // A slot with no recovered name already carries a generated one, and that name IS the name for
+            // this phi - take it as it stands. A slot that does have a recovered name goes through the typed
+            // lookup instead, which is what disambiguates a slot reused at more than one type. The two were
+            // previously told apart by whether the name began with `local`, so a class compiled with debug
+            // info silently took a different path than the same class compiled without it.
+            boolean slotIsNamed = localIndex >= 0
+                    && context.getExpressionContext().debugNameForSlot(localIndex) != null;
+            if (nameFromMethodRecoverer != null && !slotIsNamed) {
                 name = nameFromMethodRecoverer;
             } else {
-                int localIndex = getLocalIndexFromPhi(phi);
                 if (localIndex >= 0) {
                     name = getNameForLocalSlotWithType(localIndex, phiType);
                 }
@@ -5905,13 +5917,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         SSAValue result = phi.getResult();
         if (result == null) return -1;
 
-        String varName = context.getExpressionContext().getVariableName(result);
-        if (varName != null && varName.startsWith("local")) {
-            try {
-                return Integer.parseInt(varName.substring(5));
-            } catch (NumberFormatException ignored) {
-            }
-        }
+        // The slot is read off the phi's operands below. There used to be a fast path that parsed it out of a
+        // generated `localN` name, which fired only for a class WITHOUT debug info - so the two took different
+        // routes to the same answer, and only one of them was exercised by anything.
 
         for (Value incoming : phi.getOperands()) {
             if (incoming instanceof SSAValue) {
@@ -8491,10 +8499,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private final java.util.Map<IRBlock, Boolean> blockHasFieldStoreCache = new java.util.IdentityHashMap<>();
 
     /**
-     * Materializes a load into a named temporary declared at the load site so later uses read the
-     * captured value instead of re-reading its storage after a write. Returns null when the value has no
-     * recoverable type or the name is already taken (leaving the caller's default path).
+     * Whether {@code name} is one of the per-value temporaries this recovery mints for a value with no variable
+     * of its own ({@code v} followed by an id) - so a store may take its slot's name over it. Matched against
+     * that whole generated form rather than tested for a leading {@code v}, which also claimed any recovered
+     * variable that merely happens to be called {@code value} or {@code visited}.
      */
+    private boolean isPerValueTemporaryName(String name) {
+        if (name.length() < 2 || name.charAt(0) != 'v') {
+            return false;
+        }
+        for (int i = 1; i < name.length(); i++) {
+            if (!Character.isDigit(name.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private Statement materializeClobberedLoad(SSAValue result, Expression value) {
         return materializeIntoTemporary(result, value, "v" + result.getId());
     }
@@ -9259,7 +9280,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
             if (!isLoadedValue && !isAlreadyMaterialized) {
                 String existingName = context.getExpressionContext().getVariableName(sourceValue);
-                if (existingName != null && !existingName.startsWith("v")) {
+                if (existingName != null && !isPerValueTemporaryName(existingName)) {
                     name = existingName;
                 } else {
                     context.getExpressionContext().setVariableName(sourceValue, name);

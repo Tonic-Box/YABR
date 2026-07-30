@@ -80,6 +80,22 @@ public class RecoveryContext {
         this.slotPartition = slotPartition;
     }
 
+    private java.util.function.IntFunction<String> debugNameResolver;
+
+    public void setDebugNameResolver(java.util.function.IntFunction<String> resolver) {
+        this.debugNameResolver = resolver;
+    }
+
+    /**
+     * The recovered debug name for {@code slot}, or null when the class carries none for it or the active
+     * name-recovery strategy declines it. Callers ask this instead of inspecting the shape of a name they were
+     * handed - a generated name and a recorded one are then distinguished by where they came from, not by
+     * whether they happen to start with a particular prefix.
+     */
+    public String debugNameForSlot(int slot) {
+        return debugNameResolver == null ? null : debugNameResolver.apply(slot);
+    }
+
     private java.util.function.BiFunction<Integer, Integer, String> debugDescriptorResolver;
 
     public void setDebugDescriptorResolver(java.util.function.BiFunction<Integer, Integer, String> resolver) {

@@ -35,6 +35,7 @@ import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
+import com.tonic.analysis.source.recovery.NameRecoveryStrategy;
 import com.tonic.analysis.source.recovery.SyntheticLocalVariableTable;
 import com.tonic.analysis.source.recovery.SwitchMapAnalyzer;
 import com.tonic.analysis.source.recovery.TypeRecoverer;
@@ -244,7 +245,8 @@ public class ClassDecompiler {
         try {
             IRMethod ir = ssa.lift(method);
             applyBaselineTransforms(ir);
-            MethodRecoverer recoverer = new MethodRecoverer(ir, method);
+            MethodRecoverer recoverer = new MethodRecoverer(ir, method,
+                    decompilerConfig.getNameRecoveryStrategy());
             recoverer.analyze();
             recoverer.initializeRecovery();
             return SyntheticLocalVariableTable.build(ir, recoverer.getRecoveryContext(), method,
@@ -898,7 +900,8 @@ public class ClassDecompiler {
         IRMethod ir = ssa.lift(clinit);
         applyBaselineTransforms(ir);
         applyAdditionalTransforms(ir);
-        BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit);
+        BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit,
+                decompilerConfig.getNameRecoveryStrategy());
         astSimplifier.transform(body);
         arrayInitReconstructor.transform(body);
         patternInstanceOf.transform(body);
@@ -1151,7 +1154,8 @@ public class ClassDecompiler {
             IRMethod ir = ssa.lift(ctor);
             applyBaselineTransforms(ir);
             applyAdditionalTransforms(ir);
-            BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor);
+            BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor,
+                    decompilerConfig.getNameRecoveryStrategy());
             astSimplifier.transform(body);
             patternInstanceOf.transform(body);
             singleUseInliner.transform(body);
@@ -1240,7 +1244,8 @@ public class ClassDecompiler {
             // to regular methods as they can cause issues with complex control flow.
             // Only additional transforms from config are applied.
             applyAdditionalTransforms(ir);
-            BlockStmt body = MethodRecoverer.recoverMethod(ir, method);
+            BlockStmt body = MethodRecoverer.recoverMethod(ir, method,
+                    decompilerConfig.getNameRecoveryStrategy());
             dumpStage(method.getName(), body, "00-raw");
             astSimplifier.transform(body);
             dumpStage(method.getName(), body, "01-simplify");
@@ -1467,6 +1472,12 @@ public class ClassDecompiler {
      */
     private Map<Integer, String> unambiguousLvtNames(com.tonic.parser.MethodEntry method) {
         Map<Integer, String> result = new HashMap<>();
+        // The signature must name its parameters the way the body does, so the strategy governs here too: a
+        // mode that ignores debug info in the body would otherwise still print recovered names on the
+        // signature line, and the two would disagree.
+        if (decompilerConfig.getNameRecoveryStrategy() == NameRecoveryStrategy.ALWAYS_SYNTHETIC) {
+            return result;
+        }
         CodeAttribute code = method.getCodeAttribute();
         if (code == null) {
             return result;

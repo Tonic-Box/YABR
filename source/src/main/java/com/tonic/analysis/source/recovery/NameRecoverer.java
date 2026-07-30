@@ -27,7 +27,6 @@ public class NameRecoverer {
     private final MethodEntry sourceMethod;
     private final LocalVariableTableAttribute lvt;
     private final ConstPool constPool;
-    private final Map<Integer, String> slotToName = new HashMap<>();
     private final Map<Integer, String> unambiguousSlotName = new HashMap<>();
     private int syntheticCounter = 0;
 
@@ -63,7 +62,6 @@ public class NameRecoverer {
         for (LocalVariableTableEntry entry : lvt.getLocalVariableTable()) {
             String name = resolveUtf8(entry.getNameIndex());
             if (name != null) {
-                slotToName.put(entry.getIndex(), name);
                 namesPerSlot.computeIfAbsent(entry.getIndex(), k -> new java.util.HashSet<>()).add(name);
             }
         }
@@ -80,7 +78,23 @@ public class NameRecoverer {
      * variable names without risking a wrong label on a reused slot.
      */
     public String unambiguousDebugName(int slot) {
-        return unambiguousSlotName.get(slot);
+        return debugNamesAllowedFor(slot) ? unambiguousSlotName.get(slot) : null;
+    }
+
+    /**
+     * Whether the strategy permits a recovered debug name for {@code slot}. This is the single gate the whole
+     * naming path passes through - parameter names, a slot's base name, and the partition's scope lookup all
+     * arrive here - so a strategy applies uniformly instead of holding only where a caller remembered it.
+     */
+    private boolean debugNamesAllowedFor(int slot) {
+        switch (strategy) {
+            case ALWAYS_SYNTHETIC:
+                return false;
+            case PARAMETERS_ONLY:
+                return isParameter(slot);
+            default:
+                return true;
+        }
     }
 
     /**
@@ -90,7 +104,7 @@ public class NameRecoverer {
      * scope, so a slot holding {@code i} in one loop and {@code builder} in another names each by position.
      */
     public String debugNameAt(int slot, int offset) {
-        if (lvt == null) {
+        if (lvt == null || !debugNamesAllowedFor(slot)) {
             return null;
         }
         for (LocalVariableTableEntry entry : lvt.getLocalVariableTable()) {
@@ -135,44 +149,6 @@ public class NameRecoverer {
         return null;
     }
 
-    /**
-     * Recovers a name for the given SSA value.
-     */
-    public String recoverName(SSAValue value, int localSlot, int bytecodeOffset) {
-        if (strategy == NameRecoveryStrategy.ALWAYS_SYNTHETIC) {
-            return generateSyntheticName(value);
-        }
-
-        String debugName = lookupFromDebugInfo(localSlot, bytecodeOffset);
-        if (debugName != null && strategy == NameRecoveryStrategy.PREFER_DEBUG_INFO) {
-            return debugName;
-        }
-
-        if (isParameter(localSlot)) {
-            if (debugName != null) return debugName;
-            return generateParameterName(localSlot);
-        }
-
-        if (strategy == NameRecoveryStrategy.PARAMETERS_ONLY) {
-            return generateSyntheticName(value);
-        }
-
-        return debugName != null ? debugName : generateSyntheticName(value);
-    }
-
-    private String lookupFromDebugInfo(int slot, int offset) {
-        if (lvt == null) return null;
-
-        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable()) {
-            if (entry.getIndex() == slot) {
-                if (offset >= entry.getStartPc() && offset < entry.getStartPc() + entry.getLengthPc()) {
-                    return resolveUtf8(entry.getNameIndex());
-                }
-            }
-        }
-        return slotToName.get(slot);
-    }
-
     private boolean isParameter(int slot) {
         int paramSlots = irMethod.isStatic() ? 0 : 1;
         for (SSAValue param : irMethod.getParameters()) {
@@ -185,14 +161,6 @@ public class NameRecoverer {
             }
         }
         return slot < paramSlots;
-    }
-
-    private String generateParameterName(int slot) {
-        if (!irMethod.isStatic() && slot == 0) {
-            return "this";
-        }
-        int paramIndex = irMethod.isStatic() ? slot : slot - 1;
-        return "arg" + paramIndex;
     }
 
     /**

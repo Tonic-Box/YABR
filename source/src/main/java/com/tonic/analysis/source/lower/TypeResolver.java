@@ -728,7 +728,50 @@ public class TypeResolver {
                 bestReturn = m.getReturnType();
             }
         }
+        if (bestParams == null) {
+            // No method takes this many parameters, so consider a varargs callee in its EXPANDED form - the
+            // decompiler renders varargs as flat arguments, and the pool-based resolver already matches that
+            // way. Second pass, so an exact-arity overload always wins. The DECLARED descriptor is returned
+            // (trailing array parameter and all), which is what the invoke needs and what tells the caller to
+            // pack the trailing arguments.
+            for (Method m : owner.getMethods()) {
+                if (!m.getName().equals(methodName) || !m.isVarArgs()) {
+                    continue;
+                }
+                Class<?>[] p = m.getParameterTypes();
+                if (!expandedVarargsAccepts(p, args)) {
+                    continue;
+                }
+                if (bestParams == null || isAtLeastAsSpecific(p, bestParams)) {
+                    bestParams = p;
+                    bestReturn = m.getReturnType();
+                }
+            }
+        }
         return bestParams == null ? null : buildRuntimeDescriptor(bestParams, bestReturn);
+    }
+
+    /**
+     * Whether {@code args} fits {@code params} read as a varargs signature: the fixed parameters taken in
+     * order, then every remaining argument accepted by the trailing array's component type.
+     */
+    private boolean expandedVarargsAccepts(Class<?>[] params, Class<?>[] args) {
+        int fixed = params.length - 1;
+        if (fixed < 0 || args.length < fixed || !params[fixed].isArray()) {
+            return false;
+        }
+        for (int i = 0; i < fixed; i++) {
+            if (!accepts(params[i], args[i])) {
+                return false;
+            }
+        }
+        Class<?> component = params[fixed].getComponentType();
+        for (int i = fixed; i < args.length; i++) {
+            if (!accepts(component, args[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Class<?> boxed(Class<?> c) {
@@ -916,7 +959,7 @@ public class TypeResolver {
     public boolean isVarargsMethod(String ownerClass, String methodName, String descriptor) {
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
-            return false;
+            return reflectIsVarargsMethod(ownerClass, methodName, descriptor);
         }
         for (MethodEntry method : cf.getMethods()) {
             if (method.getName().equals(methodName) && method.getDesc().equals(descriptor)) {
@@ -932,6 +975,26 @@ public class TypeResolver {
         for (int ifaceIdx : cf.getInterfaces()) {
             if (isVarargsMethod(cf.resolveClassName(ifaceIdx), methodName, descriptor)) {
                 return true;
+            }
+        }
+        return reflectIsVarargsMethod(ownerClass, methodName, descriptor);
+    }
+
+    /**
+     * Whether a classpath-available method with this descriptor is declared varargs - the fallback for a callee
+     * the {@link ClassPool} does not hold, mirroring {@link #resolveMethodDescriptorViaReflection}. Without it
+     * a varargs call resolved by reflection is never packed into its trailing array, so the invoke carries the
+     * flat argument descriptor: the class still verifies and fails to link only when the method is called.
+     */
+    private boolean reflectIsVarargsMethod(String ownerClass, String methodName, String descriptor) {
+        Class<?> owner = loadRuntimeClass(ownerClass);
+        if (owner == null || descriptor == null) {
+            return false;
+        }
+        for (Method m : owner.getMethods()) {
+            if (m.getName().equals(methodName)
+                    && descriptor.equals(buildRuntimeDescriptor(m.getParameterTypes(), m.getReturnType()))) {
+                return m.isVarArgs();
             }
         }
         return false;

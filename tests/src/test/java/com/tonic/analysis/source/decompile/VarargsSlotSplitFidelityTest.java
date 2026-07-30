@@ -55,9 +55,10 @@ class VarargsSlotSplitFidelityTest {
         assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
                 "fixture compiled");
 
-        // A JDK-loaded pool, as the round-trip gate uses: resolving String.format's varargs flag
-        // needs its ClassFile, and without it the lowering emits the flat argument descriptor.
-        ClassPool pool = new ClassPool();
+        // Deliberately a pool with no JDK classes: String.format's varargs flag must then be found by
+        // reflection. Resolved only by arity it matches nothing, and the invoke would carry the flat argument
+        // descriptor - a class that verifies and fails to link when the method is finally called.
+        ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("VarargsSlotSplit.class")));
         Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
         assertEquals("2 of 3", original, "the fixture itself must format both arguments");

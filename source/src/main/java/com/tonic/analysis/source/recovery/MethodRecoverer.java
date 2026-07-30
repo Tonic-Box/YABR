@@ -259,6 +259,7 @@ public class MethodRecoverer {
                 nameRecoverer::debugNameAt);
         recoveryContext.setSlotPartition(partition);
         recoveryContext.setDebugDescriptorResolver(nameRecoverer::debugDescriptorAt);
+        recoveryContext.setDebugNameResolver(nameRecoverer::unambiguousDebugName);
 
         irMethod.getBlocks().forEach(block -> {
             block.getPhiInstructions().forEach(phi -> {

@@ -24,10 +24,13 @@ public class DecompilerConfig {
      *  The returned list is unmodifiable.
      */
     private final List<IRTransform> additionalTransforms;
+    /** How variable names are recovered: from debug info where present, or synthetic regardless. */
+    private final com.tonic.analysis.source.recovery.NameRecoveryStrategy nameRecoveryStrategy;
 
     private DecompilerConfig(Builder builder) {
         this.emitterConfig = builder.emitterConfig;
         this.additionalTransforms = Collections.unmodifiableList(new ArrayList<>(builder.transforms));
+        this.nameRecoveryStrategy = builder.nameRecoveryStrategy;
     }
 
     public SourceEmitterConfig getEmitterConfig() {
@@ -36,6 +39,15 @@ public class DecompilerConfig {
 
     public List<IRTransform> getAdditionalTransforms() {
         return additionalTransforms;
+    }
+
+    /**
+     * How variable names are recovered. The default prefers a name recorded in the {@code LocalVariableTable};
+     * the other modes produce the same names whether or not a class was compiled with debug info, which is what
+     * output compared across obfuscated and non-obfuscated builds needs.
+     */
+    public com.tonic.analysis.source.recovery.NameRecoveryStrategy getNameRecoveryStrategy() {
+        return nameRecoveryStrategy;
     }
 
     /**
@@ -58,6 +70,8 @@ public class DecompilerConfig {
     public static class Builder {
         private SourceEmitterConfig emitterConfig = SourceEmitterConfig.defaults();
         private final List<IRTransform> transforms = new ArrayList<>();
+        private com.tonic.analysis.source.recovery.NameRecoveryStrategy nameRecoveryStrategy =
+                com.tonic.analysis.source.recovery.NameRecoveryStrategy.PREFER_DEBUG_INFO;
 
         private Builder() {}
 
@@ -121,9 +135,15 @@ public class DecompilerConfig {
             return this;
         }
 
-        /**
-         * Builds the DecompilerConfig.
-         */
+        /** Sets how variable names are recovered. */
+        public Builder nameRecoveryStrategy(
+                com.tonic.analysis.source.recovery.NameRecoveryStrategy strategy) {
+            this.nameRecoveryStrategy = strategy == null
+                    ? com.tonic.analysis.source.recovery.NameRecoveryStrategy.PREFER_DEBUG_INFO
+                    : strategy;
+            return this;
+        }
+
         public DecompilerConfig build() {
             return new DecompilerConfig(this);
         }
