@@ -6221,6 +6221,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
+     * Whether the object a constructor call built is used by nothing else, so the call stands alone as a
+     * statement. The {@code <init>} invoke itself (and the {@code dup} the allocation is paired through) are
+     * not uses that keep the value alive for anything later.
+     */
+    private boolean isDiscardedAllocation(SSAValue newValue, InvokeInstruction init) {
+        if (newValue == null) {
+            return false;
+        }
+        for (IRInstruction use : newValue.getUses()) {
+            if (use != init) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Whether a call result must be forced into a named temporary instead of inlined. Only multi-use
      * receivers qualify: a single-use value is always inlined at its sole use site by the expression
      * recoverer, so materializing it here is futile and leaves an orphaned, re-inlined statement once
@@ -8803,6 +8820,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                             if (usedByStore && targetPhi == null) {
                                 return null;
                             }
+                            // Nothing keeps the object - no store, no merge, no name - but constructing it is
+                            // still what the statement DOES: the constructor runs, and whatever it throws or
+                            // writes happens. Caching the expression for a use that does not exist dropped the
+                            // allocation from the output entirely, leaving an empty method behind.
+                            if (isDiscardedAllocation(newResult, invoke)) {
+                                return new ExprStmt(expr);
+                            }
                             return null;
                         }
                         SSAValue actualNewValue = findNewInstructionValue(ssaReceiver);
@@ -8831,6 +8855,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         }
                         if (actualNewValue != null) {
                             context.getExpressionContext().cacheExpression(actualNewValue, expr);
+                        }
+                        // Nothing keeps the object - no store, no merge, no name - but constructing it is
+                        // still what the statement DOES: the constructor runs, and whatever it throws or
+                        // writes happens. Caching the expression for a use that does not exist dropped the
+                        // allocation from the output entirely, leaving an empty method behind.
+                        if (isDiscardedAllocation(actualNewValue, invoke)) {
+                            return new ExprStmt(expr);
                         }
                     }
                     return null;

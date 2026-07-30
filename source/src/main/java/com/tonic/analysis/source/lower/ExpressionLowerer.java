@@ -146,7 +146,12 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(branch);
         } else if (commonType == PrimitiveSourceType.FLOAT) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            // An ordered comparison must be FALSE when either side is NaN, so the compare has to bias NaN
+            // the way that makes the following branch fail: `<`/`<=` take fcmpg (NaN reads as greater),
+            // `>`/`>=` take fcmpl (NaN reads as less). The bias follows the operator as written - a negated
+            // comparison keeps its own, exactly as javac emits it - and having it the other way round made
+            // every float comparison answer the opposite of the source for NaN.
+            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
             currentBlock.addInstruction(fcmpInstr);
 
@@ -155,7 +160,7 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(branch);
         } else if (commonType == PrimitiveSourceType.DOUBLE) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
             currentBlock.addInstruction(dcmpInstr);
 
@@ -721,7 +726,7 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(branch);
         } else if (commonType == PrimitiveSourceType.FLOAT) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
             currentBlock.addInstruction(fcmpInstr);
 
@@ -730,7 +735,7 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(branch);
         } else if (commonType == PrimitiveSourceType.DOUBLE) {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
             currentBlock.addInstruction(dcmpInstr);
 
@@ -883,6 +888,16 @@ public class ExpressionLowerer {
         }
 
         return isPrefix ? newValue : oldValue;
+    }
+
+    /**
+     * Whether an ordered floating-point comparison needs the NaN-reads-as-greater compare ({@code fcmpg} /
+     * {@code dcmpg}). A comparison must be false for NaN, so the bias is chosen to make the branch that
+     * follows it fail: {@code <} and {@code <=} want NaN to read as greater, {@code >} and {@code >=} want
+     * it to read as less.
+     */
+    private static boolean nanReadsAsGreater(BinaryOperator op) {
+        return op == BinaryOperator.LT || op == BinaryOperator.LE;
     }
 
     private Value lowerMethodCall(MethodCallExpr call) {

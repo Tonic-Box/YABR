@@ -1162,7 +1162,12 @@ public class ExpressionRecoverer {
             // string CONVERSION, not the raw value: without an empty-string left operand the concat collapses to
             // the bare operand and the method returns its int/etc. type under a String signature. Prepend "" so it
             // recovers as `"" + x` and re-lowers as a concat. (A single String operand never reaches makeConcat.)
-            if (parts.size() == 1 && !isStringTyped(parts.get(0))) {
+            // `+` builds a String only when an operand already is one, and it associates left to right - so a
+            // chain whose first two operands are both non-String is ARITHMETIC, not concatenation. javac's
+            // `"" + x` shortcut leaves no literal in the recipe, so without restoring that empty string the
+            // recovered `a() + b()` adds two booleans under a String signature. Prepend it whenever the leading
+            // operands cannot make the `+` a concatenation on their own; a String already in front needs nothing.
+            if (!isStringTyped(parts.get(0)) && (parts.size() == 1 || !isStringTyped(parts.get(1)))) {
                 parts.add(0, LiteralExpr.ofString(""));
             }
             Expression result = parts.get(0);

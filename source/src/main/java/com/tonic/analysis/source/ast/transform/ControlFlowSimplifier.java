@@ -237,6 +237,40 @@ public class ControlFlowSimplifier implements ASTTransform {
         // is recovered identically from either layout when left alone but flattens differently when flipped,
         // so it stays untouched. The return-then-throw rule above owns its narrower shape; a
         // constant-equality guard keeps its form for the switch reconstructor.
+        // The same pair with the condition written the other way round: `if (C) { long...; exit } shortExit;`
+        // is the same shape as `if (!C) { shortExit } long...`, and the structurer produces whichever one the
+        // branch layout suggested. Normalize to the guard clause, which is what the source had, by guarding
+        // the SHORT arm - a rule that reads the arms rather than the condition's polarity and so reaches the
+        // same form from either layout. Kept to the validation shape it exists for: the following statement
+        // must be a lone THROW and the then-arm must be longer. Admitting a following `return` as well reaches
+        // further into ordinary control flow, where it shifts a nested loop's counter placement.
+        if (!ifStmt.hasElse()
+                && !isPurelyLogicalNegation(ifStmt.getCondition())
+                && !isSwitchChainGuard(ifStmt.getCondition())
+                && !isConstantEqualityGuard(ifStmt.getCondition())
+                && isTerminal(ifStmt.getThenBranch())
+                && index + 1 < parentList.size()
+                && unwrapSingleStatement(parentList.get(index + 1)) instanceof ThrowStmt
+                && getStatements(ifStmt.getThenBranch()).size() > 1) {
+            List<Statement> thenStmts = new ArrayList<>(getStatements(ifStmt.getThenBranch()));
+            // The long arm's own trailing exit only existed to leave the `if`; flat after the guard it is the
+            // method's natural end, and leaving it in would be an unreachable-looking `return` at the tail.
+            if (!thenStmts.isEmpty() && thenStmts.get(thenStmts.size() - 1) instanceof ReturnStmt
+                    && ((ReturnStmt) thenStmts.get(thenStmts.size() - 1)).getValue() == null) {
+                thenStmts.remove(thenStmts.size() - 1);
+            }
+            Statement following = unwrapSingleStatement(parentList.get(index + 1));
+            invertCondition(ifStmt);
+            List<Statement> guardBody = new ArrayList<>();
+            guardBody.add(following);
+            ifStmt.setThenBranch(new BlockStmt(guardBody));
+            parentList.remove(index + 1);
+            for (int j = 0; j < thenStmts.size(); j++) {
+                parentList.add(index + 1 + j, thenStmts.get(j));
+            }
+            return true;
+        }
+
         if (!ifStmt.hasElse()
                 && isPurelyLogicalNegation(ifStmt.getCondition())
                 && !isSwitchChainGuard(ifStmt.getCondition())
@@ -1032,7 +1066,7 @@ public class ControlFlowSimplifier implements ASTTransform {
                         negate(binary.getLeft()), negate(binary.getRight()), binary.getType());
             }
             BinaryOperator flipped = flipComparison(op);
-            if (flipped != null) {
+            if (flipped != null && !flipChangesNanAnswer(binary)) {
                 return new BinaryExpr(flipped, binary.getLeft(), binary.getRight(), binary.getType());
             }
         }
@@ -1085,7 +1119,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             BinaryExpr ba = (BinaryExpr) a;
             BinaryExpr bb = (BinaryExpr) b;
             BinaryOperator flipped = flipComparison(ba.getOperator());
-            if (flipped != null && flipped == bb.getOperator()
+            if (flipped != null && !flipChangesNanAnswer(ba) && flipped == bb.getOperator()
                     && expressionsEqual(ba.getLeft(), bb.getLeft())
                     && expressionsEqual(ba.getRight(), bb.getRight())) {
                 return true;
@@ -1139,6 +1173,36 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
             return super.visitUnary(expr);
         }
+    }
+
+    /**
+     * Whether flipping this comparison's operator would change what it answers for NaN. An ordered
+     * comparison of floating-point values is false whenever either side is NaN, so BOTH {@code a < b} and
+     * {@code a >= b} are false there - the negation of one is not the other, and the bytecode keeps them
+     * apart with different compare opcodes ({@code dcmpg} versus {@code dcmpl}). Only the ordered operators
+     * are affected: {@code ==} and {@code !=} do stay each other's negation for NaN.
+     */
+    private boolean flipChangesNanAnswer(BinaryExpr comparison) {
+        switch (comparison.getOperator()) {
+            case LT:
+            case LE:
+            case GT:
+            case GE:
+                break;
+            default:
+                return false;
+        }
+        return isFloatingPoint(comparison.getLeft()) || isFloatingPoint(comparison.getRight());
+    }
+
+    private boolean isFloatingPoint(Expression expr) {
+        SourceType type = expr == null ? null : expr.getType();
+        if (!(type instanceof PrimitiveSourceType)) {
+            return false;
+        }
+        PrimitiveSourceType.PrimitiveKind kind = ((PrimitiveSourceType) type).getKind();
+        return kind == PrimitiveSourceType.PrimitiveKind.FLOAT
+                || kind == PrimitiveSourceType.PrimitiveKind.DOUBLE;
     }
 
     private BinaryOperator flipComparison(BinaryOperator op) {
