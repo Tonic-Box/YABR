@@ -1462,10 +1462,125 @@ public class ControlFlowSimplifier implements ASTTransform {
                 continue;
             }
 
+            BlockStmt body = exclusiveBodyOf(s, varName);
+            if (body != null) {
+                if (candidate != null) return null;
+                candidate = body;
+                continue;
+            }
+
             if (usesVariable(s, varName)) return null;
         }
 
         return candidate;
+    }
+
+    /**
+     * The body of {@code s} when every use of {@code varName} in {@code s} is inside that one body and the
+     * body writes the variable before reading it - so the declaration can move in with it. A loop body
+     * qualifies only under that write-first rule: a variable read before it is written carries its value from
+     * the previous iteration, and a declaration moved inside would reset it every time. An if-arm needs the
+     * same rule for a different reason - moved inside, the default initializer no longer precedes the read.
+     * <p>
+     * This is what lets a temporary the relowered layout spilled to a slot end up beside its use, where the
+     * single-use inliner can fold it away again; left at method level with the assignment further down, the
+     * inliner sees a statement in between and declines, and the temporary survives into the output.
+     */
+    private BlockStmt exclusiveBodyOf(Statement s, String varName) {
+        Statement body;
+        if (s instanceof WhileStmt) {
+            WhileStmt loop = (WhileStmt) s;
+            if (readsVariableExpr(loop.getCondition(), varName, true)) return null;
+            body = loop.getBody();
+        } else if (s instanceof DoWhileStmt) {
+            DoWhileStmt loop = (DoWhileStmt) s;
+            if (readsVariableExpr(loop.getCondition(), varName, true)) return null;
+            body = loop.getBody();
+        } else if (s instanceof ForStmt) {
+            ForStmt loop = (ForStmt) s;
+            if (loop.getCondition() != null && readsVariableExpr(loop.getCondition(), varName, true)) {
+                return null;
+            }
+            for (Statement init : loop.getInit()) {
+                if (usesVariable(init, varName)) return null;
+            }
+            for (Expression update : loop.getUpdate()) {
+                if (readsVariableExpr(update, varName, true)) return null;
+            }
+            body = loop.getBody();
+        } else if (s instanceof ForEachStmt) {
+            ForEachStmt loop = (ForEachStmt) s;
+            if (readsVariableExpr(loop.getIterable(), varName, true)) return null;
+            body = loop.getBody();
+        } else if (s instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) s;
+            if (readsVariableExpr(ifStmt.getCondition(), varName, true)) return null;
+            boolean inThen = usesVariable(ifStmt.getThenBranch(), varName);
+            boolean inElse = ifStmt.hasElse() && usesVariable(ifStmt.getElseBranch(), varName);
+            if (inThen == inElse) return null; // used in both arms, or in neither
+            body = inThen ? ifStmt.getThenBranch() : ifStmt.getElseBranch();
+        } else {
+            return null;
+        }
+        if (!(body instanceof BlockStmt) || !usesVariable(body, varName)) {
+            return null;
+        }
+        if (drivesALoopWithin((BlockStmt) body, varName)) {
+            return null;
+        }
+        return writesBeforeReading((BlockStmt) body, varName) ? (BlockStmt) body : null;
+    }
+
+    /**
+     * Whether {@code varName} steers a loop nested inside {@code body} - its condition or update reads the
+     * variable, making it that loop's counter. A counter's declaration belongs to the loop it drives, which the
+     * for-counter folder places; moving it here as well leaves the two passes disagreeing about where it goes.
+     */
+    private boolean drivesALoopWithin(BlockStmt body, String varName) {
+        AtomicBoolean found = new AtomicBoolean(false);
+        body.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitFor(ForStmt stmt) {
+                if (stmt.getCondition() != null && readsVariableExpr(stmt.getCondition(), varName, true)) {
+                    found.set(true);
+                }
+                for (Expression update : stmt.getUpdate()) {
+                    if (readsVariableExpr(update, varName, true)) {
+                        found.set(true);
+                    }
+                }
+                return super.visitFor(stmt);
+            }
+
+            @Override
+            public Void visitWhile(WhileStmt stmt) {
+                if (readsVariableExpr(stmt.getCondition(), varName, true)) {
+                    found.set(true);
+                }
+                return super.visitWhile(stmt);
+            }
+
+            @Override
+            public Void visitDoWhile(DoWhileStmt stmt) {
+                if (readsVariableExpr(stmt.getCondition(), varName, true)) {
+                    found.set(true);
+                }
+                return super.visitDoWhile(stmt);
+            }
+        });
+        return found.get();
+    }
+
+    /** Whether the first statement of {@code body} that touches {@code varName} assigns to it. */
+    private boolean writesBeforeReading(BlockStmt body, String varName) {
+        for (Statement s : body.getStatements()) {
+            if (!usesVariable(s, varName)) {
+                continue;
+            }
+            BinaryExpr assign = getAssignmentTo(s, varName);
+            return assign != null && !readsVariableExpr(assign.getRight(), varName, true);
+        }
+        return false;
     }
 
     /**
