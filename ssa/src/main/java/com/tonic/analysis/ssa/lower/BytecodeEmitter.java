@@ -961,7 +961,7 @@ public class BytecodeEmitter {
                     // the middle of the argument's own stack and its trailing call would consume the receiver
                     // instead of its own - so the argument spills to a local instead, as it did before any
                     // preload existed.
-                    if (argEvaluationStart(instructions, defIdxOf, argDef) != argDef) {
+                    if (windowStartIndex(arg, instructions, defIdxOf, k) != argDef) {
                         continue;
                     }
                     receiverPreload.put(instructions.get(argDef), recv);
@@ -1071,9 +1071,16 @@ public class BytecodeEmitter {
                     continue; // value built in this block before the store
                 }
                 IRInstruction valDefInstr = instructions.get(valDef);
-                if (!(valDefInstr instanceof NewInstruction) || !newToInit.containsKey(valDefInstr)
-                        || useCounts.getOrDefault(value, 0) != 2) {
-                    continue; // a paired-new value used only by its <init> and this store
+                // Either a paired new used only by its own <init> and this store, or any other value this
+                // store alone consumes whose computation is a single instruction. A longer computation begins
+                // before its defining instruction, and the array+index pushed there would land inside it.
+                boolean pairedNewValue = valDefInstr instanceof NewInstruction
+                        && newToInit.containsKey(valDefInstr)
+                        && useCounts.getOrDefault(value, 0) == 2;
+                boolean singleInstructionValue = useCounts.getOrDefault(value, 0) == 1
+                        && windowStartIndex(value, instructions, defIdxOf, k) == valDef;
+                if (!pairedNewValue && !singleInstructionValue) {
+                    continue;
                 }
                 SSAValue arraySv = store.getArray() instanceof SSAValue ? (SSAValue) store.getArray() : null;
                 SSAValue indexSv = store.getIndex() instanceof SSAValue ? (SSAValue) store.getIndex() : null;
@@ -1111,6 +1118,44 @@ public class BytecodeEmitter {
                 arrayStorePrefixPreload.put(valDefInstr, prefix);
                 skipStorePrefix.add(store);
                 stackResidentValues.add(value);
+            }
+
+            // Field store: this.f = <expr>. The receiver is a re-loadable value loaded on-demand AT the store,
+            // which is AFTER the value - so the value has to spill to a local and reload. Preload the receiver
+            // just before the value's computation and the value stays resident on top of it, matching javac's
+            // `aload_0; <expr>; putfield`. Restricted to a value produced by a single instruction: a longer
+            // computation starts earlier than its defining instruction, and a receiver pushed there would land
+            // inside the value's own stack.
+            for (int k = 0; k < instructions.size(); k++) {
+                if (!(instructions.get(k) instanceof FieldAccessInstruction)) {
+                    continue;
+                }
+                FieldAccessInstruction store = (FieldAccessInstruction) instructions.get(k);
+                if (!store.isStore() || store.isStatic()) {
+                    continue;
+                }
+                if (!(store.getObjectRef() instanceof SSAValue) || !(store.getValue() instanceof SSAValue)) {
+                    continue;
+                }
+                SSAValue recv = (SSAValue) store.getObjectRef();
+                SSAValue value = (SSAValue) store.getValue();
+                Integer valDef = defIdxOf.get(value);
+                if (valDef == null || valDef >= k || useCounts.getOrDefault(value, 0) != 1) {
+                    continue; // the value is built in this block, for this store alone
+                }
+                if (stackResidentValues.contains(recv) || inlinedConstants.contains(recv)
+                        || regAlloc.getRegister(recv) < 0 || defIdxOf.get(recv) != null) {
+                    continue; // the receiver must be re-loadable on demand, so it can be pushed early
+                }
+                if (windowStartIndex(value, instructions, defIdxOf, k) != valDef) {
+                    continue;
+                }
+                if (!arrayStoreWindowClosed(instructions, valDef, k, useCounts, value)) {
+                    continue;
+                }
+                receiverPreload.put(instructions.get(valDef), recv);
+                skipReceiver.add(store);
+                markResident(value);
             }
         }
     }
@@ -1167,37 +1212,6 @@ public class BytecodeEmitter {
             }
         }
         return min;
-    }
-
-    /**
-     * The index of the first instruction in {@code block} that contributes to {@code arg}'s value: the lowest
-     * index in the transitive closure of its operands within this block, and {@code argDef} itself when the
-     * value is produced outright. This is where the argument's evaluation begins on the stack, so it is where a
-     * preloaded receiver has to sit to end up underneath all of it.
-     */
-    private int argEvaluationStart(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
-                                   int argDef) {
-        int start = argDef;
-        java.util.Deque<Integer> work = new java.util.ArrayDeque<>();
-        java.util.Set<Integer> seen = new HashSet<>();
-        work.add(argDef);
-        while (!work.isEmpty()) {
-            int idx = work.poll();
-            if (!seen.add(idx)) {
-                continue;
-            }
-            start = Math.min(start, idx);
-            for (Value op : instructions.get(idx).getOperands()) {
-                if (!(op instanceof SSAValue)) {
-                    continue;
-                }
-                Integer opDef = defIdxOf.get(op);
-                if (opDef != null && opDef < idx) {
-                    work.add(opDef);
-                }
-            }
-        }
-        return start;
     }
 
     private boolean argWindowClosedForPreload(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
