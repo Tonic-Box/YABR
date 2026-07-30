@@ -39,6 +39,8 @@ public class BytecodeEmitter {
     private int currentOffset;
 
     private final Set<SSAValue> stackResidentValues;
+    /** Values of locals the source declared; they always spill to their slot so the name survives. */
+    private Set<SSAValue> namedSourceLocals = java.util.Collections.emptySet();
     /** Per-block register operand pushed at the block head so a condition's bound stays on the stack. */
     private final Map<IRBlock, SSAValue> blockHeadPreload;
     /** Values already pushed onto the stack ahead of their use (a head preload), to be skipped at the use. */
@@ -182,6 +184,7 @@ public class BytecodeEmitter {
         dos = new DataOutputStream(bytecode);
         currentOffset = 0;
 
+        namedSourceLocals = namedSourceLocalValues();
         analyzeInlinedConstants();
         analyzeStackResidentValues();
         analyzeConstructorPairs();
@@ -383,6 +386,34 @@ public class BytecodeEmitter {
                 }
             }
         }
+    }
+
+    /**
+     * Keeps a call argument on the operand stack instead of storing it, unless the source declared it as a
+     * local. A declared local always spills to its slot, as javac does for every assignment of a source
+     * variable: an unwritten slot carries no LocalVariableTable entry, so the variable comes back out of a
+     * decompile unnamed - and because an argument's window can span whole statements, a value held across
+     * one reads as if it were computed after it.
+     * <p>
+     * Scoped to arguments deliberately. The other residency decisions keep a value on the stack only within
+     * a single expression, where no statement can come between its production and its use, and one of them
+     * (a loop's comparison bound) is what keeps a counted loop recoverable as a {@code for}.
+     */
+    private void markResident(SSAValue value) {
+        if (!namedSourceLocals.contains(value)) {
+            stackResidentValues.add(value);
+        }
+    }
+
+    /** Every value that belongs to a named local declared by the source this IR was lowered from. */
+    private Set<SSAValue> namedSourceLocalValues() {
+        Set<SSAValue> named = new HashSet<>();
+        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
+            if (local.getName() != null && !local.isParameter()) {
+                named.addAll(local.getValues());
+            }
+        }
+        return named;
     }
 
     /**
@@ -910,13 +941,13 @@ public class BytecodeEmitter {
                 if (pairedInit) {
                     // The receiver is the freshly-new'd object, already on the stack (new; dup); just keep the
                     // argument resident so it builds on top of it (e.g. new JPanel(new FlowLayout(0))).
-                    stackResidentValues.add(arg);
+                    markResident(arg);
                 } else if (stackResidentValues.contains(recv)) {
                     // The receiver already stays on the stack (e.g. a cast kept resident by the receiver-window
                     // analysis). Just keep the paired-new argument resident on top of it - no preload needed, so
                     // the argument builds directly above the receiver (javac's `<recv>; new; dup; init; invoke`)
                     // instead of spilling to a local.
-                    stackResidentValues.add(arg);
+                    markResident(arg);
                 } else {
                     // Method call with a re-loadable, multi-use slot receiver: preload it beneath the argument
                     // window so the argument need not spill to a local.
@@ -925,7 +956,7 @@ public class BytecodeEmitter {
                     }
                     receiverPreload.put(instructions.get(argDef), recv);
                     skipReceiver.add(inv);
-                    stackResidentValues.add(arg);
+                    markResident(arg);
                 }
             }
 

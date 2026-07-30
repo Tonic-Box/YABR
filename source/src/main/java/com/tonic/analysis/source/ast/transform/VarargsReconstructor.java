@@ -186,6 +186,7 @@ public class VarargsReconstructor implements ASTTransform {
         // a separate null-init declaration - a plain assignment `v = new T[N]`. Accept both as the build start.
         String varName;
         NewArrayExpr array;
+        int creationRefs = 0;
         if (first instanceof VarDeclStmt && ((VarDeclStmt) first).getInitializer() instanceof NewArrayExpr) {
             VarDeclStmt decl = (VarDeclStmt) first;
             varName = decl.getName();
@@ -199,6 +200,11 @@ public class VarargsReconstructor implements ASTTransform {
             }
             varName = ((VarRefExpr) assign.getLeft()).getName();
             array = (NewArrayExpr) assign.getRight();
+            // Unlike the declaration form, an assignment names the variable on its left, so the creation
+            // itself is one of the counted references. Without this the "used only by this build" check is
+            // short by one and the whole match is refused - which is why an array built through a split slot
+            // (the shape a round trip produces) never folded back into its varargs call.
+            creationRefs = 1;
         } else {
             return null;
         }
@@ -216,7 +222,7 @@ public class VarargsReconstructor implements ASTTransform {
         Set<String> consumedTemps = new HashSet<>();
         int cursor = index + 1;
         int matched = 0;
-        int extraRefs = 0;
+        int extraRefs = creationRefs;
         while (matched < size) {
             if (cursor >= stmts.size()) {
                 return null;
