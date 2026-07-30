@@ -1161,6 +1161,11 @@ public class ClassDecompiler {
             singleUseInliner.transform(body);
             deadStoreEliminator.transform(body);
             deadVarEliminator.transform(body);
+            // Re-simplify, as the method path does: the eliminators above expose shapes the first pass could
+            // not see (an emptied then-branch, a guard whose arm has become terminal). Without it a
+            // constructor was simplified less than a method with the same body, and settled on a different
+            // form of the same guard.
+            astSimplifier.transform(body);
             varargsReconstructor.transform(body);
             declarationHoister.transform(body);
         // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
