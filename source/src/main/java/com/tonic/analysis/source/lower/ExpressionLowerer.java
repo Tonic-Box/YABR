@@ -1325,7 +1325,7 @@ public class ExpressionLowerer {
             ownerClass = field.getOwnerClass();
         } else if (receiver instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) receiver;
-            if (!ctx.hasVariable(varRef.getName())) {
+            if (isClassNameReceiver(varRef)) {
                 ownerClass = resolveClassName(varRef.getName());
                 isStatic = true;
             } else {
@@ -1375,6 +1375,20 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(instr);
 
         return result;
+    }
+
+    /**
+     * Whether a bare identifier used as a receiver names a class rather than a value. It does only when it is
+     * neither a local variable nor a field of the class being lowered - a {@code static final} constant read
+     * through its own simple name ({@code MAX_VERSION.major}) is a value, and taking it for a class name makes
+     * the access static against a type that does not exist. Mirrors the same test in {@link #lowerMethodCall}.
+     */
+    private boolean isClassNameReceiver(VarRefExpr varRef) {
+        if (ctx.hasVariable(varRef.getName())) {
+            return false;
+        }
+        return !(ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName())
+                instanceof ReferenceSourceType);
     }
 
     /** The receiver value's reference type as an internal owner name, or null when it is not a usable named reference. */
@@ -1482,7 +1496,7 @@ public class ExpressionLowerer {
             ownerClass = field.getOwnerClass();
         } else if (receiver instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) receiver;
-            if (!ctx.hasVariable(varRef.getName())) {
+            if (isClassNameReceiver(varRef)) {
                 ownerClass = resolveClassName(varRef.getName());
                 isStatic = true;
             } else {

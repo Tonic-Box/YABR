@@ -102,6 +102,14 @@ public class TypeResolver {
                 return inherited;
             }
         }
+        // A `static final` constant may be declared on an implemented interface rather than a superclass, so the
+        // interface set is part of the search - the same walk resolveMethodReturnType already does.
+        for (int ifaceIdx : cf.getInterfaces()) {
+            SourceType declared = resolveFieldType(cf.resolveClassName(ifaceIdx), fieldName);
+            if (declared != null) {
+                return declared;
+            }
+        }
 
         return reflectFieldType(ownerClass, fieldName);
     }
@@ -136,6 +144,14 @@ public class TypeResolver {
             SourceType inherited = findFieldType(superClass, fieldName);
             if (inherited != null) {
                 return inherited;
+            }
+        }
+        // A `static final` constant may be declared on an implemented interface rather than a superclass, so the
+        // interface set is part of the search - the same walk resolveMethodReturnType already does.
+        for (int ifaceIdx : cf.getInterfaces()) {
+            SourceType declared = findFieldType(cf.resolveClassName(ifaceIdx), fieldName);
+            if (declared != null) {
+                return declared;
             }
         }
 
@@ -197,7 +213,18 @@ public class TypeResolver {
 
         String superClass = cf.getSuperClassName();
         if (superClass != null && !superClass.equals("java/lang/Object") && !superClass.startsWith("Invalid")) {
-            return isStaticField(superClass, fieldName);
+            if (isStaticField(superClass, fieldName)) {
+                return true;
+            }
+        }
+
+        // An interface field is implicitly static and final, and is in scope unqualified in every implementor,
+        // so the interface set is searched too. Missing it reads the constant as an instance field, which then
+        // needs a receiver the enclosing method may not even have.
+        for (int ifaceIdx : cf.getInterfaces()) {
+            if (isStaticField(cf.resolveClassName(ifaceIdx), fieldName)) {
+                return true;
+            }
         }
 
         return false;
