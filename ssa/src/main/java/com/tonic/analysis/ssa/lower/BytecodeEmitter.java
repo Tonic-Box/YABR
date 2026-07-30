@@ -954,6 +954,16 @@ public class BytecodeEmitter {
                     if (useCounts.getOrDefault(recv, 0) <= 1 || inlinedConstants.contains(recv)) {
                         continue;
                     }
+                    // The preload goes immediately before the instruction that produces the argument, which
+                    // is only beneath the WHOLE argument when that one instruction evaluates all of it. When
+                    // the argument's value is built over several instructions
+                    // (`p.getModelTransform().invert()` produces it at the last), the receiver would land in
+                    // the middle of the argument's own stack and its trailing call would consume the receiver
+                    // instead of its own - so the argument spills to a local instead, as it did before any
+                    // preload existed.
+                    if (argEvaluationStart(instructions, defIdxOf, argDef) != argDef) {
+                        continue;
+                    }
                     receiverPreload.put(instructions.get(argDef), recv);
                     skipReceiver.add(inv);
                     markResident(arg);
@@ -1160,10 +1170,36 @@ public class BytecodeEmitter {
     }
 
     /**
-     * Whether {@code [windowStart, invIdx)} is a closed build window for an argument preceded by a preloaded
-     * receiver: the receiver is defined before the window, and every value the window produces is consumed
-     * inside the window or by the call - so the receiver stays undisturbed at the bottom (no {@code dup_x}/swap).
+     * The index of the first instruction in {@code block} that contributes to {@code arg}'s value: the lowest
+     * index in the transitive closure of its operands within this block, and {@code argDef} itself when the
+     * value is produced outright. This is where the argument's evaluation begins on the stack, so it is where a
+     * preloaded receiver has to sit to end up underneath all of it.
      */
+    private int argEvaluationStart(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
+                                   int argDef) {
+        int start = argDef;
+        java.util.Deque<Integer> work = new java.util.ArrayDeque<>();
+        java.util.Set<Integer> seen = new HashSet<>();
+        work.add(argDef);
+        while (!work.isEmpty()) {
+            int idx = work.poll();
+            if (!seen.add(idx)) {
+                continue;
+            }
+            start = Math.min(start, idx);
+            for (Value op : instructions.get(idx).getOperands()) {
+                if (!(op instanceof SSAValue)) {
+                    continue;
+                }
+                Integer opDef = defIdxOf.get(op);
+                if (opDef != null && opDef < idx) {
+                    work.add(opDef);
+                }
+            }
+        }
+        return start;
+    }
+
     private boolean argWindowClosedForPreload(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
                                               Map<SSAValue, Integer> useCounts, int windowStart, int invIdx,
                                               SSAValue recv) {
