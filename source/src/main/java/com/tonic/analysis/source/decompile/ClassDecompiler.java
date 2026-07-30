@@ -1304,6 +1304,7 @@ public class ClassDecompiler {
             if (whileToForCanonicalizer.transform(body)) {
                 forLoopCounterFolder.transform(body);
             }
+            dumpStage(method.getName(), body, "13-final");
             removeTrailingReturn(body);
             emitBlockContents(writer, body, method.getName() + method.getDesc());
         } catch (Exception e) {
