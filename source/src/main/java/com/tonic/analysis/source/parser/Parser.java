@@ -1785,7 +1785,10 @@ public class Parser {
         if (type instanceof ArraySourceType && check(TokenType.LBRACE)) {
             ArraySourceType arrayType = (ArraySourceType) type;
             ArrayInitExpr initializer = parseArrayInit(arrayType);
-            return new NewArrayExpr(arrayType.getElementType(), List.of(), initializer, null, loc);
+            // Pass the array type as written. Left to infer it from the element type and an empty dimension
+            // list, the expression assumes ONE dimension - so `new int[][] {...}` became an `int[]`, and the
+            // lowering then built the outer array out of ints and stored int arrays into it.
+            return new NewArrayExpr(arrayType.getElementType(), List.of(), initializer, arrayType, loc);
         }
 
         consume(TokenType.LPAREN, "Expected '(' after type");

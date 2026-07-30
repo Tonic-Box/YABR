@@ -1756,7 +1756,10 @@ public class ExpressionLowerer {
     private Value lowerNewArrayWithInitializer(NewArrayExpr newArr) {
         List<Expression> elements = newArr.getInitializer().getElements();
         int size = elements.size();
-        IRType elementType = getElementType(newArr.getType());
+        // The allocation covers ONE dimension, so its component is the type reached by a single index -
+        // `int[]` for an `int[][]` initializer, not the base `int`. Using the base built the outer array as
+        // a primitive one, and storing the inner arrays into it produced bytecode that does not verify.
+        IRType elementType = peelArrayType(newArr.getType(), 1);
         IRType arrayType = newArr.getType().toIRType();
 
         SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
@@ -1775,14 +1778,6 @@ public class ExpressionLowerer {
         }
 
         return result;
-    }
-
-    private IRType getElementType(SourceType arrayType) {
-        if (arrayType instanceof ArraySourceType) {
-            ArraySourceType arr = (ArraySourceType) arrayType;
-            return arr.getElementType().toIRType();
-        }
-        throw new LoweringException("Expected array type: " + arrayType);
     }
 
     /**
@@ -1824,7 +1819,10 @@ public class ExpressionLowerer {
             return result;
         }
 
-        if (toType instanceof ReferenceSourceType) {
+        // An array type is a reference type too, and its cast is just as load-bearing: dropping
+        // `(String[]) objectArray` leaves the method returning `Object[]` under a `String[]` signature.
+        // Only a primitive target reaches the fall-through, where the conversion op above already covers it.
+        if (toType instanceof ReferenceSourceType || toType instanceof ArraySourceType) {
             IRType resultType = resolveTypeForConstant(toType);
             SSAValue result = ctx.newValue(resultType);
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, operand, resultType);
@@ -1956,7 +1954,9 @@ public class ExpressionLowerer {
 
     private Value lowerArrayInit(ArrayInitExpr arrInit) {
         int size = arrInit.getElements().size();
-        IRType elementType = getElementType(arrInit.getType());
+        // One dimension per allocation, so the component is what a single index reaches - see
+        // lowerNewArrayWithInitializer, which builds the same shape from the other syntax.
+        IRType elementType = peelArrayType(arrInit.getType(), 1);
         IRType arrayType = arrInit.getType().toIRType();
 
         SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
