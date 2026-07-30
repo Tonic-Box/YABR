@@ -1267,6 +1267,7 @@ public class ClassDecompiler {
         // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
         // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
         singleUseInliner.transform(body);
+            dumpStage(method.getName(), body, "09-inline2");
             // Fold the array-build idiom (`T[] tmp = new T[N]; tmp[i]=...`) back into an array literal
             // (`new T[]{...}`). Run after hoisting+inlining so the temp declaration is formed and each element
             // value is inline; the synthetic temp otherwise carries an unstable slot-based name that drifts.
@@ -1274,6 +1275,7 @@ public class ClassDecompiler {
             // Scope a loop counter used only within its `for` back into the for-init (`int j = 0; for (j = 1;...)`
             // -> `for (int j = 1;...)`), matching javac and dropping the drifting method-scope declaration.
             forLoopCounterFolder.transform(body);
+            dumpStage(method.getName(), body, "10-counter-fold");
             // The reconstructions above run AFTER the first dead-code pass: varargs-arg inlining and array-literal
             // folding can strip the last use of a hoisted temp, leaving it declared `= null` and unused (e.g. an
             // inlined String.format varargs array). A second dead-store/var pass removes those - their unstable
@@ -1283,6 +1285,7 @@ public class ClassDecompiler {
             // Drop a redundant phi-copy re-assignment (`x = V; ...; x = V`) that YABR's phi elimination emits at
             // a branch's end but javac never does - keeps the earlier source-position assignment, matching d1.
             redundantAssignmentEliminator.transform(body);
+            dumpStage(method.getName(), body, "11-deadcode2");
             // Fold a constant equality-guard chain (if (x != a) {...} if (x != b) {...}) into a switch before the
             // switch reconstructors run, so a dispatch the schema structurer recovers at recovery time is
             // recovered identically here.
@@ -1290,6 +1293,7 @@ public class ClassDecompiler {
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             scopeEscapeHoister.transform(body);
+            dumpStage(method.getName(), body, "12-scope-escape");
             // A hoist above can re-fold a declaration into `T x = c;` leaving a later redundant `x = c;`
             // (e.g. a loop counter's init copy); collapse those once more so recovery is a fixed point.
             redundantAssignmentEliminator.transform(body);
