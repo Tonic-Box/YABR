@@ -242,7 +242,7 @@ public class ControlFlowSimplifier implements ASTTransform {
                 && !isSwitchChainGuard(ifStmt.getCondition())
                 && isTerminal(ifStmt.getThenBranch())
                 && index + 1 < parentList.size()
-                && unwrapSingleStatement(parentList.get(index + 1)) instanceof ReturnStmt) {
+                && isSingleTerminalExit(parentList.get(index + 1))) {
             List<Statement> thenStmts = getStatements(ifStmt.getThenBranch());
             Statement following = unwrapSingleStatement(parentList.get(index + 1));
             invertCondition(ifStmt);
@@ -818,6 +818,17 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
         }
         return changed;
+    }
+
+    /**
+     * Whether {@code stmt} is exactly one return or throw. Both end the method, so which of the two the
+     * structurer leaves as the branch's fall-through is a property of the layout it was recovered from rather
+     * than of the program - so the guard-clause swap treats them alike, and a decompile reaches the same form
+     * from either layout.
+     */
+    private boolean isSingleTerminalExit(Statement stmt) {
+        Statement single = unwrapSingleStatement(stmt);
+        return single instanceof ReturnStmt || single instanceof ThrowStmt;
     }
 
     private boolean isEmptyBlock(Statement stmt) {
