@@ -55,18 +55,16 @@ public final class FieldDecl implements ASTNode {
     }
 
     public void setType(SourceType type) {
-        this.type = type;
+        withType(type);
     }
 
     public Expression getInitializer() {
         return initializer;
     }
 
-    public void setInitializer(Expression initializer) {
-        this.initializer = initializer;
-    }
-
-    public SourceLocation getLocation() {
+      public void setInitializer(Expression initializer) {
+        withInitializer(initializer);
+    }    public SourceLocation getLocation() {
         return location;
     }
 
@@ -105,13 +103,12 @@ public final class FieldDecl implements ASTNode {
     }
 
     public FieldDecl withInitializer(Expression initializer) {
-        if (this.initializer != null) {
-            this.initializer.setParent(null);
-        }
+        ASTNode previous = this.initializer;
         this.initializer = initializer;
         if (initializer != null) {
             initializer.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

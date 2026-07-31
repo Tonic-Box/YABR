@@ -1323,12 +1323,36 @@ public class ClassDecompiler {
 
 
     private static void dumpStage(String methodName, com.tonic.analysis.source.ast.stmt.BlockStmt body, String stage) {
+        if (System.getProperty("yabr.parents") != null) {
+            reportDetachedParents(body, methodName + " " + stage);
+        }
         String want = System.getProperty("yabr.dump");
         if (want == null || !want.equals(methodName)) {
             return;
         }
         System.err.println("[stage] " + stage);
         System.err.println(com.tonic.analysis.source.ast.ASTPrinter.formatCompact(body));
+    }
+
+    /**
+     * Reports nodes whose parent pointer disagrees with the child link that reaches them. The child links are
+     * the tree; the parent pointers are a cache a transform has to maintain when it moves a node, and a
+     * transform that reasons about scope by walking parents silently sees the pre-move tree when it does not.
+     */
+    private static void reportDetachedParents(com.tonic.analysis.source.ast.ASTNode root, String stage) {
+        java.util.List<String> broken = new java.util.ArrayList<>();
+        root.walk(node -> {
+            for (com.tonic.analysis.source.ast.ASTNode child : node.getChildren()) {
+                if (child != null && child.getParent() != node) {
+                    broken.add(child.getClass().getSimpleName() + " under " + node.getClass().getSimpleName()
+                            + " points at "
+                            + (child.getParent() == null ? "null" : child.getParent().getClass().getSimpleName()));
+                }
+            }
+        });
+        if (!broken.isEmpty()) {
+            System.err.println("[detached-parent] " + stage + " x" + broken.size() + ": " + broken);
+        }
     }
 
     private void recordMethodSpan(String methodKey, int startLine, int endLine) {

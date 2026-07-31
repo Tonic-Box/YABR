@@ -41,26 +41,22 @@ public final class ForEachStmt implements Statement {
     }
 
     public void setVariable(VarDeclStmt variable) {
-        this.variable = variable;
+        withVariable(variable);
     }
 
     public Expression getIterable() {
         return iterable;
     }
 
-    public void setIterable(Expression iterable) {
-        this.iterable = iterable;
-    }
-
-    public Statement getBody() {
+      public void setIterable(Expression iterable) {
+        withIterable(iterable);
+    }    public Statement getBody() {
         return body;
     }
 
-    public void setBody(Statement body) {
-        this.body = body;
-    }
-
-    public void setLabel(String label) {
+        public void setBody(Statement body) {
+        withBody(body);
+    }  public void setLabel(String label) {
         this.label = label;
     }
 
@@ -82,23 +78,32 @@ public final class ForEachStmt implements Statement {
     }
 
     public ForEachStmt withVariable(VarDeclStmt variable) {
-        if (this.variable != null) this.variable.setParent(null);
+        ASTNode previous = this.variable;
         this.variable = variable;
-        if (variable != null) variable.setParent(this);
+        if (variable != null) {
+            variable.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public ForEachStmt withIterable(Expression iterable) {
-        if (this.iterable != null) this.iterable.setParent(null);
+        ASTNode previous = this.iterable;
         this.iterable = iterable;
-        if (iterable != null) iterable.setParent(this);
+        if (iterable != null) {
+            iterable.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public ForEachStmt withBody(Statement body) {
-        if (this.body != null) this.body.setParent(null);
+        ASTNode previous = this.body;
         this.body = body;
-        if (body != null) body.setParent(this);
+        if (body != null) {
+            body.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

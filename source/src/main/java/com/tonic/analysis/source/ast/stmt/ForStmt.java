@@ -65,7 +65,7 @@ public final class ForStmt implements Statement {
     }
 
     public void setCondition(Expression condition) {
-        this.condition = condition;
+        withCondition(condition);
     }
 
     public NodeList<Expression> getUpdate() {
@@ -77,7 +77,7 @@ public final class ForStmt implements Statement {
     }
 
     public void setBody(Statement body) {
-        this.body = body;
+        withBody(body);
     }
 
     public void setLabel(String label) {
@@ -134,16 +134,22 @@ public final class ForStmt implements Statement {
     }
 
     public ForStmt withCondition(Expression condition) {
-        if (this.condition != null) this.condition.setParent(null);
+        ASTNode previous = this.condition;
         this.condition = condition;
-        if (condition != null) condition.setParent(this);
+        if (condition != null) {
+            condition.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public ForStmt withBody(Statement body) {
-        if (this.body != null) this.body.setParent(null);
+        ASTNode previous = this.body;
         this.body = body;
-        if (body != null) body.setParent(this);
+        if (body != null) {
+            body.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

@@ -35,18 +35,16 @@ public final class SynchronizedStmt implements Statement {
     }
 
     public void setLock(Expression lock) {
-        this.lock = lock;
+        withLock(lock);
     }
 
     public Statement getBody() {
         return body;
     }
 
-    public void setBody(Statement body) {
-        this.body = body;
-    }
-
-    public SourceLocation getLocation() {
+      public void setBody(Statement body) {
+        withBody(body);
+    }    public SourceLocation getLocation() {
         return location;
     }
 

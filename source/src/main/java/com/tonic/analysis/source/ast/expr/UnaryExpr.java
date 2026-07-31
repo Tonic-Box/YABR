@@ -36,18 +36,16 @@ public final class UnaryExpr implements Expression {
     }
 
     public void setOperator(UnaryOperator operator) {
-        this.operator = operator;
+        withOperator(operator);
     }
 
     public Expression getOperand() {
         return operand;
     }
 
-    public void setOperand(Expression operand) {
-        this.operand = operand;
-    }
-
-    public SourceType getType() {
+      public void setOperand(Expression operand) {
+        withOperand(operand);
+    }    public SourceType getType() {
         return type;
     }
 
@@ -90,9 +88,12 @@ public final class UnaryExpr implements Expression {
     }
 
     public UnaryExpr withOperand(Expression operand) {
-        if (this.operand != null) this.operand.setParent(null);
+        ASTNode previous = this.operand;
         this.operand = operand;
-        if (operand != null) operand.setParent(this);
+        if (operand != null) {
+            operand.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

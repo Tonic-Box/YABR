@@ -71,7 +71,7 @@ public final class ConstructorDecl implements ASTNode {
     }
 
     public void setBody(BlockStmt body) {
-        this.body = body;
+        withBody(body);
     }
 
     public SourceLocation getLocation() {
@@ -123,13 +123,12 @@ public final class ConstructorDecl implements ASTNode {
     }
 
     public ConstructorDecl withBody(BlockStmt body) {
-        if (this.body != null) {
-            this.body.setParent(null);
-        }
+        ASTNode previous = this.body;
         this.body = body;
         if (body != null) {
             body.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

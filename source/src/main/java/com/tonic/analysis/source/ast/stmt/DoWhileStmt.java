@@ -41,7 +41,7 @@ public final class DoWhileStmt implements Statement {
     }
 
     public void setBody(Statement body) {
-        this.body = body;
+        withBody(body);
     }
 
     public Expression getCondition() {
@@ -49,7 +49,7 @@ public final class DoWhileStmt implements Statement {
     }
 
     public void setCondition(Expression condition) {
-        this.condition = condition;
+        withCondition(condition);
     }
 
     public void setLabel(String label) {
@@ -74,16 +74,22 @@ public final class DoWhileStmt implements Statement {
     }
 
     public DoWhileStmt withBody(Statement body) {
-        if (this.body != null) this.body.setParent(null);
+        ASTNode previous = this.body;
         this.body = body;
-        if (body != null) body.setParent(this);
+        if (body != null) {
+            body.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public DoWhileStmt withCondition(Expression condition) {
-        if (this.condition != null) this.condition.setParent(null);
+        ASTNode previous = this.condition;
         this.condition = condition;
-        if (condition != null) condition.setParent(this);
+        if (condition != null) {
+            condition.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

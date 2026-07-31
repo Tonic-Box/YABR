@@ -40,7 +40,7 @@ public final class LiteralExpr implements Expression {
     }
 
     public void setType(SourceType type) {
-        this.type = type;
+        withType(type);
     }
 
     public SourceLocation getLocation() {

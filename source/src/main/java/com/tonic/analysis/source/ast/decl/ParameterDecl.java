@@ -45,7 +45,7 @@ public final class ParameterDecl implements ASTNode {
     }
 
     public void setType(SourceType type) {
-        this.type = type;
+        withType(type);
     }
 
     public boolean isFinal() {

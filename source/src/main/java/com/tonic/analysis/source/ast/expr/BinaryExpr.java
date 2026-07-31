@@ -40,26 +40,22 @@ public final class BinaryExpr implements Expression {
     }
 
     public void setOperator(BinaryOperator operator) {
-        this.operator = operator;
+        withOperator(operator);
     }
 
     public Expression getLeft() {
         return left;
     }
 
-    public void setLeft(Expression left) {
-        this.left = left;
-    }
-
-    public Expression getRight() {
+      public void setLeft(Expression left) {
+        withLeft(left);
+    }    public Expression getRight() {
         return right;
     }
 
-    public void setRight(Expression right) {
-        this.right = right;
-    }
-
-    public SourceType getType() {
+        public void setRight(Expression right) {
+        withRight(right);
+    }  public SourceType getType() {
         return type;
     }
 
@@ -109,16 +105,22 @@ public final class BinaryExpr implements Expression {
     }
 
     public BinaryExpr withLeft(Expression left) {
-        if (this.left != null) this.left.setParent(null);
+        ASTNode previous = this.left;
         this.left = left;
-        if (left != null) left.setParent(this);
+        if (left != null) {
+            left.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public BinaryExpr withRight(Expression right) {
-        if (this.right != null) this.right.setParent(null);
+        ASTNode previous = this.right;
         this.right = right;
-        if (right != null) right.setParent(this);
+        if (right != null) {
+            right.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

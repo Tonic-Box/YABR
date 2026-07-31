@@ -55,7 +55,7 @@ public final class TryCatchStmt implements Statement {
     }
 
     public void setTryBlock(Statement tryBlock) {
-        this.tryBlock = tryBlock;
+        withTryBlock(tryBlock);
     }
 
     public List<CatchClause> getCatches() {
@@ -66,11 +66,9 @@ public final class TryCatchStmt implements Statement {
         return finallyBlock;
     }
 
-    public void setFinallyBlock(Statement finallyBlock) {
-        this.finallyBlock = finallyBlock;
-    }
-
-    public NodeList<Expression> getResources() {
+      public void setFinallyBlock(Statement finallyBlock) {
+        withFinallyBlock(finallyBlock);
+    }    public NodeList<Expression> getResources() {
         return resources;
     }
 
@@ -123,24 +121,22 @@ public final class TryCatchStmt implements Statement {
     }
 
     public TryCatchStmt withTryBlock(Statement tryBlock) {
-        if (this.tryBlock != null) {
-            this.tryBlock.setParent(null);
-        }
+        ASTNode previous = this.tryBlock;
         this.tryBlock = tryBlock;
         if (tryBlock != null) {
             tryBlock.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public TryCatchStmt withFinallyBlock(Statement finallyBlock) {
-        if (this.finallyBlock != null) {
-            this.finallyBlock.setParent(null);
-        }
+        ASTNode previous = this.finallyBlock;
         this.finallyBlock = finallyBlock;
         if (finallyBlock != null) {
             finallyBlock.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

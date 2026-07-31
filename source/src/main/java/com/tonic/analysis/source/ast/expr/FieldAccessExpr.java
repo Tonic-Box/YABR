@@ -53,7 +53,7 @@ public final class FieldAccessExpr implements Expression {
     }
 
     public void setReceiver(Expression receiver) {
-        this.receiver = receiver;
+        withReceiver(receiver);
     }
 
     public String getFieldName() {
@@ -120,9 +120,12 @@ public final class FieldAccessExpr implements Expression {
     }
 
     public FieldAccessExpr withReceiver(Expression receiver) {
-        if (this.receiver != null) this.receiver.setParent(null);
+        ASTNode previous = this.receiver;
         this.receiver = receiver;
-        if (receiver != null) receiver.setParent(this);
+        if (receiver != null) {
+            receiver.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

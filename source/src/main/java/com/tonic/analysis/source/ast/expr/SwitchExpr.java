@@ -150,7 +150,12 @@ public final class SwitchExpr implements Expression {
     }
 
     public void setSelector(Expression selector) {
+        ASTNode previous = this.selector;
         this.selector = selector;
+        if (selector != null) {
+            selector.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
     }
 
     public List<Arm> getArms() {

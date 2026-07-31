@@ -46,11 +46,26 @@ public interface ASTNode {
     <T> T accept(SourceVisitor<T> visitor);
 
     /**
-     * Gets the direct children of this node.
-     * Override this in implementing classes to return actual children.
+     * Clears the parent of a node that {@code parent} no longer holds. Replacing one child with another must
+     * not orphan the old one when it has already been re-attached - a new condition built AROUND the old one,
+     * or two children swapped, both leave the "former" child still in the tree. Anything reasoning about
+     * scope by walking parents reads such a node as living outside every block it is actually inside.
      *
-     * @return a list of direct child nodes
+     * @param formerChild the node the parent used to hold, may be null
+     * @param parent the node that replaced it
      */
+    static void releaseFormerChild(ASTNode formerChild, ASTNode parent) {
+        if (formerChild == null || parent == null || formerChild.getParent() != parent) {
+            return;
+        }
+        for (ASTNode child : parent.getChildren()) {
+            if (child == formerChild) {
+                return;
+            }
+        }
+        formerChild.setParent(null);
+    }
+
     default List<ASTNode> getChildren() {
         return List.of();
     }

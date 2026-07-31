@@ -69,7 +69,7 @@ public final class NewExpr implements Expression {
     }
 
     public void setEnclosingInstance(Expression enclosingInstance) {
-        this.enclosingInstance = enclosingInstance;
+        withEnclosingInstance(enclosingInstance);
     }
 
     public String getClassName() {
@@ -134,9 +134,12 @@ public final class NewExpr implements Expression {
     }
 
     public NewExpr withEnclosingInstance(Expression enclosingInstance) {
-        if (this.enclosingInstance != null) this.enclosingInstance.setParent(null);
+        ASTNode previous = this.enclosingInstance;
         this.enclosingInstance = enclosingInstance;
-        if (enclosingInstance != null) enclosingInstance.setParent(this);
+        if (enclosingInstance != null) {
+            enclosingInstance.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

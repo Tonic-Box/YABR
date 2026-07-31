@@ -40,7 +40,7 @@ public final class AnnotationValue implements ASTNode {
     }
 
     public void setValue(Expression value) {
-        this.value = value;
+        withValue(value);
     }
 
     public SourceLocation getLocation() {
@@ -61,13 +61,12 @@ public final class AnnotationValue implements ASTNode {
     }
 
     public AnnotationValue withValue(Expression value) {
-        if (this.value != null) {
-            this.value.setParent(null);
-        }
+        ASTNode previous = this.value;
         this.value = value;
         if (value != null) {
             value.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

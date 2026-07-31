@@ -69,7 +69,7 @@ public final class ClassDecl implements TypeDecl {
     }
 
     public void setSuperclass(SourceType superclass) {
-        this.superclass = superclass;
+        withSuperclass(superclass);
     }
 
     public NodeList<SourceType> getInterfaces() {

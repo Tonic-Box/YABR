@@ -31,8 +31,7 @@ public final class NewArrayExpr implements Expression {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public NewArrayExpr(SourceType elementType, List<Expression> dimensions,
-                        ArrayInitExpr initializer, SourceType type, SourceLocation location) {
+    public NewArrayExpr(SourceType elementType, List<Expression> dimensions, ArrayInitExpr initializer, SourceType type, SourceLocation location) {
         this.elementType = Objects.requireNonNull(elementType, "elementType cannot be null");
         this.dimensions = new ArrayList<>(dimensions != null ? dimensions : List.of());
         this.initializer = initializer;
@@ -69,7 +68,7 @@ public final class NewArrayExpr implements Expression {
     }
 
     public void setInitializer(ArrayInitExpr initializer) {
-        this.initializer = initializer;
+        withInitializer(initializer);
     }
 
     public SourceType getType() {
@@ -125,20 +124,18 @@ public final class NewArrayExpr implements Expression {
     }
 
     public NewArrayExpr withInitializer(ArrayInitExpr initializer) {
-        if (this.initializer != null) {
-            this.initializer.setParent(null);
-        }
+        ASTNode previous = this.initializer;
         this.initializer = initializer;
         if (initializer != null) {
             initializer.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     @Override
     public java.util.List<ASTNode> getChildren() {
-        java.util.List<ASTNode> children = new java.util.ArrayList<>();
-        children.addAll(dimensions);
+        List<ASTNode> children = new ArrayList<>(dimensions);
         if (initializer != null) children.add(initializer);
         return children;
     }

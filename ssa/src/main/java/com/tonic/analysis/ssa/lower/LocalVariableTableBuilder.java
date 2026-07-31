@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds a {@code LocalVariableTable} from the source-local model recorded during AST lowering
@@ -79,6 +80,7 @@ public final class LocalVariableTableBuilder {
                     valuesBySlot.computeIfAbsent(s, k -> new ArrayList<>()).add(v);
                 }
             }
+            dropSlotsNeverOccupied(valuesBySlot);
             for (Map.Entry<Integer, List<SSAValue>> e : valuesBySlot.entrySet()) {
                 int slot = e.getKey();
                 int[] scope = instructionScope(e.getValue());
@@ -101,6 +103,40 @@ public final class LocalVariableTableBuilder {
         attr.setLocalVariableTable(entries);
         attr.updateLength();
         return attr;
+    }
+
+    /**
+     * Drops the slots a variable is only allocated on paper. A value the emitter kept on the stack, or folded
+     * in as a constant, never reaches a register at all - the allocator still reserved one, and naming it
+     * tells the reader two slots hold the variable at once. The reader then treats both as the same variable
+     * and its uses no longer add up. Applied only when a slot the variable really occupies survives, so a
+     * variable that legitimately lives on two slots over disjoint stretches keeps both.
+     */
+    private void dropSlotsNeverOccupied(Map<Integer, List<SSAValue>> valuesBySlot) {
+        if (valuesBySlot.size() < 2) {
+            return;
+        }
+        Set<SSAValue> onStack = emitter.getStackResidentValues();
+        Set<SSAValue> folded = emitter.getInlinedConstants();
+        List<Integer> unoccupied = new ArrayList<>();
+        for (Map.Entry<Integer, List<SSAValue>> e : valuesBySlot.entrySet()) {
+            boolean occupied = false;
+            for (SSAValue v : e.getValue()) {
+                if (!onStack.contains(v) && !folded.contains(v)) {
+                    occupied = true;
+                    break;
+                }
+            }
+            if (!occupied) {
+                unoccupied.add(e.getKey());
+            }
+        }
+        if (unoccupied.size() >= valuesBySlot.size()) {
+            return;
+        }
+        for (Integer slot : unoccupied) {
+            valuesBySlot.remove(slot);
+        }
     }
 
     /**

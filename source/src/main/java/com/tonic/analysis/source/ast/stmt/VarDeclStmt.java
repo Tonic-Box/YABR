@@ -77,7 +77,7 @@ public final class VarDeclStmt implements Statement {
     }
 
     public void setInitializer(Expression initializer) {
-        this.initializer = initializer;
+        withInitializer(initializer);
     }
 
     public boolean isUseVarKeyword() {
@@ -123,13 +123,12 @@ public final class VarDeclStmt implements Statement {
     }
 
     public VarDeclStmt withInitializer(Expression initializer) {
-        if (this.initializer != null) {
-            this.initializer.setParent(null);
-        }
+        ASTNode previous = this.initializer;
         this.initializer = initializer;
         if (initializer != null) {
             initializer.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

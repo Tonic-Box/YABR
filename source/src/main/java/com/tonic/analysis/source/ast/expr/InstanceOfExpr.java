@@ -46,7 +46,7 @@ public final class InstanceOfExpr implements Expression {
     }
 
     public void setExpression(Expression expression) {
-        this.expression = expression;
+        withExpression(expression);
     }
 
     public SourceType getCheckType() {
@@ -74,9 +74,12 @@ public final class InstanceOfExpr implements Expression {
     }
 
     public InstanceOfExpr withExpression(Expression expression) {
-        if (this.expression != null) this.expression.setParent(null);
+        ASTNode previous = this.expression;
         this.expression = expression;
-        if (expression != null) expression.setParent(this);
+        if (expression != null) {
+            expression.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

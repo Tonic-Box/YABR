@@ -44,7 +44,7 @@ public final class IfStmt implements Statement {
     }
 
     public void setCondition(Expression condition) {
-        this.condition = condition;
+        withCondition(condition);
     }
 
     public Statement getThenBranch() {
@@ -52,7 +52,7 @@ public final class IfStmt implements Statement {
     }
 
     public void setThenBranch(Statement thenBranch) {
-        this.thenBranch = thenBranch;
+        withThenBranch(thenBranch);
     }
 
     public Statement getElseBranch() {
@@ -60,7 +60,7 @@ public final class IfStmt implements Statement {
     }
 
     public void setElseBranch(Statement elseBranch) {
-        this.elseBranch = elseBranch;
+        withElseBranch(elseBranch);
     }
 
     public SourceLocation getLocation() {
@@ -90,23 +90,32 @@ public final class IfStmt implements Statement {
     }
 
     public IfStmt withCondition(Expression condition) {
-        if (this.condition != null) this.condition.setParent(null);
+        ASTNode previous = this.condition;
         this.condition = condition;
-        if (condition != null) condition.setParent(this);
+        if (condition != null) {
+            condition.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public IfStmt withThenBranch(Statement thenBranch) {
-        if (this.thenBranch != null) this.thenBranch.setParent(null);
+        ASTNode previous = this.thenBranch;
         this.thenBranch = thenBranch;
-        if (thenBranch != null) thenBranch.setParent(this);
+        if (thenBranch != null) {
+            thenBranch.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public IfStmt withElseBranch(Statement elseBranch) {
-        if (this.elseBranch != null) this.elseBranch.setParent(null);
+        ASTNode previous = this.elseBranch;
         this.elseBranch = elseBranch;
-        if (elseBranch != null) elseBranch.setParent(this);
+        if (elseBranch != null) {
+            elseBranch.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

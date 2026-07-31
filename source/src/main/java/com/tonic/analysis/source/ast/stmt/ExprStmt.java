@@ -33,7 +33,7 @@ public final class ExprStmt implements Statement {
     }
 
     public void setExpression(Expression expression) {
-        this.expression = expression;
+        withExpression(expression);
     }
 
     public SourceLocation getLocation() {

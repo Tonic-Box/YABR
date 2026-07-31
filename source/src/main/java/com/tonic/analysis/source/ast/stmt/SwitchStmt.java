@@ -40,7 +40,7 @@ public final class SwitchStmt implements Statement {
     }
 
     public void setSelector(Expression selector) {
-        this.selector = selector;
+        withSelector(selector);
     }
 
     public List<SwitchCase> getCases() {
@@ -91,13 +91,12 @@ public final class SwitchStmt implements Statement {
     }
 
     public SwitchStmt withSelector(Expression selector) {
-        if (this.selector != null) {
-            this.selector.setParent(null);
-        }
+        ASTNode previous = this.selector;
         this.selector = selector;
         if (selector != null) {
             selector.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

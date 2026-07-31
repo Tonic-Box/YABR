@@ -41,26 +41,22 @@ public final class TernaryExpr implements Expression {
     }
 
     public void setCondition(Expression condition) {
-        this.condition = condition;
+        withCondition(condition);
     }
 
     public Expression getThenExpr() {
         return thenExpr;
     }
 
-    public void setThenExpr(Expression thenExpr) {
-        this.thenExpr = thenExpr;
-    }
-
-    public Expression getElseExpr() {
+      public void setThenExpr(Expression thenExpr) {
+        withThenExpr(thenExpr);
+    }    public Expression getElseExpr() {
         return elseExpr;
     }
 
-    public void setElseExpr(Expression elseExpr) {
-        this.elseExpr = elseExpr;
-    }
-
-    public SourceType getType() {
+        public void setElseExpr(Expression elseExpr) {
+        withElseExpr(elseExpr);
+    }  public SourceType getType() {
         return type;
     }
 
@@ -77,23 +73,32 @@ public final class TernaryExpr implements Expression {
     }
 
     public TernaryExpr withCondition(Expression condition) {
-        if (this.condition != null) this.condition.setParent(null);
+        ASTNode previous = this.condition;
         this.condition = condition;
-        if (condition != null) condition.setParent(this);
+        if (condition != null) {
+            condition.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public TernaryExpr withThenExpr(Expression thenExpr) {
-        if (this.thenExpr != null) this.thenExpr.setParent(null);
+        ASTNode previous = this.thenExpr;
         this.thenExpr = thenExpr;
-        if (thenExpr != null) thenExpr.setParent(this);
+        if (thenExpr != null) {
+            thenExpr.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public TernaryExpr withElseExpr(Expression elseExpr) {
-        if (this.elseExpr != null) this.elseExpr.setParent(null);
+        ASTNode previous = this.elseExpr;
         this.elseExpr = elseExpr;
-        if (elseExpr != null) elseExpr.setParent(this);
+        if (elseExpr != null) {
+            elseExpr.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

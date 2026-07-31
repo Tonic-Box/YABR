@@ -52,6 +52,17 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
         return backing.add(element);
     }
 
+    /**
+     * Detaches an element this list no longer holds, unless something else has already taken it. Moving a
+     * statement between blocks adds it to the new one before removing it from the old, and clearing the
+     * parent unconditionally at that point orphans a node that is still very much in the tree.
+     */
+    private void releaseIfStillOurs(T element) {
+        if (element != null && element.getParent() == owner) {
+            element.setParent(null);
+        }
+    }
+
     @Override
     public void add(int index, T element) {
         if (element != null) {
@@ -64,7 +75,7 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     public T set(int index, T element) {
         T old = backing.get(index);
         if (old != null) {
-            old.setParent(null);
+            releaseIfStillOurs(old);
         }
         if (element != null) {
             element.setParent(owner);
@@ -76,7 +87,7 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     public T remove(int index) {
         T removed = backing.remove(index);
         if (removed != null) {
-            removed.setParent(null);
+            releaseIfStillOurs(removed);
         }
         return removed;
     }
@@ -95,7 +106,7 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     public void clear() {
         for (T element : backing) {
             if (element != null) {
-                element.setParent(null);
+                releaseIfStillOurs(element);
             }
         }
         backing.clear();
@@ -140,7 +151,7 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
             T element = it.next();
             if (!c.contains(element)) {
                 if (element != null) {
-                    element.setParent(null);
+                    releaseIfStillOurs(element);
                 }
                 it.remove();
                 modified = true;
@@ -158,7 +169,7 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
             T element = it.next();
             if (filter.test(element)) {
                 if (element != null) {
-                    element.setParent(null);
+                    releaseIfStillOurs(element);
                 }
                 it.remove();
                 modified = true;
@@ -174,9 +185,7 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
 
     @SafeVarargs
     public final NodeList<T> addNodes(T... elements) {
-        for (T element : elements) {
-            add(element);
-        }
+        this.addAll(Arrays.asList(elements));
         return this;
     }
 

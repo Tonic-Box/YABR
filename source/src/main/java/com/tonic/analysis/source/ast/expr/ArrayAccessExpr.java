@@ -37,18 +37,16 @@ public final class ArrayAccessExpr implements Expression {
     }
 
     public void setArray(Expression array) {
-        this.array = array;
+        withArray(array);
     }
 
     public Expression getIndex() {
         return index;
     }
 
-    public void setIndex(Expression index) {
-        this.index = index;
-    }
-
-    public SourceType getType() {
+      public void setIndex(Expression index) {
+        withIndex(index);
+    }    public SourceType getType() {
         return type;
     }
 
@@ -65,16 +63,22 @@ public final class ArrayAccessExpr implements Expression {
     }
 
     public ArrayAccessExpr withArray(Expression array) {
-        if (this.array != null) this.array.setParent(null);
+        ASTNode previous = this.array;
         this.array = array;
-        if (array != null) array.setParent(this);
+        if (array != null) {
+            array.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     public ArrayAccessExpr withIndex(Expression index) {
-        if (this.index != null) this.index.setParent(null);
+        ASTNode previous = this.index;
         this.index = index;
-        if (index != null) index.setParent(this);
+        if (index != null) {
+            index.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

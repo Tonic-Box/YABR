@@ -32,7 +32,7 @@ public final class AnnotationExpr implements Expression {
     }
 
     public void setAnnotationType(SourceType annotationType) {
-        this.annotationType = annotationType;
+        withAnnotationType(annotationType);
     }
 
     public NodeList<AnnotationValue> getValues() {

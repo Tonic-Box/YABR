@@ -54,7 +54,7 @@ public final class LambdaExpr implements Expression {
     }
 
     public void setBody(ASTNode body) {
-        this.body = body;
+        withBody(body);
     }
 
     public SourceType getType() {
@@ -78,9 +78,12 @@ public final class LambdaExpr implements Expression {
     }
 
     public LambdaExpr withBody(ASTNode body) {
-        if (this.body != null) this.body.setParent(null);
+        ASTNode previous = this.body;
         this.body = body;
-        if (body != null) body.setParent(this);
+        if (body != null) {
+            body.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 

@@ -32,7 +32,12 @@ public final class ThrowStmt implements Statement {
     }
 
     public void setException(Expression exception) {
+        ASTNode previous = this.exception;
         this.exception = exception;
+        if (exception != null) {
+            exception.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
     }
 
     public SourceLocation getLocation() {

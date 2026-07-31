@@ -41,7 +41,7 @@ public final class ReturnStmt implements Statement {
     }
 
     public void setValue(Expression value) {
-        this.value = value;
+        withValue(value);
     }
 
     public SourceLocation getLocation() {
@@ -72,13 +72,12 @@ public final class ReturnStmt implements Statement {
     }
 
     public ReturnStmt withValue(Expression value) {
-        if (this.value != null) {
-            this.value.setParent(null);
-        }
+        ASTNode previous = this.value;
         this.value = value;
         if (value != null) {
             value.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
