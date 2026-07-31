@@ -2193,6 +2193,22 @@ public class BytecodeEmitter {
     private void emitCopy(CopyInstruction instr) throws IOException {
         Value source = instr.getSource();
 
+        // A copy whose result rides the stack into a merge pushes its source and leaves it on top - the
+        // predecessor-tail materialization of a stack-resident phi incoming that is not already there.
+        if (stackResidentValues.contains(instr.getResult())) {
+            if (source instanceof SSAValue) {
+                SSAValue ssa = (SSAValue) source;
+                if (inlinedConstants.contains(ssa)) {
+                    emitConstantValue(inlinedConstantValue.get(ssa));
+                } else if (!stackResidentValues.contains(ssa)) {
+                    emitLoadValue(ssa);
+                }
+            } else if (source instanceof Constant) {
+                emitConstantValue((Constant) source);
+            }
+            return;
+        }
+
         int dstReg = getPhiCopyDestination(instr.getResult());
         if (dstReg < 0) {
             dstReg = regAlloc.getRegister(instr.getResult());

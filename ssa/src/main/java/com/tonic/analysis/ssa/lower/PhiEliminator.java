@@ -44,27 +44,61 @@ public class PhiEliminator {
                 continue;
             }
             PhiInstruction phi = phis.get(0);
-            if (isStackResidentEligible(method, merge, phi)) {
-                result.add(phi);
-                method.getStackResidentPhiResults().add(phi.getResult());
-                for (Value incoming : phi.getIncomingValues().values()) {
-                    if (incoming instanceof SSAValue) {
-                        method.getStackResidentPhiIncomings().add((SSAValue) incoming);
+            if (!isStackResidentEligible(merge, phi)) {
+                continue;
+            }
+            // Either every arm computes its value in place (a conditional over expressions - each arm's code
+            // already leaves its result on top), or no arm does (a select between existing values - every arm
+            // is re-pushed at its tail). The mixed shape is `if (c) { x = v; } use x`: javac keeps that in the
+            // slot, so a stack merge there would recover as a conditional the source never wrote.
+            int producing = 0;
+            Map<IRBlock, Value> incomings = phi.getIncomingValues();
+            for (Map.Entry<IRBlock, Value> entry : incomings.entrySet()) {
+                if (producedAtTail(entry.getKey(), (SSAValue) entry.getValue())) {
+                    producing++;
+                }
+            }
+            if (producing != 0 && producing != incomings.size()) {
+                continue;
+            }
+            // A select's operands feed nothing but the merge. An incoming with another consumer is an
+            // ASSIGNED value - `if (c) { x = v; } use x` reaches here with v also feeding x's store - and
+            // javac keeps that in the slot, so a stack merge would recover as a conditional never written.
+            if (producing == 0) {
+                boolean pureSelect = true;
+                for (Value incoming : incomings.values()) {
+                    if (((SSAValue) incoming).getUseCount() != 1) {
+                        pureSelect = false;
+                        break;
                     }
+                }
+                if (!pureSelect) {
+                    continue;
+                }
+            }
+            result.add(phi);
+            method.getStackResidentPhiResults().add(phi.getResult());
+            if (producing == 0) {
+                materializeForeignIncomings(phi);
+            }
+            for (Value incoming : phi.getIncomingValues().values()) {
+                if (incoming instanceof SSAValue) {
+                    method.getStackResidentPhiIncomings().add((SSAValue) incoming);
                 }
             }
         }
         return result;
     }
 
-    private boolean isStackResidentEligible(IRMethod method, IRBlock merge, PhiInstruction phi) {
+    private boolean isStackResidentEligible(IRBlock merge, PhiInstruction phi) {
         SSAValue phiResult = phi.getResult();
         if (phiResult == null) {
             return false;
         }
+        // References merge on the stack exactly like ints - only the two-slot widths are excluded, since
+        // every structural check below assumes the value is one stack entry deep.
         IRType type = phiResult.getType();
-        if (!(type instanceof PrimitiveType)
-                || type == PrimitiveType.LONG || type == PrimitiveType.DOUBLE) {
+        if (type == PrimitiveType.LONG || type == PrimitiveType.DOUBLE) {
             return false;
         }
 
@@ -88,7 +122,17 @@ public class PhiEliminator {
                 return false;
             }
         }
-        List<Value> firstOps = mergeInstrs.get(0).getOperands();
+        // Leading constants do not bury the value: each pushes ABOVE it and the consumer takes the phi as
+        // its deepest operand, so the stack reads phi-then-constants exactly as the operand order demands.
+        // An argument list is the common case - `call(c ? 1 : 0, "label")` opens its merge with the label.
+        int firstReal = 0;
+        while (firstReal < mergeInstrs.size() && mergeInstrs.get(firstReal) instanceof ConstantInstruction) {
+            firstReal++;
+        }
+        if (firstReal >= mergeInstrs.size()) {
+            return false;
+        }
+        List<Value> firstOps = mergeInstrs.get(firstReal).getOperands();
         if (firstOps.isEmpty() || firstOps.get(0) != phiResult) {
             return false;
         }
@@ -99,7 +143,6 @@ public class PhiEliminator {
             if (!(incoming instanceof SSAValue)) {
                 return false;
             }
-            SSAValue incomingValue = (SSAValue) incoming;
             if (pred.getSuccessors().size() != 1 || !pred.getSuccessors().contains(merge)) {
                 return false;
             }
@@ -109,22 +152,50 @@ public class PhiEliminator {
                     || ((SimpleInstruction) terminator).getTarget() != merge) {
                 return false;
             }
-            List<IRInstruction> predInstrs = pred.getInstructions();
-            IRInstruction lastNonTerminator = null;
-            for (int i = predInstrs.size() - 1; i >= 0; i--) {
-                if (predInstrs.get(i) != terminator) {
-                    lastNonTerminator = predInstrs.get(i);
-                    break;
-                }
-            }
-            if (lastNonTerminator == null || lastNonTerminator.getResult() != incomingValue) {
-                return false;
-            }
-            if (incomingValue.getUseCount() != 1) {
-                return false;
-            }
         }
         return true;
+    }
+
+    /**
+     * Whether {@code pred}'s last real instruction produces {@code value} for this merge alone - the case
+     * where the value is simply left where it already is. Anything else (a parameter, a value shared with
+     * other uses, one computed earlier) is re-materialized onto the stack at the predecessor's tail by
+     * {@link #materializeForeignIncomings} instead.
+     */
+    private boolean producedAtTail(IRBlock pred, SSAValue value) {
+        IRInstruction terminator = pred.getTerminator();
+        List<IRInstruction> predInstrs = pred.getInstructions();
+        IRInstruction lastNonTerminator = null;
+        for (int i = predInstrs.size() - 1; i >= 0; i--) {
+            if (predInstrs.get(i) != terminator) {
+                lastNonTerminator = predInstrs.get(i);
+                break;
+            }
+        }
+        return lastNonTerminator != null && lastNonTerminator.getResult() == value
+                && value.getUseCount() == 1;
+    }
+
+    /**
+     * Rewrites each incoming that is not already sitting on the predecessor's stack into a copy at the
+     * predecessor's tail. The copy's result is stack-resident, so the emitter pushes the source and leaves it
+     * on top - exactly what the merge expects - while the source itself keeps its slot and its other uses.
+     */
+    private void materializeForeignIncomings(PhiInstruction phi) {
+        for (Map.Entry<IRBlock, Value> entry : new HashMap<>(phi.getIncomingValues()).entrySet()) {
+            IRBlock pred = entry.getKey();
+            SSAValue incoming = (SSAValue) entry.getValue();
+            if (producedAtTail(pred, incoming)) {
+                continue;
+            }
+            SSAValue fresh = new SSAValue(incoming.getType());
+            CopyInstruction copy = new CopyInstruction(fresh, incoming);
+            List<IRInstruction> instrs = pred.getInstructions();
+            int at = instrs.indexOf(pred.getTerminator());
+            pred.insertInstruction(at < 0 ? instrs.size() : at, copy);
+            phi.removeIncoming(pred);
+            phi.addIncoming(fresh, pred);
+        }
     }
 
     private void splitCriticalEdges(IRMethod method) {

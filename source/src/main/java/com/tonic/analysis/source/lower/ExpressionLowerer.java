@@ -653,40 +653,36 @@ public class ExpressionLowerer {
         return result;
     }
 
+    /**
+     * Lowers {@code &&}/{@code ||} in value position as one branch tree into a shared {@code 1}/{@code 0}
+     * pair, exactly as a compiler does. Lowering each operator as its own materialized merge instead makes
+     * the parent branch on a value the branches just built - recovery then reads the relowered form as
+     * nested ifs staging a flag, not the compound the source wrote.
+     */
     private Value lowerShortCircuit(BinaryExpr bin) {
-        boolean isAnd = bin.getOperator() == BinaryOperator.AND;
-
-        Value left = lower(bin.getLeft());
-
-        IRBlock shortCircuitBlock = ctx.createBlock();
-        IRBlock evalRight = ctx.createBlock();
+        IRBlock trueBlock = ctx.createBlock();
+        IRBlock falseBlock = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
 
-        IRBlock currentBlock = ctx.getCurrentBlock();
-        CompareOp cmp = isAnd ? CompareOp.IFEQ : CompareOp.IFNE;
-        BranchInstruction branch = new BranchInstruction(cmp, left, shortCircuitBlock, evalRight);
-        currentBlock.addInstruction(branch);
-        currentBlock.addSuccessor(shortCircuitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        currentBlock.addSuccessor(evalRight, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        lowerCondition(bin, trueBlock, falseBlock, false);
 
-        ctx.setCurrentBlock(shortCircuitBlock);
-        IntConstant shortCircuitValue = isAnd ? IntConstant.ZERO : IntConstant.ONE;
-        SSAValue shortCircuitResult = ctx.newValue(PrimitiveType.INT);
-        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(shortCircuitResult, shortCircuitValue));
-        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        shortCircuitBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.setCurrentBlock(trueBlock);
+        SSAValue one = ctx.newValue(PrimitiveType.INT);
+        trueBlock.addInstruction(new ConstantInstruction(one, IntConstant.ONE));
+        trueBlock.addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
-        ctx.setCurrentBlock(evalRight);
-        Value right = lower(bin.getRight());
-        IRBlock rightEndBlock = ctx.getCurrentBlock();
-        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        rightEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.setCurrentBlock(falseBlock);
+        SSAValue zero = ctx.newValue(PrimitiveType.INT);
+        falseBlock.addInstruction(new ConstantInstruction(zero, IntConstant.ZERO));
+        falseBlock.addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
         PhiInstruction phi = new PhiInstruction(result);
-        phi.addIncoming(shortCircuitResult, shortCircuitBlock);
-        phi.addIncoming(right, rightEndBlock);
+        phi.addIncoming(one, trueBlock);
+        phi.addIncoming(zero, falseBlock);
         mergeBlock.addPhi(phi);
 
         return result;

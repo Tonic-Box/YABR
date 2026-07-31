@@ -633,8 +633,60 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (inner != cast.getExpression()) {
                 return new CastExpr(cast.getTargetType(), inner);
             }
+        } else if (expr instanceof MethodCallExpr) {
+            MethodCallExpr call = (MethodCallExpr) expr;
+            simplifyArguments(call.getArguments(), call.getDescriptor());
+        } else if (expr instanceof NewExpr) {
+            NewExpr ctor = (NewExpr) expr;
+            simplifyArguments(ctor.getArguments(), ctor.getDescriptor());
         }
         return expr;
+    }
+
+    /**
+     * Simplifies each argument in place, and writes an int literal handed to a {@code boolean} parameter as
+     * the boolean it is. A boolean argument arrives either as the int-carrying ternary its branches
+     * materialize ({@code c ? 1 : 0} and friends) or - when a layout staged it through a slot - as a bare
+     * {@code 0}/{@code 1} inlined after recovery, past every type hint. Nothing else descends into argument
+     * lists, so without this the call keeps an int where the callee declares a boolean: not valid Java.
+     */
+    private void simplifyArguments(List<Expression> arguments, String descriptor) {
+        List<String> params = parameterDescriptors(descriptor);
+        for (int i = 0; i < arguments.size(); i++) {
+            Expression arg = simplifyExpression(arguments.get(i));
+            if (params != null && i < params.size() && "Z".equals(params.get(i))
+                    && arg instanceof LiteralExpr && ((LiteralExpr) arg).getValue() instanceof Integer) {
+                int v = (Integer) ((LiteralExpr) arg).getValue();
+                if (v == 0 || v == 1) {
+                    arg = LiteralExpr.ofBoolean(v != 0);
+                }
+            }
+            if (arg != arguments.get(i)) {
+                arguments.set(i, arg);
+            }
+        }
+    }
+
+    /** The parameter descriptors of a JVM method descriptor, in order; null when there is none to read. */
+    private List<String> parameterDescriptors(String descriptor) {
+        if (descriptor == null || !descriptor.startsWith("(")) {
+            return null;
+        }
+        List<String> params = new ArrayList<>();
+        int i = 1;
+        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+            int begin = i;
+            while (descriptor.charAt(i) == '[') {
+                i++;
+            }
+            if (descriptor.charAt(i) == 'L') {
+                i = descriptor.indexOf(';', i) + 1;
+            } else {
+                i++;
+            }
+            params.add(descriptor.substring(begin, i));
+        }
+        return params;
     }
 
     /**
