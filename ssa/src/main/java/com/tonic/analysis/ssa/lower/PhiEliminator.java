@@ -38,12 +38,24 @@ public class PhiEliminator {
      */
     private Set<PhiInstruction> findStackResidentPhis(IRMethod method) {
         Set<PhiInstruction> result = new HashSet<>();
+        // A named variable's merge stays in its slot. The store is what carries the variable: javac emits it
+        // for every declared local, the LocalVariableTable range opens at it, and a value carried on the
+        // stack instead erases the variable - the declaration reads back with a synthesized name.
+        Set<SSAValue> named = new HashSet<>();
+        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
+            if (!local.isParameter()) {
+                named.addAll(local.getValues());
+            }
+        }
         for (IRBlock merge : method.getBlocks()) {
             List<PhiInstruction> phis = merge.getPhiInstructions();
             if (phis.size() != 1) {
                 continue;
             }
             PhiInstruction phi = phis.get(0);
+            if (named.contains(phi.getResult())) {
+                continue;
+            }
             if (!isStackResidentEligible(merge, phi)) {
                 continue;
             }

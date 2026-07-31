@@ -433,6 +433,19 @@ public class SlotVariablePartition {
         // fallback (which keeps each split uniquely named when there is no debug info).
         Map<Integer, String> rootName = new HashMap<>();
         Set<Integer> scopedRoots = new HashSet<>();
+        // Every debug name any slot's components can claim, collected up front: a fallback name must not
+        // collide with a debug name on a DIFFERENT slot either. A prior generation's fallback (`local4_1`)
+        // becomes a declared name on whatever slot relowering assigns, so a later generation synthesizing
+        // the same pattern for slot 4 would merge two unrelated variables - and their types with them.
+        Set<String> reservedDebugNames = new HashSet<>();
+        for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet()) {
+            for (int root : se.getValue().keySet()) {
+                String scoped = scopeName(se.getKey(), rootOffsets.get(root));
+                if (scoped != null) {
+                    reservedDebugNames.add(scoped);
+                }
+            }
+        }
         for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet()) {
             int slot = se.getKey();
             Map<Integer, Integer> order = se.getValue();
@@ -477,7 +490,7 @@ public class SlotVariablePartition {
                 }
                 int idx = ce.getValue();
                 String name = nameFor(slot, idx);
-                while (used.contains(name)) {
+                while (used.contains(name) || reservedDebugNames.contains(name)) {
                     name = "local" + slot + "_" + (++idx);
                 }
                 rootName.put(root, name);

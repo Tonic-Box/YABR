@@ -75,5 +75,8 @@ class ShortCircuitValueLoweringTest {
                 "no branch may test an int-materialized boolean:\n" + d2);
         assertFalse(d2.replaceAll("\\s+", " ").contains("= false; if ("),
                 "no compound may be staged through a flag:\n" + d2);
+        assertEquals(d1, d2,
+                "decompiling must be a fixed point - `boolean found = ...` keeps its name only while"
+                        + " the variable's store survives relowering");
     }
 }
