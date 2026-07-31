@@ -12,6 +12,7 @@ import com.tonic.parser.attribute.table.LvtSupport;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -72,7 +73,7 @@ public final class LocalVariableTableBuilder {
             // over-reach into other variables sharing this slot, so the overlap-drop would silently discard
             // their names and the decompiler would mislabel them (an unstable, drifting round trip).
             Map<Integer, List<SSAValue>> valuesBySlot = new LinkedHashMap<>();
-            for (SSAValue v : local.getValues()) {
+            for (SSAValue v : regAlloc.getHomeSlotGroups().getOrDefault(local, new LinkedHashSet<>(local.getValues()))) {
                 Integer s = allocation.get(v);
                 if (s != null) {
                     valuesBySlot.computeIfAbsent(s, k -> new ArrayList<>()).add(v);
@@ -89,6 +90,7 @@ public final class LocalVariableTableBuilder {
             }
         }
 
+        entries = mergeSameVariableRanges(entries);
         entries = trimSameSlotOverlaps(entries);
         if (entries.isEmpty()) {
             return null;
@@ -99,6 +101,45 @@ public final class LocalVariableTableBuilder {
         attr.setLocalVariableTable(entries);
         attr.updateLength();
         return attr;
+    }
+
+    /**
+     * Folds the ranges of one variable on one slot into their union wherever they overlap or touch. Two
+     * scopes that come out identical are a duplicate entry, which the JVM rejects outright as a malformed
+     * class - and even when they merely overlap, two rows naming the same variable over the same slot say
+     * nothing the union does not.
+     */
+    private List<LocalVariableTableEntry> mergeSameVariableRanges(List<LocalVariableTableEntry> entries) {
+        Map<List<Integer>, List<LocalVariableTableEntry>> byVariable = new LinkedHashMap<>();
+        for (LocalVariableTableEntry e : entries) {
+            byVariable.computeIfAbsent(
+                    List.of(e.getIndex(), e.getNameIndex(), e.getDescriptorIndex()),
+                    k -> new ArrayList<>()).add(e);
+        }
+        List<LocalVariableTableEntry> result = new ArrayList<>();
+        for (List<LocalVariableTableEntry> group : byVariable.values()) {
+            group.sort(java.util.Comparator.comparingInt(LocalVariableTableEntry::getStartPc));
+            LocalVariableTableEntry open = null;
+            int end = -1;
+            for (LocalVariableTableEntry e : group) {
+                if (open != null && e.getStartPc() <= end) {
+                    end = Math.max(end, e.getStartPc() + e.getLengthPc());
+                    continue;
+                }
+                if (open != null) {
+                    result.add(new LocalVariableTableEntry(constPool, open.getStartPc(), end - open.getStartPc(),
+                            open.getNameIndex(), open.getDescriptorIndex(), open.getIndex()));
+                }
+                open = e;
+                end = e.getStartPc() + e.getLengthPc();
+            }
+            if (open != null) {
+                result.add(new LocalVariableTableEntry(constPool, open.getStartPc(), end - open.getStartPc(),
+                        open.getNameIndex(), open.getDescriptorIndex(), open.getIndex()));
+            }
+        }
+        result.sort(java.util.Comparator.comparingInt(LocalVariableTableEntry::getStartPc));
+        return result;
     }
 
     /**

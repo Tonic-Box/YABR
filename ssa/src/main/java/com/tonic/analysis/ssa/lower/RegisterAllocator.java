@@ -32,6 +32,7 @@ public class RegisterAllocator {
     // to one name on round trip. Ownership blocks that merge while leaving unnamed temps free to share.
     private final Map<Integer, IRMethod.SourceLocal> slotOwner = new HashMap<>();
     private Map<SSAValue, IRMethod.SourceLocal> namedLocalOf = new HashMap<>();
+    private final Map<IRMethod.SourceLocal, Set<SSAValue>> homeSlotGroups = new LinkedHashMap<>();
     private int maxLocals;
     private int reservedSlotCount; // Slots reserved for parameters, never released
     private Map<IRBlock, List<PhiInstruction>> phisByBlockCache;
@@ -109,6 +110,7 @@ public class RegisterAllocator {
         coalesceCopySourcesIntoPhiSlots();
         coalesceReassignmentsIntoVariableSlots();
         allocateAffinityGroups();
+        recordSourceLocalGroups();
 
         for (LiveInterval interval : intervals) {
             SSAValue value = interval.value;
@@ -215,35 +217,7 @@ public class RegisterAllocator {
             // materializes those copies as real moves - a spurious extra variable on round trip. A phi
             // whose every named incoming belongs to the group is the variable's own merge; closure to a
             // fixpoint picks up phis feeding phis.
-            if (phiCopies != null) {
-                boolean grew = true;
-                while (grew) {
-                    grew = false;
-                    for (Map.Entry<SSAValue, List<CopyInfo>> pc : phiCopies.entrySet()) {
-                        SSAValue phiResult = pc.getKey();
-                        if (phiResult == null || members.contains(phiResult)) {
-                            continue;
-                        }
-                        boolean touches = false;
-                        boolean foreign = false;
-                        for (CopyInfo ci : pc.getValue()) {
-                            SSAValue src = copySource(ci);
-                            if (src == null) {
-                                continue;
-                            }
-                            if (members.contains(src)) {
-                                touches = true;
-                            } else if (namedLocalOf.get(src) != null) {
-                                foreign = true;
-                            }
-                        }
-                        if (touches && !foreign) {
-                            members.add(phiResult);
-                            grew = true;
-                        }
-                    }
-                }
-            }
+            addOwnPhiMerges(members);
             int kind = storageKind(local.getType());
             boolean twoSlot = local.getType().isTwoSlot();
             boolean consistent = true;
@@ -256,6 +230,7 @@ public class RegisterAllocator {
             if (!consistent) {
                 continue;
             }
+            homeSlotGroups.put(local, new LinkedHashSet<>(members));
             Integer home = null;
             for (SSAValue v : members) {
                 if (method.getParameters().contains(v)) {
@@ -285,10 +260,66 @@ public class RegisterAllocator {
     }
 
     /**
-     * The values placed in an affinity home slot by {@link #allocateAffinityGroups}. The emitter must
-     * materialize every one of these (no constant inlining, no stack residency): each is a definition or
-     * merge of a variable whose slot a try/finally handler reads at an arbitrary fault point.
+     * Grows {@code members} with the merge phis that belong to the same variable: a phi whose every named
+     * incoming is already a member is this variable's own merge, not a join with another. Closing to a
+     * fixpoint picks up phis feeding phis.
      */
+    private void addOwnPhiMerges(Set<SSAValue> members) {
+        Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
+        if (phiCopies == null) {
+            return;
+        }
+        boolean grew = true;
+        while (grew) {
+            grew = false;
+            for (Map.Entry<SSAValue, List<CopyInfo>> pc : phiCopies.entrySet()) {
+                SSAValue phiResult = pc.getKey();
+                if (phiResult == null || members.contains(phiResult)) {
+                    continue;
+                }
+                boolean touches = false;
+                boolean foreign = false;
+                for (CopyInfo ci : pc.getValue()) {
+                    SSAValue src = copySource(ci);
+                    if (src == null) {
+                        continue;
+                    }
+                    if (members.contains(src)) {
+                        touches = true;
+                    } else if (namedLocalOf.get(src) != null) {
+                        foreign = true;
+                    }
+                }
+                if (touches && !foreign) {
+                    members.add(phiResult);
+                    grew = true;
+                }
+            }
+        }
+    }
+
+    /** Records the phi-closed membership of every source variable that no affinity group already covers. */
+    private void recordSourceLocalGroups() {
+        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
+            if (homeSlotGroups.containsKey(local)) {
+                continue;
+            }
+            Set<SSAValue> members = new LinkedHashSet<>(local.getValues());
+            addOwnPhiMerges(members);
+            homeSlotGroups.put(local, members);
+        }
+    }
+
+    /**
+     * The values sharing each source variable's home slot, phi results included. A loop-carried variable is
+     * read through its merge phi, which the variable's own value list does not carry - so this is the only
+     * view that spans the whole variable, and anything scoping a variable over the code (its debug range,
+     * say) needs it rather than the defs alone.
+     */
+    public Map<IRMethod.SourceLocal, Set<SSAValue>> getHomeSlotGroups() {
+        return homeSlotGroups;
+    }
+
     public Set<SSAValue> getAffinityPinnedValues() {
         return affinityPinnedValues;
     }

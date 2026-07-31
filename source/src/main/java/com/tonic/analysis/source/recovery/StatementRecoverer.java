@@ -10576,7 +10576,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     op, left, nullExpr, PrimitiveSourceType.BOOLEAN);
             }
 
-            if (isBooleanExpression(left) || isBooleanSSAValue(branch.getLeft())) {
+            if (isBooleanExpression(left) || isBooleanSSAValue(branch.getLeft())
+                    || isBooleanLocalAt(branch.getLeft(), branch.getBytecodeOffset())) {
                 boolean wantTrue = (condition == CompareOp.NE || condition == CompareOp.IFNE);
                 if (negate) {
                     wantTrue = !wantTrue;
@@ -10719,6 +10720,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         return false;
+    }
+
+    /**
+     * Whether {@code value} reads a local the class declares {@code boolean}, tested at {@code offset}. A
+     * boolean is an int once it is in a register, so the SSA type says nothing - but the declared type is
+     * recorded, and a branch on such a local is testing the variable itself. Without this the condition came
+     * out as `flag == 0`, comparing a boolean to an int, which is not valid Java.
+     */
+    private boolean isBooleanLocalAt(Value value, int offset) {
+        if (!(value instanceof SSAValue)) {
+            return false;
+        }
+        IRInstruction def = ((SSAValue) value).getDefinition();
+        int slot = -1;
+        if (def instanceof LoadLocalInstruction) {
+            slot = ((LoadLocalInstruction) def).getLocalIndex();
+        } else if (def instanceof PhiInstruction) {
+            slot = getLocalIndexFromPhi((PhiInstruction) def);
+        }
+        return slot >= 0 && "Z".equals(narrowLvtDescriptor(slot, offset));
     }
 
     /**
