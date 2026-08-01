@@ -119,6 +119,13 @@ public class StatementLowerer {
         }
     }
 
+    /** An Object-typed reference says nothing about the value - any specific declared type beats it. */
+    private static boolean isUnspecificReference(com.tonic.analysis.ssa.type.IRType type) {
+        return type instanceof com.tonic.analysis.ssa.type.ReferenceType
+                && "java/lang/Object".equals(
+                        ((com.tonic.analysis.ssa.type.ReferenceType) type).getInternalName());
+    }
+
     private void lowerVarDecl(VarDeclStmt decl) {
         SourceType type = decl.getType();
         String name = decl.getName();
@@ -126,9 +133,36 @@ public class StatementLowerer {
         ctx.declareLocal(name, type.toIRType(), false);
 
         if (init != null) {
-            Value value = exprLowerer.lower(init);
+            ctx.pushExpectedType(type);
+            Value value;
+            try {
+                value = exprLowerer.lower(init);
+            } finally {
+                ctx.popExpectedType();
+            }
             if (value instanceof SSAValue) {
                 SSAValue ssaVal = (SSAValue) value;
+                // The declared type is ground truth. An initializer whose resolved type degraded to
+                // Object (an unresolvable call return, say) would poison every later use of the variable
+                // - `byte[] bytes = data.getBytes(...)` then `bytes.length` reads a field on Object -
+                // so re-type the value to what the source declares.
+                com.tonic.analysis.ssa.type.IRType declared =
+                        com.tonic.analysis.ssa.type.IRType.fromDescriptor(
+                                ctx.getTypeResolver().descriptorOf(type));
+                if (isUnspecificReference(ssaVal.getType()) && declared != null
+                        && !isUnspecificReference(declared)
+                        && !(declared instanceof com.tonic.analysis.ssa.type.PrimitiveType)
+                        && !(ssaVal.getDefinition()
+                                instanceof com.tonic.analysis.ssa.ir.ConstantInstruction)) {
+                    // A checkcast, not a copy: the degraded value is Object ON THE STACK too (its
+                    // descriptor said so), and the verifier holds the bytecode to that - a later
+                    // arraylength or member access needs the frame narrowed, not just the SSA type.
+                    SSAValue retyped = ctx.newValue(declared);
+                    ctx.getCurrentBlock().addInstruction(
+                            com.tonic.analysis.ssa.ir.TypeCheckInstruction.createCast(
+                                    retyped, ssaVal, declared));
+                    ssaVal = retyped;
+                }
                 ctx.setVariable(name, ssaVal);
             } else {
                 IRType irType = type.toIRType();
@@ -482,7 +516,7 @@ public class StatementLowerer {
      */
     private String enumSelectorClass(SwitchStmt switchStmt, Value selector) {
         if (selector instanceof SSAValue) {
-            com.tonic.analysis.ssa.type.IRType irType = ((SSAValue) selector).getType();
+            com.tonic.analysis.ssa.type.IRType irType = selector.getType();
             if (irType instanceof com.tonic.analysis.ssa.type.ReferenceType) {
                 String internal = ((com.tonic.analysis.ssa.type.ReferenceType) irType).getInternalName();
                 if (internal != null && !"java/lang/Object".equals(internal)) {

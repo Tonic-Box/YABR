@@ -314,6 +314,10 @@ public final class TestUtils {
         if (source.contains("@interface ")) {
             return false;
         }
+        // A package-info class declares nothing recompilable; its original bytecode IS the result.
+        if (owner != null && owner.endsWith("package-info")) {
+            return true;
+        }
         CompilationUnit cu = JavaParser.create().parse(source);
         boolean plainClass = cu.getPrimaryType() instanceof ClassDecl;
         if (!plainClass && !(cu.getPrimaryType() instanceof com.tonic.analysis.source.ast.decl.EnumDecl)

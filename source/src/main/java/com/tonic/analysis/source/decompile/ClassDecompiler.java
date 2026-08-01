@@ -341,7 +341,7 @@ public class ClassDecompiler {
         writer.newLine();
         writer.indent();
 
-        boolean isEnum = Modifiers.isEnum(classFile.getAccess());
+        boolean isEnum = Modifiers.isEnum(classFile.getAccess()) && isEnumProper();
         RecordAttribute record = findRecordAttribute();
         List<FieldEntry> fields = classFile.getFields();
 
@@ -576,7 +576,7 @@ public class ClassDecompiler {
             sb.append("@interface ");
         } else if (Modifiers.isInterface(access)) {
             sb.append("interface ");
-        } else if (Modifiers.isEnum(access)) {
+        } else if (Modifiers.isEnum(access) && isEnumProper()) {
             sb.append("enum ");
         } else {
             sb.append("class ");
@@ -655,6 +655,17 @@ public class ClassDecompiler {
             }
         }
         return null;
+    }
+
+    /**
+     * Whether this enum-flagged class is the enum itself rather than a constant's body. A constant with a
+     * class body compiles to an anonymous subclass that also carries ACC_ENUM but extends the ENUM, not
+     * {@code java/lang/Enum} - and no legal source declares an enum that extends another type, so such a
+     * class is emitted as a plain class for the round trip to parse.
+     */
+    private boolean isEnumProper() {
+        String superName = classFile.getSuperClassName();
+        return "java/lang/Enum".equals(superName);
     }
 
     private RecordAttribute findRecordAttribute() {

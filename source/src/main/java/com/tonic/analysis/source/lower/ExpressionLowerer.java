@@ -1296,6 +1296,13 @@ public class ExpressionLowerer {
             if (resolved != null) {
                 return resolved;
             }
+            // The callee is unresolvable (not in the pool, not reflectively loadable). The surrounding
+            // declaration knows what it expects; a descriptor built with that return links against the
+            // real method where Object never can.
+            SourceType expected = ctx.peekExpectedType();
+            if (expected != null && !isObjectOrNull(expected)) {
+                return expected;
+            }
         }
         return declaredType != null ? declaredType : ReferenceSourceType.OBJECT;
     }

@@ -171,6 +171,26 @@ public class LoweringContext {
         this.currentMethodReturnType = type;
     }
 
+    /**
+     * The type the surrounding declaration expects of the expression being lowered - the declared type of a
+     * variable whose initializer is under way. Consulted when a call's return type cannot be resolved, so
+     * the descriptor carries what the source demands instead of degrading to Object.
+     */
+    private final java.util.ArrayDeque<com.tonic.analysis.source.ast.type.SourceType> expectedTypes =
+            new java.util.ArrayDeque<>();
+
+    public void pushExpectedType(com.tonic.analysis.source.ast.type.SourceType type) {
+        expectedTypes.push(type);
+    }
+
+    public void popExpectedType() {
+        expectedTypes.pop();
+    }
+
+    public com.tonic.analysis.source.ast.type.SourceType peekExpectedType() {
+        return expectedTypes.peek();
+    }
+
     /** The owner class of the current method */
     public String getOwnerClass() {
         return ownerClass;

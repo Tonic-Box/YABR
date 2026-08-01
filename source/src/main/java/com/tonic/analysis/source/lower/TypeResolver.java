@@ -88,7 +88,9 @@ public class TypeResolver {
             // SUPERCLASS, so fall through to the pool walk below rather than giving up at the source view.
         }
 
-        ownerClass = normalizeNestedName(ownerClass);
+        // The owner may arrive as a SIMPLE name (a receiver typed from source text); qualify it through
+        // the imports before the pool lookup, else `Vector3f.x` resolves against a class that isn't there.
+        ownerClass = normalizeNestedName(resolveClassName(ownerClass));
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
             return reflectFieldType(ownerClass, fieldName);
