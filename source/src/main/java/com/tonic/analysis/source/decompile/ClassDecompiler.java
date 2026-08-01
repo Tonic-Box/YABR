@@ -1201,6 +1201,13 @@ public class ClassDecompiler {
         if (Modifiers.isPrivate(access) && !hasInnerClasses) sb.append("private ");
         if (Modifiers.isProtected(access)) sb.append("protected ");
         if (Modifiers.isStatic(access)) sb.append("static ");
+        // An interface method WITH a body that is neither static nor abstract is a default method, and the
+        // keyword is mandatory - without it the source declares an abstract method with a body.
+        if (Modifiers.isInterface(classAccess) && !Modifiers.isStatic(access)
+                && !Modifiers.isAbstract(access) && !Modifiers.isPrivate(access)
+                && method.getCodeAttribute() != null) {
+            sb.append("default ");
+        }
         if (Modifiers.isFinal(access)) sb.append("final ");
         if (!isAnnotationType && Modifiers.isAbstract(access)) sb.append("abstract ");
         if (Modifiers.isSynchronized(access)) sb.append("synchronized ");

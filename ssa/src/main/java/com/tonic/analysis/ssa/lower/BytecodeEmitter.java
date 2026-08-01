@@ -2388,7 +2388,8 @@ public class BytecodeEmitter {
             mh.getReferenceKind(),
             mh.getOwner(),
             mh.getName(),
-            mh.getDescriptor()
+            mh.getDescriptor(),
+            ownerIsInterface(mh.getOwner())
         ).getIndex(constPool);
 
         List<Integer> bsArgIndices = new ArrayList<>();
@@ -2403,6 +2404,31 @@ public class BytecodeEmitter {
         int nameAndTypeIndex = constPool.addNameAndType(instr.getName(), instr.getDescriptor());
 
         return constPool.addInvokeDynamic(bootstrapMethodIndex, nameAndTypeIndex);
+    }
+
+    /**
+     * Whether a method handle's owner is an interface - the class being emitted, a pooled class, or a
+     * platform class via reflection. A static or special handle on an interface owner must reference an
+     * InterfaceMethodref rather than a Methodref, or the emitted pool is rejected as inconsistent.
+     */
+    private boolean ownerIsInterface(String owner) {
+        if (owner == null) {
+            return false;
+        }
+        ClassFile emitting = constPool.getClassFile();
+        if (emitting != null && owner.equals(emitting.getClassName())) {
+            return (emitting.getAccess() & 0x0200) != 0;
+        }
+        com.tonic.parser.ClassPool pool = emitting != null ? emitting.getClassPool() : null;
+        ClassFile cf = pool != null ? pool.get(owner) : null;
+        if (cf != null) {
+            return (cf.getAccess() & 0x0200) != 0;
+        }
+        try {
+            return Class.forName(owner.replace('/', '.'), false, getClass().getClassLoader()).isInterface();
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private BootstrapMethodsAttribute findOrCreateBootstrapMethodsAttribute(ClassFile classFile) {
@@ -2433,7 +2459,8 @@ public class BytecodeEmitter {
                 mh.getReferenceKind(),
                 mh.getOwner(),
                 mh.getName(),
-                mh.getDescriptor()
+                mh.getDescriptor(),
+                ownerIsInterface(mh.getOwner())
             ).getIndex(constPool);
         } else if (constant instanceof MethodTypeConstant) {
             MethodTypeConstant mt = (MethodTypeConstant) constant;

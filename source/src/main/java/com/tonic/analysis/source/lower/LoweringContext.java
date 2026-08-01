@@ -160,6 +160,17 @@ public class LoweringContext {
         this.currentMethodName = currentMethodName;
     }
 
+    /** The declared return type of the method being lowered - the target type of its return values. */
+    private com.tonic.analysis.source.ast.type.SourceType currentMethodReturnType;
+
+    public com.tonic.analysis.source.ast.type.SourceType getCurrentMethodReturnType() {
+        return currentMethodReturnType;
+    }
+
+    public void setCurrentMethodReturnType(com.tonic.analysis.source.ast.type.SourceType type) {
+        this.currentMethodReturnType = type;
+    }
+
     /** The owner class of the current method */
     public String getOwnerClass() {
         return ownerClass;

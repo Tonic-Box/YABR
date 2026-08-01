@@ -103,6 +103,7 @@ public class ASTLowerer {
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setOwnerClass(ownerClass);
         ctx.setCurrentMethodName(methodName);
+        ctx.setCurrentMethodReturnType(returnType);
         ctx.setSuperClassName(superClassName);
 
         IRBlock entryBlock = ctx.createBlock();
@@ -173,6 +174,7 @@ public class ASTLowerer {
         LoweringContext ctx = new LoweringContext(irMethod, constPool, typeResolver);
         ctx.setOwnerClass(ownerClass);
         ctx.setCurrentMethodName(methodName);
+        ctx.setCurrentMethodReturnType(returnType);
         ctx.setSuperClassName(superClassName);
 
         // Use the slot-based form + real SSA construction not only for loops but for any branch

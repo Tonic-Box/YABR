@@ -910,7 +910,7 @@ public class ExpressionLowerer {
                 SourceType fieldType = ctx.hasVariable(varRef.getName())
                         ? null
                         : ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName());
-                if (!ctx.hasVariable(varRef.getName()) && !(fieldType instanceof ReferenceSourceType)) {
+                if (!ctx.hasVariable(varRef.getName()) && fieldType == null) {
                     // A bare identifier that is neither a local variable nor a field: a class name (static call).
                     invokeType = InvokeType.STATIC;
                     ownerClass = resolveClassName(varRef.getName());
@@ -942,11 +942,19 @@ public class ExpressionLowerer {
                     ownerClass = ctx.getOwnerClass();
                 }
             } else if (receiver != null) {
-                Value receiverValue = lower(receiver);
-                args.add(receiverValue);
-                invokeType = InvokeType.VIRTUAL;
-                if (ownerClass == null || ownerClass.isEmpty()) {
-                    ownerClass = ownerClassFromValue(receiverValue, receiver);
+                // A dotted chain naming a class (`a.b.Outer.Inner.create(...)`) parses as nested field
+                // accesses; calling through it is a static call on that class, not a virtual call on a value.
+                String qualifiedOwner = resolveQualifiedTypeReceiver(receiver);
+                if (qualifiedOwner != null) {
+                    invokeType = InvokeType.STATIC;
+                    ownerClass = qualifiedOwner;
+                } else {
+                    Value receiverValue = lower(receiver);
+                    args.add(receiverValue);
+                    invokeType = InvokeType.VIRTUAL;
+                    if (ownerClass == null || ownerClass.isEmpty()) {
+                        ownerClass = ownerClassFromValue(receiverValue, receiver);
+                    }
                 }
             } else {
                 if (ownerClass == null || ownerClass.isEmpty()) {
@@ -1316,7 +1324,7 @@ public class ExpressionLowerer {
         // (reliable) so a genuine field literally named "length" on a class still lowers as a getfield. Skip
         // class-name receivers (static access). Lower the receiver exactly once to preserve side effects.
         if (!isStatic && "length".equals(field.getFieldName()) && receiver != null
-                && !(receiver instanceof VarRefExpr && !ctx.hasVariable(((VarRefExpr) receiver).getName()))) {
+                && !(receiver instanceof VarRefExpr && isClassNameReceiver((VarRefExpr) receiver))) {
             Value recv = lower(receiver);
             if (recv.getType() instanceof ArrayType) {
                 SSAValue len = ctx.newValue(PrimitiveType.INT);
@@ -1398,8 +1406,9 @@ public class ExpressionLowerer {
         if (ctx.hasVariable(varRef.getName())) {
             return false;
         }
-        return !(ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName())
-                instanceof ReferenceSourceType);
+        // ANY field of that name disqualifies class-ness - an ARRAY-typed field (`axisNames.length`)
+        // is as much a value receiver as a reference-typed one.
+        return ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName()) == null;
     }
 
     /** The receiver value's reference type as an internal owner name, or null when it is not a usable named reference. */
@@ -2078,6 +2087,14 @@ public class ExpressionLowerer {
         }
 
         SourceType lambdaType = lambda.getType();
+        // The parser cannot type a lambda; a returned lambda's functional interface is the enclosing
+        // method's declared return type. Without it the call site descriptor says Object, and the
+        // metafactory rejects the site outright ("Functional interface java.lang.Object is not an
+        // interface").
+        if (isObjectOrNull(lambdaType) && ctx.getCurrentMethodReturnType() != null
+                && !isObjectOrNull(ctx.getCurrentMethodReturnType())) {
+            lambdaType = ctx.getCurrentMethodReturnType();
+        }
         String samInterfaceName = extractInterfaceName(lambdaType);
 
         // Resolve the functional interface's single abstract method so the lambda's return type

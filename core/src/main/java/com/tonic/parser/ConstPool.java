@@ -655,11 +655,21 @@ public class ConstPool {
      * @return The MethodHandleItem.
      */
     public MethodHandleItem findOrAddMethodHandle(int refKind, String owner, String name, String desc) {
+        return findOrAddMethodHandle(refKind, owner, name, desc, false);
+    }
+
+    /**
+     * As {@link #findOrAddMethodHandle(int, String, String, String)}, with the owner's interface-ness made
+     * explicit: a static/special/virtual handle on an INTERFACE owner must reference a
+     * {@code CONSTANT_InterfaceMethodref} (JVMS 4.4.8), or the JVM rejects the pool as inconsistent.
+     */
+    public MethodHandleItem findOrAddMethodHandle(int refKind, String owner, String name, String desc,
+                                                  boolean ownerIsInterface) {
         int refIndex;
         if (refKind >= 1 && refKind <= 4) {
             FieldRefItem fieldRef = findOrAddFieldRef(owner, name, desc);
             refIndex = getIndexOf(fieldRef);
-        } else if (refKind == 9) {
+        } else if (refKind == 9 || (ownerIsInterface && refKind >= 5 && refKind <= 8)) {
             InterfaceRefItem interfaceRef = findOrAddInterfaceRef(owner, name, desc);
             refIndex = getIndexOf(interfaceRef);
         } else {

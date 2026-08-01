@@ -316,7 +316,8 @@ public final class TestUtils {
         }
         CompilationUnit cu = JavaParser.create().parse(source);
         boolean plainClass = cu.getPrimaryType() instanceof ClassDecl;
-        if (!plainClass && !(cu.getPrimaryType() instanceof com.tonic.analysis.source.ast.decl.EnumDecl)) {
+        if (!plainClass && !(cu.getPrimaryType() instanceof com.tonic.analysis.source.ast.decl.EnumDecl)
+                && !(cu.getPrimaryType() instanceof com.tonic.analysis.source.ast.decl.InterfaceDecl)) {
             return false;
         }
         com.tonic.analysis.source.ast.decl.TypeDecl decl = cu.getPrimaryType();
