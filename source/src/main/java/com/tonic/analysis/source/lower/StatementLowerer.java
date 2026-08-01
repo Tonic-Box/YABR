@@ -3,6 +3,7 @@ package com.tonic.analysis.source.lower;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.SourceType;
+import java.util.ArrayList;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.type.ReferenceType;
@@ -372,6 +373,10 @@ public class StatementLowerer {
 
     private void lowerSwitch(SwitchStmt switchStmt) {
         Value selector = exprLowerer.lower(switchStmt.getSelector());
+        String enumClass = hasEnumLabels(switchStmt) ? enumSelectorClass(switchStmt, selector) : null;
+        if (enumClass != null) {
+            selector = lowerOrdinalOf(selector, enumClass);
+        }
 
         IRBlock exitBlock = ctx.createBlock();
         IRBlock defaultBlock = null;
@@ -399,10 +404,15 @@ public class StatementLowerer {
             // integer labels. Honor both, or the switch lowers with no cases (a bare goto to default).
             if (sc.hasExpressionLabels()) {
                 for (Expression label : sc.expressionLabels()) {
-                    Integer key = constIntLabel(label);
-                    if (key != null) {
-                        switchInstr.addCase(key, caseBlocks[i]);
+                    Integer key = enumClass != null
+                            ? enumOrdinalLabel(label, enumClass)
+                            : constIntLabel(label);
+                    if (key == null) {
+                        throw new LoweringException("Unresolvable switch case label: " + label
+                                + " (enum " + enumClass + ", selector type "
+                                + switchStmt.getSelector().getType() + ")");
                     }
+                    switchInstr.addCase(key, caseBlocks[i]);
                 }
             } else {
                 for (Integer label : sc.labels()) {
@@ -450,6 +460,74 @@ public class StatementLowerer {
     }
 
     /** Extracts the constant int value of a switch-case label expression (int/char literal), or null. */
+    /** Whether any case label names an enum constant rather than carrying a constant value. */
+    private boolean hasEnumLabels(SwitchStmt switchStmt) {
+        for (SwitchCase sc : switchStmt.getCases()) {
+            if (!sc.hasExpressionLabels()) {
+                continue;
+            }
+            for (Expression label : sc.expressionLabels()) {
+                if (constIntLabel(label) == null
+                        && !(label instanceof com.tonic.analysis.source.ast.expr.LiteralExpr)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The enum class a named-label switch dispatches over. The lowered selector VALUE is the authority -
+     * its type comes from a resolved descriptor - with the declared source type as the fallback for values
+     * whose IR type is unspecific. Named labels with no enum class to resolve against cannot lower.
+     */
+    private String enumSelectorClass(SwitchStmt switchStmt, Value selector) {
+        if (selector instanceof SSAValue) {
+            com.tonic.analysis.ssa.type.IRType irType = ((SSAValue) selector).getType();
+            if (irType instanceof com.tonic.analysis.ssa.type.ReferenceType) {
+                String internal = ((com.tonic.analysis.ssa.type.ReferenceType) irType).getInternalName();
+                if (internal != null && !"java/lang/Object".equals(internal)) {
+                    return internal;
+                }
+            }
+        }
+        SourceType type = switchStmt.getSelector().getType();
+        if (type instanceof com.tonic.analysis.source.ast.type.ReferenceSourceType) {
+            String name = ((com.tonic.analysis.source.ast.type.ReferenceSourceType) type).getInternalName();
+            String resolved = name.contains("/") ? name : ctx.getTypeResolver().resolveClassName(name);
+            if (resolved != null && !"java/lang/Object".equals(resolved)) {
+                return resolved;
+            }
+        }
+        throw new LoweringException("Switch labels name enum constants but the selector's enum class"
+                + " cannot be determined (type " + type + ")");
+    }
+
+    /** Dispatches an enum selector on its ordinal, the int the case keys index. */
+    private Value lowerOrdinalOf(Value selector, String enumClass) {
+        SSAValue ordinal = ctx.newValue(com.tonic.analysis.ssa.type.PrimitiveType.INT);
+        List<Value> args = new ArrayList<>();
+        args.add(selector);
+        ctx.getCurrentBlock().addInstruction(new com.tonic.analysis.ssa.ir.InvokeInstruction(
+                ordinal, com.tonic.analysis.ssa.ir.InvokeType.VIRTUAL, enumClass, "ordinal", "()I", args));
+        return ordinal;
+    }
+
+    /** The ordinal of an enum-constant case label ({@code NAME} or {@code Type.NAME}), or null. */
+    private Integer enumOrdinalLabel(Expression label, String enumClass) {
+        String name = null;
+        if (label instanceof com.tonic.analysis.source.ast.expr.VarRefExpr) {
+            name = ((com.tonic.analysis.source.ast.expr.VarRefExpr) label).getName();
+        } else if (label instanceof com.tonic.analysis.source.ast.expr.FieldAccessExpr) {
+            name = ((com.tonic.analysis.source.ast.expr.FieldAccessExpr) label).getFieldName();
+        }
+        if (name == null) {
+            return null;
+        }
+        return com.tonic.analysis.source.recovery.EnumConstants.ordinalByName(
+                ctx.getTypeResolver().getClassPool(), enumClass, name);
+    }
+
     private Integer constIntLabel(Expression label) {
         if (label instanceof com.tonic.analysis.source.ast.expr.LiteralExpr) {
             Object v = ((com.tonic.analysis.source.ast.expr.LiteralExpr) label).getValue();

@@ -47,6 +47,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      */
     private final com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer rcsStructurer;
 
+    /** The pool enum constants resolve from when a switch dispatches on {@code ordinal()} directly. */
+    private com.tonic.parser.ClassPool enumClassPool;
+
+    public void setEnumClassPool(com.tonic.parser.ClassPool pool) {
+        this.enumClassPool = pool;
+    }
+
     public StatementRecoverer(ControlFlowContext context, StructuralAnalyzer analyzer,
                               ExpressionRecoverer exprRecoverer) {
         this.context = context;
@@ -166,9 +173,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo)) {
                 selector = enumInfo.enumVariable;
                 enumNamesResolved = true;
-            } else {
+            } else if (enumInfo.rawOrdinals) {
                 selector = enumInfo.ordinalExpression;
             }
+            // A $SwitchMap$ dispatch whose mapping did not resolve keeps the array access: the case keys
+            // are MAP VALUES, not ordinals, so rewriting the selector to `x.ordinal()` silently redirects
+            // every case to the wrong constant.
         }
 
         IRBlock mergeBlock = findSwitchMerge(info);
@@ -197,8 +207,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (enumNamesResolved) {
                 List<Expression> enumLabels = new ArrayList<>();
                 for (Integer caseValue : labels) {
-                    String constantName = EnumSwitchMapRegistry.getInstance()
-                            .lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue);
+                    String constantName = enumConstantForCase(enumInfo, caseValue);
                     SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
                     enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
                 }
@@ -10066,10 +10075,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         Expression ordinalExpression;
         String enumClassName;
         String holderClass;
+        boolean rawOrdinals;
     }
 
     private EnumSwitchInfo detectEnumSwitchPattern(Expression selector) {
         if (!(selector instanceof ArrayAccessExpr)) {
+            // A switch dispatched on the ordinal directly, without javac's $SwitchMap indirection - the
+            // relowered form of an enum switch. The case keys ARE the ordinals, and the enum class is the
+            // ordinal() call's owner, so the constants resolve from the enum itself with no holder.
+            if (selector instanceof MethodCallExpr) {
+                MethodCallExpr call = (MethodCallExpr) selector;
+                if ("ordinal".equals(call.getMethodName()) && call.getReceiver() != null
+                        && call.getOwnerClass() != null) {
+                    EnumSwitchInfo info = new EnumSwitchInfo();
+                    info.enumVariable = call.getReceiver();
+                    info.ordinalExpression = call;
+                    info.enumClassName = call.getOwnerClass();
+                    info.rawOrdinals = true;
+                    return info;
+                }
+            }
             return null;
         }
 
@@ -10112,6 +10137,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
     /** True when every case value of an enum switch resolves to a constant name via the switch-map registry. */
     private boolean allEnumCasesResolve(RegionInfo info, EnumSwitchInfo enumInfo) {
+        if (enumInfo.rawOrdinals) {
+            for (Integer caseValue : info.getSwitchCases().keySet()) {
+                if (enumConstantForCase(enumInfo, caseValue) == null) {
+                    return false;
+                }
+            }
+            return true;
+        }
         EnumSwitchMapRegistry registry = EnumSwitchMapRegistry.getInstance();
         if (!registry.hasMapping(enumInfo.holderClass, enumInfo.enumClassName)) {
             return false;
@@ -10122,6 +10155,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         return true;
+    }
+
+    /** The enum constant a case key selects: the ordinal itself, or the holder's switch-map entry. */
+    private String enumConstantForCase(EnumSwitchInfo enumInfo, int caseValue) {
+        if (enumInfo.rawOrdinals) {
+            return EnumConstants.nameByOrdinal(enumClassPool, enumInfo.enumClassName, caseValue);
+        }
+        return EnumSwitchMapRegistry.getInstance()
+                .lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue);
     }
 
 

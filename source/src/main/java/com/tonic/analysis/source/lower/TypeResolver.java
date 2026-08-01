@@ -24,6 +24,10 @@ public class TypeResolver {
     private final ClassPool classPool;
     private final String currentClass;
 
+    public ClassPool getClassPool() {
+        return classPool;
+    }
+
     public TypeResolver(ClassPool classPool, String currentClass) {
         this.classPool = classPool;
         this.currentClass = currentClass;

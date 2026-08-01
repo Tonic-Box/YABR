@@ -245,6 +245,9 @@ public class MethodRecoverer {
         controlFlowContext = new ControlFlowContext(irMethod, dominatorTree, loopAnalysis, recoveryContext);
 
         statementRecoverer = new StatementRecoverer(controlFlowContext, structuralAnalyzer, expressionRecoverer);
+        if (sourceMethod != null && sourceMethod.getClassFile() != null) {
+            statementRecoverer.setEnumClassPool(sourceMethod.getClassFile().getClassPool());
+        }
     }
 
     /**
