@@ -2988,6 +2988,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
 
         List<Statement> normalPath = recoverBlockSequence(entry, new HashSet<>());
+        flattenTrailingGuardElse(normalPath);
         List<Statement> folded = reconstructTryWithResources(normalPath, catchClauses, finallyBlock, finallyVars);
         if (folded == null) {
             allHandlers.forEach(processedTryHandlers::remove);
@@ -3076,12 +3077,44 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Folds a recovered clean normal path of a try-with-resources method into {@code try (resources) { body }}.
-     * Resources are the locals that are {@code close()}d on the normal path; their declarations are lifted out
-     * and referenced from the try header, and the synthetic close calls are dropped. A user {@code finally}
-     * (with its inlined copies filtered from the body) is attached when present; pass null and an empty set
-     * when there is none.
+     * Unfolds a trailing {@code if (c) { throws } else { continuation }} into guard form - the terminal arm
+     * keeps the guard, the else's statements rejoin the top level. A validation guard whose arm declares a
+     * local recovers as a full diamond, burying the resource region inside the else where the fold cannot
+     * see it; with the arm terminal the two forms are the same program. Repeats while the tail keeps the
+     * shape, so stacked guards all flatten.
      */
+    private void flattenTrailingGuardElse(List<Statement> normalPath) {
+        while (!normalPath.isEmpty()) {
+            Statement last = normalPath.get(normalPath.size() - 1);
+            if (!(last instanceof IfStmt)) {
+                return;
+            }
+            IfStmt guard = (IfStmt) last;
+            if (!guard.hasElse() || !endsAbruptly(guard.getThenBranch())) {
+                return;
+            }
+            Statement elseBranch = guard.getElseBranch();
+            guard.setElseBranch(null);
+            if (elseBranch instanceof BlockStmt) {
+                normalPath.addAll(((BlockStmt) elseBranch).getStatements());
+            } else {
+                normalPath.add(elseBranch);
+            }
+        }
+    }
+
+    /** Whether every path through {@code s} throws or returns (its last reachable statement is terminal). */
+    private boolean endsAbruptly(Statement s) {
+        if (s instanceof ThrowStmt || s instanceof ReturnStmt) {
+            return true;
+        }
+        if (s instanceof BlockStmt) {
+            List<Statement> stmts = ((BlockStmt) s).getStatements();
+            return !stmts.isEmpty() && endsAbruptly(stmts.get(stmts.size() - 1));
+        }
+        return false;
+    }
+
     private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches,
                                                         BlockStmt finallyBlock, Set<String> finallyVars) {
         Set<String> closedVars = new LinkedHashSet<>();
@@ -8725,7 +8758,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 SSAValue result = fieldAccess.getResult();
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(result, value);
-                if (fieldLoadClobberedBeforeUse(fieldAccess, result)) {
+                if (fieldLoadClobberedBeforeUse(fieldAccess, result)
+                        || exprRecoverer.inliningWouldReorderEffects(result)) {
+                    // The same protection when the field is mutated INDIRECTLY: a call between the load
+                    // and its use may write the field (`double a = g.time; g.setTime(x); use(a)`), so a
+                    // load carried across any effect is captured where it was performed, not re-read at
+                    // the use. Operands of the use itself are exempt inside the reorder check.
                     Statement decl = materializeClobberedLoad(result, value);
                     if (decl != null) {
                         return decl;

@@ -243,7 +243,7 @@ public class ExpressionRecoverer {
         SSAValue result = instr.getResult();
         if (result != null) {
             int useCount = result.getUses().size();
-            return useCount <= 1;
+            return useCount <= 1 && !inliningWouldReorderEffects(result);
         }
 
         return false;
@@ -265,7 +265,7 @@ public class ExpressionRecoverer {
      */
     public boolean inliningWouldReorderEffects(SSAValue value) {
         IRInstruction def = value == null ? null : value.getDefinition();
-        if (!hasEffect(def) || value.getUses().size() != 1) {
+        if (def == null || (!hasEffect(def) && !readsMutableState(def)) || value.getUses().size() != 1) {
             return false;
         }
         IRInstruction use = value.getUses().get(0);
@@ -306,6 +306,18 @@ public class ExpressionRecoverer {
             }
         }
         return seen;
+    }
+
+    /**
+     * True when the instruction reads state a side effect can change - a field or array load. The value it
+     * produced is the one BEFORE any intervening call or store, so rendering it later re-reads the mutated
+     * state: {@code double a = g.time; g.setTime(x); use(a)} must not become {@code use(g.time)}.
+     */
+    private boolean readsMutableState(IRInstruction instr) {
+        if (instr instanceof FieldAccessInstruction) {
+            return !((FieldAccessInstruction) instr).isStore();
+        }
+        return instr instanceof ArrayAccessInstruction && !((ArrayAccessInstruction) instr).isStore();
     }
 
     /** True for instruction kinds whose execution is observable, so their order may not be changed. */

@@ -197,7 +197,7 @@ public class ControlFlowSimplifier implements ASTTransform {
         boolean orientable = exitingArm
                 ? isPurelyLogicalNegation(ifStmt.getCondition())
                         && !isConstantEqualityGuard(ifStmt.getCondition())
-                : isNegativeCondition(ifStmt.getCondition());
+                : isNegativeCondition(ifStmt.getCondition()) && negationIsPositive(ifStmt.getCondition());
         if (ifStmt.hasElse() && orientable
                 && !isEmptyBlock(ifStmt.getThenBranch()) && !isEmptyBlock(ifStmt.getElseBranch())) {
             Statement thenBody = ifStmt.getThenBranch();
@@ -1045,6 +1045,16 @@ public class ControlFlowSimplifier implements ASTTransform {
             return new ReturnStmt(new LiteralExpr(lit.getValue(), lit.getType()));
         }
         return null;
+    }
+
+    /**
+     * Whether negating {@code e} actually yields a positive form. A floating-point relational cannot flip
+     * its operator (that changes the answer for NaN), so negating it WRAPS a {@code !} - orienting on it
+     * would turn the positive form into the negative one and the next pass would swap straight back,
+     * oscillating forever. Such a condition is already as positive as it can be written.
+     */
+    private boolean negationIsPositive(Expression e) {
+        return !(e instanceof BinaryExpr) || !flipChangesNanAnswer((BinaryExpr) e);
     }
 
     private boolean isNegativeCondition(Expression e) {

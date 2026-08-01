@@ -459,7 +459,6 @@ public class StatementLowerer {
         ctx.setCurrentBlock(exitBlock);
     }
 
-    /** Extracts the constant int value of a switch-case label expression (int/char literal), or null. */
     /** Whether any case label names an enum constant rather than carrying a constant value. */
     private boolean hasEnumLabels(SwitchStmt switchStmt) {
         for (SwitchCase sc : switchStmt.getCases()) {
@@ -905,7 +904,9 @@ public class StatementLowerer {
         if (type != null) {
             IRType ir = type.toIRType();
             if (ir instanceof ReferenceType) {
-                return ((ReferenceType) ir).getInternalName();
+                String name = ((ReferenceType) ir).getInternalName();
+                // The parsed declaration carries the SIMPLE name; the invoke owner needs the internal one.
+                return name.contains("/") ? name : ctx.getTypeResolver().resolveClassName(name);
             }
         }
         return "java/lang/AutoCloseable";
