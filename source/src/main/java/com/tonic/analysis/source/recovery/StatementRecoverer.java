@@ -9882,6 +9882,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (context.isForLoopInductionPhi(targetPhi.getResult()) || selfStorePhis.contains(targetPhi)) {
             return null;
         }
+        // A phi mixing primitives with references is a type-pun across a reused slot, verifier-legal only
+        // because its result is dead - the declarations already skip it, and a copy INTO it is the same
+        // nonsense written as an assignment (`cIndex = sdBuf` with cIndex an int and sdBuf a buffer).
+        // A dead result more generally has nothing downstream to read the copy.
+        if (isTypePunDeadPhi(targetPhi) || targetPhi.getResult().getUses().isEmpty()) {
+            return null;
+        }
         String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
         if (phiVarName == null || !context.getExpressionContext().isDeclared(phiVarName)
                 || phiVarName.equals("this")
@@ -10549,6 +10556,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
             if (inductionOnly && !isForLoopInductionPhi(phi)) {
+                continue;
+            }
+            // A dead phi has nothing downstream to read the copy, and a primitive/reference pun across a
+            // reused slot exists only BECAUSE it is dead - a copy into either is a nonsense assignment
+            // (`cIndex = sdBuf` with cIndex an int and sdBuf a buffer).
+            if (result.getUses().isEmpty() || isTypePunDeadPhi(phi)) {
                 continue;
             }
             String target = context.getExpressionContext().getVariableName(result);

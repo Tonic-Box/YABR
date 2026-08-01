@@ -198,6 +198,12 @@ public class RecoveryContext {
     }
 
     public void setVariableName(SSAValue value, String name) {
+        // A parameter's name is fixed by the signature. The lifter forwards a slot load straight to the
+        // parameter value it copies, so a slot-derived name would RENAME the parameter everywhere - and the
+        // copy's own declaration (`float c1 = p1;`) then reads as an identity store and is dropped.
+        if (irMethod.getParameters().contains(value) && variableNames.containsKey(value)) {
+            return;
+        }
         variableNames.put(value, name);
     }
 

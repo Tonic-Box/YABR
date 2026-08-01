@@ -1269,28 +1269,28 @@ public class ClassDecompiler {
             applyAdditionalTransforms(ir);
             BlockStmt body = MethodRecoverer.recoverMethod(ir, method,
                     decompilerConfig.getNameRecoveryStrategy());
-            dumpStage(method.getName(), body, "00-raw");
+            dumpStage(method.getName(), method.getDesc(), body, "00-raw");
             astSimplifier.transform(body);
-            dumpStage(method.getName(), body, "01-simplify");
+            dumpStage(method.getName(), method.getDesc(), body, "01-simplify");
             patternInstanceOf.transform(body);
             singleUseInliner.transform(body);
-            dumpStage(method.getName(), body, "03-inline");
+            dumpStage(method.getName(), method.getDesc(), body, "03-inline");
             deadStoreEliminator.transform(body);
-            dumpStage(method.getName(), body, "04-deadstore");
+            dumpStage(method.getName(), method.getDesc(), body, "04-deadstore");
             deadVarEliminator.transform(body);
-            dumpStage(method.getName(), body, "05-deadvar");
+            dumpStage(method.getName(), method.getDesc(), body, "05-deadvar");
             // Re-simplify: the eliminators above can empty a then-branch (leaving
             // `if (c) {} else { ... }`), which the first pass could not see. A second pass
             // inverts/cleans those.
             astSimplifier.transform(body);
             varargsReconstructor.transform(body);
-            dumpStage(method.getName(), body, "07-pre-hoist");
+            dumpStage(method.getName(), method.getDesc(), body, "07-pre-hoist");
             declarationHoister.transform(body);
-            dumpStage(method.getName(), body, "08-post-hoist");
+            dumpStage(method.getName(), method.getDesc(), body, "08-post-hoist");
         // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
         // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
         singleUseInliner.transform(body);
-            dumpStage(method.getName(), body, "09-inline2");
+            dumpStage(method.getName(), method.getDesc(), body, "09-inline2");
             // Fold the array-build idiom (`T[] tmp = new T[N]; tmp[i]=...`) back into an array literal
             // (`new T[]{...}`). Run after hoisting+inlining so the temp declaration is formed and each element
             // value is inline; the synthetic temp otherwise carries an unstable slot-based name that drifts.
@@ -1298,7 +1298,7 @@ public class ClassDecompiler {
             // Scope a loop counter used only within its `for` back into the for-init (`int j = 0; for (j = 1;...)`
             // -> `for (int j = 1;...)`), matching javac and dropping the drifting method-scope declaration.
             forLoopCounterFolder.transform(body);
-            dumpStage(method.getName(), body, "10-counter-fold");
+            dumpStage(method.getName(), method.getDesc(), body, "10-counter-fold");
             // The reconstructions above run AFTER the first dead-code pass: varargs-arg inlining and array-literal
             // folding can strip the last use of a hoisted temp, leaving it declared `= null` and unused (e.g. an
             // inlined String.format varargs array). A second dead-store/var pass removes those - their unstable
@@ -1308,7 +1308,7 @@ public class ClassDecompiler {
             // Drop a redundant phi-copy re-assignment (`x = V; ...; x = V`) that YABR's phi elimination emits at
             // a branch's end but javac never does - keeps the earlier source-position assignment, matching d1.
             redundantAssignmentEliminator.transform(body);
-            dumpStage(method.getName(), body, "11-deadcode2");
+            dumpStage(method.getName(), method.getDesc(), body, "11-deadcode2");
             // Fold a constant equality-guard chain (if (x != a) {...} if (x != b) {...}) into a switch before the
             // switch reconstructors run, so a dispatch the schema structurer recovers at recovery time is
             // recovered identically here.
@@ -1316,7 +1316,7 @@ public class ClassDecompiler {
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
             scopeEscapeHoister.transform(body);
-            dumpStage(method.getName(), body, "12-scope-escape");
+            dumpStage(method.getName(), method.getDesc(), body, "12-scope-escape");
             // A hoist above can re-fold a declaration into `T x = c;` leaving a later redundant `x = c;`
             // (e.g. a loop counter's init copy); collapse those once more so recovery is a fixed point.
             redundantAssignmentEliminator.transform(body);
@@ -1327,7 +1327,7 @@ public class ClassDecompiler {
             if (whileToForCanonicalizer.transform(body)) {
                 forLoopCounterFolder.transform(body);
             }
-            dumpStage(method.getName(), body, "13-final");
+            dumpStage(method.getName(), method.getDesc(), body, "13-final");
             removeTrailingReturn(body);
             emitBlockContents(writer, body, method.getName() + method.getDesc());
         } catch (Exception e) {
@@ -1340,12 +1340,14 @@ public class ClassDecompiler {
     }
 
 
-    private static void dumpStage(String methodName, com.tonic.analysis.source.ast.stmt.BlockStmt body, String stage) {
+    private static void dumpStage(String methodName, String descriptor, com.tonic.analysis.source.ast.stmt.BlockStmt body, String stage) {
         if (System.getProperty("yabr.parents") != null) {
             reportDetachedParents(body, methodName + " " + stage);
         }
         String want = System.getProperty("yabr.dump");
-        if (want == null || !want.equals(methodName)) {
+        // Match by bare name, or by name+descriptor so ONE overload can be isolated - a bare name matches
+        // every overload and interleaves their stages into an unreadable (and misleading) mix.
+        if (want == null || !(want.equals(methodName) || want.equals(methodName + descriptor))) {
             return;
         }
         System.err.println("[stage] " + stage);
