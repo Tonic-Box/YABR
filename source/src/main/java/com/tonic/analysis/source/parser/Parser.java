@@ -665,7 +665,7 @@ public class Parser {
             typeParams.add(param);
         } while (match(TokenType.COMMA));
 
-        consume(TokenType.GT, "Expected '>' after type parameters");
+        consumeTypeClose("Expected '>' after type parameters");
     }
 
     private AnnotationExpr parseAnnotation() {
@@ -1473,6 +1473,7 @@ public class Parser {
         if (!t.isPrimitiveType() && t.getType() != TokenType.IDENTIFIER) {
             return false;
         }
+        boolean primitive = t.isPrimitiveType();
 
         int depth = 1;
         while (depth > 0 && t.getType() != TokenType.EOF) {
@@ -1484,6 +1485,11 @@ public class Parser {
         if (depth != 0) return false;
 
         t = tempLexer.nextToken();
+        // `(double) -x` is a cast beyond doubt - a parenthesized PRIMITIVE cannot be an operand - while
+        // `(a) - b` is a subtraction, so the sign tokens continue a cast only after a primitive type.
+        if (primitive && (t.getType() == TokenType.MINUS || t.getType() == TokenType.PLUS)) {
+            return true;
+        }
         return t.getType() == TokenType.IDENTIFIER ||
                t.getType() == TokenType.LPAREN ||
                t.getType() == TokenType.NEW ||
@@ -2167,7 +2173,7 @@ public class Parser {
             }
         } while (match(TokenType.COMMA));
 
-        consume(TokenType.GT, "Expected '>' after type arguments");
+        consumeTypeClose("Expected '>' after type arguments");
         return typeArgs;
     }
 
@@ -2179,6 +2185,27 @@ public class Parser {
             sb.append(".").append(consume(TokenType.IDENTIFIER, "Expected identifier").getText());
         }
         return sb.toString();
+    }
+
+    /**
+     * Consumes one {@code >} closing a type-argument or type-parameter list. Nested generics end in
+     * {@code >>} (or {@code >>>}), which the lexer reads as a shift operator - one token. Splitting it here
+     * consumes a single angle and leaves the remainder as the current token for the enclosing list to close.
+     */
+    private void consumeTypeClose(String message) {
+        if (check(TokenType.GT)) {
+            advance();
+            return;
+        }
+        if (check(TokenType.GT_GT)) {
+            current = new Token(TokenType.GT, ">", null, current.getPosition());
+            return;
+        }
+        if (check(TokenType.GT_GT_GT)) {
+            current = new Token(TokenType.GT_GT, ">>", null, current.getPosition());
+            return;
+        }
+        throw error(message + " (got " + current.getType() + ")");
     }
 
     private Token advance() {

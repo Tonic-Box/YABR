@@ -315,10 +315,11 @@ public final class TestUtils {
             return false;
         }
         CompilationUnit cu = JavaParser.create().parse(source);
-        if (!(cu.getPrimaryType() instanceof ClassDecl)) {
+        boolean plainClass = cu.getPrimaryType() instanceof ClassDecl;
+        if (!plainClass && !(cu.getPrimaryType() instanceof com.tonic.analysis.source.ast.decl.EnumDecl)) {
             return false;
         }
-        ClassDecl decl = (ClassDecl) cu.getPrimaryType();
+        com.tonic.analysis.source.ast.decl.TypeDecl decl = cu.getPrimaryType();
         TypeResolver resolver = new TypeResolver(pool, owner);
         resolver.setImports(cu.getImports());
         resolver.setCurrentClassDecl(decl);
@@ -337,7 +338,11 @@ public final class TestUtils {
                 ssa.lower(lowerer.lower(md, owner), target);
             }
         }
-        for (ConstructorDecl ctor : decl.getConstructors()) {
+        // An enum constructor's descriptor carries the synthetic (name, ordinal) prefix the parsed
+        // parameter list does not, so enum constructors keep their original bytecode.
+        List<ConstructorDecl> ctors = plainClass
+                ? ((ClassDecl) decl).getConstructors() : java.util.Collections.emptyList();
+        for (ConstructorDecl ctor : ctors) {
             if (ctor.getBody() == null) {
                 continue;
             }

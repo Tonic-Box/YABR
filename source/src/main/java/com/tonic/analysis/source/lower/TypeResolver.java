@@ -1,6 +1,6 @@
 package com.tonic.analysis.source.lower;
 
-import com.tonic.analysis.source.ast.decl.ClassDecl;
+import com.tonic.analysis.source.ast.decl.TypeDecl;
 import com.tonic.analysis.source.ast.decl.FieldDecl;
 import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
@@ -40,7 +40,7 @@ public class TypeResolver {
         return currentClass;
     }
 
-    public void setCurrentClassDecl(ClassDecl currentClassDecl) {
+    public void setCurrentClassDecl(TypeDecl currentClassDecl) {
         this.currentClassDecl = currentClassDecl;
     }
 
@@ -74,7 +74,7 @@ public class TypeResolver {
             return null;
         }
     }
-    private ClassDecl currentClassDecl;
+    private TypeDecl currentClassDecl;
     private List<ImportDecl> imports = new ArrayList<>();
 
     public SourceType resolveFieldType(String ownerClass, String fieldName) {
@@ -84,7 +84,8 @@ public class TypeResolver {
                     return resolveDeclaredType(field.getType());
                 }
             }
-            throw new LoweringException("Cannot resolve field: " + ownerClass + "." + fieldName + " in current class");
+            // Not declared here does not mean not a field: an inherited `this.spatial` resolves on a
+            // SUPERCLASS, so fall through to the pool walk below rather than giving up at the source view.
         }
 
         ownerClass = normalizeNestedName(ownerClass);

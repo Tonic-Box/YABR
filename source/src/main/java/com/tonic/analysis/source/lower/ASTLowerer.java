@@ -1,6 +1,8 @@
 package com.tonic.analysis.source.lower;
 
 import com.tonic.analysis.source.ast.decl.ClassDecl;
+import com.tonic.analysis.source.ast.decl.EnumDecl;
+import com.tonic.analysis.source.ast.decl.TypeDecl;
 import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
@@ -49,7 +51,7 @@ public class ASTLowerer {
 
     private final ConstPool constPool;
     private final ClassPool classPool;
-    private ClassDecl currentClassDecl;
+    private TypeDecl currentClassDecl;
     private List<ImportDecl> imports = new ArrayList<>();
 
     /** Synthetic lambda methods produced by lowering, awaiting materialization into the class. */
@@ -63,7 +65,7 @@ public class ASTLowerer {
         this.classPool = classPool;
     }
 
-    public void setCurrentClassDecl(ClassDecl currentClassDecl) {
+    public void setCurrentClassDecl(TypeDecl currentClassDecl) {
         this.currentClassDecl = currentClassDecl;
     }
 
@@ -246,7 +248,11 @@ public class ASTLowerer {
      * instead of always defaulting to Object.
      */
     private String resolveSuperClassName(TypeResolver typeResolver) {
-        SourceType superType = currentClassDecl != null ? currentClassDecl.getSuperclass() : null;
+        if (currentClassDecl instanceof EnumDecl) {
+            return "java/lang/Enum";
+        }
+        SourceType superType = currentClassDecl instanceof ClassDecl
+                ? ((ClassDecl) currentClassDecl).getSuperclass() : null;
         if (superType == null) {
             return "java/lang/Object";
         }
