@@ -5848,7 +5848,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (entryInput instanceof SSAValue) {
             IRInstruction def = ((SSAValue) entryInput).getDefinition();
             if (def == null) {
-                return true;
+                // Definition-less means a parameter - always in scope - or an UNDEFINED slot read: the
+                // pre-loop path never wrote the slot, and rendering that input borrows whatever name a
+                // DISJOINT component left there (`Spatial child = t;` with t from an exclusive branch).
+                // Only a parameter is a real entry value.
+                return isParameterOrThisRef((SSAValue) entryInput);
             }
             IRBlock defBlock = def.getBlock();
             return defBlock != null && analyzer.getDominatorTree().dominates(defBlock, phiBlock);
@@ -10555,6 +10559,22 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             Value incoming = phi.getIncoming(pred);
             if (incoming == null) {
                 continue;
+            }
+            // A phi operand must dominate its predecessor (the SSA invariant). The lift's reaching defs
+            // are imprecise across EXCLUSIVE branches sharing a slot, so an "incoming" can be the other
+            // branch's variable - `child = t` with t defined on a path that returns before the loop.
+            // Rendering such an incoming borrows a disjoint component's name; the slot is really
+            // undefined on this edge and the declaration's default covers it.
+            if (incoming instanceof SSAValue) {
+                SSAValue in = (SSAValue) incoming;
+                IRInstruction inDef = in.getDefinition();
+                if (inDef == null && !isParameterOrThisRef(in)) {
+                    continue;
+                }
+                if (inDef != null && (inDef.getBlock() == null
+                        || !analyzer.getDominatorTree().dominates(inDef.getBlock(), pred))) {
+                    continue;
+                }
             }
             SourceType type = getLocalSlotUnifiedType(target);
             if (type == null) {
