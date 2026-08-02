@@ -22,6 +22,7 @@ import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.SwitchStmt;
 import com.tonic.analysis.source.ast.stmt.SynchronizedStmt;
 import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
+import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
@@ -151,7 +152,15 @@ public class ASTLowerer {
         List<SourceType> parameters = new ArrayList<>();
         List<String> paramNames = new ArrayList<>();
         for (ParameterDecl p : paramDecls) {
-            parameters.add(p.getType());
+            // A varargs declaration carries the element type; the parameter's actual type is one
+            // array dimension up, both in the descriptor and as the local's bound type.
+            SourceType paramType = p.getType();
+            if (p.isVarArgs()) {
+                paramType = paramType instanceof ArraySourceType
+                        ? ((ArraySourceType) paramType).addDimension()
+                        : new ArraySourceType(paramType);
+            }
+            parameters.add(paramType);
             paramNames.add(p.getName());
         }
 

@@ -130,6 +130,9 @@ class D1OracleTest {
 
     private static void recompile(ClassFile cf, ClassPool pool, String source, String owner) throws Exception {
         CompilationUnit cu = JavaParser.create().parse(source);
+        if (!(cu.getPrimaryType() instanceof ClassDecl)) {
+            throw new IllegalStateException("decompiled source has no class declaration for " + owner);
+        }
         ClassDecl decl = (ClassDecl) cu.getPrimaryType();
         TypeResolver resolver = new TypeResolver(pool, owner);
         resolver.setImports(cu.getImports());
@@ -159,7 +162,7 @@ class D1OracleTest {
 
     private static String desc(List<ParameterDecl> params, String ret, TypeResolver resolver) {
         StringBuilder d = new StringBuilder("(");
-        for (ParameterDecl pp : params) d.append(resolver.descriptorOf(pp.getType()));
+        for (ParameterDecl pp : params) d.append(resolver.descriptorOf(pp));
         return d.append(")").append(ret).toString();
     }
 

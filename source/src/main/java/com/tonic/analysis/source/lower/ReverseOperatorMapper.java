@@ -79,6 +79,16 @@ public final class ReverseOperatorMapper {
         PrimitiveSourceType fromPrim = (PrimitiveSourceType) from;
         PrimitiveSourceType toPrim = (PrimitiveSourceType) to;
 
+        // byte/short/char live as int on the JVM stack; their conversions are the int ones
+        // ((long) aByte is i2l). Identity falls through to null - no conversion needed.
+        if (fromPrim == PrimitiveSourceType.BYTE || fromPrim == PrimitiveSourceType.SHORT
+                || fromPrim == PrimitiveSourceType.CHAR) {
+            if (fromPrim == toPrim) {
+                return null;
+            }
+            fromPrim = PrimitiveSourceType.INT;
+        }
+
         if (fromPrim == PrimitiveSourceType.INT) {
             if (toPrim == PrimitiveSourceType.LONG) return UnaryOp.I2L;
             if (toPrim == PrimitiveSourceType.FLOAT) return UnaryOp.I2F;

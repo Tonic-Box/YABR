@@ -86,7 +86,7 @@ final class Recompile {
     private static String desc(List<ParameterDecl> params, String ret, TypeResolver resolver) {
         StringBuilder d = new StringBuilder("(");
         for (ParameterDecl pp : params) {
-            d.append(resolver.descriptorOf(pp.getType()));
+            d.append(resolver.descriptorOf(pp));
         }
         return d.append(")").append(ret).toString();
     }

@@ -2005,7 +2005,7 @@ public class BytecodeEmitter {
 
     private void emitArrayAccess(ArrayAccessInstruction instr) throws IOException {
         if (instr.isLoad()) {
-            IRType elemType = instr.getResult().getType();
+            IRType elemType = arrayElementTypeOr(instr, instr.getResult().getType());
             int opcode;
             if (elemType instanceof PrimitiveType) {
                 PrimitiveType prim = (PrimitiveType) elemType;
@@ -2040,7 +2040,7 @@ public class BytecodeEmitter {
             }
             emit(opcode);
         } else {
-            IRType elemType = instr.getValue().getType();
+            IRType elemType = arrayElementTypeOr(instr, instr.getValue().getType());
             int opcode;
             if (elemType instanceof PrimitiveType) {
                 PrimitiveType prim = (PrimitiveType) elemType;
@@ -2075,6 +2075,23 @@ public class BytecodeEmitter {
             }
             emit(opcode);
         }
+    }
+
+    /**
+     * The accessed array's own element type - the authority for the xALOAD/xASTORE opcode. An int
+     * value stored into a byte[] still needs bastore; the value/result type is only a fallback for
+     * an array whose static type degraded to a plain reference.
+     */
+    private IRType arrayElementTypeOr(ArrayAccessInstruction instr, IRType fallback) {
+        IRType arrayType = instr.getArray().getType();
+        if (arrayType instanceof ArrayType) {
+            ArrayType at = (ArrayType) arrayType;
+            if (at.getDimensions() > 1) {
+                return new ArrayType(at.getElementType(), at.getDimensions() - 1);
+            }
+            return at.getElementType();
+        }
+        return fallback;
     }
 
     private void emitTypeCheck(TypeCheckInstruction instr) throws IOException {

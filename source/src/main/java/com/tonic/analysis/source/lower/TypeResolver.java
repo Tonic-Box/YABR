@@ -122,6 +122,40 @@ public class TypeResolver {
     }
 
     /**
+     * Erases an owner that names a type parameter of the current declaration to its first bound
+     * (java/lang/Object when unbounded), so members are resolved against the erased type.
+     */
+    private String eraseTypeVariable(String ownerClass) {
+        if (currentClassDecl == null || ownerClass == null
+                || ownerClass.indexOf('.') >= 0 || ownerClass.indexOf('/') >= 0) {
+            return ownerClass;
+        }
+        List<SourceType> typeParams;
+        if (currentClassDecl instanceof com.tonic.analysis.source.ast.decl.ClassDecl) {
+            typeParams = ((com.tonic.analysis.source.ast.decl.ClassDecl) currentClassDecl).getTypeParameters();
+        } else if (currentClassDecl instanceof com.tonic.analysis.source.ast.decl.InterfaceDecl) {
+            typeParams = ((com.tonic.analysis.source.ast.decl.InterfaceDecl) currentClassDecl).getTypeParameters();
+        } else {
+            return ownerClass;
+        }
+        for (SourceType tp : typeParams) {
+            if (tp instanceof ReferenceSourceType
+                    && ((ReferenceSourceType) tp).getInternalName().equals(ownerClass)) {
+                List<SourceType> bounds = ((ReferenceSourceType) tp).getTypeArguments();
+                SourceType bound = bounds.isEmpty() ? null : bounds.get(0);
+                if (bound instanceof GenericSourceType) {
+                    bound = ((GenericSourceType) bound).getRawType();
+                }
+                if (!(bound instanceof ReferenceSourceType)) {
+                    return "java/lang/Object";
+                }
+                return ((ReferenceSourceType) bound).getInternalName();
+            }
+        }
+        return ownerClass;
+    }
+
+    /**
      * Resolves a field's declared type, returning null when the field cannot be found
      * instead of throwing. Searches the current class declaration first, then the field
      * tables of the owner class and its superclasses via the ClassPool.
@@ -330,7 +364,7 @@ public class TypeResolver {
         if (cf == null) {
             return null;
         }
-        String prefix = "lambda$" + enclosingMethod + "$";
+        String prefix = "lambda$" + LoweringContext.lambdaEnclosingName(enclosingMethod) + "$";
         List<MethodEntry> matches = new ArrayList<>();
         for (MethodEntry method : cf.getMethods()) {
             String suffix = method.getName().startsWith(prefix)
@@ -388,6 +422,9 @@ public class TypeResolver {
     }
 
     public SourceType resolveMethodReturnType(String ownerClass, String methodName, List<SourceType> argTypes) {
+        // The owner may arrive as a SIMPLE name or a type variable; qualify (and erase) it the same
+        // way the field paths do, else the pool lookup below misses.
+        ownerClass = normalizeNestedName(resolveClassName(ownerClass));
         if (currentClassDecl != null && isCurrentClass(ownerClass)) {
             for (MethodDecl method : currentClassDecl.getMethods()) {
                 if (method.getName().equals(methodName) && parametersMatch(method.getParameters(), argTypes)) {
@@ -1281,6 +1318,13 @@ public class TypeResolver {
             return resolveDottedName(simpleName.replace('.', '/'));
         }
 
+        // A type parameter of the current declaration SHADOWS any same-named class; erase it to its
+        // bound before consulting imports or the pool, exactly as javac's erasure does.
+        String erased = eraseTypeVariable(simpleName);
+        if (!erased.equals(simpleName)) {
+            return resolveClassName(erased);
+        }
+
         for (ImportDecl imp : imports) {
             if (!imp.isStatic() && !imp.isWildcard()) {
                 String importName = imp.getName();
@@ -1349,11 +1393,19 @@ public class TypeResolver {
     }
 
     /**
-     * A JVM type descriptor for {@code type} with reference types fully resolved (imports + nested {@code $}).
-     * Unlike {@code type.toIRType().getDescriptor()} - which emits the unresolved, possibly mis-nested name as
-     * written in source - this yields the descriptor that matches the compiled class, so method signatures
-     * built from decompiled source line up with the originals.
+     * The descriptor of a declared parameter. A varargs parameter carries its element type in the
+     * declaration; its descriptor is one array dimension up.
      */
+    public String descriptorOf(ParameterDecl param) {
+        SourceType type = param.getType();
+        if (param.isVarArgs()) {
+            type = type instanceof ArraySourceType
+                    ? ((ArraySourceType) type).addDimension()
+                    : new ArraySourceType(type);
+        }
+        return descriptorOf(type);
+    }
+
     public String descriptorOf(SourceType type) {
         if (type instanceof GenericSourceType) {
             return descriptorOf(((GenericSourceType) type).getRawType());

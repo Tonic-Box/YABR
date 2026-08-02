@@ -394,7 +394,7 @@ public class Parser {
                     }
                 }
                 SourceType type = parseTypeReference();
-                String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                String memberName = consumeName("Expected member name").getText();
                 if (check(TokenType.LPAREN)) {
                     MethodDecl method = parseMethod(memberMods, memberAnns, type, memberName);
                     constant.addMethod(method);
@@ -500,7 +500,7 @@ public class Parser {
         }
 
         SourceType type = parseTypeReference();
-        String name = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+        String name = consumeName("Expected member name").getText();
 
         if (check(TokenType.LPAREN)) {
             MethodDecl method = parseMethod(modifiers, annotations, type, name);
@@ -589,7 +589,7 @@ public class Parser {
         List<FieldDecl> fields = new ArrayList<>();
         fields.add(parseFieldDeclarator(modifiers, annotations, type, name));
         while (match(TokenType.COMMA)) {
-            String nextName = consume(TokenType.IDENTIFIER, "Expected field name").getText();
+            String nextName = consumeName("Expected field name").getText();
             fields.add(parseFieldDeclarator(modifiers, annotations, type, nextName));
         }
         consume(TokenType.SEMICOLON, "Expected ';' after field declaration");
@@ -637,7 +637,7 @@ public class Parser {
 
         SourceType type = parseTypeReference();
         boolean isVarArgs = match(TokenType.ELLIPSIS);
-        String name = consume(TokenType.IDENTIFIER, "Expected parameter name").getText();
+        String name = consumeName("Expected parameter name").getText();
 
         ParameterDecl param = new ParameterDecl(name, type, loc);
         param.withFinal(isFinal);
@@ -840,7 +840,11 @@ public class Parser {
 
     private boolean isLocalVariableDeclaration() {
         if (check(TokenType.FINAL)) return true;
-        if (check(TokenType.VAR)) return true;
+        // `var` opens a declaration only as a TYPE (`var x = ...`); `var.foo()`, `var = ...`, `var[i]`
+        // are uses of a variable named var.
+        if (check(TokenType.VAR)) {
+            return lexer.peek().getType() == TokenType.IDENTIFIER;
+        }
         if (current.isPrimitiveType()) return true;
 
         if (check(TokenType.IDENTIFIER)) {
@@ -851,7 +855,12 @@ public class Parser {
 
     private boolean looksLikeTypeDeclaration() {
         int offset = skipTypeTokens(0);
-        return offset >= 0 && lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER;
+        if (offset < 0) {
+            return false;
+        }
+        TokenType after = lexer.peekAhead(offset).getType();
+        // `Type var = ...` declares a variable NAMED var (reserved as a type name only).
+        return after == TokenType.IDENTIFIER || after == TokenType.VAR;
     }
 
     /**
@@ -1010,7 +1019,7 @@ public class Parser {
     private ForEachStmt parseForEach(SourceLocation loc) {
         boolean isFinal = match(TokenType.FINAL);
         SourceType type = parseTypeReference();
-        String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+        String varName = consumeName("Expected variable name").getText();
         consume(TokenType.COLON, "Expected ':' in enhanced for");
         Expression iterable = parseExpression();
         consume(TokenType.RPAREN, "Expected ')' after enhanced for");
@@ -1343,7 +1352,7 @@ public class Parser {
      */
     private VarDeclStmt parseDeclarator(SourceType baseType, boolean useVar, boolean isFinal) {
         SourceLocation loc = currentLocation();
-        String name = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+        String name = consumeName("Expected variable name").getText();
 
         SourceType type = baseType;
         while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
@@ -1534,7 +1543,7 @@ public class Parser {
                     advance();
                     expr = parseInnerClassCreation(expr, loc);
                 } else {
-                    String name = consume(TokenType.IDENTIFIER, "Expected field or method name").getText();
+                    String name = consumeName("Expected field or method name").getText();
                     if (check(TokenType.LPAREN)) {
                         expr = parseMethodCall(expr, name, loc);
                     } else {
@@ -1658,6 +1667,7 @@ public class Parser {
 
         if (current.isPrimitiveType()) {
             SourceType type = parsePrimitiveType();
+            type = withArrayClassLiteralDims(type);
             if (match(TokenType.DOT)) {
                 consume(TokenType.CLASS, "Expected 'class'");
                 return new ClassExpr(type, loc);
@@ -1665,7 +1675,8 @@ public class Parser {
             throw error("Unexpected primitive type");
         }
 
-        if (check(TokenType.IDENTIFIER)) {
+        // `var` in EXPRESSION position is a variable named var - the reservation applies to types only.
+        if (check(TokenType.IDENTIFIER) || check(TokenType.VAR)) {
             String name = advance().getText();
 
             if (check(TokenType.ARROW)) {
@@ -1681,10 +1692,30 @@ public class Parser {
                 return parseMethodReferenceFromType(name, loc);
             }
 
+            // `Type[].class` / `Type[][].class`: empty bracket pairs before `.class` are array
+            // dimensions of a class literal, not an index (an index has an expression inside).
+            if (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+                SourceType arrayType = withArrayClassLiteralDims(new ReferenceSourceType(name));
+                consume(TokenType.DOT, "Expected '.' after array type");
+                consume(TokenType.CLASS, "Expected 'class'");
+                return new ClassExpr(arrayType, loc);
+            }
+
             return new VarRefExpr(name, lookupVariable(name));
         }
 
         throw error("Expected expression");
+    }
+
+    /** Consumes trailing empty bracket pairs, wrapping {@code type} in one array dimension per pair. */
+    private SourceType withArrayClassLiteralDims(SourceType type) {
+        int dims = 0;
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+            advance();
+            advance();
+            dims++;
+        }
+        return dims > 0 ? new ArraySourceType(type, dims) : type;
     }
 
     private boolean isLambdaExpression() {
@@ -1719,7 +1750,7 @@ public class Parser {
                     params.add(LambdaParameter.implicit(name, ReferenceSourceType.OBJECT));
                 } else {
                     type = parseTypeReference();
-                    name = consume(TokenType.IDENTIFIER, "Expected parameter name").getText();
+                    name = consumeName("Expected parameter name").getText();
                     params.add(LambdaParameter.explicit(type, name));
                 }
             } while (match(TokenType.COMMA));
@@ -2212,6 +2243,17 @@ public class Parser {
         Token previous = current;
         current = lexer.nextToken();
         return previous;
+    }
+
+    /**
+     * Consumes a NAME: an identifier, or {@code var} - a reserved TYPE name only, legal as a variable,
+     * field, parameter, or member name (`ShaderNodeVariable var = ...` is real source).
+     */
+    private Token consumeName(String message) {
+        if (check(TokenType.IDENTIFIER) || check(TokenType.VAR)) {
+            return advance();
+        }
+        throw error(message + " (got " + current.getType() + ")");
     }
 
     private Token consume(TokenType expected, String message) {

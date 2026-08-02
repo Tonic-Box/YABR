@@ -1188,7 +1188,7 @@ public class ClassDecompiler {
             scopeEscapeHoister.transform(body);
             removeRedundantSuper(body);
             removeTrailingReturn(body);
-            emitBlockContents(writer, body, ctor.getName() + ctor.getDesc());
+            emitBlockContents(writer, body, ctor.getName() + ctor.getDesc(), parameterNamesOf(ctor));
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile constructor: " + e.getMessage());
         }
@@ -1329,7 +1329,7 @@ public class ClassDecompiler {
             }
             dumpStage(method.getName(), method.getDesc(), body, "13-final");
             removeTrailingReturn(body);
-            emitBlockContents(writer, body, method.getName() + method.getDesc());
+            emitBlockContents(writer, body, method.getName() + method.getDesc(), parameterNamesOf(method));
         } catch (Exception e) {
             writer.writeLine("// Failed to decompile: " + e.getMessage());
         }
@@ -1394,8 +1394,14 @@ public class ClassDecompiler {
     }
 
     private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey) {
+        emitBlockContents(writer, block, methodKey, java.util.Collections.emptySet());
+    }
+
+    private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey,
+                                   java.util.Set<String> parameterNames) {
         SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
         emitter.setCurrentClassName(classFile.getClassName());
+        emitter.setParameterNames(parameterNames);
         if (lineMapsCollector != null && methodKey != null) {
             // Statements inside an inlined lambda are reported under the lambda's own impl-method key,
             // so each method (including synthetic lambda$ methods) gets its own offset→line map.
@@ -1559,6 +1565,34 @@ public class ClassDecompiler {
             }
         }
         return result;
+    }
+
+    /**
+     * The parameter names as the signature line renders them: the unambiguous LVT name per slot with the
+     * positional {@code argN} fallback.
+     */
+    private java.util.Set<String> parameterNamesOf(com.tonic.parser.MethodEntry method) {
+        java.util.Set<String> names = new java.util.HashSet<>();
+        Map<Integer, String> slotNames = unambiguousLvtNames(method);
+        String desc = method.getDesc();
+        int slot = Modifiers.isStatic(method.getAccess()) ? 0 : 1;
+        int i = desc.indexOf('(') + 1;
+        int j = 0;
+        while (i < desc.length() && desc.charAt(i) != ')') {
+            int start = i;
+            while (desc.charAt(i) == '[') i++;
+            char c = desc.charAt(i);
+            if (c == 'L') {
+                i = desc.indexOf(';', i) + 1;
+            } else {
+                i++;
+            }
+            String name = slotNames.get(slot);
+            names.add(name != null ? name : "arg" + j);
+            slot += (start == i - 1 && (c == 'J' || c == 'D')) ? 2 : 1;
+            j++;
+        }
+        return names;
     }
 
     private String formatParameters(String desc, boolean isSignature, boolean varargs, boolean isStatic,

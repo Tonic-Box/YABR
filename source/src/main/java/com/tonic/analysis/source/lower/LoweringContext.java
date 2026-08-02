@@ -456,7 +456,18 @@ public class LoweringContext {
      * Generates a unique name for a synthetic lambda method.
      */
     public String generateLambdaMethodName() {
-        return "lambda$" + currentMethodName + "$" + (lambdaCounter++);
+        return "lambda$" + lambdaEnclosingName(currentMethodName) + "$" + (lambdaCounter++);
+    }
+
+    /** The enclosing-method label javac uses in a synthetic lambda name: {@code <init>} is "new". */
+    public static String lambdaEnclosingName(String methodName) {
+        if ("<init>".equals(methodName)) {
+            return "new";
+        }
+        if ("<clinit>".equals(methodName)) {
+            return "static";
+        }
+        return methodName;
     }
 
     /**

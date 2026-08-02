@@ -160,7 +160,7 @@ public class DemoJarRecompileSweepTest {
     private static String descriptorOf(MethodDecl md, TypeResolver resolver) {
         StringBuilder sb = new StringBuilder("(");
         for (ParameterDecl p : md.getParameters()) {
-            sb.append(resolver.descriptorOf(p.getType()));
+            sb.append(resolver.descriptorOf(p));
         }
         sb.append(")").append(resolver.descriptorOf(md.getReturnType()));
         return sb.toString();

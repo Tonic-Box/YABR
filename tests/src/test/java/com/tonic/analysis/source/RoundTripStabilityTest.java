@@ -93,7 +93,7 @@ class RoundTripStabilityTest {
             }
             StringBuilder d = new StringBuilder("(");
             for (ParameterDecl pp : md.getParameters()) {
-                d.append(resolver.descriptorOf(pp.getType()));
+                d.append(resolver.descriptorOf(pp));
             }
             d.append(")").append(resolver.descriptorOf(md.getReturnType()));
             MethodEntry target = null;

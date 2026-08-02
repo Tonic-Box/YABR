@@ -3,6 +3,7 @@ package com.tonic.analysis.source.lower;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
+import com.tonic.analysis.source.ast.type.GenericSourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
@@ -606,6 +607,26 @@ public class ExpressionLowerer {
             Value rhs = lower(bin.getRight());
             ctx.getCurrentBlock().addInstruction(ArrayAccessInstruction.createStore(array, index, rhs));
             return rhs;
+        }
+
+        // A lambda or method reference assigned to a FIELD takes its functional interface from the
+        // field's declared type - the parser types the expression Object, and lowering it without the
+        // target type builds an invokedynamic site the metafactory rejects.
+        if (left instanceof FieldAccessExpr
+                && (bin.getRight() instanceof LambdaExpr || bin.getRight() instanceof MethodRefExpr)) {
+            FieldAccessExpr fa = (FieldAccessExpr) left;
+            String fieldOwner = fa.getOwnerClass() != null && !"java/lang/Object".equals(fa.getOwnerClass())
+                    ? fa.getOwnerClass() : ctx.getOwnerClass();
+            SourceType declared = ctx.getTypeResolver().findFieldType(fieldOwner, fa.getFieldName());
+            if (declared != null && !isObjectOrNull(declared)) {
+                ctx.pushExpectedType(declared);
+                try {
+                    Value fieldRhs = lower(bin.getRight());
+                    return lowerFieldStore(fa, fieldRhs);
+                } finally {
+                    ctx.popExpectedType();
+                }
+            }
         }
 
         Value rhs = lower(bin.getRight());
@@ -1881,8 +1902,12 @@ public class ExpressionLowerer {
         IRType checkType;
         if (inst.getCheckType() instanceof ReferenceSourceType) {
             checkType = resolveTypeForConstant(inst.getCheckType());
+        } else if (!(inst.getCheckType() instanceof PrimitiveSourceType)) {
+            // Arrays and generic types are reference types too - `x instanceof float[]` and
+            // `x instanceof List<?>` (erased to the raw type) both check fine; only a primitive cannot.
+            checkType = IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(inst.getCheckType()));
         } else {
-            throw new LoweringException("instanceof requires reference type");
+            throw new LoweringException("instanceof requires reference type: " + inst.getCheckType());
         }
 
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -2022,6 +2047,10 @@ public class ExpressionLowerer {
     }
 
     private UnaryOp getWideningOp(PrimitiveType from, PrimitiveType to) {
+        // byte/short/char sit on the stack as int; their widenings are the int ones.
+        if (from == PrimitiveType.BYTE || from == PrimitiveType.SHORT || from == PrimitiveType.CHAR) {
+            from = PrimitiveType.INT;
+        }
         if (from == PrimitiveType.INT) {
             if (to == PrimitiveType.LONG) return UnaryOp.I2L;
             if (to == PrimitiveType.FLOAT) return UnaryOp.I2F;
@@ -2094,10 +2123,15 @@ public class ExpressionLowerer {
         }
 
         SourceType lambdaType = lambda.getType();
-        // The parser cannot type a lambda; a returned lambda's functional interface is the enclosing
-        // method's declared return type. Without it the call site descriptor says Object, and the
-        // metafactory rejects the site outright ("Functional interface java.lang.Object is not an
-        // interface").
+        // The parser cannot type a lambda; its functional interface comes from the assignment or
+        // declaration target when one is in scope, else a returned lambda takes the enclosing
+        // method's declared return type. Without either the call site descriptor says Object, and
+        // the metafactory rejects the site outright ("Functional interface java.lang.Object is not
+        // an interface").
+        if (isObjectOrNull(lambdaType) && ctx.peekExpectedType() != null
+                && !isObjectOrNull(ctx.peekExpectedType())) {
+            lambdaType = ctx.peekExpectedType();
+        }
         if (isObjectOrNull(lambdaType) && ctx.getCurrentMethodReturnType() != null
                 && !isObjectOrNull(ctx.getCurrentMethodReturnType())) {
             lambdaType = ctx.getCurrentMethodReturnType();
@@ -2171,10 +2205,21 @@ public class ExpressionLowerer {
             implRefKind, ownerClass, lambdaMethodName, syntheticDescriptor
         );
 
+        // The metafactory's third argument is the INSTANTIATED method type - the SAM specialized to
+        // the actual types, which are the impl descriptor's trailing SAM parameters and its return.
+        // Passing the erased SAM type again fails the link when the impl narrowed a parameter
+        // ("Object is not convertible to String").
+        StringBuilder instantiated = new StringBuilder("(");
+        List<SourceType> implArgs = ctx.getTypeResolver().paramTypesFromDescriptor(syntheticDescriptor);
+        for (int i = implArgs.size() - lambdaParams.size(); i < implArgs.size(); i++) {
+            instantiated.append(ctx.getTypeResolver().descriptorOf(implArgs.get(i)));
+        }
+        instantiated.append(syntheticDescriptor.substring(syntheticDescriptor.indexOf(')')));
+
         List<Constant> bsArgs = new ArrayList<>();
         bsArgs.add(new MethodTypeConstant(samDescriptor));
         bsArgs.add(implHandle);
-        bsArgs.add(new MethodTypeConstant(samDescriptor));
+        bsArgs.add(new MethodTypeConstant(instantiated.toString()));
 
         BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
 
@@ -2403,6 +2448,9 @@ public class ExpressionLowerer {
     }
 
     private String extractInterfaceName(SourceType type) {
+        if (type instanceof GenericSourceType) {
+            return ((GenericSourceType) type).getRawType().getInternalName();
+        }
         if (type instanceof ReferenceSourceType) {
             return ((ReferenceSourceType) type).getInternalName();
         }

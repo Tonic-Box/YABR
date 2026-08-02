@@ -521,7 +521,12 @@ public class ExpressionRecoverer {
         } else if (c instanceof ClassConstant) {
             ClassConstant cc = (ClassConstant) c;
             String className = cc.getClassName();
-            SourceType classType = new ReferenceSourceType(className, Collections.emptyList());
+            // The pool may hold the literal as a DESCRIPTOR (`Ljava/lang/String;`, `[I`) rather than an
+            // internal name; emit the type it denotes, not the raw text with its L/; armor.
+            SourceType classType = className != null && (className.startsWith("L") && className.endsWith(";")
+                    || className.startsWith("["))
+                    ? typeRecoverer.recoverType(className)
+                    : new ReferenceSourceType(className, Collections.emptyList());
             return new ClassExpr(classType);
         } else if (c instanceof DynamicConstant) {
             DynamicConstant dc = (DynamicConstant) c;
@@ -1518,9 +1523,19 @@ public class ExpressionRecoverer {
                 }
 
                 List<String> samParamTypes = parseParameterTypes(samDescriptor);
+                // The synthetic method's own LVT is the authoritative parameter name: the body's naming
+                // consults it, and a parameter once named keeps that name - a table-derived label the
+                // body cannot adopt would leave the parameter list and the body disagreeing.
+                NameRecoverer lambdaNames = new NameRecoverer(lambdaIR, lambdaMethod,
+                        NameRecoveryStrategy.PREFER_DEBUG_INFO);
                 Map<Integer, String> paramMapping = new HashMap<>();
                 int paramSlot = slot;
                 for (int i = 0; i < params.size(); i++) {
+                    String lvtName = lambdaNames.unambiguousDebugName(paramSlot);
+                    if (lvtName != null && !lvtName.equals(params.get(i).name())) {
+                        LambdaParameter p = params.get(i);
+                        params.set(i, new LambdaParameter(lvtName, p.type(), p.implicitType()));
+                    }
                     paramMapping.put(paramSlot, params.get(i).name());
                     paramSlot++;
                     if (i < samParamTypes.size()) {

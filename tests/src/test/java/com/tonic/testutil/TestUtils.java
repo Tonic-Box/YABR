@@ -388,7 +388,7 @@ public final class TestUtils {
     private static String methodDescriptor(List<ParameterDecl> params, String ret, TypeResolver resolver) {
         StringBuilder d = new StringBuilder("(");
         for (ParameterDecl pp : params) {
-            d.append(resolver.descriptorOf(pp.getType()));
+            d.append(resolver.descriptorOf(pp));
         }
         return d.append(")").append(ret).toString();
     }

@@ -42,6 +42,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
      *  accesses cast against the DECLARED type (e.g. a merged Object slot) rather than the
      *  expression's narrowed type. */
     private final java.util.Map<String, SourceType> declaredLocalTypes = new java.util.HashMap<>();
+    private final java.util.Set<String> parameterNames = new java.util.HashSet<>();
 
     public SourceEmitter(IndentingWriter writer) {
         this(writer, SourceEmitterConfig.defaults());
@@ -361,6 +362,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitMethodDecl(MethodDecl decl) {
+        beginMethodScope(decl.getParameters());
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         emitTypeParameters(decl.getTypeParameters());
@@ -389,6 +391,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
     @Override
     public Void visitConstructorDecl(ConstructorDecl decl) {
+        beginMethodScope(decl.getParameters());
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         emitTypeParameters(decl.getTypeParameters());
@@ -836,11 +839,26 @@ public class SourceEmitter implements SourceVisitor<Void> {
         }
     }
 
-    /**
-     * The type to use when deciding whether a member access on this receiver needs a downcast: the
-     * variable's DECLARED type when the receiver is a known local (so a merged {@code Object} slot
-     * is cast at each narrowed use), otherwise the receiver expression's own type.
-     */
+    /** Resets per-method name scope: locals from prior methods are gone; parameters are in scope. */
+    private void beginMethodScope(java.util.List<ParameterDecl> parameters) {
+        declaredLocalTypes.clear();
+        parameterNames.clear();
+        for (ParameterDecl p : parameters) {
+            declaredLocalTypes.put(p.getName(), p.getType());
+            parameterNames.add(p.getName());
+        }
+    }
+
+    /** Seeds the shadow scope with the emitting method's parameter names (block-emission path). */
+    public void setParameterNames(java.util.Collection<String> names) {
+        parameterNames.clear();
+        parameterNames.addAll(names);
+    }
+
+    private boolean isShadowed(String name) {
+        return parameterNames.contains(name) || declaredLocalTypes.containsKey(name);
+    }
+
     private SourceType castReceiverType(Expression receiver) {
         if (receiver instanceof VarRefExpr) {
             SourceType declared = declaredLocalTypes.get(((VarRefExpr) receiver).getName());
@@ -1119,7 +1137,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 (currentClassName.equals(ownerClass) ||
                  currentClassName.replace('/', '.').equals(ownerClass) ||
                  currentClassName.equals(ownerClass.replace('.', '/')));
-            if (!isSelfReference) {
+            // A self-reference may drop its qualifier ONLY while no parameter or local shadows the
+            // field's simple name; a shadowed access must stay class-qualified to keep its meaning.
+            if (!isSelfReference || isShadowed(expr.getFieldName())) {
                 writer.write(formatClassName(ownerClass));
                 writer.write(".");
             }
@@ -1131,8 +1151,14 @@ public class SourceEmitter implements SourceVisitor<Void> {
             // A field declared on a subtype, accessed through a wider-typed receiver (e.g. an
             // Object-typed local that the verifier narrowed elsewhere), needs a downcast just like
             // a method call does (visitMethodCall). Without it the field access does not compile.
+            // An arraylength access (owner "[]") has no owner class to name; its downcast target is
+            // the receiver expression's own array type.
+            boolean isArrayLength = "[]".equals(ownerClass);
             boolean needsCast = false;
-            if (receiverType instanceof ReferenceSourceType && ownerClass != null) {
+            if (isArrayLength) {
+                needsCast = !(receiverType instanceof ArraySourceType)
+                        && receiver.getType() instanceof ArraySourceType;
+            } else if (receiverType instanceof ReferenceSourceType && ownerClass != null) {
                 String receiverClass = ((ReferenceSourceType) receiverType).getInternalName();
                 if (!ownerClass.equals(receiverClass) && !"java/lang/Object".equals(ownerClass)) {
                     needsCast = true;
@@ -1141,7 +1167,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
             if (needsCast) {
                 writer.write("((");
-                writer.write(formatClassName(ownerClass));
+                writer.write(isArrayLength ? receiver.getType().toJavaSource() : formatClassName(ownerClass));
                 writer.write(") ");
                 receiver.accept(this);
                 writer.write(")");
