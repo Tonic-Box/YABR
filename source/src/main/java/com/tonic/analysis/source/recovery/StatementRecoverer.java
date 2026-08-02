@@ -8596,6 +8596,31 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     private Statement materializeClobberedLoad(SSAValue result, Expression value) {
+        // Prefer names that are stable across bytecode layouts: the captured FIELD's own simple
+        // name is derived from the expression itself, identical whichever layout the method was
+        // compiled from; the partition's store name and the id-derived fallback both shift with the
+        // layout (the partition bumps around reserved names, ids renumber), renaming the temp on
+        // every round trip.
+        if (value instanceof FieldAccessExpr) {
+            String fieldName = ((FieldAccessExpr) value).getFieldName();
+            if (fieldName != null && !fieldName.isEmpty()) {
+                Statement s = materializeIntoTemporary(result, value, fieldName);
+                if (s != null) {
+                    return s;
+                }
+            }
+        }
+        for (IRInstruction use : result.getUses()) {
+            if (use instanceof StoreLocalInstruction) {
+                String stored = partitionName(use);
+                if (stored != null && !context.getExpressionContext().isDeclared(stored)) {
+                    Statement s = materializeIntoTemporary(result, value, stored);
+                    if (s != null) {
+                        return s;
+                    }
+                }
+            }
+        }
         return materializeIntoTemporary(result, value, "v" + result.getId());
     }
 

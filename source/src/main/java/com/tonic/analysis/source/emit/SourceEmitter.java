@@ -1139,7 +1139,12 @@ public class SourceEmitter implements SourceVisitor<Void> {
                  currentClassName.equals(ownerClass.replace('.', '/')));
             // A self-reference may drop its qualifier ONLY while no parameter or local shadows the
             // field's simple name; a shadowed access must stay class-qualified to keep its meaning.
-            if (!isSelfReference || isShadowed(expr.getFieldName())) {
+            // The shadowed self-reference qualifies FULLY: the simple name can resolve to a
+            // same-named import (a sibling class also called LwjglContext, say) instead of this one.
+            if (isSelfReference && isShadowed(expr.getFieldName())) {
+                writer.write(ownerClass.replace('/', '.').replace('$', '.'));
+                writer.write(".");
+            } else if (!isSelfReference) {
                 writer.write(formatClassName(ownerClass));
                 writer.write(".");
             }
