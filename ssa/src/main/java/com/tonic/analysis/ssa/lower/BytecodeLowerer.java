@@ -106,10 +106,17 @@ public class BytecodeLowerer {
                 attr instanceof LineNumberTableAttribute);
 
             if (emitLocalVariableTable) {
-                LocalVariableTableAttribute lvt = new LocalVariableTableBuilder(
-                        irMethod, regAlloc, emitter, bytecode.length, constPool, targetMethod).build();
+                LocalVariableTableBuilder builder = new LocalVariableTableBuilder(
+                        irMethod, regAlloc, emitter, bytecode.length, constPool, targetMethod);
+                LocalVariableTableAttribute lvt = builder.build();
                 if (lvt != null) {
                     codeAttr.getAttributes().add(lvt);
+                    // Signatures synthesized from the declared source types take precedence; the
+                    // preserved originals fill in variables the source view did not carry.
+                    for (Map.Entry<Long, String> e : builder.getSignaturesByLvKey().entrySet()) {
+                        genericSignatures.put(e.getKey(),
+                                constPool.findOrAddUtf8(e.getValue()).getIndex(constPool));
+                    }
                     LocalVariableTypeTableAttribute lvtt = rebuildTypeTable(lvt, genericSignatures, targetMethod);
                     if (lvtt != null) {
                         codeAttr.getAttributes().add(lvtt);

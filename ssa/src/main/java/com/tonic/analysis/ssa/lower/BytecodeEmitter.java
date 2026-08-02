@@ -37,6 +37,8 @@ public class BytecodeEmitter {
     private final Map<IRInstruction, Integer> instructionOffsets = new HashMap<>();
     private final List<PendingJump> pendingJumps;
     private int currentOffset;
+    private final Map<SSAValue, Integer> storeEndOffsets = new HashMap<>();
+    private final Set<Integer> writtenSlots = new HashSet<>();
 
     private final Set<SSAValue> stackResidentValues;
     /** Values of locals the source declared; they always spill to their slot so the name survives. */
@@ -144,6 +146,26 @@ public class BytecodeEmitter {
 
     public int getCurrentOffset() {
         return currentOffset;
+    }
+
+    /** For each stored value, the pc immediately AFTER its slot store - javac's LVT range start. */
+    public Map<SSAValue, Integer> getStoreEndOffsets() {
+        return storeEndOffsets;
+    }
+
+    /** Every local slot some emitted instruction actually writes. */
+    public Set<Integer> getWrittenSlots() {
+        return writtenSlots;
+    }
+
+    private void recordSlotStore(SSAValue value, int reg, IRType type) {
+        writtenSlots.add(reg);
+        if (type != null && type.isTwoSlot()) {
+            writtenSlots.add(reg + 1);
+        }
+        if (value != null) {
+            storeEndOffsets.put(value, currentOffset);
+        }
     }
 
     public Set<SSAValue> getStackResidentValues() {
@@ -1268,7 +1290,9 @@ public class BytecodeEmitter {
 
         SSAValue result = initToNew.get(instr).getResult();
         if (result != null && !stackResidentValues.contains(result)) {
-            emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), regAlloc.getRegister(result));
+            int reg = regAlloc.getRegister(result);
+            emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), reg);
+            recordSlotStore(result, reg, result.getType());
         }
     }
 
@@ -1484,6 +1508,7 @@ public class BytecodeEmitter {
         } else {
             emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), reg);
         }
+        recordSlotStore(result, reg, type);
     }
 
     private void emitConstant(ConstantInstruction instr) throws IOException {
@@ -2235,6 +2260,7 @@ public class BytecodeEmitter {
         // stack. Store it into the exception value's local so later handler code can re-load it.
         if (source == instr.getResult() && handlerExceptionCaptures.contains(instr.getResult())) {
             emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), dstReg);
+            recordSlotStore(instr.getResult(), dstReg, instr.getResult().getType());
             return;
         }
 
@@ -2265,12 +2291,14 @@ public class BytecodeEmitter {
                 } else {
                     emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), dstReg);
                 }
+                recordSlotStore(instr.getResult(), dstReg, ssa.getType());
             } else {
                 int srcReg = regAlloc.getRegister(ssa);
                 if (srcReg != dstReg) {
                     IRType type = ssa.getType();
                     emitVarInsn(getLoadOpcode(type), getLoadShortBase(type), srcReg);
                     emitVarInsn(getStoreOpcode(type), getStoreShortBase(type), dstReg);
+                    recordSlotStore(instr.getResult(), dstReg, type);
                 }
             }
         } else if (source instanceof Constant) {
@@ -2300,6 +2328,7 @@ public class BytecodeEmitter {
             } else {
                 emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), dstReg);
             }
+            recordSlotStore(instr.getResult(), dstReg, type);
         }
     }
 

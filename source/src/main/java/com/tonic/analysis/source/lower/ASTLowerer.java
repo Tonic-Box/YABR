@@ -115,6 +115,7 @@ public class ASTLowerer {
             IRType thisType = new ReferenceType(ownerClass);
             SSAValue thisVal = ctx.newValue(thisType);
             irMethod.addParameter(thisVal);
+            ctx.declareLocal("this", thisType, true);
             ctx.setVariable("this", thisVal);
         }
 
@@ -122,6 +123,7 @@ public class ASTLowerer {
             IRType paramType = resolvedParamType(parameters.get(i), typeResolver);
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
+            ctx.declareLocal("arg" + i, paramType, true);
             ctx.setVariable("arg" + i, paramVal);
         }
 
@@ -447,6 +449,7 @@ public class ASTLowerer {
             IRType paramType = paramTypes.get(i).toIRType();
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
+            ctx.declareLocal(paramNames.get(i), paramType, true);
             if (hasLoops) {
                 ctx.registerParameter(paramNames.get(i), paramSlot, paramVal);
             } else {
@@ -605,11 +608,13 @@ public class ASTLowerer {
         List<SSAValue> params = irMethod.getParameters();
 
         if (!isStatic && !params.isEmpty()) {
+            ctx.declareLocal("this", params.get(0).getType(), true);
             ctx.setVariable("this", params.get(0));
         }
 
         int paramOffset = isStatic ? 0 : 1;
         for (int i = paramOffset; i < params.size(); i++) {
+            ctx.declareLocal("arg" + (i - paramOffset), params.get(i).getType(), true);
             ctx.setVariable("arg" + (i - paramOffset), params.get(i));
         }
 

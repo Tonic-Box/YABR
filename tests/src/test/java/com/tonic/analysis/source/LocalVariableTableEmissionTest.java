@@ -55,10 +55,14 @@ class LocalVariableTableEmissionTest {
         }
     }
 
+    private byte[] lastCode;
+    private ClassFile lastClass;
+
     private List<Row> lvt(String internalName, String source, String methodName) throws Exception {
         ClassFile cf = TestUtils.compileSource(source, internalName);
         TestUtils.linkAndVerify(cf);
         ClassFile rt = TestUtils.roundTrip(cf);
+        lastClass = rt;
         MethodEntry method = rt.getMethods().stream()
                 .filter(m -> m.getName().equals(methodName))
                 .findFirst().orElseThrow(() -> new AssertionError("method not found: " + methodName));
@@ -71,6 +75,7 @@ class LocalVariableTableEmissionTest {
             }
         }
         List<Row> rows = new ArrayList<>();
+        lastCode = code.getCode();
         int codeLength = code.getCode().length;
         int maxLocals = code.getMaxLocals();
         if (table != null) {
@@ -219,5 +224,75 @@ class LocalVariableTableEmissionTest {
                 + " public static int f(int a){ return a * a + 1; } }", "f");
         assertEquals(1, rows.size(), "only the parameter, no temp entries: " + rows);
         assertEquals("a", rows.get(0).name);
+    }
+
+    @Test
+    void aStackResidentLocalHasNoPhantomEntry() throws Exception {
+        // The single-use local stays on the operand stack - the emitted code never writes a body
+        // slot, and a truthful table must not name one.
+        List<Row> rows = lvt("t/Ph", "package t; public class Ph {"
+                + " public static int f(int a){ int doubled = a * 2; return doubled + 1; } }", "f");
+        assertEquals(1, rows.size(), "no entry for a slot nothing writes: " + rows);
+        assertEquals("a", rows.get(0).name);
+    }
+
+    @Test
+    void bodyLocalRangeOpensAfterItsInitializingStore() throws Exception {
+        List<Row> rows = lvt("t/Sp", "package t; public class Sp {"
+                + " public static int f(int n){ int s = 7; if (n > 0) { s = s + n; } return s; } }", "f");
+        Row s = byName(rows, "s");
+        assertNotNull(s, "s present: " + rows);
+        assertTrue(s.startPc > 0, "range opens after the store, not at pc 0: " + s);
+        assertTrue(endsWithStoreTo(lastCode, s.startPc, s.slot),
+                "the bytes before start_pc are the initializing store: " + s);
+    }
+
+    @Test
+    void anAliasBetweenNamedLocalsKeepsBothEntries() throws Exception {
+        List<Row> rows = lvt("t/Al", "package t; public class Al {"
+                + " public static int f(int a, int n){ int b = a; if (n > 0) { b = b + 1; } return b; } }", "f");
+        assertNotNull(byName(rows, "a"), "source variable a: " + rows);
+        assertNotNull(byName(rows, "b"), "aliasing variable b keeps its own entry: " + rows);
+    }
+
+    @Test
+    void aGenericLocalGetsASynthesizedTypeTableEntry() throws Exception {
+        lvt("t/G", "package t; import java.util.List; import java.util.ArrayList; public class G {"
+                + " public static int f(int n){ List<String> xs = new ArrayList<String>();"
+                + " if (n > 0) { xs.add(\"x\"); } return xs.size(); } }", "f");
+        MethodEntry method = lastClass.getMethods().stream()
+                .filter(m -> m.getName().equals("f")).findFirst().orElseThrow();
+        com.tonic.parser.attribute.LocalVariableTypeTableAttribute lvtt = null;
+        for (Attribute a : method.getCodeAttribute().getAttributes()) {
+            if (a instanceof com.tonic.parser.attribute.LocalVariableTypeTableAttribute) {
+                lvtt = (com.tonic.parser.attribute.LocalVariableTypeTableAttribute) a;
+            }
+        }
+        assertNotNull(lvtt, "a generic declaration synthesizes a LocalVariableTypeTable");
+        boolean found = false;
+        for (com.tonic.parser.attribute.table.LocalVariableTypeTableEntry e : lvtt.getLocalVariableTypeTable()) {
+            if ("xs".equals(utf8(lastClass, e.getNameIndex()))
+                    && "Ljava/util/List<Ljava/lang/String;>;".equals(utf8(lastClass, e.getSignatureIndex()))) {
+                found = true;
+            }
+        }
+        assertTrue(found, "xs carries its List<String> signature");
+    }
+
+    /** Whether the code bytes immediately before {@code pc} are a store to {@code slot}. */
+    private static boolean endsWithStoreTo(byte[] code, int pc, int slot) {
+        if (pc >= 1 && slot <= 3) {
+            int b = code[pc - 1] & 0xff;
+            if (b == 0x3b + slot || b == 0x4b + slot || b == 0x43 + slot
+                    || b == 0x3f + slot || b == 0x47 + slot) {
+                return true;
+            }
+        }
+        if (pc >= 2) {
+            int op = code[pc - 2] & 0xff;
+            int idx = code[pc - 1] & 0xff;
+            return idx == slot && (op == 0x36 || op == 0x37 || op == 0x38 || op == 0x39 || op == 0x3a);
+        }
+        return false;
     }
 }

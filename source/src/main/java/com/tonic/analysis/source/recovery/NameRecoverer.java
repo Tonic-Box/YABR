@@ -37,6 +37,55 @@ public class NameRecoverer {
         this.constPool = sourceMethod.getClassFile().getConstPool();
         this.lvt = findLocalVariableTable();
         buildSlotNameMap();
+        buildSortedOffsets();
+    }
+
+    /** Every lifted instruction offset, sorted - the instruction boundaries for exact range probes. */
+    private int[] sortedOffsets = new int[0];
+
+    private void buildSortedOffsets() {
+        java.util.TreeSet<Integer> offs = new java.util.TreeSet<>();
+        if (irMethod != null) {
+            for (com.tonic.analysis.ssa.cfg.IRBlock block : irMethod.getBlocks()) {
+                for (com.tonic.analysis.ssa.ir.IRInstruction instr : block.getInstructions()) {
+                    if (instr.getBytecodeOffset() >= 0) {
+                        offs.add(instr.getBytecodeOffset());
+                    }
+                }
+            }
+        }
+        sortedOffsets = offs.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    /** The smallest instruction offset strictly greater than {@code off}, or {@code off + 1} if none known. */
+    public int nextOffsetAfter(int off) {
+        int lo = 0;
+        int hi = sortedOffsets.length;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (sortedOffsets[mid] <= off) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        return lo < sortedOffsets.length ? sortedOffsets[lo] : off + 1;
+    }
+
+    /**
+     * The LVT name for {@code slot} at the pc where a STORE at {@code storeOffset} takes effect - the
+     * following instruction, which is where javac opens the variable's range. This is the exact form
+     * of the old fixed-width forward probe, which a wide store or multi-byte neighbor escaped.
+     */
+    public String debugNameAtStore(int slot, int storeOffset) {
+        String at = debugNameAt(slot, nextOffsetAfter(storeOffset));
+        return at != null ? at : debugNameAt(slot, storeOffset);
+    }
+
+    /** As {@link #debugNameAtStore} for the entry's descriptor. */
+    public String debugDescriptorAtStore(int slot, int storeOffset) {
+        String at = debugDescriptorAt(slot, nextOffsetAfter(storeOffset));
+        return at != null ? at : debugDescriptorAt(slot, storeOffset);
     }
 
     public NameRecoveryStrategy getStrategy() {
@@ -124,6 +173,9 @@ public class NameRecoverer {
      * type inferred from the (int-shaped) stored values.
      */
     public String debugDescriptorAt(int slot, int offset) {
+        if (!debugNamesAllowedFor(slot)) {
+            return null;
+        }
         if (lvt == null) {
             return null;
         }
@@ -149,7 +201,32 @@ public class NameRecoverer {
         return null;
     }
 
+    /** Parameter slot count derived from the method descriptor, for use without lifted IR. */
+    private int paramSlotsFromDescriptor() {
+        int slots = (sourceMethod.getAccess() & 0x0008) != 0 ? 0 : 1;
+        String desc = sourceMethod.getDesc();
+        int i = desc.indexOf('(') + 1;
+        while (i < desc.length() && desc.charAt(i) != ')') {
+            char c = desc.charAt(i);
+            boolean array = false;
+            while (c == '[') {
+                array = true;
+                c = desc.charAt(++i);
+            }
+            if (c == 'L') {
+                i = desc.indexOf(';', i) + 1;
+            } else {
+                i++;
+            }
+            slots += (!array && (c == 'J' || c == 'D')) ? 2 : 1;
+        }
+        return slots;
+    }
+
     private boolean isParameter(int slot) {
+        if (irMethod == null) {
+            return slot < paramSlotsFromDescriptor();
+        }
         int paramSlots = irMethod.isStatic() ? 0 : 1;
         for (SSAValue param : irMethod.getParameters()) {
             paramSlots++;

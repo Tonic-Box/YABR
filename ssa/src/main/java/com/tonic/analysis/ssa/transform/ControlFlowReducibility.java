@@ -153,7 +153,7 @@ public class ControlFlowReducibility implements IRTransform {
         }
 
         for (IRBlock succ : new ArrayList<>(block.getSuccessors())) {
-            updatePhisForSplit(succ, block, duplicate, group2);
+            updatePhisForSplit(succ, block, duplicate);
         }
 
         return true;
@@ -178,17 +178,13 @@ public class ControlFlowReducibility implements IRTransform {
 
         for (IRInstruction instr : original.getInstructions()) {
             IRInstruction copy = copyInstruction(instr, valueMap);
-            if (copy != null) {
-                duplicate.addInstruction(copy);
-            }
+            duplicate.addInstruction(copy);
         }
 
         IRInstruction term = original.getTerminator();
         if (term != null) {
             IRInstruction termCopy = copyInstruction(term, valueMap);
-            if (termCopy != null) {
-                duplicate.setTerminator(termCopy);
-            }
+            duplicate.setTerminator(termCopy);
         }
 
         for (IRBlock succ : original.getSuccessors()) {
@@ -216,7 +212,12 @@ public class ControlFlowReducibility implements IRTransform {
             }
         }
 
-        return instr.copyWithNewOperands(newResult, newOperands);
+        IRInstruction copy = instr.copyWithNewOperands(newResult, newOperands);
+        // The duplicate stands in for the original at the same source position: without the offset
+        // the recovery's LVT range attribution has nothing to match and falls back to generated
+        // names for every variable the duplicated block touches.
+        copy.setBytecodeOffset(instr.getBytecodeOffset());
+        return copy;
     }
 
     private void redirectEdge(IRBlock pred, IRBlock oldTarget, IRBlock newTarget) {
@@ -232,7 +233,13 @@ public class ControlFlowReducibility implements IRTransform {
         }
     }
 
-    private void updatePhisForSplit(IRBlock succ, IRBlock original, IRBlock duplicate, List<IRBlock> movedPreds) {
+    /**
+     * Mirrors each successor phi's incoming from the original block onto the duplicate, since control
+     * can now arrive from either. The mirrored value is the ORIGINAL's - not the duplicate's clone of
+     * it - which is imprecise when the value is defined inside the split block; the recovery tolerates
+     * it because both define the same expression, and only irreducible methods reach this transform.
+     */
+    private void updatePhisForSplit(IRBlock succ, IRBlock original, IRBlock duplicate) {
         for (PhiInstruction phi : succ.getPhiInstructions()) {
             Value origValue = phi.getIncoming(original);
             if (origValue != null) {

@@ -107,6 +107,18 @@ public class RecoveryContext {
         return debugDescriptorResolver == null ? null : debugDescriptorResolver.apply(slot, offset);
     }
 
+    private java.util.function.BiFunction<Integer, Integer, String> debugStoreDescriptorResolver;
+
+    public void setDebugStoreDescriptorResolver(java.util.function.BiFunction<Integer, Integer, String> resolver) {
+        this.debugStoreDescriptorResolver = resolver;
+    }
+
+    /** The LVT descriptor at the pc where a STORE at {@code storeOffset} takes effect, or null. */
+    public String debugDescriptorAtStore(int slot, int storeOffset) {
+        return debugStoreDescriptorResolver == null ? null
+                : debugStoreDescriptorResolver.apply(slot, storeOffset);
+    }
+
     /** Recovered expressions keyed by SSA value */
     public Map<SSAValue, Expression> getRecoveredExpressions() {
         return recoveredExpressions;

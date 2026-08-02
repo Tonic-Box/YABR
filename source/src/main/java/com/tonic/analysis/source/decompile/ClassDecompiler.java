@@ -35,7 +35,6 @@ import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
-import com.tonic.analysis.source.recovery.NameRecoveryStrategy;
 import com.tonic.analysis.source.recovery.SyntheticLocalVariableTable;
 import com.tonic.analysis.source.recovery.SwitchMapAnalyzer;
 import com.tonic.analysis.source.recovery.TypeRecoverer;
@@ -51,7 +50,6 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
-import com.tonic.parser.attribute.table.LocalVariableTableEntry;
 import com.tonic.parser.attribute.ConstantValueAttribute;
 import com.tonic.parser.attribute.ExceptionsAttribute;
 import com.tonic.parser.attribute.PermittedSubclassesAttribute;
@@ -72,7 +70,6 @@ import com.tonic.util.Modifiers;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1531,37 +1528,25 @@ public class ClassDecompiler {
      * agrees on a single name. Lets the signature show real parameter names that match the recovered body.
      */
     private Map<Integer, String> unambiguousLvtNames(com.tonic.parser.MethodEntry method) {
+        // Delegates to the one live LVT-reading implementation. A parameter's name is the entry
+        // covering pc 0 for its slot - exact even when the slot is later reused - with the
+        // whole-slot unambiguous name as fallback; the strategy gate is NameRecoverer's own, so the
+        // signature line and the body can never disagree about what the strategy allows.
         Map<Integer, String> result = new HashMap<>();
-        // The signature must name its parameters the way the body does, so the strategy governs here too: a
-        // mode that ignores debug info in the body would otherwise still print recovered names on the
-        // signature line, and the two would disagree.
-        if (decompilerConfig.getNameRecoveryStrategy() == NameRecoveryStrategy.ALWAYS_SYNTHETIC) {
+        if (method.getCodeAttribute() == null) {
             return result;
         }
-        CodeAttribute code = method.getCodeAttribute();
-        if (code == null) {
-            return result;
-        }
-        LocalVariableTableAttribute lvt = null;
-        for (Attribute attr : code.getAttributes()) {
-            if (attr instanceof LocalVariableTableAttribute) {
-                lvt = (LocalVariableTableAttribute) attr;
-                break;
+        com.tonic.analysis.source.recovery.NameRecoverer names =
+                new com.tonic.analysis.source.recovery.NameRecoverer(
+                        null, method, decompilerConfig.getNameRecoveryStrategy());
+        int maxLocals = method.getCodeAttribute().getMaxLocals();
+        for (int slot = 0; slot < maxLocals; slot++) {
+            String name = names.debugNameAt(slot, 0);
+            if (name == null) {
+                name = names.unambiguousDebugName(slot);
             }
-        }
-        if (lvt == null) {
-            return result;
-        }
-        Map<Integer, Set<String>> namesPerSlot = new HashMap<>();
-        for (LocalVariableTableEntry e : lvt.getLocalVariableTable()) {
-            Object item = classFile.getConstPool().getItem(e.getNameIndex());
-            if (item instanceof Utf8Item) {
-                namesPerSlot.computeIfAbsent(e.getIndex(), k -> new HashSet<>()).add(((Utf8Item) item).getValue());
-            }
-        }
-        for (Map.Entry<Integer, Set<String>> e : namesPerSlot.entrySet()) {
-            if (e.getValue().size() == 1) {
-                result.put(e.getKey(), e.getValue().iterator().next());
+            if (name != null) {
+                result.put(slot, name);
             }
         }
         return result;

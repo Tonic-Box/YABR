@@ -135,7 +135,7 @@ public class StatementLowerer {
         // re-qualify it blind (matching an unrelated same-simple-name class).
         ctx.declareLocal(name,
                 com.tonic.analysis.ssa.type.IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(type)),
-                false);
+                false, ctx.getTypeResolver().signatureOf(type));
 
         if (init != null) {
             ctx.pushExpectedType(type);
@@ -387,7 +387,8 @@ public class StatementLowerer {
         SSAValue elem = ctx.newValue(elemType);
         ArrayAccessInstruction loadInstr = ArrayAccessInstruction.createLoad(elem, iterable, index);
         ctx.getCurrentBlock().addInstruction(loadInstr);
-        ctx.declareLocal(forEach.getVariable().getName(), elemType, false);
+        ctx.declareLocal(forEach.getVariable().getName(), elemType, false,
+                ctx.getTypeResolver().signatureOf(forEach.getVariable().getType()));
         ctx.setVariable(forEach.getVariable().getName(), elem);
 
         lower(forEach.getBody());

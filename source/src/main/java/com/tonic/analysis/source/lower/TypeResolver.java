@@ -1417,6 +1417,84 @@ public class TypeResolver {
     }
 
     /**
+     * The JVM generic signature of a declared type, or null when the declaration carries no generic
+     * information (a plain reference, array of plain references, or primitive needs no
+     * LocalVariableTypeTable entry). Type arguments recurse; a name that is a type parameter of the
+     * current declaration renders as a type-variable use.
+     */
+    public String signatureOf(SourceType type) {
+        if (!containsGenerics(type)) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        appendSignature(type, sb);
+        return sb.toString();
+    }
+
+    private boolean containsGenerics(SourceType type) {
+        if (type instanceof GenericSourceType) {
+            return true;
+        }
+        if (type instanceof ArraySourceType) {
+            return containsGenerics(((ArraySourceType) type).getElementType());
+        }
+        if (type instanceof ReferenceSourceType) {
+            String name = ((ReferenceSourceType) type).getInternalName();
+            return isTypeParameterName(name);
+        }
+        return false;
+    }
+
+    private boolean isTypeParameterName(String name) {
+        if (name == null || name.indexOf('/') >= 0 || name.indexOf('.') >= 0) {
+            return false;
+        }
+        return !eraseTypeVariable(name).equals(name);
+    }
+
+    private void appendSignature(SourceType type, StringBuilder sb) {
+        if (type instanceof GenericSourceType) {
+            GenericSourceType g = (GenericSourceType) type;
+            sb.append('L').append(resolveInternalName(g.getRawType().getInternalName()));
+            if (!g.getTypeArguments().isEmpty()) {
+                sb.append('<');
+                for (SourceType arg : g.getTypeArguments()) {
+                    appendSignature(arg, sb);
+                }
+                sb.append('>');
+            }
+            sb.append(';');
+            return;
+        }
+        if (type instanceof WildcardSourceType) {
+            WildcardSourceType w = (WildcardSourceType) type;
+            if (w.isUnbounded()) {
+                sb.append('*');
+                return;
+            }
+            sb.append(w.hasUpperBound() ? '+' : '-');
+            appendSignature(w.getBound(), sb);
+            return;
+        }
+        if (type instanceof ArraySourceType) {
+            ArraySourceType a = (ArraySourceType) type;
+            sb.append("[".repeat(Math.max(0, a.getTotalDimensions())));
+            appendSignature(a.getElementType(), sb);
+            return;
+        }
+        if (type instanceof ReferenceSourceType) {
+            String name = ((ReferenceSourceType) type).getInternalName();
+            if (isTypeParameterName(name)) {
+                sb.append('T').append(name).append(';');
+            } else {
+                sb.append('L').append(resolveInternalName(name)).append(';');
+            }
+            return;
+        }
+        sb.append(descriptorOf(type));
+    }
+
+    /**
      * The descriptor of a declared parameter. A varargs parameter carries its element type in the
      * declaration; its descriptor is one array dimension up.
      */

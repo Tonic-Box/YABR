@@ -36,6 +36,7 @@ public final class LocalVariableTableBuilder {
     private final int codeLength;
     private final ConstPool constPool;
     private final MethodEntry targetMethod;
+    private final Map<Long, String> signaturesByLvKey = new LinkedHashMap<>();
 
     public LocalVariableTableBuilder(IRMethod irMethod, RegisterAllocator regAlloc, BytecodeEmitter emitter,
                                      int codeLength, ConstPool constPool, MethodEntry targetMethod) {
@@ -56,6 +57,21 @@ public final class LocalVariableTableBuilder {
         int maxLocals = regAlloc.getMaxLocals();
 
         List<LocalVariableTableEntry> entries = new ArrayList<>();
+        if (System.getProperty("yabr.lvttrace") != null) {
+            System.err.println("[lvt] written=" + emitter.getWrittenSlots());
+            for (IRMethod.SourceLocal l : locals) {
+                StringBuilder sb = new StringBuilder("[lvt] " + l.getName() + " param=" + l.isParameter() + " vals=");
+                for (SSAValue v : l.getValues()) {
+                    sb.append("v").append(v.getId())
+                      .append("(def=").append(v.getDefinition() == null ? "null" : v.getDefinition().getClass().getSimpleName())
+                      .append(",slot=").append(allocation.get(v))
+                      .append(",se=").append(emitter.getStoreEndOffsets().get(v)).append(") ");
+                }
+                Set<SSAValue> grp = regAlloc.getHomeSlotGroups().get(l);
+                sb.append(" group=").append(grp == null ? "null" : grp.size());
+                System.err.println(sb);
+            }
+        }
         for (IRMethod.SourceLocal local : locals) {
             String desc = local.getType() != null ? local.getType().getDescriptor() : null;
             if (desc == null || local.getName() == null) {
@@ -64,7 +80,12 @@ public final class LocalVariableTableBuilder {
             if (local.isParameter()) {
                 Integer slot = resolveSlot(local, allocation);
                 if (slot != null && LvtSupport.valid(slot, maxLocals, 0, codeLength, codeLength)) {
-                    entries.add(LvtSupport.entry(constPool, slot, local.getName(), desc, 0, codeLength));
+                    LocalVariableTableEntry entry =
+                            LvtSupport.entry(constPool, slot, local.getName(), desc, 0, codeLength);
+                    entries.add(entry);
+                    if (local.getSignature() != null) {
+                        signaturesByLvKey.put(((long) slot << 32) | entry.getNameIndex(), local.getSignature());
+                    }
                 }
                 continue;
             }
@@ -75,19 +96,32 @@ public final class LocalVariableTableBuilder {
             // their names and the decompiler would mislabel them (an unstable, drifting round trip).
             Map<Integer, List<SSAValue>> valuesBySlot = new LinkedHashMap<>();
             for (SSAValue v : regAlloc.getHomeSlotGroups().getOrDefault(local, new LinkedHashSet<>(local.getValues()))) {
+                if (v.getDefinition() == null && !irMethod.getParameters().contains(v)) {
+                    continue;
+                }
                 Integer s = allocation.get(v);
                 if (s != null) {
                     valuesBySlot.computeIfAbsent(s, k -> new ArrayList<>()).add(v);
                 }
             }
-            dropSlotsNeverOccupied(valuesBySlot);
             for (Map.Entry<Integer, List<SSAValue>> e : valuesBySlot.entrySet()) {
                 int slot = e.getKey();
+                // The LVT is truthful: an entry names only a slot the emitted code actually writes.
+                // A value kept on the stack or folded into its use has an allocation on paper only -
+                // naming that slot points the reader at a local that never exists.
+                if (!emitter.getWrittenSlots().contains(slot)) {
+                    continue;
+                }
                 int[] scope = instructionScope(e.getValue());
                 int startPc = scope[0];
                 int length = scope[1] - scope[0];
                 if (LvtSupport.valid(slot, maxLocals, startPc, length, codeLength)) {
-                    entries.add(LvtSupport.entry(constPool, slot, local.getName(), desc, startPc, length));
+                    LocalVariableTableEntry entry =
+                            LvtSupport.entry(constPool, slot, local.getName(), desc, startPc, length);
+                    entries.add(entry);
+                    if (local.getSignature() != null) {
+                        signaturesByLvKey.put(((long) slot << 32) | entry.getNameIndex(), local.getSignature());
+                    }
                 }
             }
         }
@@ -103,40 +137,6 @@ public final class LocalVariableTableBuilder {
         attr.setLocalVariableTable(entries);
         attr.updateLength();
         return attr;
-    }
-
-    /**
-     * Drops the slots a variable is only allocated on paper. A value the emitter kept on the stack, or folded
-     * in as a constant, never reaches a register at all - the allocator still reserved one, and naming it
-     * tells the reader two slots hold the variable at once. The reader then treats both as the same variable
-     * and its uses no longer add up. Applied only when a slot the variable really occupies survives, so a
-     * variable that legitimately lives on two slots over disjoint stretches keeps both.
-     */
-    private void dropSlotsNeverOccupied(Map<Integer, List<SSAValue>> valuesBySlot) {
-        if (valuesBySlot.size() < 2) {
-            return;
-        }
-        Set<SSAValue> onStack = emitter.getStackResidentValues();
-        Set<SSAValue> folded = emitter.getInlinedConstants();
-        List<Integer> unoccupied = new ArrayList<>();
-        for (Map.Entry<Integer, List<SSAValue>> e : valuesBySlot.entrySet()) {
-            boolean occupied = false;
-            for (SSAValue v : e.getValue()) {
-                if (!onStack.contains(v) && !folded.contains(v)) {
-                    occupied = true;
-                    break;
-                }
-            }
-            if (!occupied) {
-                unoccupied.add(e.getKey());
-            }
-        }
-        if (unoccupied.size() >= valuesBySlot.size()) {
-            return;
-        }
-        for (Integer slot : unoccupied) {
-            valuesBySlot.remove(slot);
-        }
     }
 
     /**
@@ -215,6 +215,14 @@ public final class LocalVariableTableBuilder {
         return result;
     }
 
+    /**
+     * Generic signatures for the emitted entries, keyed {@code slot << 32 | nameIndex} - the same key
+     * the type-table rebuild matches on. Populated from the source-local declarations.
+     */
+    public Map<Long, String> getSignaturesByLvKey() {
+        return signaturesByLvKey;
+    }
+
     /** The final slot of a source variable: the first of its SSA values that was allocated one, else null. */
     private Integer resolveSlot(IRMethod.SourceLocal local, Map<SSAValue, Integer> allocation) {
         for (SSAValue v : local.getValues()) {
@@ -269,9 +277,16 @@ public final class LocalVariableTableBuilder {
      */
     private int[] instructionScope(List<SSAValue> values) {
         Map<IRInstruction, Integer> offs = emitter.getInstructionOffsets();
+        Map<SSAValue, Integer> storeEnds = emitter.getStoreEndOffsets();
         int startPc = Integer.MAX_VALUE;
+        int storeStart = Integer.MAX_VALUE;
         int endPc = -1;
         for (SSAValue v : values) {
+            Integer afterStore = storeEnds.get(v);
+            if (afterStore != null) {
+                storeStart = Math.min(storeStart, afterStore);
+                endPc = Math.max(endPc, afterStore);
+            }
             startPc = Math.min(startPc, offsetOf(v.getDefinition(), offs, Integer.MAX_VALUE));
             endPc = Math.max(endPc, offsetOf(v.getDefinition(), offs, -1));
             for (IRInstruction use : v.getUses()) {
@@ -279,12 +294,19 @@ public final class LocalVariableTableBuilder {
                 endPc = Math.max(endPc, offsetOf(use, offs, -1));
             }
         }
+        // The range opens at the pc AFTER the initializing store, not where the initializer begins
+        // computing (the javac convention). Opening earlier both misdescribes the slot - it still
+        // holds the previous occupant there - and steals range from that occupant in the same-slot
+        // trim.
+        if (storeStart != Integer.MAX_VALUE) {
+            startPc = storeStart;
+        }
         if (endPc < 0 || startPc == Integer.MAX_VALUE) {
             return blockScope(values);
         }
         // End at the instruction boundary AFTER the last def/use, so the range covers that instruction yet
         // {@code start_pc + length} stays a valid opcode index (the JVM rejects a mid-instruction LVT bound).
-        return new int[]{Math.max(0, startPc), nextBoundaryAfter(endPc, offs)};
+        return new int[]{Math.max(0, startPc), Math.max(nextBoundaryAfter(endPc, offs), startPc)};
     }
 
     /** The smallest emitted instruction offset strictly greater than {@code off}, or {@code codeLength}. */

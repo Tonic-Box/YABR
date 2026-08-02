@@ -233,7 +233,13 @@ public class LoweringContext {
      * {@link #setVariable}/{@link #registerParameter} append their SSA values to the current record.
      */
     public void declareLocal(String name, IRType type, boolean isParameter) {
+        declareLocal(name, type, isParameter, null);
+    }
+
+    /** As {@link #declareLocal(String, IRType, boolean)} with the declared type's generic signature. */
+    public void declareLocal(String name, IRType type, boolean isParameter, String signature) {
         IRMethod.SourceLocal local = new IRMethod.SourceLocal(name, type, isParameter);
+        local.setSignature(signature);
         currentSourceLocal.put(name, local);
         irMethod.addSourceLocal(local);
     }
@@ -252,6 +258,10 @@ public class LoweringContext {
     private void recordValue(String name, SSAValue value) {
         IRMethod.SourceLocal local = currentSourceLocal.get(name);
         if (local != null && value != null) {
+            if (System.getProperty("yabr.lvttrace") != null) {
+                System.err.println("[rec] " + name + " <- v" + value.getId() + " def="
+                        + (value.getDefinition() == null ? "null" : value.getDefinition().getClass().getSimpleName()));
+            }
             local.addValue(value);
         }
     }
@@ -286,6 +296,24 @@ public class LoweringContext {
      * When emitLocalInstructions is enabled, also emits a StoreLocalInstruction.
      */
     public void setVariable(String name, SSAValue value) {
+        // An alias between two NAMED locals (`chained = complex;`) must stay two variables: sharing
+        // the SSA value lets the allocator coalesce them onto one slot with one store, and the two
+        // LocalVariableTable entries then collapse into one - the alias vanishes on round trip.
+        // A real copy keeps javac's shape: each variable gets its own store and its own range.
+        if (emitLocalInstructions && currentBlock != null) {
+            IRMethod.SourceLocal owner = irMethod.sourceLocalOf(value);
+            boolean aliasesOtherLocal = owner != null && owner != currentSourceLocal.get(name);
+            if (!aliasesOtherLocal && value.getDefinition() instanceof com.tonic.analysis.ssa.ir.LoadLocalInstruction) {
+                int loadedFrom = ((com.tonic.analysis.ssa.ir.LoadLocalInstruction) value.getDefinition()).getLocalIndex();
+                aliasesOtherLocal = !variableLocalIndices.containsKey(name) || variableLocalIndices.get(name) != loadedFrom;
+            }
+            if (aliasesOtherLocal) {
+                SSAValue aliased = newValue(value.getType());
+                currentBlock.addInstruction(
+                        new com.tonic.analysis.ssa.ir.CopyInstruction(aliased, value));
+                value = aliased;
+            }
+        }
         variableMap.put(name, value);
         recordValue(name, value);
 

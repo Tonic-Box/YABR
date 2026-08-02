@@ -183,6 +183,16 @@ public class IRMethod {
         sourceLocals.add(local);
     }
 
+    /** The source local whose value list contains {@code value}, or null. */
+    public SourceLocal sourceLocalOf(SSAValue value) {
+        for (SourceLocal local : sourceLocals) {
+            if (local.getValues().contains(value)) {
+                return local;
+            }
+        }
+        return null;
+    }
+
     /**
      * A source-declared variable (the receiver, a parameter, or a body local) and the SSA value(s) it lowered
      * to. Carries the real source name + declared type so the lowerer can emit a LocalVariableTable; the slot
@@ -193,6 +203,7 @@ public class IRMethod {
         private final IRType type;
         private final List<SSAValue> values = new ArrayList<>();
         private final boolean parameter;
+        private String signature;
 
         public SourceLocal(String name, IRType type, boolean parameter) {
             this.name = name;
@@ -202,6 +213,15 @@ public class IRMethod {
 
         public String getName() {
             return name;
+        }
+
+        /** The generic signature of the declared type, or null when the declaration is not generic. */
+        public String getSignature() {
+            return signature;
+        }
+
+        public void setSignature(String signature) {
+            this.signature = signature;
         }
 
         public IRType getType() {

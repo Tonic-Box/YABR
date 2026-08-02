@@ -245,7 +245,7 @@ public class MethodRecoverer {
         controlFlowContext = new ControlFlowContext(irMethod, dominatorTree, loopAnalysis, recoveryContext);
 
         statementRecoverer = new StatementRecoverer(controlFlowContext, structuralAnalyzer, expressionRecoverer);
-        if (sourceMethod != null && sourceMethod.getClassFile() != null) {
+        if (sourceMethod.getClassFile() != null) {
             statementRecoverer.setEnumClassPool(sourceMethod.getClassFile().getClassPool());
         }
     }
@@ -259,9 +259,10 @@ public class MethodRecoverer {
         assignParameterNames();
 
         SlotVariablePartition partition = new SlotVariablePartition(irMethod, this::baseNameForSlot,
-                nameRecoverer::debugNameAt);
+                nameRecoverer::debugNameAt, nameRecoverer::debugNameAtStore);
         recoveryContext.setSlotPartition(partition);
         recoveryContext.setDebugDescriptorResolver(nameRecoverer::debugDescriptorAt);
+        recoveryContext.setDebugStoreDescriptorResolver(nameRecoverer::debugDescriptorAtStore);
         recoveryContext.setDebugNameResolver(nameRecoverer::unambiguousDebugName);
 
         irMethod.getBlocks().forEach(block -> {
@@ -361,7 +362,13 @@ public class MethodRecoverer {
         int paramIndex = 0;
         for (var param : irMethod.getParameters()) {
             int slot = locals().slotOfParameter(param);
-            String debug = nameRecoverer != null ? nameRecoverer.unambiguousDebugName(slot) : null;
+            // The entry covering pc 0 IS the parameter, even when the slot is later reused for a
+            // body local (which makes the whole-slot name set ambiguous and used to degrade the
+            // parameter to argN).
+            String debug = nameRecoverer != null ? nameRecoverer.debugNameAt(slot, 0) : null;
+            if (debug == null && nameRecoverer != null) {
+                debug = nameRecoverer.unambiguousDebugName(slot);
+            }
             String name;
             if (debug != null) {
                 name = debug;

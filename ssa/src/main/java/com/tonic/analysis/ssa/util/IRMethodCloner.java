@@ -79,6 +79,7 @@ public class IRMethodCloner {
 
             for (IRInstruction instr : block.getInstructions()) {
                 IRInstruction clonedInstr = cloneInstruction(instr);
+                clonedInstr.setBytecodeOffset(instr.getBytecodeOffset());
                 clonedBlock.addInstruction(clonedInstr);
             }
 

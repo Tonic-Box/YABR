@@ -5666,13 +5666,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      */
     private String narrowLvtDescriptor(int slot, int offset) {
         RecoveryContext ctx = context.getExpressionContext();
-        for (int d = 0; d <= 3; d++) {
-            String desc = ctx.debugDescriptorAt(slot, offset + d);
-            if (desc != null && desc.length() == 1 && "ZBCS".indexOf(desc.charAt(0)) >= 0) {
-                return desc;
-            }
+        String desc = ctx.debugDescriptorAtStore(slot, offset);
+        if (desc == null) {
+            desc = ctx.debugDescriptorAt(slot, offset);
         }
-        return null;
+        return desc != null && desc.length() == 1 && "ZBCS".indexOf(desc.charAt(0)) >= 0 ? desc : null;
     }
 
     /**

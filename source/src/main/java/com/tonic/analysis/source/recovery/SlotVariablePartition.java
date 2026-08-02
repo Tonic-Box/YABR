@@ -50,14 +50,25 @@ public class SlotVariablePartition {
     private final IRMethod method;
     private final IntFunction<String> baseNameForSlot;
     private final ScopeNameResolver scopeNameResolver;
+    private final ScopeNameResolver storeNameResolver;
 
     private final Map<IRInstruction, String> instructionNames = new HashMap<>();
 
     public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot,
                                  ScopeNameResolver scopeNameResolver) {
+        this(method, baseNameForSlot, scopeNameResolver, null);
+    }
+
+    /**
+     * As the three-argument form, with a dedicated resolver for STORE offsets: a store's variable
+     * becomes visible at the next instruction, so its name lives one instruction past the store.
+     */
+    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot,
+                                 ScopeNameResolver scopeNameResolver, ScopeNameResolver storeNameResolver) {
         this.method = method;
         this.baseNameForSlot = baseNameForSlot;
         this.scopeNameResolver = scopeNameResolver;
+        this.storeNameResolver = storeNameResolver;
         compute();
     }
 
@@ -422,12 +433,17 @@ public class SlotVariablePartition {
         // Collect the bytecode offsets of each component's real instructions. Loads sit inside the
         // variable's LocalVariableTable scope, so they identify the right name when a slot is reused.
         Map<Integer, List<Integer>> rootOffsets = new HashMap<>();
+        Set<Integer> storeOffsets = new HashSet<>();
         for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
             addOffset(rootOffsets, find(e.getValue().id), e.getKey().getBytecodeOffset());
+            if (e.getKey().getBytecodeOffset() >= 0) {
+                storeOffsets.add(e.getKey().getBytecodeOffset());
+            }
         }
         for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet()) {
             addOffset(rootOffsets, find(e.getValue()), e.getKey().getBytecodeOffset());
         }
+        this.componentStoreOffsets = storeOffsets;
 
         // One name per component: the LVT name covering its offsets when available, else the slot-based
         // fallback (which keeps each split uniquely named when there is no debug info).
@@ -648,6 +664,9 @@ public class SlotVariablePartition {
         }
     }
 
+    /** Store offsets across all components, so scopeName probes a store at the pc where it takes effect. */
+    private Set<Integer> componentStoreOffsets = new HashSet<>();
+
     /** The LVT name covering the most of a component's instruction offsets, or null if none resolve. */
     private String scopeName(int slot, List<Integer> offsets) {
         if (scopeNameResolver == null || offsets == null || offsets.isEmpty()) {
@@ -655,15 +674,11 @@ public class SlotVariablePartition {
         }
         Map<String, Integer> votes = new HashMap<>();
         for (int off : offsets) {
-            // Exact scope first; if a store sits one or two bytes before its variable's scope start
-            // (the slot becomes live only after the store completes), probe just past it.
-            String n = scopeNameResolver.nameAt(slot, off);
-            if (n == null) {
-                n = scopeNameResolver.nameAt(slot, off + 1);
-            }
-            if (n == null) {
-                n = scopeNameResolver.nameAt(slot, off + 2);
-            }
+            // A load sits inside its variable's scope; a store sits just BEFORE it (the slot becomes
+            // live at the next instruction), so the store resolver probes the exact following pc.
+            String n = componentStoreOffsets.contains(off) && storeNameResolver != null
+                    ? storeNameResolver.nameAt(slot, off)
+                    : scopeNameResolver.nameAt(slot, off);
             if (n != null) {
                 votes.merge(n, 1, Integer::sum);
             }
