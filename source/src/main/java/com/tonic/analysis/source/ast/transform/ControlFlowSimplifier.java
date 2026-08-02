@@ -86,6 +86,8 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= collapseGuardWithSharedEarlyExit(stmts);
 
+        changed |= mergeGuardChainIntoSharedExit(stmts);
+
         for (int i = 0; i < stmts.size(); i++) {
             Statement stmt = stmts.get(i);
 
@@ -2465,13 +2467,62 @@ public class ControlFlowSimplifier implements ASTTransform {
     }
 
     /**
-     * Collapses a positive guard whose outer-else and inner guard reach the SAME early exit into one OR guard:
-     * <pre>if (cond) { if (inner) E; rest } E   =&gt;   if (!cond || inner) E; rest</pre>
-     * javac compiles {@code if (!cond || inner) E; rest} (e.g. {@code if (session == null || expired()) return
-     * null;}) as short-circuit branches that the recovery renders as the expanded nested form, while YABR's own
-     * recompiled shape recovers the OR directly - so d1 and d2 diverge. Rebuilding the OR here makes the first
-     * decompile a fixed point. Requires the two early exits to be identical so control flow is preserved exactly.
+     * The sibling form of {@link #collapseGuardWithSharedEarlyExit}: an exit guard, then a guarded
+     * TERMINAL body, then the same exit as the trailing fall-through -
+     * {@code if (A) exit; if (C) { body...exit } exit;} - is one disjoined guard over the shared
+     * exit: {@code if (A || !C) exit; body}. This is the shape a shared exit tail recovers as when
+     * the bytecode keeps ONE copy of the exit (javac's short-circuit layout), while a layout with
+     * per-test copies recovers as the disjunction directly - folding here makes both layouts agree.
+     * Evaluation order is unchanged: A first, C only when A failed.
      */
+    private boolean mergeGuardChainIntoSharedExit(List<Statement> stmts) {
+        boolean changed = false;
+        boolean again = true;
+        while (again) {
+            again = false;
+            for (int i = 0; i + 2 < stmts.size(); i++) {
+                if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof IfStmt)) {
+                    continue;
+                }
+                IfStmt exitGuard = (IfStmt) stmts.get(i);
+                IfStmt bodyGuard = (IfStmt) stmts.get(i + 1);
+                if (exitGuard.hasElse() || bodyGuard.hasElse()) {
+                    continue;
+                }
+                Statement exit = unwrapSingleStatement(exitGuard.getThenBranch());
+                // Returns only: two textually-equal `throw new AssertionError()` exits are separate
+                // assert diamonds, and folding across them restructures assert chains differently
+                // per bytecode layout instead of converging them.
+                if (!(exit instanceof ReturnStmt)) {
+                    continue;
+                }
+                Statement tail = stmts.get(i + 2);
+                if (i + 2 != stmts.size() - 1 || !earlyExitsEqual(exit, tail)) {
+                    continue;
+                }
+                if (!isTerminal(bodyGuard.getThenBranch())) {
+                    continue;
+                }
+                Expression merged = new BinaryExpr(BinaryOperator.OR,
+                        exitGuard.getCondition(), negate(bodyGuard.getCondition()),
+                        PrimitiveSourceType.BOOLEAN);
+                IfStmt newIf = new IfStmt(merged, exitGuard.getThenBranch());
+                Locations.copy(exitGuard, newIf);
+                stmts.set(i, newIf);
+                stmts.remove(i + 2);
+                stmts.remove(i + 1);
+                List<Statement> body = getStatements(bodyGuard.getThenBranch());
+                for (int k = 0; k < body.size(); k++) {
+                    stmts.add(i + 1 + k, body.get(k));
+                }
+                changed = true;
+                again = true;
+                break;
+            }
+        }
+        return changed;
+    }
+
     private boolean collapseGuardWithSharedEarlyExit(List<Statement> stmts) {
         boolean changed = false;
         for (int i = 0; i + 1 < stmts.size(); i++) {

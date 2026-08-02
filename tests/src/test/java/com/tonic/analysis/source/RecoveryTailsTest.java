@@ -120,6 +120,39 @@ class RecoveryTailsTest {
                 "the round-tripped class must behave the same");
     }
 
+    @Test
+    void aSharedExitGuardChainFoldsToOneDisjunction() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("EqGuard",
+                "public class EqGuard {",
+                "    int kind;",
+                "    public boolean same(Object obj) {",
+                "        if (obj == null || getClass() != obj.getClass()) {",
+                "            return false;",
+                "        }",
+                "        return this.kind == ((EqGuard) obj).kind;",
+                "    }",
+                "    public static String check() {",
+                "        EqGuard a = new EqGuard();",
+                "        EqGuard b = new EqGuard();",
+                "        b.kind = 1;",
+                "        return a.same(a) + \"|\" + a.same(b) + \"|\" + a.same(null) + \"|\" + a.same(\"x\");",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("EqGuard");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals("true|false|false|false", original, "the fixture itself must compare all four ways");
+
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(d1.contains("obj == null || getClass() != obj.getClass()"),
+                "the shared-exit guard chain folds back to the source's single disjunction: " + d1);
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "EqGuard"), "d1 recompiles");
+        assertEquals(d1, ClassDecompiler.decompile(cf), "the folded form is a fixed point");
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
     private static Map<String, ClassFile> compileAll(String primary, String... lines) throws Exception {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
