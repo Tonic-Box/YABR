@@ -238,6 +238,16 @@ public class LoweringContext {
         irMethod.addSourceLocal(local);
     }
 
+    /**
+     * The DECLARED type of a live source local, or null when {@code name} was never declared. This is
+     * the variable's static type in the Java sense - the authority for member resolution regardless of
+     * what the last assignment's flow type narrowed or widened to.
+     */
+    public IRType declaredTypeOf(String name) {
+        IRMethod.SourceLocal local = currentSourceLocal.get(name);
+        return local != null ? local.getType() : null;
+    }
+
     /** Appends an SSA value to the current source-local record for {@code name}, if one was declared. */
     private void recordValue(String name, SSAValue value) {
         IRMethod.SourceLocal local = currentSourceLocal.get(name);

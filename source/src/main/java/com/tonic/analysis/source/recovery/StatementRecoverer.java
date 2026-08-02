@@ -10566,6 +10566,102 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return inits;
     }
 
+    /**
+     * Whether a phi edge copy of {@code incoming} into a variable of type {@code target} is type-
+     * coherent: primitives only into primitives, and references only when one side is assignable to
+     * the other (either direction - the unified type may be narrower than the incoming's static
+     * type). Unresolvable classes are assumed compatible.
+     */
+    private boolean copyTypeCompatible(SourceType target, Value incoming) {
+        SourceType in = typeRecoverer.recoverType(incoming);
+        if (target == null || in == null) {
+            return true;
+        }
+        boolean targetPrim = target instanceof PrimitiveSourceType;
+        boolean inPrim = in instanceof PrimitiveSourceType;
+        if (targetPrim != inPrim) {
+            return false;
+        }
+        if (targetPrim) {
+            return true;
+        }
+        if (!(target instanceof ReferenceSourceType) || !(in instanceof ReferenceSourceType)) {
+            return true;
+        }
+        String a = ((ReferenceSourceType) target).getInternalName();
+        String b = ((ReferenceSourceType) in).getInternalName();
+        if (a.equals(b) || "java/lang/Object".equals(a) || "java/lang/Object".equals(b)) {
+            return true;
+        }
+        return reachesInHierarchy(a, b) || reachesInHierarchy(b, a);
+    }
+
+    /** The last name segment, splitting on every separator a nested reference can be spelled with. */
+    private static String nestedSimpleName(String internal) {
+        int cut = Math.max(internal.lastIndexOf('/'),
+                Math.max(internal.lastIndexOf('$'), internal.lastIndexOf('.')));
+        return cut < 0 ? internal : internal.substring(cut + 1);
+    }
+
+    /**
+     * Pool lookup tolerant of the source-dotted spelling of a nested class: tries the slashed name,
+     * then successively rewrites separators to {@code $} from the right ({@code a/b/Outer/Inner} ->
+     * {@code a/b/Outer$Inner}).
+     */
+    private com.tonic.parser.ClassFile poolClassFor(String name) {
+        if (enumClassPool == null) {
+            return null;
+        }
+        String n = name.replace('.', '/');
+        com.tonic.parser.ClassFile cf = enumClassPool.get(n);
+        char[] chars = n.toCharArray();
+        for (int i = chars.length - 1; cf == null && i >= 0; i--) {
+            if (chars[i] == '/') {
+                chars[i] = '$';
+                cf = enumClassPool.get(new String(chars));
+            }
+        }
+        return cf;
+    }
+
+    /** Whether {@code sub} reaches {@code sup} walking supers and interfaces; unresolvable => true. */
+    private boolean reachesInHierarchy(String sub, String sup) {
+        java.util.ArrayDeque<String> work = new java.util.ArrayDeque<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        work.add(sub);
+        while (!work.isEmpty()) {
+            String cur = work.poll();
+            if (cur == null || !seen.add(cur)) {
+                continue;
+            }
+            if (cur.equals(sup) || nestedSimpleName(cur).equals(nestedSimpleName(sup))) {
+                return true;
+            }
+            com.tonic.parser.ClassFile cf = poolClassFor(cur);
+            if (cf != null) {
+                if (cf.getSuperClassName() != null) {
+                    work.add(cf.getSuperClassName());
+                }
+                for (int idx : cf.getInterfaces()) {
+                    work.add(cf.resolveClassName(idx));
+                }
+                continue;
+            }
+            try {
+                Class<?> c = Class.forName(cur.replace('/', '.'), false, getClass().getClassLoader());
+                if (c.getSuperclass() != null) {
+                    work.add(c.getSuperclass().getName().replace('.', '/'));
+                }
+                for (Class<?> i : c.getInterfaces()) {
+                    work.add(i.getName().replace('.', '/'));
+                }
+            } catch (Throwable unresolvable) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ, boolean inductionOnly) {
         List<Statement> copies = new ArrayList<>();
         List<Integer> copySlots = new ArrayList<>();
@@ -10612,6 +10708,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             SourceType type = getLocalSlotUnifiedType(target);
             if (type == null) {
                 type = typeRecoverer.recoverType(result);
+            }
+            // A copy whose incoming TYPE is unrelated to the target variable's (a float or an
+            // Iterator into a Vertex) is the same reused-slot fiction the dominance filter catches
+            // for cross-branch reads - no verified program produces it. Rendering it both emits a
+            // nonsense assignment and poisons the variable's type at every later use.
+            if (!copyTypeCompatible(type, incoming)) {
+                continue;
             }
             Expression rhs = exprRecoverer.recoverOperand(incoming, type);
             if (rhs instanceof VarRefExpr && target.equals(((VarRefExpr) rhs).getName())) {

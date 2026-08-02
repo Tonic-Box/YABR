@@ -1406,9 +1406,18 @@ public class ExpressionLowerer {
         Value receiverVal = null;
         if (!isStatic) {
             receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            String fromValue = receiverOwner(receiverVal);
-            if (fromValue != null) {
-                ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+            // A named local's DECLARED type is its static type in the Java sense and the authority
+            // for member resolution; the value's flow type only refines an undeclared receiver
+            // (Java resolves `pv0.f` against pv0's declaration even right after `pv0 = narrower`).
+            String declaredOwner = receiver instanceof VarRefExpr
+                    ? declaredReferenceOwner(((VarRefExpr) receiver).getName()) : null;
+            if (declaredOwner != null) {
+                ownerClass = declaredOwner;
+            } else {
+                String fromValue = receiverOwner(receiverVal);
+                if (fromValue != null) {
+                    ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+                }
             }
         }
 
@@ -1440,6 +1449,18 @@ public class ExpressionLowerer {
         // ANY field of that name disqualifies class-ness - an ARRAY-typed field (`axisNames.length`)
         // is as much a value receiver as a reference-typed one.
         return ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName()) == null;
+    }
+
+    /** The declared type of a live named local as an internal owner name, or null. */
+    private String declaredReferenceOwner(String name) {
+        IRType declared = ctx.declaredTypeOf(name);
+        if (declared instanceof ReferenceType) {
+            String n = ((ReferenceType) declared).getInternalName();
+            if (n != null && !n.isEmpty() && !n.equals("java/lang/Object")) {
+                return n;
+            }
+        }
+        return null;
     }
 
     /** The receiver value's reference type as an internal owner name, or null when it is not a usable named reference. */
@@ -1578,9 +1599,18 @@ public class ExpressionLowerer {
         Value receiverVal = null;
         if (!isStatic) {
             receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            String fromValue = receiverOwner(receiverVal);
-            if (fromValue != null) {
-                ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+            // A named local's DECLARED type is its static type in the Java sense and the authority
+            // for member resolution; the value's flow type only refines an undeclared receiver
+            // (Java resolves `pv0.f` against pv0's declaration even right after `pv0 = narrower`).
+            String declaredOwner = receiver instanceof VarRefExpr
+                    ? declaredReferenceOwner(((VarRefExpr) receiver).getName()) : null;
+            if (declaredOwner != null) {
+                ownerClass = declaredOwner;
+            } else {
+                String fromValue = receiverOwner(receiverVal);
+                if (fromValue != null) {
+                    ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+                }
             }
         }
 

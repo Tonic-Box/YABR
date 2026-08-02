@@ -33,11 +33,15 @@ public class SingleUseInliner implements ASTTransform {
         return "SingleUseInliner";
     }
 
+    /** The method root, for method-wide SSA-identity reference counts; see the inline guard. */
+    private BlockStmt rootBlock;
+
     @Override
     public boolean transform(BlockStmt block) {
         boolean changed = false;
         boolean madeProgress;
 
+        rootBlock = block;
         do {
             madeProgress = inlineSingleUseVars(block.getStatements(), Collections.emptySet());
             if (madeProgress) {
@@ -46,6 +50,42 @@ public class SingleUseInliner implements ASTTransform {
         } while (madeProgress);
 
         return changed;
+    }
+
+    /**
+     * Counts references anywhere in the method to the exact SSA value {@code ssa}. The per-list use
+     * scan sees only the declaration's own statement list; a recovered capture can be referenced
+     * from a guard in a DIFFERENT subtree under the same name and the same underlying value -
+     * deleting the declaration would orphan those. SSA identity distinguishes that hazard from
+     * ordinary same-named shadow ranges, which are different values.
+     */
+    private int countSsaRefs(com.tonic.analysis.ssa.value.SSAValue ssa) {
+        int[] n = {0};
+        rootBlock.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitVarRef(VarRefExpr expr) {
+                if (expr.getSsaValue() == ssa) {
+                    n[0]++;
+                }
+                return null;
+            }
+        });
+        return n[0];
+    }
+
+    /** The SSA value of the first {@code varName} reference inside {@code stmt}, or null. */
+    private com.tonic.analysis.ssa.value.SSAValue refSsaIn(Statement stmt, String varName) {
+        com.tonic.analysis.ssa.value.SSAValue[] found = {null};
+        stmt.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitVarRef(VarRefExpr expr) {
+                if (found[0] == null && varName.equals(expr.getName()) && expr.getSsaValue() != null) {
+                    found[0] = expr.getSsaValue();
+                }
+                return null;
+            }
+        });
+        return found[0];
     }
 
     /**
@@ -82,6 +122,11 @@ public class SingleUseInliner implements ASTTransform {
 
                 if (usage.count == 1 && usage.canInline && usage.usageStmtIndex > i
                         && !escapeRefs.contains(varName)) {
+                    com.tonic.analysis.ssa.value.SSAValue useSsa =
+                            refSsaIn(stmts.get(usage.usageStmtIndex), varName);
+                    if (useSsa != null && countSsaRefs(useSsa) > usage.count) {
+                        continue;
+                    }
                     if (tryInline(stmts, i, usage.usageStmtIndex, varName, init)) {
                         changed = true;
                         i--;

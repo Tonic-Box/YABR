@@ -130,7 +130,12 @@ public class StatementLowerer {
         SourceType type = decl.getType();
         String name = decl.getName();
         Expression init = decl.getInitializer();
-        ctx.declareLocal(name, type.toIRType(), false);
+        // Declare under the RESOLVED type: the source spells a simple name ("Node"), and the raw
+        // toIRType would record it unqualified - any later resolution against the record would then
+        // re-qualify it blind (matching an unrelated same-simple-name class).
+        ctx.declareLocal(name,
+                com.tonic.analysis.ssa.type.IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(type)),
+                false);
 
         if (init != null) {
             ctx.pushExpectedType(type);
