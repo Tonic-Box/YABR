@@ -812,7 +812,10 @@ public class ExpressionLowerer {
         Value operand = lower(unary.getOperand());
 
         if (op == UnaryOperator.NEG) {
-            IRType resultType = unary.getType().toIRType();
+            // xneg preserves its operand's type; the AST type is a parse-time guess that can claim
+            // the ENCLOSING cast's target and swallow the conversion (`(double) -floatField`).
+            IRType resultType = operand.getType() instanceof PrimitiveType
+                    ? operand.getType() : unary.getType().toIRType();
             SSAValue result = ctx.newValue(resultType);
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.NEG, operand);
             ctx.getCurrentBlock().addInstruction(instr);
@@ -2209,17 +2212,25 @@ public class ExpressionLowerer {
         // the actual types, which are the impl descriptor's trailing SAM parameters and its return.
         // Passing the erased SAM type again fails the link when the impl narrowed a parameter
         // ("Object is not convertible to String").
-        StringBuilder instantiated = new StringBuilder("(");
+        String instantiated;
         List<SourceType> implArgs = ctx.getTypeResolver().paramTypesFromDescriptor(syntheticDescriptor);
-        for (int i = implArgs.size() - lambdaParams.size(); i < implArgs.size(); i++) {
-            instantiated.append(ctx.getTypeResolver().descriptorOf(implArgs.get(i)));
+        if (implArgs.size() >= lambdaParams.size()) {
+            StringBuilder inst = new StringBuilder("(");
+            for (int i = implArgs.size() - lambdaParams.size(); i < implArgs.size(); i++) {
+                inst.append(ctx.getTypeResolver().descriptorOf(implArgs.get(i)));
+            }
+            inst.append(syntheticDescriptor.substring(syntheticDescriptor.indexOf(')')));
+            instantiated = inst.toString();
+        } else {
+            // An impl whose receiver carries the first SAM parameter has fewer descriptor args than
+            // the lambda has parameters; the erased SAM type is the best remaining answer.
+            instantiated = samDescriptor;
         }
-        instantiated.append(syntheticDescriptor.substring(syntheticDescriptor.indexOf(')')));
 
         List<Constant> bsArgs = new ArrayList<>();
         bsArgs.add(new MethodTypeConstant(samDescriptor));
         bsArgs.add(implHandle);
-        bsArgs.add(new MethodTypeConstant(instantiated.toString()));
+        bsArgs.add(new MethodTypeConstant(instantiated));
 
         BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
 

@@ -103,6 +103,27 @@ class LoweringTailsTest {
     }
 
     @Test
+    void aNegatedFloatKeepsItsCastToDouble() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("Energy",
+                "public class Energy {",
+                "    float mass = 2.5f;",
+                "    double total(double g) { return (double) -this.mass * g + 1.0; }",
+                "    public static double check() { return new Energy().total(4.0); }",
+                "}");
+        ClassFile cf = loaded.get("Energy");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals(-9.0, original, "the fixture itself must negate then widen");
+
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Energy"),
+                "the f2d must survive the negation:\n" + d1);
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
+    @Test
     void aFieldStoredLambdaTakesTheFieldsInterface() throws Exception {
         Map<String, ClassFile> loaded = compileAll("Gate",
                 "import java.util.function.Predicate;",
@@ -129,6 +150,48 @@ class LoweringTailsTest {
                 "the lambda's interface must come from the field's declared type:\n" + d1);
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
                 "the round-tripped class must behave the same");
+    }
+
+    @Test
+    void aFieldOnAnAbsentClassResolvesFromTheOriginalPool() throws Exception {
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        assumeTrue(compiler != null, "no JDK compiler available");
+        Path dir = Files.createTempDirectory("absentfield");
+        Files.writeString(dir.resolve("Binder.java"), String.join(System.lineSeparator(),
+                "public class Binder {",
+                "    public static String NAME = \"bound\";",
+                "}"));
+        Files.writeString(dir.resolve("UseBinder.java"), String.join(System.lineSeparator(),
+                "public class UseBinder {",
+                "    public static int check() {",
+                "        return Binder.NAME.length();",
+                "    }",
+                "}"));
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(),
+                dir.resolve("Binder.java").toString(), dir.resolve("UseBinder.java").toString()) == 0,
+                "fixture compiled");
+
+        // The pool deliberately holds ONLY the user class: Binder is absent everywhere, so the
+        // field's type is knowable only from UseBinder's own constant pool.
+        ClassPool pool = new ClassPool();
+        ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("UseBinder.class")));
+        byte[] binderBytes = Files.readAllBytes(dir.resolve("Binder.class"));
+
+        Object original = invokeWith(cf.write(), "UseBinder", binderBytes, "Binder");
+        assertEquals(5, original, "the fixture itself must read the absent class's field");
+
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "UseBinder"),
+                "the original FieldRef descriptor must carry the type:\n" + d1);
+        assertEquals(original, invokeWith(cf.write(), "UseBinder", binderBytes, "Binder"),
+                "the round-tripped class must behave the same");
+    }
+
+    private static Object invokeWith(byte[] userBytes, String userName, byte[] depBytes, String depName)
+            throws Exception {
+        com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();
+        loader.defineClass(depName, depBytes);
+        return loader.defineClass(userName, userBytes).getMethod("check").invoke(null);
     }
 
     private static Map<String, ClassFile> compileAll(String primary, String... lines) throws Exception {

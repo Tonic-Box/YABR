@@ -853,7 +853,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(outerHandler) : null;
             Statement region;
             if (syncLock != null) {
-                SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
+                SynchronizedStmt sync = new SynchronizedStmt(recoverLockExpr(syncLock), tryBlock);
                 stampFromBody(sync, tryBlock);
                 region = sync;
             } else {
@@ -1370,9 +1370,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * Searches backwards from a try region's start for the {@code monitorenter} that opens it, returning its
-     * lock operand (the innermost enter reached first). Null if none precedes the region.
+     * Recovers a {@code synchronized} lock expression. The lock's slot store is scaffolding the sync
+     * recovery consumes, so a lock materialized under that slot's name would reference a variable that
+     * is never emitted - recover through the materialization to the defining expression instead.
      */
+    private Expression recoverLockExpr(Value syncLock) {
+        Expression expr = exprRecoverer.recoverOperand(syncLock);
+        if (expr instanceof VarRefExpr && syncLock instanceof SSAValue) {
+            SSAValue ssa = (SSAValue) syncLock;
+            String name = ((VarRefExpr) expr).getName();
+            if (ssa.getDefinition() != null
+                    && !context.getExpressionContext().isDeclared(name)
+                    && !isParameterOrThisRef(ssa)) {
+                Expression direct = exprRecoverer.recover(ssa.getDefinition());
+                if (direct != null) {
+                    return direct;
+                }
+            }
+        }
+        return expr;
+    }
+
     private Value findMonitorEnterLock(IRBlock tryStart) {
         if (tryStart == null) {
             return null;
@@ -3545,7 +3563,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(mainHandler) : null;
         if (syncLock != null) {
-            SynchronizedStmt sync = new SynchronizedStmt(exprRecoverer.recoverOperand(syncLock), tryBlock);
+            SynchronizedStmt sync = new SynchronizedStmt(recoverLockExpr(syncLock), tryBlock);
             stampFromBody(sync, tryBlock);
             return sync;
         }
@@ -10550,6 +10568,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
     private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ, boolean inductionOnly) {
         List<Statement> copies = new ArrayList<>();
+        List<Integer> copySlots = new ArrayList<>();
+        boolean allLiteral = true;
         for (PhiInstruction phi : succ.getPhiInstructions()) {
             SSAValue result = phi.getResult();
             if (result == null) {
@@ -10595,10 +10615,38 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             Expression rhs = exprRecoverer.recoverOperand(incoming, type);
             if (rhs instanceof VarRefExpr && target.equals(((VarRefExpr) rhs).getName())) {
-                continue;
+                // A for-induction phi's incoming is materialized UNDER THIS PHI'S OWN NAME because the
+                // for-init pre-pass SKIPPED its store - recoverOperand then echoes the variable being
+                // assigned while the real entry value was never emitted anywhere. Recover the constant
+                // behind it directly. Any other phi's echo is a genuine identity copy (its init store
+                // was emitted normally) and stays skipped.
+                Expression direct = isForLoopInductionPhi(phi)
+                        && !context.getExpressionContext().isDeclared(target)
+                        ? recoverEntryConstant(incoming, type) : null;
+                if (direct == null) {
+                    continue;
+                }
+                rhs = direct;
             }
+            allLiteral &= rhs instanceof LiteralExpr;
+            copySlots.add(getLocalIndexFromPhi(phi));
             copies.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
                 new VarRefExpr(target, type), rhs, type)));
+        }
+        // Copies on one edge are PARALLEL in SSA semantics; their emission order is an artifact of
+        // phi order, which differs between the javac and relowered layouts. When every rhs is a
+        // literal (no copy can read another's target), order them by slot so both layouts agree.
+        if (allLiteral && copies.size() > 1) {
+            List<Statement> ordered = new ArrayList<>(copies);
+            List<Integer> idx = new ArrayList<>();
+            for (int i = 0; i < copies.size(); i++) {
+                idx.add(i);
+            }
+            idx.sort(java.util.Comparator.comparingInt(copySlots::get));
+            for (int i = 0; i < idx.size(); i++) {
+                ordered.set(i, copies.get(idx.get(i)));
+            }
+            return ordered;
         }
         return copies;
     }
@@ -11609,7 +11657,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (definedInArm && wasMaterialized) {
                 context.getExpressionContext().unmarkMaterialized(ssa);
             }
+            // An arm-produced value's statements are discarded by the collapse, so any name the
+            // normal path would reference (a materialization temp, or the bare vN fallback for an
+            // allocation recoverOperand declines to inline) no longer exists. Derive the expression
+            // from the definition itself; fall back to the operand path only when that yields nothing.
             Expression expr = exprRecoverer.recoverOperand(value);
+            if (definedInArm && expr instanceof VarRefExpr
+                    && !context.getExpressionContext().isMaterialized(ssa)) {
+                Expression direct = exprRecoverer.recover(ssa.getDefinition());
+                if (direct != null) {
+                    expr = direct;
+                    context.getExpressionContext().cacheExpression(ssa, direct);
+                }
+            }
             if (definedInArm && wasMaterialized) {
                 context.getExpressionContext().markMaterialized(ssa);
             }

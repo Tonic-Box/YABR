@@ -68,6 +68,14 @@ public class DeadStoreEliminator implements ASTTransform {
                         BinaryExpr assign = (BinaryExpr) assignStmt.getExpression();
                         Expression newValue = assign.getRight();
 
+                        // The merge MOVES newValue's evaluation above the intervening statements. It
+                        // is unsound if any of them declares or writes a name newValue reads (the
+                        // read would see the wrong value - or no declaration at all), or can touch
+                        // heap state newValue depends on.
+                        if (!safeToHoistOver(stmts, i + 1, reassignIndex, newValue)) {
+                            continue;
+                        }
+
                         VarDeclStmt newDecl = new VarDeclStmt(
                             decl.getType(),
                             varName,
@@ -166,11 +174,93 @@ public class DeadStoreEliminator implements ASTTransform {
     }
 
     /**
-     * Finds an immediate reassignment to the given variable.
-     * Returns the index of the assignment statement, or -1 if not found.
-     *
-     * "Immediate" means no intervening reads of the variable.
+     * Whether {@code newValue} may be evaluated before statements {@code [from, to)}: none of them
+     * declares or assigns a variable {@code newValue} references, and - when {@code newValue} reads
+     * through the heap (a field, array element, or call) - none of them has side effects.
      */
+    private boolean safeToHoistOver(List<Statement> stmts, int from, int to, Expression newValue) {
+        java.util.Set<String> reads = new java.util.HashSet<>();
+        collectVarReads(newValue, reads);
+        boolean readsHeap = readsHeap(newValue);
+        for (int j = from; j < to; j++) {
+            Statement s = stmts.get(j);
+            if (s instanceof VarDeclStmt && reads.contains(((VarDeclStmt) s).getName())) {
+                return false;
+            }
+            if (writesAnyOf(s, reads)) {
+                return false;
+            }
+            if (readsHeap && stmtHasSideEffects(s)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void collectVarReads(Expression expr, java.util.Set<String> out) {
+        if (expr == null) {
+            return;
+        }
+        if (expr instanceof VarRefExpr) {
+            out.add(((VarRefExpr) expr).getName());
+        }
+        for (com.tonic.analysis.source.ast.ASTNode child : expr.getChildren()) {
+            if (child instanceof Expression) {
+                collectVarReads((Expression) child, out);
+            }
+        }
+    }
+
+    private boolean readsHeap(Expression expr) {
+        if (expr == null) {
+            return false;
+        }
+        if (expr instanceof FieldAccessExpr || expr instanceof ArrayAccessExpr
+                || expr instanceof MethodCallExpr || expr instanceof NewExpr) {
+            return true;
+        }
+        for (com.tonic.analysis.source.ast.ASTNode child : expr.getChildren()) {
+            if (child instanceof Expression && readsHeap((Expression) child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean writesAnyOf(Statement s, java.util.Set<String> names) {
+        if (s instanceof VarDeclStmt) {
+            return false;
+        }
+        if (!(s instanceof ExprStmt)) {
+            return false;
+        }
+        Expression e = ((ExprStmt) s).getExpression();
+        if (e instanceof BinaryExpr && ((BinaryExpr) e).getOperator().isAssignment()
+                && ((BinaryExpr) e).getLeft() instanceof VarRefExpr) {
+            return names.contains(((VarRefExpr) ((BinaryExpr) e).getLeft()).getName());
+        }
+        if (e instanceof UnaryExpr) {
+            UnaryOperator op = ((UnaryExpr) e).getOperator();
+            if ((op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
+                    || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC)
+                    && ((UnaryExpr) e).getOperand() instanceof VarRefExpr) {
+                return names.contains(((VarRefExpr) ((UnaryExpr) e).getOperand()).getName());
+            }
+        }
+        return false;
+    }
+
+    private boolean stmtHasSideEffects(Statement s) {
+        if (s instanceof VarDeclStmt) {
+            Expression init = ((VarDeclStmt) s).getInitializer();
+            return init != null && hasSideEffects(init);
+        }
+        if (s instanceof ExprStmt) {
+            return hasSideEffects(((ExprStmt) s).getExpression());
+        }
+        return true;
+    }
+
     private int findImmediateReassignment(List<Statement> stmts, int startIndex, String varName) {
         for (int i = startIndex; i < stmts.size(); i++) {
             Statement stmt = stmts.get(i);

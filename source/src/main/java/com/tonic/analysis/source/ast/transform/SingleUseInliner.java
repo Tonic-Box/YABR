@@ -373,7 +373,11 @@ public class SingleUseInliner implements ASTTransform {
             InstanceOfExpr instOf = (InstanceOfExpr) expr;
             Expression newExpr = replaceInExpression(instOf.getExpression(), replacer);
             if (newExpr != instOf.getExpression()) {
-                return new InstanceOfExpr(newExpr, instOf.getCheckType());
+                InstanceOfExpr rebuilt = new InstanceOfExpr(newExpr, instOf.getCheckType());
+                if (instOf.hasPatternVariable()) {
+                    rebuilt.withPatternVariable(instOf.getPatternVariable());
+                }
+                return rebuilt;
             }
             return expr;
         } else if (expr instanceof TernaryExpr) {

@@ -93,7 +93,8 @@ public class TypeResolver {
         ownerClass = normalizeNestedName(resolveClassName(ownerClass));
         ClassFile cf = classPool.get(ownerClass);
         if (cf == null) {
-            return reflectFieldType(ownerClass, fieldName);
+            SourceType reflected = reflectFieldType(ownerClass, fieldName);
+            return reflected != null ? reflected : fieldTypeFromOriginalPool(ownerClass, fieldName);
         }
 
         for (FieldEntry field : cf.getFields()) {
@@ -118,7 +119,30 @@ public class TypeResolver {
             }
         }
 
-        return reflectFieldType(ownerClass, fieldName);
+        SourceType reflected = reflectFieldType(ownerClass, fieldName);
+        return reflected != null ? reflected : fieldTypeFromOriginalPool(ownerClass, fieldName);
+    }
+
+    /**
+     * Last resort for a field on a class absent from both the pool and the running JVM (e.g. a binding
+     * class the original code was compiled against a stub of): the CURRENT class's own constant pool
+     * still carries the original FieldRef with its descriptor, which the original compilation proved.
+     */
+    private SourceType fieldTypeFromOriginalPool(String ownerClass, String fieldName) {
+        ClassFile current = classPool.get(currentClass);
+        if (current == null || ownerClass == null) {
+            return null;
+        }
+        for (com.tonic.parser.constpool.Item<?> item : current.getConstPool().getItems()) {
+            if (!(item instanceof com.tonic.parser.constpool.FieldRefItem)) {
+                continue;
+            }
+            com.tonic.parser.constpool.FieldRefItem ref = (com.tonic.parser.constpool.FieldRefItem) item;
+            if (ownerClass.replace('/', '.').equals(ref.getClassName()) && fieldName.equals(ref.getName())) {
+                return parseDescriptor(ref.getDescriptor());
+            }
+        }
+        return null;
     }
 
     /**
