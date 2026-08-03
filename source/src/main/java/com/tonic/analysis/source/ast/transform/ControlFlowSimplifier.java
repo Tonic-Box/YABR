@@ -84,6 +84,8 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= unguardComplementOfExitedGuard(stmts);
 
+        changed |= foldTrySpilledReturn(stmts);
+
         changed |= flattenNestedNegatedGuards(stmts);
 
         changed |= collapseGuardWithSharedEarlyExit(stmts);
@@ -1267,6 +1269,65 @@ public class ControlFlowSimplifier implements ASTTransform {
             List<Statement> body = getStatements(second.getThenBranch());
             stmts.remove(j);
             stmts.addAll(j, body);
+            changed = true;
+        }
+        return changed;
+    }
+
+    /**
+     * Folds the layout spill of an in-try return back into the try: {@code T x = null; try { ...;
+     * x = expr; } catch (E e) { <terminal> } return x;} becomes {@code try { ...; return expr; }
+     * catch (E e) { <terminal> }}. javac parks the returned value in a slot so the return
+     * instruction sits OUTSIDE the protected range; recovering that literally invents a temp the
+     * source never had. Sound only when every catch is terminal (nothing can fall through to read
+     * the declaration's null) and the temp has no other reader.
+     */
+    private boolean foldTrySpilledReturn(List<Statement> stmts) {
+        if (methodRoot == null || stmts.size() < 2) {
+            return false;
+        }
+        boolean changed = false;
+        for (int i = 0; i + 1 < stmts.size(); i++) {
+            if (!(stmts.get(i) instanceof TryCatchStmt)
+                    || !(stmts.get(i + 1) instanceof ReturnStmt)
+                    || i + 2 != stmts.size()) {
+                continue;
+            }
+            TryCatchStmt tryCatch = (TryCatchStmt) stmts.get(i);
+            ReturnStmt ret = (ReturnStmt) stmts.get(i + 1);
+            if (tryCatch.hasFinally() || !tryCatch.getResources().isEmpty()
+                    || !(tryCatch.getTryBlock() instanceof BlockStmt)
+                    || !(ret.getValue() instanceof VarRefExpr)) {
+                continue;
+            }
+            String name = ((VarRefExpr) ret.getValue()).getName();
+            boolean catchesTerminal = true;
+            for (CatchClause clause : tryCatch.getCatches()) {
+                if (!isTerminal(clause.body())) {
+                    catchesTerminal = false;
+                    break;
+                }
+            }
+            if (!catchesTerminal) {
+                continue;
+            }
+            List<Statement> tryStmts = ((BlockStmt) tryCatch.getTryBlock()).getStatements();
+            if (tryStmts.isEmpty()) {
+                continue;
+            }
+            Statement last = tryStmts.get(tryStmts.size() - 1);
+            if (!(last instanceof VarDeclStmt)
+                    || !((VarDeclStmt) last).getName().equals(name)
+                    || ((VarDeclStmt) last).getInitializer() == null) {
+                continue;
+            }
+            if (countUsesInTree(methodRoot, name) != 1) {
+                continue;
+            }
+            ReturnStmt folded = new ReturnStmt(((VarDeclStmt) last).getInitializer());
+            Locations.copy(last, folded);
+            tryStmts.set(tryStmts.size() - 1, folded);
+            stmts.remove(i + 1);
             changed = true;
         }
         return changed;

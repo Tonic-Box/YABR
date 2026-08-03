@@ -557,6 +557,51 @@ class RecoveryTailsTest {
                 "the round-tripped class must behave the same");
     }
 
+    @Test
+    void aTrySpilledReturnFoldsBackIntoTheTry() {
+        // The modern-javac layout parks a returned value in a slot so the return sits outside the
+        // protected range; recovery then renders `try { T x = expr; } catch { throw } return x;`.
+        // The simplifier folds the spill back to the source's `try { return expr; }` form. (javac 11
+        // keeps the return in-range, so this shape is only constructible directly.)
+        com.tonic.analysis.source.ast.type.SourceType obj =
+                new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Object");
+        com.tonic.analysis.source.ast.stmt.VarDeclStmt decl =
+                new com.tonic.analysis.source.ast.stmt.VarDeclStmt(obj, "result",
+                        com.tonic.analysis.source.ast.expr.LiteralExpr.ofInt(7));
+        com.tonic.analysis.source.ast.stmt.BlockStmt tryBlock =
+                new com.tonic.analysis.source.ast.stmt.BlockStmt(
+                        new java.util.ArrayList<>(java.util.List.of(
+                                (com.tonic.analysis.source.ast.stmt.Statement) decl)));
+        com.tonic.analysis.source.ast.stmt.BlockStmt catchBody =
+                new com.tonic.analysis.source.ast.stmt.BlockStmt(new java.util.ArrayList<>(java.util.List.of(
+                        (com.tonic.analysis.source.ast.stmt.Statement) new com.tonic.analysis.source.ast.stmt.ThrowStmt(
+                                new com.tonic.analysis.source.ast.expr.VarRefExpr("e", obj)))));
+        com.tonic.analysis.source.ast.stmt.CatchClause clause =
+                new com.tonic.analysis.source.ast.stmt.CatchClause(
+                        java.util.List.of((com.tonic.analysis.source.ast.type.SourceType)
+                                new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Exception")),
+                        "e", catchBody);
+        com.tonic.analysis.source.ast.stmt.TryCatchStmt tryCatch =
+                new com.tonic.analysis.source.ast.stmt.TryCatchStmt(tryBlock,
+                        new java.util.ArrayList<>(java.util.List.of(clause)), null);
+        com.tonic.analysis.source.ast.stmt.ReturnStmt ret =
+                new com.tonic.analysis.source.ast.stmt.ReturnStmt(
+                        new com.tonic.analysis.source.ast.expr.VarRefExpr("result", obj));
+        com.tonic.analysis.source.ast.stmt.BlockStmt body =
+                new com.tonic.analysis.source.ast.stmt.BlockStmt(new java.util.ArrayList<>(java.util.List.of(
+                        tryCatch, ret)));
+
+        new com.tonic.analysis.source.ast.transform.ControlFlowSimplifier().transform(body);
+
+        assertEquals(1, body.getStatements().size(), "the trailing return folds away");
+        com.tonic.analysis.source.ast.stmt.TryCatchStmt folded =
+                (com.tonic.analysis.source.ast.stmt.TryCatchStmt) body.getStatements().get(0);
+        com.tonic.analysis.source.ast.stmt.Statement last =
+                ((com.tonic.analysis.source.ast.stmt.BlockStmt) folded.getTryBlock()).getStatements().get(0);
+        assertTrue(last instanceof com.tonic.analysis.source.ast.stmt.ReturnStmt,
+                "the spilled declaration becomes the try's own return: " + last);
+    }
+
     /** Defines every fixture class in one loader and returns {@code main}'s Class. */
     private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
         com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();
