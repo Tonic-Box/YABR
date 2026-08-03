@@ -374,15 +374,21 @@ public final class TestUtils {
 
     /**
      * True when verifying {@code cf} finds a control-flow drop - a method that falls off its end or a path
-     * that does not return, the signature of a dropped {@code return}/{@code throw}. Other verify errors
+     * that does not return, the signature of a dropped {@code return}/{@code throw} - or a return opcode
+     * that contradicts the method's descriptor (a bare {@code return} in a value-returning method is never
+     * pipeline noise; it is a synthesized fall-off that fails JVM verification). Other verify errors
      * (stack, type, frame) are re-lowering-pipeline artifacts, not recovery drops, and are ignored - so
-     * this isolates structural drops from the pipeline noise a large jar produces.
+     * this isolates genuine miscompiles from the pipeline noise a large jar produces.
      */
     public static boolean hasControlFlowDrop(ClassFile cf, ClassPool pool) {
         return Verifier.builder().classPool(pool).build().verify(cf).getErrors().stream()
                 .anyMatch(e -> e.isError()
                         && (e.getType() == VerificationErrorType.INSTRUCTION_FALLS_OFF_END
-                            || e.getType() == VerificationErrorType.PATH_DOES_NOT_RETURN));
+                            || e.getType() == VerificationErrorType.PATH_DOES_NOT_RETURN
+                            || (e.getType() == VerificationErrorType.INCOMPATIBLE_RETURN_TYPE
+                                && e.getMessage() != null
+                                && (e.getMessage().contains("RETURN used in method with non-void")
+                                    || e.getMessage().contains("Non-RETURN instruction used in void")))));
     }
 
     private static String methodDescriptor(List<ParameterDecl> params, String ret, TypeResolver resolver) {

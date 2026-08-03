@@ -10,6 +10,7 @@ import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.CatchClause;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
+import com.tonic.analysis.source.ast.stmt.SynchronizedStmt;
 import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
@@ -1085,6 +1086,13 @@ public class ClassDecompiler {
             }
             if (ifStmt.getElseBranch() instanceof BlockStmt) {
                 removeTrailingVoidReturn(((BlockStmt) ifStmt.getElseBranch()).getStatements());
+            }
+        } else if (last instanceof SynchronizedStmt) {
+            // A synchronized block in tail position: its body's end IS the method's end (monitor release
+            // then implicit return), so a trailing `return;` inside it is the same redundant surfacing.
+            SynchronizedStmt sync = (SynchronizedStmt) last;
+            if (sync.getBody() instanceof BlockStmt) {
+                removeTrailingVoidReturn(((BlockStmt) sync.getBody()).getStatements());
             }
         } else if (last instanceof TryCatchStmt) {
             // A trailing try/catch's arms are themselves in tail position: a void return there falls out of

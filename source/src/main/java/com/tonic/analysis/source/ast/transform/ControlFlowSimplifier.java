@@ -82,6 +82,8 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= mergeComplementaryGuards(stmts);
 
+        changed |= unguardComplementOfExitedGuard(stmts);
+
         changed |= flattenNestedNegatedGuards(stmts);
 
         changed |= collapseGuardWithSharedEarlyExit(stmts);
@@ -289,6 +291,39 @@ public class ControlFlowSimplifier implements ASTTransform {
             for (int j = 0; j < thenStmts.size(); j++) {
                 parentList.add(index + 1 + j, thenStmts.get(j));
             }
+            changed = true;
+        }
+
+        // The mirror pair of the rule above with the SHORT arm in the then: `if (!C) { return x; }
+        // longTail... terminal` and `if (C) { longTail... terminal } return x;` recover from the two
+        // branch layouts of the same source. Normalize to the positive-condition body form. Disjoint
+        // from the rule above (which needs a TERMINAL following); this one needs a non-terminal tail
+        // run ending at the list's own final terminal, so the two never re-flip each other's output.
+        // The then must be a lone VALUE return - a throw here is the return-then-throw and
+        // guard-the-throw rules' territory, and a bare void `return;` is the guard-CLAUSE idiom
+        // (`if (!enabled) return; body...`) whose source form is the guard itself.
+        if (!ifStmt.hasElse()
+                && isPurelyLogicalNegation(ifStmt.getCondition())
+                && !isSwitchChainGuard(ifStmt.getCondition())
+                && unwrapSingleStatement(ifStmt.getThenBranch()) instanceof ReturnStmt
+                && ((ReturnStmt) unwrapSingleStatement(ifStmt.getThenBranch())).getValue() != null
+                && index + 2 < parentList.size()
+                && !isTerminal(parentList.get(index + 1))
+                && isTerminal(parentList.get(parentList.size() - 1))
+                && parentList.subList(index + 1, parentList.size() - 1).stream()
+                        .noneMatch(this::isTerminal)
+                // A tail whose own terminal is the SAME return as the guard's is the shared-exit
+                // fold family's shape (both layouts fold it there); flipping it would diverge.
+                && !earlyExitsEqual(unwrapSingleStatement(ifStmt.getThenBranch()),
+                        parentList.get(parentList.size() - 1))) {
+            Statement shortExit = unwrapSingleStatement(ifStmt.getThenBranch());
+            List<Statement> tail = new ArrayList<>(parentList.subList(index + 1, parentList.size()));
+            invertCondition(ifStmt);
+            ifStmt.setThenBranch(new BlockStmt(tail));
+            while (parentList.size() > index + 1) {
+                parentList.remove(parentList.size() - 1);
+            }
+            parentList.add(shortExit);
             changed = true;
         }
 
@@ -1174,7 +1209,69 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    /** Whether {@code b} is the logical negation of {@code a} - directly ({@code !a}), by comparison flip, or De Morgan. */
+    /**
+     * Splices the body out of a guard whose condition is the COMPLEMENT of an immediately preceding
+     * exiting guard: after {@code if (C) exit;}, C is false, so {@code if (!C) { REST }} is just REST.
+     * The recovered pair otherwise leaves the method's textual tail open - javac rejects the text
+     * ("missing return statement") and the re-lowering needs a synthesized tail terminator. Pure
+     * literal declarations between the two guards are allowed (the hoisted {@code T x = null;}) when
+     * the second condition does not read them; deleting the complement's evaluation requires it to be
+     * side-effect-free.
+     */
+    private boolean unguardComplementOfExitedGuard(List<Statement> stmts) {
+        boolean changed = false;
+        for (int i = 0; i < stmts.size(); i++) {
+            if (!(stmts.get(i) instanceof IfStmt)) {
+                continue;
+            }
+            IfStmt guard = (IfStmt) stmts.get(i);
+            if (guard.hasElse() || !isTerminal(guard.getThenBranch())) {
+                continue;
+            }
+            int j = i + 1;
+            List<String> declared = new ArrayList<>();
+            while (j < stmts.size() && stmts.get(j) instanceof VarDeclStmt) {
+                VarDeclStmt decl = (VarDeclStmt) stmts.get(j);
+                if (decl.getInitializer() != null && !(decl.getInitializer() instanceof LiteralExpr)) {
+                    break;
+                }
+                declared.add(decl.getName());
+                j++;
+            }
+            if (j >= stmts.size() || !(stmts.get(j) instanceof IfStmt)) {
+                continue;
+            }
+            IfStmt second = (IfStmt) stmts.get(j);
+            if (second.hasElse() || !areComplementary(guard.getCondition(), second.getCondition())) {
+                continue;
+            }
+            // The guard is IMPLIED by control flow (its complement just exited), so deleting it is
+            // sound even when its atoms are calls - the original bytecode evaluated them once, and
+            // the guard's re-evaluation is the recovery's own addition. An embedded ASSIGNMENT is
+            // the one form whose deletion could lose a real store, so it stays.
+            WrittenVarCollector writes = new WrittenVarCollector();
+            new ExprStmt(second.getCondition()).accept(writes);
+            if (!writes.written.isEmpty()) {
+                continue;
+            }
+            boolean readsDecl = false;
+            for (String name : declared) {
+                if (countVariableUses(second.getCondition(), name) > 0) {
+                    readsDecl = true;
+                    break;
+                }
+            }
+            if (readsDecl) {
+                continue;
+            }
+            List<Statement> body = getStatements(second.getThenBranch());
+            stmts.remove(j);
+            stmts.addAll(j, body);
+            changed = true;
+        }
+        return changed;
+    }
+
     private boolean areComplementary(Expression a, Expression b) {
         if (isNotOf(a, b) || isNotOf(b, a)) {
             return true;

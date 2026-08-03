@@ -33,6 +33,13 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
+import com.tonic.analysis.ssa.ir.ConstantInstruction;
+import com.tonic.analysis.ssa.value.Constant;
+import com.tonic.analysis.ssa.value.DoubleConstant;
+import com.tonic.analysis.ssa.value.FloatConstant;
+import com.tonic.analysis.ssa.value.IntConstant;
+import com.tonic.analysis.ssa.value.LongConstant;
+import com.tonic.analysis.ssa.value.NullConstant;
 import com.tonic.analysis.ssa.lift.PhiInserter;
 import com.tonic.analysis.ssa.lift.VariableRenamer;
 import com.tonic.analysis.ssa.type.IRType;
@@ -132,9 +139,7 @@ public class ASTLowerer {
 
         stmtLowerer.lower(body);
 
-        if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
-        }
+        appendImpliedReturn(ctx, returnIrType(returnType));
 
         drainSynthetics(ctx);
         return irMethod;
@@ -243,9 +248,7 @@ public class ASTLowerer {
 
         stmtLowerer.lower(body);
 
-        if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
-        }
+        appendImpliedReturn(ctx, returnIrType(methodDecl.getReturnType()));
 
         if (hasLoops) {
             constructSSAForm(irMethod);
@@ -465,9 +468,7 @@ public class ASTLowerer {
         StatementLowerer stmtLowerer = new StatementLowerer(ctx, exprLowerer);
         stmtLowerer.lower(body);
 
-        if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
-        }
+        appendImpliedReturn(ctx, returnIrType(synthetic.getDescriptor()));
 
         if (hasLoops) {
             constructSSAForm(irMethod);
@@ -560,13 +561,48 @@ public class ASTLowerer {
     }
 
     /**
-     * Removes phi functions whose result is never used, iterating to a fixpoint so a phi that becomes dead
-     * once its only consumer (another dead phi) is removed is also dropped. Minimal (unpruned) SSA places a
-     * phi at every dominance frontier of a definition; for a variable defined on only one path into a join
-     * (e.g. an exception handler's caught-exception local, dead at the continuation) this yields a malformed
-     * phi missing an entry for the other predecessor, which breaks frame generation. Such a phi is always
-     * unused for valid source, so pruning dead phis here removes it without affecting live values.
+     * Appends the implied terminator to an unterminated tail block. A void method's tail is the
+     * implicit {@code return}; a value-returning method's tail is only unterminated when every real
+     * path already returned or threw, but the block still needs a terminator the verifier accepts -
+     * a bare void {@code return} contradicts the descriptor and fails verification - so it returns
+     * the type's default value instead.
      */
+    private void appendImpliedReturn(LoweringContext ctx, IRType returnType) {
+        if (ctx.getCurrentBlock().getTerminator() != null) {
+            return;
+        }
+        if (returnType == null) {
+            ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
+            return;
+        }
+        SSAValue dflt = ctx.newValue(returnType);
+        Constant zero;
+        if (returnType == PrimitiveType.LONG) {
+            zero = LongConstant.ZERO;
+        } else if (returnType == PrimitiveType.FLOAT) {
+            zero = FloatConstant.ZERO;
+        } else if (returnType == PrimitiveType.DOUBLE) {
+            zero = DoubleConstant.ZERO;
+        } else if (returnType instanceof PrimitiveType) {
+            zero = IntConstant.ZERO;
+        } else {
+            zero = NullConstant.INSTANCE;
+        }
+        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(dflt, zero));
+        ctx.getCurrentBlock().addInstruction(new ReturnInstruction(dflt));
+    }
+
+    /** The IR return type of a declared source return type; null stands for void. */
+    private static IRType returnIrType(SourceType returnType) {
+        return returnType == null || returnType instanceof VoidSourceType ? null : returnType.toIRType();
+    }
+
+    /** The IR return type encoded in a method descriptor; null stands for void. */
+    private static IRType returnIrType(String methodDescriptor) {
+        String ret = methodDescriptor.substring(methodDescriptor.indexOf(')') + 1);
+        return "V".equals(ret) ? null : IRType.fromDescriptor(ret);
+    }
+
     private void removeDeadPhis(IRMethod irMethod) {
         boolean changed = true;
         while (changed) {
@@ -622,9 +658,7 @@ public class ASTLowerer {
         StatementLowerer stmtLowerer = new StatementLowerer(ctx, exprLowerer);
         stmtLowerer.lower(body);
 
-        if (ctx.getCurrentBlock().getTerminator() == null) {
-            ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
-        }
+        appendImpliedReturn(ctx, returnIrType(irMethod.getDescriptor()));
     }
 
     private String buildDescriptor(List<SourceType> parameters, SourceType returnType, TypeResolver resolver) {

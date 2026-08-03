@@ -331,6 +331,176 @@ class RecoveryTailsTest {
                 "the round-tripped class must behave the same");
     }
 
+    @Test
+    void aTailSynchronizedBlockDropsItsRedundantReturn() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("SyncTail",
+                "import java.util.Iterator;",
+                "public class SyncTail {",
+                "    private final java.util.List<String> names = new java.util.ArrayList<>();",
+                "    public void addAll(Iterable<String> more) {",
+                "        synchronized (names) {",
+                "            Iterator<String> it = more.iterator();",
+                "            while (it.hasNext()) {",
+                "                names.add(it.next());",
+                "            }",
+                "        }",
+                "    }",
+                "    public static int check() throws Exception {",
+                "        SyncTail t = new SyncTail();",
+                "        t.addAll(java.util.Arrays.asList(\"a\", \"b\"));",
+                "        java.lang.reflect.Field f = SyncTail.class.getDeclaredField(\"names\");",
+                "        f.setAccessible(true);",
+                "        return ((java.util.List) f.get(t)).size();",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("SyncTail");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals(2, original, "the fixture itself must add both entries under the lock");
+
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "SyncTail"), "d1 recompiles");
+        // The relowered layout routes the sync block's normal exit through a shared trailing return;
+        // recovery surfaced it as an explicit `return;` inside the tail synchronized block, which is
+        // implicit there exactly as it is at the method's own end.
+        String d2 = ClassDecompiler.decompile(cf);
+        assertEquals(d1, d2, "the tail synchronized block is a fixed point without a surfaced return");
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
+    @Test
+    void aValueReturningTailSynthesizesATypedReturn() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("GuardTail",
+                "public class GuardTail {",
+                "    static boolean flag(int k) {",
+                "        return k > 0;",
+                "    }",
+                "    public static String check() {",
+                "        return flag(1) + \"|\" + flag(-1);",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("GuardTail");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals("true|false", original, "the fixture itself must branch both ways");
+
+        // Recovered guard chains can cover every real path yet leave the method's textual tail open
+        // (`if (k > 0) return true; if (k <= 0) return false;`). Lowering that tail as a bare void
+        // return contradicts the descriptor and fails verification; it must be a typed default.
+        String guardTail = String.join("\n",
+                "public class GuardTail {",
+                "    static boolean flag(int k) {",
+                "        if (k > 0) {",
+                "            return true;",
+                "        }",
+                "        if (k <= 0) {",
+                "            return false;",
+                "        }",
+                "    }",
+                "    public static String check() {",
+                "        return flag(1) + \"|\" + flag(-1);",
+                "    }",
+                "}");
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        assertTrue(TestUtils.recompileSource(cf, pool, guardTail, "GuardTail"), "the guard-tail form recompiles");
+        assertTrue(TestUtils.verifies(cf, pool), "the synthesized tail verifies");
+        org.junit.jupiter.api.Assertions.assertFalse(TestUtils.hasControlFlowDrop(cf, pool),
+                "a value-returning method's synthesized tail must match its descriptor");
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
+    @Test
+    void aValueGuardKeepsItsBodyFormAcrossRelowering() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("Orient",
+                "public class Orient {",
+                "    Object result;",
+                "    boolean flagged;",
+                "    boolean cancel() {",
+                "        if (this.result == null) {",
+                "            this.flagged = true;",
+                "            return true;",
+                "        }",
+                "        return false;",
+                "    }",
+                "    public static String check() {",
+                "        Orient a = new Orient();",
+                "        boolean empty = a.cancel();",
+                "        a.result = \"r\";",
+                "        return empty + \"|\" + a.cancel() + \"|\" + a.flagged;",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("Orient");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals("true|false|true", original, "the fixture itself must take both arms");
+
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(d1.contains("== null"), "d1 keeps the source's positive body form:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Orient"), "d1 recompiles");
+        // The relowered layout recovers as the inverted guard (`if (result != null) return false;`);
+        // the orientation canon flips it back to the positive body form so the round trip converges.
+        // (check()'s local keeps a layout-derived name, the separate known naming family - so the
+        // assertion reads the oriented method, not the whole text.)
+        String d2 = ClassDecompiler.decompile(cf);
+        assertTrue(d2.contains("== null") && !d2.contains("!= null"),
+                "d2 recovers the positive body form, not the inverted guard:\n" + d2);
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
+    @Test
+    void aComplementGuardAfterAnExitedGuardUnwraps() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("Unguard",
+                "import java.util.List;",
+                "public class Unguard {",
+                "    static String name(int t) {",
+                "        return t > 0 ? \"nm\" : null;",
+                "    }",
+                "    static boolean supports(List<String> caps, int type) {",
+                "        if (type == 2 && !caps.contains(\"array\")) {",
+                "            return false;",
+                "        }",
+                "        String s = name(type);",
+                "        if (s == null) {",
+                "            return true;",
+                "        }",
+                "        switch (s.length()) {",
+                "            case 1:",
+                "                return caps.contains(\"a\");",
+                "            case 2:",
+                "                return caps.contains(\"b\");",
+                "            default:",
+                "                return true;",
+                "        }",
+                "    }",
+                "    public static String check() {",
+                "        List<String> caps = java.util.Arrays.asList(\"array\", \"a\");",
+                "        return supports(caps, 2) + \"|\" + supports(java.util.Arrays.asList(), 2)",
+                "                + \"|\" + supports(caps, -1) + \"|\" + supports(caps, 3);",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("Unguard");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals("false|false|true|false", original, "the fixture itself must take every path");
+
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        // The region after the early-exit guard used to recover wrapped in the guard's COMPLEMENT
+        // (`if (type != 2 || caps.contains("array")) {...}`) - a fictional second evaluation the
+        // bytecode never performs, and a textual tail javac rejects as a missing return.
+        String d1 = ClassDecompiler.decompile(cf);
+        org.junit.jupiter.api.Assertions.assertFalse(d1.contains("type != 2"),
+                "the implied complement guard must not be re-emitted:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Unguard"), "d1 recompiles");
+        assertEquals(d1, ClassDecompiler.decompile(cf), "the unguarded form is a fixed point");
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
     /** Defines every fixture class in one loader and returns {@code main}'s Class. */
     private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
         com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();
