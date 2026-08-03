@@ -210,10 +210,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             int off = e.getKey().getBytecodeOffset();
             return off >= 0 ? off : Integer.MAX_VALUE;
         }));
+        // A default sharing a value case's target is that case's extra LABEL (`case 6: default:`), not
+        // an arm of its own: a second spec for the same header either duplicates the body or is elided
+        // by the processed-block dedup, and an elided default relowers as a fall-off edge - which a
+        // value-returning method must not have (the synthesized fall-off return does not verify).
+        boolean defaultMergedIntoCase = defaultTarget != null && !emptyDefault
+                && targetToCases.containsKey(defaultTarget);
         List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
         for (Map.Entry<IRBlock, List<Integer>> entry : orderedTargets) {
             IRBlock target = entry.getKey();
             List<Integer> labels = entry.getValue();
+            boolean alsoDefault = defaultMergedIntoCase && target == defaultTarget;
             if (enumNamesResolved) {
                 List<Expression> enumLabels = new ArrayList<>();
                 for (Integer caseValue : labels) {
@@ -221,12 +228,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
                     enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
                 }
-                cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), enumLabels, false, target));
+                cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), enumLabels, alsoDefault, target));
             } else {
-                cases.add(new SwitchDescriptor.CaseSpec(new ArrayList<>(labels), Collections.emptyList(), false, target));
+                cases.add(new SwitchDescriptor.CaseSpec(new ArrayList<>(labels), Collections.emptyList(), alsoDefault, target));
             }
         }
-        if (defaultTarget != null) {
+        if (defaultTarget != null && !defaultMergedIntoCase) {
             SwitchDescriptor.CaseSpec defaultCase = new SwitchDescriptor.CaseSpec(
                     Collections.emptyList(), Collections.emptyList(), true, emptyDefault ? null : defaultTarget);
             // Place the default at its layout (bytecode-offset) position among the value cases, not blindly

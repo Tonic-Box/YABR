@@ -674,9 +674,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
         List<SwitchCase> cases = stmt.getCases();
         for (SwitchCase switchCase : cases) {
-            if (switchCase.isDefault()) {
-                writer.writeLine("default:");
-            } else if (switchCase.hasExpressionLabels()) {
+            if (switchCase.hasExpressionLabels()) {
                 for (Expression label : switchCase.expressionLabels()) {
                     writer.write("case ");
                     if (label instanceof FieldAccessExpr) {
@@ -692,6 +690,11 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 for (Integer label : switchCase.labels()) {
                     writer.writeLine("case " + label + ":");
                 }
+            }
+            // Labels and `default:` are not exclusive: a default whose target coincides with a value
+            // case carries that case's labels and both label sets print (`case 6: default:`).
+            if (switchCase.isDefault()) {
+                writer.writeLine("default:");
             }
             writer.indent();
             List<Statement> stmts = switchCase.statements();

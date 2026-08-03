@@ -1470,9 +1470,14 @@ public final class ReachingConditionStructurer {
                 // outer case that falls through to it. The outer switch owns that block; structuring it here would
                 // nest the outer cases inside this switch. A default is omitted entirely - control falls out of the
                 // switch to the enclosing case, which is what javac emits and a round-trip fixed point (an empty
-                // default instead recompiles to a distinct goto block that recovers differently).
+                // default instead recompiles to a distinct goto block that recovers differently). A default MERGED
+                // onto a value case keeps the value labels as the empty boundary case and sheds only its
+                // default marker.
                 if (spec.isDefault()) {
-                    continue;
+                    if (spec.intLabels().isEmpty() && spec.exprLabels().isEmpty()) {
+                        continue;
+                    }
+                    spec = new SwitchDescriptor.CaseSpec(spec.intLabels(), spec.exprLabels(), false, spec.header());
                 }
                 body = new ArrayList<>();
             } else if (spec.header() == null) {
@@ -1508,7 +1513,9 @@ public final class ReachingConditionStructurer {
     /** Builds one {@code case}/{@code default} from its decoded labels and structured body. */
     private SwitchCase buildSwitchCase(SwitchDescriptor.CaseSpec spec, List<Statement> body, boolean fallsThrough) {
         if (spec.isDefault()) {
-            return SwitchCase.defaultCase(body).withFallsThrough(fallsThrough);
+            // A default may carry value labels too (`case 6: default:` - the default target coincides
+            // with a value case's), so the labels ride along rather than being dropped.
+            return new SwitchCase(spec.intLabels(), spec.exprLabels(), true, body).withFallsThrough(fallsThrough);
         }
         if (!spec.exprLabels().isEmpty()) {
             return SwitchCase.ofExpressions(spec.exprLabels(), body).withFallsThrough(fallsThrough);

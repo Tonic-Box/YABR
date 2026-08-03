@@ -287,6 +287,50 @@ class RecoveryTailsTest {
                 "make() must load and run after relowering the qualified allocation");
     }
 
+    @Test
+    void aDefaultSharingAValueCaseKeepsItsArm() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("Shared",
+                "public class Shared {",
+                "    static int pick(int k) {",
+                "        switch (k) {",
+                "            case 1:",
+                "                return 10;",
+                "            case 2:",
+                "                return 20;",
+                "            case 3:",
+                "            default:",
+                "                throw new IllegalArgumentException(String.valueOf(k));",
+                "        }",
+                "    }",
+                "    public static String check() {",
+                "        StringBuilder sb = new StringBuilder();",
+                "        sb.append(pick(1)).append('|').append(pick(2)).append('|');",
+                "        try {",
+                "            pick(9);",
+                "        } catch (IllegalArgumentException e) {",
+                "            sb.append(e.getMessage());",
+                "        }",
+                "        return sb.toString();",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("Shared");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals("10|20|9", original, "the fixture itself must dispatch and throw");
+
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        String d1 = ClassDecompiler.decompile(cf);
+        // The default's target IS the case-3 throw block; dropping the default arm makes the switch
+        // relower with a fall-off edge, and a value-returning method's synthesized fall-off return is
+        // not verifiable bytecode.
+        assertTrue(d1.contains("default:"), "the shared default arm survives:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Shared"), "d1 recompiles");
+        String d2 = ClassDecompiler.decompile(cf);
+        assertEquals(d1, d2, "the shared-default switch is a fixed point");
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
     /** Defines every fixture class in one loader and returns {@code main}'s Class. */
     private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
         com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();

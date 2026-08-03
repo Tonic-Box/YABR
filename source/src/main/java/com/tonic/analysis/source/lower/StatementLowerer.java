@@ -437,9 +437,8 @@ public class StatementLowerer {
         SwitchInstruction switchInstr = new SwitchInstruction(selector, defaultBlock);
         for (int i = 0; i < cases.size(); i++) {
             SwitchCase sc = cases.get(i);
-            if (sc.isDefault()) {
-                continue;
-            }
+            // A default case may also carry value labels (`case 6: default:`); they register as
+            // explicit entries on the same block, exactly as javac lays them out.
             // Parsed/desugared cases carry their labels as constant expressions; recovered ones use
             // integer labels. Honor both, or the switch lowers with no cases (a bare goto to default).
             if (sc.hasExpressionLabels()) {
