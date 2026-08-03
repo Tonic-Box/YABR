@@ -602,6 +602,43 @@ class RecoveryTailsTest {
                 "the spilled declaration becomes the try's own return: " + last);
     }
 
+    @Test
+    void aLambdaConstructorArgumentTakesTheDeclaredFunctionalType() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("HookCtor",
+                "public class HookCtor {",
+                "    static StringBuilder log = new StringBuilder();",
+                "    final Thread hook;",
+                "    HookCtor(String tag) {",
+                "        this.hook = new Thread(() -> {",
+                "            log.append(tag);",
+                "        });",
+                "    }",
+                "    public static String check() {",
+                "        log = new StringBuilder();",
+                "        new HookCtor(\"x\").hook.run();",
+                "        return log.toString();",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("HookCtor");
+        Object original = loadWith(loaded, cf).getMethod("check").invoke(null);
+        assertEquals("x", original, "the fixture itself must run the hook");
+
+        ClassPool pool = new ClassPool();
+        for (ClassFile each : loaded.values()) {
+            pool.loadClass(each.write());
+        }
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "HookCtor"), "d1 recompiles");
+        // Inside a constructor the enclosing return type is VOID; a lambda constructor argument
+        // must take the target constructor's declared functional interface (Thread(Runnable)), not
+        // fall back to that void - which emitted `Thread."<init>":(V)V` and unliftable bytecode.
+        String d2 = ClassDecompiler.decompile(cf);
+        org.junit.jupiter.api.Assertions.assertFalse(d2.contains("Failed to decompile"),
+                "the relowered constructor must lift back:\n" + d2);
+        assertEquals(original, loadWith(loaded, cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
     /** Defines every fixture class in one loader and returns {@code main}'s Class. */
     private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
         com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();

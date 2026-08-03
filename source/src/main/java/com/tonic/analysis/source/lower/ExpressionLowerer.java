@@ -1756,7 +1756,20 @@ public class ExpressionLowerer {
         List<Value> args = new ArrayList<>();
         args.add(result);
 
-        for (Expression arg : newExpr.getArguments()) {
+        List<Expression> ctorArgs = newExpr.getArguments();
+        for (int idx = 0; idx < ctorArgs.size(); idx++) {
+            Expression arg = ctorArgs.get(idx);
+            // A lambda argument cannot type itself; the functional interface comes from the target
+            // constructor's declared parameter. Without it the lambda falls back to the enclosing
+            // method's return type - VOID inside a constructor - and the built descriptor carries a
+            // void parameter that fails to lift.
+            if (arg instanceof LambdaExpr) {
+                SourceType expected = ctx.getTypeResolver()
+                        .functionalConstructorParamType(className, ctorArgs.size(), idx);
+                if (expected != null) {
+                    arg = retypeFunctionalArg(arg, expected);
+                }
+            }
             args.add(lower(arg));
         }
 
@@ -2189,8 +2202,11 @@ public class ExpressionLowerer {
                 && !isObjectOrNull(ctx.peekExpectedType())) {
             lambdaType = ctx.peekExpectedType();
         }
+        // VOID can never be a functional interface: inside a constructor (or void method) the
+        // enclosing return type is no lambda target, and adopting it poisons the call descriptor.
         if (isObjectOrNull(lambdaType) && ctx.getCurrentMethodReturnType() != null
-                && !isObjectOrNull(ctx.getCurrentMethodReturnType())) {
+                && !isObjectOrNull(ctx.getCurrentMethodReturnType())
+                && !(ctx.getCurrentMethodReturnType() instanceof VoidSourceType)) {
             lambdaType = ctx.getCurrentMethodReturnType();
         }
         String samInterfaceName = extractInterfaceName(lambdaType);

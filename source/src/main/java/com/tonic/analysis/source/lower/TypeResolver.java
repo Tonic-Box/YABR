@@ -752,15 +752,31 @@ public class TypeResolver {
     }
 
     /**
-     * Resolves a call's DECLARED descriptor by runtime reflection when the callee class is not in the pool (e.g. a
-     * JDK method - the pool never loads JDK classes). {@link #resolveMethodDescriptor} returns null then, and
-     * building a descriptor from the argument static types is wrong for a subtype argument: a String passed to
-     * {@code List.add(Object)} would emit {@code add(String)}, which does not exist, so the recompiled call throws
-     * {@code NoSuchMethodError}. This finds the real method (or constructor, for {@code <init>}) by matching
-     * reference parameters against reference arguments by assignability, and returns its actual descriptor.
-     * Restricted to reference parameters and arguments - the case the erased-argument bug hits; any primitive,
-     * varargs, or unloadable type makes it return null so the caller keeps its existing behavior.
+     * The declared type of a constructor parameter that expects a FUNCTIONAL argument, resolved by
+     * arity: among {@code ownerClass}'s constructors taking {@code arity} arguments, the unique one
+     * whose parameter {@code index} is an interface. A lambda argument cannot type itself, and the
+     * one interface-typed slot among same-arity overloads is where it fits ({@code Thread(Runnable)}
+     * vs {@code Thread(String)}). Returns null when no candidate or more than one interface type.
      */
+    public SourceType functionalConstructorParamType(String ownerClass, int arity, int index) {
+        Class<?> owner = loadRuntimeClass(ownerClass);
+        if (owner == null) {
+            return null;
+        }
+        Class<?> found = null;
+        for (java.lang.reflect.Constructor<?> ctor : owner.getDeclaredConstructors()) {
+            Class<?>[] p = ctor.getParameterTypes();
+            if (p.length != arity || index >= p.length || !p[index].isInterface()) {
+                continue;
+            }
+            if (found != null && !found.equals(p[index])) {
+                return null;
+            }
+            found = p[index];
+        }
+        return found == null ? null : new ReferenceSourceType(found.getName().replace('.', '/'));
+    }
+
     public String resolveMethodDescriptorViaReflection(String ownerClass, String methodName, List<IRType> argTypes) {
         Class<?> owner = loadRuntimeClass(ownerClass);
         if (owner == null) {
