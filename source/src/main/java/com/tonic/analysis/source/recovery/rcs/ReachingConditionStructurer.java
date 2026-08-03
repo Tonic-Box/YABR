@@ -424,7 +424,8 @@ public final class ReachingConditionStructurer {
                 if (isBackEdge(pred, b) && !region.contains(pred) && !consumedByAnyNode(pred)) {
                     trace("rcs-decline latch-outside entry=" + entry.getBytecodeOffset()
                             + " header=" + b.getBytecodeOffset()
-                            + " pred=" + pred.getBytecodeOffset());
+                            + " pred=" + pred.getBytecodeOffset()
+                            + " regionSize=" + region.size() + " nodes=" + tryNodes.size());
                     return false;
                 }
             }
@@ -592,6 +593,8 @@ public final class ReachingConditionStructurer {
                 // A bare goto pad the node annexed (an exit connector consumed with its chain) is not
                 // node interior: jumping to it is jumping to its landing, which the region models.
                 if (s != b && node.consumed().contains(s) && !isGotoOnly(s)) {
+                    trace("validate-decline jump-into-consumed r=" + r.getBytecodeOffset()
+                            + " s=" + s.getBytecodeOffset() + " node=" + b.getBytecodeOffset());
                     throw new BailToLegacy();
                 }
             }

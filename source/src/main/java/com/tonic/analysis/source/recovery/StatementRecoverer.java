@@ -649,7 +649,34 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         ExceptionHandler outerHandler = findOutermostHandler(entry, mergedHandlers);
 
         if (outerHandler != null) {
-            result.addAll(recoverOuterHandlerRegion(entry, outerHandler, handlers, mergedHandlers, handlerBlocks));
+            // The staging owns every shape it settles; the engine (with try nodes, bounded by the
+            // catch-EXCLUSIVE blocks) is its RESCUE when it throws the retired-schema signal - a
+            // split protected family strangles the staging's stop set (everything past the FIRST
+            // range's end becomes a stop, cutting loop latches out of the continuation region).
+            // Offering the engine FIRST instead perturbed settled staging output: its catch-clause
+            // attachment differs between the two layouts of the same method. FINALLY-bearing
+            // methods keep the loud signal - the scaffolding's copy de-duplication has no engine
+            // equivalent.
+            try {
+                result.addAll(recoverOuterHandlerRegion(entry, outerHandler, handlers, mergedHandlers, handlerBlocks));
+            } catch (RetiredSchemaRecoveryException retired) {
+                boolean anyFinally = false;
+                for (ExceptionHandler fh : handlers) {
+                    if (handlerRethrows(fh) && !handlerThrowsFreshException(fh) && isFinallyCatchType(fh)) {
+                        anyFinally = true;
+                        break;
+                    }
+                }
+                if (anyFinally) {
+                    throw retired;
+                }
+                List<Statement> engine = rcsStructurer.tryStructureRegion(
+                        entry, catchExclusiveBlocks(handlers), true);
+                if (engine == null) {
+                    throw retired;
+                }
+                result.addAll(engine);
+            }
         } else {
             // No handler covers the entry: the try begins after a prelude, so a reachable unprocessed try
             // exists by construction and the reaching-condition engine alone can never own the region - it
@@ -7257,6 +7284,52 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             int off = b.getBytecodeOffset();
             if (off >= startOff && off < endOff) {
                 consumed.add(b);
+            }
+        }
+        // A plain typed catch with SPLIT ranges (javac splits around a return/break in the try) has
+        // the same interleaving disease as a finally family: the merged window swallows the gap
+        // between its ranges, where a relowered layout parks unrelated code (a return arm, a loop
+        // continuation). Carve the window down to the family's actual ranges plus the blocks only
+        // the construct reaches - same closure, keyed on this handler's own family.
+        if (!finallyNode) {
+            List<int[]> ownRanges = new ArrayList<>();
+            for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                if (eh.getHandlerBlock() == h.getHandlerBlock()
+                        && eh.getTryStart() != null && eh.getTryEnd() != null) {
+                    ownRanges.add(new int[]{eh.getTryStart().getBytecodeOffset(),
+                            eh.getTryEnd().getBytecodeOffset()});
+                }
+            }
+            boolean acyclicPlain = context.getLoopAnalysis() == null
+                    || context.getLoopAnalysis().getLoop(block) == null;
+            if (ownRanges.size() > 1 && acyclicPlain) {
+                Set<IRBlock> plainClosure = new HashSet<>();
+                for (IRBlock b : irMethod.getBlocks()) {
+                    int boff = b.getBytecodeOffset();
+                    for (int[] r : ownRanges) {
+                        if (boff >= r[0] && boff < r[1]) {
+                            plainClosure.add(b);
+                            break;
+                        }
+                    }
+                }
+                plainClosure.add(h.getHandlerBlock());
+                boolean plainGrew = true;
+                while (plainGrew) {
+                    plainGrew = false;
+                    for (IRBlock b : irMethod.getBlocks()) {
+                        if (plainClosure.contains(b) || b == irMethod.getEntryBlock()
+                                || b.getPredecessors().isEmpty()
+                                || b.getTerminator() instanceof ReturnInstruction) {
+                            continue;
+                        }
+                        if (plainClosure.containsAll(b.getPredecessors())) {
+                            plainClosure.add(b);
+                            plainGrew = true;
+                        }
+                    }
+                }
+                consumed = plainClosure;
             }
         }
         if (finallyNode) {
