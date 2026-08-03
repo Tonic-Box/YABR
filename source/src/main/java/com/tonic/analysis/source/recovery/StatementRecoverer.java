@@ -200,8 +200,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
 
 
+        // Cases print in LAYOUT order - the body offsets both javac and the re-lowerer carry over
+        // from source - not key order: an enum switch's $SwitchMap keys follow source order on the
+        // javac layout but raw ordinals dispatch in declaration order, so key order flips the
+        // printed cases between the two. Fall-through adjacency also follows layout order. The sort
+        // is stable, so synthesized offset-less targets keep their key order.
+        List<Map.Entry<IRBlock, List<Integer>>> orderedTargets = new ArrayList<>(targetToCases.entrySet());
+        orderedTargets.sort(java.util.Comparator.comparingInt(e -> {
+            int off = e.getKey().getBytecodeOffset();
+            return off >= 0 ? off : Integer.MAX_VALUE;
+        }));
         List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
-        for (Map.Entry<IRBlock, List<Integer>> entry : targetToCases.entrySet()) {
+        for (Map.Entry<IRBlock, List<Integer>> entry : orderedTargets) {
             IRBlock target = entry.getKey();
             List<Integer> labels = entry.getValue();
             if (enumNamesResolved) {
@@ -6828,6 +6838,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private final Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
     /** For-loop induction inits already re-emitted (as a for-init or in front of a while), never twice. */
     private final Set<IRInstruction> consumedForLoopInits = new HashSet<>();
+
+    /** Stores recovered ahead of their own position, at the call whose carried result they consume. */
+    private final Set<IRInstruction> earlyRecoveredStores = new HashSet<>();
     /** Excised inlined-finally copy blocks consumed outright; the walk and continuation route around them. */
     private final Set<IRBlock> consumedFinallyShells = new HashSet<>();
     /** Tracks handler blocks to prevent nested try-finally for same finally block */
@@ -8595,6 +8608,85 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return true;
     }
 
+    /**
+     * Recovers the store consuming {@code result} at the CALL's own position. Bytecode may keep a call
+     * result on the stack across another effect and store it only afterwards; recovering the store at its
+     * own offset then prints the call after that effect, in the opposite order to the one the program
+     * performs. Emitting the assignment where the call happens restores the order without a temporary.
+     * In-place only when the move is invisible: the single use is a store in the same block, and nothing
+     * in between touches the store's slot or names its variable. Returns null otherwise.
+     */
+    private Statement storeCarriedCallInPlace(InvokeInstruction invoke, SSAValue result) {
+        StoreLocalInstruction store = null;
+        for (IRInstruction use : result.getUses()) {
+            if (use instanceof StoreLocalInstruction) {
+                if (store != null) {
+                    return null;
+                }
+                store = (StoreLocalInstruction) use;
+            } else if (!(use instanceof PhiInstruction)) {
+                // A phi beside the store is the join of the stored slot - the text renders once, at
+                // the store. Any other extra use reads the value elsewhere and pins the default path.
+                return null;
+            }
+        }
+        if (store == null) {
+            return null;
+        }
+        IRBlock block = invoke.getBlock();
+        if (block == null || store.getBlock() != block
+                || !exprRecoverer.renderingAtUseCrossesEffects(invoke, store)) {
+            return null;
+        }
+        String targetName = partitionName(store);
+        if (targetName == null || !context.getExpressionContext().isDeclared(targetName)) {
+            return null;
+        }
+        // Every merge of the value must render under the same name, or an arm-end edge copy would
+        // still read it and re-print the call there.
+        for (IRInstruction use : result.getUses()) {
+            if (use instanceof PhiInstruction && use.getResult() != null
+                    && !targetName.equals(context.getExpressionContext().getVariableName(use.getResult()))) {
+                return null;
+            }
+        }
+        List<IRInstruction> instrs = block.getInstructions();
+        int from = instrs.indexOf(invoke);
+        int to = instrs.indexOf(store);
+        if (from < 0 || to <= from) {
+            return null;
+        }
+        for (int i = from + 1; i < to; i++) {
+            IRInstruction between = instrs.get(i);
+            if (between instanceof LoadLocalInstruction
+                    && ((LoadLocalInstruction) between).getLocalIndex() == store.getLocalIndex()) {
+                return null;
+            }
+            if (between instanceof StoreLocalInstruction
+                    && ((StoreLocalInstruction) between).getLocalIndex() == store.getLocalIndex()) {
+                return null;
+            }
+            for (Value op : between.getOperands()) {
+                if (op instanceof SSAValue
+                        && targetName.equals(context.getExpressionContext().getVariableName((SSAValue) op))) {
+                    return null;
+                }
+            }
+        }
+        SourceType type = getLocalSlotUnifiedType(targetName);
+        if (type == null) {
+            type = typeRecoverer.recoverType(result);
+        }
+        Expression rhs = exprRecoverer.recover(invoke);
+        // Binding the result to the variable's own name makes the arm-end phi edge copy an identity
+        // (`node = node`), which the copy lowering already skips - the assignment lives here instead.
+        context.getExpressionContext().markMaterialized(result);
+        context.getExpressionContext().setVariableName(result, targetName);
+        earlyRecoveredStores.add(store);
+        return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                new VarRefExpr(targetName, type, result), rhs, type));
+    }
+
     private Statement materializeClobberedLoad(SSAValue result, Expression value) {
         // Prefer names that are stable across bytecode layouts: the captured FIELD's own simple
         // name is derived from the expression itself, identical whichever layout the method was
@@ -8775,6 +8867,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         if (instr instanceof StoreLocalInstruction) {
             StoreLocalInstruction store = (StoreLocalInstruction) instr;
+            if (earlyRecoveredStores.remove(store)) {
+                return null;
+            }
             return recoverStoreLocal(store);
         }
 
@@ -8970,6 +9065,20 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
             boolean usedByStoreLocal = isUsedByStoreLocal(result);
             if (usedByStoreLocal) {
+                Statement inPlace = storeCarriedCallInPlace(invoke, result);
+                if (inPlace != null) {
+                    return inPlace;
+                }
+                if (exprRecoverer.inliningWouldReorderEffects(result)) {
+                    String name = temporaryNameForCall(invoke);
+                    if (name != null) {
+                        Expression captured = exprRecoverer.recover(invoke);
+                        Statement decl = materializeIntoTemporary(result, captured, name);
+                        if (decl != null) {
+                            return decl;
+                        }
+                    }
+                }
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;

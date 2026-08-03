@@ -268,7 +268,15 @@ public class ExpressionRecoverer {
         if (def == null || (!hasEffect(def) && !readsMutableState(def)) || value.getUses().size() != 1) {
             return false;
         }
-        IRInstruction use = value.getUses().get(0);
+        return renderingAtUseCrossesEffects(def, value.getUses().get(0));
+    }
+
+    /**
+     * The same-block effect scan of {@link #inliningWouldReorderEffects} without the single-use gate:
+     * true when rendering {@code def}'s value at {@code use} would move it past another observable
+     * effect. Callers that tolerate extra uses (a store paired with its merge phi) gate on this directly.
+     */
+    public boolean renderingAtUseCrossesEffects(IRInstruction def, IRInstruction use) {
         IRBlock block = def.getBlock();
         if (block == null || use.getBlock() != block || use instanceof PhiInstruction) {
             return false;

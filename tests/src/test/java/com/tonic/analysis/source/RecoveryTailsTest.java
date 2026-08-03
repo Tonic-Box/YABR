@@ -153,6 +153,153 @@ class RecoveryTailsTest {
                 "the round-tripped class must behave the same");
     }
 
+    @Test
+    void aStoreCarriedCallKeepsItsOrderAcrossAnEffect() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("Carried",
+                "public class Carried {",
+                "    static StringBuilder log = new StringBuilder();",
+                "    static String get(String b) { log.append(\"get;\"); return b; }",
+                "    static String get2(String b) { log.append(\"get2;\"); return b; }",
+                "    static void cancel(String b) { log.append(\"cancel;\"); }",
+                "    static String run(String bone, boolean flag) {",
+                "        String node;",
+                "        if (flag) {",
+                "            node = get(bone);",
+                "            cancel(bone);",
+                "        }",
+                "        else {",
+                "            node = get2(bone);",
+                "            cancel(bone);",
+                "        }",
+                "        return node;",
+                "    }",
+                "    public static String check() {",
+                "        log = new StringBuilder();",
+                "        run(\"b\", true);",
+                "        run(\"b\", false);",
+                "        return log.toString();",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("Carried");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals("get;cancel;get2;cancel;", original, "the fixture itself must call get before cancel");
+
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Carried"), "d1 recompiles");
+        // The relowered layout merges node at the join and keeps each arm's call result on the
+        // stack across cancel(); the decompile of that layout must still print the call before
+        // the effect it precedes, not at the later store.
+        String d2 = ClassDecompiler.decompile(cf);
+        String flat = d2.replaceAll("\\s+", "");
+        assertTrue(flat.contains("node=Carried.get(bone);Carried.cancel(bone);"),
+                "the then-arm keeps source order:\n" + d2);
+        assertTrue(flat.contains("node=Carried.get2(bone);Carried.cancel(bone);"),
+                "the else-arm keeps source order:\n" + d2);
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
+    @Test
+    void switchCasesKeepTheirLayoutOrderAcrossRelowering() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("CaseOrder",
+                "public class CaseOrder {",
+                "    enum Kind { SPHERE, BOX, OTHER }",
+                "    static String pick(Kind k) {",
+                "        switch (k) {",
+                "            case BOX:",
+                "                return \"box\";",
+                "            case SPHERE:",
+                "                return \"sphere\";",
+                "            default:",
+                "                return \"other\";",
+                "        }",
+                "    }",
+                "    public static String check() {",
+                "        return pick(Kind.BOX) + \"|\" + pick(Kind.SPHERE) + \"|\" + pick(Kind.OTHER);",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("CaseOrder");
+        Object original = loadWith(loaded, cf).getMethod("check").invoke(null);
+        assertEquals("box|sphere|other", original, "the fixture itself must dispatch all three ways");
+
+        ClassPool pool = new ClassPool();
+        for (ClassFile extra : loaded.values()) {
+            pool.loadClass(extra.write());
+        }
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(d1.contains("case BOX") && d1.indexOf("case BOX") < d1.indexOf("case SPHERE"),
+                "d1 keeps the source's case order (BOX first):\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "CaseOrder"), "d1 recompiles");
+        // The relowered switch dispatches on raw ordinals, whose key order is DECLARATION order
+        // (SPHERE first); the printed cases must still follow the body layout, which both javac and
+        // the re-lowerer carry over from source.
+        String d2 = ClassDecompiler.decompile(cf);
+        assertTrue(d2.contains("case BOX") && d2.indexOf("case BOX") < d2.indexOf("case SPHERE"),
+                "d2 keeps the same case order as d1:\n" + d2);
+        assertEquals(original, loadWith(loaded, cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
+    @Test
+    void aQualifiedNestedArrayAllocationReferencesTheRealClass() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("Holder",
+                "public class Holder {",
+                "    enum Kind { A, B }",
+                "    static Kind[] make() {",
+                "        return new Kind[] {Kind.A, Kind.B};",
+                "    }",
+                "    public static String check() {",
+                "        StringBuilder sb = new StringBuilder();",
+                "        for (Kind k : make()) {",
+                "            sb.append(k);",
+                "        }",
+                "        return sb.toString();",
+                "    }",
+                "}");
+        ClassFile outer = loaded.get("Holder");
+        Object original = loadWith(loaded, outer).getMethod("check").invoke(null);
+        assertEquals("AB", original, "the fixture itself must build and iterate the array");
+
+        ClassPool pool = new ClassPool();
+        for (ClassFile each : loaded.values()) {
+            pool.loadClass(each.write());
+        }
+        // The DOTTED source form of a nested type in an array allocation - what the decompile of a
+        // modern-javac enum's $values() prints - must lower to the real Holder$Kind class, or the
+        // allocation references a class that does not exist and make() throws NoClassDefFoundError.
+        String qualified = String.join("\n",
+                "public class Holder {",
+                "    static Holder.Kind[] make() {",
+                "        return new Holder.Kind[] {Holder.Kind.A, Holder.Kind.B};",
+                "    }",
+                "    public static String check() {",
+                "        StringBuilder sb = new StringBuilder();",
+                "        for (Holder.Kind k : make()) {",
+                "            sb.append(k);",
+                "        }",
+                "        return sb.toString();",
+                "    }",
+                "}");
+        assertTrue(TestUtils.recompileSource(outer, pool, qualified, "Holder"), "the qualified form recompiles");
+        assertEquals(original, loadWith(loaded, outer).getMethod("check").invoke(null),
+                "make() must load and run after relowering the qualified allocation");
+    }
+
+    /** Defines every fixture class in one loader and returns {@code main}'s Class. */
+    private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
+        com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();
+        Class<?> result = null;
+        for (ClassFile each : all.values()) {
+            Class<?> c = loader.defineClass(each.getClassName().replace('/', '.'), each.write());
+            if (each == main) {
+                result = c;
+            }
+        }
+        return result;
+    }
+
     private static Map<String, ClassFile> compileAll(String primary, String... lines) throws Exception {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
