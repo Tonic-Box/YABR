@@ -736,7 +736,28 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         IRBlock tryStart = outerHandler.getTryStart();
         List<Statement> preTryStmts = new ArrayList<>();
         if (tryStart != null && tryStart != entry) {
-            Set<IRBlock> preTryStop = new HashSet<>(stopBlocks);
+            // The offset-based stops exist to bound the TRY region; the prefix owns a post-try-offset
+            // block only IT reaches (a guard jumping forward past the try to a shared throw). Stopping
+            // the prefix there dropped the guard branches entirely and the target block then surfaced
+            // unconditionally. A post-try block the try region also reaches stays a stop, so the
+            // continuation recovery keeps sole ownership of genuinely shared blocks.
+            Set<IRBlock> reachableFromTry = new HashSet<>();
+            Deque<IRBlock> work = new ArrayDeque<>();
+            work.add(tryStart);
+            work.addAll(handlerBlocks);
+            while (!work.isEmpty()) {
+                IRBlock b = work.poll();
+                if (b == null || !reachableFromTry.add(b)) {
+                    continue;
+                }
+                work.addAll(b.getSuccessors());
+            }
+            Set<IRBlock> preTryStop = new HashSet<>(handlerBlocks);
+            for (IRBlock stop : stopBlocks) {
+                if (reachableFromTry.contains(stop)) {
+                    preTryStop.add(stop);
+                }
+            }
             preTryStop.add(tryStart);
             preTryStmts = recoverRegionHandoff(entry, preTryStop);
         }
@@ -3636,12 +3657,64 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     }
 
     /**
-     * True when the handler rethrows a freshly constructed exception rather than the caught one - a
-     * {@code catch (E e) { throw new X(...); }} that wraps and rethrows. Its terminal {@code athrow} throws a value
-     * produced by a {@code new} in the handler, not the caught exception, so it is a catch clause, not a finally,
-     * even though {@link #handlerRethrows} (which only checks for a trailing {@code athrow}) reports true. Used to
-     * keep such a body on the reaching-condition engine instead of routing it to the legacy finally walk.
+     * As {@link #handlerThrowsFreshException} but tracing freshness through slot round-trips - used ONLY
+     * by the decode-side finally classification, where a typed wrap-rethrow catch on a re-lowered layout
+     * (astore/aload around the constructor) must not read as finally scaffolding. The other call sites
+     * keep the narrower historical predicate their surrounding machinery is calibrated against.
      */
+    private boolean throwsFreshExceptionThroughSlots(ExceptionHandler h) {
+        if (h == null || h.getHandlerBlock() == null) {
+            return false;
+        }
+        Set<Value> freshValues = new HashSet<>();
+        Set<Integer> freshSlots = new HashSet<>();
+        Value thrown = null;
+        Deque<IRBlock> work = new ArrayDeque<>();
+        Set<IRBlock> seen = new HashSet<>();
+        work.add(h.getHandlerBlock());
+        int budget = 60;
+        while (!work.isEmpty() && budget-- > 0) {
+            IRBlock b = work.poll();
+            if (!seen.add(b)) {
+                continue;
+            }
+            for (IRInstruction ins : b.getInstructions()) {
+                if (ins instanceof NewInstruction && ins.getResult() != null) {
+                    freshValues.add(ins.getResult());
+                }
+                // A layout may park the fresh exception in a slot before the throw (astore/aload
+                // around the constructor); the slot carries the freshness to the reload.
+                if (ins instanceof StoreLocalInstruction
+                        && freshValues.contains(((StoreLocalInstruction) ins).getValue())) {
+                    freshSlots.add(((StoreLocalInstruction) ins).getLocalIndex());
+                }
+                if (ins instanceof LoadLocalInstruction && ins.getResult() != null
+                        && freshSlots.contains(((LoadLocalInstruction) ins).getLocalIndex())) {
+                    freshValues.add(ins.getResult());
+                }
+                if (ins instanceof CopyInstruction && ins.getResult() != null
+                        && freshValues.contains(((CopyInstruction) ins).getSource())) {
+                    freshValues.add(ins.getResult());
+                }
+            }
+            IRInstruction term = b.getTerminator();
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                // The FIRST athrow reached is the handler's own; descending further would wander over
+                // an exception edge into ANOTHER handler's throw and judge that one instead.
+                if (thrown == null) {
+                    thrown = ((SimpleInstruction) term).getOperand();
+                }
+                continue;
+            }
+            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    work.add(e.getKey());
+                }
+            }
+        }
+        return thrown != null && freshValues.contains(thrown);
+    }
+
     private boolean handlerThrowsFreshException(ExceptionHandler h) {
         if (h == null || h.getHandlerBlock() == null) {
             return false;
@@ -8083,8 +8156,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
     private boolean tryHasFinallyHandler(IRBlock tryStart) {
         int startOff = tryStart.getBytecodeOffset();
         for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+            // A typed wrap-rethrow user clause (`catch (FNF e) { throw wrap(e); }`) must not read as
+            // finally scaffolding: the slot-tracing freshness check sees the wrap even when a layout
+            // parks the fresh exception in a slot before its throw. (Gating on the declared catch
+            // type instead broke real finally scaffolding whose merged handler carries a user type.)
             if (h.getTryStart() != null && h.getTryStart().getBytecodeOffset() == startOff
-                    && handlerRethrows(h) && !handlerThrowsFreshException(h)) {
+                    && handlerRethrows(h) && !throwsFreshExceptionThroughSlots(h)) {
                 return true;
             }
         }

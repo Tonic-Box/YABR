@@ -501,6 +501,62 @@ class RecoveryTailsTest {
                 "the round-tripped class must behave the same");
     }
 
+    @Test
+    void aTypedWrapRethrowCatchIsNotFinallyScaffolding() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("WrapCatch",
+                "public class WrapCatch {",
+                "    int size;",
+                "    WrapCatch(String name, int size) throws Exception {",
+                "        if (name == null || size <= 0) {",
+                "            throw new Exception(\"bad args\");",
+                "        }",
+                "        try {",
+                "            this.size = Integer.parseInt(name) + size;",
+                "        }",
+                "        catch (NumberFormatException e) {",
+                "            throw new Exception(\"bad name: \" + name);",
+                "        }",
+                "    }",
+                "    public static String check() {",
+                "        StringBuilder sb = new StringBuilder();",
+                "        try {",
+                "            sb.append(new WrapCatch(\"7\", 3).size);",
+                "        } catch (Exception e) {",
+                "            sb.append(e.getMessage());",
+                "        }",
+                "        try {",
+                "            new WrapCatch(null, 3);",
+                "        } catch (Exception e) {",
+                "            sb.append('|').append(e.getMessage());",
+                "        }",
+                "        try {",
+                "            new WrapCatch(\"x\", 3);",
+                "        } catch (Exception e) {",
+                "            sb.append('|').append(e.getMessage());",
+                "        }",
+                "        return sb.toString();",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("WrapCatch");
+        Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
+        assertEquals("10|bad args|bad name: x", original, "the fixture itself must take every path");
+
+        ClassPool pool = new ClassPool();
+        pool.loadClass(cf.write());
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "WrapCatch"), "d1 recompiles");
+        // The relowered layout parks the wrapped exception in a slot before its throw; the typed
+        // wrap-rethrow catch must still read as a USER clause, not finally scaffolding - the
+        // misclassification structured a phantom finally node, the region then declined, and the
+        // constructor recovered as its unconditional guard throw alone.
+        String d2 = ClassDecompiler.decompile(cf);
+        assertTrue(d2.contains("catch (NumberFormatException"),
+                "the typed catch survives the round trip:\n" + d2);
+        assertTrue(d2.contains("parseInt"), "the try body survives the round trip:\n" + d2);
+        assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
     /** Defines every fixture class in one loader and returns {@code main}'s Class. */
     private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
         com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();
