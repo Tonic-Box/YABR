@@ -1809,8 +1809,9 @@ public class ExpressionLowerer {
         // int[] (ANEWARRAY [I -> int[][]). Flattening to the base int would emit NEWARRAY int -> int[].
         // For a fully-counted allocation (`new int[2][3]`) the peel reaches the base and the emitter
         // picks MULTIANEWARRAY from the >1 count.
-        IRType elementType = peelArrayType(newArr.getType(), dims.size());
-        IRType arrayType = newArr.getType().toIRType();
+        SourceType declared = resolveArrayElement(newArr.getType());
+        IRType elementType = peelArrayType(declared, dims.size());
+        IRType arrayType = declared.toIRType();
         SSAValue result = ctx.newValue(arrayType);
 
         NewArrayInstruction instr = new NewArrayInstruction(result, elementType, dims);
@@ -1825,8 +1826,9 @@ public class ExpressionLowerer {
         // The allocation covers ONE dimension, so its component is the type reached by a single index -
         // `int[]` for an `int[][]` initializer, not the base `int`. Using the base built the outer array as
         // a primitive one, and storing the inner arrays into it produced bytecode that does not verify.
-        IRType elementType = peelArrayType(newArr.getType(), 1);
-        IRType arrayType = newArr.getType().toIRType();
+        SourceType declared = resolveArrayElement(newArr.getType());
+        IRType elementType = peelArrayType(declared, 1);
+        IRType arrayType = declared.toIRType();
 
         SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(sizeVal, IntConstant.of(size)));
@@ -1844,6 +1846,28 @@ public class ExpressionLowerer {
         }
 
         return result;
+    }
+
+    /**
+     * The array type with its reference base resolved to a real internal name. The parser carries the
+     * SOURCE form - a dotted nested name ({@code com.jme3.animation.AnimationFactory.Type}) or a bare
+     * simple name - and lowering that form verbatim makes the allocation reference a class that does
+     * not exist, failing with {@code NoClassDefFoundError} the first time the method runs.
+     */
+    private SourceType resolveArrayElement(SourceType type) {
+        if (type instanceof ArraySourceType) {
+            ArraySourceType arr = (ArraySourceType) type;
+            SourceType base = resolveArrayElement(arr.getElementType());
+            return base == arr.getElementType() ? arr : new ArraySourceType(base, arr.getTotalDimensions());
+        }
+        if (type instanceof ReferenceSourceType) {
+            String name = ((ReferenceSourceType) type).getInternalName();
+            String resolved = ctx.getTypeResolver().resolveInternalName(name);
+            if (resolved != null && !resolved.equals(name)) {
+                return new ReferenceSourceType(resolved, ((ReferenceSourceType) type).getTypeArguments());
+            }
+        }
+        return type;
     }
 
     /**
@@ -2819,8 +2843,12 @@ public class ExpressionLowerer {
             case "S":
                 return PrimitiveSourceType.SHORT;
             default:
-                String internalName = typeName.replace('.', '/');
-                return new ReferenceSourceType(internalName);
+                // The resolver, not a blind dot-to-slash swap: a dotted NESTED name
+                // (com.jme3.animation.AnimationFactory.Type) must become Outer$Nested, or the
+                // allocation references a class that does not exist and the method throws
+                // NoClassDefFoundError the first time it runs. Simple names resolve through
+                // imports and the current declaration the same way every other type use does.
+                return new ReferenceSourceType(ctx.getTypeResolver().resolveClassName(typeName));
         }
     }
 }
