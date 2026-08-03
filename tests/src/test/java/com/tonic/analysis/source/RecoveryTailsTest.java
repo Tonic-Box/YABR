@@ -578,8 +578,7 @@ class RecoveryTailsTest {
                                 new com.tonic.analysis.source.ast.expr.VarRefExpr("e", obj)))));
         com.tonic.analysis.source.ast.stmt.CatchClause clause =
                 new com.tonic.analysis.source.ast.stmt.CatchClause(
-                        java.util.List.of((com.tonic.analysis.source.ast.type.SourceType)
-                                new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Exception")),
+                        java.util.List.of(new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Exception")),
                         "e", catchBody);
         com.tonic.analysis.source.ast.stmt.TryCatchStmt tryCatch =
                 new com.tonic.analysis.source.ast.stmt.TryCatchStmt(tryBlock,
@@ -635,6 +634,69 @@ class RecoveryTailsTest {
         String d2 = ClassDecompiler.decompile(cf);
         org.junit.jupiter.api.Assertions.assertFalse(d2.contains("Failed to decompile"),
                 "the relowered constructor must lift back:\n" + d2);
+        assertEquals(original, loadWith(loaded, cf).getMethod("check").invoke(null),
+                "the round-tripped class must behave the same");
+    }
+
+    @Test
+    void aFinallyInsideAnIfArmSurvivesTheRelayeredLayout() throws Exception {
+        Map<String, ClassFile> loaded = compileAll("FinIf",
+                "import java.io.ByteArrayInputStream;",
+                "import java.io.IOException;",
+                "import java.io.InputStream;",
+                "public class FinIf {",
+                "    static StringBuilder log = new StringBuilder();",
+                "    static String cfg = \"x\";",
+                "    static InputStream open() throws IOException {",
+                "        log.append(\"o\");",
+                "        return new ByteArrayInputStream(new byte[] {1});",
+                "    }",
+                "    static void run() {",
+                "        log.append(\"s\");",
+                "        if (cfg != null) {",
+                "            InputStream in = null;",
+                "            try {",
+                "                in = open();",
+                "                log.append(in.read());",
+                "            } catch (IOException ex) {",
+                "                log.append(\"c\");",
+                "            } finally {",
+                "                if (in != null) {",
+                "                    try {",
+                "                        in.close();",
+                "                    } catch (IOException e) {",
+                "                    }",
+                "                }",
+                "            }",
+                "        }",
+                "        log.append(\"r\");",
+                "    }",
+                "    public static String check() {",
+                "        log = new StringBuilder();",
+                "        run();",
+                "        cfg = null;",
+                "        run();",
+                "        cfg = \"x\";",
+                "        return log.toString();",
+                "    }",
+                "}");
+        ClassFile cf = loaded.get("FinIf");
+        Object original = loadWith(loaded, cf).getMethod("check").invoke(null);
+        assertEquals("so1rsr", original, "the fixture itself must take both arms");
+
+        ClassPool pool = new ClassPool();
+        for (ClassFile each : loaded.values()) {
+            pool.loadClass(each.write());
+        }
+        String d1 = ClassDecompiler.decompile(cf);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "FinIf"), "d1 recompiles");
+        // The relowered layout interleaves the construct with the post-if continuation and parks
+        // the de-duplicated guarded close past the protected window, so offset-window membership
+        // over- and under-consumes and the finally node declined on phantom rival joins - gutting
+        // the method to a retired-schema comment. Closure membership recovers it.
+        String d2 = ClassDecompiler.decompile(cf);
+        org.junit.jupiter.api.Assertions.assertFalse(d2.contains("Failed to decompile"),
+                "the relowered finally-in-if layout must structure:\n" + d2);
         assertEquals(original, loadWith(loaded, cf).getMethod("check").invoke(null),
                 "the round-tripped class must behave the same");
     }

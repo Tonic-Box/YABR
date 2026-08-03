@@ -7266,33 +7266,129 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // such a gap is protected by nothing and is the join the node must continue at, not part of the
             // construct; leave it unconsumed so the join scan finds it.
             List<int[]> protectedRanges = new ArrayList<>();
+            Set<IRBlock> familyHandlers = new HashSet<>();
             for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
                 if (sib.getHandlerBlock() == null || sib.getTryStart() == null
                         || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
                     continue;
                 }
                 for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-                    if (eh.getHandlerBlock() == sib.getHandlerBlock()
-                            && eh.getTryStart() != null && eh.getTryEnd() != null) {
-                        protectedRanges.add(new int[]{eh.getTryStart().getBytecodeOffset(),
-                                eh.getTryEnd().getBytecodeOffset()});
+                    if (eh.getHandlerBlock() == sib.getHandlerBlock()) {
+                        familyHandlers.add(eh.getHandlerBlock());
+                        if (eh.getTryStart() != null && eh.getTryEnd() != null) {
+                            protectedRanges.add(new int[]{eh.getTryStart().getBytecodeOffset(),
+                                    eh.getTryEnd().getBytecodeOffset()});
+                        }
                     }
                 }
             }
-            for (IRBlock b : new ArrayList<>(consumed)) {
+            // A RELOWERED layout interleaves the construct with unrelated blocks: continuation code
+            // and foreign handlers can sit between the family's ranges while construct code (the
+            // de-duplicated guarded close on the normal path) lands past the window's end. The
+            // offset window then both over- and under-consumes, and the join scan meets phantom
+            // rivals. Membership is really a CLOSURE: the family's protected ranges and handlers,
+            // every block all of whose predecessors already belong (interior flow can't escape), and
+            // every nested handler whose whole protected range lies inside. The unprotected-return
+            // carve stays: a gap return the exits converge on is the join, never construct interior.
+            // ACYCLIC, non-synchronized contexts only: inside a loop the predecessor closure
+            // swallows latches and break continuations the loop model owns, and extending it there
+            // (dominance-bounded, wrapper-gated) let a wrapped retry loop re-wire its join through
+            // excised copies and spin - the TryLoop2 trap. The monitor gate checks the WHOLE
+            // same-start family: a user catch inside a synchronized body shares its try start with
+            // the monitor rethrower.
+            boolean acyclicNode = context.getLoopAnalysis() == null
+                    || context.getLoopAnalysis().getLoop(block) == null;
+            // The monitor scaffolding may not be the node's OWN handler: a user catch inside a
+            // synchronized body shares its try start with the sync rethrower, so every same-start
+            // handler is checked before the closure engages.
+            boolean syncFamily = false;
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+                if (sib.getTryStart() != null && sib.getTryStart().getBytecodeOffset() == startOff
+                        && detectSynchronizedLock(sib) != null) {
+                    syncFamily = true;
+                    break;
+                }
+            }
+            if (acyclicNode && !syncFamily) {
+            Set<IRBlock> closure = new HashSet<>();
+            for (IRBlock b : irMethod.getBlocks()) {
+                int boff = b.getBytecodeOffset();
+                for (int[] r : protectedRanges) {
+                    if (boff >= r[0] && boff < r[1]) {
+                        closure.add(b);
+                        break;
+                    }
+                }
+            }
+            closure.addAll(familyHandlers);
+            boolean grew = true;
+            while (grew) {
+                grew = false;
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                    if (eh.getHandlerBlock() == null || closure.contains(eh.getHandlerBlock())
+                            || eh.getTryStart() == null || eh.getTryEnd() == null) {
+                        continue;
+                    }
+                    boolean rangeInside = true;
+                    int lo = eh.getTryStart().getBytecodeOffset();
+                    int hi = eh.getTryEnd().getBytecodeOffset();
+                    for (IRBlock b : irMethod.getBlocks()) {
+                        int boff = b.getBytecodeOffset();
+                        if (boff >= lo && boff < hi && !closure.contains(b)) {
+                            rangeInside = false;
+                            break;
+                        }
+                    }
+                    if (rangeInside) {
+                        closure.add(eh.getHandlerBlock());
+                        grew = true;
+                    }
+                }
+                for (IRBlock b : irMethod.getBlocks()) {
+                    if (closure.contains(b) || b == irMethod.getEntryBlock()
+                            || b.getPredecessors().isEmpty()
+                            || b.getTerminator() instanceof ReturnInstruction) {
+                        continue;
+                    }
+                    if (closure.containsAll(b.getPredecessors())) {
+                        closure.add(b);
+                        grew = true;
+                    }
+                }
+            }
+            for (IRBlock b : new ArrayList<>(closure)) {
                 if (!(b.getTerminator() instanceof ReturnInstruction)) {
                     continue;
                 }
-                int off = b.getBytecodeOffset();
+                int boff = b.getBytecodeOffset();
                 boolean covered = false;
                 for (int[] r : protectedRanges) {
-                    if (off >= r[0] && off < r[1]) {
+                    if (boff >= r[0] && boff < r[1]) {
                         covered = true;
                         break;
                     }
                 }
                 if (!covered) {
-                    consumed.remove(b);
+                    closure.remove(b);
+                }
+            }
+            consumed = closure;
+            } else {
+                for (IRBlock b : new ArrayList<>(consumed)) {
+                    if (!(b.getTerminator() instanceof ReturnInstruction)) {
+                        continue;
+                    }
+                    int boff = b.getBytecodeOffset();
+                    boolean covered = false;
+                    for (int[] r : protectedRanges) {
+                        if (boff >= r[0] && boff < r[1]) {
+                            covered = true;
+                            break;
+                        }
+                    }
+                    if (!covered) {
+                        consumed.remove(b);
+                    }
                 }
             }
         }
@@ -7399,12 +7495,33 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (after == null) {
-            int best = Integer.MAX_VALUE;
-            for (IRBlock b : irMethod.getBlocks()) {
-                int off = b.getBytecodeOffset();
-                if (off >= endOff && off < best && !consumed.contains(b)) {
-                    after = b;
-                    best = off;
+            // The range-end fallback presumes the try's normal continuation physically follows the
+            // protected range (javac's contiguous layout). When the try side is fully TERMINAL too
+            // (`try { return f(); } catch { throw wrap; }`), there is no join at all - fabricating
+            // one from the next offset wires the node into unrelated code (a relowered layout may
+            // place any block there) and the phantom edge reads as an irreducible cycle.
+            Set<IRBlock> trySideTargets = new HashSet<>();
+            for (IRBlock cb : consumed) {
+                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                            && !consumed.contains(e.getKey())) {
+                        trySideTargets.add(e.getKey());
+                    }
+                }
+            }
+            if (trySideTargets.size() == 1) {
+                // The try side's one real continuation IS the join; the offset fallback below can
+                // point at whatever block a relowered layout happens to place past the range end
+                // (an empty pad, unrelated code).
+                after = trySideTargets.iterator().next();
+            } else if (!trySideTargets.isEmpty()) {
+                int best = Integer.MAX_VALUE;
+                for (IRBlock b : irMethod.getBlocks()) {
+                    int off = b.getBytecodeOffset();
+                    if (off >= endOff && off < best && !consumed.contains(b)) {
+                        after = b;
+                        best = off;
+                    }
                 }
             }
             if (after != null && dt.dominates(h.getHandlerBlock(), after)) {
