@@ -294,7 +294,29 @@ public final class ReachingConditionStructurer {
             return null;
         }
         if (!prepareRegion(entry, stopBlocks)) {
-            return null;
+            // The region may only need its catch-join SEGMENTATION - the same cut
+            // tryStructureRegion performs. Probe the segmented shape: the head bounded at the
+            // split, then the tail from the split; their exits (minus the internal split) are what
+            // the segmented structure flows into. Without this the offer declines before the
+            // engine's segmentation ever runs.
+            IRBlock split = pendingCatchJoinSplit;
+            pendingCatchJoinSplit = null;
+            if (split == null || split == entry || !allowTryNodes) {
+                return null;
+            }
+            Set<IRBlock> headStops = new HashSet<>(stopBlocks);
+            headStops.add(split);
+            Set<IRBlock> headExits = probeRegionExits(entry, headStops, true);
+            if (headExits == null) {
+                return null;
+            }
+            Set<IRBlock> tailExits = probeRegionExits(split, stopBlocks, true);
+            if (tailExits == null) {
+                return null;
+            }
+            headExits.remove(split);
+            headExits.addAll(tailExits);
+            return headExits;
         }
         Set<IRBlock> exits = new HashSet<>();
         for (IRBlock rb : region) {
@@ -1027,6 +1049,8 @@ public final class ReachingConditionStructurer {
                     }
                 }
                 if (!isNodeJoin) {
+                    trace("collect-decline consumed-idom entry=" + entry.getBytecodeOffset()
+                            + " b=" + b.getBytecodeOffset() + " idom=" + idom.getBytecodeOffset());
                     return false;
                 }
             }

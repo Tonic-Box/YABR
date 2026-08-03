@@ -1267,6 +1267,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             switch (info.getType()) {
                 case IF_THEN:
                 case IF_THEN_ELSE:
+                // A guard clause is an if with an early-exit arm; its merge is the continuation
+                // after the guard, the same bound an if takes.
+                case GUARD_CLAUSE:
                     rcsBound = info.getMergeBlock();
                     // An if with no merge block has terminating arms (every path returns or throws);
                     // like an exit-less loop it is offered unbounded, and the walk has no continuation.
@@ -5258,6 +5261,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 boolean bodyTerminalRegion = false;
                 boolean strictOffer = false;
                 switch (info.getType()) {
+                    case GUARD_CLAUSE:
+                        // A guard clause bounds at its merge like an if; the skip mode keeps the
+                        // walk (a finally's inlined copies inflate the guard's exit arm).
+                        if (!skipReachingConditions) {
+                            bodyBound = info.getMergeBlock();
+                            bodyTerminalRegion = bodyBound == null;
+                        }
+                        break;
                     case IF_THEN:
                     case IF_THEN_ELSE:
                         if (!skipReachingConditions) {
@@ -7254,6 +7265,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (startOff < 0 || endOff <= startOff || block.getBytecodeOffset() != startOff) {
+            trace("node-decline range block=" + block.getBytecodeOffset()
+                    + " startOff=" + startOff + " endOff=" + endOff);
             return null;
         }
         boolean finallyNode = false;
@@ -7512,17 +7525,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (s >= startOff && s < endOff
                     && !processedTryHandlers.contains(eh)
                     && !processedHandlerBlocks.contains(eh.getHandlerBlock())) {
+                // Containment is judged against the CONSUMED SET, not the offset window: a
+                // relowered layout may park the nested catch's subtree past the window's end while
+                // the closure has legitimately absorbed it. A block in neither is genuinely outside
+                // the model's reach.
                 boolean contained = true;
                 for (IRBlock nb : irMethod.getBlocks()) {
                     if (nb == eh.getHandlerBlock() || nestDt.dominates(eh.getHandlerBlock(), nb)) {
                         int off = nb.getBytecodeOffset();
-                        if (off < startOff || off >= endOff) {
+                        if ((off < startOff || off >= endOff) && !consumed.contains(nb)) {
                             contained = false;
                             break;
                         }
                     }
                 }
                 if (!contained) {
+                    trace("node-decline nested-uncontained block=" + block.getBytecodeOffset()
+                            + " nested=" + eh.getHandlerBlock().getBytecodeOffset());
                     return null;
                 }
             }
@@ -7562,6 +7581,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     continue;
                 }
                 if (after != null && after != succ) {
+                    trace("node-decline handler-two-join block=" + block.getBytecodeOffset()
+                            + " a=" + after.getBytecodeOffset() + " b=" + succ.getBytecodeOffset());
                     return null;
                 }
                 after = succ;
@@ -7598,6 +7619,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
             if (after != null && dt.dominates(h.getHandlerBlock(), after)) {
+                trace("node-decline handler-dominates-after block=" + block.getBytecodeOffset());
                 return null;
             }
         }
