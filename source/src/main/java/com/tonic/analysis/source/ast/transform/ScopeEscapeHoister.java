@@ -100,7 +100,14 @@ public class ScopeEscapeHoister implements ASTTransform {
         if (index < 0) {
             return false;
         }
-        if (decl.getInitializer() != null) {
+        // A DEFAULT initializer outside a loop carries nothing the hoisted declaration's own default
+        // does not: keeping it as a residual assignment can CLOBBER a live value when the recovery
+        // placed the declaration below a real store to the same variable (a reused-slot component
+        // declared mid-flow). Inside a loop the reset runs once per iteration and must stay.
+        boolean defaultResidueDroppable = decl.getInitializer() != null
+                && isDefaultLiteral(decl.getInitializer())
+                && !insideLoop(declScope, methodBlock);
+        if (decl.getInitializer() != null && !defaultResidueDroppable) {
             VarRefExpr target = new VarRefExpr(decl.getName(), decl.getType(), null);
             ExprStmt assign = new ExprStmt(new BinaryExpr(
                 BinaryOperator.ASSIGN, target, decl.getInitializer(), decl.getType()));
@@ -125,6 +132,40 @@ public class ScopeEscapeHoister implements ASTTransform {
         methodBlock.getStatements().add(insertAt,
             new VarDeclStmt(decl.getType(), decl.getName(), defaultValueOf(decl.getType())));
         return true;
+    }
+
+    /** Whether {@code expr} is a default-value literal (null, zero of any width, false, '\0'). */
+    private static boolean isDefaultLiteral(Expression expr) {
+        if (!(expr instanceof LiteralExpr)) {
+            return false;
+        }
+        Object v = ((LiteralExpr) expr).getValue();
+        if (v == null) {
+            return true;
+        }
+        if (v instanceof Number) {
+            return ((Number) v).doubleValue() == 0.0;
+        }
+        if (v instanceof Boolean) {
+            return !((Boolean) v);
+        }
+        if (v instanceof Character) {
+            return (Character) v == '\0';
+        }
+        return false;
+    }
+
+    /** Whether any node on the path from {@code scope} up to {@code stopAt} is a loop statement. */
+    private static boolean insideLoop(ASTNode scope, ASTNode stopAt) {
+        for (ASTNode p = scope; p != null && p != stopAt; p = p.getParent()) {
+            if (p instanceof com.tonic.analysis.source.ast.stmt.WhileStmt
+                    || p instanceof com.tonic.analysis.source.ast.stmt.DoWhileStmt
+                    || p instanceof com.tonic.analysis.source.ast.stmt.ForStmt
+                    || p instanceof com.tonic.analysis.source.ast.stmt.ForEachStmt) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Expression defaultValueOf(SourceType type) {

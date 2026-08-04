@@ -873,7 +873,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     continue;
                 }
                 dedupJoins.add(exit);
-                stopBlocks.add(exit);
+            }
+            // Only an UNAMBIGUOUS join bounds the body: a fused construct excises one copy per
+            // switch arm, and its several exits are arm-interior code - making them stops would cut
+            // the arms mid-way. The continuation preference below already requires uniqueness.
+            if (dedupJoins.size() == 1) {
+                stopBlocks.add(dedupJoins.iterator().next());
+            } else {
+                dedupJoins.clear();
             }
         }
         List<Statement> tryStmts;
@@ -1239,6 +1246,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
                     stampFromBody(tryCatch, tryBlock);
                     result.add(tryCatch);
+                    // A try whose every path returns or throws has no continuation on this walk:
+                    // walking the try-end successors would re-emit the stashed return (or whatever
+                    // block follows) as unreachable code after the construct.
+                    if (isTerminatingRecoveredTry(tryCatch)) {
+                        current = null;
+                        continue;
+                    }
                 } else {
                     result.addAll(tryStmts);
                 }
@@ -1713,7 +1727,27 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         processedTryHandlers.add(eh);
                     }
                 }
-                List<Statement> structured = recoverBlockSequence(handlerBlock, bodyStops);
+                // An ENCLOSING construct's protection of this clause's code (a range starting inside
+                // the subtree whose handler lies outside it) is not a nested try of the clause: it
+                // belongs to a construct still being recovered outside-in, and decoding it here meets
+                // a mid-family range start no node model owns. Mask such entries for this walk only.
+                Set<ExceptionHandler> enclosingProtections = new HashSet<>();
+                for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
+                    if (eh.getHandlerBlock() != null && eh.getHandlerBlock() != handlerBlock
+                            && eh.getTryStart() != null
+                            && catchBody.contains(eh.getTryStart())
+                            && !catchBody.contains(eh.getHandlerBlock())
+                            && !processedTryHandlers.contains(eh)) {
+                        enclosingProtections.add(eh);
+                        processedTryHandlers.add(eh);
+                    }
+                }
+                List<Statement> structured;
+                try {
+                    structured = recoverBlockSequence(handlerBlock, bodyStops);
+                } finally {
+                    processedTryHandlers.removeAll(enclosingProtections);
+                }
                 List<Statement> filtered = new ArrayList<>();
                 for (Statement st : structured) {
                     if (st instanceof VarDeclStmt && ((VarDeclStmt) st).getName().equals(exceptionVarName)) {
@@ -2319,6 +2353,24 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         newCatches, tcs.getFinallyBlock());
                 Locations.copy(tcs, rebuiltTry);
                 result.add(rebuiltTry);
+                i++;
+                continue;
+            }
+
+            if (stmt instanceof SwitchStmt) {
+                // javac splits the finally's protected range around the returns in switch arms, so
+                // an arm that leaves the try normally carries the inlined copy before its return.
+                // Left in place next to the extracted finally clause, the copy runs the cleanup a
+                // second time on that arm.
+                SwitchStmt sw = (SwitchStmt) stmt;
+                List<SwitchCase> newCases = new ArrayList<>();
+                for (SwitchCase c : sw.getCases()) {
+                    newCases.add(new SwitchCase(c.labels(), c.expressionLabels(), c.isDefault(),
+                            filterInlinedFinallyFromTryStatements(c.statements(), finallyStmts)));
+                }
+                SwitchStmt rebuiltSwitch = new SwitchStmt(sw.getSelector(), newCases);
+                Locations.copy(sw, rebuiltSwitch);
+                result.add(rebuiltSwitch);
                 i++;
                 continue;
             }
@@ -3515,11 +3567,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         // Claim the region's clause set before recovering the body: a body walk's engine attempt would
         // otherwise node-ify the construct's own family as a fresh try - re-recovering the construct
-        // inside itself and synthesizing nested tries around the user catches.
+        // inside itself and synthesizing nested tries around the user catches. The claim covers the
+        // whole HANDLER-BLOCK family: a split range of the same clause (javac splits around returns
+        // and interleaved arms) is this construct's own scaffolding, and leaving it unclaimed makes
+        // the continuation walk meet it as a fresh mid-family try start it can never decode.
         for (ExceptionHandler h : sameRegionHandlers) {
             processedTryHandlers.add(h);
             if (h.getHandlerBlock() != null) {
                 processedHandlerBlocks.add(h.getHandlerBlock());
+            }
+        }
+        for (ExceptionHandler h : irMethod.getExceptionHandlers()) {
+            if (h.getHandlerBlock() != null && processedHandlerBlocks.contains(h.getHandlerBlock())) {
+                processedTryHandlers.add(h);
             }
         }
         Set<IRBlock> tryStopBlocks = new HashSet<>(originalStopBlocks);
@@ -5668,6 +5728,26 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         if (stmt instanceof BlockStmt) {
             return isTerminatingBlock((BlockStmt) stmt);
+        }
+        if (stmt instanceof SwitchStmt) {
+            // A switch terminates when every arm does (returns/throws; a break falls out and does
+            // NOT terminate) and a default arm makes the dispatch total.
+            SwitchStmt sw = (SwitchStmt) stmt;
+            boolean hasDefault = false;
+            for (SwitchCase c : sw.getCases()) {
+                if (c.isDefault()) {
+                    hasDefault = true;
+                }
+                List<Statement> body = c.statements();
+                if (body.isEmpty()) {
+                    return false;
+                }
+                Statement last = body.get(body.size() - 1);
+                if (last instanceof BreakStmt || !isTerminatingStatement(last)) {
+                    return false;
+                }
+            }
+            return hasDefault;
         }
         return false;
     }
@@ -8695,7 +8775,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 && (findUnprocessedHandlerStartingAt(stop) != null
                     || isBareReturnTail(stop)
                     || startsClaimedHandlerRange(stop)
-                    || retiredTryBoundaries.contains(stop)));
+                    || retiredTryBoundaries.contains(stop)
+                    || (bound == null && excisedFinallyCopyBlocks.contains(stop))));
     }
 
     /**
@@ -9795,6 +9876,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             SSAValue result = constInstr.getResult();
             if (result != null) {
                 PhiInstruction targetPhi = getPhiUsingValue(result);
+                // A dead phi (or the primitive/reference pun a reused slot leaves behind) carries an
+                // arbitrary component's name; materializing the constant into it writes another
+                // variable entirely (`minor = null` for a try-with-resources sentinel). The same
+                // guard every other phi-copy emitter applies. The store consuming this constant
+                // still emits the real initialization.
+                if (targetPhi != null && targetPhi.getResult() != null
+                        && (targetPhi.getResult().getUses().isEmpty() || isTypePunDeadPhi(targetPhi))) {
+                    targetPhi = null;
+                }
+                // The phi of a REUSED slot can carry the other occupant's name and type; writing this
+                // constant into it is the same reused-slot fiction lowerPhisOnEdge refuses (`minor =
+                // null` for a try-with-resources sentinel, with minor an int). The store consuming
+                // the constant still emits the real initialization under the right name.
+                if (targetPhi != null && targetPhi.getResult() != null) {
+                    String punName = context.getExpressionContext().getVariableName(targetPhi.getResult());
+                    if (punName != null && !copyTypeCompatible(getLocalSlotUnifiedType(punName), result)) {
+                        targetPhi = null;
+                    }
+                }
                 if (targetPhi != null && targetPhi.getResult() != null) {
                     if (selfStorePhis.contains(targetPhi)) {
                         FieldAccessInstruction fieldInfo = getSelfStoreFieldInfo(targetPhi);
@@ -9987,6 +10087,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // Name the store via the reaching-definition partition so this slot's variable
         // matches the loads that read it; fall back to category naming if unplaced.
         String name = partitionName(store);
+        if (System.getProperty("yabr.debug.store") != null
+                && store.getBytecodeOffset() == Integer.parseInt(System.getProperty("yabr.debug.store"))) {
+            System.err.println("[store] off=" + store.getBytecodeOffset() + " slot=" + localIndex
+                    + " partition=" + name
+                    + " valName=" + (storeValue instanceof SSAValue
+                        ? context.getExpressionContext().getVariableName((SSAValue) storeValue) : "-")
+                    + " materialized=" + (storeValue instanceof SSAValue
+                        && context.getExpressionContext().isMaterialized((SSAValue) storeValue)));
+        }
         if (name == null) {
             name = getNameForLocalSlotWithType(localIndex, valueType);
         }

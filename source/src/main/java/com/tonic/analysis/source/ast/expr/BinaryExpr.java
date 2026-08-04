@@ -27,6 +27,12 @@ public final class BinaryExpr implements Expression {
         this.type = Objects.requireNonNull(type, "type cannot be null");
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
+        String dbg = System.getProperty("yabr.debug.assign");
+        if (dbg != null && operator == BinaryOperator.ASSIGN
+                && left instanceof VarRefExpr && dbg.equals(((VarRefExpr) left).getName())) {
+            new Exception("assign " + dbg + " = " + right.getClass().getSimpleName()).printStackTrace();
+        }
+
         left.setParent(this);
         right.setParent(this);
     }

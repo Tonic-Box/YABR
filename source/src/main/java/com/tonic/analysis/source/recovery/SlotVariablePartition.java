@@ -579,6 +579,26 @@ public class SlotVariablePartition {
         for (Map.Entry<PhiInstruction, Integer> e : phiRepresentative.entrySet()) {
             instructionNames.put(e.getKey(), rootName.get(find(e.getValue())));
         }
+        String dbgSlot = System.getProperty("yabr.debug.slot");
+        if (dbgSlot != null) {
+            int want = Integer.parseInt(dbgSlot);
+            for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
+                if (e.getValue().slot == want) {
+                    System.err.println("[part] DEF off=" + e.getKey().getBytecodeOffset()
+                            + " kind=" + e.getKey().getClass().getSimpleName()
+                            + " root=" + find(e.getValue().id)
+                            + " name=" + rootName.get(find(e.getValue().id))
+                            + " rootOffs=" + rootOffsets.get(find(e.getValue().id)));
+                }
+            }
+            for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet()) {
+                if (e.getKey().getLocalIndex() == want) {
+                    System.err.println("[part] LOAD off=" + e.getKey().getBytecodeOffset()
+                            + " root=" + find(e.getValue())
+                            + " name=" + rootName.get(find(e.getValue())));
+                }
+            }
+        }
     }
 
     /**
