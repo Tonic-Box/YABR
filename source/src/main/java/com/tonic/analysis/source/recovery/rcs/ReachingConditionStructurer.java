@@ -331,6 +331,26 @@ public final class ReachingConditionStructurer {
     }
 
     /**
+     * Whether the most recently probed region flows into {@code bound} through a back edge - the
+     * region is an enclosing loop's body tail whose continuation is the loop header itself. Such a
+     * region probes as exitless (back edges are never exits), yet its bounded offer is sound: the
+     * region ends in the loop's continue and the caller resumes at the already-processed header.
+     */
+    public boolean lastRegionContinuesInto(IRBlock bound) {
+        if (region == null || bound == null) {
+            return false;
+        }
+        for (IRBlock rb : region) {
+            for (IRBlock succ : modelSuccessors(rb)) {
+                if (succ == bound && isBackEdge(rb, succ)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * As {@link #tryStructureRegion(IRBlock, Set)}, and with {@code allowTryNodes} set additionally treats
      * each try in the region as an opaque composite node (delegated to the host's try/catch recovery at its
      * structural position) instead of declining the region. Offered separately so the linear staging path,
@@ -447,7 +467,10 @@ public final class ReachingConditionStructurer {
                     trace("rcs-decline latch-outside entry=" + entry.getBytecodeOffset()
                             + " header=" + b.getBytecodeOffset()
                             + " pred=" + pred.getBytecodeOffset()
-                            + " regionSize=" + region.size() + " nodes=" + tryNodes.size());
+                            + " regionSize=" + region.size() + " nodes=" + tryNodes.size()
+                            + " stops=" + stopBlocks.stream()
+                                .map(x -> String.valueOf(x.getBytecodeOffset())).sorted()
+                                .collect(java.util.stream.Collectors.joining(",")));
                     return false;
                 }
             }

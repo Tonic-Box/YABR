@@ -777,8 +777,11 @@ public class StatementLowerer {
             }
             Set<IRBlock> finallyProtected = new LinkedHashSet<>(tryBodyBlocks);
             finallyProtected.addAll(catchBlocks);
+            // A TRUE catch-any entry (catch_type 0), exactly javac's finally lowering. Source cannot
+            // express one, so a re-decompile can tell this scaffold from a user catch(Throwable)
+            // rethrow even when the copies are laid out branchy; a typed entry erases that provenance.
             ExceptionHandler finallyAll =
-                    new ExceptionHandler(tryBlock, tryEnd, finallyHandler, throwableType);
+                    new ExceptionHandler(tryBlock, tryEnd, finallyHandler, null);
             finallyAll.setTryBlocks(finallyProtected);
             ctx.getIrMethod().addExceptionHandler(finallyAll);
             ctx.restoreVariables(normalFinallyVars);

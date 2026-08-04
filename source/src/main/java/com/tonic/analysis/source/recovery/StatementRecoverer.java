@@ -832,6 +832,50 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             innerHandlers.removeIf(h -> h.getHandlerBlock() != null
                     && !liveHandlerBlocks.contains(h.getHandlerBlock()));
         }
+        // A CFG-level de-duplication has identified where each excised normal-path copy converges -
+        // the construct's real continuation. A relowered layout can interleave the continuation (and
+        // whole downstream structures) BELOW the merged range end, where the offset stops never bound
+        // the body walk - the walk would absorb continuation code and bisect its loops. The join is
+        // the accurate boundary; the continuation recovery below resumes exactly there. For a javac
+        // layout the join lies past the merged end and is already a stop, so this is a no-op.
+        Set<IRBlock> dedupJoins = new HashSet<>();
+        if (finallyDeduped && outerHandler.getTryStart() != null) {
+            int windowLo = outerHandler.getTryStart().getBytecodeOffset();
+            for (Map.Entry<IRBlock, IRBlock> e : excisedCopyExits.entrySet()) {
+                int rootOff = e.getKey().getBytecodeOffset();
+                IRBlock exit = e.getValue();
+                if (rootOff < windowLo || rootOff >= outerTryEndOffset
+                        || exit.getBytecodeOffset() >= outerTryEndOffset
+                        || context.isProcessed(exit)) {
+                    continue;
+                }
+                // A return/throw exit is a stash-reload boundary terminal the body walk owns (javac
+                // lowers `return v` across a finally as stash, copy, reload-return); only a plain
+                // fall-through join is the construct's continuation. A join within one of the
+                // family's own protected ranges is construct-internal, not a continuation either.
+                IRInstruction exitTerm = exit.getTerminator();
+                if (exitTerm instanceof ReturnInstruction
+                        || (exitTerm instanceof SimpleInstruction
+                            && ((SimpleInstruction) exitTerm).getOp() == SimpleOp.ATHROW)) {
+                    continue;
+                }
+                boolean inOwnRange = false;
+                for (ExceptionHandler h : handlers) {
+                    if (outerHandlerBlocks.contains(h.getHandlerBlock())
+                            && h.getTryStart() != null && h.getTryEnd() != null
+                            && exit.getBytecodeOffset() >= h.getTryStart().getBytecodeOffset()
+                            && exit.getBytecodeOffset() < h.getTryEnd().getBytecodeOffset()) {
+                        inOwnRange = true;
+                        break;
+                    }
+                }
+                if (inOwnRange) {
+                    continue;
+                }
+                dedupJoins.add(exit);
+                stopBlocks.add(exit);
+            }
+        }
         List<Statement> tryStmts;
         if (!innerHandlers.isEmpty()) {
             tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
@@ -936,7 +980,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         collectCatchConsumedBlocks(h, consumed);
                     }
                 }
-                IRBlock continuation = findBlockAfterTryCatch(outerHandler, consumed);
+                // An interleaved layout's continuation is the de-duplication's join, not whatever
+                // block the offset scan finds past the merged end (that can be the middle of a loop
+                // the join's own structure contains). Only an unambiguous unprocessed join is taken.
+                IRBlock continuation = null;
+                for (IRBlock j : dedupJoins) {
+                    if (context.isProcessed(j)) {
+                        continue;
+                    }
+                    if (continuation != null) {
+                        continuation = null;
+                        break;
+                    }
+                    continuation = j;
+                }
+                if (continuation == null) {
+                    continuation = findBlockAfterTryCatch(outerHandler, consumed);
+                }
                 if (continuation != null && !context.isProcessed(continuation)) {
                     result.addAll(recoverRegionHandoff(continuation, new HashSet<>()));
                 }
@@ -1219,7 +1279,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (context.isProcessed(current)) {
                 result.addAll(context.getStatements(current));
                 IRBlock next = null;
+                DominatorTree walkDt = context.getDominatorTree();
                 for (IRBlock succ : current.getSuccessors()) {
+                    // A back edge leads into an enclosing loop's already-emitted body; following it
+                    // would re-add that body's cached statements (an iterator advance duplicated
+                    // inside the try). The loop's own emission owns the iteration - stop here.
+                    if (walkDt != null && walkDt.dominates(succ, current)) {
+                        continue;
+                    }
                     if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
                         if (innerTryStarts.contains(succ)) {
                             next = succ;
@@ -1241,7 +1308,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 context.setStatements(current, blockStmts);
                 context.markProcessed(current);
                 IRBlock next = null;
+                DominatorTree seqDt = context.getDominatorTree();
                 for (IRBlock succ : current.getSuccessors()) {
+                    // A back edge is the enclosing loop's iteration, owned by the loop's own
+                    // emission; walking through it drifts into already-emitted body code.
+                    if (seqDt != null && seqDt.dominates(succ, current)) {
+                        continue;
+                    }
                     if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
                         if (innerTryStarts.contains(succ)) {
                             next = succ;
@@ -7343,6 +7416,43 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     }
                 }
                 consumed = plainClosure;
+            } else if (ownRanges.size() > 1) {
+                // Inside a loop the predecessor closure is off-limits (it swallows latches), but the
+                // merged window still over-consumes: a relowered layout parks unrelated code in the
+                // gap between the family's split ranges. A gap block no consumed block flows into is
+                // foreign - carve it out so the join scan never meets its exits. Strictly narrowing:
+                // range-covered blocks and interior-reached gap blocks (the latch path) are untouched.
+                boolean carved = true;
+                while (carved) {
+                    carved = false;
+                    for (IRBlock b : new ArrayList<>(consumed)) {
+                        if (b == block || b == h.getHandlerBlock()) {
+                            continue;
+                        }
+                        int boff = b.getBytecodeOffset();
+                        boolean inRange = false;
+                        for (int[] r : ownRanges) {
+                            if (boff >= r[0] && boff < r[1]) {
+                                inRange = true;
+                                break;
+                            }
+                        }
+                        if (inRange) {
+                            continue;
+                        }
+                        boolean reached = false;
+                        for (IRBlock p : b.getPredecessors()) {
+                            if (consumed.contains(p)) {
+                                reached = true;
+                                break;
+                            }
+                        }
+                        if (!reached) {
+                            consumed.remove(b);
+                            carved = true;
+                        }
+                    }
+                }
             }
         }
         if (finallyNode) {
@@ -7525,6 +7635,23 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (s >= startOff && s < endOff
                     && !processedTryHandlers.contains(eh)
                     && !processedHandlerBlocks.contains(eh.getHandlerBlock())) {
+                // A handler whose protected blocks lie entirely outside the consumed set is not
+                // nested at all: it is a sibling construct a relowered layout parked in the gap
+                // between this family's split ranges. Its offset alone puts it in the window;
+                // membership says it belongs to the surrounding region.
+                boolean protectsConsumed = false;
+                int lo = eh.getTryStart().getBytecodeOffset();
+                int hi = eh.getTryEnd() != null ? eh.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
+                for (IRBlock nb : consumed) {
+                    int off = nb.getBytecodeOffset();
+                    if (off >= lo && off < hi) {
+                        protectsConsumed = true;
+                        break;
+                    }
+                }
+                if (!protectsConsumed) {
+                    continue;
+                }
                 // Containment is judged against the CONSUMED SET, not the offset window: a
                 // relowered layout may park the nested catch's subtree past the window's end while
                 // the closure has legitimately absorbed it. A block in neither is genuinely outside
@@ -8571,6 +8698,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // the bound - the construct duplicates. Only an UNBOUNDED (terminal) offer accepts empty exits.
         Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
         boolean exitsOk = boundSatisfied(exits, bound);
+        // An enclosing loop's body tail continues into its own header: the bound is reached through
+        // a back edge, which the probe never counts as an exit. The offer is sound - the region ends
+        // in the loop's continue and the caller resumes at the already-processed header.
+        if (!exitsOk && bound != null && exits != null && exits.isEmpty()
+                && rcsStructurer.lastRegionContinuesInto(bound)) {
+            exitsOk = true;
+        }
         // A bounded construct may ALSO fall out through the end boundary of a handler range still
         // being recovered (a split-range desugar lays a terminal arm across it) and on into a bare
         // return: both are the construct's own terminal tail, not rival continuations. Release such
