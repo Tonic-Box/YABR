@@ -1303,6 +1303,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
             RegionInfo info = analyzer.getRegionInfo(current);
             if (info == null) {
+                if (current.getTerminator() instanceof SwitchInstruction) {
+                    // Same contract as the try-body walk: an unclassifiable dispatch is offered as
+                    // a terminal region or declined loudly, never fallen through.
+                    OfferResult offered = offerTerminalRegion(current, new HashSet<>(combinedStops));
+                    if (offered != null) {
+                        result.addAll(offered.statements);
+                        current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
+                                && (!context.isProcessed(offered.continuation)
+                                    || isTerminalTail(offered.continuation)) ? offered.continuation : null;
+                        continue;
+                    }
+                    throw retiredSchemaRecovery("switch", current);
+                }
                 List<Statement> blockStmts = recoverSimpleBlock(current);
                 result.addAll(blockStmts);
                 context.setStatements(current, blockStmts);
@@ -1354,6 +1367,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     rcsBound = info.getLoopExit();
                     terminalRegion = rcsBound == null;
                     break;
+                case SWITCH:
+                    // A dispatch met by this walk bounds at its merge like an if; without a merge
+                    // (every arm terminal) it is offered unbounded. Falling into the sequential
+                    // default would silently adopt one arm and drop the dispatch and the rest.
+                    rcsBound = findSwitchMerge(info);
+                    terminalRegion = rcsBound == null;
+                    break;
                 default:
                     break;
             }
@@ -1392,6 +1412,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     throw retiredSchemaRecovery("for", current);
                 case GUARD_CLAUSE:
                     throw retiredSchemaRecovery("guard", current);
+                case SWITCH:
+                    throw retiredSchemaRecovery("switch", current);
                 default: {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
                     result.addAll(blockStmts);
@@ -5324,6 +5346,21 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
             RegionInfo info = analyzer.getRegionInfo(current);
             if (info == null) {
+                if (current.getTerminator() instanceof SwitchInstruction) {
+                    // A dispatch the analyzer could not classify (its arms woven through an
+                    // enclosing construct's scaffolding) must never fall through its terminator -
+                    // the sequential walk would silently adopt one arm and drop the rest. Offer it
+                    // to the engine as a terminal region; otherwise decline loudly.
+                    OfferResult offered = offerTerminalRegion(current, new HashSet<>(stopBlocks));
+                    if (offered != null) {
+                        result.addAll(offered.statements);
+                        current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
+                                && (!context.isProcessed(offered.continuation)
+                                    || isTerminalTail(offered.continuation)) ? offered.continuation : null;
+                        continue;
+                    }
+                    throw retiredSchemaRecovery("switch", current);
+                }
                 List<Statement> blockStmts = recoverSimpleBlock(current);
                 result.addAll(blockStmts);
                 context.setStatements(current, blockStmts);

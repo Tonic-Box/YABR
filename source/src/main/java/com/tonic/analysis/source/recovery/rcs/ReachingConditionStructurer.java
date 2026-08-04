@@ -753,6 +753,8 @@ public final class ReachingConditionStructurer {
                 if (isTerminalBlock(s)) {
                     continue;
                 }
+                trace("case-exit-unplaceable header=" + spec.header().getBytecodeOffset()
+                        + " x=" + x.getBytecodeOffset() + " s=" + s.getBytecodeOffset());
                 throw new BailToLegacy();
             }
         }
