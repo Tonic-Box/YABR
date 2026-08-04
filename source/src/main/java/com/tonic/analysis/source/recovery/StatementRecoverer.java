@@ -4253,10 +4253,25 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // copy and the return in-range when the try ends by returning. Match those copies first - each
         // must be a protected subgraph whose continuation IS an in-range return block - then every
         // in-range return must be covered by one, and every normal exit LEAVING the range must land on a
-        // matched copy of its own.
+        // matched copy of its own. Coverage is demanded against the RAW split ranges even when the
+        // copy hunt runs over the merged view: a return in the GAP between ranges is the
+        // continuation a relowered layout parked there, protected by nothing and owed no copy.
+        Set<IRBlock> rawRangeBlocks = new HashSet<>();
+        for (ExceptionHandler r : method.getExceptionHandlers()) {
+            if (r.getHandlerBlock() != root || r.getTryStart() == null || r.getTryEnd() == null) {
+                continue;
+            }
+            int lo = r.getTryStart().getBytecodeOffset();
+            int hi = r.getTryEnd().getBytecodeOffset();
+            for (IRBlock b : method.getBlocks()) {
+                if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi) {
+                    rawRangeBlocks.add(b);
+                }
+            }
+        }
         Set<IRBlock> returnBlocks = new HashSet<>();
         for (IRBlock p : protectedBlocks) {
-            if (p.getTerminator() instanceof ReturnInstruction) {
+            if (p.getTerminator() instanceof ReturnInstruction && rawRangeBlocks.contains(p)) {
                 returnBlocks.add(p);
             }
         }
@@ -4315,7 +4330,18 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
             if (!coveredReturns.containsAll(returnBlocks)) {
-                trace("finally-dedup bail#7 root=" + root.getBytecodeOffset());
+                if (TRACE) {
+                    Set<IRBlock> missing = new HashSet<>(returnBlocks);
+                    missing.removeAll(coveredReturns);
+                    StringBuilder sb = new StringBuilder();
+                    for (IRBlock mb : missing) {
+                        sb.append(mb.getBytecodeOffset()).append(",");
+                    }
+                    trace("finally-dedup bail#7 root=" + root.getBytecodeOffset()
+                            + " uncovered=" + sb);
+                } else {
+                    trace("finally-dedup bail#7 root=" + root.getBytecodeOffset());
+                }
                 return false;
             }
         }
@@ -4334,7 +4360,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 Map<IRBlock, IRBlock> map =
                         matchFinallySubgraph(root, cand, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
                 if (map == null) {
-                    trace("finally-dedup bail#8 root=" + root.getBytecodeOffset());
+                    trace("finally-dedup bail#8 root=" + root.getBytecodeOffset()
+                            + " exitFrom=" + p.getBytecodeOffset() + " cand=" + cand.getBytecodeOffset());
                     return false;
                 }
                 matches.add(map);

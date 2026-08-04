@@ -1508,7 +1508,19 @@ public class ExpressionLowerer {
             return null;
         }
         String internalName = ctx.getTypeResolver().resolveInternalName(dottedName);
-        return ctx.getTypeResolver().classExists(internalName) ? internalName : null;
+        if (ctx.getTypeResolver().classExists(internalName)) {
+            return internalName;
+        }
+        // A NESTED type spelled with dots (java.lang.StackWalker.StackFrame) slashes to a name no
+        // class has; rewrite separators to '$' from the right until one resolves.
+        String candidate = internalName;
+        for (int cut = candidate.lastIndexOf('/'); cut > 0; cut = candidate.lastIndexOf('/', cut - 1)) {
+            candidate = candidate.substring(0, cut) + '$' + candidate.substring(cut + 1);
+            if (ctx.getTypeResolver().classExists(candidate)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private String flattenDottedName(Expression expr) {
@@ -2348,7 +2360,19 @@ public class ExpressionLowerer {
                 refKind = MethodHandleConstant.REF_invokeVirtual;
                 implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
                 break;
-            case BOUND:
+            case BOUND: {
+                // A reference the parser read as bound (`java.lang.StackWalker.StackFrame::x`) can
+                // really be UNBOUND on a nested type spelled with dots - the receiver chain names a
+                // class, not a value. Lowering it as a value would emit a field load of the nested
+                // class's simple name.
+                String typeReceiver = methodRef.getReceiver() != null
+                        ? resolveQualifiedTypeReceiver(methodRef.getReceiver()) : null;
+                if (typeReceiver != null) {
+                    ownerClass = typeReceiver;
+                    refKind = MethodHandleConstant.REF_invokeVirtual;
+                    implDescriptor = inferMethodDescriptor(ownerClass, methodName, MethodRefKind.INSTANCE, returnType);
+                    break;
+                }
                 refKind = MethodHandleConstant.REF_invokeVirtual;
                 implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
                 if (methodRef.getReceiver() != null) {
@@ -2356,6 +2380,7 @@ public class ExpressionLowerer {
                     hasBoundReceiver = true;
                 }
                 break;
+            }
             case CONSTRUCTOR:
                 refKind = MethodHandleConstant.REF_newInvokeSpecial;
                 methodName = "<init>";
