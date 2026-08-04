@@ -321,13 +321,40 @@ public final class ReachingConditionStructurer {
         Set<IRBlock> exits = new HashSet<>();
         for (IRBlock rb : region) {
             for (IRBlock succ : modelSuccessors(rb)) {
-                if (stopBlocks.contains(succ) && !isBackEdge(rb, succ)
-                        && !boundaryTailPlacement.containsKey(succ)) {
+                if (isBackEdge(rb, succ) || boundaryTailPlacement.containsKey(succ)) {
+                    continue;
+                }
+                if (stopBlocks.contains(succ)) {
                     exits.add(succ);
+                    continue;
+                }
+                // A shared goto pad on the boundary (skipped by the collect as a merge the entry
+                // does not dominate) fronts the stop the region really flows into; the emission
+                // skips the pad the same way, so the landing is the honest exit.
+                if (!region.contains(succ)) {
+                    IRBlock landing = resolveThroughBareGotos(succ);
+                    if (landing != succ && stopBlocks.contains(landing) && !isBackEdge(rb, landing)) {
+                        exits.add(landing);
+                    }
                 }
             }
         }
         return exits;
+    }
+
+    /** Follows single-goto shell blocks (no payload instructions) to the code they front. */
+    private IRBlock resolveThroughBareGotos(IRBlock b) {
+        int hops = 0;
+        while (b != null && b.getSuccessors().size() == 1
+                && b.getTerminator() instanceof SimpleInstruction
+                && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.GOTO
+                && (b.getInstructions().isEmpty()
+                    || (b.getInstructions().size() == 1
+                        && b.getInstructions().get(0) == b.getTerminator()))
+                && hops++ < 8) {
+            b = b.getSuccessors().iterator().next();
+        }
+        return b;
     }
 
     /**

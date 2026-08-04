@@ -8686,7 +8686,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // so the pad is absorbed in-region and the offer is judged against the landing.
         if (bound != null) {
             IRBlock landing = resolveThroughGotoShells(bound);
-            if (landing != bound) {
+            // Resolve only a pad the region owns exclusively (the entry dominates it). A shell with
+            // predecessors outside the offered construct is a SHARED convergence - the walk's real
+            // continuation - and swapping it for its landing leaves the region no reachable exit.
+            DominatorTree padDt = context.getDominatorTree();
+            if (landing != bound && padDt != null && padDt.dominates(entry, bound)) {
                 offeredStops.remove(bound);
                 offeredStops.add(landing);
                 bound = landing;
