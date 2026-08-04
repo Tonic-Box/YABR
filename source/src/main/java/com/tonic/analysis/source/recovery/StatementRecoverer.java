@@ -3570,10 +3570,13 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
             }
         }
-        boolean hasFinally = handlerRethrows(mainHandler) && !handlerThrowsFreshException(mainHandler)
-                && isFinallyCatchType(mainHandler);
+        // A TYPED Throwable rethrower with no finally EVIDENCE (no inlined copy anywhere, not a true
+        // catch-any) is a user catch-rethrow, not a finally: treating it as one routes the body into
+        // the copy-skipping walk over copies that do not exist, refusing every structural offer. The
+        // emitter writes real finally scaffolds as catch-any, so provenance survives the round trip.
+        boolean hasFinally = isEvidencedFinally(mainHandler);
         for (ExceptionHandler h : sameRegionHandlers) {
-            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)) {
+            if (isEvidencedFinally(h)) {
                 hasFinally = true;
             }
         }
@@ -5208,9 +5211,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         if (excisions.isEmpty()) {
-            trace("finally-dedup contiguous no-copies root="
+            // Every exit passed the coverage checks yet no copy exists anywhere: the protected range
+            // is fully terminal (every path throws into the scaffolding or ends in a bare rethrow
+            // tail), so javac had no normal path to inline the finally on. Vacuously de-duplicated -
+            // declining would sink the whole family and force the body into the skip-mode walk over
+            // copies that do not exist.
+            trace("finally-dedup contiguous vacuous root="
                     + (handlerBlocks.isEmpty() ? -1 : handlerBlocks.iterator().next().getBytecodeOffset()));
-            return false;
+            finallyDeduped.addAll(rethrowers);
+            return true;
         }
         for (List<IRInstruction> run : excisions) {
             for (IRInstruction ins : run) {
@@ -7366,10 +7375,43 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         Set<IRBlock> consumed = new HashSet<>();
-        for (IRBlock b : irMethod.getBlocks()) {
-            int off = b.getBytecodeOffset();
-            if (off >= startOff && off < endOff) {
-                consumed.add(b);
+        boolean monitorFamily = false;
+        for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+            if (sib.getTryStart() != null && sib.getTryStart().getBytecodeOffset() == startOff
+                    && detectSynchronizedLock(sib) != null) {
+                monitorFamily = true;
+                break;
+            }
+        }
+        if (finallyNode && !monitorFamily && context.getLoopAnalysis() != null && context.getLoopAnalysis().getLoop(block) != null) {
+            // Inside a loop the finally family's span window swallows the loop's own continuation
+            // (the code between the protected range and the latch, where a relowered layout parks
+            // it) and the predecessor closure is off-limits. Membership is the family's actual
+            // RANGES: the de-duplication excises the close copies from the epilogue, and the
+            // epilogue's real code stays outside the node as region code at the join.
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+                if (sib.getHandlerBlock() == null || sib.getTryStart() == null || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+                    continue;
+                }
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                    if (eh.getHandlerBlock() != sib.getHandlerBlock() || eh.getTryStart() == null || eh.getTryEnd() == null) {
+                        continue;
+                    }
+                    int lo = eh.getTryStart().getBytecodeOffset();
+                    int hi = eh.getTryEnd().getBytecodeOffset();
+                    for (IRBlock b : irMethod.getBlocks()) {
+                        if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi) {
+                            consumed.add(b);
+                        }
+                    }
+                }
+            }
+        } else {
+            for (IRBlock b : irMethod.getBlocks()) {
+                int off = b.getBytecodeOffset();
+                if (off >= startOff && off < endOff) {
+                    consumed.add(b);
+                }
             }
         }
         // A plain typed catch with SPLIT ranges (javac splits around a return/break in the try) has
@@ -7380,14 +7422,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         if (!finallyNode) {
             List<int[]> ownRanges = new ArrayList<>();
             for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-                if (eh.getHandlerBlock() == h.getHandlerBlock()
-                        && eh.getTryStart() != null && eh.getTryEnd() != null) {
+                if (eh.getHandlerBlock() == h.getHandlerBlock() && eh.getTryStart() != null && eh.getTryEnd() != null) {
                     ownRanges.add(new int[]{eh.getTryStart().getBytecodeOffset(),
                             eh.getTryEnd().getBytecodeOffset()});
                 }
             }
-            boolean acyclicPlain = context.getLoopAnalysis() == null
-                    || context.getLoopAnalysis().getLoop(block) == null;
+            boolean acyclicPlain = context.getLoopAnalysis() == null || context.getLoopAnalysis().getLoop(block) == null;
             if (ownRanges.size() > 1 && acyclicPlain) {
                 Set<IRBlock> plainClosure = new HashSet<>();
                 for (IRBlock b : irMethod.getBlocks()) {
@@ -7851,6 +7891,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         } finally {
             context.popStopBlocks();
         }
+    }
+
+    /**
+     * Whether {@code h} is a finally's rethrow scaffold by shape AND provenance: the rethrow shape,
+     * a finally-compatible catch type, and either a true catch-any entry (source cannot express one)
+     * or a verbatim inlined copy of the handler body somewhere outside its protected ranges.
+     */
+    private boolean isEvidencedFinally(ExceptionHandler h) {
+        return handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)
+                && (h.isCatchAll() || h.getHandlerBlock() == null
+                    || handlerHasFinallyEvidence(h.getHandlerBlock()));
     }
 
     @Override
