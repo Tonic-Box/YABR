@@ -5333,6 +5333,17 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         return term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW;
     }
 
+    /** An empty block or one whose only instruction is its goto terminator - a jump pad. */
+    private boolean isBareShellBlock(IRBlock b) {
+        if (b.getInstructions().isEmpty()) {
+            return true;
+        }
+        return b.getInstructions().size() == 1
+                && b.getInstructions().get(0) == b.getTerminator()
+                && b.getTerminator() instanceof SimpleInstruction
+                && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.GOTO;
+    }
+
     /**
      * Recovers blocks for a try region, stopping at the specified stop blocks.
      */
@@ -8265,10 +8276,91 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         // clause (try body, catch bodies, and the trailing fall-through copy alike).
         boolean savedDecodeExtended = extendedFinallyDedup;
         extendedFinallyDedup = true;
+        boolean decodeDeduped;
         try {
-            dedupStraightLineFinally(family);
+            decodeDeduped = dedupStraightLineFinally(family);
         } finally {
             extendedFinallyDedup = savedDecodeExtended;
+        }
+        Set<IRBlock> carveFreed = Collections.emptySet();
+        // With the copies EXCISED, scaffold and continuation are distinguishable: everything the
+        // predecessor closure absorbed that is neither protected, a family handler's subtree, an
+        // excised copy, nor a bare shell/rethrow tail is the construct's CONTINUATION - a linear
+        // method reaches it only through the construct, so all-preds-inside holds for it too, and
+        // leaving it consumed silently drops it (an array build between the close and the next use
+        // vanished whole). Only after a successful excision: un-excised copies must stay consumed
+        // for the delegate's statement-level folds.
+        if (decodeDeduped) {
+            Set<IRBlock> familySubtrees = new HashSet<>();
+            for (ExceptionHandler sib : siblings) {
+                familySubtrees.add(sib.getHandlerBlock());
+            }
+            familySubtrees.addAll(nestedRethrowerBlocks);
+            familySubtrees.add(rethrower.getHandlerBlock());
+            Set<IRBlock> candidates = new LinkedHashSet<>();
+            for (IRBlock cb : consumed) {
+                int off = cb.getBytecodeOffset();
+                boolean keep = excisedFinallyCopyBlocks.contains(cb)
+                        || consumedFinallyShells.contains(cb)
+                        || isBareRethrowTail(cb) || isBareShellBlock(cb);
+                if (!keep) {
+                    for (ExceptionHandler fh : family) {
+                        if (fh.getTryStart() != null && fh.getTryEnd() != null
+                                && off >= fh.getTryStart().getBytecodeOffset()
+                                && off < fh.getTryEnd().getBytecodeOffset()) {
+                            keep = true;
+                            break;
+                        }
+                    }
+                }
+                if (!keep) {
+                    for (IRBlock hb : familySubtrees) {
+                        if (hb != null && (cb == hb || dt.dominates(hb, cb))) {
+                            keep = true;
+                            break;
+                        }
+                    }
+                }
+                if (!keep) {
+                    candidates.add(cb);
+                }
+            }
+            // A candidate is freed only when its forward flow leaves the construct: a candidate
+            // whose successor is KEPT scaffolding still flows back into the model and must stay
+            // consumed (freeing it puts the region on a jump into node interior). Chains free
+            // together; blocked chains stay whole.
+            boolean freedAny = true;
+            Set<IRBlock> freed = new HashSet<>();
+            while (freedAny) {
+                freedAny = false;
+                for (IRBlock cb : candidates) {
+                    if (freed.contains(cb)) {
+                        continue;
+                    }
+                    boolean flowsOut = true;
+                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e
+                            : cb.getSuccessorEdgeTypes().entrySet()) {
+                        if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                            continue;
+                        }
+                        IRBlock t = resolveThroughGotoShells(e.getKey());
+                        if (consumed.contains(t) && !freed.contains(t) && !candidates.contains(t)) {
+                            flowsOut = false;
+                            break;
+                        }
+                        if (candidates.contains(t) && !freed.contains(t)) {
+                            flowsOut = false;
+                            break;
+                        }
+                    }
+                    if (flowsOut) {
+                        freed.add(cb);
+                        freedAny = true;
+                    }
+                }
+            }
+            consumed.removeAll(freed);
+            carveFreed = freed;
         }
         Set<IRBlock> siblingBlocks = new HashSet<>();
         for (ExceptionHandler sib : siblings) {
@@ -8297,7 +8389,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         IRBlock after = null;
         boolean allExitsTerminal = false;
         Set<IRBlock> exitShells = new HashSet<>();
-        for (IRBlock cb : consumed) {
+        boolean rescan = true;
+        scan:
+        while (rescan) {
+        rescan = false;
+        for (IRBlock cb : new ArrayList<>(consumed)) {
             if (cb != rethrower.getHandlerBlock() && dt.dominates(rethrower.getHandlerBlock(), cb)) {
                 continue;
             }
@@ -8383,6 +8479,16 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                             continue;
                         }
                     }
+                    if (!carveFreed.isEmpty()) {
+                        // The carve exposed a second join this model cannot take; the pre-carve
+                        // consumed set had the construct whole. Restore it and rescan once.
+                        trace("finally-node carve-retry block=" + block.getBytecodeOffset());
+                        consumed.addAll(carveFreed);
+                        carveFreed = Collections.emptySet();
+                        after = null;
+                        exitShells.clear();
+                        continue scan;
+                    }
                     trace("finally-node decline block=" + block.getBytecodeOffset() + " second-join="
                             + succ.getBytecodeOffset() + " first=" + after.getBytecodeOffset());
                     return null;
@@ -8392,6 +8498,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (allExitsTerminal) {
                 break;
             }
+        }
         }
         if (after == block) {
             return null;
