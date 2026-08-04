@@ -314,8 +314,9 @@ public final class TestUtils {
         if (source.contains("@interface ")) {
             return false;
         }
-        // A package-info class declares nothing recompilable; its original bytecode IS the result.
-        if (owner != null && owner.endsWith("package-info")) {
+        // A package-info or module-info entry declares nothing recompilable as a class; its
+        // original bytecode IS the result.
+        if (owner != null && (owner.endsWith("package-info") || owner.endsWith("module-info"))) {
             return true;
         }
         CompilationUnit cu = JavaParser.create().parse(source);

@@ -635,13 +635,27 @@ public class ExpressionLowerer {
             if (!ctx.hasVariable(varRef.getName()) && tryLowerImplicitFieldStore(varRef.getName(), rhs)) {
                 return rhs;
             }
-            ctx.setVariable(varRef.getName(), (SSAValue) rhs);
+            storeNamedVariable(varRef.getName(), (SSAValue) rhs);
             return rhs;
         } else if (left instanceof FieldAccessExpr) {
             return lowerFieldStore((FieldAccessExpr) left, rhs);
         }
 
         throw new LoweringException("Invalid assignment target: " + left.getClass().getSimpleName());
+    }
+
+    /**
+     * Records a store to a named variable, failing loudly when the name was never declared and did
+     * not resolve to a field: the value would otherwise be computed and silently discarded (emitted
+     * as a push/pop pair), turning invalid source into wrong bytecode instead of an error. A local
+     * declared without an initializer ({@code int x; x = 5;}) has a declaration record but no value
+     * yet and is accepted.
+     */
+    private void storeNamedVariable(String name, SSAValue value) {
+        if (!ctx.hasVariable(name) && ctx.declaredTypeOf(name) == null) {
+            throw new LoweringException("Assignment to undeclared variable: " + name);
+        }
+        ctx.setVariable(name, value);
     }
 
     private Value lowerCompoundAssignment(BinaryExpr bin) {
@@ -663,7 +677,7 @@ public class ExpressionLowerer {
         if (left instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) left;
             if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), result)) {
-                ctx.setVariable(varRef.getName(), result);
+                storeNamedVariable(varRef.getName(), result);
             }
         } else if (left instanceof FieldAccessExpr) {
             lowerFieldStore((FieldAccessExpr) left, result);
@@ -899,7 +913,7 @@ public class ExpressionLowerer {
         if (operand instanceof VarRefExpr) {
             VarRefExpr varRef = (VarRefExpr) operand;
             if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), newValue)) {
-                ctx.setVariable(varRef.getName(), newValue);
+                storeNamedVariable(varRef.getName(), newValue);
             }
         } else if (operand instanceof FieldAccessExpr) {
             lowerFieldStore((FieldAccessExpr) operand, newValue);

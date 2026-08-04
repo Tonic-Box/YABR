@@ -342,6 +342,7 @@ class ExpressionLowererTest {
 
     @Test
     void lowerSimpleAssignment() {
+        ctx.declareLocal("x", PrimitiveType.INT, false);
         LiteralExpr value = LiteralExpr.ofInt(100);
         VarRefExpr var = new VarRefExpr("x", PrimitiveSourceType.INT);
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, var, value, PrimitiveSourceType.INT);
@@ -351,6 +352,15 @@ class ExpressionLowererTest {
         assertNotNull(result);
         assertTrue(ctx.hasVariable("x"));
         assertEquals(result, ctx.getVariable("x"));
+    }
+
+    @Test
+    void undeclaredAssignmentFailsLoudly() {
+        LiteralExpr value = LiteralExpr.ofInt(100);
+        VarRefExpr var = new VarRefExpr("neverDeclared", PrimitiveSourceType.INT);
+        BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, var, value, PrimitiveSourceType.INT);
+
+        assertThrows(LoweringException.class, () -> lowerer.lower(assign));
     }
 
     @Test

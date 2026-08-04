@@ -73,6 +73,40 @@ public class SingleUseInliner implements ASTTransform {
         return n[0];
     }
 
+    /**
+     * Counts assignments (plain, compound, increment/decrement) targeting {@code varName} anywhere
+     * in the method. A reused name can have another occupant's bare assignment in a sibling subtree
+     * that this declaration is the sole declaration for - removing it would orphan that write into
+     * an undeclared-variable error, so any method-wide write blocks the inline-and-remove. A true
+     * single-use temp is never re-assigned, so ordinary inlining is unaffected.
+     */
+    private int countMethodWideWrites(String varName) {
+        int[] n = {0};
+        rootBlock.accept(new AbstractSourceVisitor<Void>() {
+            @Override
+            public Void visitBinary(BinaryExpr expr) {
+                if (expr.getOperator().isAssignment() && expr.getLeft() instanceof VarRefExpr
+                        && varName.equals(((VarRefExpr) expr.getLeft()).getName())) {
+                    n[0]++;
+                }
+                return super.visitBinary(expr);
+            }
+
+            @Override
+            public Void visitUnary(UnaryExpr expr) {
+                UnaryOperator op = expr.getOperator();
+                if ((op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
+                        || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC)
+                        && expr.getOperand() instanceof VarRefExpr
+                        && varName.equals(((VarRefExpr) expr.getOperand()).getName())) {
+                    n[0]++;
+                }
+                return super.visitUnary(expr);
+            }
+        });
+        return n[0];
+    }
+
     /** The SSA value of the first {@code varName} reference inside {@code stmt}, or null. */
     private com.tonic.analysis.ssa.value.SSAValue refSsaIn(Statement stmt, String varName) {
         com.tonic.analysis.ssa.value.SSAValue[] found = {null};
@@ -125,6 +159,9 @@ public class SingleUseInliner implements ASTTransform {
                     com.tonic.analysis.ssa.value.SSAValue useSsa =
                             refSsaIn(stmts.get(usage.usageStmtIndex), varName);
                     if (useSsa != null && countSsaRefs(useSsa) > usage.count) {
+                        continue;
+                    }
+                    if (countMethodWideWrites(varName) > 0) {
                         continue;
                     }
                     if (tryInline(stmts, i, usage.usageStmtIndex, varName, init)) {

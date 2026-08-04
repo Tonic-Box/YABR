@@ -1184,13 +1184,27 @@ public class ClassDecompiler {
             astSimplifier.transform(body);
             varargsReconstructor.transform(body);
             declarationHoister.transform(body);
-        // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
-        // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
-        singleUseInliner.transform(body);
+            // Re-inline a local the declaration-sink just merged into a single-use form (e.g. `Task task =
+            // new Task()` sunk into its `if`, used once), matching the recompile which keeps such a value resident.
+            singleUseInliner.transform(body);
+            // The same late reconstruction chain as the method path: without the counter folder a
+            // constructor's induction counter is left undeclared (`local4 = 0; for (; ...)` - the folder
+            // owns its declaration), which is invalid source; the remaining passes keep a constructor
+            // simplified exactly as far as a method with the same body.
+            arrayInitReconstructor.transform(body);
+            forLoopCounterFolder.transform(body);
+            deadStoreEliminator.transform(body);
+            deadVarEliminator.transform(body);
+            redundantAssignmentEliminator.transform(body);
             comparisonChainToSwitch.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
+            scopeEscapeHoister.setNonLocalName(nonLocalNamePredicate(ctor));
             scopeEscapeHoister.transform(body);
+            redundantAssignmentEliminator.transform(body);
+            if (whileToForCanonicalizer.transform(body)) {
+                forLoopCounterFolder.transform(body);
+            }
             removeRedundantSuper(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body, ctor.getName() + ctor.getDesc(), parameterNamesOf(ctor));
@@ -1320,6 +1334,7 @@ public class ClassDecompiler {
             comparisonChainToSwitch.transform(body);
             patternSwitchReconstructor.transform(body);
             switchExprReconstructor.transform(body);
+            scopeEscapeHoister.setNonLocalName(nonLocalNamePredicate(method));
             scopeEscapeHoister.transform(body);
             dumpStage(method.getName(), method.getDesc(), body, "12-scope-escape");
             // A hoist above can re-fold a declaration into `T x = c;` leaving a later redundant `x = c;`
@@ -1558,6 +1573,20 @@ public class ClassDecompiler {
             }
         }
         return result;
+    }
+
+    /**
+     * Whether a name is legally assignable without a local declaration in {@code method}'s body: a
+     * parameter, or a name resolving to a field of this class (own or inherited - a bare write to it
+     * lowers as an implicit field store). Feeds the hoister's missing-declaration net so it never
+     * manufactures a local that would shadow one of these.
+     */
+    private java.util.function.Predicate<String> nonLocalNamePredicate(com.tonic.parser.MethodEntry method) {
+        java.util.Set<String> params = parameterNamesOf(method);
+        ClassPool pool = classFile.getClassPool() != null ? classFile.getClassPool() : ClassPool.getDefault();
+        com.tonic.analysis.source.lower.TypeResolver fields =
+                new com.tonic.analysis.source.lower.TypeResolver(pool, classFile.getClassName());
+        return n -> params.contains(n) || fields.findFieldType(classFile.getClassName(), n) != null;
     }
 
     /**

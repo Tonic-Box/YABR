@@ -155,8 +155,8 @@ public class ForLoopCounterFolder implements ASTTransform {
 
     /**
      * A {@code for} with an empty init slot and a single {@code v++}/{@code v--}/{@code v = v +/- c} update,
-     * preceded (nearest-touch, allowing unrelated statements in between) by {@code v = INIT} where {@code INIT}
-     * does not read {@code v}; else null.
+     * preceded (nearest-touch, allowing unrelated statements in between) by {@code v = INIT} or
+     * {@code T v = INIT;} where {@code INIT} does not read {@code v}; else null.
      */
     private Segment asHoistedCounter(ForStmt f, int forIndex, List<Statement> list) {
         if (!f.getInit().isEmpty() || f.getUpdate().size() != 1) {
@@ -168,12 +168,32 @@ public class ForLoopCounterFolder implements ASTTransform {
         }
         int initIdx = -1;
         for (int k = forIndex - 1; k >= 0; k--) {
-            if (countUses(list.get(k), var) > 0) {
+            Statement prev = list.get(k);
+            boolean declaresVar = prev instanceof VarDeclStmt && var.equals(((VarDeclStmt) prev).getName());
+            if (declaresVar || countUses(prev, var) > 0) {
                 initIdx = k; // nearest preceding statement that touches the counter
                 break;
             }
         }
-        if (initIdx < 0 || !(list.get(initIdx) instanceof ExprStmt)) {
+        if (initIdx < 0) {
+            return null;
+        }
+        if (list.get(initIdx) instanceof VarDeclStmt) {
+            VarDeclStmt decl = (VarDeclStmt) list.get(initIdx);
+            if (!decl.getName().equals(var) || decl.getInitializer() == null
+                    || countUses(decl.getInitializer(), var) > 0) {
+                return null;
+            }
+            // Folding moves the initializer's evaluation past any statements between the declaration
+            // and the loop; only a constant is insensitive to that reordering, so a computed
+            // initializer folds only when the declaration directly precedes the loop.
+            if (initIdx != forIndex - 1
+                    && !(decl.getInitializer() instanceof com.tonic.analysis.source.ast.expr.LiteralExpr)) {
+                return null;
+            }
+            return new Segment(var, decl.getType(), f, decl, decl.getInitializer(), list);
+        }
+        if (!(list.get(initIdx) instanceof ExprStmt)) {
             return null;
         }
         Expression e = ((ExprStmt) list.get(initIdx)).getExpression();
@@ -195,7 +215,7 @@ public class ForLoopCounterFolder implements ASTTransform {
         if (type == null) {
             return null;
         }
-        return new Segment(var, type, f, (ExprStmt) list.get(initIdx), assign.getRight(), list);
+        return new Segment(var, type, f, list.get(initIdx), assign.getRight(), list);
     }
 
     /** The counter name written by a {@code v++}/{@code v--} or {@code v = ...} for-update, else null. */
@@ -228,11 +248,11 @@ public class ForLoopCounterFolder implements ASTTransform {
         final String var;
         final SourceType type;
         final ForStmt forStmt;
-        final ExprStmt initStmt;
+        final Statement initStmt;
         final Expression initValue;
         final List<Statement> list;
 
-        Segment(String var, SourceType type, ForStmt forStmt, ExprStmt initStmt, Expression initValue,
+        Segment(String var, SourceType type, ForStmt forStmt, Statement initStmt, Expression initValue,
                 List<Statement> list) {
             this.var = var;
             this.type = type;

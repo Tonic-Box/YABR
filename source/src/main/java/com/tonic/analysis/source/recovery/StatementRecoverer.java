@@ -844,8 +844,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             for (Map.Entry<IRBlock, IRBlock> e : excisedCopyExits.entrySet()) {
                 int rootOff = e.getKey().getBytecodeOffset();
                 IRBlock exit = e.getValue();
-                if (rootOff < windowLo || rootOff >= outerTryEndOffset
+                // The copy ROOT may sit at or past the merged range end (a relowered layout parks
+                // the normal-path close there); only the JOIN itself must lie below the end for the
+                // boundary to matter, and the exclusions plus the single-join gate scope the rest.
+                if (rootOff < windowLo
                         || exit.getBytecodeOffset() >= outerTryEndOffset
+                        || exit.getBytecodeOffset() < windowLo
                         || context.isProcessed(exit)) {
                     continue;
                 }
@@ -3212,11 +3216,19 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
         List<ExceptionHandler> allHandlers = new ArrayList<>(cleanup);
         allHandlers.addAll(userHandlers);
-        Set<IRBlock> restoreBlocks = new HashSet<>();
+        // The attempt below EMITS the whole normal path before the fold can decline. A decline must
+        // roll back every recovery mark the emission made - processed blocks, cached statements,
+        // claimed handlers, declared variables - or the generic fallback runs against a half-emitted
+        // method (a continuation join reads as already processed and its whole region is dropped).
+        // Excision-linked state stays: its IR mutations are permanent and route-independent.
+        Set<ExceptionHandler> savedTryHandlers = new HashSet<>(processedTryHandlers);
+        Set<IRBlock> savedHandlerBlocks = new HashSet<>(processedHandlerBlocks);
+        Set<IRBlock> savedProcessed = new HashSet<>(context.getProcessedBlocks());
+        Map<IRBlock, List<Statement>> savedStatements = new HashMap<>(context.getBlockStatements());
         for (ExceptionHandler h : allHandlers) {
             processedTryHandlers.add(h);
-            if (h.getHandlerBlock() != null && processedHandlerBlocks.add(h.getHandlerBlock())) {
-                restoreBlocks.add(h.getHandlerBlock());
+            if (h.getHandlerBlock() != null) {
+                processedHandlerBlocks.add(h.getHandlerBlock());
             }
         }
 
@@ -3224,8 +3236,15 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         flattenTrailingGuardElse(normalPath);
         List<Statement> folded = reconstructTryWithResources(normalPath, catchClauses, finallyBlock, finallyVars);
         if (folded == null) {
-            allHandlers.forEach(processedTryHandlers::remove);
-            processedHandlerBlocks.removeAll(restoreBlocks);
+            processedTryHandlers.clear();
+            processedTryHandlers.addAll(savedTryHandlers);
+            processedHandlerBlocks.clear();
+            processedHandlerBlocks.addAll(savedHandlerBlocks);
+            context.getProcessedBlocks().clear();
+            context.getProcessedBlocks().addAll(savedProcessed);
+            context.getBlockStatements().clear();
+            context.getBlockStatements().putAll(savedStatements);
+            context.getExpressionContext().resetDeclaredVariablesToBaseline();
             return null;
         }
         return folded;
@@ -4349,6 +4368,11 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (matchedCopyBlocks.contains(p)) {
                 continue;
             }
+            // Exit coverage is OWED only by blocks in the RAW split ranges. A gap block inside the
+            // merged view can be the range's own fall-through chain reaching its copy - so its exits
+            // are still HUNTED - or relowered-parked continuation whose exits carry no copies - so a
+            // failed match there is not the family's failure.
+            boolean mustCover = rawRangeBlocks.contains(p);
             for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : p.getSuccessorEdgeTypes().entrySet()) {
                 if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
                         || protectedBlocks.contains(e.getKey()) || e.getKey() == root
@@ -4358,11 +4382,14 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
                 IRBlock cand = resolveThroughEmptyChain(e.getKey());
                 Map<IRBlock, IRBlock> map =
-                        matchFinallySubgraph(root, cand, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
+                        matchFinallySubgraphPeeled(root, cand, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
                 if (map == null) {
-                    trace("finally-dedup bail#8 root=" + root.getBytecodeOffset()
-                            + " exitFrom=" + p.getBytecodeOffset() + " cand=" + cand.getBytecodeOffset());
-                    return false;
+                    if (mustCover) {
+                        trace("finally-dedup bail#8 root=" + root.getBytecodeOffset()
+                                + " exitFrom=" + p.getBytecodeOffset() + " cand=" + cand.getBytecodeOffset());
+                        return false;
+                    }
+                    continue;
                 }
                 matches.add(map);
             }
@@ -4501,6 +4528,74 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         finallyDeduped.addAll(rethrowers);
         return true;
+    }
+
+    /**
+     * As {@link #matchFinallySubgraph}, retrying with LEADING GUARDS PEELED when the direct match
+     * fails: the relowering prunes a copy's leading null-check when the tested value is provably
+     * non-null on that path, so the copy corresponds to the guard's surviving arm. Only a guard
+     * whose OTHER arm leads to the rethrow may peel (the pruned test's failure path could only
+     * rethrow, which the pruned path cannot take), and only pure-load guard payloads qualify - a
+     * peel must not lose an effect.
+     */
+    private Map<IRBlock, IRBlock> matchFinallySubgraphPeeled(IRBlock troot, IRBlock croot,
+                                                             Set<IRBlock> tblocks, IRBlock rethrowBlk,
+                                                             Map<IRBlock, ExceptionHandler> nestedTemplate,
+                                                             Set<ExceptionHandler> copyNestedHandlers) {
+        Map<IRBlock, IRBlock> map =
+                matchFinallySubgraph(troot, croot, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
+        if (map != null) {
+            return map;
+        }
+        IRBlock entry = troot;
+        for (int peel = 0; peel < 3; peel++) {
+            while (matchableInstructions(entry, entry == troot).isEmpty()
+                    && !(entry.getTerminator() instanceof BranchInstruction)) {
+                IRBlock nxt = singleNormalSuccessor(entry);
+                if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk) {
+                    return null;
+                }
+                entry = nxt;
+            }
+            if (!(entry.getTerminator() instanceof BranchInstruction)) {
+                return null;
+            }
+            for (IRInstruction ins : matchableInstructions(entry, entry == troot)) {
+                if (!(ins instanceof LoadLocalInstruction || ins instanceof ConstantInstruction)) {
+                    return null;
+                }
+            }
+            BranchInstruction br = (BranchInstruction) entry.getTerminator();
+            IRBlock keep;
+            if (peeledArmRethrows(br.getTrueTarget(), rethrowBlk, tblocks)) {
+                keep = br.getFalseTarget();
+            } else if (peeledArmRethrows(br.getFalseTarget(), rethrowBlk, tblocks)) {
+                keep = br.getTrueTarget();
+            } else {
+                return null;
+            }
+            if (keep == null || !tblocks.contains(keep)) {
+                return null;
+            }
+            map = matchFinallySubgraph(keep, croot, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
+            if (map != null) {
+                return map;
+            }
+            entry = keep;
+        }
+        return null;
+    }
+
+    /** Whether a peeled guard's discarded arm only rethrows (directly or through empty pads). */
+    private boolean peeledArmRethrows(IRBlock arm, IRBlock rethrowBlk, Set<IRBlock> tblocks) {
+        if (arm == null) {
+            return false;
+        }
+        IRBlock r = resolveThroughEmptyChain(arm);
+        if (r == rethrowBlk) {
+            return true;
+        }
+        return r != null && tblocks.contains(r) && isBareRethrowTail(r);
     }
 
     /**
@@ -6417,6 +6512,24 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             }
         }
         return true;
+    }
+
+    /**
+     * Whether a StoreLocal consumes {@code value} under the same recovered name as {@code varName}.
+     * Such a store renders the value's expression itself (as a declaration or assignment), so a
+     * phi-copy materialization of the same expression under that name would run its side effects a
+     * second time - the store is the single materialization and the copy must be suppressed.
+     */
+    private boolean isStoredToVariableNamed(SSAValue value, String varName) {
+        if (value == null || varName == null) {
+            return false;
+        }
+        for (IRInstruction use : value.getUses()) {
+            if (use instanceof StoreLocalInstruction && varName.equals(partitionName(use))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -9732,7 +9845,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                                 if (phiVarName != null && !phiVarName.equals("this")
                                         && !isParameterOrThisRef(targetPhi.getResult())
-                                        && valueBelongsToPhiVariable(newResult, phiVarName)) {
+                                        && valueBelongsToPhiVariable(newResult, phiVarName)
+                                        && !isStoredToVariableNamed(newResult, phiVarName)) {
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));

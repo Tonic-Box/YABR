@@ -151,6 +151,11 @@ public class ControlFlowContext {
     }
 
     public void markProcessed(IRBlock block) {
+        String dbg = System.getProperty("yabr.debug.mark");
+        if (dbg != null && block.getBytecodeOffset() == Integer.parseInt(dbg)
+                && !processedBlocks.contains(block)) {
+            new Exception("markProcessed " + block.getBytecodeOffset()).printStackTrace();
+        }
         processedBlocks.add(block);
     }
 
