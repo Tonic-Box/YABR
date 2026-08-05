@@ -7103,6 +7103,217 @@ public class StatementRecoverer implements RegionRecoveryBridge
         return false;
     }
 
+    /**
+     * The membership closure of a finally family: the blocks of its protected ranges and handlers, every
+     * nested handler whose whole protected range lies inside, and every block all of whose predecessors
+     * already belong. The unprotected-return carve is applied separately by the caller, so membership can
+     * be tested for an exit before any block is freed.
+     *
+     */
+    private Set<IRBlock> buildFamilyClosure(List<int[]> protectedRanges, Set<IRBlock> familyHandlers,
+            int endOff)
+    {
+        IRMethod irMethod = context.getIrMethod();
+        Set<IRBlock> closure = new HashSet<>();
+        for (IRBlock b : irMethod.getBlocks())
+        {
+            int boff = b.getBytecodeOffset();
+            for (int[] r : protectedRanges)
+            {
+                if (boff >= r[0] && boff < r[1])
+                {
+                    closure.add(b);
+                    break;
+                }
+            }
+        }
+        closure.addAll(familyHandlers);
+        Set<IRBlock> seed = new HashSet<>(closure);
+        boolean grew = true;
+        while (grew)
+        {
+            grew = false;
+            for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+            {
+                if (eh.getHandlerBlock() == null || closure.contains(eh.getHandlerBlock())
+                        || eh.getTryStart() == null || eh.getTryEnd() == null)
+                {
+                    continue;
+                }
+                boolean rangeInside = true;
+                int lo = eh.getTryStart().getBytecodeOffset();
+                int hi = eh.getTryEnd().getBytecodeOffset();
+                for (IRBlock b : irMethod.getBlocks())
+                {
+                    int boff = b.getBytecodeOffset();
+                    if (boff >= lo && boff < hi && !closure.contains(b))
+                    {
+                        rangeInside = false;
+                        break;
+                    }
+                }
+                if (rangeInside)
+                {
+                    closure.add(eh.getHandlerBlock());
+                    grew = true;
+                }
+            }
+            for (IRBlock b : irMethod.getBlocks())
+            {
+                if (closure.contains(b) || b == irMethod.getEntryBlock()
+                        || b.getPredecessors().isEmpty()
+                        || b.getTerminator() instanceof ReturnInstruction)
+                {
+                    continue;
+                }
+                // Where the construct's own boundary hands over - every predecessor still in the seed -
+                // a block past the window is absorbed only when it belongs to the family: dominated by a
+                // handler, or opening a repeat of the handler body (the inlined finally copies a
+                // relowered layout parks out there). Anything else is the next construct, and absorbing
+                // it takes the join with it - the join satisfies the predecessor rule trivially, being
+                // the range's fall-through, so the closure would then cascade over the rest of the
+                // method and leave the exit scan nothing to settle on. Past that first hand-off the
+                // copies' own interior flow cascades normally.
+                if (b.getBytecodeOffset() >= endOff && seed.containsAll(b.getPredecessors())
+                        && !dominatedByAny(familyHandlers, b, context.getDominatorTree())
+                        && !repeatsFamilyHandlerBody(b, familyHandlers))
+                {
+                    continue;
+                }
+                if (closure.containsAll(b.getPredecessors()))
+                {
+                    closure.add(b);
+                    grew = true;
+                }
+            }
+        }
+        return closure;
+    }
+
+    /**
+     * Removes from {@code closure} every return block outside {@code protectedRanges}: a gap return the
+     * exits converge on is the construct's join, never its interior.
+     */
+    private void carveUnprotectedReturns(Set<IRBlock> closure, List<int[]> protectedRanges)
+    {
+        for (IRBlock b : new ArrayList<>(closure))
+        {
+            if (!(b.getTerminator() instanceof ReturnInstruction))
+            {
+                continue;
+            }
+            int boff = b.getBytecodeOffset();
+            boolean covered = false;
+            for (int[] r : protectedRanges)
+            {
+                if (boff >= r[0] && boff < r[1])
+                {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered)
+            {
+                closure.remove(b);
+            }
+        }
+    }
+
+    /**
+     * Whether any block in {@code roots} dominates {@code block}.
+     */
+    private boolean dominatedByAny(Set<IRBlock> roots, IRBlock block, DominatorTree dt)
+    {
+        for (IRBlock root : roots)
+        {
+            if (dt.dominates(root, block))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether {@code block} opens with a repeat of the body of any handler in {@code familyHandlers} - the
+     * form an inlined finally copy takes on a path outside the family's protected ranges. The handler's
+     * own leading store of the caught exception is not part of the copied body.
+     */
+    private boolean repeatsFamilyHandlerBody(IRBlock block, Set<IRBlock> familyHandlers)
+    {
+        for (IRBlock handler : familyHandlers)
+        {
+            List<IRInstruction> body = handlerBodyTemplate(handler);
+            if (body.isEmpty() || block.getInstructions().size() < body.size())
+            {
+                continue;
+            }
+            List<IRInstruction> instructions = block.getInstructions();
+            boolean match = true;
+            for (int i = 0; i < body.size(); i++)
+            {
+                if (!sameFinallyInstr(body.get(i), instructions.get(i)))
+                {
+                    match = false;
+                    break;
+                }
+            }
+            if (match)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The instructions of {@code handler} that an inlined copy of it repeats: its own body without the
+     * phis and without the leading store that binds the caught exception.
+     */
+    private List<IRInstruction> handlerBodyTemplate(IRBlock handler)
+    {
+        List<IRInstruction> body = new ArrayList<>();
+        for (IRInstruction i : handler.getInstructions())
+        {
+            if (i instanceof PhiInstruction)
+            {
+                continue;
+            }
+            if (body.isEmpty() && bindsCaughtException(i))
+            {
+                continue;
+            }
+            body.add(i);
+        }
+        return body;
+    }
+
+    /**
+     * Whether {@code instruction} is part of a handler's leading bind of the caught exception rather than
+     * of its body - the exception value itself, or the store that parks it in a local.
+     */
+    private boolean bindsCaughtException(IRInstruction instruction)
+    {
+        SSAValue result = instruction.getResult();
+        if (result != null && result.getName() != null && result.getName().startsWith("exc_"))
+        {
+            return true;
+        }
+        if (!(instruction instanceof StoreLocalInstruction))
+        {
+            return false;
+        }
+        for (Value operand : instruction.getOperands())
+        {
+            if (operand instanceof SSAValue && ((SSAValue) operand).getName() != null
+                    && ((SSAValue) operand).getName().startsWith("exc_"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean isTerminatingTryCatch(TryCatchStmt tryCatch)
     {
         if (!isTerminatingBranch(tryCatch.getTryBlock()))
@@ -9578,85 +9789,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
             }
             if (acyclicNode && !syncFamily)
             {
-            Set<IRBlock> closure = new HashSet<>();
-            for (IRBlock b : irMethod.getBlocks())
-            {
-                int boff = b.getBytecodeOffset();
-                for (int[] r : protectedRanges)
-                {
-                    if (boff >= r[0] && boff < r[1])
-                    {
-                        closure.add(b);
-                        break;
-                    }
-                }
-            }
-            closure.addAll(familyHandlers);
-            boolean grew = true;
-            while (grew)
-            {
-                grew = false;
-                for (ExceptionHandler eh : irMethod.getExceptionHandlers())
-                {
-                    if (eh.getHandlerBlock() == null || closure.contains(eh.getHandlerBlock())
-                            || eh.getTryStart() == null || eh.getTryEnd() == null)
-                    {
-                        continue;
-                    }
-                    boolean rangeInside = true;
-                    int lo = eh.getTryStart().getBytecodeOffset();
-                    int hi = eh.getTryEnd().getBytecodeOffset();
-                    for (IRBlock b : irMethod.getBlocks())
-                    {
-                        int boff = b.getBytecodeOffset();
-                        if (boff >= lo && boff < hi && !closure.contains(b))
-                        {
-                            rangeInside = false;
-                            break;
-                        }
-                    }
-                    if (rangeInside)
-                    {
-                        closure.add(eh.getHandlerBlock());
-                        grew = true;
-                    }
-                }
-                for (IRBlock b : irMethod.getBlocks())
-                {
-                    if (closure.contains(b) || b == irMethod.getEntryBlock()
-                            || b.getPredecessors().isEmpty()
-                            || b.getTerminator() instanceof ReturnInstruction)
-                    {
-                        continue;
-                    }
-                    if (closure.containsAll(b.getPredecessors()))
-                    {
-                        closure.add(b);
-                        grew = true;
-                    }
-                }
-            }
-            for (IRBlock b : new ArrayList<>(closure))
-            {
-                if (!(b.getTerminator() instanceof ReturnInstruction))
-                {
-                    continue;
-                }
-                int boff = b.getBytecodeOffset();
-                boolean covered = false;
-                for (int[] r : protectedRanges)
-                {
-                    if (boff >= r[0] && boff < r[1])
-                    {
-                        covered = true;
-                        break;
-                    }
-                }
-                if (!covered)
-                {
-                    closure.remove(b);
-                }
-            }
+            Set<IRBlock> closure = buildFamilyClosure(protectedRanges, familyHandlers, endOff);
+            carveUnprotectedReturns(closure, protectedRanges);
             consumed = closure;
             }
             else
